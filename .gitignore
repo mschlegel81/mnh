@@ -15,3 +15,8 @@ Thumbs.db
 #ignore Lazarus Project state
 *.lps
 gui/mnh_gui.lps
+gui/lib/i386-win32/askdialog.lfm
+gui/lib/i386-win32/closedialog.lfm
+gui/lib/i386-win32/mnh_gui.compiled
+gui/lib/i386-win32/mnh_gui_main.lfm
+gui/lib/i386-win32/mnh_gui_settings.lfm
