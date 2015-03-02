@@ -58,13 +58,6 @@ VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
     
-//FUNCTION isReloadOfMainPackageIndicated:boolean;
-//  begin
-//    EnterCriticalsection(poolCs);
-//    result:=not(packagesAreFinalized) and mainPackage.needReload;
-//    DoneCriticalsection(poolCs);
-//  end;
-
 PROCEDURE reloadMainPackage;
   VAR i,j:longint;
       used:T_listOfString;
@@ -460,10 +453,10 @@ procedure T_package.load;
           first:=nil;
         end else if (next.tokType<>tt_eol) then begin
           if first=nil then begin
-            first:=newToken(next);
+            first:=newToken(next); next.undefine;
             last :=first
           end else begin
-            last^.next:=newToken(next);
+            last^.next:=newToken(next); next.undefine;
             last      :=last^.next;
           end;
         end;

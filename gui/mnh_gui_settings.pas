@@ -48,6 +48,7 @@ type
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName:string;
     FUNCTION canOpenFile(CONST filename:ansistring; CONST lineNumber:longint):boolean;
+    PROCEDURE saveSettings;
   end;
 
 var
@@ -138,29 +139,8 @@ procedure TSettingsForm.FontButtonClick(Sender: TObject);
   end;
 
 procedure TSettingsForm.FormDestroy(Sender: TObject);
-  VAR ff:T_file;
   begin
-    ff.createToWrite(settingsFileName);
-
-    ff.writeAnsiString(NotepadFileNameEdit.FileName);
-
-    ff.writeLongint(getFontSize);
-    ff.writeAnsiString(editorFontname);
-    ff.writeBoolean(AntialiasCheckbox.Checked);
-
-    with mainForm do begin
-      ff.writeLongint(top);
-      ff.writeLongint(left);
-      ff.writeLongint(width);
-      ff.writeLongint(height);
-    end;
-    with outputBehaviour do begin
-      ff.writeBoolean(doEchoInput);
-      ff.writeBoolean(doEchoDeclaration);
-      ff.writeBoolean(doShowExpressionOut);
-    end;
-    ff.writeAnsiString(fileInEditor);
-    ff.destroy;
+    saveSettings;
   end;
 
 function TSettingsForm.getFontSize: longint;
@@ -196,6 +176,32 @@ function TSettingsForm.canOpenFile(const filename: ansistring; const lineNumber:
       tempProcess.Free;
       result:=true;
     end else result:=false;
+  end;
+
+procedure TSettingsForm.saveSettings;
+  VAR ff:T_file;
+  begin
+    ff.createToWrite(settingsFileName);
+
+    ff.writeAnsiString(NotepadFileNameEdit.FileName);
+
+    ff.writeLongint(getFontSize);
+    ff.writeAnsiString(editorFontname);
+    ff.writeBoolean(AntialiasCheckbox.Checked);
+
+    with mainForm do begin
+      ff.writeLongint(top);
+      ff.writeLongint(left);
+      ff.writeLongint(width);
+      ff.writeLongint(height);
+    end;
+    with outputBehaviour do begin
+      ff.writeBoolean(doEchoInput);
+      ff.writeBoolean(doEchoDeclaration);
+      ff.writeBoolean(doShowExpressionOut);
+    end;
+    ff.writeAnsiString(fileInEditor);
+    ff.destroy;
   end;
 
 end.

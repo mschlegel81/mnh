@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, mnh_gui_settings, mnh_gui_main, mnh_askForm;
+  Forms, mnh_gui_settings, mnh_gui_main;
 
 {$R *.res}
 
@@ -16,7 +16,6 @@ begin
   Application.Initialize;
   Application.CreateForm(TMnhForm, MnhForm);
   Application.CreateForm(TSettingsForm, SettingsForm);
-  Application.CreateForm(TAskForm, AskForm);
   Application.Run;
 end.
 

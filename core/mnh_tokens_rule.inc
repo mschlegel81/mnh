@@ -70,7 +70,6 @@ FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token
         exit(true);
       end;
       result:=false;
-
     end else begin
       for i:=0 to length(subrules)-1 do if subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
       result:=false;

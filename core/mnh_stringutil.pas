@@ -1,5 +1,4 @@
 UNIT mnh_stringutil;
-{$WARNING TODO: Cleanup unit.}
 INTERFACE
 CONST
   C_lineBreakChar     =chr(13);
@@ -9,7 +8,6 @@ CONST
 
 FUNCTION formatTabs(s:ansistring):ansistring;
 FUNCTION isBlank(CONST s:ansistring):boolean;
-//FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
 FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
 FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
 FUNCTION replaceOne(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
@@ -17,8 +15,6 @@ FUNCTION escapeString(CONST s:ansistring):ansistring;
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
 FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
 FUNCTION startsWith(CONST input,head:ansistring):boolean;
-
-//PROCEDURE removeLeadingBlanks(VAR input:ansistring);
 
 IMPLEMENTATION
 FUNCTION formatTabs(s:ansistring):ansistring;
@@ -130,20 +126,6 @@ FUNCTION isBlank(CONST s:ansistring):boolean;
                     C_tabChar,
                     ' ']) 
     then exit(false);
-  end;
-
-FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
-  VAR i:longint;
-  begin
-    if length(inputAndRest)<maxLineLength then begin
-      result:=inputAndRest;
-      inputAndRest:='';
-      exit(result);
-    end;
-    i:=maxLineLength;
-    while (i>minLineLength) and (inputAndRest[i]<>' ') do dec(i);
-    result:=copy(inputAndRest,1,i);
-    inputAndRest:=copy(inputAndRest,i+1,length(inputAndRest)-1);
   end;
 
 FUNCTION replaceOne(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;

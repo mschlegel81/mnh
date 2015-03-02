@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_tokloc;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread;
 
 CONST C_DeclEchoHead=#10+' in>';
       C_ExprEchoHead=#10+'_in>';
@@ -222,7 +222,7 @@ begin
     '/': begin
       inc(run);
       if fLine[run]='/' then begin
-        while fLine[run+1]<>#0 do inc(run);
+        while fLine[run]<>#0 do inc(run);
         fTokenId:=tkComment;
       end else fTokenId:=tkOperator;
     end;
@@ -252,6 +252,12 @@ begin
       inc(run);
       while (fLine[run]<>#0) and ((fLine[run]<>'"') or (fLine[run-1]='\')) do inc(run);
       if (fLine[run]='"') then inc(run);
+      fTokenId:=tkString;
+    end;
+    '''': begin
+      inc(run);
+      while (fLine[run]<>#0) and ((fLine[run]<>'''') or (fLine[run-1]='\')) do inc(run);
+      if (fLine[run]='''') then inc(run);
       fTokenId:=tkString;
     end;
     else begin

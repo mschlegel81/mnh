@@ -34,12 +34,12 @@ IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
 
 FUNCTION main(p:pointer):ptrint;
-  VAR idleCount:longint=0;
+  CONST MAX_SLEEP_TIME=250;
+  VAR sleepTime:longint=0;
   begin
     evaluationState.value:=es_idle;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
-        idleCount:=0;
         pendingRequest.value:=er_none;
         evaluationState.value:=es_running;
         startOfEvaluation.value:=now;
@@ -51,9 +51,12 @@ FUNCTION main(p:pointer):ptrint;
         if hasMessage(el5_systemError,HALT_MESSAGE)
         then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
         else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
-      end else inc(idleCount);
-      sleep(10);
-    until (pendingRequest.value<>er_evaluate) and (idleCount>100) or (pendingRequest.value=er_die);
+        sleepTime:=0;
+      end else begin
+        if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
+        if pendingRequest.value=er_none then sleep(sleepTime);
+      end;
+    until (pendingRequest.value=er_die);
     evaluationState.value:=es_dead;
   end;
 

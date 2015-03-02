@@ -221,7 +221,9 @@ procedure TMnhForm.FormResize(Sender: TObject);
 
 procedure TMnhForm.FormShow(Sender: TObject);
   begin
+    DoubleBuffered:=true;
     if not(settingsHaveBeenProcessed) then processSettings;
+    UpdateTimeTimer.Enabled:=true;
   end;
 
 procedure TMnhForm.InputEditChange(Sender: TObject);
@@ -353,12 +355,15 @@ procedure TMnhForm.miSaveAsClick(Sender: TObject);
       MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
       ad_setFile(SaveDialog.FileName,InputEdit.Lines);
       SettingsForm.fileInEditor:=SaveDialog.FileName;
+      SettingsForm.saveSettings;
     end;
   end;
 
 procedure TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile<>'' then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+    SettingsForm.fileInEditor:=ad_currentFile;
+    SettingsForm.saveSettings;
   end;
 
 procedure TMnhForm.mi_settingsClick(Sender: TObject);
@@ -456,8 +461,9 @@ procedure TMnhForm.processSettings;
                              else mnh_out_adapters.exprOut:=nil;
     end;
     if ad_currentFile<>SettingsForm.fileInEditor then begin
-      if ad_currentFile='' then ad_clearFile
-                           else ad_setFile(SettingsForm.fileInEditor,InputEdit.Lines);
+      if SettingsForm.fileInEditor=''
+      then ad_clearFile
+      else ad_setFile(SettingsForm.fileInEditor,InputEdit.Lines);
     end;
     settingsHaveBeenProcessed:=true;
   end;

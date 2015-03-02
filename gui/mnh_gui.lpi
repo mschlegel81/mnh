@@ -32,15 +32,18 @@
         <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="SynEdit"/>
+        <PackageName Value="TAChartLazarusPkg"/>
       </Item1>
       <Item2>
-        <PackageName Value="LCL"/>
+        <PackageName Value="SynEdit"/>
       </Item2>
+      <Item3>
+        <PackageName Value="LCL"/>
+      </Item3>
     </RequiredPackages>
-    <Units Count="4">
+    <Units Count="5">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -66,9 +69,17 @@
         <Filename Value="mnh_askform.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="AskForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_askForm"/>
       </Unit3>
+      <Unit4>
+        <Filename Value="mnh_chartform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ChartForm"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="mnh_chartForm"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -82,12 +93,33 @@
       <OtherUnitFiles Value="..\core;..\util"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <CPPInline Value="False"/>
+      </SyntaxOptions>
+    </Parsing>
+    <CodeGeneration>
+      <Checks>
+        <IOChecks Value="True"/>
+        <RangeChecks Value="True"/>
+        <OverflowChecks Value="True"/>
+        <StackChecks Value="True"/>
+      </Checks>
+      <VerifyObjMethodCallValidity Value="True"/>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
     <Linking>
       <Debugging>
+        <UseHeaptrc Value="True"/>
         <UseExternalDbgSyms Value="True"/>
       </Debugging>
     </Linking>
     <Other>
+      <Verbosity>
+        <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
+      </Verbosity>
       <CompilerMessages>
         <MsgFileName Value=""/>
       </CompilerMessages>

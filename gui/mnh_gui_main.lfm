@@ -462,8 +462,9 @@ object MnhForm: TMnhForm
     IncrementColor.FrameEdges = sfeAround
     HighlightAllColor.FrameEdges = sfeAround
     BracketHighlightStyle = sbhsBoth
-    BracketMatchColor.Background = clNone
+    BracketMatchColor.Background = clYellow
     BracketMatchColor.Foreground = clNone
+    BracketMatchColor.FrameColor = clRed
     BracketMatchColor.FrameEdges = sfeAround
     BracketMatchColor.Style = [fsBold]
     FoldedCodeColor.Background = clNone
@@ -999,8 +1000,9 @@ object MnhForm: TMnhForm
     IncrementColor.FrameEdges = sfeAround
     HighlightAllColor.FrameEdges = sfeAround
     BracketHighlightStyle = sbhsBoth
-    BracketMatchColor.Background = clNone
+    BracketMatchColor.Background = clYellow
     BracketMatchColor.Foreground = clNone
+    BracketMatchColor.FrameColor = clRed
     BracketMatchColor.FrameEdges = sfeAround
     BracketMatchColor.Style = [fsBold]
     FoldedCodeColor.Background = clNone
@@ -1146,6 +1148,7 @@ object MnhForm: TMnhForm
     end
   end
   object UpdateTimeTimer: TTimer
+    Enabled = False
     OnTimer = UpdateTimeTimerTimer
     left = 88
     top = 19

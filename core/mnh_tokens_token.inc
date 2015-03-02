@@ -293,13 +293,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     if length(line)<1 then exit(result);
     case line[1] of
       '0'..'9': begin
-        result.data:=parseNumber(line,parsedLength);
-        if result.data=nil
-        then fail('Cannot parse numeric literal '+line)
-        else begin
-          result.tokType:=tt_literal;
-          if not(inEvaluationLoop) then disposeLiteral(result.data);
-        end;
+        result.data:=parseNumber(line,not(inEvaluationLoop),parsedLength);
+        if parsedLength<=0 then fail('Cannot parse numeric literal '+line)
+                           else result.tokType:=tt_literal;
       end;
       '"','''': begin        
         id:=unescapeString(line,parsedLength);
