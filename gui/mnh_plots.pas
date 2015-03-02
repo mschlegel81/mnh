@@ -83,42 +83,42 @@ implementation
 
 { TplotForm }
 
-procedure TplotForm.FormCreate(Sender: TObject);
+PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     pullSettingsToGui();
     rendering:=false;
   end;
 
-procedure TplotForm.FormResize(Sender: TObject);
+PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
     doPlot();
   end;
 
-procedure TplotForm.miAntialiasingOffClick(Sender: TObject);
+PROCEDURE TplotForm.miAntialiasingOffClick(Sender: TObject);
   begin
     if ad_evaluationRunning then plotDisplayRequired:=true
                             else doPlot();
   end;
 
-procedure TplotForm.miAutoResetClick(Sender: TObject);
+PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
 begin
   miAutoReset.Checked:=not(miAutoReset.Checked);
 end;
 
-procedure TplotForm.miAutoscaleXClick(Sender: TObject);
+PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
 begin
   miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miAutoscaleYClick(Sender: TObject);
+PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
 begin
   miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miExportBmpClick(Sender: TObject);
+PROCEDURE TplotForm.miExportBmpClick(Sender: TObject);
 VAR storeImage:TImage;
     rect:TRect;
 begin
@@ -137,7 +137,7 @@ begin
   end;
 end;
 
-procedure TplotForm.miLoadPlotClick(Sender: TObject);
+PROCEDURE TplotForm.miLoadPlotClick(Sender: TObject);
   begin
     OpenDialog.Filter:='MNH-Plot|*.mnh_plot';
     if OpenDialog.Execute then begin
@@ -150,25 +150,25 @@ procedure TplotForm.miLoadPlotClick(Sender: TObject);
     end;
   end;
 
-procedure TplotForm.miLogscaleXClick(Sender: TObject);
+PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
 begin
   miLogscaleX.Checked:=not(miLogscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miLogscaleYClick(Sender: TObject);
+PROCEDURE TplotForm.miLogscaleYClick(Sender: TObject);
 begin
   miLogscaleY.Checked:=not(miLogscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miPreserveAspectClick(Sender: TObject);
+PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect.Checked:=not(miPreserveAspect.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-procedure TplotForm.miSavePlotClick(Sender: TObject);
+PROCEDURE TplotForm.miSavePlotClick(Sender: TObject);
   begin
     SaveDialog.Filter:='MNH-Plot|*.mnh_plot';
     if SaveDialog.Execute then begin
@@ -177,47 +177,47 @@ procedure TplotForm.miSavePlotClick(Sender: TObject);
     end;
   end;
 
-procedure TplotForm.miXFinerGridClick(Sender: TObject);
+PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
 begin
   miXFinerGrid.Checked:=not(miXFinerGrid.Checked);
   if miXFinerGrid.Checked then miXGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miXGridClick(Sender: TObject);
+PROCEDURE TplotForm.miXGridClick(Sender: TObject);
 begin
   miXGrid.Checked:=not(miXGrid.Checked);
   if not(miXGrid.Checked) then miXFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miXTicsClick(Sender: TObject);
+PROCEDURE TplotForm.miXTicsClick(Sender: TObject);
 begin
   miXTics.Checked:=not(miXTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYFinerGridClick(Sender: TObject);
+PROCEDURE TplotForm.miYFinerGridClick(Sender: TObject);
 begin
   miYFinerGrid.Checked:=not(miYFinerGrid.Checked);
   if miYFinerGrid.Checked then miYGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYGridClick(Sender: TObject);
+PROCEDURE TplotForm.miYGridClick(Sender: TObject);
 begin
   miYGrid.Checked:=not(miYGrid.Checked);
   if not(miYGrid.Checked) then miYFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYTicsClick(Sender: TObject);
+PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 begin
   miYTics.Checked:=not(miYTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.doPlot;
+PROCEDURE TplotForm.doPlot;
   PROCEDURE drawGridAndRows(CONST target:TCanvas; CONST scalingFactor:longint);
     VAR rowId,i,x,y,yBaseLine,lastX,lastY:longint;
         symSize:double;
@@ -514,7 +514,7 @@ procedure TplotForm.doPlot;
         target.FillRect(0,0,activePlot.xOffset,plotImage.Height);
       if activePlot.wantTics('x') then
         target.FillRect(activePlot.xOffset,activePlot.yOffset,
-                                  plotImage.Width   ,plotImage.Height);
+                        plotImage.Width   ,plotImage.Height);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
       target.Pen.Style:=psSolid;
@@ -579,7 +579,7 @@ procedure TplotForm.doPlot;
     rendering:=false;
   end;
 
-procedure TplotForm.pullSettingsToGui;
+PROCEDURE TplotForm.pullSettingsToGui;
   begin
     miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
     miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
@@ -594,7 +594,7 @@ procedure TplotForm.pullSettingsToGui;
     miLogscaleY.Checked     :=activePlot.logscale['y'];
   end;
 
-procedure TplotForm.pushSettingsToPlotContainer(const plotImmediately: boolean);
+PROCEDURE TplotForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
   VAR aidX,aidY:longint;
   begin
     aidX:=0;
@@ -614,24 +614,11 @@ procedure TplotForm.pushSettingsToPlotContainer(const plotImmediately: boolean);
                        else plotDisplayRequired:=true;
   end;
 
-procedure TplotForm.doConditionalReset;
+PROCEDURE TplotForm.doConditionalReset;
   begin
     if miAutoReset.Checked then begin
       activePlot.setDefaults;
       pullSettingsToGui();
-    end;
-  end;
-
-
-FUNCTION fReal(CONST X:P_literal):double; inline;
-  begin
-    case X^.literalType of
-      lt_real: begin
-        result:=P_realLiteral(x)^.value;
-        if IsInfinite(result) then result:=NaN;
-      end;
-      lt_int: result:=P_intLiteral(x)^.value;
-      else result:=NaN;
     end;
   end;
 
@@ -640,42 +627,11 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       sizeWithoutOptions:longint;
       rowId,i,iMax:longint;
       X,Y:P_listLiteral;
-      t0,t1:double;
-
-  PROCEDURE addFuncRow(CONST fx:P_subrule);
-    VAR j,k,refRun:longint;
-        t:T_realLiteral;
-        td:double;
-        res:P_literal;
-    begin
-      for j:=0 to 100 do begin
-        td:=t0+(t1-t0)*(j*0.01);
-        t.create(td);
-        res:=fx^.directEvaluateUnary(@t,callDepth+1);
-        t.destroy;
-        activePlot.row[rowId].addSample(td,fReal(res));
-        disposeLiteral(res);
-      end;
-    end;
-
-  PROCEDURE addFuncRow(CONST fx,fy:P_subrule);
-    VAR j:longint;
-        t:P_realLiteral;
-        resX,resY:P_literal;
-    begin
-      for j:=0 to 100 do begin
-        t:=newRealLiteral(t0+(t1-t0)*(j*0.01));
-        resX:=fx^.directEvaluateUnary(t,callDepth+1);
-        resY:=fy^.directEvaluateUnary(t,callDepth+1);
-        activePlot.row[rowId].addSample(fReal(resX),fReal(resY));
-        disposeLiteral(t);
-        disposeLiteral(resX);
-        disposeLiteral(resY);
-      end;
-    end;
 
   begin
     if (params<>nil) and (params^.size>=1) then begin
+      activePlot.setScreenSize(plotForm.plotImage.Width,
+                               plotForm.plotImage.Height);
       if (params^.value(params^.size-1)^.literalType=lt_string) then begin
         options:=P_stringLiteral(params^.value(params^.size-1))^.value;
         sizeWithoutOptions:=params^.size-1;
@@ -722,12 +678,11 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
          (params^.value(2)^.literalType in [lt_int,lt_real])
       then begin
         rowId:=activePlot.addRow(options);
-        t0:=fReal(params^.value(1));
-        t1:=fReal(params^.value(2));
-        try
-          addFuncRow(P_expressionLiteral(params^.value(0))^.value);
-        finally
-        end;
+        activePlot.row[rowId].setRules(
+          nil,
+          P_expressionLiteral(params^.value(0)),
+          fReal(params^.value(1)),
+          fReal(params^.value(2)));
         plotDisplayRequired:=true;
         result:=newBoolLiteral(true);
       end else if (sizeWithoutOptions=4) and
@@ -737,13 +692,11 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
          (params^.value(3)^.literalType in [lt_int,lt_real])
       then begin
         rowId:=activePlot.addRow(options);
-        t0:=fReal(params^.value(2));
-        t1:=fReal(params^.value(3));
-        try
-          addFuncRow(P_expressionLiteral(params^.value(0))^.value,
-                     P_expressionLiteral(params^.value(1))^.value);
-        finally
-        end;
+        activePlot.row[rowId].setRules(
+          P_expressionLiteral(params^.value(0)),
+          P_expressionLiteral(params^.value(1)),
+          fReal(params^.value(2)),
+          fReal(params^.value(3)));
         plotDisplayRequired:=true;
         result:=newBoolLiteral(true);
       end else result:=newErrorLiteralRaising('Functions plot and addPlot cannot be applied to parameter list'+params^.toParameterListString(true),tokenLocation);
@@ -752,12 +705,14 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 
 FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     activePlot.clear;
     result:=addPlot(params,tokenLocation,callDepth);
   end;
 
 FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_booleanList) and (P_listLiteral(params^.value(0))^.size=2) then begin
       activePlot.setAutoscale(P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
@@ -769,11 +724,13 @@ FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION getAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=activePlot.getAutoscale;
   end;
 
 FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_booleanList) and (P_listLiteral(params^.value(0))^.size=2) then begin
       activePlot.setLogscale(P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
@@ -785,6 +742,7 @@ FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 
 FUNCTION getLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=activePlot.getLogscale;
   end;
 
@@ -792,6 +750,7 @@ FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   VAR x,y:P_literal;
       x0,y0,x1,y1:double;
   begin
+    while plotForm.rendering do sleep(1);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=2) then begin
       x:=P_listLiteral(params^.value(0))^.value(0);
@@ -816,11 +775,13 @@ FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION getPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=activePlot.getRange;
   end;
 
 FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_intList) and (P_listLiteral(params^.value(0))^.size=2) then begin
       activePlot.setAxisStyle(P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
@@ -832,11 +793,13 @@ FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION getAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=activePlot.getAxisStyle;
   end;
 
 FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_boolean) then begin
       activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
@@ -847,22 +810,35 @@ FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
 FUNCTION getPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
+    while plotForm.rendering do sleep(1);
     result:=activePlot.getPreserveAspect;
   end;
 
+FUNCTION true_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=newBoolLiteral(true);
+  end;
+
 INITIALIZATION
-  mnh_funcs.registerRule('plot',@plot,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('addPlot',@addPlot,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('getPlotAutoscale',@getAutoscale,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('getPlotLogscale',@getLogscale,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('setPlotRange',@setPlotRange,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('getPlotRange',@getPlotRange,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('getPlotAxisStyle',@getAxisStyle,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,''{$WARNING uncommented!});
-  mnh_funcs.registerRule('getPlotPreserveAspect',@getPreserveAspect,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('plotAvailable' ,@true_impl,'returns true (because plotting is available)');
+  mnh_funcs.registerRule('plot',@plot,'plot(list,[options]); //plots flat numeric list or xy-list'+
+  '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
+  '#plot(yExpression,t0,t1,[options]); //plots yExpression versus t in [t0,t1]'+
+  '#plot(xExpression,yExpression,t0,t1,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+  mnh_funcs.registerRule('addPlot',@addPlot,'addPlot(list,[options]); //adds plot flat numeric list or xy-list'+
+  '#addPlot(xList,yList,[options]); //plots flat numeric list or xy-list'+
+  '#addPlot(yExpression,t0,t1,[options]); //plots yExpression versus t in [t0,t1]'+
+  '#addPlot(xExpression,yExpression,t0,t1,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule('getPlotAutoscale',@getAutoscale,'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,'setPlotLogscale([forX,forY]);#Sets log-scale per axis and returns true#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule('getPlotLogscale',@getLogscale,'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule('setPlotRange',@setPlotRange,'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot and returns true.');
+  mnh_funcs.registerRule('getPlotRange',@getPlotRange,'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
+  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true.');
+  mnh_funcs.registerRule('getPlotAxisStyle',@getAxisStyle,'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
+  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,'setPlotPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
+  mnh_funcs.registerRule('getPlotPreserveAspect',@getPreserveAspect,'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
   mnh_evalThread.initIntrinsicRuleList;
 end.
 

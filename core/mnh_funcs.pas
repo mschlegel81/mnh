@@ -760,10 +760,12 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_int) and (params^.value(2)^.literalType=lt_int) then begin
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string)
+                                          and (params^.value(1)^.literalType=lt_int)
+                                          and (params^.value(2)^.literalType=lt_int) then begin
       result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
                                     P_intLiteral   (params^.value(1))^.value,
-                                    P_intLiteral   (params^.value(1))^.value));
+                                    P_intLiteral   (params^.value(2))^.value));
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
 
@@ -1274,13 +1276,13 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           end;
           '''','"': begin //strings
             unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),i1);
-            if i1<=0 then i1:=i0+1
-                     else i1:=i0+i1+1;
+            if i1<=0 then i1:=i0
+                     else i1:=i0+i1;
           end;
           '0'..'9': begin //numbers
             parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
-            if i1<=0 then i1:=i0+1
-                     else i1:=i0+i1+1;
+            if i1<=0 then i1:=i0
+                     else i1:=i0+i1;
           end;
           ' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar: begin //whitespace
             i1:=i0;
@@ -1294,11 +1296,16 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
   end;
 
+FUNCTION false_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=newBoolLiteral(false);
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
   registerRule('not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
-  registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#If tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('print'         ,@print_imp     ,'print(...);#Prints OUT the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule('abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric parameter n');
   registerRule('sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric parameter n');
   registerRule('sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric parameter n');
@@ -1321,10 +1328,10 @@ INITIALIZATION
   registerRule('unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule('flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule('random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
-  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
-  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
-  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
-  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
+  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element OUT of list L#max(x,y,...);#Returns the greatest element OUT of the given parameters');
+  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element OUT of list L (or the first index if ambiguous)');
+  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element OUT of list L#min(x,y,...);#Returns the smallest element OUT of the given parameters');
+  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element OUT of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
   registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none#Note: Character indexes start with 1!');
@@ -1350,6 +1357,7 @@ INITIALIZATION
   registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
+  registerRule('plotAvailable' ,@false_impl,'returns false (because plotting is not available)');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

@@ -1,6 +1,6 @@
 UNIT mnh_plotData;
 INTERFACE
-USES myFiles,sysutils,math,mnh_litvar;
+USES myFiles,sysutils,math,mnh_litvar,mnh_tokens,mnh_constants;
 TYPE
   T_colorChannel=(cc_red,cc_green,cc_blue);
 
@@ -70,13 +70,24 @@ TYPE
   { T_sampleRow }
 
   T_boundingBox=array['x'..'y',0..1] of double;
+  T_sampleWithTime=record
+                     x,y,t:double;
+                   end;
 
   T_sampleRow=object(T_serializable)
+    //nonpersistent:
+    computed:record
+      temp:array of T_sampleWithTime;
+      xRule,yRule:P_expressionLiteral;
+      t0,t1:double;
+    end;
     //persistent:
     style:T_style;
     sample:T_dataRow;
     CONSTRUCTOR create(CONST index:byte);
     PROCEDURE getBoundingBox(CONST logX,logY:boolean; VAR box:T_boundingBox);
+    PROCEDURE setRules(CONST forXOrNil,forY:P_expressionLiteral; CONST t0,t1:double);
+    PROCEDURE computeSamplesInActivePlot(CONST secondPass:boolean);
     PROCEDURE addSample(CONST x,y:double);
     DESTRUCTOR destroy;
     FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
@@ -127,6 +138,7 @@ TYPE
     FUNCTION realToScreen(CONST p :T_point):T_point;
     FUNCTION realToScreen(CONST x,y:double):T_point;
     FUNCTION realToScreen(CONST axis:char; CONST p:double):double;
+    FUNCTION est_curvature(CONST s0,s1,s2: T_point):double;
     FUNCTION olx(CONST x:double):double;
     FUNCTION oex(CONST x:double):double;
     FUNCTION oly(CONST y:double):double;
@@ -146,7 +158,19 @@ TYPE
   end;
 
 VAR activePlot:T_plot;
+FUNCTION fReal(CONST X:P_literal):double; inline;
 IMPLEMENTATION
+FUNCTION fReal(CONST X:P_literal):double; inline;
+  begin
+    case X^.literalType of
+      lt_real: begin
+        result:=P_realLiteral(x)^.value;
+        if IsInfinite(result) then result:=NaN;
+      end;
+      lt_int: result:=P_intLiteral(x)^.value;
+      else result:=NaN;
+    end;
+  end;
 
 { T_sampleRow }
 
@@ -154,6 +178,12 @@ CONSTRUCTOR T_sampleRow.create(CONST index: byte);
   begin
     style.create(index);
     SetLength(sample,0);
+    with computed do begin
+      computed.xRule:=nil;
+      computed.yRule:=nil;
+      computed.t0:=0;
+      computed.t1:=1;
+    end;
   end;
 
 PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean;
@@ -168,6 +198,126 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean;
       if IsNan(box['x',1]) or (not(IsNan(x)) and not(IsInfinite(x)) and (x>box['x',1])) then box['x',1]:=x;
       if IsNan(box['y',0]) or (not(IsNan(y)) and not(IsInfinite(y)) and (y<box['y',0])) then box['y',0]:=y;
       if IsNan(box['y',1]) or (not(IsNan(y)) and not(IsInfinite(y)) and (y>box['y',1])) then box['y',1]:=y;
+    end;
+  end;
+
+PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double);
+  begin
+    computed.xRule:=forXOrNil;
+    computed.yRule:=forY;
+    if forXOrNil<>nil then forXOrNil^.rereference;
+    if forY<>nil then forY^.rereference;
+
+    if t1>t0 then begin
+      computed.t0:=t0;
+      computed.t1:=t1;
+    end else begin
+      computed.t0:=t1;
+      computed.t1:=t0;
+    end;
+  end;
+
+PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass:boolean);
+  CONST initialSampleCount=100;
+
+  VAR xRule,yRule:P_subrule;
+
+  PROCEDURE injectSample(CONST atTime:double);
+    VAR pt:T_realLiteral;
+        i:longint;
+        tmp:T_sampleWithTime;
+        L:P_literal;
+    begin
+      i:=length(computed.temp);
+      setLength(computed.temp,i+1);
+      pt.create(atTime);
+      if xRule=nil then computed.temp[i].x:=atTime
+      else begin
+        L:=xRule^.directEvaluateUnary(@pt,0);
+        computed.temp[i].x:=fReal(L);
+        disposeLiteral(L);
+      end;
+      begin
+        L:=yRule^.directEvaluateUnary(@pt,0);
+        computed.temp[i].y:=fReal(L);
+        disposeLiteral(L);
+      end;
+      pt.destroy;
+      computed.temp[i].t:=atTime;
+      with computed do while (i>0) and (temp[i-1].t>temp[i].t) do begin
+        tmp:=temp[i]; temp[i]:=temp[i-1]; temp[i-1]:=tmp; dec(i);
+      end;
+    end;
+
+  FUNCTION curvature(CONST i:longint):double;
+    VAR p0,p1,p2:T_point;
+    begin
+      with computed do begin
+        if (i<=0) or (i>=length(temp)-1) then exit(0);
+        p0:=activePlot.realToScreen(temp[i-1].x,temp[i-1].y);
+        p1:=activePlot.realToScreen(temp[i  ].x,temp[i  ].y);
+        p2:=activePlot.realToScreen(temp[i+1].x,temp[i+1].y);
+      end;
+      result:=sqr(p0[0]-2*p1[0]+p2[0])
+             +sqr(p0[1]-2*p1[1]+p2[1]);
+      if IsNan(result) or IsInfinite(result) then result:=0;
+    end;
+
+  PROCEDURE copyTempToData;
+    VAR i:longint;
+    begin
+      with computed do begin
+        setLength(sample,length(temp));
+        for i:=0 to length(temp)-1 do begin
+          if IsInfinite(temp[i].x) then sample[i,0]:=NaN
+                                   else sample[i,0]:=temp[i].x;
+          if IsInfinite(temp[i].y) then sample[i,1]:=NaN
+                                   else sample[i,1]:=temp[i].y;
+        end;
+      end;
+    end;
+
+  VAR i:longint;
+      averageCurvature:double;
+  begin
+    if (computed.yRule<>nil) and (length(sample)=0) and not(secondPass) then begin
+      if computed.xRule=nil then xRule:=nil else xRule:=computed.xRule^.value;
+                                                 yRule:=computed.yRule^.value;
+
+      setLength(computed.temp,0);
+      with computed do
+        for i:=0 to initialSampleCount do
+          injectSample(t0+(t1-t0)*i/initialSampleCount);
+
+      copyTempToData;
+    end else if (computed.yRule<>nil) and (length(sample)>0) and secondPass then begin
+      if computed.xRule=nil then xRule:=nil else xRule:=computed.xRule^.value;
+                                                 yRule:=computed.yRule^.value;
+
+      averageCurvature:=0;
+      for i:=1 to length(computed.temp)-1 do
+        averageCurvature:=averageCurvature+curvature(i);
+      averageCurvature:=1E3*averageCurvature/(length(computed.temp)-1);
+
+      repeat
+        i:=0;
+        while (i<length(computed.temp)) do begin
+          if (curvature(i)>averageCurvature) or (curvature(i+1)>averageCurvature) then begin
+            injectSample((computed.temp[i].t+computed.temp[i+1].t)*0.5);
+            inc(i);
+          end;
+          inc(i);
+        end;
+        averageCurvature:=averageCurvature*0.99;
+      until length(computed.temp)>=10*initialSampleCount;
+
+      copyTempToData;
+      setLength(computed.temp,0);
+
+      if computed.xRule<>nil then disposeLiteral(computed.xRule);
+                                  disposeLiteral(computed.yRule);
+      computed.xRule:=nil;
+      computed.yRule:=nil;
     end;
   end;
 
@@ -434,12 +584,12 @@ begin
   result:=(style and C_symbolStyle_impulse)=C_symbolStyle_impulse;
 end;
 
-constructor T_plot.createWithDefaults;
+CONSTRUCTOR T_plot.createWithDefaults;
   begin
     setDefaults;
   end;
 
-procedure T_plot.setDefaults;
+PROCEDURE T_plot.setDefaults;
   VAR axis:char;
   begin
     screenWidth:=200;
@@ -457,23 +607,23 @@ procedure T_plot.setDefaults;
     clear;
   end;
 
-destructor T_plot.destroy;
+DESTRUCTOR T_plot.destroy;
   begin clear; end;
 
-procedure T_plot.addSampleRow(const sampleRow: T_sampleRow);
+PROCEDURE T_plot.addSampleRow(CONST sampleRow: T_sampleRow);
   begin
     setLength(row,length(row)+1);
     row[length(row)-1]:=sampleRow;
   end;
 
-procedure T_plot.clear;
+PROCEDURE T_plot.clear;
   VAR i:longint;
   begin
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,0);
   end;
 
-function T_plot.loadFromFile(var F: T_File): boolean;
+FUNCTION T_plot.loadFromFile(VAR F: T_File): boolean;
   VAR axis:char;
       i,iMax:longint;
   begin
@@ -495,7 +645,7 @@ function T_plot.loadFromFile(var F: T_File): boolean;
     end;
   end;
 
-procedure T_plot.saveToFile(var F: T_File);
+PROCEDURE T_plot.saveToFile(VAR F: T_File);
   VAR axis:char;
       i:longint;
   begin
@@ -510,7 +660,7 @@ procedure T_plot.saveToFile(var F: T_File);
     for i:=0 to length(row)-1 do row[i].saveToFile(f);
   end;
 
-procedure T_plot.setScreenSize(const width, height: longint);
+PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
   PROCEDURE getRanges;
     VAR axis:char;
         i:longint;
@@ -518,7 +668,10 @@ procedure T_plot.setScreenSize(const width, height: longint);
         boundingBox:T_boundingBox;
     begin
       for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=Nan;
-      for i:=0 to length(row)-1 do row[i].getBoundingBox(logscale['x'],logscale['y'],boundingBox);
+      for i:=0 to length(row)-1 do begin
+        row[i].getBoundingBox(logscale['x'],logscale['y'],boundingBox);
+        row[i].computeSamplesInActivePlot(false);
+      end;
       for axis:='x' to 'y' do
         for i:=0 to 1 do begin
           if isNAN(boundingBox[axis,i])
@@ -567,16 +720,25 @@ procedure T_plot.setScreenSize(const width, height: longint);
           range[axis,1]:=center+1E-60;
         end;
       end;
+      for i:=0 to length(row)-1 do row[i].computeSamplesInActivePlot(true);
     end;
 
   PROCEDURE initTics(CONST axis:char);
     PROCEDURE addTic(CONST realPos:double; CONST realTxt:ansistring; CONST isMajorTic:boolean);
+      VAR screenPos:double;
       begin
-        setLength(tic[axis],length(tic[axis])+1);
-        with tic[axis][length(tic[axis])-1] do begin
-          pos:=realToScreen(axis,realPos);
-          major:=isMajorTic;
-          if major then txt:=realTxt else txt:='';
+        screenPos:=realToScreen(axis,realPos);
+        if not(IsNan(screenPos)) and
+           not(IsInfinite(screenPos)) and
+           not(screenPos<0) and
+           not((axis='y') and (screenPos>screenHeight)) and
+           not((axis='x') and (screenPos>screenWidth )) then begin
+          setLength(tic[axis],length(tic[axis])+1);
+          with tic[axis][length(tic[axis])-1] do begin
+            pos:=screenPos;
+            major:=isMajorTic;
+            if major then txt:=realTxt else txt:='';
+          end;
         end;
       end;
 
@@ -656,7 +818,7 @@ procedure T_plot.setScreenSize(const width, height: longint);
     initTics('y');
   end;
 
-function T_plot.longtestYTic: ansistring;
+FUNCTION T_plot.longtestYTic: ansistring;
   VAR i:longint;
   begin
     result:='';
@@ -664,7 +826,7 @@ function T_plot.longtestYTic: ansistring;
     if result='' then result:='.0E';
   end;
 
-function T_plot.setTextSize(const xTicHeight, yTicWidth: longint): boolean;
+FUNCTION T_plot.setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
   begin
     result:=false;
     if wantTics('y') and
@@ -680,7 +842,7 @@ function T_plot.setTextSize(const xTicHeight, yTicWidth: longint): boolean;
     if result then setScreenSize(screenWidth,screenHeight);
   end;
 
-function T_plot.addRow(const styleOptions: string): longint;
+FUNCTION T_plot.addRow(CONST styleOptions: string): longint;
   begin
     result:=length(row);
     SetLength(row,result+1);
@@ -688,17 +850,17 @@ function T_plot.addRow(const styleOptions: string): longint;
     if Trim(styleOptions)<>'' then row[result].style.parseStyle(styleOptions);
   end;
 
-function T_plot.wantTics(const axis: char): boolean;
+FUNCTION T_plot.wantTics(CONST axis: char): boolean;
   begin
     result:=(axisStyle[axis] and C_tics)>0;
   end;
 
-function T_plot.realToScreen(const p: T_point): T_point;
+FUNCTION T_plot.realToScreen(CONST p: T_point): T_point;
   begin
     result:=realToScreen(p[0],p[1]);
   end;
 
-function T_plot.realToScreen(const x, y: double): T_point;
+FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
   begin
     if logscale['x']
     then result[0]:=(ln(x)/ln(10)-range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset
@@ -708,13 +870,24 @@ function T_plot.realToScreen(const x, y: double): T_point;
     else result[1]:=(   y        -range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset;
   end;
 
-function T_plot.realToScreen(const axis: char; const p: double): double;
+FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
   begin
     if axis='x' then result:=realToScreen(p,1)[0]
                 else result:=realToScreen(1,p)[1];
   end;
 
-function T_plot.olx(const x: double): double;
+FUNCTION T_plot.est_curvature(CONST s0,s1,s2: T_point): double;
+  VAR p0,p1,p2:T_point;
+  begin
+    p0:=realToScreen(s0);
+    p1:=realToScreen(s1);
+    p2:=realToScreen(s2);
+    result:=sqr(p0[0]-2*p1[0]+p2[0])
+           +sqr(p0[1]-2*p1[1]+p2[1]);
+    if IsNan(result) or IsInfinite(result) then result:=0;
+  end;
+
+FUNCTION T_plot.olx(CONST x: double): double;
 begin
   if logscale['x'] then begin
     result:=ln(x)/ln(10);
@@ -722,12 +895,12 @@ begin
   end else result:=x;
 end;
 
-function T_plot.oex(const x: double): double;
+FUNCTION T_plot.oex(CONST x: double): double;
 begin
   if logscale['x'] then result:=exp(x*ln(10)) else result:=x;
 end;
 
-function T_plot.oly(const y: double): double;
+FUNCTION T_plot.oly(CONST y: double): double;
 begin
   if logscale['y'] then begin
     result:=ln(y)/ln(10);
@@ -735,12 +908,12 @@ begin
   end else result:=y;
 end;
 
-function T_plot.oey(const y: double): double;
+FUNCTION T_plot.oey(CONST y: double): double;
 begin
   if logscale['y'] then result:=exp(y*ln(10)) else result:=y;
 end;
 
-function T_plot.isSampleValid(const sample: T_point): boolean;
+FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
 begin
   result:=not(IsNan(sample[0])) and
           not(IsInfinite(sample[0])) and
@@ -750,20 +923,20 @@ begin
           (not(logscale['y']) or (sample[1]>=1E-100));
 end;
 
-procedure T_plot.setAutoscale(const autoX, autoY: boolean);
+PROCEDURE T_plot.setAutoscale(CONST autoX, autoY: boolean);
 begin
   autoscale['x']:=autoX;
   autoscale['y']:=autoY;
 end;
 
-function T_plot.getAutoscale: P_listLiteral;
+FUNCTION T_plot.getAutoscale: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newBoolLiteral(autoscale['x']),false);
   result^.append(newBoolLiteral(autoscale['y']),false);
 end;
 
-procedure T_plot.setRange(const x0, y0, x1, y1: double);
+PROCEDURE T_plot.setRange(CONST x0, y0, x1, y1: double);
 begin
   autoscale['x']:=false;
   autoscale['y']:=false;
@@ -773,7 +946,7 @@ begin
   range['y',1]:=oly(y1);
 end;
 
-function T_plot.getRange: P_listLiteral;
+FUNCTION T_plot.getRange: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newListLiteral,false);
@@ -784,7 +957,7 @@ begin
   P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range['y',1])),false);
 end;
 
-procedure T_plot.setAxisStyle(const x, y: longint);
+PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
 begin
   if (x>=0) and (x<255) and (byte(x) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) and
      (y>=0) and (y<255) and (byte(y) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) then begin
@@ -793,14 +966,14 @@ begin
   end;
 end;
 
-function T_plot.getAxisStyle: P_listLiteral;
+FUNCTION T_plot.getAxisStyle: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newIntLiteral(axisStyle['x']),false);
   result^.append(newIntLiteral(axisStyle['y']),false);
 end;
 
-procedure T_plot.setLogscale(const logX, logY: boolean);
+PROCEDURE T_plot.setLogscale(CONST logX, logY: boolean);
 begin
   range['x',0]:=oex(range['x',0]);
   range['x',1]:=oex(range['x',1]);
@@ -815,19 +988,19 @@ begin
   if logscale['x']<>logscale['y'] then preserveAspect:=false;
 end;
 
-function T_plot.getLogscale: P_listLiteral;
+FUNCTION T_plot.getLogscale: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newBoolLiteral(logscale['x']),false);
   result^.append(newBoolLiteral(logscale['y']),false);
 end;
 
-procedure T_plot.setPreserveAspect(const flag: boolean);
+PROCEDURE T_plot.setPreserveAspect(CONST flag: boolean);
 begin
   preserveAspect:=(logscale['x']=logscale['y']) and flag;
 end;
 
-function T_plot.getPreserveAspect: P_boolLiteral;
+FUNCTION T_plot.getPreserveAspect: P_boolLiteral;
 begin
   result:=newBoolLiteral(preserveAspect);
 end;

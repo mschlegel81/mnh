@@ -2,33 +2,44 @@ sum([])->0;
 sum(L)->each(e,L,+);
 
 pascal(n)->pascal([1],n);
-pascal(L,n>0)->pascal(0|L+L|0,n-1);
-pascal(L,n)->each(i,[max(1,size(L)-1)..1],sum(head(L,i)))/sum(L);
-CACHE pascal;
+pascal(L,n>0)->pascal(0.5*(0|L+L|0),n-1);
+pascal(L,n)->each(i,[max(1,size(L)-1)..1],sum(head(L,i)));
+
 limitLength(L,maxLen)->tail(L,size(L)-maxLen);
 
 W(0,n)->1;
 W(k,n)->limitLength(each(i,[0..n-k],1)|pascal(k),n);
 
 atSummand(i)->(-1)^i/(2*i+1);
-CACHE atSummand;
-
 pi:=4*arctan(1);
+piA(n:int)->4*sum(       atSummand([0..n-1]));
+piB(n:int)->4*sum(W(n,n)*atSummand([0..n-1]));
+piA(N:intList)->each(n,N,piA(n));
+piB(N:intList)->each(n,N,piB(n));
 
-piA(k:int,n:int)->4*sum(W(k,n)*atSummand([0..n-1]));
-piA(k:int,N:intList)->each(n,N,piA(k,n));
-CACHE piA;
-piAError(k,n)->abs(piA(k,n)-pi);
+piAError(n)->abs(piA(n)-pi);
+piBError(n)->abs(piB(n)-pi);
 
-//N:=round(sqrt(2)**[1..18]);
-N:=[1..500];
-doPlot->setPlotLogscale([true,true]) and
-        setPlotRange([[min(N),max(N)],[1E-18,5]]) and
-        plot                      (N,piAError(0,N),"black") and
-        each(k,[1..20],and,addPlot(N,piAError(k,N),"black"));
+piATime(n)->abs(time({piA(n)})%[2,1]%%1-[0,pi]);
+piBTime(n)->abs(time({piB(n)})%[2,1]%%1-[0,pi]);
 
+L:=fileExists('piPlots.data')
+   ? expression(fileContents('piPlots.data'))()
+   : [each(i,[1..100]*10,[i,piAError(i)]),
+      each(i,[1.. 60]   ,[i,piBError(i)]),
+      each(i,[1..100]*10,   piATime (i) ),
+      each(i,[1.. 60]   ,   piBTime (i) )];
+
+print(fileExists('piPlots.data')          ? "Data was read." :
+      writeFile('piPlots.data',string(L)) ? "Data was computed and written." :
+                                            "Data was computed; writing failed!");
+
+doPlot->setPlotLogscale([false,true]) and
+        setPlotAutoscale([true,true]) and
+        plot   (L%2,". l") and
+        addPlot(L%3,". l");
+
+L%2;
 doPlot;
+//piBTime(60);
 
-delta(L)->tail(L)-head(L,size(L)-1);
-convOrder(k:int)->(ln(piAError(k,29))-ln(piAError(k,30)))/(ln(29)-ln(30));
-print(each(k,[0..20],&'\n'&,k&"\t"&convOrder(k)));
