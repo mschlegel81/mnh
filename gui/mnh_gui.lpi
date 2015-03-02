@@ -29,7 +29,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5"/>
+        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5\gui"/>
       </local>
     </RunParams>
     <RequiredPackages Count="3">
@@ -113,7 +113,6 @@
         <OverflowChecks Value="True"/>
         <StackChecks Value="True"/>
       </Checks>
-      <VerifyObjMethodCallValidity Value="True"/>
       <Optimizations>
         <OptimizationLevel Value="0"/>
       </Optimizations>
@@ -121,7 +120,6 @@
     <Linking>
       <Debugging>
         <UseHeaptrc Value="True"/>
-        <TrashVariables Value="True"/>
       </Debugging>
     </Linking>
     <Other>

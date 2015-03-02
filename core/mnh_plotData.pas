@@ -176,6 +176,9 @@ type
     PROCEDURE setPreserveAspect(CONST flag: boolean);
     FUNCTION getPreserveAspect: P_boolLiteral;
 
+    PROCEDURE zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double);
+    PROCEDURE panByPixels(CONST pixelDX,pixelDY:longint);
+
     PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
   end;
 
@@ -1269,18 +1272,14 @@ FUNCTION T_plot.realToScreen(CONST p: T_point): T_point;
 
 FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
   begin
-    result[0] := (olx(x) - range['x', 0]) / (range['x', 1] - range['x', 0]) *
-      (screenWidth - xOffset) + xOffset;
-    result[1] := (oly(y) - range['y', 0]) / (range['y', 1] - range['y', 0]) *
-      (-yOffset) + yOffset;
+    result[0] := (olx(x) - range['x', 0]) / (range['x', 1] - range['x', 0]) * (screenWidth - xOffset) + xOffset;
+    result[1] := (oly(y) - range['y', 0]) / (range['y', 1] - range['y', 0]) * (-yOffset) + yOffset;
   end;
 
 FUNCTION T_plot.screenToReal(CONST x, y: longint): T_point;
   begin
-    result[0] := oex((x - xOffset) / (screenWidth - xOffset) *
-      (range['x', 1] - range['x', 0]) + range['x', 0]);
-    result[1] := oey((y - yOffset) / (-yOffset) * (range['y', 1] - range['y', 0]) +
-      range['y', 0]);
+    result[0] := oex((x - xOffset) / (screenWidth - xOffset) * (range['x', 1] - range['x', 0]) + range['x', 0]);
+    result[1] := oey((y - yOffset) / (-yOffset)              * (range['y', 1] - range['y', 0]) + range['y', 0]);
   end;
 
 FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
@@ -1433,6 +1432,32 @@ PROCEDURE T_plot.setPreserveAspect(CONST flag: boolean);
 FUNCTION T_plot.getPreserveAspect: P_boolLiteral;
   begin
     result := newBoolLiteral(preserveAspect);
+  end;
+
+PROCEDURE T_plot.zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double);
+  VAR holdX,holdY:double;
+  begin
+    autoscale['x']:=false;
+    autoscale['y']:=false;
+    holdX := (pixelX - xOffset) / (screenWidth - xOffset) * (range['x', 1] - range['x', 0]) + range['x', 0];
+    holdY := (pixelY - yOffset) / (-yOffset)              * (range['y', 1] - range['y', 0]) + range['y', 0];
+    range['x',0]:=(range['x',0]-holdX)*factor+holdX;
+    range['x',1]:=(range['x',1]-holdX)*factor+holdX;
+    range['y',0]:=(range['y',0]-holdY)*factor+holdY;
+    range['y',1]:=(range['y',1]-holdY)*factor+holdY;
+  end;
+
+PROCEDURE T_plot.panByPixels(CONST pixelDX,pixelDY:longint);
+  VAR worldDX,worldDY:double;
+  begin
+    autoscale['x']:=false;
+    autoscale['y']:=false;
+    worldDX:=pixelDX / (screenWidth - xOffset) *  (range['x', 1] - range['x', 0]);
+    worldDY:=pixelDY / (-yOffset) * (range['y', 1] - range['y', 0]);
+    range['x',0]:=range['x',0]+worldDX;
+    range['x',1]:=range['x',1]+worldDX;
+    range['y',0]:=range['y',0]+worldDY;
+    range['y',1]:=range['y',1]+worldDY;
   end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
@@ -2174,14 +2199,38 @@ INITIALIZATION
   mnh_funcs.registerRule('plot', @plot,
     'plot(list,[options]); //plots flat numeric list or xy-list' +
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list' +
-    '#plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'
-    +
-    '#plot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+    '#plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]' +
+    '#plot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]'+
+    '#options are optional and given in the form of a string, the individual option items being delimited by spaces'+
+    '#valid options are:'+
+    '#Style/size modifier: any real number'+
+    '#Styles:'+
+    '#  line; l;'+
+    '#  stepLeft;'+
+    '#  stepRight;'+
+    '#  fill;'+
+    '#  bar;'+
+    '#  box;'+
+    '#  dot; .;'+
+    '#  plus; +;'+
+    '#  cross; x;'+
+    '#  impulse; i;'+
+    '#Colors:'+
+    '#  black;'+
+    '#  red;'+
+    '#  blue;'+
+    '#  green;'+
+    '#  purple;'+
+    '#  orange;'+
+    '#  RGB$,$,$; //With three real numbers in range [0,1]'+
+    '#  HSV$,$,$; //With three real numbers in range [0,1]'+
+    '#  HUE$; //With one real number '+
+    '#  GREY$; //With one real number in range [0,1]');
   mnh_funcs.registerRule('addPlot', @addPlot,
-    'addPlot(list,[options]); //adds plot flat numeric list or xy-list' +
-    '#addPlot(xList,yList,[options]); //plots flat numeric list or xy-list' +
-    '#addPlot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'
-    + '#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+    'addPlot(list,[options]); //adds plot of flat numeric list or xy-list' +
+    '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list' +
+    '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]' +
+    '#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
   mnh_funcs.registerRule('setPlotAutoscale', @setAutoscale,
     'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
   mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,
@@ -2196,6 +2245,11 @@ INITIALIZATION
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
   mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
     'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true.');
+  //C_tics = 1;
+  //C_grid = 2;
+  //C_finerGrid = C_grid + 4; //=6
+  //C_ticsAndGrid = C_tics + C_grid; //=3
+  //C_ticsAndFinerGrid = C_tics + C_finerGrid; //=7
   mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,
     'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
   mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,

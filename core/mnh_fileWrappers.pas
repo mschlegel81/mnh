@@ -124,8 +124,8 @@ FUNCTION locateSources:T_stringList;
 
   begin
     setLength(result, 0);    recursePath('');
-    if length(result)=0 then recursePath('..');
-    if length(result)=0 then recursePath('..\..');
+    if length(result)=0 then recursePath('..\');
+    if length(result)=0 then recursePath('..\..\');
   end;
 
 

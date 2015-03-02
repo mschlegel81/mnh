@@ -108,6 +108,7 @@ PROCEDURE interactiveMode;
     writeln;    
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
+    writeln('End a line with a \ to continue the input.');
     
     readInputFromConsole;
     while not(hasExitSignal) do begin      

@@ -7,21 +7,26 @@
 </head>
 <body>
 <h2 align="center"><a href="index.html">MNH 5</a> - Quickstart</h3>
-<div align="right">
-<font color="#a0a0a0">
-<hr> </font>
-</div>
-<h4><a href="quickstart.html">Quick start</a></h4>
-<h4><a href="operators.html">Operators</a></h4>
-<h4><a href="functions.html">Function definitions</a></h4>
-<h4><a href="each.html">Special constructs: each </font> and pEach</a></h4>
-<h4><a href="builtin.html">Built-in Functions</a></h4>
-<h4><a href="packages.html">User packages</a></h4>
-<tr bgcolor="#FFFACD">
+<div align="right"><hr> </font></div>
+MNH5 comes in 6 flavours (for each compilation target):<ul>
+  <li> <b>mnh_gui</b>: a GUI version with plotting support
+  <li> <b>mnh_console</b>: a simple console version with plotting support and the possibility to run executable MNH-packages from the command line-height
+  <li> <b>mnh_light</b>: a slimmed down console version without plotting support (for the cases where size matters)
+  <li> ... and the debug-version of each of the above
+</ul>
 
-<div align="right">
-<font color="#a0a0a0">
-<hr> </font>
+You can just start an executable of any flavour and start typing. Most of the inputs will result in understandable outputs (the exception being infinite loops, 
+fork bombs and other "pathologic" examples).<br>
+<br>
+The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
+1+2;
+</code> Or an assignment<code>
+x:=1;
+</code> Or a declaration<code>
+f(x)->sin(x);
+
+<div align="right"><hr> </font></div>
+
 </div>
 </body>
 </html>

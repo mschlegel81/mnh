@@ -118,12 +118,47 @@ The <code>&</code>-operator for string concatenation (inspired from Excel) was i
 </table>
 <h3><a name="listOps"> List operators</a></h3>
 <table border="0">
-<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td> </td></tr>
-<tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td> </td></tr>
-<tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
-<tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
-<tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
-<tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td> 
+The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
+  x | y -> [x,y];
+  x |[y]-> [x,y];
+ [x]| y -> [x,y];
+  x |[y]-> [x,y];
+</code>
+However the result does not have to be a flat list; e.g.<code>
+  x |[[y]]->[x,[y]];
+</code>
+</td></tr>
+
+<tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td> 
+The in-operator (inspired by SQL) tests, if the left hand side operand is contained in the right hand side operand.<br>
+For obvious reasons the right hand side operands must be a list.<br>
+<code> x in [y0,y1,...] -> x==y0 or x==y1 or ...;
+</code> or, if you are already famliar with the <a href="each.html">each-construct</a>:<code>
+x in Y -> each(y,Y,or,x==y);</code>
+</td></tr>
+<tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td> 
+The extraction operator can be used to access list items by their index (starting with 0) or by a boolean mask. The right hand operand must be an integer, a list of integers or a list of booleans with the same
+number of elements as the left hand side operand:<code>
+  ["a","b","c"]%0 -> "a";
+  ["a","b","c"]%[true,false,true] -> ["a","c"];
+  ["a","b","c"]%[2,1,0] -> ["c","b","a"];
+</code>
+</td></tr>
+<tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 2 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [X0,X1,X2,...]%%Y -> [X0%Y,X1%Y,X2%Y,...]</code>
+</td></tr>
+
+<tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 3 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [X0,X1,X2,...]%%%Y -> [X0%%Y,X1%%Y,X2%%Y,...]</code>
+</td></tr>
+
+<tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 4 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [X0,X1,X2,...]%%%%Y -> [X0%%%Y,X1%%%Y,X2%%%Y,...]</code>
+</td></tr>
 </table>
 
 <h3><a name="iifOps"> The ternary inline-if operator</a></h3>

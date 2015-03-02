@@ -9,6 +9,7 @@ VAR
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
   mnh_console_executable:ansistring;
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 
 //Callbacks:--------------------------------
 TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
@@ -17,6 +18,7 @@ VAR resolveNullaryCallback:T_resolveNullaryCallback;
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
 VAR stringToExprCallback:T_stringToExprCallback;
 //--------------------------------:Callbacks
+
 IMPLEMENTATION
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
@@ -1225,40 +1227,6 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
-FUNCTION interpret_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  VAR fileByScriptName,filename:ansistring;
-      cmdLinePar:T_stringList;
-      i:longint;
-      output:TStringList;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
-      filename        :=             P_stringLiteral(params^.value(0))^.value;
-      fileByScriptName:=locateSource('',P_stringLiteral(params^.value(0))^.value);
-      if (fileByScriptName      <>'') and FileExists(fileByScriptName) then filename:=fileByScriptName;
-      if (filename              <>'') and FileExists(filename) and
-         (mnh_console_executable<>'') and FileExists(mnh_console_executable) then begin
-        setLength(cmdLinePar,1);
-        cmdLinePar[0]:=filename;
-        if params^.size=2 then begin
-          setLength(cmdLinePar,1+P_listLiteral(params^.value(1))^.size);
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-            cmdLinePar[i+1]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
-        end;
-        runCommand(mnh_console_executable,
-                   cmdLinePar,
-                   output);
-        result:=newListLiteral;
-        for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
-        output.Free;
-      end else begin
-        raiseError(el1_note,'File or script "'+P_stringLiteral(params^.value(0))^.value+'" cannot be found.',tokenLocation);
-        result:=newListLiteral;
-      end;
-    end else raiseNotApplicableError('interpret',params,tokenLocation);
-  end;
-
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_stringList;
@@ -1385,6 +1353,92 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     raiseNotApplicableError('trueCount',params,tokenLocation);
   end;
 
+FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and
+      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) then begin
+       case params^.Value(0)^.literalType of
+         lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.Value(0))^.Value)));
+         lt_int:  exit(newBoolLiteral(false));
+         lt_intList: begin
+           result:=newListLiteral;
+           for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+             P_listLiteral(result)^.append(newBoolLiteral(false),false);
+         end;
+         else begin
+           result:=newListLiteral;
+           for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+             P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.Value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.Value(0)))^.Value)),false);
+         end;
+       end;
+    end else raiseNotApplicableError('isNan',params,tokenLocation);
+  end;
+
+FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and
+      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) then begin
+      case params^.Value(0)^.literalType of
+        lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.Value(0))^.Value)));
+        lt_int:  exit(newBoolLiteral(false));
+        lt_intList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+            P_listLiteral(result)^.append(newBoolLiteral(false),false);
+        end;
+        else begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+            P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.Value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.Value(0)))^.Value)),false);
+        end;
+      end;
+    end else raiseNotApplicableError('isInfinite',params,tokenLocation);
+  end;
+
+FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR r0,r1:extended;
+  FUNCTION inRange(CONST L:P_literal):boolean; inline;
+    VAR i:int64;
+        r:extended;
+    begin
+      if l^.literalType=lt_real then begin
+        r:=P_realLiteral(l)^.Value;
+        result:=not(IsNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
+      end else begin
+        i:=P_intLiteral(l)^.Value;
+        result:=(r0<=i) and (i<=r1);
+      end;
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and
+      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) and
+       (params^.Value(1)^.literalType in [lt_real,lt_int]) and
+       (params^.Value(2)^.literalType in [lt_real,lt_int]) then begin
+      if params^.Value(1)^.literalType=lt_real
+        then r0:=P_realLiteral(params^.Value(1))^.Value
+        else r0:=P_intLiteral (params^.Value(1))^.Value;
+      if params^.Value(2)^.literalType=lt_real
+        then r1:=P_realLiteral(params^.Value(2))^.Value
+        else r1:=P_intLiteral (params^.Value(2))^.Value;
+      if params^.Value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.Value(0))))
+      else begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+          P_listLiteral(result)^.append(newBoolLiteral(inRange(P_listLiteral(params^.Value(0))^.Value(i))),false);
+      end;
+    end else raiseNotApplicableError('isInRange',params,tokenLocation);
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
@@ -1437,12 +1491,14 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  registerRule('interpret'     ,@interpret_impl,'interpret(filenameOrPackageId:string);#Evaluates the specified file and returns the text output');
   registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
-  registerRule('myPath',@myPath_impl,'returns the path to the current package');
+  registerRule('myPath'        ,@myPath_impl,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
+  registerRule('isNan'         ,@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
+  registerRule('isInfinite'    ,@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
+  registerRule('isInRange'     ,@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

@@ -8,7 +8,7 @@ uses
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
   mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc;
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens;
 
 type
 
@@ -16,6 +16,9 @@ type
 
   TMnhForm = class(TForm)
     ErrorMemo: TMemo;
+    MenuItem3: TMenuItem;
+    miHelp: TMenuItem;
+    miHelpExternally: TMenuItem;
     miAntiAliasingOff: TMenuItem;
     miAntiAliasing2: TMenuItem;
     miAntiAliasing3: TMenuItem;
@@ -54,7 +57,6 @@ type
     miFileHistory4: TMenuItem;
     miFileHistory5: TMenuItem;
     miOpenNpp: TMenuItem;
-    miHelp: TMenuItem;
     miHaltEvalutaion: TMenuItem;
     miEvalModeDirect: TMenuItem;
     miEvaluateNow: TMenuItem;
@@ -91,6 +93,7 @@ type
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: char);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
@@ -119,6 +122,7 @@ type
     PROCEDURE miFileHistory9Click(Sender: TObject);
     PROCEDURE miHaltEvalutaionClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
+    procedure miHelpExternallyClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOpenNppClick(Sender: TObject);
@@ -145,8 +149,14 @@ type
     PROCEDURE OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     PROCEDURE PageControlChange(Sender: TObject);
+    procedure plotImageMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
+    procedure plotImageMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure PopupNotifier1Close(Sender: TObject; var CloseAction: TCloseAction
+      );
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR Value: string;
       SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
@@ -185,6 +195,7 @@ VAR errorThroughput:array of T_storedError;
     plotSubsystem:record
       rendering:boolean;
       state:(pss_neutral, pss_plotAfterCalculation, pss_plotOnShow);
+      lastMouseX,lastMouseY:longint;
     end;
 
 {$R *.lfm}
@@ -247,7 +258,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 
 PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
   begin
-    if (caret.y>0) and (caret.y<=lines.Count) then begin
+    if miHelp.Checked and (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
       if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
         PopupNotifier1.Title:=underCursor.tokenText;
@@ -368,6 +379,15 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     ad_killEvaluationLoopSoftly;
   end;
 
+procedure TMnhForm.FormKeyPress(Sender: TObject; var Key: char);
+begin
+  if (PageControl.ActivePageIndex=1) and (key in ['+','-']) then begin
+    if key='+' then activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,0.9)
+               else activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9);
+    doPlot();
+  end;
+end;
+
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -384,12 +404,11 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
-    //DoubleBuffered:=true;
-    //plotImage.AntialiasingMode:=amOn;
     if not(settingsHaveBeenProcessed) then begin
       processSettings;
       InputEdit.SetFocus;
     end;
+    KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
   end;
 
@@ -604,6 +623,12 @@ begin
                          else if underCursor.tokenText<>'' then positionHelpNotifier;
 end;
 
+procedure TMnhForm.miHelpExternallyClick(Sender: TObject);
+begin
+  findAndDocumentAllPackages;
+  OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
+end;
+
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -713,12 +738,46 @@ begin
   end;
 end;
 
+procedure TMnhForm.plotImageMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if ssLeft in Shift then begin
+    plotSubsystem.lastMouseX:=x;
+    plotSubsystem.lastMouseY:=y;
+  end;
+end;
+
 PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
   VAR p:T_point;
   begin
     p:=activePlot.screenToReal(x,y);
     StatusBar.SimpleText:='x='+FloatToStr(p[0])+'; y='+FloatToStr(p[1]);
+    if ssLeft in Shift then with plotSubsystem do begin
+      activePlot.panByPixels(lastMouseX-x,lastMouseY-y);
+      doPlot();
+    end;
+    with plotSubsystem do begin
+      lastMouseX:=x;
+      lastMouseY:=y;
+    end;
   end;
+
+procedure TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if ssLeft in Shift then with plotSubsystem do begin
+    activePlot.panByPixels(x-lastMouseX,y-lastMouseY);
+    lastMouseX:=x;
+    lastMouseY:=y;
+    doPlot();
+  end;
+end;
+
+procedure TMnhForm.PopupNotifier1Close(Sender: TObject;
+  var CloseAction: TCloseAction);
+begin
+  miHelp.Checked:=false;
+end;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
@@ -1018,6 +1077,7 @@ FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
+
 INITIALIZATION
   mnh_funcs.registerRule('plot',@plot,'');
   mnh_funcs.registerRule('addPlot',@addPlot,'');
@@ -1035,8 +1095,6 @@ INITIALIZATION
   output.create;
   setLength(errorThroughput,0);
 
-  mnh_doc.documentBuiltIns;
-  findAndDocumentAllPackages;
 FINALIZATION
   output.destroy;
 end.

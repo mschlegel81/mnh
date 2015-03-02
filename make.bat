@@ -65,18 +65,18 @@
 
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
-@mkdir distro\mnh\packages
-@mkdir distro\mnh\demos
-@mkdir distro\mnh\doc
-@copy packages\*.mnh distro\mnh\packages
-@copy demos\*.mnh distro\mnh\demos
-@copy doc\*.mnh distro\mnh\doc
+@mkdir distro\packages
+@mkdir distro\demos
+@mkdir distro\doc
+@copy packages\*.mnh distro\packages
+@copy demos\*.mnh distro\demos
+@copy doc\*.mnh distro\doc
 @cd distro
-@copy ..\bin64\* .
+@copy ..\bin64\*.exe .
 @del ..\versions\mnh5_win??_%mydate%.7z
 @%sevenZip% a -mx=9 ..\versions\mnh5_win64_%mydate%.7z
 @del /Q *
-@copy ..\bin32\* .
+@copy ..\bin32\*.exe .
 @%sevenZip% a -mx=9 ..\versions\mnh5_win32_%mydate%.7z
 @cd ..
 @rmdir /S /Q distro

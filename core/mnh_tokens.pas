@@ -334,7 +334,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
           exit;
         end;
 
-        if evaluateBody then reduceExpression(ruleBody,0);
+        if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,0);
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           subRule^.publish:=not(ruleIsPrivate);
@@ -614,6 +614,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     cascadeDisposeToken(t);
   end;
 
+
 FUNCTION getMainPackage: P_package;
   begin
     result:=@mainPackage;
@@ -623,11 +624,6 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   VAR copyOfLine:ansistring;
       lineLocation:T_tokenLocation;
   begin
-    if not(mainPackage.ready) then begin
-      result.create;
-      result.define(C_nilTokenLocation,'ERR',tt_eol);
-      exit(result);
-    end;
     try
       copyOfLine:=line;
       lineLocation.provider:=mainPackage.codeProvider;
@@ -660,6 +656,7 @@ PROCEDURE findAndDocumentAllPackages;
       p.destroy;
     end;
     writeUserPackageDocumentations;
+    documentBuiltIns;
   end;
 
 INITIALIZATION

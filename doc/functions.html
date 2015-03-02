@@ -16,11 +16,53 @@
 <li><h4><a href="#pureMod">pure</a></h4></li></ul>
 <div align="right"><hr> </font></div>
 <h3><a name="declarations">Declarations</a></h3>
+A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
+The declaration may be preceded by <a href="#modifiers">modifiers</a>, the pattern may be empty (producing a nullary function).<br>
+<i>Patterns</i> form a means for case distinction. They may also serve to make the function "somewhat typesafe". The most primitive pattern element is just an identifier, without any restrictions:<code>
+  f(x)->sin(1/x);</code><br>
+Patterns may consist of any number of elements:<code>
+  g(a,b,c,d,e,f,g)->a+b*c/d^e-f*g;</code><br>
+Please have a look at <a href="#restrictions">Parameter restrictions</a> for more sophisticated patterns.
+
 <h3><a name="assignments">Assignments</a></h3>
+An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>ruleBody</i>.<br>
+As you can see it is identical to the declaration prototype apart from the assignment operator. Behaviour is only almost identical: An assignment is evaluated "<i>on declaration</i>", while a declaration is evaluated only when it 
+is called. This is important when you take side effects into account. A reasonable example would be:<code>
+  pi:=4*arctan(1);</code><br>
+This defines pi and is evaluated only once. 
+
 <h3><a name="restrictions">Parameter restrictions</a></h3>
+Parameter restrictions fall in three categories:<ul>
+  <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>)
+  <li> Comparison with a literal (see <a href="operators.html#compOps"> Comparators</a>)
+  <li> Comparison with another parameter
+</ul>
+Apart from the type checks defined as unary operator there are two type checks which look like comparisons:<ul>
+  <li> <code>x=[]</code> matches, if x is an empty list
+  <li> <code>x<>[]</code> matches, if x is a list but not empty
+</ul>
+If a rule has several subrules (i.e. there are several declarations with the same ID), the subrules are tested in order of their declaration and the first matching subrule will be applied.<br>
+Example: <code>
+  fib(i<=1)->1;                      //recursion terminates
+  fib(i:int)->fib(i-1)+fib(i-2);     //recursion step
+  fib(I:intList)->each(i,I,fib(i));  //vectorization
+</code> 
+There is a shorthand for tests on equality: the first comparand can be omitted:<br>
+<code>  f(x=1)...;  </code> is eqivalent to <code>f(x)...;</code><br>
+<code>  f(x=y,y)...;</code> is eqivalent to <code>f(y,y)...;</code><br>
+<code>  f(x=[])...; </code> is eqivalent to <code>f([])...;</code><br>
+
 <h3><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
+The <i>private modifier</i> can be used to hide a subrule from importing packages.
+Inside of the package containing the modified subrule it is usable as any other rule.
+
 <h4><a name="pureMod">pure</a></h4>
+The <i>pure modifier</i> enables caching for the complete rule; if one subrule of a rule is marked as pure, then the complete rule is pure.
+<br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
+map has a size limit - if this limit is exceeded, the least recently used key-value-pairs are "forgotten".<br>
+Used appropriately, caching results in enormous speedup. <br>
+Note that pure functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
 
 <div align="right"><hr> </font></div>
 </body>

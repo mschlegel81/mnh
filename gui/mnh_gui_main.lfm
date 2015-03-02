@@ -12,6 +12,7 @@ object MnhForm: TMnhForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyPress = FormKeyPress
   OnResize = FormResize
   OnShow = FormShow
   LCLVersion = '1.2.2.0'
@@ -1074,7 +1075,9 @@ object MnhForm: TMnhForm
         Top = 0
         Width = 2048
         AntialiasingMode = amOn
+        OnMouseDown = plotImageMouseDown
         OnMouseMove = plotImageMouseMove
+        OnMouseUp = plotImageMouseUp
       end
     end
   end
@@ -1220,11 +1223,6 @@ object MnhForm: TMnhForm
         ShortCut = 16573
         OnClick = miDecFontSizeClick
       end
-      object miHelp: TMenuItem
-        Caption = 'Display help'
-        ShortCut = 112
-        OnClick = miHelpClick
-      end
     end
     object submenuPlotOptions: TMenuItem
       Caption = 'Plot options'
@@ -1323,6 +1321,18 @@ object MnhForm: TMnhForm
         OnClick = miLogscaleYClick
       end
     end
+    object miHelpExternally: TMenuItem
+      Caption = 'Help'
+      ShortCut = 112
+      object miHelp: TMenuItem
+        Caption = 'Display help popup'
+        OnClick = miHelpClick
+      end
+      object MenuItem3: TMenuItem
+        Caption = 'Open documentation'
+        OnClick = miHelpExternallyClick
+      end
+    end
   end
   object UpdateTimeTimer: TTimer
     Enabled = False
@@ -1352,6 +1362,7 @@ object MnhForm: TMnhForm
     Text = 'Text'
     Title = 'Caption'
     Visible = False
+    OnClose = PopupNotifier1Close
     left = 228
     top = 46
   end
