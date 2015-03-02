@@ -1,6 +1,8 @@
 UNIT mnh_plotData;
 INTERFACE
-USES myFiles,sysutils,math,mnh_litvar,mnh_tokens,mnh_constants,mnh_out_adapters;
+USES myFiles,sysutils,math,mnh_litvar,mnh_tokens,mnh_constants,mnh_out_adapters,mnh_tokloc,
+     mnh_funcs,
+     Interfaces,ExtCtrls,Graphics,types;
 TYPE
   T_colorChannel=(cc_red,cc_green,cc_blue);
 
@@ -139,6 +141,7 @@ TYPE
     FUNCTION realToScreen(CONST p :T_point):T_point;
     FUNCTION realToScreen(CONST x,y:double):T_point;
     FUNCTION realToScreen(CONST axis:char; CONST p:double):double;
+    FUNCTION screenToReal(CONST x,y:longint):T_point;
     FUNCTION est_curvature(CONST s0,s1,s2: T_point):double;
     FUNCTION olx(CONST x:double):double;
     FUNCTION oex(CONST x:double):double;
@@ -156,10 +159,21 @@ TYPE
     FUNCTION  getLogscale:P_listLiteral;
     PROCEDURE setPreserveAspect(CONST flag:boolean);
     FUNCTION  getPreserveAspect:P_boolLiteral;
+
+    PROCEDURE renderPlot(VAR plotImage:TImage; CONST supersampling:longint);
   end;
 
 VAR activePlot:T_plot;
-FUNCTION fReal(CONST X:P_literal):double; inline;
+
+FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+
+//FUNCTION fReal(CONST X:P_literal):double; inline;
 IMPLEMENTATION
 FUNCTION fReal(CONST X:P_literal):double; inline;
   begin
@@ -541,17 +555,17 @@ FUNCTION T_style.getSymbolRad: double;
 
 FUNCTION T_style.wantStraightLines: boolean;
 begin
-  result:=(style and C_anyLineStyle)=C_lineStyle_straight;
+  result:=(style and C_anyLineStyle) in [C_lineStyle_straight,C_lineStyle_straight or C_lineStyle_filled];
 end;
 
 FUNCTION T_style.wantLeftSteps: boolean;
 begin
-  result:=(style and C_anyLineStyle)=C_lineStyle_stepLeft;
+  result:=(style and C_anyLineStyle) in [C_lineStyle_stepLeft,C_lineStyle_stepLeft or C_lineStyle_filled];
 end;
 
 FUNCTION T_style.wantRightSteps: boolean;
 begin
-  result:=(style and C_anyLineStyle)=C_lineStyle_stepRight;
+  result:=(style and C_anyLineStyle) in [C_lineStyle_stepRight,C_lineStyle_stepRight or C_lineStyle_filled];
 end;
 
 FUNCTION T_style.wantFill: boolean;
@@ -912,12 +926,14 @@ FUNCTION T_plot.realToScreen(CONST p: T_point): T_point;
 
 FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
   begin
-    if logscale['x']
-    then result[0]:=(ln(x)/ln(10)-range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset
-    else result[0]:=(   x        -range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset;
-    if logscale['y']
-    then result[1]:=(ln(y)/ln(10)-range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset
-    else result[1]:=(   y        -range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset;
+    result[0]:=(olx(x)-range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset;
+    result[1]:=(oly(y)-range['y',0])/(range['y',1]-range['y',0])*(           -yOffset)+yOffset;
+  end;
+
+FUNCTION T_plot.screenToReal(CONST x,y:longint):T_point;
+  begin
+    result[0]:=oex((x-xOffset)/(screenWidth-xOffset)*(range['x',1]-range['x',0])+range['x',0]);
+    result[1]:=oey((y-yOffset)/(           -yOffset)*(range['y',1]-range['y',0])+range['y',0]);
   end;
 
 FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
@@ -1055,8 +1071,550 @@ begin
   result:=newBoolLiteral(preserveAspect);
 end;
 
+PROCEDURE T_plot.renderPlot(VAR plotImage:TImage; CONST supersampling:longint);
+  PROCEDURE drawGridAndRows(CONST target:TCanvas; CONST scalingFactor:longint);
+    VAR rowId,i,x,y,yBaseLine,lastX,lastY:longint;
+        symSize:double;
+        lastWasValid,currentIsValid:boolean;
+        sample:T_point;
+        patternIdx:byte;
+        rowColor:longint;
+
+    PROCEDURE drawPatternRect(x0,y0,x1,y1:longint);
+      VAR x,y,locY:longint;
+      begin
+        if x1<x0 then begin
+          x:=x1; x1:=x0; x0:=x;
+        end;
+        for x:=x0 to x1 do begin
+          if (x1>x0) then locY:=round(y0+(y1-y0)*(x-x0)/(x1-x0))
+                     else locY:=round(0.5*(y0+y1));
+          if locY>yBaseLine then begin
+            for y:=yBaseLine to locY do
+            if (x and 1)+2*(y and 1)=patternIdx then
+              target.Pixels[x,y]:=rowColor;
+          end else begin
+            for y:=yBaseLine downto locY do
+            if (x and 1)+2*(y and 1)=patternIdx then
+              target.Pixels[x,y]:=rowColor;
+          end;
+        end;
+      end;
+
+    begin
+      //Clear:------------------------------------------------------------------
+      target.Brush.Style:=bsSolid;
+      target.Brush.Color:=clWhite;
+      target.Pen.Style  :=psClear;
+      target.Pen.EndCap :=pecSquare;
+      target.FillRect(0,0,target.Width-1,target.Height-1);
+      target.Clear;
+      //------------------------------------------------------------------:Clear
+      //coordinate grid:========================================================
+      target.Pen.Style:=psSolid;
+      target.Pen.Width:=scalingFactor;
+      //minor grid:-------------------------------------------------------------
+      target.Pen.Color:=$DDDDDD;
+      for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if not(major) then begin
+        y:=round(pos*scalingFactor);
+        target.Line(0,y,screenWidth*scalingFactor,y);
+      end;
+      for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if not(major) then begin
+        x:=round(pos*scalingFactor);
+        target.Line(x,0,x,screenHeight*scalingFactor);
+      end;
+      //-------------------------------------------------------------:minor grid
+      //major grid:-------------------------------------------------------------
+      target.Pen.Color:=$BBBBBB;
+      for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
+        y:=round(pos*scalingFactor);
+        target.Line(0,y,screenWidth*scalingFactor,y);
+      end;
+      for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
+        x:=round(pos*scalingFactor);
+        target.Line(x,0,x,screenHeight*scalingFactor);
+      end;
+      //-------------------------------------------------------------:major grid
+      //========================================================:coordinate grid
+      //row data:===============================================================
+      if logscale['y'] then yBaseLine:=round(realToScreen('y',1)*scalingFactor)
+                       else yBaseLine:=round(realToScreen('y',0)*scalingFactor);
+      if yBaseLine<0 then yBaseLine:=0 else if yBaseLine>=target.Height then yBaseLine:=target.Height-1;
+      for rowId:=0 to length(row)-1 do begin
+        rowColor:=row[rowId].style.getTColor;
+        patternIdx:=rowId and 3;
+
+        if row[rowId].style.wantStraightLines then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
+          lastWasValid:=false;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
+              if lastWasValid then begin
+                target.LineTo(x,y);
+                if row[rowId].style.wantFill then drawPatternRect(lastX,lastY,x,y);
+              end else target.MoveTo(x,y);
+              lastX:=x;
+              lastY:=y;
+            end;
+            lastWasValid:=currentIsValid;
+          end;
+        end else if row[rowId].style.wantLeftSteps then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
+          lastWasValid:=false;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
+              if lastWasValid then begin
+                target.LineTo(lastX,y);
+                target.LineTo(    x,y);
+                if row[rowId].style.wantFill then drawPatternRect(lastX,y,x,y);
+              end else target.MoveTo(x,y);
+              lastX:=x;
+              lastY:=y;
+            end;
+            lastWasValid:=currentIsValid;
+          end;
+        end else if row[rowId].style.wantRightSteps then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
+          lastWasValid:=false;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
+              if lastWasValid then begin
+                target.LineTo(x,lastY);
+                target.LineTo(x,    y);
+                if row[rowId].style.wantFill then drawPatternRect(lastX,lastY,x,lastY);
+              end else target.MoveTo(x,y);
+              lastX:=x;
+              lastY:=y;
+            end;
+            lastWasValid:=currentIsValid;
+          end;
+        end else if row[rowId].style.wantBars then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
+
+          lastWasValid:=false;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
+              if lastWasValid then begin
+                drawPatternRect(round(lastX*0.95+x*0.05),lastY,
+                                round(lastX*0.05+x*0.95),lastY);
+                target.Line(round(lastX*0.95+x*0.05),yBaseLine,round(lastX*0.95+x*0.05),lastY);
+                target.Line(round(lastX*0.95+x*0.05),lastY    ,round(lastX*0.05+x*0.95),lastY);
+                target.Line(round(lastX*0.05+x*0.95),yBaseLine,round(lastX*0.05+x*0.95),lastY);
+              end;
+              lastX:=x;
+              lastY:=y;
+              lastWasValid:=currentIsValid;
+            end;
+          end;
+
+        end else if row[rowId].style.wantBoxes then begin
+          target.Pen.Style:=psClear;
+          target.Brush.Style:=bsSolid;
+          target.Brush.Color:=rowColor;
+          lastWasValid:=false;
+          i:=0;
+          while i+1<length(row[rowId].sample) do begin
+            sample:=row[rowId].sample[i];
+            if isSampleValid(sample) then begin
+              sample:=realToScreen(sample);
+              lastX:=round(sample[0]*scalingFactor);
+              lastY:=round(sample[1]*scalingFactor);
+              sample:=row[rowId].sample[i+1];
+              if isSampleValid(sample) then begin
+                sample:=realToScreen(sample);
+                x:=round(sample[0]*scalingFactor);
+                y:=round(sample[1]*scalingFactor);
+                target.FillRect(lastX,lastY,x,y);
+              end;
+            end;
+            inc(i,2);
+          end;
+        end;
+        if row[rowId].style.wantDot then begin
+          target.Pen.Style:=psClear;
+          target.Brush.Style:=bsSolid;
+          target.Brush.Color:=rowColor;
+          symSize:=row[rowId].style.getSymbolWidth*scalingFactor;
+
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              //target.Pixels[round(sample[0]*scalingFactor),round(sample[1]*scalingFactor)]:=rowColor;
+              target.Ellipse(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor-symSize),
+                             round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor+symSize));
+            end;
+          end;
+        end;
+        if row[rowId].style.wantPlus then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
+          symSize:=row[rowId].style.getSymbolWidth*scalingFactor;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              target.Line(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor),
+                                    round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor));
+              target.Line(round(sample[0]*scalingFactor),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor),round(sample[1]*scalingFactor+symSize));
+            end;
+          end;
+        end;
+        if row[rowId].style.wantCross then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
+          symSize:=row[rowId].style.getSymbolRad*scalingFactor;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              target.Line(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor+symSize));
+              target.Line(round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor+symSize));
+            end;
+          end;
+        end;
+        if row[rowId].style.wantImpulses then begin
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
+          for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              target.Line(round(sample[0]*scalingFactor),yBaseLine,
+                                    round(sample[0]*scalingFactor),round(sample[1]*scalingFactor));
+            end;
+          end;
+        end;
+      end;
+      //===============================================================:row data
+    end;
+
+  PROCEDURE scale(source : TImage;VAR dest:TImage;Factor : Real);
+    VAR	ARect : TRect;
+    	X,Y : Integer;
+    begin
+      X := Round(source.Width * Factor);
+      Y := Round(source.Height * Factor);
+      Arect := Rect(0,0,X,Y);
+      dest.Canvas.AntialiasingMode:=amOn;
+      dest.Canvas.StretchDraw(ARect,source.Picture.Bitmap);
+    end;
+
+  PROCEDURE drawCoordSys(CONST target:TCanvas);
+    VAR i,x,y:longint;
+    begin
+      //coordinate system:======================================================
+      //clear border:-----------------------------------------------------------
+      target.Brush.Style:=bsSolid;
+      target.Brush.Color:=clWhite;
+      target.Pen.Style:=psClear;
+      target.Pen.Width:=1;
+      target.Pen.EndCap:=pecSquare;
+
+      if activePlot.wantTics('y') then
+        target.FillRect(0,0,activePlot.xOffset,screenHeight);
+      if activePlot.wantTics('x') then
+        target.FillRect(activePlot.xOffset,activePlot.yOffset,
+                        screenWidth,screenHeight);
+      //-----------------------------------------------------------:clear border
+      //axis:-------------------------------------------------------------------
+      target.Pen.Style:=psSolid;
+      target.Pen.Color:=clBlack;
+      target.Pen.Width:=1;
+      if wantTics('y') then
+        target.Line(xOffset    ,0                 ,
+                              xOffset,yOffset);
+      if wantTics('x') then
+        target.Line(screenWidth,yOffset,
+                              xOffset    ,yOffset);
+      //-------------------------------------------------------------------:axis
+      //tics:-------------------------------------------------------------------
+      if wantTics('y') then begin
+        for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
+          y:=round(pos);
+          target.Line(xOffset-5,y,xOffset,y);
+          target.TextOut(xOffset-5-target.TextWidth(txt),y-target.TextHeight(txt) shr 1,txt);
+        end;
+      end;
+      if wantTics('x') then begin
+        for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
+          x:=round(pos);
+          target.Line(x,yOffset+5,x,yOffset);
+          target.TextOut(x-target.TextWidth(txt) shr 1 ,yOffset+5,txt);
+        end;
+      end;
+
+      //-------------------------------------------------------------------:tics
+      //======================================================:coordinate system
+    end;
+
+  VAR renderImage:TImage;
+  begin
+    repeat until not(
+      setTextSize(
+        plotImage.Canvas.TextHeight(longtestYTic),
+        plotImage.Canvas.TextWidth (longtestYTic)));
+
+    if supersampling<=1 then begin
+      drawGridAndRows(plotImage.Canvas,1);
+      drawCoordSys(plotImage.Canvas);
+    end else begin
+      renderImage:=TImage.Create(nil);
+      renderImage.SetInitialBounds(0,0,screenWidth*supersampling,screenHeight*supersampling);
+      drawGridAndRows(renderImage.Canvas,supersampling);
+      scale(renderImage,plotImage,1/supersampling);
+      renderImage.Free;
+      drawCoordSys(plotImage.Canvas);
+    end;
+  end;
+
+FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR options:ansistring='';
+      sizeWithoutOptions:longint;
+      rowId,i,iMax:longint;
+      X,Y:P_listLiteral;
+
+  begin
+    if (params<>nil) and (params^.size>=1) then begin
+      if (params^.value(params^.size-1)^.literalType=lt_string) then begin
+        options:=P_stringLiteral(params^.value(params^.size-1))^.value;
+        sizeWithoutOptions:=params^.size-1;
+      end else begin
+        options:='';
+        sizeWithoutOptions:=params^.size
+      end;
+      if (sizeWithoutOptions=1) and
+         (params^.value(0)^.literalType=lt_list)
+      then begin
+        rowId:=activePlot.addRow(options);
+        X:=P_listLiteral(params^.value(0));
+        for i:=0 to X^.size-1 do begin
+          if (X^.value(i)^.literalType in [lt_intList,lt_realList,lt_numList]) then begin
+            Y:=P_listLiteral(X^.value(i));
+            if Y^.size=2 then activePlot.row[rowId].addSample(fReal(Y^.value(0)),fReal(Y^.value(1)))
+                         else activePlot.row[rowId].addSample(Nan,Nan);
+          end else activePlot.row[rowId].addSample(Nan,Nan);
+        end;
+
+        result:=newBoolLiteral(true);
+      end else if (sizeWithoutOptions=1) and
+         (params^.value(0)^.literalType in [lt_intList,lt_realList,lt_numList])
+      then begin
+        rowId:=activePlot.addRow(options);
+        X:=P_listLiteral(params^.value(0));
+        for i:=0 to X^.size-1 do activePlot.row[rowId].addSample(i,fReal(X^.value(i)));
+        result:=newBoolLiteral(true);
+      end else if (sizeWithoutOptions=2) and
+         (params^.value(0)^.literalType in [lt_intList,lt_realList,lt_numList]) and
+         (params^.value(1)^.literalType in [lt_intList,lt_realList,lt_numList])
+      then begin
+        rowId:=activePlot.addRow(options);
+        X:=P_listLiteral(params^.value(0));
+        Y:=P_listLiteral(params^.value(1));
+        iMax:=Min(X^.size,Y^.size);
+        for i:=0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)),fReal(Y^.value(i)));
+        result:=newBoolLiteral(true);
+      end else if (sizeWithoutOptions=4) and
+         (params^.value(0)^.literalType = lt_expression) and
+         (params^.value(1)^.literalType in [lt_int,lt_real]) and
+         (params^.value(2)^.literalType in [lt_int,lt_real]) and
+         (params^.value(3)^.literalType = lt_int)
+      then begin
+        rowId:=activePlot.addRow(options);
+        activePlot.row[rowId].setRules(
+          nil,
+          P_expressionLiteral(params^.value(0)),
+                fReal(params^.value(1)),
+                fReal(params^.value(2)),
+          round(fReal(params^.value(3))));
+        result:=newBoolLiteral(true);
+      end else if (sizeWithoutOptions=5) and
+         (params^.value(0)^.literalType = lt_expression) and
+         (params^.value(1)^.literalType = lt_expression) and
+         (params^.value(2)^.literalType in [lt_int,lt_real]) and
+         (params^.value(3)^.literalType in [lt_int,lt_real]) and
+         (params^.value(4)^.literalType = lt_int)
+      then begin
+        rowId:=activePlot.addRow(options);
+        activePlot.row[rowId].setRules(
+          P_expressionLiteral(params^.value(0)),
+          P_expressionLiteral(params^.value(1)),
+                fReal(params^.value(2)),
+                fReal(params^.value(3)),
+          round(fReal(params^.value(4))));
+        result:=newBoolLiteral(true);
+      end else result:=newErrorLiteralRaising('Functions plot and addPlot cannot be applied to parameter list'+params^.toParameterListString(true),tokenLocation);
+    end else result:=newErrorLiteralRaising('Function plot and addPlot cannot be applied to empty parameter list',tokenLocation);
+  end;
+
+FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    activePlot.clear;
+    result:=addPlot(params,tokenLocation,callDepth);
+  end;
+
+FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_booleanList) and (P_listLiteral(params^.value(0))^.size=2) then begin
+      activePlot.setAutoscale(P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
+                              P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
+      result:=newBoolLiteral(true);
+    end else result:=newErrorLiteralRaising('Function setPlotAutoscale expects a list of 2 booleans as parameter.',tokenLocation);
+  end;
+
+FUNCTION getAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=activePlot.getAutoscale;
+  end;
+
+FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_booleanList) and (P_listLiteral(params^.value(0))^.size=2) then begin
+      activePlot.setLogscale(P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
+                             P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
+      result:=newBoolLiteral(true);
+    end else result:=newErrorLiteralRaising('Function setPlotLogscale expects a list of 2 booleans as parameter.',tokenLocation);
+  end;
+
+FUNCTION getLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=activePlot.getLogscale;
+  end;
+
+FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR x,y:P_literal;
+      x0,y0,x1,y1:double;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=2) then begin
+      x:=P_listLiteral(params^.value(0))^.value(0);
+      y:=P_listLiteral(params^.value(0))^.value(1);
+      if (x^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(x)^.size=2) and
+         (y^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(y)^.size=2) then begin
+        x0:=fReal(P_listLiteral(x)^.value(0));
+        x1:=fReal(P_listLiteral(x)^.value(1));
+        y0:=fReal(P_listLiteral(y)^.value(0));
+        y1:=fReal(P_listLiteral(y)^.value(1));
+        if not(IsNan(x0)) and not(IsInfinite(x0)) and
+           not(IsNan(x1)) and not(IsInfinite(x1)) and
+           not(IsNan(y0)) and not(IsInfinite(y0)) and
+           not(IsNan(y1)) and not(IsInfinite(y1)) then begin
+          activePlot.setRange(x0,y0,x1,y1);
+          result:=newBoolLiteral(true);
+        end else result:=newErrorLiteralRaising('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+      end else result:=newErrorLiteralRaising('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+    end else result:=newErrorLiteralRaising('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+  end;
+
+FUNCTION getPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=activePlot.getRange;
+  end;
+
+FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_intList) and (P_listLiteral(params^.value(0))^.size=2) then begin
+      activePlot.setAxisStyle(P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
+                              P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
+      result:=newBoolLiteral(true);
+    end else result:=newErrorLiteralRaising('Function setPlotAxisStyle expects a list of 2 integers as parameter.',tokenLocation);
+  end;
+
+FUNCTION getAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=activePlot.getAxisStyle;
+  end;
+
+FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_boolean) then begin
+      activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
+      result:=newBoolLiteral(true);
+    end else result:=newErrorLiteralRaising('Function setPlotPreserveAspect expects a boolean as parameter.',tokenLocation);
+  end;
+
+FUNCTION getPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=activePlot.getPreserveAspect;
+  end;
+
+FUNCTION renderToFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    //Parameter: Dateiname, Breite, Höhe, [Supersampling]
+    result:=newBoolLiteral(true);
+  end;
+
+
 INITIALIZATION
   activePlot.createWithDefaults;
+  mnh_funcs.registerRule('plot',@plot,'plot(list,[options]); //plots flat numeric list or xy-list'+
+  '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
+  '#plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'+
+  '#plot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+  mnh_funcs.registerRule('addPlot',@addPlot,'addPlot(list,[options]); //adds plot flat numeric list or xy-list'+
+  '#addPlot(xList,yList,[options]); //plots flat numeric list or xy-list'+
+  '#addPlot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'+
+  '#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]');
+  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule('getPlotAutoscale',@getAutoscale,'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,'setPlotLogscale([forX,forY]);#Sets log-scale per axis and returns true#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule('getPlotLogscale',@getLogscale,'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule('setPlotRange',@setPlotRange,'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot and returns true.');
+  mnh_funcs.registerRule('getPlotRange',@getPlotRange,'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
+  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true.');
+  mnh_funcs.registerRule('getPlotAxisStyle',@getAxisStyle,'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
+  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,'setPlotPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
+  mnh_funcs.registerRule('getPlotPreserveAspect',@getPreserveAspect,'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
+
 FINALIZATION
   activePlot.destroy;
 end.

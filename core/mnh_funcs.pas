@@ -642,9 +642,11 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+  VAR oldExplanation:ansistring;
   begin
     intrinsicRuleMap.put(name,ptr);
-    intrinsicRuleExplanationMap.put(name,explanation);
+    if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(name,oldExplanation))
+      then intrinsicRuleExplanationMap.put(name,explanation);
   end;
 
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -1366,7 +1368,6 @@ INITIALIZATION
   registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
-  registerRule('plotAvailable' ,@false_impl,'returns false (because plotting is not available)');
   registerRule('myPath',@myPath_impl,'returns the path to the current package');
 
 FINALIZATION

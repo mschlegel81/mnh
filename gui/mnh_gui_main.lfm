@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 475
+  Left = 800
   Height = 373
-  Top = 44
+  Top = 222
   Width = 479
   Caption = 'MNH5'
   ClientHeight = 353
@@ -1068,10 +1068,13 @@ object MnhForm: TMnhForm
       ClientHeight = 302
       ClientWidth = 471
       object plotImage: TImage
+        Cursor = crCross
         Left = 0
-        Height = 3000
+        Height = 1200
         Top = 0
-        Width = 4000
+        Width = 2048
+        AntialiasingMode = amOn
+        OnMouseMove = plotImageMouseMove
       end
     end
   end
@@ -1229,6 +1232,7 @@ object MnhForm: TMnhForm
       object miAntiAliasingOff: TMenuItem
         AutoCheck = True
         Caption = 'Antialiasing Off'
+        Checked = True
         RadioItem = True
         OnClick = miAntiAliasingOffClick
       end
