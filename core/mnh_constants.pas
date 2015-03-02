@@ -249,6 +249,7 @@ TYPE
     el5_systemError);
 
 CONST
+  SELF_TOKEN_TEXT='$self';
   C_errorLevelTxt: array[T_errorLevel] of string = ('          ',
     'Note    : ',
     'Warning : ',

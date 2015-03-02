@@ -199,7 +199,6 @@ FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
     result:=true;
   end;
 
-CONST SELF_TOKEN_TEXT='$self';
 PROCEDURE T_subrule.updatePatternForInline;
   VAR i:longint;
   begin
@@ -304,8 +303,8 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
                        else raiseError(el3_evalError,'Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
         srt_inline_for_literal: begin
-          if param=nil then raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then raiseError(el3_evalError,'Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                       else raiseError(el3_evalError,'Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
       end;
     end;
