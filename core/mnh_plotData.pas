@@ -148,7 +148,7 @@ type
     FUNCTION longtestYTic: ansistring;
     FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
     FUNCTION addRow(CONST styleOptions: string): longint;
-    //pure query:
+
     FUNCTION wantTics(CONST axis: char): boolean;
     FUNCTION realToScreen(CONST p: T_point): T_point;
     FUNCTION realToScreen(CONST x, y: double): T_point;

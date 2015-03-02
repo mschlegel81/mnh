@@ -1,0 +1,13 @@
+private digitSquareSum(x:int)->digitSquareSum(string(x));
+LUT:=each(i,[0..9],[string(i),i*i]);
+private digitSquareSum(s:string)->each(x,LUT%copy(s,[0..length(s)-1],1),+);
+
+private memoized digitSquareFinal(1)->1;
+private digitSquareFinal(89)->89;
+private digitSquareFinal(x)->digitSquareFinal(digitSquareSum(x));
+
+private count89->each(i,[1..100000],+,digitSquareFinal(i)=89 ? 1 : 0);
+//*See <a href="http://rosettacode.org/wiki/Iterated_digits_squaring">Iterated_digits_squaring</a>
+main->print(count89);
+count89;
+

@@ -1,8 +1,8 @@
-pure private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
+memoized private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
      private expandPrimes(P:intList,pMax:int,C:intList)-> P|C%each(c,C,each(p,c mod P<>0,and));
 
 //*Special case 1: Prime numbers lesser than 3
-pure
+memoized
 primes(nMax<3)->[2];
 //*Special case 2: Prime numbers lesser than 5
 primes(nMax<5)->[2,3];
@@ -12,7 +12,7 @@ primes(nMax<7)->[2,3,5];
 primes(nMax)->expandPrimes(primes(round(sqrt(nMax))),floor(nMax));
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
-pure factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));
+memoized factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));
 private factorize(1,[])->[];
 private factorize(n:int,[])->n;
 private factorize(n:int,dividers:intList)->dividers|factorize(n div each(d,dividers,*));
@@ -22,7 +22,7 @@ dividers(n:int)->dividers_A(n,[2..floor(sqrt(n))]);
 private dividers_A(n,C)->dividers_B(n,C%(n mod C = 0));
 private dividers_B(n,D)->1|unique(D|(n div D));
 //*Return the divider-sum of integer <code>n</code>
-pure dividerSum(n:int)->each(d,dividers(n),+);
+memoized dividerSum(n:int)->each(d,dividers(n),+);
 
 
 P(n)->2^(n-1)*(2^n-1);
@@ -38,7 +38,7 @@ main->each(n,[1..32],print(n,' ',P(n),' ',P(n)=dividerSum(P(n))?'PERFECT':'!='&d
 
 
 
-pure factors(n:int)->factors(n,primes(sqrt(sqrt(n)))%(n mod primes(sqrt(sqrt(n)))=0));
+memoized factors(n:int)->factors(n,primes(sqrt(sqrt(n)))%(n mod primes(sqrt(sqrt(n)))=0));
 private factors(1,[])->[];
 private factors(n:int,[])->factorize(n);
 private factors(n:int,dividers:intList)->dividers|factors(n div each(d,dividers,*));

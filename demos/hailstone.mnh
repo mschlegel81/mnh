@@ -1,4 +1,4 @@
-pure
+memoized
 private hailstone(1  )->1;
 private hailstone(i>1)->i|((i and 1)=1 ? hailstone(3*i+1) : hailstone(i div 2));
 

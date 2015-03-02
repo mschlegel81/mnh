@@ -42,11 +42,11 @@ FUNCTION main(p:pointer):ptrint;
   PROCEDURE updateCompletionList;
     begin
       completionList.clear;
-      completionList.add('pure');
+      completionList.add(C_tokenString[tt_modifier_memoized]);
       completionList.add('USE');
-      completionList.add('private');
-      completionList.add('each');
-      completionList.add('pEach');      
+      completionList.add(C_tokenString[tt_modifier_private]);
+      completionList.add(C_tokenString[tt_each]);
+      completionList.add(C_tokenString[tt_parallelEach]);
       completionList.addArr(localUserRules.elementArray);
       completionList.addArr(importedUserRules.elementArray);
       completionList.addArr(intrinsicRules.elementArray);

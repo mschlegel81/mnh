@@ -1,4 +1,4 @@
-pure
+memoized
 fibNStep(i>=k,k)->each(j,[1..k],+,fibNStep(i-j,k));
 fibNStep(i   ,k)->1;
 fib(i)->fibNStep(i,2);

@@ -15,7 +15,7 @@ TYPE
 
   { T_userFunctionDocumentation }
   T_userFunctionDocumentation = object
-    isPure: boolean;
+    isMemoized: boolean;
     id: ansistring;
     subrules: array of record  isPrivate: boolean;
       pattern, comment: ansistring;
@@ -47,7 +47,7 @@ TYPE
     PROCEDURE resolveUses;
     FUNCTION toHtml: ansistring;
     PROCEDURE addComment(CONST s: ansistring);
-    PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isPure, isPrivate: boolean);
+    PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate: boolean);
     FUNCTION getHref: ansistring;
     FUNCTION isExecutable: boolean;
     PROCEDURE printHelpText;
@@ -198,7 +198,7 @@ PROCEDURE T_userPackageDocumentation.addComment(CONST s: ansistring);
     else lastComment := lastComment+' '+s;
   end;
 
-PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isPure, isPrivate: boolean);
+PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate: boolean);
   VAR ruleIdx: longint;
   begin
     if isPrivate then
@@ -213,7 +213,7 @@ PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansist
       setLength(rules, ruleIdx+1);
       rules[ruleIdx].Create(subruleId);
       end;
-    if isPure then rules[ruleIdx].isPure := true;
+    if isMemoized then rules[ruleIdx].isMemoized := true;
     rules[ruleIdx].addSubRule(isPrivate, pattern, lastComment);
     lastComment := '';
   end;
@@ -261,10 +261,10 @@ FUNCTION T_userFunctionDocumentation.toHtml: ansistring;
   VAR i: longint;
   begin
     result := '<table><tr class="ruleHead"><td>';
-    if isPure then result := result+'<div class="red">';
+    if isMemoized then result := result+'<div class="red">';
     if id = 'main' then result := result+'<b>'+id+'</b>'
     else result := result+id;
-    if isPure then result := result+' (pure)</div>';
+    if isMemoized then result := result+' (memoized)</div>';
 
     result := result+'</td></tr>';
     for i := 0 to length(subrules)-1 do with subrules [i] do if not(isPrivate) then begin

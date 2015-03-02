@@ -95,7 +95,7 @@ FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
 PROCEDURE T_pattern.finalizeRefs;
   VAR i,j:longint;
   begin
-    for i:=1 to length(sig)-1 do if (sig[i].restrictionType=tt_identifier) then begin
+    for i:=1 to length(sig)-1 do if (sig[i].restrictionType=tt_literal) then begin
       j:=0;
       while (j<i) and (sig[j].id<>sig[i].id) do inc(j);
       if j<i then with sig[i] do begin

@@ -226,7 +226,7 @@ PROCEDURE TSynMnhSyn.Next;
         else if (localId = 'Nan') or (localId = 'Inf') then
           fTokenId := tkNumber
         else if (localId = 'each') or (localId = 'pEach') or
-          (localId = 'pure') or (localId = 'USE') or (localId = 'private') then
+          (localId = 'memoized') or (localId = 'USE') or (localId = 'private') or (localId = 'main') then
           fTokenId := tkIntrinsicRuleOrKeyword
         else
         if localUserRules.contains(localId) then

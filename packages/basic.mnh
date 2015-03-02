@@ -79,7 +79,7 @@ private histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,
 pi:=4*arctan(1);
 
 //*Factorial
-pure
+memoized
 fak(n<1)->1.0;
 fak(n:int)->n*fak(n-1);
 fak(N:list)->each(n,N,fak(n));

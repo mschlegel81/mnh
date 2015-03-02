@@ -309,8 +309,8 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id='false'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
         else if id='Nan'     then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
         else if id='Inf'     then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
-        else if id='private' then result.tokType:=tt_modifier_private
-        else if id='pure'    then result.tokType:=tt_modifier_pure
+        else if id=C_tokenString[tt_modifier_private]  then result.tokType:=tt_modifier_private
+        else if id=C_tokenString[tt_modifier_memoized] then result.tokType:=tt_modifier_memoized
         else begin
           result.txt:=id;
           result.tokType:=tt_identifier;

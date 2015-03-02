@@ -1,5 +1,5 @@
-private pure hc(k<=2):=1;
-private      hc(k)->hc(hc(k-1))+hc(k-hc(k-1));
+private memoized hc(k<=2):=1;
+private          hc(k)->hc(hc(k-1))+hc(k-hc(k-1));
 
 private maxBetween(i0,i1)->maxBetween(i0,i1,each(i,[i0..i1],hc(i)/i));
 private maxBetween(i0,i1,L)->max(L)&" @i="&(i0+argMax(L));

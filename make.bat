@@ -73,6 +73,12 @@
 @copy demos\*.txt distro\demos
 @copy doc\* distro\doc
 @cd distro
+@cd doc 
+@type builtin.head > builtin.html
+@type builtin.foot >> builtin.html
+@type packages.head > packages.html
+@type packages.foot >> packages.html
+@cd ..
 @copy ..\bin64\*.exe .
 @del ..\versions\mnh5_win??_%mydate%.7z
 @%sevenZip% a -mx=9 ..\versions\mnh5_win64_%mydate%.7z

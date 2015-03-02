@@ -202,6 +202,90 @@ UNARY_NUM_TO_SAME;
 
 {$undef UNARY_NUM_TO_SAME}
 
+{$define ROUND_IMPLEMENTATION:=
+  FUNCTION recurse1(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : begin result:=x; x^.rereference; end;
+        lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  FUNCTION recurse2(CONST x,y:P_literal):P_literal;
+    FUNCTION myRound(CONST x:extended; CONST y:int64):P_literal; inline;
+      VAR pot:extended;
+          i:int64;
+      begin
+        pot:=1;
+        i:=0;
+        while i<y do begin pot:=pot*10;  inc(i); end;
+        while i>y do begin pot:=pot*0.1; dec(i); end;
+        result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
+      end;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : begin result:=x; x^.rereference; end;
+        lt_real: case y^.literalType of
+          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
+          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
+          lt_list,lt_intList: begin
+            result:=newListLiteral;
+            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
+          end;
+          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
+        end;
+        lt_list,lt_intList,lt_realList,lt_numList: case y^.literalType of
+          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
+          lt_int: begin
+            result:=newListLiteral;
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
+          end;
+          lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
+            result:=newListLiteral;
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
+          end else raiseError(el3_evalError,'Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
+          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
+        end;
+        else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then result:=recurse1(params^.value(0)) else
+    if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1))
+    else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+  end}
+
+FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=round}
+{$define ID_MACRO:='round'}
+ROUND_IMPLEMENTATION;
+
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=ceil}
+{$define ID_MACRO:='ceil'}
+ROUND_IMPLEMENTATION;
+
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=floor}
+{$define ID_MACRO:='floor'}
+ROUND_IMPLEMENTATION;
+
+{$undef ROUND_IMPLEMENTATION}
+
 FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -225,124 +309,6 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params<>nil) and (params^.size=1)
     then result:=sign_rec(params^.value(0))
     else raiseNotApplicableError('sign',params,tokenLocation);
-  end;
-  
-  
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION ceil_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'ceil',tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(ceil(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ceil_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('ceil',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=ceil_rec(params^.value(0))
-    else raiseNotApplicableError('ceil',params,tokenLocation);
-  end;
-
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION floor_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'floor',tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(floor(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(floor_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('floor',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=floor_rec(params^.value(0))
-    else raiseNotApplicableError('floor',params,tokenLocation);
-  end;
-
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION round_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'round',tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(round(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('round',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  FUNCTION round_rec2(CONST x,y:P_literal):P_literal;
-    FUNCTION myRound(CONST x:extended; CONST y:int64):P_literal; inline;
-      VAR pot:extended;
-          i:int64;
-      begin
-        pot:=1;
-        i:=0;
-        while i<y do begin pot:=pot*10;  inc(i); end;
-        while i>y do begin pot:=pot*0.1; dec(i); end;
-        result:=newRealLiteral(round(x*pot)/pot);
-      end;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
-          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-          lt_list,lt_intList: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(round_rec2(x,P_listLiteral(y)^.value(i)),false);
-          end;
-          else raiseNotApplicableError('round',y^.literalType,' (second parameter)',tokenLocation);
-        end;
-        lt_list,lt_intList,lt_realList,lt_numList: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
-          lt_int: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec2(P_listLiteral(x)^.value(i),y),false);
-          end;
-          lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for built in FUNCTION [round]',tokenLocation);
-          else raiseNotApplicableError('round',y^.literalType,' (second parameter)',tokenLocation);
-        end;
-        else raiseNotApplicableError('round',x^.literalType,' (first parameter)',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=round_rec(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=round_rec2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('round',params,tokenLocation);
   end;
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;

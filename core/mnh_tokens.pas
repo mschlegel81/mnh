@@ -220,7 +220,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
     PROCEDURE parseRule;
       VAR p,n,nn,nnn:P_token;
           ruleIsPrivate:boolean=false;
-          ruleIsPure:boolean=false;
+          ruleIsMemoized:boolean=false;
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
@@ -245,9 +245,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
           cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_pure]) do begin
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized]) do begin
           if first^.tokType=tt_modifier_private then ruleIsPrivate:=true;
-          if first^.tokType=tt_modifier_pure    then ruleIsPure:=true;
+          if first^.tokType=tt_modifier_memoized then ruleIsMemoized:=true;
           first:=disposeToken(first);
         end;
         if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
@@ -338,9 +338,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate));
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if ruleIsPure then ensureRuleId(ruleId)^.setPure;
+          if ruleIsMemoized then ensureRuleId(ruleId)^.setMemoized;
           first:=nil;
-          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsPure,ruleIsPrivate);
+          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate);
         end else if errorLevel<el5_systemError then
           cascadeDisposeToken(first)
         else
@@ -589,6 +589,12 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
       t^.next:=newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);
       reduceExpression(t,0);
+      //special handling if main returns an expression:
+      if (t^.tokType=tt_literal) and (t^.next=nil) and
+         (P_literal(t^.data)^.literalType=lt_expression) then begin
+        P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(0);
+      end;
+      //:special handling if main returns an expression
     end;
     cascadeDisposeToken(t);
   end;

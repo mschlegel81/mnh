@@ -48,7 +48,7 @@ TYPE
     tt_semicolon,
     //modifiers:
     tt_modifier_private,
-    tt_modifier_pure,
+    tt_modifier_memoized,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -138,7 +138,7 @@ CONST
     //special: [E]nd [O]f [L]ine
     ';',
     'private',
-    'pure',
+    'memoized',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -225,7 +225,7 @@ CONST
     'type check: empty list#matches only to the empty list',
     'semicolon#marks the end of a statement, assignment or declaration',
     'private modifier#hides the subrule from all importing packages',
-    'pure modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
+    'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE

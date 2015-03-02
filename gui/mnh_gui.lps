@@ -9,7 +9,7 @@
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="mnh_gui"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="11"/>
@@ -25,8 +25,8 @@
         <UnitName Value="mnh_gui_main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="196"/>
-        <CursorPos X="1" Y="198"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
         <UsageCount Value="235"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -38,7 +38,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_gui_settings"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="308"/>
         <CursorPos X="1" Y="343"/>
@@ -53,7 +53,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="closeDialog"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="15"/>
         <CursorPos X="25" Y="50"/>
@@ -67,7 +67,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="askDialog"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="94"/>
         <CursorPos X="1" Y="129"/>
@@ -112,36 +112,34 @@
         <UnitName Value="SynHighlighterMnh"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="38" Y="25"/>
+        <TopLine Value="212"/>
+        <CursorPos X="35" Y="240"/>
         <UsageCount Value="81"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\core\mnh_tokens.pas"/>
         <UnitName Value="mnh_tokens"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="321"/>
-        <CursorPos X="87" Y="339"/>
+        <TopLine Value="324"/>
+        <CursorPos X="68" Y="341"/>
         <UsageCount Value="102"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
         <Filename Value="..\core\mnh_tokens_subrule.inc"/>
-        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
         <TopLine Value="214"/>
         <CursorPos X="81" Y="240"/>
         <UsageCount Value="97"/>
-        <Loaded Value="True"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\core\mnh_tokens_rule.inc"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="15"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="87"/>
-        <CursorPos X="76" Y="119"/>
+        <TopLine Value="1"/>
+        <CursorPos X="28" Y="19"/>
         <UsageCount Value="105"/>
         <Loaded Value="True"/>
       </Unit11>
@@ -156,12 +154,10 @@
       <Unit13>
         <Filename Value="..\core\mnh_fileWrappers.pas"/>
         <UnitName Value="mnh_fileWrappers"/>
-        <EditorIndex Value="16"/>
         <WindowIndex Value="0"/>
         <TopLine Value="500"/>
         <CursorPos X="14" Y="528"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
       </Unit13>
       <Unit14>
         <Filename Value="..\core\mnh_tokloc.pas"/>
@@ -181,46 +177,48 @@
       </Unit15>
       <Unit16>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <EditorIndex Value="15"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="192"/>
-        <CursorPos X="38" Y="210"/>
+        <TopLine Value="296"/>
+        <CursorPos X="97" Y="313"/>
         <UsageCount Value="120"/>
         <Loaded Value="True"/>
       </Unit16>
       <Unit17>
         <Filename Value="..\core\mnh_constants.pas"/>
         <UnitName Value="mnh_constants"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="127"/>
-        <CursorPos X="1" Y="128"/>
+        <TopLine Value="198"/>
+        <CursorPos X="14" Y="228"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit17>
       <Unit18>
         <Filename Value="..\core\mnh_litvar.pas"/>
         <UnitName Value="mnh_litvar"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1718"/>
+        <CursorPos X="70" Y="1740"/>
         <UsageCount Value="101"/>
+        <Loaded Value="True"/>
       </Unit18>
       <Unit19>
         <Filename Value="..\core\mnh_funcs.pas"/>
         <UnitName Value="mnh_funcs"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1180"/>
-        <CursorPos X="19" Y="1209"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
         <UsageCount Value="101"/>
         <Loaded Value="True"/>
       </Unit19>
       <Unit20>
         <Filename Value="..\core\mnh_stringutil.pas"/>
         <UnitName Value="mnh_stringutil"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="306"/>
         <CursorPos X="1" Y="341"/>
@@ -230,10 +228,10 @@
       <Unit21>
         <Filename Value="mnh_evalThread.pas"/>
         <UnitName Value="mnh_evalThread"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="3"/>
-        <CursorPos X="10" Y="21"/>
+        <TopLine Value="29"/>
+        <CursorPos X="56" Y="65"/>
         <UsageCount Value="111"/>
         <Loaded Value="True"/>
       </Unit21>
@@ -247,10 +245,12 @@
       </Unit22>
       <Unit23>
         <Filename Value="..\core\mnh_tokens_pattern.inc"/>
+        <EditorIndex Value="16"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="190"/>
-        <CursorPos X="41" Y="204"/>
+        <TopLine Value="68"/>
+        <CursorPos X="39" Y="68"/>
         <UsageCount Value="68"/>
+        <Loaded Value="True"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\util\myFloat.pas"/>
@@ -263,10 +263,10 @@
       <Unit25>
         <Filename Value="..\core\mnh_plotData.pas"/>
         <UnitName Value="mnh_plotData"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2200"/>
-        <CursorPos X="28" Y="2216"/>
+        <TopLine Value="134"/>
+        <CursorPos X="1" Y="151"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit25>
@@ -334,20 +334,20 @@
       </Unit33>
       <Unit34>
         <Filename Value="..\core\mnh_tokens_futureTask.inc"/>
-        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="7"/>
         <CursorPos X="15" Y="19"/>
         <UsageCount Value="26"/>
-        <Loaded Value="True"/>
       </Unit34>
       <Unit35>
         <Filename Value="..\core\mnh_doc.pas"/>
         <UnitName Value="mnh_doc"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="292"/>
-        <CursorPos X="8" Y="299"/>
+        <TopLine Value="237"/>
+        <CursorPos X="52" Y="267"/>
         <UsageCount Value="30"/>
+        <Loaded Value="True"/>
       </Unit35>
       <Unit36>
         <Filename Value="C:\lazarus\lcl\controls.pp"/>
@@ -425,124 +425,124 @@
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2218" Column="19" TopLine="2208"/>
+        <Filename Value="synhighlightermnh.pas"/>
+        <Caret Line="219" Column="1" TopLine="200"/>
       </Position1>
       <Position2>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2176" Column="32" TopLine="2158"/>
+        <Filename Value="..\core\mnh_funcs.pas"/>
+        <Caret Line="354" Column="30" TopLine="331"/>
       </Position2>
       <Position3>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2156" Column="3" TopLine="2138"/>
+        <Filename Value="..\core\mnh_funcs.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position3>
       <Position4>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2118" Column="36" TopLine="2095"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position4>
       <Position5>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2087" Column="3" TopLine="2069"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="902" Column="16" TopLine="872"/>
       </Position5>
       <Position6>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2064" Column="32" TopLine="2046"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="907" Column="16" TopLine="877"/>
       </Position6>
       <Position7>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="1956" Column="17" TopLine="1938"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="912" Column="16" TopLine="882"/>
       </Position7>
       <Position8>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="917" Column="16" TopLine="887"/>
       </Position8>
       <Position9>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2033" Column="50" TopLine="2004"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="967" Column="16" TopLine="938"/>
       </Position9>
       <Position10>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2036" Column="48" TopLine="2007"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="972" Column="16" TopLine="943"/>
       </Position10>
       <Position11>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2066" Column="18" TopLine="2036"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="977" Column="16" TopLine="948"/>
       </Position11>
       <Position12>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2089" Column="18" TopLine="2059"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="982" Column="16" TopLine="953"/>
       </Position12>
       <Position13>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2125" Column="22" TopLine="2095"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="988" Column="16" TopLine="959"/>
       </Position13>
       <Position14>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2130" Column="20" TopLine="2101"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="994" Column="16" TopLine="965"/>
       </Position14>
       <Position15>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2135" Column="18" TopLine="2106"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1000" Column="16" TopLine="971"/>
       </Position15>
       <Position16>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2158" Column="18" TopLine="2128"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1006" Column="16" TopLine="977"/>
       </Position16>
       <Position17>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2178" Column="18" TopLine="2148"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1019" Column="16" TopLine="990"/>
       </Position17>
       <Position18>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2217" Column="20" TopLine="2188"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1032" Column="16" TopLine="1003"/>
       </Position18>
       <Position19>
-        <Filename Value="..\core\mnh_plotData.pas"/>
-        <Caret Line="2242" Column="18" TopLine="2213"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1038" Column="16" TopLine="1009"/>
       </Position19>
       <Position20>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1381" Column="29" TopLine="1364"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1072" Column="16" TopLine="1042"/>
       </Position20>
       <Position21>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1" Column="9" TopLine="1"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1078" Column="16" TopLine="1049"/>
       </Position21>
       <Position22>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1153" Column="7" TopLine="1147"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1084" Column="16" TopLine="1055"/>
       </Position22>
       <Position23>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1207" Column="110" TopLine="1179"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1090" Column="16" TopLine="1061"/>
       </Position23>
       <Position24>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1170" Column="31" TopLine="1149"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1096" Column="16" TopLine="1067"/>
       </Position24>
       <Position25>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="2" Column="1" TopLine="1"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1103" Column="16" TopLine="1074"/>
       </Position25>
       <Position26>
-        <Filename Value="mnh_gui_main.pas"/>
-        <Caret Line="993" Column="41" TopLine="973"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1119" Column="16" TopLine="1089"/>
       </Position26>
       <Position27>
-        <Filename Value="mnh_gui_main.pas"/>
-        <Caret Line="198" Column="1" TopLine="196"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1124" Column="16" TopLine="1094"/>
       </Position27>
       <Position28>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="2" Column="63" TopLine="1"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1547" Column="68" TopLine="1518"/>
       </Position28>
       <Position29>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1152" Column="19" TopLine="1123"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1548" Column="62" TopLine="1519"/>
       </Position29>
       <Position30>
-        <Filename Value="..\core\mnh_funcs.pas"/>
-        <Caret Line="1162" Column="24" TopLine="1133"/>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <Caret Line="1549" Column="31" TopLine="1520"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

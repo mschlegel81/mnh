@@ -1,5 +1,5 @@
 //Binominalkoeffizient über Pascalsches Dreieck:
-pure pascal(n)->pascal([1],n);
+memoized pascal(n)->pascal([1],n);
 pascal(L,n>0)->pascal(L|0+0|L,n-1);
 pascal(L,n)->L;
 

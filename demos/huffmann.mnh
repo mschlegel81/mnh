@@ -7,7 +7,7 @@ private huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) 
 private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
                                               traverseBinaryTree(codePrefix&1,T%1) ;
-codeSort(L)->L%(sortPerm(each(code,L%%0,length(code))));
+private codeSort(L)->L%(sortPerm(each(code,L%%0,length(code))));
 
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
 private charactersInString     (s:string)->charFreq(copy(s,[0..min(1000000,length(s))-1],1));

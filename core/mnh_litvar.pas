@@ -209,7 +209,8 @@ IMPLEMENTATION
 
 VAR
   boolLit: array[false..true] of T_boolLiteral;
-  intLit: array[0..127] of P_intLiteral;
+  intLit: array[-1000..1000] of P_intLiteral;
+  strLit: array[-1..255] of P_stringLiteral;
   errLit: T_scalarLiteral;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
@@ -229,18 +230,13 @@ FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral;
 
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
   begin
-    if (value>=0) and (value<length(intLit)) then
-      begin
-      if intLit [value] = nil then
-        new(intLit [value], Create(value));
+    if (value>=-1000) and (value<=1000) then begin
       result := intLit [value];
       result^.rereference;
-      end
-    else
-      begin
+    end else begin
       new(result, Create(value));
       isMemoryFree('allocating new integer literal');
-      end;
+    end;
   end;
 
 FUNCTION newRealLiteral(CONST value: extended): P_realLiteral;
@@ -251,8 +247,14 @@ FUNCTION newRealLiteral(CONST value: extended): P_realLiteral;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
-    new(result, Create(value));
-    isMemoryFree('allocating new string literal');
+    if length(value)<=1 then begin
+      if length(value)=0 then result:=strLit[-1]
+                         else result:=strLit[ord(value[1])];
+      result^.rereference;
+    end else begin
+      new(result, Create(value));
+      isMemoryFree('allocating new string literal');
+    end;
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
@@ -1737,7 +1739,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 for j := 0 to P_listLiteral(RHS)^.size-1 do
                   begin
                   key := P_stringLiteral(P_listLiteral(RHS)^.element [j])^.value;
-                  i := 0; while i<length(P_listLiteral(LHS)^.element)-1 do
+                  i := 0; while i<length(P_listLiteral(LHS)^.element) do
                     if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then
                       begin
                       P_listLiteral(result)^.append(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [1], true);
@@ -1981,8 +1983,9 @@ INITIALIZATION
   boolLit[false].Create(false);
   boolLit[true].Create(true);
   errLit.init;
-  for i := 0 to length(intLit)-1 do
-    intLit[i] := nil;
+  for i := -1000 to 1000 do new(intLit[i],create(i));
+  new(strLit[-1],create(''));
+  for i:=0 to 255 do new(strLit[i],Create(chr(i)));
   DefaultFormatSettings.DecimalSeparator := '.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
@@ -1991,7 +1994,6 @@ FINALIZATION
   boolLit[false].Destroy;
   boolLit[true].Destroy;
   errLit.Destroy;
-  for i := 0 to length(intLit)-1 do
-    if intLit [i]<>nil then
-      dispose(intLit [i], Destroy);
+  for i := -1000 to 1000 do if intLit[i]<>nil then dispose(intLit [i], Destroy);
+  for i:= -1 to 255 do if strLit[i]<>nil then dispose(strLit[i],destroy);
 end.

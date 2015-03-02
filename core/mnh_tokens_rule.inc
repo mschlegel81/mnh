@@ -16,7 +16,7 @@
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
-      PROCEDURE setPure;
+      PROCEDURE setMemoized;
       FUNCTION hasPublicSubrule:boolean;
   end;
 {$endif}
@@ -105,7 +105,7 @@ FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
     result:=subrules[0]^.declaredAt;
   end;
 
-PROCEDURE T_rule.setPure;
+PROCEDURE T_rule.setMemoized;
   begin
     if not(isCached) then begin
       isCached:=true;
