@@ -62,7 +62,7 @@ FUNCTION main(p:pointer):ptrint;
         evaluationState.value:=es_running;
         startOfEvaluation.value:=now;
         startOfEvaluationCallback();
-        reloadMainPackage(true);
+        reloadMainPackage(lu_forDirectExecution);
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
         getMainPackage^.updateLists(localUserRules,importedUserRules);
         updateCompletionList;
@@ -81,7 +81,7 @@ FUNCTION main(p:pointer):ptrint;
 
 PROCEDURE ad_clearFile;
   begin
-    clearSourceScanPaths;
+    setMainPackagePath('');
     if evaluationState.value=es_running then haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.clear;
@@ -111,7 +111,7 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
   begin
     ad_haltEvaluation;
     if path<>mainPackageProvider.getPath then begin
-      addSourceScanPath(path);
+      setMainPackagePath(path);
       mainPackageProvider.setPath(path);
       if mainPackageProvider.fileHasChanged then begin
         mainPackageProvider.load;

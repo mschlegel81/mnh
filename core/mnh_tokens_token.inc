@@ -365,6 +365,13 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              parsedLength:=1;
              result.tokType:=tt_comparatorGrt;
            end;
+      '!': if startsWith(line,'!=') then begin
+             parsedLength:=2;
+             result.tokType:=tt_comparatorNeq;
+           end else begin
+             fail('Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')');
+             line:='';
+           end;
       '=': if startsWith(line,'=[]') then begin
              parsedLength:=3;
              result.tokType:=tt_typeCheckEmptyList;
@@ -772,6 +779,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             future[k].destroy;
             t:=t^.next;
           end;
+          t^.next:=bracketClosingEach;
         end;
         setLength(future,0);
       end;

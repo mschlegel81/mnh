@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MNH 5 - Types</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Types</h3>
+<div align="right"><hr> </font></div>
+<h3>      <a href="#intro">Introduction</a></h3>
+<h3>      <a href="#scalars">Scalar types</a></h3><ul>
+  <li><h4><a href="#booleans">Booleans</a></h4></li>
+  <li><h4><a href="#integers">Integers</a></h4></li>
+  <li><h4><a href="#reals">Reals</a></h4></li>
+  <li><h4><a href="#strings">Strings</a></h4></li>
+  <li><h4><a href="#expressions">Expressions</a></h4></li>
+  <li><h4><a href="#errors">Errors</a></h4></li>
+</ul>
+<h3>      <a href="#lists">List types</a></h3>
+<div align="right"><font color="#a0a0a0"><hr> </font></div>
+<h3><a name="intro">Introduction</a></h3>
+MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
+This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
+
+<h3><a name="scalars">Scalar types</a></h3>
+<h4><a name="booleans">Booleans</a></h4>
+Booleans are the simplest type. There are only two possible values:<code>true</code> and <code>false</code>.<br>
+To directly input a boolean, use the reserved words <code>true</code> and <code>false</code>.
+
+<h4><a name="integers">Integers</a></h4>
+Integers are internally represented as 64bit two-complement integer numbers. Consequently the smallest possible integer is -9223372036854775808 and the largest possible integer is 9223372036854775807.<br>
+Note that no overflow-checking is employed.<br>
+Together with reals, integers form the class of <i>numeric</i> values.<br>
+To directly input an integer, write a number only containing of digits, without a decimal point.
+
+<h4><a name="reals">Reals</a></h4>
+Reals are internally represented as 80bit <i>extended precision</i> floating point numbers.<br>
+Together with integers, reals form the class of <i>numeric</i> values.<br>
+To directly input a real, write a number containing of digits and a decimal point and/or an exponent, e.g. <code>1.2E-2</code>.
+
+<h4><a name="strings">Strings</a></h4>
+Strings are internally represented as ANSI-Strings, without length limitation.<br>
+You can alternatively use <code>'</code> or <code>"</code> as string delimiters. Within strings the following escape-sequences are defined:<ul>
+<li><code>\n  </code> Line break</li>
+<li><code>\r  </code> Carriage return</li>
+<li><code>\t  </code> Tabulator</li>
+<li><code>\\  </code> Backslash</li>
+<li><code>\"  </code> The delimiter (if it was <code>"</code>)</li>
+<li><code>\'  </code> The delimiter (if it was <code>'</code>)</li>
+</ul>
+
+<h4><a name="expressions">Expressions</a></h4>
+Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
+Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
+Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
+If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
+Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
+  f(a,b)->{a+b*$x}</code> will return a linear scalar function.
+
+<h4><a name="errors">Errors</a></h4>
+Errors are no functional literals. They form a fallback for cases, where a literal result was expected but none could be provided (e.g. when invoking an operator with incompatible operands).<br>
+You should see them rarely and when you see them they should have a corresponding error message.<br>
+There is no way to directly write an error-literal.
+
+<h3><a name="lists">List types</a></h3>
+Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
+  ["a",true,4.6]</code><br>
+This example also shows, that types within a list can be mixed. You can use the same notation to construct lists. In addition there is the <code>..</code>-separator, which is only allowed in list constructors. 
+It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.
+
+<div align="right"><font color="#a0a0a0"><hr> </font></div>
+
+</body>
+</html>

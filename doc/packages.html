@@ -1,0 +1,48 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MNH 5 - Packages</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Packages</h3>
+<div align="right"><hr> </font></div>
+<h3><a href="#usage">Usage</a></h3>
+<ul>
+  <li><h4><a href="#defining">Defining a package</a></h4></li>
+  <li><h4><a href="#importing">Importing a package</a></h4></li>
+  <li><h4><a href="#executables">Executable packages</a></h4></li>
+</ul>  
+<h3><a href="#defined">Currently defined packages</a></h3>
+
+<div align="right"><hr> </font></div>
+
+<h3><a name="usage">Usage</a></h3>
+Packages form the major means to structure your implementation so that parts of it can be reused.<br>
+Each package is a collection of functions and expressions; each input to MNH is a package.
+<h4><a name="defining">Defining a package</a></h4>
+To define a package, just create a file with the extension <code>.mnh</code> (or even simpler: start typing in interactive mode). The following restrictions apply:
+<ul>
+  <li>The filenmae (without extension) should be a valid identifier, i.e. it should start with a letter.<br>This is because the filename wihtout extension will be interpreted as the package-identifier.
+  <br>Packages violating this convention cannot be imported by other packages.</li>
+  <li>The package must be in the search paths of importing packages (see <a href="#importing">Importing a package</a>).
+  <li>The filename must not be <code>mnh.mnh</code>, since the package <code>mnh</code> is used as a pseudo-package containing all built-in functions.</li>
+</ul>
+<h4><a name="importing">Importing a package</a></h4>
+To import a package, start your package with a <i>use clause</i>, e.g.:<code>
+  USE basic;</code><br>
+This will import the first package with a filename <code>basic.mnh</code> in the following folders:<ul>
+  <li> The same folder as the importing package </li>
+  <li> This folder's subfolders </li>
+</ul>
+Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.<code>
+  basic.sum([1,2,6]);</code>
+<h4><a name="executables">Executable packages</a></h4> 
+A package is <i>executable</i> if it 
+
+<h3><a name="defined">Currently defined packages</a></h3>
+<table></table><div align="right"><hr> </font></div>
+
+</body>
+</html>

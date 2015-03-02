@@ -44,7 +44,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       lit:P_literal;
       useParam:P_listLiteral;
   begin
-    if isCached and (threadId=mainThread) then begin
+    if isCached and (ThreadID=mainThread) then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       lit:=cache.get(useParam);
@@ -65,7 +65,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         lastRep:=firstRep^.last;
         if param=nil then disposeLiteral(useParam);
         if (errorLevel>=el3_evalError) then begin
-          if (callDepth mod 1000)=0 then raiseError(el0_allOkay,'Quitting evaluation of cached rule on level '+IntToStr(callDepth),C_nilTokenLocation);
+          if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule on level '+IntToStr(callDepth),C_nilTokenLocation);
           cascadeDisposeToken(firstRep);
           firstRep:=newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
           lastRep:=firstRep;

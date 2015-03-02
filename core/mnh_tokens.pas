@@ -2,7 +2,7 @@ UNIT mnh_tokens;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
-     mnh_funcs, mnh_out_adapters, mnh_caches; //even more specific
+     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
 
 {$define doTokenRecycling}
 {$define include_interface}
@@ -13,6 +13,8 @@ TYPE
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
+
+  T_packageLoadUsecase=(lu_forImport,lu_forDirectExecution,lu_forDocGeneration);
   
   { T_package }
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
@@ -29,20 +31,22 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
-      PROCEDURE load(CONST resolveExpressions:boolean);
+      PROCEDURE load(CONST usecase:T_packageLoadUsecase);
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
+      PROCEDURE ensureDocumentation;
   end;
 
 CONST C_id_qualify_character='.';
   
-PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
+PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
+PROCEDURE findAndDocumentAllPackages;
 
 VAR mainPackageProvider:T_codeProvider;
     mainThread:TThreadID;
@@ -81,13 +85,13 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_rule.inc}
 {$include mnh_tokens_futureTask.inc}
 
-PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
+PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
   VAR i,j:longint;
       used:T_listOfString;
   begin
     clearAllCaches;
     clearErrors;
-    mainPackage.load(resolveExpressions);
+    mainPackage.load(usecase);
     //housekeeping:-------------------------------------------------------------
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
@@ -115,7 +119,6 @@ PROCEDURE finalizePackages;
     mainPackageProvider.destroy;  
     clearAllCaches;
     clearErrors;
-    clearSourceScanPaths;
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
     setLength(secondaryPackages,0);
     packagesAreFinalized:=true;
@@ -131,7 +134,7 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
         if secondaryPackages[i]^.ready then begin
           if secondaryPackages[i]^.needReload then begin
             secondaryPackages[i]^.clear;
-            secondaryPackages[i]^.load(false);
+            secondaryPackages[i]^.load(lu_forImport);
           end;
           exit(secondaryPackages[i]);
         end else begin
@@ -139,22 +142,34 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
           exit(nil);
         end;
       end;
-    
-    newSourceName:=locateSource(packageId);
+
+
+    if tokenLocation.provider<>nil
+    then newSourceName:=locateSource(tokenLocation.provider^.getPath,packageId)
+    else newSourceName:=locateSource(''                             ,packageId);
     if newSourceName<>'' then begin
       new(newSource,create(newSourceName));
       new(result,create(newSource));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=result;
-      result^.load(false);
+      result^.load(lu_forImport);
     end else begin
       raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
       result:=nil;
     end;
   end;
 
-PROCEDURE T_package.load(CONST resolveExpressions:boolean);
+PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
   VAR isFirstLine:boolean=true;
+      doc:P_userPackageDocumentation;
+
+  PROCEDURE pseudoLoadPackage(id:ansistring);
+    VAR newSourceName:ansistring;
+    begin
+      newSourceName:=locateSource(codeProvider^.getPath,id);
+      if newSourceName<>'' then doc^.addUses(newSourceName);
+    end;
+
   PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
       VAR temp:P_token;
@@ -186,13 +201,18 @@ PROCEDURE T_package.load(CONST resolveExpressions:boolean);
           end;
           temp:=first; first:=disposeToken(temp);
         end;
-        for i:=0 to length(packageUses)-1 do with packageUses[i] do pack:=loadPackage(id,locationForErrorFeedback);
-        i:=0;
-        while i<length(packageUses) do begin
-          if packageUses[i].pack=nil then begin
-            for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
-            setLength(packageUses,length(packageUses)-1);
-          end else inc(i);
+        if usecase=lu_forDocGeneration then begin
+          for i:=0 to length(packageUses)-1 do pseudoLoadPackage(packageUses[i].id);
+          setLength(packageUses,0);
+        end else begin
+          for i:=0 to length(packageUses)-1 do with packageUses[i] do pack:=loadPackage(id,locationForErrorFeedback);
+          i:=0;
+          while i<length(packageUses) do begin
+            if packageUses[i].pack=nil then begin
+              for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
+              setLength(packageUses,length(packageUses)-1);
+            end else inc(i);
+          end;
         end;
       end;
       
@@ -347,7 +367,7 @@ PROCEDURE T_package.load(CONST resolveExpressions:boolean);
         writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
-        if resolveExpressions then begin
+        if usecase=lu_forDirectExecution then begin
           predigest(first,@self);
           writeExprEcho(tokensToString(first));
           reduceExpression(first,0);
@@ -357,15 +377,35 @@ PROCEDURE T_package.load(CONST resolveExpressions:boolean);
       if first<>nil then cascadeDisposeToken(first);
     end;
 
+  PROCEDURE documentRules;
+    VAR r:T_ruleMap.VALUE_TYPE_ARRAY;
+        i,j:longint;
+        ruleDoc:P_userFunctionDocumentation;
+    begin
+      r:=rules.valueSet;
+      for i:=0 to length(r)-1 do begin
+        ruleDoc:=nil;
+        new(ruleDoc,create(r[i]^.id));
+        ruleDoc^.isPure:=r[i]^.isCached;
+        for j:=0 to length(r[i]^.subRules)-1 do
+          ruleDoc^.addSubRule(not(r[i]^.subRules[j]^.publish),r[i]^.subRules[j]^.pattern.toString);
+        doc^.addRule(ruleDoc);
+      end;
+      setLength(r,0);
+    end;
+
   VAR codeLines:T_stringList;
       i:longint;
       next:T_token;
       first,last:P_token;
       location:T_TokenLocation;
   begin
+    if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
     loadedVersion:=codeProvider^.getVersion(true);
     codeLines:=codeProvider^.getLines;
+
+
 
     first:=nil;
     last :=nil;
@@ -395,6 +435,7 @@ PROCEDURE T_package.load(CONST resolveExpressions:boolean);
       if first<>nil then interpret(first);
     end else cascadeDisposeToken(first);
     ready:=true;
+    if usecase=lu_forDocGeneration then documentRules;
     raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
   end;
 
@@ -502,6 +543,12 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinesImportedRules.unique;
   end;
 
+PROCEDURE T_package.ensureDocumentation;
+  begin
+
+
+  end;
+
 FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
   VAR next:T_token;
       first,last,temp:P_token;
@@ -597,6 +644,22 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
       result.create;
       result.define(C_nilTokenLocation,'ERR',tt_eol);
     end;
+  end;
+
+PROCEDURE findAndDocumentAllPackages;
+  VAR sourceNames:T_stringList;
+      i:longint;
+      p:T_package;
+      provider:P_codeProvider;
+  begin
+    sourceNames:=locateSources;
+    for i:=0 to length(sourceNames)-1 do begin
+      new(provider,Create(sourceNames[i]));
+      p.create(provider);
+      p.load(lu_forDocGeneration);
+      p.destroy;
+    end;
+    writeUserPackageDocumentations;
   end;
 
 INITIALIZATION

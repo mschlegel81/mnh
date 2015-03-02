@@ -1235,7 +1235,7 @@ FUNCTION interpret_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       filename        :=             P_stringLiteral(params^.value(0))^.value;
-      fileByScriptName:=locateSource(P_stringLiteral(params^.value(0))^.value);
+      fileByScriptName:=locateSource('',P_stringLiteral(params^.value(0))^.value);
       if (fileByScriptName      <>'') and FileExists(fileByScriptName) then filename:=fileByScriptName;
       if (filename              <>'') and FileExists(filename) and
          (mnh_console_executable<>'') and FileExists(mnh_console_executable) then begin
@@ -1389,7 +1389,7 @@ INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
   registerRule('not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
-  registerRule('print'         ,@print_imp     ,'print(...);#Prints OUT the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule('abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric parameter n');
   registerRule('sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric parameter n');
   registerRule('sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric parameter n');
@@ -1412,10 +1412,10 @@ INITIALIZATION
   registerRule('unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule('flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule('random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
-  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element OUT of list L#max(x,y,...);#Returns the greatest element OUT of the given parameters');
-  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element OUT of list L (or the first index if ambiguous)');
-  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element OUT of list L#min(x,y,...);#Returns the smallest element OUT of the given parameters');
-  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element OUT of list L (or the first index if ambiguous)');
+  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
+  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
+  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
   registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none#Note: Character indexes start with 1!');

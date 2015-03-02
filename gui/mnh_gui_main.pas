@@ -8,7 +8,7 @@ uses
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
   mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar;
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc;
 
 type
 
@@ -1035,6 +1035,8 @@ INITIALIZATION
   output.create;
   setLength(errorThroughput,0);
 
+  mnh_doc.documentBuiltIns;
+  findAndDocumentAllPackages;
 FINALIZATION
   output.destroy;
 end.

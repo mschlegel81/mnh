@@ -1,6 +1,6 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif};
+USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif}, mnh_doc;
 
 //by command line parameters:---------------
 VAR minErrorLevel:T_errorLevel=el2_warning;
@@ -95,7 +95,7 @@ PROCEDURE interactiveMode;
           hasExitSignal:=true;
           exit;
         end;
-        if nextInput[length(nextInput)]='\' then begin
+        if (length(nextInput)>0) and (nextInput[length(nextInput)]='\') then begin
           mainPackageProvider.appendLine(copy(nextInput,1,length(nextInput)-1));
         end else begin
           mainPackageProvider.appendLine(nextInput);
@@ -112,7 +112,7 @@ PROCEDURE interactiveMode;
     readInputFromConsole;
     while not(hasExitSignal) do begin      
       time:=now;
-      reloadMainPackage(true);
+      reloadMainPackage(lu_forDirectExecution);
       writeln('time: ',(now-time)*24*60*60:0:3,'sec');
       readInputFromConsole;
     end;
@@ -121,13 +121,15 @@ PROCEDURE interactiveMode;
 PROCEDURE fileMode;
   begin
     mainPackageProvider.setPath(fileToInterpret);
-    reloadMainPackage(false);    
+    reloadMainPackage(lu_forImport);    
     callMainInMain(parameters);
   end;
   
-begin
+begin  
   mnh_funcs.mnh_console_executable:=paramstr(0);
   parseCmdLine;
+  mnh_doc.documentBuiltIns;
+  findAndDocumentAllPackages;
   if fileToInterpret='' then interactiveMode
                         else fileMode;
 end.

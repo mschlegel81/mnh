@@ -67,8 +67,10 @@
 @echo ---------------------------------- packaging ---------------------------------------
 @mkdir distro\mnh\packages
 @mkdir distro\mnh\demos
+@mkdir distro\mnh\doc
 @copy packages\*.mnh distro\mnh\packages
 @copy demos\*.mnh distro\mnh\demos
+@copy doc\*.mnh distro\mnh\doc
 @cd distro
 @copy ..\bin64\* .
 @del ..\versions\mnh5_win??_%mydate%.7z

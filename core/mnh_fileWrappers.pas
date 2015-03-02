@@ -40,17 +40,18 @@ TYPE
     PROCEDURE Clear;
   end;
 
+CONST sourceExt = '.MNH';
+
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
 FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST Name: ansistring;
   CONST textToWrite: T_stringList): boolean;
-FUNCTION find(CONST pattern: ansistring;
-  CONST filesAndNotFolders: boolean): T_stringList;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
 
-PROCEDURE clearSourceScanPaths;
-PROCEDURE addSourceScanPath(CONST path: ansistring);
-FUNCTION locateSource(CONST id: ansistring): ansistring;
+PROCEDURE setMainPackagePath(CONST path:ansistring);
+FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
+FUNCTION locateSources:T_stringList;
 
 FUNCTION runCommandAsync(CONST executable: ansistring;
   CONST parameters: T_stringList): boolean;
@@ -58,34 +59,14 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
   OUT output: TStringList): boolean;
 
 IMPLEMENTATION
+VAR mainPackagePath:ansistring;
 
-VAR
-  sourceScanPath: T_stringList;
-
-PROCEDURE clearSourceScanPaths;
+PROCEDURE setMainPackagePath(CONST path:ansistring);
   begin
-    setLength(sourceScanPath, 0);
-    addSourceScanPath(ParamStr(0));
-    addSourceScanPath('');
+    mainPackagePath:=expandFileName(extractFilePath(path));
   end;
 
-PROCEDURE addSourceScanPath(CONST path: ansistring);
-  VAR
-    expandedPath: ansistring;
-    i: longint;
-  begin
-    expandedPath := expandFileName(extractFilePath(path));
-    for i := 0 to length(sourceScanPath) - 1 do
-      if sourceScanPath[i] = expandedPath then
-        exit;
-    setLength(sourceScanPath, length(sourceScanPath) + 1);
-    sourceScanPath[length(sourceScanPath) - 1] := expandedPath;
-  end;
-
-FUNCTION locateSource(CONST id: ansistring): ansistring;
-  CONST
-    sourceExt = '.MNH';
-
+FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
   FUNCTION nameToId(CONST fname: ansistring): ansistring;
     begin
       if uppercase(extractFileExt(fname)) = sourceExt then
@@ -116,13 +97,35 @@ FUNCTION locateSource(CONST id: ansistring): ansistring;
       SysUtils.findClose(info);
     end;
 
-  VAR
-    i: longint;
   begin
     result := '';
-    for i := 0 to length(sourceScanPath) - 1 do
-      if result = '' then
-        recursePath(sourceScanPath[i]);
+    recursePath(expandFileName(extractFilePath(rootPath)));
+  end;
+
+FUNCTION locateSources:T_stringList;
+  PROCEDURE recursePath(CONST path: ansistring);
+    VAR
+      info: TSearchRec;
+    begin
+      if findFirst(path + '*', faAnyFile, info) = 0 then
+        repeat
+          if (info.attr and faDirectory) = faDirectory then
+            begin
+            if (info.Name <> '.') and (info.Name <> '..') then
+              recursePath(path + info.Name + DirectorySeparator);
+            end
+          else if uppercase(extractFileExt(info.name)) = sourceExt then begin
+            setLength(result,length(result)+1);
+            result[length(result)-1]:= path + info.Name;
+          end;
+        until (findNext(info) <> 0);
+      SysUtils.findClose(info);
+    end;
+
+  begin
+    setLength(result, 0);    recursePath('');
+    if length(result)=0 then recursePath('..');
+    if length(result)=0 then recursePath('..\..');
   end;
 
 
@@ -230,23 +233,20 @@ FUNCTION writeFileLines(CONST Name: ansistring;
       end;
   end;
 
-FUNCTION find(CONST pattern: ansistring;
-  CONST filesAndNotFolders: boolean): T_stringList;
-  VAR
-    info: TSearchRec;
-    path: ansistring;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
+  VAR info: TSearchRec;
+      path: ansistring;
   begin
     path := ExtractFilePath(pattern);
     setLength(result, 0);
     if findFirst(pattern, faAnyFile, info) = 0 then
       repeat
         if (info.Name <> '.') and (info.Name <> '..') and
-          (((info.attr and faDirectory) = faDirectory) and not
-          (filesAndNotFolders) or ((info.attr and faDirectory) <> faDirectory) and
-          filesAndNotFolders) then
+          (((info.attr and faDirectory) =  faDirectory) and not(filesAndNotFolders) or
+           ((info.attr and faDirectory) <> faDirectory) and     filesAndNotFolders) then
           begin
-          setLength(result, length(result) + 1);
-          result[length(result) - 1] := path + info.Name;
+            setLength(result, length(result) + 1);
+            result[length(result) - 1] := path + info.Name;
           end;
       until (findNext(info) <> 0);
     SysUtils.findClose(info);
@@ -520,5 +520,5 @@ PROCEDURE T_codeProvider.Clear;
   end;
 
 INITIALIZATION
-  clearSourceScanPaths;
+  setMainPackagePath('');
 end.

@@ -1,0 +1,22 @@
+body {
+  padding-left: 1em;
+  font-family: Georgia, "Times New Roman",
+        Times, serif;
+  color: black;
+  background-color: #EEEEEE}
+h1 {
+  font-family: Helvetica, Geneva, Arial,
+        SunSans-Regular, sans-serif }
+code { font-family: Courier; white-space: pre }
+a:link {
+  color: #0000FF }
+a:visited {
+  color: #000066 }
+address {
+  margin-top: 1em;
+  padding-top: 1em;
+  border-top: thin dotted }
+table { display: inline-table}
+.oben    { vertical-align:top}
+.red {color:#FF0000}
+.ruleHead  { vertical-align:top; background-color: #DDDDDD}

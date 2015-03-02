@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>MNH 5 - Operators</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Operators</h3>
+<div align="right"><hr> </font></div>
+<h3><a href="#scalarOps"> Scalar operators</a></h3>
+<ul>
+  <li><h4><a href="#arithOps"> Arithmetic operators</a></h4></li>
+  <li><h4><a href="#compOps"> Comparators         </a></h4></li>
+  <li><h4><a href="#logOps"> Logical operators   </a></h4></li>
+  <li><h4><a href="#stringOps"> String concatenation</a></h4></li>
+</ul>
+<h3><a href="#listOps"> List operators                </a></h3>
+<h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
+<h3><a href="#typecheckOps"> Type check operators</a></h3>
+<h3><a href="#assignmentOps"> Assignment operators</a></h3>
+<div align="right"><font color="#a0a0a0"><hr> </font></div>
+
+<h3><a name="scalarOps"> Scalar operators<a></h3>
+Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
+All of those operators apart from <code>==</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
+[x0,x1,...] o  y          -> [x0 o y , x1 o y , ...]
+ x          o [y0,y1,...] -> [x  o y0, x  o y1, ...]
+[x0,x1,...] o [y0,y1,...] -> [x0 o y0, x0 o y1, ...]
+</code>The last one will work if (and only if) both operators have the same number of list elements.<br>
+While this is handy in most situations, there are some counter intutive consequences:<ul>
+  <li> Lazy evaluation cannot be implemented <br>because <code>false and X</code> will yield <code>false</code> only if X is a scalar.
+       If on the other hand X is a list of booleans, the result of this operation will be a list of booleans (all false). Consequently X always must be evaluated to determine the result.</li>
+  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>[1,2]=[1,2] -> [true,true]</code>.<br>
+       As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are equal, e.g. <code>[1,2]==[1,2] -> true</code>.
+  </li>
+  </ul>
+For expression-literals, all operators will be used to expand the expression to a new expression-literal:<code>
+{expr} o X -> {(expr o X)}
+</code>
+
+<h4><a name="#arithOps"> Arithmetic operators</a></h4>
+<table border="0">
+<tr><td><code>+</code></td><td><h5>Addition</h5></td></tr><tr><td></td><td> 
+This is the common addition operator, which also doubles as an unary "neutral" operator.<br> As in many modern languages, the operator is overloaded for string concatenation. 
+In contrast to languages as C or Java, it does not allow for concatenation of non-strings and strings.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.
+</td></tr>
+<tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td> 
+This is the common subtraction operator, which also doubles as unary negation.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.
+</td></tr>
+<tr><td><code>*</code></td><td><h5>Multiplication</h5></td></tr><tr><td></td><td> 
+This is the common multiplication operator.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.
+</td></tr>
+<tr><td><code>/</code></td><td><h5>Real division</h5></td></tr><tr><td></td><td> 
+This is the common division operator.<br>
+If both operands are numeric the result is a real number.
+</td></tr>
+<tr><td><code>**</code>, <code>^</code></td><td><h5>Potentiation</h5></td></tr><tr><td></td><td> 
+This is the potentiation operator.<br>
+The result type will be the simplest possible type possible for representing the analytic result.<br>
+Example 1: <code> 2 ^ 2 -> 4 </code> (The result is an integer)<br>
+Example 2: <code> 2 ^ -2 -> 0.25 </code> (The result is a real number)
+</td></tr>
+<tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td> 
+Inspired by Pascal.
+</td></tr>
+<tr><td><code>mod</code></td><td><h5>Integer modulo</h5></td></tr><tr><td></td><td> 
+Inspired by Pascal.
+</td></tr>
+</table>
+
+<h4><a name="compOps"> Comparators</a></h4>
+Comparators are implemented, so that they return a boolean or a list of booleans for most cases, the only exception being comparison of lists of incompatible sizes.<br>
+Consequently all comparators <code>o</code> must be read as<code>
+x o y -> [x and y are naively comparable] and (x o y)</code><br>
+As a further consequence, the following expressions will return the same result only if x and y are comparable:<code>
+x > y
+not(x<=y)</code><br>
+Comparators can be used as in mathematical notation, e.g. <code>x < y < z</code> is identical to <code>x < y and y < z.</code><br>
+For on comparators in function definitions see <a href="functions.html">MNH5 - Function definitions</a>.
+<br>
+<table border="0">
+<tr><td><code>= </code></td><td><h5>Scalar equals</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and equal (e.g. <code>3 = 3.0</code>). </td></tr>
+<tr><td><code>==</code></td><td><h5>List equals</h5></td></tr><tr><td></td><td>
+Returns a scalar boolean.<br>Returns true if the comparands are comparable, have the same number of list elements and all list elements are equal.<br>
+<code>[x0,x1,...] == [y0,y1,...]  ->  x0 == y0 and x1 == y1 and ...</code>
+</td></tr>
+<tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and not equal.</td></tr>
+<tr><td><code>> </code></td><td><h5>Greater than</h5></td></tr><tr><td></td><td> 
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand.</td></tr>
+<tr><td><code>< </code></td><td><h5>Lesser than</h5></td></tr><tr><td></td><td> 
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand.</td></tr>
+<tr><td><code>>=</code></td><td><h5>Greater-or-equal</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand or both comparands are equal.</td></tr>
+<tr><td><code><=</code></td><td><h5>Lesser-or-equal</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
+</table>
+
+<h4><a name="logOps">Logical operators</a></h4>
+<table border="0">
+<tr><td><code>and</code></td><td><h5>Logical or bitwise and</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>or</code></td><td><h5>Logical or bitwise or</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>xor</code></td><td><h5>Logical or bitwise exclusive-or</h5></td></tr><tr><td></td><td> </td></tr>
+</table>
+
+<h4><a name="stringOps"> String concatenation</a></h4>
+The <code>&</code>-operator for string concatenation (inspired from Excel) was introduced as the preferred method to concatenate strings.<br>
+<table border="0">
+<tr><td><code>&</code></td><td><h5>String concatenation</h5></td></tr><tr><td></td><td> </td></tr>
+</table>
+<h3><a name="listOps"> List operators</a></h3>
+<table border="0">
+<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> </td></tr>
+</table>
+
+<h3><a name="iifOps"> The ternary inline-if operator</a></h3>
+The ternary inline-if operator is inspired by C and it's successors.<br>Syntax is <code>B ? X : Y</code>, where <code>B</code> is a boolean scalar, <code>X</code> is the result if <code>B</code> evaluates to true and <code>Y</code> is 
+the result if <code>B</code> evaluates to false.<br>
+Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed.<br>
+Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
+
+<h3><a name="typecheckOps"> Type check operators</a></h3>
+Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. <br>Syntactically type checks are unary operators in postfix notation.
+<br>The following type checks are defined:<code>
+:scalar
+:list
+:boolean
+:booleanList
+:int
+:intList
+:real
+:realList
+:string
+:stringList
+:numeric
+:numericList
+:expression
+</code><br>
+Example: Test if 3 is an integer<code>
+  3:int</code>
+
+
+<h3><a name="assignmentOps"> Assignment operators</a></h3>
+For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs without a return value and with side effects.
+<br>For details on user defined functions see <a href="functions.html">MNH5 - Function definitions</a>.<br>
+<table border="0">
+<tr><td><code>-></code></td><td><h5>Declaration operator</h5></td></tr><tr><td></td><td>
+Declares a function.</td></tr>
+<tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
+Declares a function and resolves the right-hand-side immediately.</td></tr>
+</table>
+
+<div align="right"><font color="#a0a0a0"><hr> </font></div>
+</body>
+</html>
