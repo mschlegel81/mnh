@@ -1,5 +1,6 @@
 :start
-@if "%1"=="" goto help
+@if "%1"=="help" goto help
+@if "%1"=="" %0 32o 32d 64o 64d 
 @if "%1"=="all" %0 32o 32d 64o 64d distro
 
 @set delp=C:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32 gui
@@ -20,6 +21,7 @@
 @if "%1"=="64o" goto 64bitOpt
 @if "%1"=="64d" goto 64bitDeb
 @if "%1"=="distro" goto pack
+@if "%1"=="clean" goto cleanup
 @goto help
 
 :64bitOpt
@@ -91,6 +93,11 @@
 @echo ------------------------------------------------------------------------------------
 @goto loop
 
+:cleanup
+@%delp%
+@del bin32\*.lfm bin32\*.res test\*.exe bin32\*.exe gui\*.exe *.exe
+@goto loop
+
 :loop
 @shift
 @if "%1"=="" goto end
@@ -104,4 +111,5 @@
 @echo   64d    - builds 32bit binaried for debugging
 @echo   distro - makes a distro package
 @echo   all    - all of the above
+@echo   clean  - cleanup
 :end
