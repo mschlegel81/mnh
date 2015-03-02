@@ -2,7 +2,7 @@ UNIT mnh_tokens;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
-     mnh_funcs, mnh_out_adapters; //even more specific
+     mnh_funcs, mnh_out_adapters, mnh_caches; //even more specific
      
 {$define doTokenRecycling}
 {$define include_interface}
@@ -18,7 +18,7 @@ TYPE
       publicRules:specialize G_stringKeyMap<P_rule>;
       localRules:specialize G_stringKeyMap<P_rule>;
       packageUses:array of record
-        id:string;
+        id:ansistring;
         pack:P_package;
       end;
       ready:boolean;
@@ -72,7 +72,7 @@ FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadAllPackages;
   VAR i:longint;
   begin
-    clearValueCache; 
+    clearAllCaches;
     if length(packages)<=0 then exit;
     for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);
     setLength(packages,1);
@@ -81,7 +81,7 @@ PROCEDURE reloadAllPackages;
 
 PROCEDURE reloadMainPackage;
   begin
-    clearValueCache; 
+    clearAllCaches;
     clearErrors;
     if length(packages)>0 then packages[0]^.load;
   end;
@@ -89,7 +89,7 @@ PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
   VAR i:longint;
   begin
-    clearValueCache; 
+    clearAllCaches;
     clearErrors;
     clearSourceScanPaths;
     for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);
@@ -282,7 +282,7 @@ PROCEDURE T_package.load;
           end else inc(i);
         end;
       end;
-
+      
     VAR assignmentToken:P_token;
 
     PROCEDURE parseRule;
@@ -403,7 +403,7 @@ PROCEDURE T_package.load;
           exit;
         end;
 
-        if evaluateBody then reduceExpression(ruleBody);
+        if evaluateBody then reduceExpression(ruleBody,0);
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           ensureLocalRuleId(ruleId)^.addOrReplaceSubRule(subrule);
@@ -414,20 +414,47 @@ PROCEDURE T_package.load;
           cascadeDisposeToken(first);
         end;
       end;
-
+      
+    FUNCTION parseCache:boolean;
+      VAR ruleIdToken:P_token;
+          specifier:P_token;
+          cacheSize:longint;
+      begin
+        if not(first^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_userRulePointer,tt_parameterIdentifier]) or 
+              (first^.txt<>'CACHE') or 
+              (first^.next=nil) 
+        then exit(false);
+        ruleIdToken:=first^.next;
+        if not(ruleIdToken^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_userRulePointer,tt_parameterIdentifier])
+        then exit(false);
+        specifier:=ruleIdToken^.next;
+        if (specifier=nil) or (specifier^.tokType=tt_literal) 
+                and (P_literal(specifier^.data)^.literalType=lt_int)
+                and (specifier^.next=nil) then begin          
+          if specifier=nil then cacheSize:=100
+                           else cacheSize:=P_intLiteral(specifier^.data)^.value;
+          ensureLocalRuleId (ruleIdToken^.txt)^.setCached(cacheSize);
+          ensurePublicRuleId(ruleIdToken^.txt)^.setCached(cacheSize);
+          cascadeDisposeToken(first);
+          first:=nil;
+          result:=true;
+        end else result:=false;
+      end;
+    
     begin
       if first=nil then exit;
       if isFirstLine then begin
         isFirstLine:=false;
-        if (          first^.tokType=tt_identifier) and
-           (uppercase(first^.txt)='USE') and
-           (          first^.next<>nil) and
-           (          first^.next^.tokType=tt_identifier)
+        if (first^.tokType=tt_identifier) and
+           (first^.txt    ='USE') and
+           (first^.next   <>nil) and
+           (first^.next^.tokType=tt_identifier)
         then begin
           interpretUseClause;
           exit;
         end;
       end;
+      if parseCache then exit;
       predigestBeforeDeclarationParsing(first);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken=nil then predigest(first)
@@ -437,7 +464,7 @@ PROCEDURE T_package.load;
         parseRule;
       end else begin
         writeExprEcho(tokensToString(first));
-        reduceExpression(first);
+        reduceExpression(first,0);
         writeExprOut(tokensToString(first));
       end;
       cascadeDisposeToken(first);
@@ -693,7 +720,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
       t^.next:=newToken(C_nilTokenLocation,'',tt_parList,parLit);
-      reduceExpression(t);
+      reduceExpression(t,0);
     end;
     cascadeDisposeToken(t);
   end;

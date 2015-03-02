@@ -22,8 +22,8 @@
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
       FUNCTION toString:ansistring;
       PROCEDURE performSet(CONST newValue:P_literal);
-      FUNCTION directEvaluateNullary():P_literal;
-      FUNCTION directEvaluateUnary(CONST x:P_literal):P_literal;
+      FUNCTION directEvaluateNullary(CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):P_literal;
   end;
 
 {$endif}
@@ -301,11 +301,11 @@ PROCEDURE T_subrule.performSet(CONST newValue:P_literal);
     end else raiseError(el3_evalError,'Cannot process set-operation',declaredAt);
   end;
 
-FUNCTION T_subrule.directEvaluateNullary():P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,firstRep,lastRep) then begin
-      reduceExpression(firstRep);
+      reduceExpression(firstRep,callDepth+1);
       if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -318,18 +318,18 @@ FUNCTION T_subrule.directEvaluateNullary():P_literal;
     end else result:=nil;
   end;
 
-FUNCTION evaluateNullary(CONST subrulePointer:pointer):P_literal;
+FUNCTION evaluateNullary(CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
   begin
-    result:=P_subrule(subrulePointer)^.directEvaluateNullary;
+    result:=P_subrule(subrulePointer)^.directEvaluateNullary(callDepth);
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
       param:P_listLiteral;
   begin
     param:=newOneElementListLiteral(x,true);
     if replaces(param,firstRep,lastRep) then begin
-      reduceExpression(firstRep);
+      reduceExpression(firstRep,callDepth+1);
       if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;

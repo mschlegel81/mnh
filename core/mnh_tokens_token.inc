@@ -412,7 +412,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token);
     end;
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -582,13 +582,13 @@ PROCEDURE reduceExpression(VAR first:P_token);
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if first^.tokType=tt_userRulePointer then begin
-        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace)) then begin
+        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth)) then begin
           if parameterListLiteral=nil then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
                                       else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toString,first^.location);
           exit;
         end;
       end else if first^.tokType=tt_intrinsicRulePointer then begin
-        newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
+        newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,callDepth);
         if newLiteral<>nil then begin
           firstReplace:=newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;

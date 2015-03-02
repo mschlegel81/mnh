@@ -2,7 +2,7 @@ UNIT mnh_funcs;
 INTERFACE
 USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
 VAR
   intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
@@ -10,14 +10,12 @@ VAR
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
 
 //Callbacks:--------------------------------
-TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer):P_literal;
+TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
 VAR resolveNullaryCallback:T_resolveNullaryCallback;
 
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
 VAR stringToExprCallback:T_stringToExprCallback;
 //--------------------------------:Callbacks
-
-PROCEDURE clearValueCache;
 IMPLEMENTATION
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
@@ -28,7 +26,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_list
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -52,7 +50,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=newBoolLiteral(true);
   end;
 
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION sqr_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -75,7 +73,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('SQR',params,tokenLocation);
   end;
 
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION sqrt_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -98,7 +96,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('SQRT',params,tokenLocation);
   end;
 
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION sin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -121,7 +119,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('SIN',params,tokenLocation);
   end;
 
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION arcsin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -144,7 +142,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     else raiseNotApplicableError('ARCSIN',params,tokenLocation);
   end;
 
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION cos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -167,7 +165,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('COS',params,tokenLocation);
   end;
 
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION arccos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -190,7 +188,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     else raiseNotApplicableError('ARCCOS',params,tokenLocation);
   end;
 
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION tan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -213,7 +211,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('TAN',params,tokenLocation);
   end;
 
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION arctan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -236,7 +234,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     else raiseNotApplicableError('ARCTAN',params,tokenLocation);
   end;
 
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION exp_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -259,7 +257,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('EXP',params,tokenLocation);
   end;
 
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION ln_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -282,7 +280,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation)
     else raiseNotApplicableError('LN',params,tokenLocation);
   end;
 
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION round_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -346,7 +344,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('ROUND',params,tokenLocation);
   end;
 
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION ceil_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -369,7 +367,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('CEIL',params,tokenLocation);
   end;
 
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION floor_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -392,7 +390,7 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('FLOOR',params,tokenLocation);
   end;
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION headOf(CONST x:P_literal):P_literal;
     begin
       result:=nil;
@@ -429,7 +427,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('HEAD',params,tokenLocation);
   end;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION tailOf(CONST x:P_literal):P_listLiteral;
     VAR i:longint;
     begin
@@ -467,7 +465,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('TAIL',params,tokenLocation);
   end;
 
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -482,7 +480,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('SORT',params,tokenLocation);
   end;
 
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -495,7 +493,7 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('SORTPERM',params,tokenLocation);
   end;
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   PROCEDURE recurse_flatten(CONST L:P_listLiteral);
     VAR i:longint;
     begin
@@ -515,7 +513,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
@@ -536,7 +534,7 @@ PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
     intrinsicRuleMap.put(name,ptr);
   end;
 
-FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -551,7 +549,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else raiseNotApplicableError('MAX',params,tokenLocation);
   end;
 
-FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -566,7 +564,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else raiseNotApplicableError('MIN',params,tokenLocation);
   end;
 
-FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -577,7 +575,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('SIZE',params,tokenLocation);
   end;
 
-FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR res:P_literal;
       time:double;
       aid:P_listLiteral;
@@ -585,7 +583,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
       time:=now;
-      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value);
+      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth);
       time:=now-time;
       if res<>nil then begin
         result:=newListLiteral;
@@ -601,7 +599,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('TIME',params,tokenLocation);
   end;
 
-FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR splitters:array of ansistring;
   PROCEDURE initSplitters;
     VAR i:longint;
@@ -669,7 +667,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('SPLIT',params,tokenLocation);
   end;
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -693,7 +691,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     else raiseNotApplicableError('SOFTCAST',params,tokenLocation);
   end;
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION trim_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -714,7 +712,7 @@ FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('TRIM',params,tokenLocation);
   end;
 
-FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION upper_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -735,7 +733,7 @@ FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('UPPER',params,tokenLocation);
   end;
 
-FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION lower_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -756,7 +754,7 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('LOWER',params,tokenLocation);
   end;
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -767,7 +765,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('STRING',params,tokenLocation);
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -805,7 +803,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end;
   end;
 
-FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -813,7 +811,7 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('FILES',params,tokenLocation);
   end;
 
-FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -821,121 +819,125 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('FOLDERS',params,tokenLocation);
   end;
 
-CONST CACHE_MASK=1023; //must be 2^n-1 for some integer n
-      CACHE_FILL_LIMIT=CACHE_MASK*50;
-VAR valueCache: record
-      bin:array[0..CACHE_MASK] of array of record
-        key,value:P_literal;
-        use:longint;
-      end;
-      fill:longint;
-    end;
-
-PROCEDURE initValueCache;
-  VAR i:longint;
-  begin with valueCache do begin
-    for i:=0 to CACHE_MASK do setLength(bin[i],0);
-    fill:=0;
-  end; end;
-  
-PROCEDURE clearValueCache;
-  VAR i,j:longint;
-  begin with valueCache do begin
-    for i:=0 to CACHE_MASK do begin
-      for j:=0 to length(bin[i])-1 do begin
-        disposeLiteral(bin[i,j].key);
-        disposeLiteral(bin[i,j].value);
-      end;
-      setLength(bin[i],0);
-    end;
-    fill:=0;
-  end; end;
-  
-PROCEDURE polishValueCache;
-  VAR i,j,k:longint;
-      avgUse:double;
-  begin with valueCache do begin
-    fill:=0;
-    avgUse:=0;
-    for i:=0 to CACHE_MASK do for j:=0 to length(bin[i])-1 do begin
-      inc(fill);
-      avgUse:=avgUse+bin[i,j].use;
-    end;
-    if fill=0 then exit;
-    avgUse:=avgUse/fill;
-    for i:=0 to CACHE_MASK do begin
-      k:=0;
-      for j:=0 to length(bin[i])-1 do 
-      if bin[i,j].use>avgUse then begin
-        bin[i,k]:=bin[i,j]; inc(k);
-      end else begin
-        dec(fill);
-        disposeLiteral(bin[i,j].key);
-        disposeLiteral(bin[i,j].value);
-      end;
-      setLength(bin[i],k);
-    end;
-  end; end;
-  
-PROCEDURE putToCache(CONST key,value:P_literal);
-  VAR i,j:longint;
-  begin with valueCache do begin
-    i:=key^.hash and CACHE_MASK;
-    j:=0;
-    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
-    if j<length(bin[i]) then begin
-      disposeLiteral(bin[i,j].key);
-      disposeLiteral(bin[i,j].value);
-      dec(fill);
-    end else setLength(bin[i],j+1);
-    bin[i,j].key  :=key;
-    bin[i,j].value:=value;
-    bin[i,j].use  :=0;
-    key^.rereference;
-    value^.rereference;
-    inc(fill);
-    //if fill>CACHE_FILL_LIMIT then polishValueCache;
-  end; end;
-
-FUNCTION getFromCache(CONST key:P_literal):P_literal;
-  VAR i,j:longint;
-  begin with valueCache do begin
-    i:=key^.hash and CACHE_MASK;
-    j:=0;
-    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
-    if j<length(bin[i]) then begin
-      result:=bin[i,j].value;
-      inc(bin[i,j].use);
-    end else result:=nil;
-  end; end;
-  
-FUNCTION cachePut_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) then begin
-      putToCache(params^.value(0),params^.value(1));
-      result:=params^.value(1);
-      result^.rereference;
-    end else raiseNotApplicableError('cachePut',params,tokenLocation);
-  end;
-  
-FUNCTION isCached_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      result:=newBoolLiteral(getFromCache(params^.value(0))<>nil);
-    end else raiseNotApplicableError('isCached',params,tokenLocation);
-  end;
-  
-FUNCTION cacheGet_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      result:=getFromCache(params^.value(0));
-      if result<>nil then result^.rereference
-      else result:=newErrorLiteralRaising('Invalid cache access.',tokenLocation);
-    end else raiseNotApplicableError('cacheGet',params,tokenLocation);
-  end;
+//CONST CACHE_MASK=1023; //must be 2^n-1 for some integer n
+//      CACHE_FILL_LIMIT=CACHE_MASK*50;
+//VAR valueCache: record
+//      bin:array[0..CACHE_MASK] of array of record
+//        key:record
+//              ruleKey:ansistring;
+//              param:P_listLiteral;
+//            end;
+//        value:P_literal;
+//        use:longint;
+//      end;
+//      fill:longint;
+//    end;
+//
+//PROCEDURE initValueCache;
+//  VAR i:longint;
+//  begin with valueCache do begin
+//    for i:=0 to CACHE_MASK do setLength(bin[i],0);
+//    fill:=0;
+//  end; end;
+//  
+//PROCEDURE clearValueCache;
+//  VAR i,j:longint;
+//  begin with valueCache do begin
+//    for i:=0 to CACHE_MASK do begin
+//      for j:=0 to length(bin[i])-1 do begin
+//        disposeLiteral(bin[i,j].key);
+//        disposeLiteral(bin[i,j].value);
+//      end;
+//      setLength(bin[i],0);
+//    end;
+//    fill:=0;
+//  end; end;
+//  
+//PROCEDURE polishValueCache;
+//  VAR i,j,k:longint;
+//      avgUse:double;
+//  begin with valueCache do begin
+//    fill:=0;
+//    avgUse:=0;
+//    for i:=0 to CACHE_MASK do for j:=0 to length(bin[i])-1 do begin
+//      inc(fill);
+//      avgUse:=avgUse+bin[i,j].use;
+//    end;
+//    if fill=0 then exit;
+//    avgUse:=avgUse/fill;
+//    for i:=0 to CACHE_MASK do begin
+//      k:=0;
+//      for j:=0 to length(bin[i])-1 do 
+//      if bin[i,j].use>avgUse then begin
+//        bin[i,k]:=bin[i,j]; inc(k);
+//      end else begin
+//        dec(fill);
+//        disposeLiteral(bin[i,j].key);
+//        disposeLiteral(bin[i,j].value);
+//      end;
+//      setLength(bin[i],k);
+//    end;
+//  end; end;
+//  
+//PROCEDURE putToCache(CONST key,value:P_literal);
+//  VAR i,j:longint;
+//  begin with valueCache do begin
+//    i:=key^.hash and CACHE_MASK;
+//    j:=0;
+//    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
+//    if j<length(bin[i]) then begin
+//      disposeLiteral(bin[i,j].key);
+//      disposeLiteral(bin[i,j].value);
+//      dec(fill);
+//    end else setLength(bin[i],j+1);
+//    bin[i,j].key  :=key;
+//    bin[i,j].value:=value;
+//    bin[i,j].use  :=0;
+//    key^.rereference;
+//    value^.rereference;
+//    inc(fill);
+//    //if fill>CACHE_FILL_LIMIT then polishValueCache;
+//  end; end;
+//
+//FUNCTION getFromCache(CONST key:P_literal):P_literal;
+//  VAR i,j:longint;
+//  begin with valueCache do begin
+//    i:=key^.hash and CACHE_MASK;
+//    j:=0;
+//    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
+//    if j<length(bin[i]) then begin
+//      result:=bin[i,j].value;
+//      inc(bin[i,j].use);
+//    end else result:=nil;
+//  end; end;
+//  
+//FUNCTION cachePut_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=2) then begin
+//      putToCache(params^.value(0),params^.value(1));
+//      result:=params^.value(1);
+//      result^.rereference;
+//    end else raiseNotApplicableError('cachePut',params,tokenLocation);
+//  end;
+//  
+//FUNCTION isCached_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=1) then begin
+//      result:=newBoolLiteral(getFromCache(params^.value(0))<>nil);
+//    end else raiseNotApplicableError('isCached',params,tokenLocation);
+//  end;
+//  
+//FUNCTION cacheGet_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size=1) then begin
+//      result:=getFromCache(params^.value(0));
+//      if result<>nil then result^.rereference
+//      else result:=newErrorLiteralRaising('Invalid cache access.',tokenLocation);
+//    end else raiseNotApplicableError('cacheGet',params,tokenLocation);
+//  end;
   
 {$WARNING TODO: fileExists(filename)}
 {$WARNING TODO: readFile(filename)}
@@ -946,7 +948,6 @@ FUNCTION cacheGet_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
 {$WARNING TODO: callAsync(executablepath)}
 
 INITIALIZATION
-  initValueCache;
   intrinsicRuleMap.create;
   registerRule('print'     ,@print_imp     );
   registerRule('sqr'       ,@sqr_imp       );
@@ -987,5 +988,5 @@ INITIALIZATION
   
 FINALIZATION
   intrinsicRuleMap.destroy;
-  clearValueCache; 
+
 end.

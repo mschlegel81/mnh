@@ -587,9 +587,7 @@ FUNCTION T_expressionLiteral.leqForSorting(CONST other:P_scalarLiteral):boolean;
     result:=literalType<=other^.literalType;
   end;
 
-function T_scalarLiteral.operate(const op: T_tokenType;
-  const other: P_scalarLiteral; const tokenLocation: T_tokenLocation
-  ): P_scalarLiteral;
+FUNCTION T_scalarLiteral.operate(const op: T_tokenType; const other: P_scalarLiteral; const tokenLocation: T_tokenLocation): P_scalarLiteral;
   begin
     result:=@errLit;
     errLit.rereference;
@@ -1167,7 +1165,7 @@ FUNCTION T_listLiteral.equals(const other:P_literal):Boolean;
   VAR i:longint;
   begin 
     if (@self=other) then exit(true);
-    if (other^.literalType<>strictType) or (P_listLiteral(other)^.size<>size) then exit(false);
+    if (other^.literalType<>literalType) or (P_listLiteral(other)^.size<>size) then exit(false);
     for i:=0 to length(element)-1 do
       if not(element[i]^.equals(P_listLiteral(other)^.element[i])) then exit(false);
     result:=true;
