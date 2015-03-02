@@ -1,0 +1,19 @@
+USE shannonEntropy;
+
+pure
+fibWord(i<=1)->"1";
+fibWord(i<=2)->"0";
+fibWord(n)->fibWord(n-1)&fibWord(n-2);
+
+pure
+fibWordCharFreq(i<=1)->[0,1];
+fibWordCharFreq(i<=2)->[1,0];
+fibWordCharFreq(n)->fibWordCharFreq(n-1)+fibWordCharFreq(n-2);
+
+fibWordLength(i)->each(s,fibWordCharFreq(i),+);
+fibWordEntropy(i)->-each(s,fibWordCharFreq(i)/fibWordLength(i),+,s*ln(s)/ln(2));
+
+//*Solves the <a href="http://rosettacode.org/wiki/Fibonacci_word">Fibonacci Word Task</a> (with cheating)
+main->print("N\tLength\tEntropy\tWord\n"&
+            each(i,[ 1.. 9],&"\n"&,i&"\t"&length(fibWord(i))&"\t"&shannonEntropy(fibWord(i))&"\t"&fibWord(i))&"\n"&
+            each(i,[10..37],&"\n"&,i&"\t"& fibWordLength(i) &"\t"&fibWordEntropy        (i) ));
