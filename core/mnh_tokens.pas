@@ -24,7 +24,7 @@ TYPE
       PROCEDURE load;
       PROCEDURE clear;
       DESTRUCTOR destroy;
-      PROCEDURE resolveRuleId(VAR token:T_token);
+      PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
   end;
@@ -67,7 +67,7 @@ PROCEDURE reloadAllPackages;
   
 PROCEDURE reloadMainPackage;
   begin
-      clearErrors;    
+    clearErrors;    
     if length(packages)>0 then packages[0]^.load;
   end;
 
@@ -158,71 +158,39 @@ PROCEDURE T_package.load;
       end;
     end;
     
-  PROCEDURE predigest(VAR first:P_token; CONST forceResolveIds:boolean);
-    PROCEDURE digestInlineExpression(VAR rep:P_token);
-      VAR t,prev,inlineRule:P_token;
-          bracketLevel:longint=0;
-          inlineSubRule:P_subrule;
-      begin
-        if (rep^.tokType<>tt_expBraceOpen) then begin      
-          raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
-          exit;
-        end;          
-        t:=rep^.next; prev:=rep;  
-        inlineRule:=t;
-        while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
-          case t^.tokType of
-            tt_expBraceOpen: inc(bracketLevel);
-            tt_expBraceClose: dec(bracketLevel);
-          end;
-          prev:=t;
-          t:=t^.next;
-        end;        
-        if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-          raiseError(el4_parsingError,'Error creating subrule from inline; expression does not end with an }',rep^.location); 
-          exit;
-        end;     
-        rep^.next:=t^.next; //remove expression from parent expression
-        prev^.next:=nil; //unlink closing curly bracket
-        disposeToken(t); //dispose closing curly bracket
-        predigest(inlineRule,forceResolveIds);
-        if   errorLevel<=el2_warning then begin
-          new(inlineSubRule,createFromInline(inlineRule));
-          if   errorLevel<=el2_warning then begin
-            rep^.tokType:=tt_literal;
-            rep^.data:=newExpressionLiteral(inlineSubRule);
-          end else dispose(inlineSubRule,destroy);
-        end;
-      end;
-  
+  PROCEDURE predigest(VAR first:P_token);  
     VAR t:P_token;                
     begin
       t:=first; 
       while t<>nil do begin
         case t^.tokType of
-         // tt_expBraceOpen: digestInlineExpression(t);
-          tt_identifier: t^.data:=@self;
-          tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-                  and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-                  and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-            t^.data:=ensureLocalRuleId(t^.next^.next^.txt); 
-            t^.next:=disposeToken(t^.next); //dispose (
-            t^.next:=disposeToken(t^.next); //dispose <id>
-            t^.next:=disposeToken(t^.next); //dispose ,
-          end else begin
-            raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
-            exit;
-          end;
-          tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-                  and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-                  and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-            t^.txt:=t^.next^.next^.txt;
-            t^.data:=nil;
-            t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
-          end else begin
-            raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
-            exit;
-          end;
+//          tt_expBraceOpen:                predigestInlineExpression(t,@self);
+        tt_identifier: begin
+          resolveRuleId(t^,true);
+          if t^.tokType=tt_identifier then t^.data:=@self;
+        end;
+        tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+                and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+                and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+          t^.data:=ensureLocalRuleId(t^.next^.next^.txt); 
+          t^.next:=disposeToken(t^.next); //dispose (
+          t^.next:=disposeToken(t^.next); //dispose <id>
+          t^.next:=disposeToken(t^.next); //dispose ,
+        end else begin
+          raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
+          exit;
+        end;
+        tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+                and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+                and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+          t^.txt:=t^.next^.next^.txt;
+          t^.data:=nil;
+          t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
+        end else begin
+          raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
+          exit;
+        end;
+
         end;
         t:=t^.next;
       end;
@@ -396,15 +364,15 @@ PROCEDURE T_package.load;
       end;
       predigestBeforeDeclarationParsing(first);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
-      if assignmentToken=nil then predigest(first,true)
-                             else predigest(assignmentToken,false);
+      if assignmentToken=nil then predigest(first)
+                             else predigest(assignmentToken);
       if assignmentToken<>nil then begin
-          writeDeclEcho(tokensToString(first));
+        writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
-          writeExprEcho(tokensToString(first));
+        writeExprEcho(tokensToString(first));
         reduceExpression(first);
-          writeExprOut(tokensToString(first));
+        writeExprOut(tokensToString(first));
       end;
       cascadeDisposeToken(first);
     end;
@@ -448,6 +416,7 @@ PROCEDURE T_package.load;
       end;
     end;
     if first<>nil then interpret(first);
+    ready:=true;
   end;
   
 CONSTRUCTOR T_package.create(CONST provider:P_codeProvider);
@@ -477,8 +446,6 @@ PROCEDURE T_package.clear;
       dispose(rule,destroy);
     end;
     localRules.clear;
-    
-    
     ready:=false;
   end;
   
@@ -491,7 +458,7 @@ DESTRUCTOR T_package.destroy;
     setLength(packageUses,0);    
   end;
   
-PROCEDURE T_package.resolveRuleId(VAR token:T_token);
+PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
@@ -501,18 +468,19 @@ PROCEDURE T_package.resolveRuleId(VAR token:T_token);
       token.data:=userRule;
       exit;
     end;
-    for i:=length(packageUses)-1 downto 0 do 
+    for i:=length(packageUses)-1 downto 0 do begin
     if packageUses[i].pack^.publicRules.containsKey(token.txt,userRule) then begin
       token.tokType:=tt_userRulePointer;
       token.data:=userRule;
       exit;
+    end;
     end;
     if intrinsicRuleAliases.containsKey(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
       exit;
     end;
-    raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
+    if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
   
 FUNCTION T_package.ensureLocalRuleId(CONST ruleId:ansistring):P_rule;

@@ -128,6 +128,7 @@ TYPE
       nextAppendIsRange:boolean;
     public
       CONSTRUCTOR create;
+      PROCEDURE destroyChildren;
       DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
       FUNCTION toString:ansistring;  virtual; 
@@ -141,6 +142,7 @@ TYPE
       FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
       PROCEDURE sort;
       FUNCTION sortPerm:P_listLiteral;
+      
   end;
   
 TYPE
@@ -226,8 +228,7 @@ PROCEDURE disposeLiteral(VAR l:P_literal); inline;
       lt_list..lt_listWithError: with listLitRecycling do if fill>=length(dat) 
                                  then dispose(l,destroy)
                                  else begin
-                                   setLength(P_listLiteral(l)^.element,0);
-                                   P_listLiteral(l)^.strictType:=lt_uncheckedList;
+                                   P_listLiteral(l)^.destroyChildren;
                                    dat[fill]:=P_listLiteral(l);
                                    inc(fill);
                                  end;
@@ -263,6 +264,7 @@ FUNCTION newIntLiteral(CONST value:int64     ):P_intLiteral; inline;
       {$endif}
       new(result,create(value));
     end;
+    isMemoryFree('allocating new integer literal');
   end;
   
 FUNCTION newRealLiteral(CONST value:extended  ):P_realLiteral; inline;
@@ -276,6 +278,7 @@ FUNCTION newRealLiteral(CONST value:extended  ):P_realLiteral; inline;
     end else 
     {$endif}
     new(result,create(value));
+    isMemoryFree('allocating new real literal');
   end;
   
 FUNCTION newStringLiteral    (CONST value:ansistring):P_stringLiteral; inline;
@@ -287,13 +290,15 @@ FUNCTION newStringLiteral    (CONST value:ansistring):P_stringLiteral; inline;
       result^.val:=value;
       result^.rereference;
     end else 
-    {$endif}
+    {$endif}    
     new(result,create(value));
+    isMemoryFree('allocating new string literal');
   end;
 
 FUNCTION newExpressionLiteral(CONST value:pointer   ):P_expressionLiteral; inline;
   begin
     new(result,create(value));
+    isMemoryFree('allocating new expression literal');
   end;
   
 FUNCTION newListLiteral:P_listLiteral; inline;
@@ -306,6 +311,7 @@ FUNCTION newListLiteral:P_listLiteral; inline;
     end else 
     {$endif}
     new(result,create);
+    isMemoryFree('allocating new list literal');
   end;  
   
 FUNCTION newOneElementListLiteral(CONST value:P_literal; CONST incRefs:boolean):P_listLiteral; inline;
@@ -319,6 +325,7 @@ FUNCTION newOneElementListLiteral(CONST value:P_literal; CONST incRefs:boolean):
     {$endif}
     new(result,create);
     result^.append(value,incRefs);
+    isMemoryFree('allocating new one-element-list literal');
   end;
   
 FUNCTION newErrorLiteralRaising(CONST errorMessage:ansistring; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; inline;
@@ -387,13 +394,17 @@ DESTRUCTOR T_intLiteral.destroy;         begin end;
 DESTRUCTOR T_realLiteral.destroy;        begin end;
 DESTRUCTOR T_stringLiteral.destroy;      begin end;
 DESTRUCTOR T_expressionLiteral.destroy;  begin disposeSubruleCallback(val); end;
-DESTRUCTOR T_listLiteral.destroy;        
+PROCEDURE T_listLiteral.destroyChildren; 
   VAR i:longint;
   begin
     for i:=0 to length(element)-1 do if element[i]<>nil then disposeLiteral(element[i]);
     setLength(element,0);
+    strictType:=lt_uncheckedList;
   end;
-
+  
+DESTRUCTOR T_listLiteral.destroy;        
+  begin
+  end;
 PROCEDURE T_literal.rereference;         begin inc(numberOfReferences); end;
 FUNCTION T_literal.unreference:longint;  begin dec(numberOfReferences); result:=numberOfReferences; end;
 
@@ -821,11 +832,11 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L:P_literal; CONST tokenLocatio
     if (last^.literalType=lt_int) and (L^.literalType=lt_int) then begin      
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
-      while i0<i1 do begin
+      while (i0<i1) and (errorLevel<el3_evalError) do begin
         inc(i0);
         append(newIntLiteral(i0),false);
       end;
-      while i0>i1 do begin
+      while (i0>i1) and (errorLevel<el3_evalError) do begin
         dec(i0);
         append(newIntLiteral(i0),false);
       end;
@@ -1017,6 +1028,9 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
 
   VAR i,i1,j:longint;
   begin
+    //writeln('resolving operator ',op);
+    //writeln('             LHS = ',LHS^.toString);
+    //writeln('             RHS = ',RHS^.toString);
     //HANDLE ERROR LITERALS:---------------------------------------------------
     if (LHS^.literalType=lt_error) then begin LHS^.rereference; exit(LHS); end;
     if (RHS^.literalType=lt_error) then begin RHS^.rereference; exit(RHS); end;
@@ -1026,7 +1040,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
     then exit(newExpressionLiteral(subruleApplyOpCallback(LHS,op,RHS,tokenLocation)));
     //----------------------------------------------:HANDLE EXPRESSION LITERALS
     //HANDLE S x S -> S OPERATORS:---------------------------------------------
-    if (op in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt,tt_comparatorListEq,
+    if (op in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt,
                tt_operatorAnd, tt_operatorOr, tt_operatorXor,
                tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
                tt_operatorStrConcat]) then begin
@@ -1047,7 +1061,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
           result:=newListLiteral;
           case LHS^.literalType of
             lt_listWithError: exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
-            //lt_list: for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(              LHS                       ,op,                RHS ,tokenLocation),false);
+            lt_list: for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i]          ,op,                RHS ,tokenLocation),false);
             else     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element[i])^.operate(op,P_scalarLiteral(RHS),tokenLocation),false);
           end;
           exit(result);

@@ -172,7 +172,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
           t^.next:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
           param^.value(parIdx)^.rereference;
         end else begin
-          if (token^.tokType = tt_identifier) and (token^.data<>nil) then P_package(token^.data)^.resolveRuleId(token^);
+          if (token^.tokType = tt_identifier) and (token^.data<>nil) then P_package(token^.data)^.resolveRuleId(token^,false);
           t^.next:=newToken(token);
         end;
         t:=t^.next;

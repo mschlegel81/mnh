@@ -49,6 +49,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
     end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
     result^.next:=nil;
+    isMemoryFree('allocating new token (A)');
   end;
 
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
@@ -59,6 +60,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
     end else new(result,create);    
     result^.define(tokenLocation,tokenText,tokenType);
     result^.next:=nil;
+    isMemoryFree('allocating new token (B)');
   end;
 
 FUNCTION newToken(CONST original:P_token):P_token;
@@ -69,6 +71,7 @@ FUNCTION newToken(CONST original:P_token):P_token;
     end else new(result,create);
     result^.define(original);
     result^.next:=nil;
+    isMemoryFree('allocating new token (C)');
   end;
   
 PROCEDURE finalizeTokens;
@@ -329,6 +332,44 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       line:=copy(line,parsedLength+1,length(line));
       inc(lineLocation.column,parsedLength);
     end;      
+  end;
+  
+PROCEDURE digestInlineExpression(VAR rep:P_token);
+  VAR t,prev,inlineRule:P_token;
+      bracketLevel:longint=0;
+      inlineSubRule:P_subrule;
+  begin
+    if (rep^.tokType<>tt_expBraceOpen) then begin      
+      raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      exit;
+    end;          
+    t:=rep^.next; prev:=rep;  
+    inlineRule:=t;
+    while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
+      case t^.tokType of
+        tt_expBraceOpen: begin
+          digestInlineExpression(t);
+          if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
+        end;
+      end;
+      prev:=t;
+      t:=t^.next;
+    end;        
+    if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
+      raiseError(el4_parsingError,'Error creating subrule from inline; expression does not end with an }',rep^.location); 
+      exit;
+    end;
+
+    rep^.next:=t^.next; //remove expression from parent expression
+    prev^.next:=nil; //unlink closing curly bracket
+    disposeToken(t); //dispose closing curly bracket
+    if   errorLevel<=el2_warning then begin
+      new(inlineSubRule,createFromInline(inlineRule));
+      if   errorLevel<=el2_warning then begin
+        rep^.tokType:=tt_literal;
+        rep^.data:=newExpressionLiteral(inlineSubRule);
+      end else dispose(inlineSubRule,destroy);
+    end;    
   end;
   
 PROCEDURE reduceExpression(VAR first:P_token);
@@ -595,7 +636,7 @@ PROCEDURE reduceExpression(VAR first:P_token);
     setLength(stack,0);
     repeat
       didSubstitution:=false;
-      writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
+      //writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
           tt_set: stack_popLink;
@@ -775,6 +816,10 @@ PROCEDURE reduceExpression(VAR first:P_token);
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn: 
           raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
         tt_braceOpen: stack_push;
+        tt_expBraceOpen: begin
+          digestInlineExpression(first);
+          didSubstitution:=true;
+        end;
         tt_braceClose: if cTokType(-1)=tt_parList_constructor then begin
           first:=disposeToken(first);
           stack_popLink;
@@ -794,7 +839,7 @@ PROCEDURE reduceExpression(VAR first:P_token);
           stack_push;
         end;
         tt_identifier: begin              
-          P_package(first^.data)^.resolveRuleId(first^);
+          P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each: if (first^.data=nil) then stack_push
@@ -823,8 +868,11 @@ PROCEDURE reduceExpression(VAR first:P_token);
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
-    until not(didSubstitution) or (  errorLevel>=el3_evalError);
-    while (length(stack)>0) do stack_popLink;
+    until not(didSubstitution) or (errorLevel>=el3_evalError);
+    if errorLevel>=el5_systemError then begin
+      while (length(stack)>0) do stack_popDestroy;
+      cascadeDisposeToken(first);
+    end else while (length(stack)>0) do stack_popLink;
   end;
 
 {$endif}

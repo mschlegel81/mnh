@@ -145,12 +145,14 @@ TYPE
                 el1_note,
                 el2_warning,
                 el3_evalError,
-                el4_parsingError);
+                el4_parsingError,
+                el5_systemError);
 CONST
   C_errorLevelTxt:array[T_errorLevel] of string=('          ', 
                                                  'Note    : ',
                                                  'Warning : ',
                                                  'Ev.Error: ',
-                                                 'Ps.Error: ');
+                                                 'Ps.Error: ',
+                                                 'Sys.Err.: ');
 IMPLEMENTATION
 end.

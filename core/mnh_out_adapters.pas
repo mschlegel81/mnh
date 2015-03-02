@@ -1,6 +1,7 @@
 UNIT mnh_out_adapters;
 INTERFACE
 USES mnh_stringutil, mnh_constants;
+
 TYPE  
   T_writeCallback=PROCEDURE(CONST s:ansistring);
   
@@ -23,7 +24,7 @@ FUNCTION errorLevel:T_errorLevel;
 PROCEDURE plainConsoleOut(CONST s:ansistring);
 PROCEDURE plainStdErrOut(CONST s:ansistring);
 
-PROCEDURE printMemoryStatus;
+FUNCTION isMemoryFree(CONST usage:string):boolean;
 
 IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;  
@@ -75,30 +76,24 @@ PROCEDURE plainStdErrOut(CONST s:ansistring);
   begin
     writeln(stdErr,s);
   end;
-  
-PROCEDURE printMemoryStatus;
-  VAR mem:TMemoryManager;
-      hs:THeapStatus;
-      fhs:TFPCHeapStatus;
 
+VAR MEMORY_MANAGER:TMemoryManager;  
+
+FUNCTION isMemoryFree(CONST usage:string):boolean;
+  CONST MAX_MEMORY_THRESHOLD=1500*1024*1024; //=1500 MB 
   begin
-    GetMemoryManager(mem);
-    hs:=mem.GetHeapStatus();
-    fhs:=mem.GetFPCHeapStatus();
-    writeln('free: ',hs.TotalFree,'; heap free=',fhs.CurrHeapFree,'; heap used=',fhs.CurrHeapUsed);    
-  
+    result:=(MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed<MAX_MEMORY_THRESHOLD);
+    if not(result) and (maxErrorLevel<el5_systemError) then raiseError(el5_systemError,'Out of memory!',usage);
   end;
   
 INITIALIZATION
+  GetMemoryManager(MEMORY_MANAGER);
   inputDeclEcho:=nil; 
   inputExprEcho:=nil;
   exprOut      :=nil;
   errorOut     :=@plainStdErrOut;
   printOut     :=@plainConsoleOut;
   tablePrintOut:=nil;
-
   maxErrorLevel:=el0_allOkay;
 
-
-  
 end.

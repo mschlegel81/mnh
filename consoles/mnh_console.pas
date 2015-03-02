@@ -39,20 +39,15 @@ PROCEDURE interactiveMode;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
     new(input_adapter,create);
-    write('>');
-    readln(nextInput);
-    input_adapter^.setInput(nextInput);
-    if (uppercase(trim(nextInput))<>'EXIT') then begin
-      initMainPackage(input_adapter);
+    initMainPackage(input_adapter);
+    write('>'); readln(nextInput);
+    while (uppercase(trim(nextInput))<>'EXIT') do begin
+      input_adapter^.setInput(nextInput);
+      time:=now;
+      if isReloadOfAllPackagesIndicated then reloadAllPackages
+                                        else reloadMainPackage;
+      writeln('time: ',(now-time)*24*60*60:0:3,'sec');
       write('>'); readln(nextInput);
-      while (uppercase(trim(nextInput))<>'EXIT') do begin
-        input_adapter^.setInput(nextInput);
-        time:=now;
-        if isReloadOfAllPackagesIndicated then reloadAllPackages
-                                          else reloadMainPackage;
-        writeln('time: ',(now-time)*24*60*60:0:3,'sec');
-        write('>'); readln(nextInput);
-      end;
     end;
   end;
 

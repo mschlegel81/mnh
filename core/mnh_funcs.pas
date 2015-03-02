@@ -597,11 +597,161 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('TIME',params,tokenLocation);
   end;
   
-{$WARNING TODO: split(fullText,splitter)}
-{$WARNING TODO: softCast}
-{$WARNING TODO: trim}
-{$WARNING TODO: upper}
-{$WARNING TODO: lower}
+FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR splitters:array of ansistring;
+  PROCEDURE initSplitters;
+    VAR i:longint;
+    begin
+      if params^.value(1)^.literalType=lt_string then begin
+        setLength(splitters,1);
+        splitters[0]:=P_stringLiteral(params^.value(1))^.value;
+      end else begin
+        setLength(splitters,P_listLiteral(params^.value(1))^.size);
+        for i:=0 to length(splitters)-1 do
+          splitters[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+      end;
+    end;
+
+  FUNCTION splitOneString(CONST s:P_stringLiteral):P_listLiteral;
+    PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
+      VAR i,p:longint;
+      begin
+        splitterStart:=0;
+        for i:=0 to length(splitters)-1 do begin 
+          p:=pos(splitters[i],s);
+          if (p>0) and ((splitterStart=0) or (p<splitterStart)) then begin
+            splitterStart:=p;
+            splitterEnd:=p+length(splitters[i]);
+          end;
+        end;
+      end;
+
+    VAR sp0,sp1:longint;
+        rest:ansistring;
+    begin
+      firstSplitterPos(s^.value,sp0,sp1);
+      if sp0<0 then exit(newOneElementListLiteral(s,true));
+      result:=newListLiteral;
+      rest:=s^.value;
+      while sp0>0 do begin
+        result^.append(newStringLiteral(copy(rest,1,sp0-1)),false);
+        rest:=copy(rest,sp1,length(rest));
+        firstSplitterPos(rest,sp0,sp1);
+      end;
+      result^.append(newStringLiteral(rest),false);
+    end;
+    
+  FUNCTION splitRecurse(CONST p:P_literal):P_Literal;
+    VAR i:longint;
+    begin
+      case p^.literalType of
+        lt_string: result:=splitOneString(P_stringLiteral(p));
+        lt_list,lt_stringList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(p)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
+        end
+       else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation);
+      end;
+    end;
+  
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) 
+      and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_list])
+      and (params^.value(1)^.literalType in [lt_string,lt_stringList]) then begin
+      initSplitters;
+      result:=splitRecurse(params^.value(0));
+    end else raiseNotApplicableError('SPLIT',params,tokenLocation);
+  end;
+  
+FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_string: result:=P_stringLiteral(x)^.softCast;
+        lt_list..lt_listWithError: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do 
+            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
+        end; 
+        else begin
+          x^.rereference;
+          result:=x;
+        end;
+      end;
+    end;
+    
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0))
+    else raiseNotApplicableError('SOFTCAST',params,tokenLocation);
+  end;
+  
+FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION trim_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_string: result:=P_stringLiteral(x)^.trim;
+        lt_list,lt_stringList:  begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(trim_rec(P_listLiteral(x)^.value(i)),false);
+        end; 
+        else result:=newErrorLiteralRaising('Cannot apply TRIM to literal of type '+C_typeString[x^.literalType],tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=trim_rec(params^.value(0))
+    else raiseNotApplicableError('TRIM',params,tokenLocation);
+  end;
+
+FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION upper_rec(CONST x:P_literal):P_literal;
+    VAR i:longint; 
+    begin
+      case x^.literalType of
+        lt_string: result:=P_stringLiteral(x)^.upper;
+        lt_list,lt_stringList:  begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(upper_rec(P_listLiteral(x)^.value(i)),false);
+        end; 
+        else result:=newErrorLiteralRaising('Cannot apply UPPER to literal of type '+C_typeString[x^.literalType],tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=upper_rec(params^.value(0))
+    else raiseNotApplicableError('UPPER',params,tokenLocation);
+  end;
+  
+FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION lower_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_string: result:=P_stringLiteral(x)^.lower;
+        lt_list,lt_stringList:  begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(lower_rec(P_listLiteral(x)^.value(i)),false);
+        end; 
+        else result:=newErrorLiteralRaising('Cannot apply LOWER to literal of type '+C_typeString[x^.literalType],tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=lower_rec(params^.value(0))
+    else raiseNotApplicableError('LOWER',params,tokenLocation);
+  end;
+  
 {$WARNING TODO: fileExists(filename)}
 {$WARNING TODO: readFile(filename)}
 {$WARNING TODO: writeFile(filename,strings)}
@@ -638,6 +788,11 @@ INITIALIZATION
   registerRule('min'     ,@min_imp     );
   registerRule('size'    ,@size_imp    );
   registerRule('time'    ,@time_imp    );
+  registerRule('split'   ,@split_imp   );
+  registerRule('softCast',@softCast_imp);
+  registerRule('trim'    ,@trim_imp    );
+  registerRule('upper'   ,@upper_imp   );
+  registerRule('lower'   ,@lower_imp   );
   
 FINALIZATION
   intrinsicRuleMap.destroy;
