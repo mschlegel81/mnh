@@ -2,7 +2,7 @@ UNIT mnh_stringutil;
 INTERFACE
 CONST
   C_lineBreakChar     =chr(13);
-  C_carriaceReturnChar=chr(10);
+  C_carriageReturnChar=chr(10);
   C_tabChar           =chr(9);
 
 FUNCTION formatTabs(s:ansistring):ansistring;
@@ -60,7 +60,6 @@ FUNCTION formatTabs(s:ansistring):ansistring;
       end;
       result:=s;
     end else begin
-      {$WARNING Fixme: last line is not aligned correctly}
       //s contains both line breaks and tabs -> full processing
       setLength(matrix,1); i:=0; j:=-1; maxJ:=-1;
       repeat
@@ -188,7 +187,7 @@ FUNCTION escapeString(CONST s:ansistring):ansistring;
       '\'                 ,'\\'),
       C_tabChar           ,'\t'),
       C_lineBreakChar     ,'\n'),
-      C_carriaceReturnChar,'\r'),
+      C_carriageReturnChar,'\r'),
       '"'                 ,'\"')+'"';
   end;
 
@@ -204,7 +203,7 @@ FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansist
             '\': begin result:=result+'\';             inc(i,2); end;
             't': begin result:=result+C_tabChar;       inc(i,2); end;
             'n': begin result:=result+C_lineBreakChar; inc(i,2); end;
-            'r': begin result:=result+C_carriaceReturnChar; inc(i,2); end;
+            'r': begin result:=result+C_carriageReturnChar; inc(i,2); end;
             '"': begin result:=result+'"';             inc(i,2); end;
             else i:=length(input)+1;
           end else i:=length(input)+1;

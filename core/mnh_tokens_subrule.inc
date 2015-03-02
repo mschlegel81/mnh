@@ -2,7 +2,7 @@
   P_subrule=^T_subrule;
   T_subrule=object
     private
-      declaredAt:ansistring;
+      declaredAt:T_tokenLocation;
       pattern:T_pattern;
       expression:array of record
                    parIdx:longint;
@@ -12,21 +12,23 @@
       PROCEDURE updatePatternForInline;      
       PROCEDURE embrace;
     public
-      CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring);
+      CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation);
       CONSTRUCTOR createConstant  (CONST value:P_literal);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
       CONSTRUCTOR createFromInline(CONST rep:P_Token);
       
-      CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:ansistring);            
+      CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);            
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
       FUNCTION toString:ansistring;
       PROCEDURE performSet(CONST newValue:P_literal);
+      FUNCTION directEvaluateNullary():P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal):P_literal;
   end;
 
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation);
   VAR t:P_token;
   begin
     pattern:=pat;
@@ -53,11 +55,11 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
 CONSTRUCTOR T_subrule.createConstant  (CONST value:P_literal);
   begin
     pattern.create;
-    declaredAt:='';
+    declaredAt.package:=nil;
     isDeclaredInline:=true;
     setLength(expression,1);
     with expression[0] do begin
-      token:=newToken('','',tt_literal,value);
+      token:=newToken(declaredAt,'',tt_literal,value);
       parIdx:=-1;
     end;
   end;
@@ -93,11 +95,11 @@ PROCEDURE T_subrule.embrace;
     setLength(expression,length(expression)+2);
     for i:=length(expression)-2 downto 1 do expression[i]:=expression[i-1];
     with expression[0] do begin
-      token:=newToken('<generated for rule '+declaredAt+'>','',tt_braceOpen);
+      token:=newToken(declaredAt,'',tt_braceOpen);
       parIdx:=-1;        
     end;
     with expression[length(expression)-1] do begin
-      token:=newToken('<generated for rule '+declaredAt+'>','',tt_braceClose);
+      token:=newToken(declaredAt,'',tt_braceClose);
       parIdx:=-1;
     end;  
   end;
@@ -142,7 +144,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
-    declaredAt:='';
+    declaredAt.package:=nil;
     pattern.destroy;
     for i:=0 to length(expression)-1 do disposeToken(expression[i].token);
     setLength(expression,0);  
@@ -188,7 +190,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
     end;
   end;
   
-CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:ansistring);
+CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
   VAR i,i0:longint;
       r:P_subrule;
   begin
@@ -237,7 +239,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     updatePatternForInline;    
   end;
 
-FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:ansistring):pointer;
+FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):pointer;
   VAR newRule:P_subrule;
   begin
     new(newRule,createFromOp(LHS,op,RHS,tokenLocation));
@@ -268,4 +270,47 @@ PROCEDURE T_subrule.performSet(CONST newValue:P_literal);
     end else raiseError(el3_evalError,'Cannot process set-operation',declaredAt);
   end;
 
+FUNCTION T_subrule.directEvaluateNullary():P_literal;
+  VAR firstRep,lastRep:P_token;
+  begin
+    if replaces(nil,firstRep,lastRep) then begin
+      reduceExpression(firstRep);
+      if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) 
+      then begin
+        result:=firstRep^.data;
+        result^.rereference;
+      end else begin
+        result:=nil;      
+        raiseError(el3_evalError,'Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+      end;
+      cascadeDisposeToken(firstRep);
+    end else result:=nil;
+  end;
+
+FUNCTION evaluateNullary(CONST subrulePointer:pointer):P_literal;
+  begin
+    result:=P_subrule(subrulePointer)^.directEvaluateNullary;
+  end;
+  
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal):P_literal;
+  VAR firstRep,lastRep:P_token;
+      param:P_listLiteral;     
+  begin
+    param:=newOneElementListLiteral(x,true);
+    if replaces(param,firstRep,lastRep) then begin
+      reduceExpression(firstRep);
+      if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) 
+      then begin
+        result:=firstRep^.data;
+        result^.rereference;
+      end else begin
+        result:=nil;      
+        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+      end;
+      cascadeDisposeToken(firstRep); 
+    end else result:=nil;
+    disposeLiteral(param);
+  end;
+
+  
 {$endif}

@@ -2,12 +2,19 @@ UNIT mnh_funcs;
 INTERFACE
 USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 VAR
   intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleAliases:specialize G_stringKeyMap<T_intFuncCallback>;
+
+PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
+
+//Callbacks:--------------------------------
+TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer):P_literal;
+VAR resolveNullaryCallback:T_resolveNullaryCallback;
+//--------------------------------:Callbacks
 IMPLEMENTATION
-PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:ansistring);
+PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
     complaintText:='Function '+functionName+' cannot be applied to parameters ';
@@ -16,7 +23,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_list
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;    
   begin
@@ -40,7 +47,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
     result:=newBoolLiteral(true);
   end;
 
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION sqr_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -52,7 +59,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqr_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function sqr cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function SQR cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -63,7 +70,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
     else raiseNotApplicableError('SQR',params,tokenLocation);
   end;
   
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION sqrt_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -75,7 +82,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqrt_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function sqrt cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function SQRT cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -86,7 +93,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
     else raiseNotApplicableError('SQRT',params,tokenLocation);
   end;
 
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION sin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -98,7 +105,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sin_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function sin cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function SIN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -109,7 +116,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
     else raiseNotApplicableError('SIN',params,tokenLocation);
   end;
   
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION arcsin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -121,7 +128,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arcsin_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function arcsin cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function ARCSIN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -132,7 +139,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
     else raiseNotApplicableError('ARCSIN',params,tokenLocation);
   end;
 
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION cos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -144,7 +151,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(cos_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function cos cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function COS cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -155,7 +162,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
     else raiseNotApplicableError('COS',params,tokenLocation);
   end;
 
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION arccos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -167,7 +174,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arccos_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function arccos cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function ARCCOS cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -178,7 +185,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
     else raiseNotApplicableError('ARCCOS',params,tokenLocation);
   end;
 
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION tan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -190,7 +197,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(tan_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function tan cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function TAN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -201,7 +208,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
     else raiseNotApplicableError('TAN',params,tokenLocation);
   end;
 
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION arctan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -213,7 +220,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arctan_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function arctan cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function ARCTAN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -224,7 +231,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
     else raiseNotApplicableError('ARCTAN',params,tokenLocation);
   end;
 
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION exp_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -236,7 +243,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(exp_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function exp cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function EXP cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -247,7 +254,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_l
     else raiseNotApplicableError('EXP',params,tokenLocation);
   end;
 
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION ln_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -259,7 +266,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_li
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ln_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ln cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function LN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -270,7 +277,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_li
     else raiseNotApplicableError('LN',params,tokenLocation);
   end;
 
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION round_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -282,7 +289,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function round cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
     
@@ -309,7 +316,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(round_rec2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function round cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
         lt_list,lt_intList,lt_realList,lt_numList: case y^.literalType of
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
@@ -320,10 +327,10 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
           lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for function round',tokenLocation);
-          else raiseError(el3_evalError,'Function round cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          end else raiseError(el3_evalError,'Incompatible list lengths given for function ROUND',tokenLocation);
+          else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
-        else raiseError(el3_evalError,'Function round cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+        else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
       end;
     end;
 
@@ -334,7 +341,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
     else raiseNotApplicableError('ROUND',params,tokenLocation);
   end;
 
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION ceil_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -346,7 +353,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ceil_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ceil cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function CEIL cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -357,7 +364,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
     else raiseNotApplicableError('CEIL',params,tokenLocation);
   end;
 
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION floor_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -369,7 +376,7 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(floor_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function floor cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseError(el3_evalError,'Function FLOOR cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
@@ -380,14 +387,14 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P
     else raiseNotApplicableError('FLOOR',params,tokenLocation);
   end;
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;    
+FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;    
   FUNCTION headOf(CONST x:P_literal):P_literal;
     begin
       result:=nil;
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
         result:=P_listLiteral(x)^.value(0);
         result^.rereference;
-      end else raiseError(el3_evalError,'Function head cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+      end else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
     end;
     
   FUNCTION headOf2(CONST x,y:P_literal):P_listLiteral;
@@ -405,9 +412,9 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do result^.append(headOf2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function head cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
-      end else raiseError(el3_evalError,'Function head cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+      end else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
     end;
 
   begin
@@ -417,7 +424,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
     else raiseNotApplicableError('HEAD',params,tokenLocation);
   end;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;    
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;    
   FUNCTION tailOf(CONST x:P_literal):P_listLiteral;
     VAR i:longint;
     begin
@@ -425,7 +432,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
         result:=newListLiteral;
         for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
-      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+      end else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
     end;
     
   FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
@@ -443,9 +450,9 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do result^.append(tailOf2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
-      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+      end else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
     end;
 
   begin
@@ -455,7 +462,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
     else raiseNotApplicableError('TAIL',params,tokenLocation);
   end;
   
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -467,10 +474,10 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_
         result:=params^.value(0);
         result^.rereference;
       end else raiseError(el3_evalError,'Function SORT can only be applied to flat lists containing comparable types',tokenLocation);
-    end else raiseError(el3_evalError,'Function SORT cannot be applied to parameters '+params^.toParameterListString(true),tokenLocation);
+    end else raiseNotApplicableError('SORT',params,tokenLocation);
   end;
   
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -480,10 +487,10 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring
         result:=params^.value(0);
         result^.rereference;
       end else raiseError(el3_evalError,'Function SORTPERM can only be applied to flat lists containing comparable types',tokenLocation);
-    end else raiseError(el3_evalError,'Function SORTPERM cannot be applied to parameters '+params^.toParameterListString(true),tokenLocation);
+    end else raiseNotApplicableError('SORTPERM',params,tokenLocation);
   end;
   
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE recurse_flatten(CONST L:P_listLiteral);
     VAR i:longint;
     begin
@@ -494,11 +501,16 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring)
     end;
     
   begin
-    result:=newListLiteral;
-    recurse_flatten(params);
+    if params<>nil then begin
+      result:=newListLiteral;
+      recurse_flatten(params);
+    end else begin
+      result:=nil;
+      raiseNotApplicableError('FLATTEN',params,tokenLocation);
+    end;
   end;
   
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):P_literal;
+FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
@@ -511,38 +523,121 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:ansistring):
       end;
     end;
     result:=nil;
-    raiseError(el3_evalError,'Function RANDOM cannot be applied to parameters '+params^.toParameterListString(true),tokenLocation);
+    raiseNotApplicableError('RANDOM',params,tokenLocation);
   end;
-  
-PROCEDURE regRule(CONST name:string; CONST ptr:T_intFuncCallback);
+
+PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
   begin
     intrinsicRuleAliases.put(name,ptr);
     intrinsicRuleMap.put(uppercase(name),ptr);
   end;
   
+FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR x:P_literal;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) 
+    then x:=params^.value(0) 
+    else x:=params; 
+    if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+      result:=P_listLiteral(x)^.value(0);
+      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
+      result^.rereference;
+    end else raiseNotApplicableError('MAX',params,tokenLocation);
+  end;
+
+FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR x:P_literal;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) 
+    then x:=params^.value(0) 
+    else x:=params; 
+    if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+      result:=P_listLiteral(x)^.value(0);
+      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
+      result^.rereference;
+    end else raiseNotApplicableError('MIN',params,tokenLocation);
+  end;
+  
+FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      case params^.value(0)^.literalType of
+        lt_error..  lt_expression: result:=newIntLiteral(1);
+        lt_list..lt_listWithError: result:=newIntLiteral(P_listLiteral(params^.value(0))^.size);
+      end;   
+    end else raiseNotApplicableError('SIZE',params,tokenLocation);
+  end;
+  
+FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR res:P_literal;
+      time:double;  
+      aid:P_listLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
+      time:=now;
+      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value);      
+      time:=now-time;
+      if res<>nil then begin
+        result:=newListLiteral;
+        aid:=newListLiteral;
+        aid^.append(newStringLiteral('result'),false);
+        aid^.append(res,false);        
+        P_listLiteral(result)^.append(aid,false);
+        aid:=newListLiteral;
+        aid^.append(newStringLiteral('time'),false);
+        aid^.append(newRealLiteral(time/(24*60*60)),false);
+        P_listLiteral(result)^.append(aid,false);
+      end;      
+    end else raiseNotApplicableError('TIME',params,tokenLocation);
+  end;
+  
+{$WARNING TODO: split(fullText,splitter)}
+{$WARNING TODO: softCast}
+{$WARNING TODO: trim}
+{$WARNING TODO: upper}
+{$WARNING TODO: lower}
+{$WARNING TODO: fileExists(filename)}
+{$WARNING TODO: readFile(filename)}
+{$WARNING TODO: writeFile(filename,strings)}
+{$WARNING TODO: fileTree(filename)}
+{$WARNING TODO: replace(full,original,subst)}
+{$WARNING TODO: replaceAll(full,original,subst)}
+{$WARNING TODO: callSync(executablepath)}
+{$WARNING TODO: callAsync(executablepath)}
+  
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleAliases.create;
-  regRule('print'   ,@print_imp   );
-  regRule('sqr'     ,@sqr_imp     );
-  regRule('sqrt'    ,@sqrt_imp    );
-  regRule('sin'     ,@sin_imp     );
-  regRule('arcsin'  ,@arcsin_imp  );
-  regRule('cos'     ,@cos_imp     );
-  regRule('arccos'  ,@arccos_imp  );
-  regRule('tan'     ,@tan_imp     );
-  regRule('arctan'  ,@arctan_imp  );
-  regRule('exp'     ,@exp_imp     );
-  regRule('ln'      ,@ln_imp      );
-  regRule('round'   ,@round_imp   );
-  regRule('ceil'    ,@ceil_imp    );
-  regRule('floor'   ,@floor_imp   );
-  regRule('head'    ,@head_imp    );
-  regRule('tail'    ,@tail_imp    );
-  regRule('sort'    ,@sort_imp    );
-  regRule('sortPerm',@sortPerm_imp);
-  regRule('flatten' ,@flatten_imp );
-  regRule('random'  ,@random_imp  );
+  registerRule('print'   ,@print_imp   );
+  registerRule('sqr'     ,@sqr_imp     );
+  registerRule('sqrt'    ,@sqrt_imp    );
+  registerRule('sin'     ,@sin_imp     );
+  registerRule('arcsin'  ,@arcsin_imp  );
+  registerRule('cos'     ,@cos_imp     );
+  registerRule('arccos'  ,@arccos_imp  );
+  registerRule('tan'     ,@tan_imp     );
+  registerRule('arctan'  ,@arctan_imp  );
+  registerRule('exp'     ,@exp_imp     );
+  registerRule('ln'      ,@ln_imp      );
+  registerRule('round'   ,@round_imp   );
+  registerRule('ceil'    ,@ceil_imp    );
+  registerRule('floor'   ,@floor_imp   );
+  registerRule('head'    ,@head_imp    );
+  registerRule('tail'    ,@tail_imp    );
+  registerRule('sort'    ,@sort_imp    );
+  registerRule('sortPerm',@sortPerm_imp);
+  registerRule('flatten' ,@flatten_imp );
+  registerRule('random'  ,@random_imp  );
+  registerRule('max'     ,@max_imp     );
+  registerRule('min'     ,@min_imp     );
+  registerRule('size'    ,@size_imp    );
+  registerRule('time'    ,@time_imp    );
   
 FINALIZATION
   intrinsicRuleMap.destroy;

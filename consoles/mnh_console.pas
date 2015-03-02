@@ -21,6 +21,13 @@ PROCEDURE exprOut(CONST s:ansistring);
  
 PROCEDURE setup;
   begin
+    writeln('MNH (V5) console; by Martin Schlegel');
+    writeln;
+    writeln('compiled on: ',{$I %DATE%});
+    writeln('         at: ',{$I %TIME%});
+    writeln('FPC version: ',{$I %FPCVERSION%});
+    writeln('Target CPU : ',{$I %FPCTARGET%});  
+    writeln;    
     mnh_out_adapters.inputDeclEcho:=@inputDeclEcho; 
     mnh_out_adapters.inputExprEcho:=@inputExprEcho;
     mnh_out_adapters.exprOut      :=@exprOut;   

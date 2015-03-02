@@ -2,20 +2,19 @@
 //This is a comment - you would've guessed ;-)
 
 //operators:
-//-2; 
-//+3;
-//2+3; 2-3; 2*3; 2/3; 2 div 3; 2 mod 3; 2**3;
-//2|3;
-//2&3;
-//2 in [1,2,3];
-//[1,3,7]%1;
+-2; 
++3;
+2+3; 2-3; 2*3; 2/3; 2 div 3; 2 mod 3; 2**3;
+2|3;
+2&3;
+2 in [1,2,3];
+[1,3,7]%1;
 
 primes:=[2];
 maxCheckedForPrime:=2;
-primes(maxPrime:int) -> maxPrime<=maxCheckedForPrime ? primes%(primes<=maxPrime) : 0*set(maxCheckedForPrime,maxPrime) + set(primes,sievePrimes(maxPrime));
+primes(maxPrime:int) -> maxPrime<=maxCheckedForPrime ? primes%(primes<=maxPrime) : set(primes,sievePrimes(set(maxCheckedForPrime,maxPrime)));
 sievePrimes(maxPrime>2)->sievePrimes([],2,[3..maxPrime],sqrt(maxPrime));
 sievePrimes(primes,next,candidates:intList,maxCheck>next)->sievePrimes(primes|next,candidates%(candidates mod next<>0),maxCheck);
 sievePrimes(primes,next,candidates        ,maxCheck     )->primes|next|candidates;
 sievePrimes(primes,     candidates        ,maxCheck     )->sievePrimes(primes,candidates%0,tail(candidates),maxCheck);
-
 primes(100000);
