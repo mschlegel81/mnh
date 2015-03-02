@@ -674,6 +674,7 @@ INITIALIZATION
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
+  applyUnaryOnExpressionCallback:=@subruleApplyFuncImpl;
 
 FINALIZATION
   finalizePackages;

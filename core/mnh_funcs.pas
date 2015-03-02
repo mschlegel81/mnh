@@ -17,6 +17,9 @@ VAR resolveNullaryCallback:T_resolveNullaryCallback;
 
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
 VAR stringToExprCallback:T_stringToExprCallback;
+
+TYPE T_applyUnaryOnExpressionCallback=FUNCTION (CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
+VAR applyUnaryOnExpressionCallback:T_applyUnaryOnExpressionCallback;
 //--------------------------------:Callbacks
 
 IMPLEMENTATION
@@ -42,6 +45,7 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     begin
       result:=nil;
       case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'not',tokenLocation);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
         lt_list,lt_booleanList, lt_intList: begin
@@ -83,6 +87,8 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     writePrint(stringToPrint);
     result:=newBoolLiteral(true);
   end;
+
+
 
 FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION abs_rec(CONST x:P_literal):P_literal;
@@ -156,221 +162,77 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('sqr',params,tokenLocation);
   end;
 
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION sqrt_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(sqrt(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(sqrt(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqrt_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('sqrt',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
+{$MACRO ON}
+{$define UNARY_NUM_TO_REAL:=
+FUNCTION recurse(CONST x:P_literal):P_literal;
+  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=sqrt_rec(params^.value(0))
-    else raiseNotApplicableError('sqrt',params,tokenLocation);
+    case x^.literalType of
+      lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+      lt_int : result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value));
+      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+      lt_list,lt_intList,lt_realList,lt_numList: begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+      end;
+      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+    end;
   end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(params^.value(0))
+  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+end}
+
+
+FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=sqrt}
+{$define ID_MACRO:='sqrt'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION sin_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(sin(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(sin(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sin_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('sin',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=sin_rec(params^.value(0))
-    else raiseNotApplicableError('sin',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=sin}
+{$define ID_MACRO:='sin'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION arcsin_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(arcsin(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(arcsin(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arcsin_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('arcsin',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=arcsin_rec(params^.value(0))
-    else raiseNotApplicableError('arcsin',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=arcsin}
+{$define ID_MACRO:='arcsin'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION cos_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(cos(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(cos(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(cos_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('cos',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=cos_rec(params^.value(0))
-    else raiseNotApplicableError('cos',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=cos}
+{$define ID_MACRO:='cos'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION arccos_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(arccos(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(arccos(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arccos_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('arccos',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=arccos_rec(params^.value(0))
-    else raiseNotApplicableError('arccos',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=arccos}
+{$define ID_MACRO:='arccos'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION tan_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(tan(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(tan(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(tan_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('tan',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=tan_rec(params^.value(0))
-    else raiseNotApplicableError('tan',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=tan}
+{$define ID_MACRO:='tan'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION arctan_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(arctan(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(arctan(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arctan_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('arctan',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=arctan_rec(params^.value(0))
-    else raiseNotApplicableError('arctan',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=arctan}
+{$define ID_MACRO:='arctan'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION exp_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(exp(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(exp(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(exp_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('exp',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=exp_rec(params^.value(0))
-    else raiseNotApplicableError('exp',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=exp}
+{$define ID_MACRO:='exp'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION ln_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newRealLiteral(ln(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(ln(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ln_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('ln',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=ln_rec(params^.value(0))
-    else raiseNotApplicableError('ln',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=ln}
+{$define ID_MACRO:='ln'}
+UNARY_NUM_TO_REAL;
 
 FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION round_rec(CONST x:P_literal):P_literal;

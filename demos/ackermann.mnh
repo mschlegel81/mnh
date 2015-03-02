@@ -1,22 +1,10 @@
 pure
-ackermann(m=0,n)  ->n+1;
-ackermann(m,n=0)  ->ackermann(m-1,1);
-ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
+private ackermann(m=0,n)  ->n+1;
+private ackermann(m,n=0)  ->ackermann(m-1,1);
+private ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
+private ackertime(m,n)    ->each(i,flatten(time({ackermann(m,n)})),&"\t"&);
 
-ackertime(m,n) -> each(i,flatten(time({ackermann(m,n)})),&"\t"&);
-
-
-ack(m<=0,n)  ->n+1;
-ack(m =1,n)  ->2+(n+3)-3;
-ack(m =2,n)  ->2*(n+3)-3;
-ack(m =3,n)  ->2^(n+3)-3;
-ack(m   ,n=0)->ack(m-1,1);
-ack(m>0 ,n>0)->ack(m-1,ack(m,n-1));
-
-ackTime(m,n) -> each(i,flatten(time({ack(m,n)})),&"\t"&);
-
-main(m:int,n:int)->print(print(ackertime(m,n)));
+main(m:int,n:int)->print(print(ackTime(m,n)));
 main(m:string,n:string)->main(softCast(m),softCast(n));
-main-> each(i,[0..20],print(ackertime(3,i)&"\n"&ackTime(3,i)));
-
-main;
+main->print('See http://rosettacode.org/wiki/Ackermann_function') and
+      each(n,[0..16],print(ackertime(3,n)));

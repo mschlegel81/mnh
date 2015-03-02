@@ -1,8 +1,9 @@
-monteCarloPi(sampleSize>0)->4*samplesInCircle(sampleSize)/sampleSize;
-samplesInCircle(sampleSize>10000)->pEach(i,[1..9],+,samplesInCircle(sampleSize div 10))+samplesInCircle(sampleSize-9*(sampleSize div 10));
-samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sampleSize)^2<1);
+private monteCarloPi(sampleSize>0)->4*samplesInCircle(sampleSize)/sampleSize;
+private samplesInCircle(sampleSize>10000)->pEach(i,[1..9],+,samplesInCircle(sampleSize div 10))+samplesInCircle(sampleSize-9*(sampleSize div 10));
+private samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sampleSize)^2<1);
 
-main->print(each(n,10**[1..7],&"\n"&,"n="&n&"\tpi approximated as "&monteCarloPi(n)));
+main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
+      print(each(n,10**[1..7],&"\n"&,"n="&n&"\tpi approximated as "&monteCarloPi(n)));
 
 
 

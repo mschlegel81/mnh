@@ -70,7 +70,7 @@
 @mkdir distro\doc
 @copy packages\*.mnh distro\packages
 @copy demos\*.mnh distro\demos
-@copy doc\*.mnh distro\doc
+@copy doc\* distro\doc
 @cd distro
 @copy ..\bin64\*.exe .
 @del ..\versions\mnh5_win??_%mydate%.7z

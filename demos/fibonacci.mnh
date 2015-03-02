@@ -1,10 +1,10 @@
 pure
 fibNStep(i>=k,k)->each(j,[1..k],+,fibNStep(i-j,k));
-fibNStep(i  ,k)->1;
-
+fibNStep(i   ,k)->1;
 fib(i)->fibNStep(i,2);
 
-main->print('Fibonacci n-step sequence') and
+main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
+      print('Fibonacci n-step sequence') and
       print(' n | values') and
       print('---+-----------------------------------------------------------------------------------------------------') and
       print(each(k,[1..20],&"\n"&,k&"\t| "&each(i,[1..20],&"\t"&,fibNStep(i+k-3,k))));

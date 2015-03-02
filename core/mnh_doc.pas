@@ -174,7 +174,7 @@ function T_userPackageDocumentation.toHtml: ansistring;
     result:='<h4><a name="'+docFileName+'">'+id+'</a></h4><table class="oben">'+
     '<tr class="oben"><td>Path: </td><td><code>'+uid+'</code></td></tr>'+
     '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
-    '<tr class="oben"><td>Declares: </td><td>';
+    '<tr class="oben"><td>Publishes: </td><td>';
     for i:=0 to length(rules)-1 do result:=result+rules[i]^.toHtml;
     result:=result+'</td></tr>'+
       '<tr class="oben"><td></ul>Used by: </td><td>'+getUsed+'</td></tr></table>';
@@ -221,19 +221,21 @@ end;
 
 function T_userFunctionDocumentation.toHtml: ansistring;
 VAR i:longint;
+    anyPublic:boolean=false;
 begin
+
+
   result:='<table><tr class="ruleHead"><td>';
   if isPure then result:=result+'<div class="red">'+id+' (pure)</div>'
             else result:=result+id;
-
   result:=result+'</td></tr>';
-  for i:=0 to length(subrules)-1 do with subrules[i] do begin
-    result:=result+'<tr><td><code>';
-    if isPrivate then result:=result+'private ';
-    result:=result+id+pattern+'</code></td></tr>';
+  for i:=0 to length(subrules)-1 do with subrules[i] do if not(isPrivate) then begin
+    result:=result+'<tr><td><code>'+id+pattern+'</code></td></tr>';
+    anyPublic:=true;
   end;
   result:=result+'</table>';
   if id='main' then result:='<b>'+result+'</b>';
+  if not(anyPublic) then result:='';
 end;
 
 constructor T_intrinsicFunctionDocumentation.create(const funcName: ansistring);

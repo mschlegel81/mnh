@@ -1,2 +1,0 @@
-fb->pEach(i,[1..4],interpret(myPath));
-main->fb;

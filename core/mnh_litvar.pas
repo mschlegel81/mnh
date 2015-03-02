@@ -21,6 +21,7 @@ TYPE
     FUNCTION unreference: longint;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
+    FUNCTION toShorterString:ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -34,11 +35,9 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -55,11 +54,9 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION Value: boolean;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
@@ -77,11 +74,9 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION Value: int64;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
@@ -99,11 +94,9 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION Value: extended;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
@@ -120,12 +113,11 @@ TYPE
     DESTRUCTOR Destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
+    FUNCTION toShorterString:ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION Value: ansistring;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION softCast: P_scalarLiteral;
@@ -147,11 +139,9 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType;
-      CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_scalarLiteral): boolean; virtual;
-    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral;
-      CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
+    FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION Value: pointer;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
@@ -171,11 +161,11 @@ TYPE
     DESTRUCTOR Destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
+    FUNCTION toShorterString:ansistring; virtual;
     FUNCTION toParameterListString(CONST isFinalized: boolean): ansistring;
     PROCEDURE append(CONST L: P_literal; CONST incRefs: boolean);
     PROCEDURE appendAll(CONST L: P_listLiteral);
-    PROCEDURE appendConstructing(CONST L: P_literal;
-      CONST tokenLocation: T_tokenLocation);
+    PROCEDURE appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation);
     PROCEDURE setRangeAppend;
     FUNCTION size: longint;
     FUNCTION Value(index: longint): P_literal;
@@ -622,6 +612,8 @@ FUNCTION T_literal.toString: ansistring;
     result := '<ERR>';
   end;
 
+FUNCTION T_literal.toShorterString:ansistring; begin result:=toString; end;
+
 FUNCTION T_scalarLiteral.toString: ansistring;
   begin
     result := '<ERR>';
@@ -647,6 +639,12 @@ FUNCTION T_stringLiteral.toString: ansistring;
     result := escapeString(val);
   end;
 
+FUNCTION T_stringLiteral.toShorterString:ansistring;
+  begin
+    if length(val)>13 then result:=escapeString(copy(val,1,5)+'...'+copy(val,length(val)-5,5))
+                      else result:=toString;
+  end;
+
 FUNCTION T_expressionLiteral.toString: ansistring;
   begin
     result := subruleToStringCallback(val);
@@ -667,27 +665,37 @@ FUNCTION T_listLiteral.toString: ansistring;
       end;
   end;
 
+FUNCTION T_listLiteral.toShorterString:ansistring;
+  VAR i: longint;
+  begin
+    if length(element) = 0 then
+      result := '[]'
+    else if length(element)<5 then begin
+      result := '[' + element[0]^.toShorterString;
+      for i := 1 to length(element) - 1 do
+        result := result + ',' + element[i]^.toShorterString;
+      result := result + ']';
+    end else begin
+      result := '[' + element[0]^.toShorterString + ',' +
+                      element[1]^.toShorterString + ',...,' +
+                      element[length(element)-2]^.toShorterString + ','+
+                      element[length(element)-1]^.toShorterString + ']';
+    end;
+  end;
+
 FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansistring;
   VAR
     i: longint;
   begin
-    if length(element) = 0 then
-      begin
-      if isFinalized then
-        result := '()'
-      else
-        result := '(  ';
-      end
-    else
-      begin
-      result := '(' + element[0]^.toString;
-      for i := 1 to length(element) - 1 do
-        result := result + ',' + element[i]^.toString;
-      if isFinalized then
-        result := result + ')'
-      else
-        result := result + ',  ';
-      end;
+    if length(element) = 0 then begin
+      if isFinalized then exit('()')
+                     else exit('(  ');
+    end;
+    result:=element[0]^.toShorterString;
+    for i:=1 to length(element)-1 do
+      result:=result+','+element[i]^.toShorterString;
+    if isFinalized then result := '(' + result + ')'
+                   else result := '(' + result + ',  ';
   end;
 
 FUNCTION T_scalarLiteral.stringForm: ansistring;
@@ -1890,8 +1898,7 @@ FUNCTION T_scalarLiteral.hash: longint;
 FUNCTION T_boolLiteral.hash: longint;
   begin
     result := longint(lt_boolean);
-    if val then
-      Inc(result);
+    if val then Inc(result);
   end;
 
 FUNCTION T_intLiteral.hash: longint;
@@ -1901,10 +1908,10 @@ FUNCTION T_intLiteral.hash: longint;
 
 FUNCTION T_realLiteral.hash: longint;
   begin
-{$Q-}
+    {$Q-}
     move(val, result, 4);
     result := result xor longint(lt_real);
-{$Q+}
+    {$Q+}
   end;
 
 FUNCTION T_stringLiteral.hash: longint;
@@ -1960,8 +1967,9 @@ FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
 FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
   begin
     result := (@self = other) or (other^.literalType = lt_real) and
-      (P_realLiteral(other)^.Value = val);
-{$WARNING TODO Does this cover Nan and Inf?}
+      ((P_realLiteral(other)^.Value = val) or
+       IsNan(P_realLiteral(other)^.Value) and isNan(val) or
+       IsInfinite(P_realLiteral(other)^.Value) and IsInfinite(val));
   end;
 
 FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
@@ -1990,86 +1998,6 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
     result := True;
   end;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 VAR
   i: longint;
 
@@ -2080,8 +2008,7 @@ INITIALIZATION
   for i := 0 to length(intLit) - 1 do
     intLit[i] := nil;
   DefaultFormatSettings.DecimalSeparator := '.';
-  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,
-    exOverflow, exUnderflow, exPrecision]);
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
 
 FINALIZATION

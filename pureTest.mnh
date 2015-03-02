@@ -1,0 +1,9 @@
+private pure p(x>0)->p(x-1)+p(x-1); p(x)->1;
+private      f(x>0)->f(x-1)+f(x-1); f(x)->1;
+
+private printTime(E:expression)->print(each(L,time(E),&"\n"&,each(k,L,&"\t"&)));
+
+main->printTime({p(15)}) and 
+      printTime({p(15.0)}) and 
+      printTime({f(15)}) and 
+      printTime({f(15.0)});

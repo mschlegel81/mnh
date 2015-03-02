@@ -2,7 +2,7 @@ deeper(F)->unique(flatten(each(f,F,f,folders(f&"\\*"))));
 dirs:=deeper(deeper(deeper(".")));
 sources:=files(flatten(dirs&"\\*.inc",dirs&"\\*.pas"));
 
-findInLines(lines:stringList,X:string)->each(i,[0..size(lines)-1],|,pos(X,lines%i)>=0 ? i+1 : []);
+findInLines(lines:stringList,X:string)->each(i,[0..size(lines)-1],|,pos(X,lines%i)>=0 ? (i+1) & "\t" & trim(lines%i) : []);
 findInFile(filename:string,X:string)->filename&"\t@Line\t"&findInLines(fileLines(filename),X);
 
 main(x)->print(each(l,flatten(each(s,sources,findInFile(s,x))),&"\n"&));

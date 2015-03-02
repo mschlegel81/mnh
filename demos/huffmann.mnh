@@ -1,23 +1,24 @@
-mergeNodes(n1,n2)->[n1%0+n2%0,[n1%1,n2%1]];
+private mergeNodes(n1,n2)->[n1%0+n2%0,[n1%1,n2%1]];
 
-huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L%0%1)
-                                : huffman(L,sortPerm(L%%0)%[0,1]);
-huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) | [mergeNodes(L%(mergeIdx%0),L%(mergeIdx%1))]);
+private huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L%0%1)
+                                        : huffman(L,sortPerm(L%%0)%[0,1]);
+private huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) | [mergeNodes(L%(mergeIdx%0),L%(mergeIdx%1))]);
 
-traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
-traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
-                                      traverseBinaryTree(codePrefix&1,T%1) ;
+private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
+private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
+                                              traverseBinaryTree(codePrefix&1,T%1) ;
 
-charactersInFile(filename:string)->charactersInString(fileContents(filename));
-charactersInString     (s:string)->charFreq(copy(s,[0..length(s)-1],1));
-charFreq(L)->each(c,unique(L),[size(L%(L=c)),c]);
+private charactersInFile(filename:string)->charactersInString(fileContents(filename));
+private charactersInString     (s:string)->charFreq(copy(s,[0..length(s)-1],1));
+private charFreq(L)->each(c,unique(L),[size(L%(L=c)),c]);
 
-escapeChar("\n")->'\\n';
-escapeChar("\r")->'\\r';
-escapeChar("\t")->'\\t';
-escapeChar(c   )->'"'&c&'"';
+private escapeChar("\n")->'\\n';
+private escapeChar("\r")->'\\r';
+private escapeChar("\t")->'\\t';
+private escapeChar(c   )->'"'&c&'"';
 
-main(filename:string)->print('Analyzing file: ',filename) and
+main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
+                       print('Analyzing file: ',filename) and
                        print(" code\tchar\n "&
                              each(e,huffman(charactersInFile(filename)),&"\n "&,
                                   e%0&"\t"&escapeChar(e%1)));

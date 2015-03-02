@@ -19,6 +19,7 @@
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
       CONSTRUCTOR createFromInline(CONST rep:P_Token);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
       FUNCTION toString:ansistring;
@@ -281,6 +282,34 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
   begin
     new(newRule,createFromOp(LHS,op,RHS,tokenLocation));
     result:=newRule;
+  end;
+
+CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+  VAR origRule:P_subrule;
+      i:longint;
+  begin
+    origRule:=original^.value;
+    declaredAt:=funcLocation;
+    pattern.create;
+    isDeclaredInline:=true;
+
+    setLength(expression,length(origRule^.expression)+3);
+    with expression[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRulePointer,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+    with expression[1] do begin token.create; token.define(declaredAt,'',tt_braceOpen); parIdx:=-1; end;
+    for i:=0 to length(origRule^.expression)-1 do with expression[i+2] do begin
+      token.create;
+      token.define(origRule^.expression[i].token);
+      parIdx:=-1;
+    end;
+    with expression[length(expression)-1] do begin token.create; token.define(declaredAt,'',tt_braceClose); parIdx:=-1; end;
+    updatePatternForInline;
+  end;
+
+FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
+  VAR newRule:P_subrule;
+  begin
+    new(newRule,createFromInlineWithOp(original,intrinsicRuleId,funcLocation));
+    result:=newExpressionLiteral(newRule);
   end;
 
 FUNCTION T_subrule.toString:ansistring;

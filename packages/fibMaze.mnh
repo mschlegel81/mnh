@@ -1,0 +1,28 @@
+private rotFak:=2.3999632297286533221470;
+private scanRad:=3;
+private fibPoint(i:int)->sqrt(i)*[cos(rotFak*i),sin(rotFak*i)];
+private fibPoint(I:intList)->each(i,I,fibPoint(i));
+private dist(X,y:numericList)->sqr(X%%0-y%0)+sqr(X%%1-y%1);
+
+private closeIndex(last,L)->closeIndex(last,L,[0..size(L)-1]%(isInRange(L%%0,last%0-scanRad,last%0+scanRad) and
+                                                              isInRange(L%%1,last%1-scanRad,last%1+scanRad)));
+private closeIndex(last,L,[] )->-1;
+private closeIndex(last,L,I  )->closeIndex(last,L,I,dist(L%I,last));
+private closeIndex(last,L,I,D)->min(D)<sqr(scanRad) ? I%argMin(D) : -1;
+
+private condPlot(L)->size(L)>3 ? addPlot(L,"black") : true;
+private findPath(last,L<>[],     result)->findPath(last,L,closeIndex(last,L),result);
+private findPath(last,L    ,     result)->condPlot(result);
+private findPath(last,L<>[],i>=0,result)->findPath(L%i,L%([0..size(L)-1]<>i),result|[L%i]);
+private findPath(last,L    ,i   ,result)->condPlot(result) and findPath(L%(size(L)-1),L,[]);
+
+private doPlot->setPlotAxisStyle([0,0]) and
+                plot([]) and
+                findPath(fibPoint(500),fibPoint([0..500]),[]);
+
+private main_impl(filename:string,xRes:int,yRes:int)->doPlot and renderToFile(filename,xRes,yRes,10);
+main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));
+main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,softCast(yRes));
+main(filename           )->main_impl(filename                         ,768,768);
+main                     ->main_impl(replace(myPath&"#","mnh#","png#"),768,768);
+doPlot

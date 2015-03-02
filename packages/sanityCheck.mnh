@@ -1,7 +1,0 @@
-intOperators:=["+","-","*","/","**","div","mod","and","or","xor"];
-eval(s:string)->s&"\t=\t"&string(expression(s)());
-main->
-  print(each(op,intOperators,&"\n"&,eval("2 "&op&" 3"))) and
-  print(each(op,intOperators,&"\n"&,eval("[1,2,3] "&op&" 4"))) and
-  print(each(op,intOperators,&"\n"&,eval("1 "&op&" [4,5,6]"))) and
-  print(each(op,intOperators,&"\n"&,eval("[1,2,3] "&op&" [4,5,6]")));

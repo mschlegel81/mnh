@@ -123,7 +123,7 @@ The list concatenation operator can be used to construct lists. The general beha
   x | y -> [x,y];
   x |[y]-> [x,y];
  [x]| y -> [x,y];
-  x |[y]-> [x,y];
+ [x]|[y]-> [x,y];
 </code>
 However the result does not have to be a flat list; e.g.<code>
   x |[[y]]->[x,[y]];

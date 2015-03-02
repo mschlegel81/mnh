@@ -1306,6 +1306,7 @@ FUNCTION T_plot.olx(CONST x: double): double;
   begin
     if logscale['x'] then
       begin
+        if x<1E-324 then exit(-324);
       result := ln(x) / ln(10);
       if IsNan(result) or IsInfinite(result) then
         result := -324;
@@ -1326,6 +1327,7 @@ FUNCTION T_plot.oly(CONST y: double): double;
   begin
     if logscale['y'] then
       begin
+      if y<1E-324 then exit(-324);
       result := ln(y) / ln(10);
       if IsNan(result) or IsInfinite(result) then
         result := -324;
@@ -2258,6 +2260,7 @@ INITIALIZATION
     'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
   mnh_funcs.registerRule('renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
 
 FINALIZATION
   activePlot.Destroy;
