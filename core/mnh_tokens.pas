@@ -3,7 +3,10 @@ INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
      mnh_funcs, mnh_out_adapters, mnh_caches; //even more specific
-     
+
+VAR
+  poolCs:TRTLCriticalSection;
+
 {$define doTokenRecycling}
 {$define include_interface}
 TYPE
@@ -40,6 +43,7 @@ CONST C_id_qualify_character='.';
   
 FUNCTION isReloadOfAllPackagesIndicated:boolean;
 FUNCTION isReloadOfMainPackageIndicated:boolean;
+PROCEDURE clearImportedPackages;
 PROCEDURE reloadAllPackages;
 PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
@@ -60,22 +64,36 @@ VAR packages:array of P_package;
 FUNCTION isReloadOfAllPackagesIndicated:boolean;
   VAR i:longint;
   begin
+    EnterCriticalsection(poolCs);
     for i:=1 to length(packages)-1 do if packages[i]^.codeProvider^.fileChanged then exit(true);
     result:=false;
+    LeaveCriticalsection(poolCs);
   end;
 
 FUNCTION isReloadOfMainPackageIndicated:boolean;
   begin
-    result:=(length(packages)>0) and packages[0]^.codeProvider^.fileChanged;
+    EnterCriticalsection(poolCs);
+    result:=(length(packages)>0) and
+            (packages[0]<>nil) and
+            (packages[0]^.codeProvider<>nil) and
+            (packages[0]^.codeProvider^.fileChanged);
+    DoneCriticalsection(poolCs);
   end;
 
-PROCEDURE reloadAllPackages;
+PROCEDURE clearImportedPackages;
   VAR i:longint;
   begin
+    EnterCriticalsection(poolCs);
     clearAllCaches;
     if length(packages)<=0 then exit;
     for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);
     setLength(packages,1);
+    DoneCriticalsection(poolCs);
+  end;
+
+PROCEDURE reloadAllPackages;
+  begin
+    clearImportedPackages;
     reloadMainPackage;
   end;
 
@@ -89,18 +107,20 @@ PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
   VAR i:longint;
   begin
+    EnterCriticalsection(poolCs);
     clearAllCaches;
     clearErrors;
     clearSourceScanPaths;
     for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);
     setLength(packages,0);
+    LeaveCriticalsection(poolCs);
   end;
 
 PROCEDURE initMainPackage(CONST filename:ansistring);
   VAR fileWrapper:P_fileWrapper;
   begin
     if length(packages)>0 then exit;
-      clearErrors;
+    clearErrors;
     new(fileWrapper,create(filename));
     if fileWrapper^.exists then begin
       addSourceScanPath(extractFilePath(filename));
@@ -120,21 +140,26 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_codeProvider);
 
 FUNCTION canResolveInMainPackage(const id: ansistring): byte;
   begin
+    EnterCriticalsection(poolCs);
     if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
     then result:=0
     else result:=packages[0]^.canResolveId(id);
+    LeaveCriticalsection(poolCs);
   end;
 
 FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
   begin
+    EnterCriticalsection(poolCs);
     if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
     then result:=C_nilTokenLocation
     else result:=packages[0]^.ruleLocation(id);
+    LeaveCriticalsection(poolCs);
   end;
 
 FUNCTION getPackageLocation(const id: ansistring): T_tokenLocation;
   VAR i:longint;
   begin
+    EnterCriticalsection(poolCs);
     if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
     then result:=C_nilTokenLocation
     else with packages[0]^ do begin
@@ -146,6 +171,7 @@ FUNCTION getPackageLocation(const id: ansistring): T_tokenLocation;
       end;
     end;
     result:=C_nilTokenLocation;
+    LeaveCriticalsection(poolCs);
   end;
 
 FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
@@ -466,9 +492,9 @@ PROCEDURE T_package.load;
       end else begin
         writeExprEcho(tokensToString(first));
         reduceExpression(first,0);
-        writeExprOut(tokensToString(first));
+        if first<>nil then writeExprOut(tokensToString(first));
       end;
-      cascadeDisposeToken(first);
+      if first<>nil then cascadeDisposeToken(first);
     end;
 
   VAR codeLines:T_stringList;
@@ -484,7 +510,7 @@ PROCEDURE T_package.load;
     next :=nil;
     last :=nil;
     location.provider:=codeProvider;
-    for i:=0 to length(codeLines)-1 do begin
+    for i:=0 to length(codeLines)-1 do if (errorLevel<el3_evalError) then begin
       location.line:=i+1;
       location.column:=1;
       while not(isBlank(codeLines[i])) and (errorLevel<el3_evalError) do begin
@@ -509,8 +535,11 @@ PROCEDURE T_package.load;
         end;
       end;
     end;
-    if first<>nil then interpret(first);    
-    ready:=true;    
+    if (errorLevel<el3_evalError) then begin
+      if first<>nil then interpret(first);
+    end else cascadeDisposeToken(first);
+    ready:=true;
+    raiseError(el0_allOkay,'Package '+codeProvider^.fileIdentifier+' ready.',fileTokenLocation(codeProvider));
   end;
 
 CONSTRUCTOR T_package.create(CONST provider:P_codeProvider);
@@ -726,6 +755,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
   end;
 
 INITIALIZATION
+  InitCriticalSection(poolCs);
   setLength(packages,0);
   {$ifdef doTokenRecycling}
   tokenRecycling.fill:=0;
@@ -740,4 +770,5 @@ INITIALIZATION
 FINALIZATION
   clearAllPackages;
   finalizeTokens;
+  DoneCriticalsection(poolCs);
 end.

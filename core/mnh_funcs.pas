@@ -37,7 +37,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
-    for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
+    if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
       lt_error,
       lt_boolean,
       lt_int,

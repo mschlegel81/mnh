@@ -1,13 +1,14 @@
 unit mnh_gui_main;
 
 {$mode objfpc}{$H+}
-
+{$define useAdapterCS}
 interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, SynHighlighterMnh,
-  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc, mnh_out_adapters, mnh_constants,mnh_stringutil;
+  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc,
+  mnh_out_adapters, mnh_constants,mnh_stringutil, mnh_askForm;
 
 type
 
@@ -103,18 +104,23 @@ FUNCTION evaluationThread(p: pointer): ptrint;
 procedure ad_initEvaluation;
 implementation
 var adapter:record
+      {$ifdef useAdapterCS} cs:TRTLCriticalSection; {$endif}
       state:(as_directNoFile,
              as_directFile,
              as_watching);
       currentlyEditingFile:string;
       fileWasEdited:boolean;
+      watchedFileAge:longint;
+
+      errorGridRequiresResize:boolean;
 
       directInputWrapper: P_directInputWrapper;
       fileWrapper:        P_fileWrapper;
 
-      haltEvaluationPosted : boolean;
-      evaluationRunning    : boolean;
-      evaluationLoopRunning: boolean;
+      evaluationStarted        : double;
+      haltEvaluationLoopPosted : boolean;
+      evaluationRunning        : boolean;
+      evaluationLoopRunning    : boolean;
     end;
 {$R *.lfm}
 
@@ -176,19 +182,25 @@ procedure TMnhForm.EditorPopupPopup(Sender: TObject);
     popMiOpenPackage.Enabled:=packageUnderCursorIsFile<>'';
   end;
 
-procedure ad_killEvaluationSoftly;
+procedure ad_haltEvaluation;
   begin with adapter do begin
-    directInputWrapper:=nil;
-    fileWrapper:=nil;
     haltEvaluation;
+    while evaluationRunning do sleep(1);
+  end; end;
+
+procedure ad_killEvaluationLoopSoftly;
+  begin with adapter do begin
+    haltEvaluation;
+    //this must happen outside of the critical section to avoid a deadlock
     repeat
-      haltEvaluationPosted:=true;
+      haltEvaluationLoopPosted:=true;
       sleep(1);
     until not(evaluationLoopRunning) and not(evaluationRunning);
   end; end;
 
 procedure ad_initEvaluation;
   begin with adapter do if not(evaluationLoopRunning) then begin
+    {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
     fileWrapper:=nil;
     directInputWrapper:=nil;
     if state=as_watching then begin
@@ -201,21 +213,158 @@ procedure ad_initEvaluation;
       initMainPackage(directInputWrapper);
     end;
     BeginThread(@evaluationThread);
+    {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
   end; end;
 
 procedure ad_loadInputToWrapper;
   VAR i:longint;
       L:T_stringList;
-  begin with adapter do if (state<>as_watching) and (directInputWrapper<>nil) and (evaluationLoopRunning) then begin
+  begin with adapter do if (state<>as_watching) and (directInputWrapper<>nil) then begin
+    {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
     if state=as_directFile then fileWasEdited:=true;
     setLength(L,MnhForm.InputEdit.Lines.Count);
     for i:=0 to MnhForm.InputEdit.Lines.Count-1 do L[i]:=MnhForm.InputEdit.Lines[i];
     directInputWrapper^.setInput(L);
+    {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
   end; end;
+
+procedure ad_updateForm;
+  VAR caption:string;
+  begin with adapter do begin
+    {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+    caption:='MNH5 '+currentlyEditingFile; if MnhForm.Caption<>caption then MnhForm.Caption:=caption;
+    MnhForm.miSave          .Enabled:=(currentlyEditingFile<>'') and (state<>as_watching);
+    MnhForm.miSaveAs        .Enabled:=                               (state<>as_watching);
+    MnhForm.miEvaluateNow   .Enabled:=evaluationLoopRunning and not(evaluationRunning);
+    MnhForm.miHaltEvalutaion.Enabled:=evaluationRunning;
+    if evaluationRunning then MnhForm.StatusBar.SimpleText:='Evaluating '+FloatToStr(round((now-evaluationStarted)*24*60*60*100)*0.01)+' sec.';
+    if (state=as_watching) then begin
+      if not(MnhForm.miEvalModeWatch.Checked) then MnhForm.miEvalModeWatch.Checked:=true;
+      if not(MnhForm.InputEdit.ReadOnly)      then MnhForm.InputEdit.ReadOnly:=true;
+    end else begin
+      if     MnhForm.InputEdit.ReadOnly       then MnhForm.InputEdit.ReadOnly:=false;
+    end;
+    //MnhForm.ErrorStringGrid.AutoSizeColumns;
+    if (state=as_watching) and
+       (currentlyEditingFile<>'') and
+       (FileAge(currentlyEditingFile)<>watchedFileAge)
+    then try
+      MnhForm.InputEdit.Lines.LoadFromFile(currentlyEditingFile);
+      watchedFileAge:=FileAge(currentlyEditingFile);
+    except
+      watchedFileAge:=0;
+    end;
+    if errorGridRequiresResize then try
+      MnhForm.ErrorStringGrid.AutoSizeColumns;
+      errorGridRequiresResize:=false;
+    except
+      errorGridRequiresResize:=true;
+    end;
+    {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+  end; end;
+
+procedure ad_triggerEvaluation;
+  begin with adapter do if evaluationLoopRunning then begin
+    {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+    if directInputWrapper<>nil then directInputWrapper^.markAsDirty;
+    if fileWrapper       <>nil then fileWrapper       ^.markAsDirty;
+    {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+  end; end;
+
+procedure ad_clearFile;
+  begin with adapter do begin
+    {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+    currentlyEditingFile:='';
+    if state=as_watching then begin
+      ad_killEvaluationLoopSoftly;
+      state:=as_directNoFile;
+      ad_initEvaluation;
+    end else begin
+      directInputWrapper^.setInput('');
+      ad_haltEvaluation;
+      state:=as_directNoFile;
+      clearImportedPackages;
+    end;
+    MnhForm.InputEdit.ClearAll;
+    MnhForm.InputEdit.Lines.Clear;
+    ad_updateForm;
+    {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+  end; end;
+
+PROCEDURE ad_switchToDirectWithFile(CONST filename:string);
+  VAR mr:integer;
+  begin with adapter do begin
+    case state of
+      as_directNoFile: if filename<>'' then begin
+        ad_haltEvaluation;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_loadInputToWrapper;
+      end;
+      as_directFile: begin
+        if (filename<>'') and (filename<>currentlyEditingFile) and fileWasEdited then begin
+          mr:=AskForm.showModalOnFileChange();
+          if mr=mrYes then MnhForm.InputEdit.Lines.SaveToFile(currentlyEditingFile)
+          else if mr<>mrNo then exit;
+        end;
+        ad_haltEvaluation;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_loadInputToWrapper;
+      end;
+      as_watching: begin
+        ad_killEvaluationLoopSoftly;
+        state:=as_directFile;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_initEvaluation;
+      end;
+    end;
+  end; end;
+
+PROCEDURE ad_switchToWatchFile(CONST filename:string);
+  VAR mr:integer;
+  begin with adapter do begin
+    case state of
+      as_directNoFile: if filename<>'' then begin
+        ad_killEvaluationLoopSoftly;
+        state:=as_watching;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_initEvaluation;
+      end;
+      as_directFile: begin
+        if (filename<>'') and (filename<>currentlyEditingFile) and fileWasEdited then begin
+          mr:=AskForm.showModalOnFileChange();
+          if (mr<>mrYes) and (mr<>mrNo) then exit;
+        end else if fileWasEdited then mr:=mrYes;
+        if mr=mrYes then MnhForm.InputEdit.Lines.SaveToFile(currentlyEditingFile);
+
+        ad_killEvaluationLoopSoftly;
+        state:=as_watching;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_initEvaluation;
+      end;
+      as_watching: if (filename<>'') and (filename<>currentlyEditingFile) then begin
+        ad_killEvaluationLoopSoftly;
+        currentlyEditingFile:=filename;
+        MnhForm.InputEdit.Lines.LoadFromFile(filename);
+        ad_updateForm;
+        ad_initEvaluation;
+      end;
+    end;
+  end; end;
+
 
 procedure TMnhForm.FormDestroy(Sender: TObject);
   begin
-    ad_killEvaluationSoftly;
+    ad_killEvaluationLoopSoftly;
   end;
 
 procedure TMnhForm.FormResize(Sender: TObject);
@@ -230,7 +379,7 @@ procedure TMnhForm.FormResize(Sender: TObject);
 
 procedure TMnhForm.FormShow(Sender: TObject);
   begin
-    processSettings;
+    if not(settingsHaveBeenProcessed) then processSettings;
   end;
 
 procedure TMnhForm.InputEditChange(Sender: TObject);
@@ -260,7 +409,8 @@ procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
 
 procedure TMnhForm.miClearClick(Sender: TObject);
   begin
-    {$WARNING Unimplemented!}
+    if miEvalModeWatch.Checked then miEvalModeDirectOnKeypress.Checked:=true;
+    ad_clearFile;
   end;
 
 procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
@@ -285,22 +435,31 @@ procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
 
 procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
+    if miEvalModeDirect.Checked then exit;
+    if adapter.state=as_watching then ad_switchToDirectWithFile(adapter.currentlyEditingFile);
     miEvalModeDirect.Checked:=true;
   end;
 
 procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
+    if miEvalModeDirectOnKeypress.Checked then exit;
+    if adapter.state=as_watching then ad_switchToDirectWithFile(adapter.currentlyEditingFile);
     miEvalModeDirectOnKeypress.Checked:=true;
   end;
 
 procedure TMnhForm.miEvalModeWatchClick(Sender: TObject);
   begin
-    {$WARNING Unimplemented!}
+    if miEvalModeWatch.Checked then exit;
+    if adapter.state=as_directFile then begin
+      ad_switchToWatchFile(adapter.currentlyEditingFile);
+      miEvalModeWatch.Checked:=true;
+    end else miOpenToWatchClick(Sender);
   end;
 
 procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
-    {$WARNING Unimplemented!}
+    ad_loadInputToWrapper;
+    ad_triggerEvaluation;
   end;
 
 procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
@@ -329,7 +488,7 @@ procedure TMnhForm.miExpressionResultClick(Sender: TObject);
 
 procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
-    mnh_out_adapters.haltEvaluation;
+    ad_haltEvaluation;
   end;
 
 procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
@@ -342,23 +501,31 @@ procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
 
 procedure TMnhForm.miOpenClick(Sender: TObject);
   begin
-    {$WARNING TODO unimplemented}
+    OpenDialog.Title:='Open file for editing';
+    if OpenDialog.Execute and FileExists(OpenDialog.FileName)
+    then ad_switchToDirectWithFile(OpenDialog.FileName);
   end;
 
 procedure TMnhForm.miOpenToWatchClick(Sender: TObject);
   begin
-    {$WARNING TODO unimplemented}
+    OpenDialog.Title:='Open file for watching';
+    if OpenDialog.Execute and FileExists(OpenDialog.FileName)
+    then ad_switchToWatchFile(OpenDialog.FileName);
   end;
 
 procedure TMnhForm.miSaveAsClick(Sender: TObject);
-  begin
-    {$WARNING TODO unimplemented}
-  end;
+  begin with adapter do if state=as_directFile then begin
+    if SaveDialog.Execute then begin
+      currentlyEditingFile:=SaveDialog.FileName;
+      MnhForm.InputEdit.Lines.SaveToFile(currentlyEditingFile);
+      ad_updateForm;
+    end;
+  end; end;
 
 procedure TMnhForm.miSaveClick(Sender: TObject);
-  begin
-    {$WARNING TODO unimplemented}
-  end;
+  begin with adapter do begin
+    if currentlyEditingFile<>'' then MnhForm.InputEdit.Lines.SaveToFile(currentlyEditingFile);
+  end; end;
 
 procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
@@ -400,14 +567,9 @@ procedure TMnhForm.popMiOpenPackageClick(Sender: TObject);
 
   end;
 
-VAR evaluationStarted:double=-1;
-
 procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin
-    if (evaluationStarted>0) and (adapter.evaluationRunning) then begin
-      miHaltEvalutaion.Enabled:=true;
-      StatusBar.SimpleText:='Evaluating '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.'
-    end else miHaltEvalutaion.Enabled:=false;
+    ad_updateForm;
   end;
 
 procedure TMnhForm.processSettings;
@@ -419,7 +581,7 @@ procedure TMnhForm.processSettings;
     else InputEdit.Font.Quality:=fqNonAntialiased;
 
     OutputEdit.Font     :=InputEdit.Font;
-    ErrorStringGrid.Font:=InputEdit.Font;
+    //ErrorStringGrid.Font:=InputEdit.Font;
 
     top   :=SettingsForm.mainForm.top;
     left  :=SettingsForm.mainForm.left;
@@ -444,72 +606,106 @@ FUNCTION evaluationThread(p: pointer): ptrint;
   VAR sleepTime:longint=1;
 
   PROCEDURE enterEval;
-    begin
+    begin with adapter do begin
+      {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
       try
         mnhForm.miHaltEvalutaion.Enabled:=true;
         MnhForm.OutputEdit.ClearAll;
         MnhForm.OutputEdit.Lines.Clear;
         MnhForm.ErrorStringGrid.RowCount:=0;
         MnhForm.ErrorGroupBox.Visible:=false;
-      except end;
-      repeat adapter.evaluationRunning:=true until adapter.evaluationRunning;
-      evaluationStarted:=now;
-    end;
+        errorGridRequiresResize:=false;
+      finally
+        repeat evaluationRunning:=true; until evaluationRunning;
+        evaluationStarted:=now;
+        ad_updateForm;
+        {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+      end;
+    end; end;
 
   PROCEDURE doneEval;
-    VAR totalHeight:longint;
-    begin
-      mnhForm.miHaltEvalutaion.Enabled:=false;
-      MnhForm.StatusBar.SimpleText:='Done in '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.';
-      evaluationStarted:=-1;
-      repeat adapter.evaluationRunning:=false until not(adapter.evaluationRunning);
-    end;
+    begin with adapter do begin
+      {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+      repeat evaluationRunning:=false; until not(evaluationRunning);
+      if hasMessage(el5_systemError,HALT_MESSAGE) then begin
+        MnhForm.StatusBar.SimpleText:='Halted after '+FloatToStr(round((now-evaluationStarted)*24*60*60*100)*0.01)+' sec.';
+        sleepTime:=1000;
+      end else begin
+        MnhForm.StatusBar.SimpleText:='Done in '+FloatToStr(round((now-evaluationStarted)*24*60*60*100)*0.01)+' sec.';
+        sleepTime:=1;
+      end;
+      {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+      raiseError(el0_allOkay,'Evaluation done.',C_nilTokenLocation);
+    end; end;
 
   begin
+    with adapter do begin
+      {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+      repeat evaluationLoopRunning:=true; until evaluationLoopRunning;
+      {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+    end;
     repeat
-      repeat adapter.evaluationLoopRunning:=true until adapter.evaluationLoopRunning;
       if isReloadOfAllPackagesIndicated then begin
         enterEval;
         reloadAllPackages;
+        raiseError(el0_allOkay,'Reload of all packages finished.',C_nilTokenLocation);
         doneEval;
       end else if isReloadOfMainPackageIndicated then begin
         enterEval;
         reloadMainPackage;
+        raiseError(el0_allOkay,'Reload of main package finished.',C_nilTokenLocation);
         doneEval;
-      end else if not(adapter.haltEvaluationPosted) then begin
+      end else if not(adapter.haltEvaluationLoopPosted) then begin
         Sleep(sleepTime);
-        if (sleepTime<500) then inc(sleepTime);
+        if (sleepTime<500) then inc(sleepTime)
+        else if (sleepTime>500) then sleepTime:=500;
       end;
-    until adapter.haltEvaluationPosted;
-    adapter.directInputWrapper:=nil;
-    adapter.fileWrapper:=nil;
-    clearAllPackages;
-    repeat adapter.evaluationLoopRunning:=false until not(adapter.evaluationLoopRunning);
+    until adapter.haltEvaluationLoopPosted;
+    with adapter do begin
+      {$ifdef useAdapterCS} EnterCriticalsection(cs); {$endif}
+      clearAllPackages;
+      directInputWrapper:=nil;
+      fileWrapper:=nil;
+      repeat evaluationLoopRunning:=false; until not(evaluationLoopRunning);
+      {$ifdef useAdapterCS} LeaveCriticalsection(cs); {$endif}
+    end;
   end;
 
 PROCEDURE logError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
   VAR row:longint;
   begin
-    MnhForm.ErrorGroupBox.Visible:=true;
-    row:=MnhForm.ErrorStringGrid.RowCount;
-    MnhForm.ErrorStringGrid.RowCount:=row+1;
-    MnhForm.ErrorStringGrid.Cells[0,row]:=C_errorLevelTxt[errorLevel];
-    MnhForm.ErrorStringGrid.Cells[1,row]:=errorMessage;
-    MnhForm.ErrorStringGrid.Cells[2,row]:=errorLocation;
-    {$WARNING TODO Improve error logging (filename / fileline)!}
-    MnhForm.ErrorStringGrid.AutoSizeColumns;
+    try
+      MnhForm.ErrorGroupBox.Visible:=true;
+      row:=MnhForm.ErrorStringGrid.RowCount;
+      MnhForm.ErrorStringGrid.RowCount:=row+1;
+      MnhForm.ErrorStringGrid.Cells[0,row]:=C_errorLevelTxt[errorLevel];
+      MnhForm.ErrorStringGrid.Cells[1,row]:=errorMessage;
+      MnhForm.ErrorStringGrid.Cells[2,row]:=errorLocation;
+      if (errorLocation.provider=nil) or (errorLocation.provider^.filePath='') then begin
+        MnhForm.ErrorStringGrid.Cells[3,row]:='';
+        MnhForm.ErrorStringGrid.Cells[4,row]:='';
+      end else begin
+        MnhForm.ErrorStringGrid.Cells[3,row]:=errorLocation.provider^.filePath;
+        MnhForm.ErrorStringGrid.Cells[4,row]:=IntToStr(errorLocation.line);
+      end;
+    finally
+      adapter.errorGridRequiresResize:=true;
+    end;
   end;
 
 INITIALIZATION
   with adapter do begin
+    {$ifdef useAdapterCS} InitCriticalSection(cs); {$endif}
+
     state:=as_directNoFile;
     currentlyEditingFile:='';
     fileWasEdited:=false;
+    watchedFileAge:=0;
 
     directInputWrapper:=nil;
     fileWrapper:=nil;
 
-    haltEvaluationPosted :=false;
+    haltEvaluationLoopPosted :=false;
     evaluationRunning    :=false;
     evaluationLoopRunning:=false;
   end;
@@ -517,7 +713,10 @@ INITIALIZATION
   mnh_out_adapters.inputExprEcho:=@writeExprEcho;
   mnh_out_adapters.exprOut      :=@writeExprOut;
   mnh_out_adapters.printOut     :=@writePrint;
-  mnh_out_adapters.errorOut     :=@logError;
+  //mnh_out_adapters.errorOut     :=@logError;
+
+FINALIZATION
+  {$ifdef useAdapterCS} DoneCriticalsection(adapter.cs); {$endif}
 
 end.
 

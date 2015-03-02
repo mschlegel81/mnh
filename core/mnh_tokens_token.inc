@@ -583,8 +583,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
                                 else parameterListLiteral:=parameterListToken^.data;
       if first^.tokType=tt_userRulePointer then begin
         if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth)) then begin
-          if parameterListLiteral=nil then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
-                                      else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toString,first^.location);
+          if parameterListLiteral=nil
+          then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
+          else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
       end else if first^.tokType=tt_intrinsicRulePointer then begin
@@ -593,8 +594,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           firstReplace:=newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
         end else begin
-          if parameterListLiteral=nil then raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
-                               else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toString,first^.location);
+          if parameterListLiteral=nil
+          then raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
+          else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
       end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
@@ -909,7 +911,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
-    if errorLevel>=el5_systemError then begin
+    if callDepth=0 then begin
+      if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
+                   else raiseError(el0_allOkay,'Reduce expression done',first^.location);
+    end;
+    if (errorLevel>=el5_systemError) and (callDepth=0) then begin
+      raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);
       while (length(stack)>0) do stack_popDestroy;
       cascadeDisposeToken(first);
     end else while (length(stack)>0) do stack_popLink;

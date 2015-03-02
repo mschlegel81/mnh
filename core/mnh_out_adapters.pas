@@ -1,6 +1,7 @@
 UNIT mnh_out_adapters;
 INTERFACE
 USES mnh_stringutil, mnh_constants, mnh_tokLoc;
+CONST HALT_MESSAGE='Evaluation haltet (most probably by user).';
 
 TYPE
   T_writeCallback=PROCEDURE(CONST s:ansistring);
@@ -34,7 +35,7 @@ VAR storedErrors:array of record
                    errorMessage:ansistring;
                    errorLocation:T_tokenLocation
                  end;
-
+FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
 IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;
 PROCEDURE writeExprEcho(CONST s:ansistring); begin if inputExprEcho<>nil then inputExprEcho(s); end;
@@ -78,6 +79,15 @@ PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistrin
     storedErrors[i].errorLocation:=errorLocation;
   end;
 
+FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
+  VAR i:longint;
+  begin
+    for i:=0 to length(storedErrors)-1 do with storedErrors[i] do
+      if  (errorLevel  =level  )
+      and (errorMessage=message) then exit(true);
+    result:=false;
+  end;
+
 FUNCTION errorLevel:T_errorLevel;
   begin
     result:=maxErrorLevel;
@@ -104,7 +114,7 @@ FUNCTION isMemoryFree(CONST usage:string):boolean;
 
 PROCEDURE haltEvaluation;
   begin
-    raiseError(el5_systemError,'Evaluation haltet (most probably by user).',C_nilTokenLocation);
+    raiseError(el5_systemError,HALT_MESSAGE,C_nilTokenLocation);
   end;
 
 INITIALIZATION

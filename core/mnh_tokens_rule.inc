@@ -55,7 +55,7 @@ FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
         
         reduceExpression(firstRep,callDepth+1);
-        if (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
+        if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
           cache.put(useParam,lit);
         end;  
