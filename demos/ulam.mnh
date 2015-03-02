@@ -5,9 +5,11 @@ private Ulam(1)->[[1]];
 private Ulam(n)->(n and 1)=0 ? [[n*n..n*(n-1)+1]] | each(j,[0..n-2],(Ulam(n-1)%j)|(n*(n-1)-j))
                              : each(j,[0..n-2],((sqr(n-1)+1+j)| Ulam(n-1)%j)) | [[n*(n-1)+1..n*n]];
 
+private mark(i<=9)->" _"&i;
+private mark(i<=99)->" "&i;
+private mark(i    )->" XX";
 private UlamSpiral(n:int)->UlamSpiral(Ulam(n),primes(n*n));
-private UlamSpiral(Lines,Primes)->print(each(l,Lines,&"\n"&,each(n,l,&,n in Primes ? "XX"  : "  ")));
-
+private UlamSpiral(Lines,Primes)->print(each(l,Lines,&"\n"&,each(n,l,&,n in Primes ? mark(n)  : "   ")));
 
 private UlamPlot(n)->plotCategorized(each(i,[0..n-1],|,each(j,[0..n-1],|,Ulam(n)%i%j in primes(n*n) ? [i  ,j  ] : void )));
 private plotCategorized(L)->setPlotAxisStyle([0,0]) and setPlotLogscale([false,false]) and setPlotAutoscale([true,true]) and setPlotPreserveAspect(true) and
@@ -20,6 +22,6 @@ main->info and UlamSpiral(40);
 //*Displays a n x n Ulam-Spiral
 main(n:string)->info and UlamSpiral(softCast(n));
 
-UlamPlot(221);
+//UlamPlot(221);
 
-
+main;
