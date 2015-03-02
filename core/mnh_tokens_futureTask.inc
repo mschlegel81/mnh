@@ -34,7 +34,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal; CON
     else state:=fts_errorOnInitialization;
     param.destroy;
     if state=fts_pending then begin
-      if futureThreadsRunning<random(16) then begin
+      if futureThreadsRunning<8 then begin
         InterLockedIncrement(futureThreadsRunning);
         beginThread(@futureTaskEvalThread,@self)
       end else evaluate(callDepth);

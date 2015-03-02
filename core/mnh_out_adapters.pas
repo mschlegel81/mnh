@@ -38,7 +38,7 @@ FUNCTION isMemoryFree(CONST usage: string): boolean;
 PROCEDURE haltEvaluation;
 
 VAR
-  hasHaltMessage: boolean = False;
+  hasHaltMessage: boolean = false;
 
 IMPLEMENTATION
 
@@ -94,7 +94,7 @@ VAR errorCount:longint=0;
 PROCEDURE clearErrors;
   begin
     maxErrorLevel := el0_allOkay;
-    hasHaltMessage := False;
+    hasHaltMessage := false;
     errorCount:=0;
   end;
 
@@ -103,18 +103,19 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel;
   VAR
     newError: T_storedError;
   begin
-    InterLockedIncrement(errorCount); if errorCount>20 then exit;
+    InterLockedIncrement(errorCount); if (errorCount>20) and (thisErrorLevel<=maxErrorLevel) then exit;
     newError.errorLevel := thisErrorLevel;
     newError.errorMessage := errorMessage;
     newError.errorLocation := errorLocation;
     if thisErrorLevel > maxErrorLevel then
       maxErrorLevel := thisErrorLevel;
     if errorMessage = HALT_MESSAGE then
-      hasHaltMessage := True;
+      hasHaltMessage := true;
     if errorOut <> nil then
         try
         errorOut(newError);
         except
+          plainStdErrOut(newError);
         end;
   end;
 

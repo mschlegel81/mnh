@@ -1,0 +1,18 @@
+recSources(path)->flatten(files(path&"/*.pas"),files(path&"/*.inc"),each(f,folders(path&"/*"),recSources(f)));
+language:='Pascal';
+myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT','INTERFACE','IMPLEMENTATION','INITIALIZATION','FINALIZATION',
+         'if','then','else','case','begin','end','repeat','until','while','do','to','in','ansistring','of','try',
+         'except','finally','true','false','value','word','longint','result','assign','reset','rewrite','close','object','record',
+         'setLength']);
+fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
+
+
+check(filename)->each(t,tokenSplit(fileContents(filename),language),and,fixToken(t)<>t ? print(filename&": "&t) : true);
+fix(filename)->fix(filename,tokenSplit(fileContents(filename),language));
+fix(filename,oldTokens)->fix(filename,oldTokens,each(t,oldTokens,fixToken(t)));
+fix(filename,oldTokens,newTokens==oldTokens)->true;
+fix(filename,oldTokens,newTokens)->writeFile(filename,each(t,newTokens,&)) and print('file ',filename,' modified');
+
+//each(s,recSources(".."),and,check(s));
+
+each(s,recSources(".."),and,fix(s));

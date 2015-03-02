@@ -719,7 +719,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
         for j:=0 to length(bodyRule)-1 do if errorLevel<el3_evalError then begin
-          future[k].createTask(bodyRule[j],itList^.Value(i),callDepth);
+          future[k].createTask(bodyRule[j],itList^.value(i),callDepth);
           if future[k].state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           inc(k);
         end else future[k].createTaskInErrorState;
@@ -757,8 +757,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       begin
         first^.tokType:=tt_literal;
         if resultLiteral=nil then begin
-          if aggregatorPresent then first^.data:=newErrorLiteral
-                               else first^.data:=newListLiteral;
+          if aggregatorPresent then begin
+            first^.data:=newErrorLiteral;
+            raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
+          end else first^.data:=newListLiteral;
         end else first^.data:=resultLiteral;
         first^.txt:='';
         first^.next:=disposeToken(bracketClosingEach);
@@ -807,7 +809,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           aggregateFutures;
         end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
-            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.Value(i),callDepth+1),true);
+            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),callDepth+1),true);
           finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
@@ -828,7 +830,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           finalizeAggregation;
         end else if aggregatorIsPrimitive then begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-            addToAggregation(itList^.Value(i),false);
+            addToAggregation(itList^.value(i),false);
           finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
@@ -1166,7 +1168,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         tt_identifier: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,false);
-          if first^.tokType<>tt_identifier then didSubstitution:=true;
+          if first^.tokType<>tt_identifier then didSubstitution:=true
+                                           else raiseError(el3_evalError,'Cannot resolve id "'+first^.txt+'"',first^.location);
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
@@ -1186,12 +1189,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       //printState;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
     except
-      ON EOutOfMemory DO begin
+      ON EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
         while (length(stack)>0) do stack_popDestroy;
-      //end else begin
-      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-      //  while (length(stack)>0) do stack_popDestroy;
+      end else begin
+        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        while (length(stack)>0) do stack_popDestroy;
       end;
     end;
     if callDepth=0 then begin

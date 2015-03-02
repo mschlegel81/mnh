@@ -39,32 +39,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literal
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION not_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'not',tokenLocation);
-        lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
-        lt_list,lt_booleanList, lt_intList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=not_rec(params^.value(0))
-    else raiseNotApplicableError('not',params,tokenLocation);
-  end;
-
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -92,80 +67,6 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=newBoolLiteral(true);
   end;
 
-
-
-FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION abs_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newIntLiteral (abs(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(abs(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(abs_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('abs',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=abs_rec(params^.value(0))
-    else raiseNotApplicableError('abs',params,tokenLocation);
-  end;
-
-FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION sign_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
-        lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=sign_rec(params^.value(0))
-    else raiseNotApplicableError('sign',params,tokenLocation);
-  end;
-
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION sqr_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newIntLiteral (sqr(P_intLiteral (x)^.value));
-        lt_real: result:=newRealLiteral(sqr(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqr_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('sqr',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=sqr_rec(params^.value(0))
-    else raiseNotApplicableError('sqr',params,tokenLocation);
-  end;
-
 {$MACRO ON}
 {$define UNARY_NUM_TO_REAL:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
@@ -191,7 +92,6 @@ begin
   then result:=recurse(params^.value(0))
   else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
 end}
-
 
 FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 {$define CALL_MACRO:=sqrt}
@@ -238,12 +138,153 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 {$define ID_MACRO:='ln'}
 UNARY_NUM_TO_REAL;
 
+{$undef UNARY_NUM_TO_REAL}
+
+FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION not_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'not',tokenLocation);
+        lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
+        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
+        lt_list,lt_booleanList, lt_intList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do
+            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=not_rec(params^.value(0))
+    else raiseNotApplicableError('not',params,tokenLocation);
+  end;
+
+{$define UNARY_NUM_TO_SAME:=
+FUNCTION recurse(CONST x:P_literal):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    case x^.literalType of
+      lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
+      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+      lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
+      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+      lt_list,lt_intList,lt_realList,lt_numList: begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+      end;
+      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+    end;
+  end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1)
+  then result:=recurse(params^.value(0))
+  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+end}
+
+FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=abs}
+{$define ID_MACRO:='abs'}
+UNARY_NUM_TO_SAME;
+
+FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+{$define CALL_MACRO:=sqr}
+{$define ID_MACRO:='sqr'}
+UNARY_NUM_TO_SAME;
+
+{$undef UNARY_NUM_TO_SAME}
+
+FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION sign_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'sign',tokenLocation);
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
+        lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=sign_rec(params^.value(0))
+    else raiseNotApplicableError('sign',params,tokenLocation);
+  end;
+  
+  
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION ceil_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'ceil',tokenLocation);
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : begin result:=x; x^.rereference; end;
+        lt_real: result:=newIntLiteral(ceil(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ceil_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('ceil',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=ceil_rec(params^.value(0))
+    else raiseNotApplicableError('ceil',params,tokenLocation);
+  end;
+
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION floor_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      result:=nil;
+      case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'floor',tokenLocation);
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : begin result:=x; x^.rereference; end;
+        lt_real: result:=newIntLiteral(floor(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(floor_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('floor',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=floor_rec(params^.value(0))
+    else raiseNotApplicableError('floor',params,tokenLocation);
+  end;
+
 FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION round_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
       result:=nil;
       case x^.literalType of
+        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'round',tokenLocation);
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
         lt_real: result:=newIntLiteral(round(P_realLiteral(x)^.value));
@@ -302,54 +343,6 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     if (params<>nil) and (params^.size=1) then result:=round_rec(params^.value(0)) else
     if (params<>nil) and (params^.size=2) then result:=round_rec2(params^.value(0),params^.value(1))
     else raiseNotApplicableError('round',params,tokenLocation);
-  end;
-
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION ceil_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(ceil(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ceil_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('ceil',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=ceil_rec(params^.value(0))
-    else raiseNotApplicableError('ceil',params,tokenLocation);
-  end;
-
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  FUNCTION floor_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(floor(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(floor_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('floor',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=floor_rec(params^.value(0))
-    else raiseNotApplicableError('floor',params,tokenLocation);
   end;
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -433,43 +426,30 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then begin
-        result:=newListLiteral;
-        P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
-        P_listLiteral(result)^.sort;
-      end else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
-        result:=params^.value(0);
-        result^.rereference;
-      end else raiseError(el3_evalError,'Function sort can only be applied to flat lists containing comparable types',tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList]) then begin
+      result:=newListLiteral;
+      P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
+      P_listLiteral(result)^.sort;
     end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
 
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then
-        result:=P_listLiteral(params^.value(0))^.sortPerm
-      else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
-        result:=params^.value(0);
-        result^.rereference;
-      end else raiseError(el3_evalError,'Function sortPerm can only be applied to flat lists containing comparable types',tokenLocation);
-    end else raiseNotApplicableError('sortPerm',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList])
+    then result:=P_listLiteral(params^.value(0))^.sortPerm
+    else raiseNotApplicableError('sortPerm',params,tokenLocation);
   end;
 
 FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then begin
+      if (params^.value(0)^.literalType in [lt_list..lt_listWithError]) then begin
         result:=newListLiteral;
         P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
         P_listLiteral(result)^.unique;
-      end else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
-        result:=params^.value(0);
-        result^.rereference;
-      end else raiseError(el3_evalError,'Function unique can only be applied to flat lists containing comparable types',tokenLocation);
+      end;
     end else raiseNotApplicableError('unique',params,tokenLocation);
   end;
 
@@ -642,24 +622,24 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   FUNCTION safeString(index:longint):ansistring;
     begin
-      if params^.Value(0)^.literalType=lt_string
-        then result:=P_stringLiteral(              params^.Value(0)               )^.Value
-        else result:=P_stringLiteral(P_listLiteral(params^.Value(0))^.Value(index))^.Value;
+      if params^.value(0)^.literalType=lt_string
+        then result:=P_stringLiteral(              params^.value(0)               )^.value
+        else result:=P_stringLiteral(P_listLiteral(params^.value(0))^.value(index))^.value;
     end;
 
   FUNCTION safeStart(index:longint):longint;
     begin
-      if params^.Value(1)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.Value(1)               )^.Value
-        else result:=P_intLiteral(P_listLiteral(params^.Value(1))^.Value(index))^.Value;
+      if params^.value(1)^.literalType=lt_int
+        then result:=P_intLiteral(              params^.value(1)               )^.value
+        else result:=P_intLiteral(P_listLiteral(params^.value(1))^.value(index))^.value;
       inc(result);
     end;
 
   FUNCTION safeLen(index:longint):longint;
     begin
-      if params^.Value(2)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.Value(2)               )^.Value
-        else result:=P_intLiteral(P_listLiteral(params^.Value(2))^.Value(index))^.Value;
+      if params^.value(2)^.literalType=lt_int
+        then result:=P_intLiteral(              params^.value(2)               )^.value
+        else result:=P_intLiteral(P_listLiteral(params^.value(2))^.value(index))^.value;
     end;
 
   begin
@@ -668,9 +648,9 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
                                           and (params^.value(1)^.literalType in [lt_int   ,lt_intList])
                                           and (params^.value(2)^.literalType in [lt_int   ,lt_intList]) then begin
       anyList:=false;
-      if params^.Value(0)^.literalType=lt_stringList then checkLength(params^.Value(0));
-      if params^.Value(1)^.literalType=lt_intList    then checkLength(params^.Value(1));
-      if params^.Value(2)^.literalType=lt_intList    then checkLength(params^.Value(2));
+      if params^.value(0)^.literalType=lt_stringList then checkLength(params^.value(0));
+      if params^.value(1)^.literalType=lt_intList    then checkLength(params^.value(1));
+      if params^.value(2)^.literalType=lt_intList    then checkLength(params^.value(2));
       if not(allOkay) then raiseNotApplicableError('copy',params,tokenLocation)
       else if not(anyList) then
         result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
@@ -1164,38 +1144,63 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       i0:=i1;
     end;
 
+  VAR doubleQuoteString:boolean=true;
+      singleQuoteString:boolean=true;
+      escapeStringDelimiter:boolean=true;
+      curlyBracketsDelimitOneToken:boolean=true;
+      cStyleComments:boolean=true;
+
+  PROCEDURE setLanguage(name:string);
+    begin
+      if trim(UpperCase(name))='MNH' then begin
+
+      end else if trim(UpperCase(name))='JAVA' then begin
+        curlyBracketsDelimitOneToken:=false;
+      end else if trim(UpperCase(name))='PASCAL' then begin
+        doubleQuoteString:=false;
+        escapeStringDelimiter:=false;
+      end else raiseError(el3_evalError,'tokenSplit expects one of the following as second parameter: MNH, Java, Pascal',tokenLocation);
+    end;
+
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=2) and
+       (params^.value(0)^.literalType=lt_string) and
+       (params^.value(1)^.literalType=lt_string) then begin
+      setLanguage(P_stringLiteral(params^.value(1))^.value);
       stringToSplit:=P_stringLiteral(params^.value(0))^.value;
       result:=newListLiteral;
       i0:=1;
       while i0<=length(stringToSplit) do begin
-        case stringToSplit[i0] of
-          'a'..'z','A'..'Z': begin //identifiers, keywords, etc.
-            i1:=i0;
-            while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
-          end;
-          '''','"': begin //strings
+        if stringToSplit[i0] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar] then begin //whitespace
+          i1:=i0;
+          while (i1<=length(stringToSplit)) and (stringToSplit[i1] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar]) do inc(i1);
+        end else if (stringToSplit[i0]='''') and singleQuoteString or
+                    (stringToSplit[i0]='"') and doubleQuoteString then begin
+          if escapeStringDelimiter then begin
             unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),i1);
-            if i1<=0 then begin
-              i1:=i0+1;
-              while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>stringToSplit[i0]) do inc(i1);
-            end else i1:=i0+i1;
-          end;
-          '0'..'9': begin //numbers
-            parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
-            if i1<=0 then i1:=i0
+            if i1<=0 then i1:=i0+1
                      else i1:=i0+i1;
+          end else begin
+            i1:=i0+1;
+            while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>stringToSplit[i0]) do inc(i1);
+            inc(i1);
           end;
-          ' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar: begin //whitespace
-            i1:=i0;
-            while (i1<=length(stringToSplit)) and (stringToSplit[i1] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar]) do inc(i1);
-          end;
-          else begin
-            i1:=i0+1; //symbols, etc.
-          end;
-        end;
+        end else if (stringToSplit[i0]='{') and curlyBracketsDelimitOneToken then begin
+          i1:=i0+1;
+          while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>'}') do inc(i1);
+          inc(i1);
+        end else if (copy(stringToSplit,i0,2)='//') and cStyleComments then begin
+          i1:=i0+1;
+          while (i1<=length(stringToSplit)) and not(stringToSplit[i1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(i1);
+        end else if stringToSplit[i0] in ['a'..'z','A'..'Z'] then begin
+          i1:=i0;
+          while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
+        end else if stringToSplit[i0] in ['0'..'9'] then begin //numbers
+          parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
+          if i1<=0 then i1:=i0
+                   else i1:=i0+i1;
+        end else i1:=i0+1; //symbols, etc.
         stepToken;
       end;
 
@@ -1220,12 +1225,12 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      B:=params^.Value(0);
+      B:=params^.value(0);
       case B^.literalType of
-        lt_boolean: if P_boolLiteral(B)^.Value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_boolean: if P_boolLiteral(B)^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
         lt_booleanList: begin
           c:=0;
-          for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.Value(i))^.Value then inc(c);
+          for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.value(i))^.value then inc(c);
           exit(newIntLiteral(c));
         end;
         lt_list, lt_flatList: if P_listLiteral(B)^.size=0 then exit(newIntLiteral(0));
@@ -1239,20 +1244,20 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) then begin
-       case params^.Value(0)^.literalType of
-         lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.Value(0))^.Value)));
+      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) then begin
+       case params^.value(0)^.literalType of
+         lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.value(0))^.value)));
          lt_int:  exit(newBoolLiteral(false));
          lt_intList: begin
            result:=newListLiteral;
-           for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
              P_listLiteral(result)^.append(newBoolLiteral(false),false);
          end;
          else begin
            result:=newListLiteral;
-           for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
-             P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.Value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.Value(0)))^.Value)),false);
+           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+             P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
          end;
        end;
     end else raiseNotApplicableError('isNan',params,tokenLocation);
@@ -1263,20 +1268,20 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) then begin
-      case params^.Value(0)^.literalType of
-        lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.Value(0))^.Value)));
+      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) then begin
+      case params^.value(0)^.literalType of
+        lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.value(0))^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
+          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
             P_listLiteral(result)^.append(newBoolLiteral(false),false);
         end;
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
-            P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.Value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.Value(0)))^.Value)),false);
+          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+            P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
         end;
       end;
     end else raiseNotApplicableError('isInfinite',params,tokenLocation);
@@ -1289,10 +1294,10 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         r:extended;
     begin
       if l^.literalType=lt_real then begin
-        r:=P_realLiteral(l)^.Value;
+        r:=P_realLiteral(l)^.value;
         result:=not(IsNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
       end else begin
-        i:=P_intLiteral(l)^.Value;
+        i:=P_intLiteral(l)^.value;
         result:=(r0<=i) and (i<=r1);
       end;
     end;
@@ -1301,21 +1306,21 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-      ((params^.Value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.Value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.Value(0))^.size=0)) and
-       (params^.Value(1)^.literalType in [lt_real,lt_int]) and
-       (params^.Value(2)^.literalType in [lt_real,lt_int]) then begin
-      if params^.Value(1)^.literalType=lt_real
-        then r0:=P_realLiteral(params^.Value(1))^.Value
-        else r0:=P_intLiteral (params^.Value(1))^.Value;
-      if params^.Value(2)^.literalType=lt_real
-        then r1:=P_realLiteral(params^.Value(2))^.Value
-        else r1:=P_intLiteral (params^.Value(2))^.Value;
-      if params^.Value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.Value(0))))
+      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
+       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) and
+       (params^.value(1)^.literalType in [lt_real,lt_int]) and
+       (params^.value(2)^.literalType in [lt_real,lt_int]) then begin
+      if params^.value(1)^.literalType=lt_real
+        then r0:=P_realLiteral(params^.value(1))^.value
+        else r0:=P_intLiteral (params^.value(1))^.value;
+      if params^.value(2)^.literalType=lt_real
+        then r1:=P_realLiteral(params^.value(2))^.value
+        else r1:=P_intLiteral (params^.value(2))^.value;
+      if params^.value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.value(0))))
       else begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.Value(0))^.size-1 do
-          P_listLiteral(result)^.append(newBoolLiteral(inRange(P_listLiteral(params^.Value(0))^.Value(i))),false);
+        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+          P_listLiteral(result)^.append(newBoolLiteral(inRange(P_listLiteral(params^.value(0))^.value(i))),false);
       end;
     end else raiseNotApplicableError('isInRange',params,tokenLocation);
   end;
@@ -1334,9 +1339,9 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.Value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=newListLiteral;
-      name:=P_stringLiteral(params^.Value(0))^.Value;
+      name:=P_stringLiteral(params^.value(0))^.value;
       appendPair(result,'input',name);
       appendPair(result,'expanded',ExpandFileName(name));
       appendPair(result,'relative',ExtractRelativepath(ExpandFileName(''),name));
@@ -1349,11 +1354,8 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
-  registerRule('not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
   registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule('abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric parameter n');
-  registerRule('sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric parameter n');
-  registerRule('sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric parameter n');
+  //Unary Numeric -> real
   registerRule('sqrt'          ,@sqrt_imp      ,'sqrt(n);#Returns the square root of numeric parameter n');
   registerRule('sin'           ,@sin_imp       ,'sin(n);#Returns the sine of numeric parameter n');
   registerRule('arcsin'        ,@arcsin_imp    ,'arcsin(n);#Returns the arcsine of numeric parameter n');
@@ -1363,9 +1365,18 @@ INITIALIZATION
   registerRule('arctan'        ,@arctan_imp    ,'tan(n);#Returns the arctangent of numeric parameter n');
   registerRule('exp'           ,@exp_imp       ,'exp(n);#Returns the exponential of numeric parameter n');
   registerRule('ln'            ,@ln_imp        ,'ln(n);#Returns the natural logarithm of numeric parameter n');
-  registerRule('round'         ,@round_imp     ,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  //Unary Boolean -> boolean
+  registerRule('not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
+  //Unary Numeric -> same (i.e. I -> I, R -> R)
+  registerRule('abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric parameter n');
+  registerRule('sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric parameter n');
+  //Unary Numeric -> Integer
+  registerRule('sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric parameter n');
   registerRule('ceil'          ,@ceil_imp      ,'ceil(x);#Returns the smallest integer >=x');
   registerRule('floor'         ,@floor_imp     ,'floor(x);#Returns the largest integer <=x');
+  //round might be binary...
+  registerRule('round'         ,@round_imp     ,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');  
+  //Functions on lists:
   registerRule('head'          ,@head_imp      ,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
   registerRule('sort'          ,@sort_imp      ,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)');
@@ -1378,11 +1389,13 @@ INITIALIZATION
   registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
   registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
+  //Functions on Strings:
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
   registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule('copy'          ,@copy_imp      ,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
-  registerRule('time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('split'         ,@split_imp     ,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
+  
+  registerRule('time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('softCast'      ,@softCast_imp  ,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule('trim'          ,@trim_imp      ,'trim(S:string);#Returns string S without leading or trailing spaces');
   registerRule('upper'         ,@upper_imp     ,'upper(S:string);#Returns an uppercase representation of S');
@@ -1400,7 +1413,7 @@ INITIALIZATION
   registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
-  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
+  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language');
   registerRule('myPath'        ,@myPath_impl,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
   registerRule('isNan'         ,@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');

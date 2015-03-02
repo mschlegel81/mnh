@@ -6,9 +6,9 @@ PROGRAM mnh_gui;
 USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   cthreads, {$ENDIF} {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms,
-  mnh_gui_settings,
-  mnh_gui_main, closeDialog, askDialog;
+  Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog;
+
+
 
 {$R *.res}
 

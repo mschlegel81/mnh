@@ -3,7 +3,6 @@ UNIT mnh_fileWrappers;
 INTERFACE
 
 USES SysUtils, Classes, process;
-
 TYPE
   T_stringList = array of ansistring;
 
@@ -11,7 +10,7 @@ TYPE
 
   { T_codeProvider }
 
-  T_codeProvider = OBJECT
+  T_codeProvider = object
   private
     lock: TThreadID;
     filepath: ansistring;
@@ -25,10 +24,10 @@ TYPE
     CONSTRUCTOR Create(CONST path: ansistring);
     DESTRUCTOR Destroy;
     FUNCTION getLines: T_stringList;
-    PROCEDURE setLines(CONST Value: T_stringList);
-    PROCEDURE setLines(CONST Value: TStrings);
-    PROCEDURE setLines(CONST Value: ansistring);
-    PROCEDURE appendLine(CONST Value: ansistring);
+    PROCEDURE setLines(CONST value: T_stringList);
+    PROCEDURE setLines(CONST value: TStrings);
+    PROCEDURE setLines(CONST value: ansistring);
+    PROCEDURE appendLine(CONST value: ansistring);
 
     PROCEDURE setPath(CONST path: ansistring);
     FUNCTION getPath: ansistring;
@@ -47,34 +46,31 @@ CONST sourceExt = '.MNH';
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
 FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
-FUNCTION writeFileLines(CONST Name: ansistring;
-  CONST textToWrite: T_stringList): boolean;
+FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
 
-PROCEDURE setMainPackagePath(CONST path:ansistring);
-FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
-FUNCTION locateSources:T_stringList;
+PROCEDURE setMainPackagePath(CONST path: ansistring);
+FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
+FUNCTION locateSources: T_stringList;
 
-FUNCTION runCommandAsync(CONST executable: ansistring;
-  CONST parameters: T_stringList): boolean;
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList;
-  OUT output: TStringList): boolean;
+FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
+FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
 
 IMPLEMENTATION
-VAR mainPackagePath:ansistring;
+VAR mainPackagePath: ansistring;
 
-PROCEDURE setMainPackagePath(CONST path:ansistring);
+PROCEDURE setMainPackagePath(CONST path: ansistring);
   begin
-    mainPackagePath:=expandFileName(extractFilePath(path));
+    mainPackagePath := expandFileName(extractFilePath(path));
   end;
 
-FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
+FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   FUNCTION nameToId(CONST fname: ansistring): ansistring;
     begin
       if uppercase(extractFileExt(fname)) = sourceExt then
         begin
-          result := extractFileName(fname);
-          result := copy(result, 1, length(result) - length(sourceExt));
+        result := extractFileName(fname);
+        result := copy(result, 1, length(result)-length(sourceExt));
         end
       else
         result := '';
@@ -86,49 +82,51 @@ FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
     VAR
       info: TSearchRec;
     begin
-      if findFirst(path + '*', faAnyFile, info) = 0 then
+      if findFirst(path+'*', faAnyFile, info) = 0 then
         repeat
           if (info.attr and faDirectory) = faDirectory then
             begin
-            if (info.Name <> '.') and (info.Name <> '..') then
-              recursePath(path + info.Name + DirectorySeparator);
+            if (info.Name<>'.') and (info.Name<>'..') then
+              recursePath(path+info.Name+DirectorySeparator);
             end
           else if nameToId(info.Name) = id then
-              result := path + info.Name;
-        until (findNext(info) <> 0) or (result <> '');
+            result := path+info.Name;
+        until (findNext(info)<>0) or (result<>'');
       SysUtils.findClose(info);
     end;
 
   begin
     result := '';
     recursePath(expandFileName(extractFilePath(rootPath)));
-    if result='' then recursePath(expandFileName(''));
+    if result = '' then recursePath(expandFileName(''));
   end;
 
-FUNCTION locateSources:T_stringList;
+FUNCTION locateSources: T_stringList;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR
       info: TSearchRec;
     begin
-      if findFirst(path + '*', faAnyFile, info) = 0 then
+      if findFirst(path+'*', faAnyFile, info) = 0 then
         repeat
           if (info.attr and faDirectory) = faDirectory then
             begin
-            if (info.Name <> '.') and (info.Name <> '..') then
-              recursePath(path + info.Name + DirectorySeparator);
+            if (info.Name<>'.') and (info.Name<>'..') then
+              recursePath(path+info.Name+DirectorySeparator);
             end
-          else if uppercase(extractFileExt(info.name)) = sourceExt then begin
-            setLength(result,length(result)+1);
-            result[length(result)-1]:=path + info.Name;
-          end;
-        until (findNext(info) <> 0);
+          else if uppercase(extractFileExt(info.Name)) = sourceExt then
+            begin
+            setLength(result, length(result)+1);
+            result[length(result)-1] := path+info.Name;
+            end;
+        until (findNext(info)<>0);
       SysUtils.findClose(info);
     end;
 
   begin
-    setLength(result, 0);    recursePath('');
-    if length(result)=0 then recursePath('..'+DirectorySeparator);
-    if length(result)=0 then recursePath('..'+DirectorySeparator+'..'+DirectorySeparator);
+    setLength(result, 0);  recursePath('');
+    if length(result) = 0 then recursePath('..'+DirectorySeparator);
+    if length(result) = 0 then
+      recursePath('..'+DirectorySeparator+'..'+DirectorySeparator);
   end;
 
 
@@ -140,22 +138,22 @@ FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
   begin
     if trim(Name) = '' then
       begin
-      accessed := False;
+      accessed := false;
       exit;
       end;
       try
-      accessed := True;
-      Assign(handle, Name);
+      accessed := true;
+      assign(handle, Name);
       reset(handle);
       result := '';
       repeat
         blockread(handle, block, length(block), actuallyRead);
-        for i := 0 to actuallyRead - 1 do
-          result := result + block[i];
-      until actuallyRead < length(block);
-      Close(handle);
+        for i := 0 to actuallyRead-1 do
+          result := result+block [i];
+      until actuallyRead<length(block);
+      close(handle);
       except
-      accessed := False;
+      accessed := false;
       result := '';
       end;
   end;
@@ -167,21 +165,21 @@ FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
     setLength(result, 0);
     if trim(Name) = '' then
       begin
-      accessed := False;
+      accessed := false;
       exit;
       end;
       try
-      accessed := True;
-      Assign(handle, Name);
+      accessed := true;
+      assign(handle, Name);
       reset(handle);
       while not (EOF(handle)) do
         begin
-        setLength(result, length(result) + 1);
-        readln(handle, result[length(result) - 1]);
+        setLength(result, length(result)+1);
+        readln(handle, result [length(result)-1]);
         end;
-      Close(handle);
+      close(handle);
       except
-      accessed := False;
+      accessed := false;
       setLength(result, 0);
       end;
   end;
@@ -193,89 +191,87 @@ FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
     i, j: longint;
   begin
     if trim(Name) = '' then
-      exit(False);
+      exit(false);
       try
-      result := True;
-      Assign(handle, Name);
+      result := true;
+      assign(handle, Name);
       rewrite(handle);
       i := 1;
-      while i <= length(textToWrite) do
+      while i<=length(textToWrite) do
         begin
         j := 0;
-        while (i <= length(textToWrite)) and (j < length(block)) do
+        while (i<=length(textToWrite)) and (j<length(block)) do
           begin
-          block[j] := textToWrite[i];
+          block[j] := textToWrite [i];
           Inc(i);
           Inc(j);
           end;
         blockwrite(handle, block, j);
         end;
-      Close(handle);
+      close(handle);
       except
-      result := False;
+      result := false;
       end;
   end;
 
-FUNCTION writeFileLines(CONST Name: ansistring;
-  CONST textToWrite: T_stringList): boolean;
+FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
   VAR
     handle: TextFile;
     i: longint;
   begin
     if trim(Name) = '' then
-      exit(False);
+      exit(false);
       try
-      Assign(handle, Name);
+      assign(handle, Name);
       rewrite(handle);
-      for i := 0 to length(textToWrite) - 1 do
-        writeln(handle, textToWrite[i]);
-      Close(handle);
-      result := True;
+      for i := 0 to length(textToWrite)-1 do
+        writeln(handle, textToWrite [i]);
+      close(handle);
+      result := true;
       except
-      result := False;
+      result := false;
       end;
   end;
 
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
   VAR info: TSearchRec;
-      path: ansistring;
+    path: ansistring;
   begin
     path := ExtractFilePath(pattern);
     setLength(result, 0);
     if findFirst(pattern, faAnyFile, info) = 0 then
       repeat
-        if (info.Name <> '.') and (info.Name <> '..') and
-          (((info.attr and faDirectory) =  faDirectory) and not(filesAndNotFolders) or
-           ((info.attr and faDirectory) <> faDirectory) and     filesAndNotFolders) then
+        if (info.Name<>'.') and (info.Name<>'..') and
+          (((info.attr and faDirectory) = faDirectory) and not
+          (filesAndNotFolders) or  ((info.attr and faDirectory)<>faDirectory) and
+          filesAndNotFolders) then
           begin
-            setLength(result, length(result) + 1);
-            result[length(result) - 1] := path + info.Name;
+          setLength(result, length(result)+1);
+          result[length(result)-1] := path+info.Name;
           end;
-      until (findNext(info) <> 0);
+      until (findNext(info)<>0);
     SysUtils.findClose(info);
   end;
 
-FUNCTION runCommandAsync(CONST executable: ansistring;
-  CONST parameters: T_stringList): boolean;
+FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
   VAR
     tempProcess: TProcess;
     i: longint;
   begin
-    result := True;
+    result := true;
       try
       tempProcess := TProcess.Create(nil);
       tempProcess.Executable := executable;
-      for i := 0 to length(parameters) - 1 do
-        tempProcess.Parameters.Add(parameters[i]);
+      for i := 0 to length(parameters)-1 do
+        tempProcess.Parameters.Add(parameters [i]);
       tempProcess.Execute;
       tempProcess.Free;
       except
-      result := False;
+      result := false;
       end;
   end;
 
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList;
-  OUT output: TStringList): boolean;
+FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
   CONST
     READ_BYTES = 2048;
   VAR
@@ -288,30 +284,30 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
     BytesRead := 0;
     tempProcess := TProcess.Create(nil);
     tempProcess.Executable := executable;
-    for n := 0 to length(parameters) - 1 do
-      tempProcess.Parameters.Add(parameters[n]);
+    for n := 0 to length(parameters)-1 do
+      tempProcess.Parameters.Add(parameters [n]);
     tempProcess.Options := [poUsePipes, poStderrToOutPut];
     tempProcess.ShowWindow := swoHIDE;
       try
       tempProcess.Execute;
       while tempProcess.Running do
         begin
-        memStream.SetSize(BytesRead + READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory + BytesRead)^, READ_BYTES);
-        if n > 0 then
+        memStream.SetSize(BytesRead+READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+        if n>0 then
           Inc(BytesRead, n)
         else
           Sleep(10);
         end;
       repeat
-        memStream.SetSize(BytesRead + READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory + BytesRead)^, READ_BYTES);
-        if n > 0 then
+        memStream.SetSize(BytesRead+READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+        if n>0 then
           Inc(BytesRead, n);
-      until n <= 0;
+      until n<=0;
       result := (tempProcess.ExitStatus = 0);
       except
-      result := False;
+      result := false;
       end;
     tempProcess.Free;
     memStream.SetSize(BytesRead);
@@ -323,84 +319,86 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
 { T_codeProvider }
 
 FUNCTION T_codeProvider.getLines: T_stringList;
-  VAR i:longint;
+  VAR i: longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
+    while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
     until lock = ThreadID;
-    setLength(result,length(lineData));
-    for i:=0 to length(lineData)-1 do result[i]:=lineData[i];
+    setLength(result, length(lineData));
+    for i := 0 to length(lineData)-1 do result[i] := lineData [i];
     repeat
       lock := 0
     until lock = 0;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST Value: T_stringList);
+PROCEDURE T_codeProvider.setLines(CONST value: T_stringList);
   VAR
     i: longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
+    while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
     until lock = ThreadID;
-    setLength(lineData, length(Value));
-    for i := 0 to length(Value) - 1 do
-      lineData[i] := Value[i];
+    setLength(lineData, length(value));
+    for i := 0 to length(value)-1 do
+      lineData[i] := value [i];
     Inc(version);
     repeat
       lock := 0
     until lock = 0;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST Value: TStrings);
+PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
   VAR i: longint;
-      changed:boolean=false;
-      cleanCount:longint;
+    changed: boolean = false;
+    cleanCount: longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock := ThreadID until lock = ThreadID;
-    cleanCount:=Value.Count;
-    while (cleanCount>0) and (trim(Value[cleanCount-1])='') do dec(cleanCount);
-    if length(lineData)<>cleanCount then begin
+    cleanCount := value.Count;
+    while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do Dec(cleanCount);
+    if length(lineData)<>cleanCount then
+      begin
       setLength(lineData, cleanCount);
-      changed:=true;
-    end;
-    for i := 0 to cleanCount - 1 do begin
-      changed:=changed or (trim(lineData[i])<>trim(Value[i]));
-      lineData[i] := Value[i];
+      changed := true;
+      end;
+    for i := 0 to cleanCount-1 do
+      begin
+      changed := changed or (trim(lineData [i])<>trim(value [i]));
+      lineData[i] := value [i];
 
-    end;
-    if changed then inc(version);
+      end;
+    if changed then Inc(version);
     repeat lock := 0 until lock = 0;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST Value: ansistring);
+PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
+    while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
     until lock = ThreadID;
     setLength(lineData, 1);
-    lineData[0] := Value;
+    lineData[0] := value;
     Inc(version);
     repeat
       lock := 0
     until lock = 0;
   end;
 
-PROCEDURE T_codeProvider.appendLine(CONST Value: ansistring);
+PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
+    while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
     until lock = ThreadID;
     setLength(lineData, length(lineData)+1);
-    lineData[length(lineData)-1] := Value;
+    lineData[length(lineData)-1] := value;
     Inc(version);
     repeat
       lock := 0
@@ -443,32 +441,35 @@ PROCEDURE T_codeProvider.load;
     L: T_stringList;
     i: longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock := ThreadID until lock = ThreadID;
     L := fileLines(filepath, accessed);
-    if accessed then begin
+    if accessed then
+      begin
       setLength(lineData, length(L));
-      for i := 0 to length(L) - 1 do lineData[i] := L[i];
+      for i := 0 to length(L)-1 do lineData[i] := L [i];
       FileAge(filepath, syncedFileAge);
       Inc(version);
-      fileVersion:=version;
-      i:=length(lineData);
-      while (i>0) and (trim(lineData[i-1])='') do begin
-        setLength(lineData,i-1);
-        dec(i);
+      fileVersion := version;
+      i := length(lineData);
+      while (i>0) and (trim(lineData [i-1]) = '') do
+        begin
+        setLength(lineData, i-1);
+        Dec(i);
+        end;
       end;
-    end;
     repeat lock := 0 until lock = 0;
   end;
 
 PROCEDURE T_codeProvider.save;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock := ThreadID until lock = ThreadID;
-    if (filepath <> '') and writeFileLines(filepath, lineData) then begin
+    if (filepath<>'') and writeFileLines(filepath, lineData) then
+      begin
       FileAge(filepath, syncedFileAge);
-      fileVersion:=version;
-    end;
+      fileVersion := version;
+      end;
     repeat lock := 0 until lock = 0;
   end;
 
@@ -481,23 +482,23 @@ FUNCTION T_codeProvider.fileHasChanged: boolean;
   VAR
     currentFileAge: double;
   begin
-    if (filepath <> '') and FileExists(filepath) then
+    if (filepath<>'') and FileExists(filepath) then
       begin
       FileAge(filepath, currentFileAge);
-      result := currentFileAge <> syncedFileAge;
+      result := currentFileAge<>syncedFileAge;
       end
     else
-      result := False;
+      result := false;
   end;
 
-FUNCTION T_codeProvider.fileIsOutOfSync:boolean;
+FUNCTION T_codeProvider.fileIsOutOfSync: boolean;
   begin
-    result:=fileHasChanged or (filepath<>'') and (version<>fileVersion);
+    result := fileHasChanged or (filepath<>'') and (version<>fileVersion);
   end;
 
 FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
+    while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
@@ -516,17 +517,17 @@ FUNCTION T_codeProvider.id: ansistring;
   begin
     result := filename;
     i := 1;
-    while (i <= length(result)) and (result[i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do
+    while (i<=length(result)) and (result [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do
       Inc(i);
-    result := copy(result, 1, i - 1);
+    result := copy(result, 1, i-1);
   end;
 
 PROCEDURE T_codeProvider.Clear;
   begin
     filepath := '';
-    SetLength(lineData, 0);
+    setLength(lineData, 0);
     version := 0;
-    fileVersion:=0;
+    fileVersion := 0;
     syncedFileAge := 0;
   end;
 

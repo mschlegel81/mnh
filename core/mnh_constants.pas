@@ -81,22 +81,22 @@ CONST
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckEmptyList] of
     SET of T_literalType =
     {tt_typeCheckScalar}     ([lt_boolean, lt_int, lt_real, lt_string],
-    {tt_typeCheckList}        [lt_booleanList, lt_intList, lt_realList,
+    {tt_typeCheckList} [lt_booleanList, lt_intList, lt_realList,
     lt_stringList, lt_list, lt_numList, lt_flatList],
-    {tt_typeCheckBoolean}     [lt_boolean],
-    {tt_typeCheckBoolList}    [lt_booleanList],
-    {tt_typeCheckInt}         [lt_int],
-    {tt_typeCheckIntList}     [lt_intList],
-    {tt_typeCheckReal}        [lt_real],
-    {tt_typeCheckRealList}    [lt_realList],
-    {tt_typeCheckString}      [lt_string],
-    {tt_typeCheckStringList}  [lt_stringList],
-    {tt_typeCheckNumeric}     [lt_int, lt_real],
-    {tt_typeCheckNumList}     [lt_intList, lt_realList, lt_numList],
-    {tt_typeCheckExpression}  [lt_expression],
-    {tt_typeCheckNonemptyList}[lt_booleanList, lt_intList, lt_realList,
+    {tt_typeCheckBoolean} [lt_boolean],
+    {tt_typeCheckBoolList} [lt_booleanList],
+    {tt_typeCheckInt} [lt_int],
+    {tt_typeCheckIntList} [lt_intList],
+    {tt_typeCheckReal} [lt_real],
+    {tt_typeCheckRealList} [lt_realList],
+    {tt_typeCheckString} [lt_string],
+    {tt_typeCheckStringList} [lt_stringList],
+    {tt_typeCheckNumeric} [lt_int, lt_real],
+    {tt_typeCheckNumList} [lt_intList, lt_realList, lt_numList],
+    {tt_typeCheckExpression} [lt_expression],
+    {tt_typeCheckNonemptyList} [lt_booleanList, lt_intList, lt_realList,
     lt_stringList, lt_list, lt_numList, lt_flatList],
-    {tt_typeCheckEmptyList}   [lt_list, lt_flatList]);
+    {tt_typeCheckEmptyList} [lt_list, lt_flatList]);
 
   C_tokenString: array[T_tokenType] of ansistring = ('',
     //identifier and resolved identifiers
@@ -244,7 +244,7 @@ CONST
     'Ps.Error: ',
     'Sys.Err.: ');
 
-VAR mainThread:TThreadID;
+VAR mainThread: TThreadID;
 IMPLEMENTATION
 
 end.

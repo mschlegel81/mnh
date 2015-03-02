@@ -7,11 +7,10 @@ INTERFACE
 USES
   SysUtils, Classes, FileUtil, Controls, Graphics,
   SynEditTypes, SynEditHighlighter, mnh_evalThread;
-
 CONST
-  C_DeclEchoHead = #10 + ' in>';
-  C_ExprEchoHead = #10 + '_in>';
-  C_ExprOutHead = #10 + 'out>';
+  C_DeclEchoHead = #10+' in>';
+  C_ExprEchoHead = #10+'_in>';
+  C_ExprOutHead = #10+'out>';
 
 
 TYPE
@@ -30,7 +29,7 @@ TYPE
     tkUnknown,
     tkNull);
 
-  TProcTableProc = PROCEDURE of OBJECT;
+  TProcTableProc = PROCEDURE of object;
 
   TRangeState = (rsANil, rsAnsi, rsPasStyle, rsCStyle, rsUnKnown);
 
@@ -70,7 +69,7 @@ TYPE
     FUNCTION GetTokenPos: integer; override;
     PROCEDURE Next; override;
     PROCEDURE ResetRange; override;
-    PROCEDURE SetRange(Value: Pointer); override;
+    PROCEDURE SetRange(value: Pointer); override;
     PROCEDURE SetLine(CONST NewValue: string; LineNumber: integer); override;
   end;
 
@@ -142,15 +141,15 @@ DESTRUCTOR TSynMnhSyn.Destroy;
 
 FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
   begin
-    result := styleTable[tkUnknown];
+    result := styleTable [tkUnknown];
   end;
 
 PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
   begin
     INHERITED;
-    isDeclInput := False;
-    isExprInput := False;
-    isOutput := False;
+    isDeclInput := false;
+    isExprInput := false;
+    isOutput := false;
     fLine := PChar(NewValue);
     Run := 0;
     fLineNumber := LineNumber;
@@ -164,36 +163,36 @@ PROCEDURE TSynMnhSyn.Next;
   begin
     fTokenID := tkUnknown;
     fTokenPos := Run;
-    if (run = 0) and (fLine[0] = #10) then
+    if (run = 0) and (fLine [0] = #10) then
       begin
       i := 0;
       localId := '';
-      while (length(localId) < length(C_ExprOutHead)) and (fLine[i] <> #0) do
+      while (length(localId)<length(C_ExprOutHead)) and (fLine [i]<>#0) do
         begin
-        localId := localId + fLine[i];
+        localId := localId+fLine [i];
         Inc(i);
         end;
       if localId = C_DeclEchoHead then
         begin
-        isDeclInput := True;
-        run := i + 1;
+        isDeclInput := true;
+        run := i+1;
         exit;
         end
       else if localId = C_ExprEchoHead then
-          begin
-          isExprInput := True;
-          run := i + 1;
-          exit;
-          end
-        else if localId = C_ExprOutHead then
-            begin
-            isOutput := True;
-            run := i + 1;
-            exit;
-            end;
+        begin
+        isExprInput := true;
+        run := i+1;
+        exit;
+        end
+      else if localId = C_ExprOutHead then
+        begin
+        isOutput := true;
+        run := i+1;
+        exit;
+        end;
       end;
 
-    case fLine[Run] of
+    case fLine [Run] of
       #0: fTokenID := tkNull;
       ';': begin
         Inc(run);
@@ -201,43 +200,43 @@ PROCEDURE TSynMnhSyn.Next;
         ResetRange;
         end;
       '0'..'9': begin
-        while fLine[run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
+        while fLine [run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
           Inc(run);
         fTokenId := tkNumber;
         end;
       '$': begin
         Inc(run);
-        while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
+        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
           Inc(run);
         fTokenID := tkDollarIdentifier;
         end;
       'a'..'z', 'A'..'Z': begin
-        localId := fLine[run];
+        localId := fLine [run];
         Inc(run);
-        while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', '.'] do
+        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', '.'] do
           begin
-          localId := localId + fLine[run];
+          localId := localId+fLine [run];
           Inc(run);
           end;
         if (localId = 'xor') or (localId = 'or') or (localId = 'mod') or
           (localId = 'in') or (localId = 'div') or (localId = 'and') then
           fTokenId := tkOperator
         else if (localId = 'true') or (localId = 'false') then
-            fTokenId := tkBoolean
-          else if (localId = 'Nan') or (localId = 'Inf') then
-              fTokenId := tkNumber
-            else if (localId = 'each') or (localId = 'pEach') or
-                (localId = 'pure') or (localId = 'USE') or (localId = 'private') then
-                fTokenId := tkIntrinsicRuleOrKeyword
-              else
-                if localUserRules.contains(localId) then
-                  fTokenID := tkUserRule
-                else if importedUserRules.contains(localId) then
-                    fTokenID := tkUserRule
-                  else if intrinsicRules.contains(localId) then
-                      fTokenID := tkIntrinsicRuleOrKeyword
-                    else
-                      fTokenID := tkIdentifier;
+          fTokenId := tkBoolean
+        else if (localId = 'Nan') or (localId = 'Inf') then
+          fTokenId := tkNumber
+        else if (localId = 'each') or (localId = 'pEach') or
+          (localId = 'pure') or (localId = 'USE') or (localId = 'private') then
+          fTokenId := tkIntrinsicRuleOrKeyword
+        else
+        if localUserRules.contains(localId) then
+          fTokenID := tkUserRule
+        else if importedUserRules.contains(localId) then
+          fTokenID := tkUserRule
+        else if intrinsicRules.contains(localId) then
+          fTokenID := tkIntrinsicRuleOrKeyword
+        else
+          fTokenID := tkIdentifier;
         end;
       '|', '^', '?', '+', '&', '%', '*', '=', '<', '>': begin
         Inc(run);
@@ -245,7 +244,7 @@ PROCEDURE TSynMnhSyn.Next;
         end;
       '-': begin
         Inc(run);
-        if fLine[run] = '>' then
+        if fLine [run] = '>' then
           begin
           Inc(run);
           fTokenID := tkDeclarationOp;
@@ -255,9 +254,9 @@ PROCEDURE TSynMnhSyn.Next;
         end;
       '/': begin
         Inc(run);
-        if fLine[run] = '/' then
+        if fLine [run] = '/' then
           begin
-          while fLine[run] <> #0 do
+          while fLine [run]<>#0 do
             Inc(run);
           fTokenId := tkComment;
           end
@@ -266,12 +265,12 @@ PROCEDURE TSynMnhSyn.Next;
         end;
       ':': begin
         Inc(run);
-        case fLine[run] of
+        case fLine [run] of
           'b', 'e', 'i', 'l', 'n', 's', 'r': begin
             localId := ':';
-            while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
+            while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
               begin
-              localId := localId + fLine[run];
+              localId := localId+fLine [run];
               Inc(run);
               end;
             if (localId = ':booleanList') or (localId = ':boolean') or
@@ -289,30 +288,30 @@ PROCEDURE TSynMnhSyn.Next;
             Inc(run);
             fTokenID := tkDeclarationOp;
             end;
-          else fTokenID := tkOperator;
+        else fTokenID := tkOperator;
           end;
         end;
       '"': begin
         Inc(run);
-        while (fLine[run] <> #0) and ((fLine[run] <> '"') or
-            (fLine[run - 1] = '\') and (fLine[run - 2] <> '\')) DO
+        while (fLine [run]<>#0) and ((fLine [run]<>'"') or
+            (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
           Inc(run);
-        IF (fLine[run] = '"') then
+        if (fLine [run] = '"') then
           Inc(run);
         fTokenId := tkString;
         end;
       '''': begin
         Inc(run);
-        while (fLine[run] <> #0) and ((fLine[run] <> '''') or (fLine[run - 1] = '\')) DO
+        while (fLine [run]<>#0) and ((fLine [run]<>'''') or (fLine [run-1] = '\')) do
           Inc(run);
-        IF (fLine[run] = '''') then
+        if (fLine [run] = '''') then
           Inc(run);
         fTokenId := tkString;
         end;
-      else begin
-        fTokenID := tkUnknown;
-        Inc(Run);
-        end;
+    else begin
+      fTokenID := tkUnknown;
+      Inc(Run);
+      end;
       end;
   end;
 
@@ -331,15 +330,15 @@ FUNCTION TSynMnhSyn.GetToken: string;
   VAR
     Len: longint;
   begin
-    Len := Run - fTokenPos;
+    Len := Run-fTokenPos;
     result := '';
-    SetString(result, (FLine + fTokenPos), Len);
+    SetString(result, (FLine+fTokenPos), Len);
   end;
 
 PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer);
   begin
-    TokenLength := Run - fTokenPos;
-    TokenStart := FLine + fTokenPos;
+    TokenLength := Run-fTokenPos;
+    TokenStart := FLine+fTokenPos;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
@@ -353,12 +352,12 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     bg := 255;
     if isDeclInput then
-      bg := bg - 40;
+      bg := bg-40;
     if isExprInput then
-      bg := bg - 20;
+      bg := bg-20;
     if isOutput then
-      bg := bg - 10;
-    result := styleTable[fTokenID];
+      bg := bg-10;
+    result := styleTable [fTokenID];
     result.Background := (bg or (bg shl 8) or (bg shl 16));
   end;
 
@@ -375,12 +374,12 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
     fRange := rsUnknown;
-    isDeclInput := False;
-    isExprInput := False;
-    isOutput := False;
+    isDeclInput := false;
+    isExprInput := false;
+    isOutput := false;
   end;
 
-PROCEDURE TSynMnhSyn.SetRange(Value: Pointer);
+PROCEDURE TSynMnhSyn.SetRange(value: Pointer);
   begin
     //expressionLevel:=ptrUInt(expressionLevel);
     //fRange := TRangeState(PtrUInt(Value));
@@ -395,17 +394,6 @@ FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
   begin
     result := ['a'..'z', 'A'..'Z', '.', '_', '0'..'9'];
   end;
-
-
-
-
-
-
-
-
-
-
-
 
 
 

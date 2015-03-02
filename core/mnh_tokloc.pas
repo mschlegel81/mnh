@@ -3,7 +3,6 @@ UNIT mnh_tokloc;
 INTERFACE
 
 USES SysUtils, mnh_fileWrappers;
-
 TYPE
   T_tokenLocation = record
     provider: P_codeProvider;
@@ -30,7 +29,7 @@ OPERATOR := (x: T_tokenLocation): ansistring;
     if x.provider = nil then
       result := '?'
     else
-      result := x.provider^.fileName + ':' + IntToStr(x.line) + ',' +
+      result := x.provider^.fileName+':'+IntToStr(x.line)+','+
         IntToStr(x.column);
   end;
 

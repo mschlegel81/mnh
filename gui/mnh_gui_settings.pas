@@ -7,7 +7,6 @@ INTERFACE
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs;
-
 CONST
   default_notepad_path = 'c:\Program Files (x86)\Notepad++\notepad++.exe';
 
@@ -35,24 +34,22 @@ TYPE
     editorFontname: string;
     fileInEditor: ansistring;
     FUNCTION getFontSize: longint;
-    PROCEDURE setFontSize(Value: longint);
+    PROCEDURE setFontSize(value: longint);
   public
     { public declarations }
-    mainForm: RECORD
-      top, left, Width, Height: longint;
-      isFullscreen:boolean;
-    END;
-    outputBehaviour: RECORD
-      doEchoInput: boolean;
+    mainForm: record  top, left, Width, Height: longint;
+      isFullscreen: boolean;
+    end;
+    outputBehaviour: record  doEchoInput: boolean;
       doEchoDeclaration: boolean;
       doShowExpressionOut: boolean;
-    END;
-    instantEvaluation:boolean;
-    resetPlotOnEvaluation:boolean;
+    end;
+    instantEvaluation: boolean;
+    resetPlotOnEvaluation: boolean;
 
 
-    fileContents: ARRAY OF ansistring;
-    fileHistory: ARRAY[0..9] OF ansistring;
+    fileContents: ARRAY of ansistring;
+    fileHistory: ARRAY[0..9] of ansistring;
 
     PROPERTY fontSize: longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName: string;
@@ -62,8 +59,8 @@ TYPE
     PROCEDURE getFileContents(CONST Data: TStrings);
     FUNCTION setFileInEditor(CONST filename: ansistring): boolean;
     FUNCTION getFileInEditor: ansistring;
-    FUNCTION polishHistory:boolean;
-  END;
+    FUNCTION polishHistory: boolean;
+  end;
 
 VAR
   SettingsForm: TSettingsForm;
@@ -73,13 +70,13 @@ IMPLEMENTATION
 {$R *.lfm}
 
 FUNCTION settingsFileName: string;
-  BEGIN
-    Result := ExpandFileName(extractFilePath(ParamStr(0))) + 'mnh_gui.settings';
+  begin
+    result := ExpandFileName(extractFilePath(ParamStr(0)))+'mnh_gui.settings';
   end;
 
 { TSettingsForm }
 
-procedure TSettingsForm.FormCreate(Sender: TObject);
+PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR
     ff: T_file;
     iMax, i: longint;
@@ -102,7 +99,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         left := ff.readLongint;
         Width := ff.readLongint;
         Height := ff.readLongint;
-        isFullscreen:=ff.readBoolean;
+        isFullscreen := ff.readBoolean;
         end;
       WITH outputBehaviour do
         begin
@@ -110,8 +107,8 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         doEchoDeclaration := ff.readBoolean;
         doShowExpressionOut := ff.readBoolean;
         end;
-      instantEvaluation:=ff.readBoolean;
-      resetPlotOnEvaluation:=ff.readBoolean;
+      instantEvaluation := ff.readBoolean;
+      resetPlotOnEvaluation := ff.readBoolean;
       for i := 0 to 9 do
         fileHistory[i] := ff.readAnsiString;
 
@@ -119,10 +116,10 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       if fileInEditor = '' then
         begin
         iMax := ff.readLongint;
-        if iMax >= 0 then
+        if iMax>=0 then
           begin
           setLength(fileContents, iMax);
-          for i := 0 to iMax - 1 do
+          for i := 0 to iMax-1 do
             fileContents[i] := ff.readAnsiString;
           end
         else
@@ -137,20 +134,22 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         fileHistory[i] := '';
       editorFontname := 'Courier New';
       fontSize := 11;
-      WITH mainForm do begin
+      WITH mainForm do
+        begin
         top := 0;
         left := 0;
         Width := 480;
         Height := 480;
-        isFullscreen:=false;
-      end;
-      WITH outputBehaviour do begin
-        doEchoInput := True;
-        doEchoDeclaration := True;
-        doShowExpressionOut := True;
-      end;
-      instantEvaluation:=true;
-      resetPlotOnEvaluation:=false;
+        isFullscreen := false;
+        end;
+      WITH outputBehaviour do
+        begin
+        doEchoInput := true;
+        doEchoDeclaration := true;
+        doShowExpressionOut := true;
+        end;
+      instantEvaluation := true;
+      resetPlotOnEvaluation := false;
       fileInEditor := '';
       end;
     FontButton.Font.Name := editorFontname;
@@ -158,15 +157,15 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
     FontButton.Caption := editorFontname;
     WITH mainForm do
       begin
-      if top < 0 then
+      if top<0 then
         top := 0;
-      if left < 0 then
+      if left<0 then
         left := 0;
-      if Height > Screen.Height - top then
-        Height := screen.Height - top;
-      if Width > screen.Width - left then
-        Width := screen.Width - left;
-      if (Height < 0) or (Width < 0) then
+      if Height>Screen.Height-top then
+        Height := screen.Height-top;
+      if Width>screen.Width-left then
+        Width := screen.Width-left;
+      if (Height<0) or (Width<0) then
         begin
         top := 0;
         left := 0;
@@ -176,7 +175,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       end;
   end;
 
-procedure TSettingsForm.FontButtonClick(Sender: TObject);
+PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.Execute then
       begin
@@ -189,51 +188,50 @@ procedure TSettingsForm.FontButtonClick(Sender: TObject);
       end;
   end;
 
-procedure TSettingsForm.FormDestroy(Sender: TObject);
+PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
   end;
 
-function TSettingsForm.getFontSize: longint;
+FUNCTION TSettingsForm.getFontSize: longint;
   begin
     result := StrToInt64Def(Trim(FontSizeEdit.Text), 12);
   end;
 
-procedure TSettingsForm.setFontSize(Value: longint);
+PROCEDURE TSettingsForm.setFontSize(value: longint);
   begin
-    FontSizeEdit.Text := IntToStr(Value);
-    EditorFontDialog.Font.Size := Value;
+    FontSizeEdit.Text := IntToStr(value);
+    EditorFontDialog.Font.Size := value;
   end;
 
-function TSettingsForm.getEditorFontName: string;
+FUNCTION TSettingsForm.getEditorFontName: string;
   begin
     result := editorFontname;
   end;
 
-function TSettingsForm.canOpenFile(const filename: ansistring;
-  const lineNumber: longint): boolean;
+FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
   VAR
     par: T_stringList;
   begin
-    if (trim(NotepadFileNameEdit.Filename) <> '') and not
+    if (trim(NotepadFileNameEdit.Filename)<>'') and not
       (FileExistsUTF8(NotepadFileNameEdit.Filename)) then
       NotepadFileNameEdit.Filename := '';
-    if (trim(NotepadFileNameEdit.Filename) <> '') then
+    if (trim(NotepadFileNameEdit.Filename)<>'') then
       begin
       setLength(par, 1);
       par[0] := filename;
-      if lineNumber > 0 then
+      if lineNumber>0 then
         begin
         setLength(par, 2);
-        par[1] := '-n' + IntToStr(lineNumber);
+        par[1] := '-n'+IntToStr(lineNumber);
         end;
       result := runCommandAsync(NotepadFileNameEdit.FileName, par);
       end
     else
-      result := False;
+      result := false;
   end;
 
-procedure TSettingsForm.saveSettings;
+PROCEDURE TSettingsForm.saveSettings;
   VAR
     ff: T_file;
     i: longint;
@@ -246,95 +244,104 @@ procedure TSettingsForm.saveSettings;
     ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
-    WITH mainForm do begin
+    WITH mainForm do
+      begin
       ff.writeLongint(top);
       ff.writeLongint(left);
       ff.writeLongint(Width);
       ff.writeLongint(Height);
       ff.writeBoolean(isFullscreen);
-    end;
-    WITH outputBehaviour do begin
+      end;
+    WITH outputBehaviour do
+      begin
       ff.writeBoolean(doEchoInput);
       ff.writeBoolean(doEchoDeclaration);
       ff.writeBoolean(doShowExpressionOut);
-    end;
+      end;
     ff.writeBoolean(instantEvaluation);
     ff.writeBoolean(resetPlotOnEvaluation);
     for i := 0 to 9 do
-      ff.writeAnsiString(fileHistory[i]);
+      ff.writeAnsiString(fileHistory [i]);
     ff.writeAnsiString(fileInEditor);
     if fileInEditor = '' then
       begin
       ff.writeLongint(length(fileContents));
-      for i := 0 to length(fileContents) - 1 do
-        ff.writeAnsiString(fileContents[i]);
+      for i := 0 to length(fileContents)-1 do
+        ff.writeAnsiString(fileContents [i]);
       end;
     ff.Destroy;
   end;
 
-procedure TSettingsForm.setFileContents(const Data: TStrings);
+PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);
   VAR
     i: longint;
   begin
-    if fileInEditor <> '' then
+    if fileInEditor<>'' then
       begin
       setLength(fileContents, 0);
       exit;
       end;
     setLength(fileContents, Data.Count);
-    for i := 0 to Data.Count - 1 do
-      fileContents[i] := Data[i];
+    for i := 0 to Data.Count-1 do
+      fileContents[i] := Data [i];
   end;
 
-procedure TSettingsForm.getFileContents(const Data: TStrings);
+PROCEDURE TSettingsForm.getFileContents(CONST Data: TStrings);
   VAR
     i: longint;
   begin
-    if fileInEditor <> '' then
+    if fileInEditor<>'' then
       exit;
     Data.Clear;
-    for i := 0 to length(fileContents) - 1 do
-      Data.Append(fileContents[i]);
+    for i := 0 to length(fileContents)-1 do
+      Data.Append(fileContents [i]);
   end;
 
-function TSettingsForm.setFileInEditor(const filename: ansistring): boolean;
+FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
   VAR
     i: longint;
     tmp: ansistring;
   begin
-    if fileInEditor <> '' then begin
+    if fileInEditor<>'' then
+      begin
       polishHistory;
       i := 0;
-      while (i < length(fileHistory)) and (fileHistory[i] <> fileInEditor) do Inc(i);
-      if (i >= length(fileHistory)) then begin
-        i := length(fileHistory) - 1;
+      while (i<length(fileHistory)) and (fileHistory [i]<>fileInEditor) do Inc(i);
+      if (i>=length(fileHistory)) then
+        begin
+        i := length(fileHistory)-1;
         fileHistory[i] := fileInEditor;
-      end;
-      while (i > 0) do begin
-        tmp := fileHistory[i];
-        fileHistory[i] := fileHistory[i - 1];
-        fileHistory[i - 1] := tmp;
+        end;
+      while (i>0) do
+        begin
+        tmp := fileHistory [i];
+        fileHistory[i] := fileHistory [i-1];
+        fileHistory[i-1] := tmp;
         Dec(i);
-      end;
-      result := True;
-    end else result := polishHistory;
+        end;
+      result := true;
+      end
+    else result := polishHistory;
     fileInEditor := filename;
   end;
 
-function TSettingsForm.getFileInEditor: ansistring;
+FUNCTION TSettingsForm.getFileInEditor: ansistring;
   begin
     result := fileInEditor;
   end;
 
-function TSettingsForm.polishHistory:boolean;
-  VAR i,j:longint;
+FUNCTION TSettingsForm.polishHistory: boolean;
+  VAR i, j: longint;
   begin
-    result:=false;
-    for i:=0 to length(fileHistory)-1 do if (fileHistory[i]<>'') and not(FileExists(fileHistory[i])) then begin
-      for j:=i to length(fileHistory)-2 do fileHistory[j]:=fileHistory[j+1];
-      fileHistory[length(fileHistory)-1]:='';
-      result:=true;
-    end;
+    result := false;
+    for i := 0 to length(fileHistory)-1 do
+      if (fileHistory [i]<>'') and not(FileExists(fileHistory [i])) then
+        begin
+        for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
+        fileHistory[length(fileHistory)-1] := '';
+        result := true;
+
+        end;
   end;
 
 end.
