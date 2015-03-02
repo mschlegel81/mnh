@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, SynHighlighterMnh,
-  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc, mnh_out_adapters, mnh_constants;
+  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc, mnh_out_adapters, mnh_constants,mnh_stringutil;
 
 type
 
@@ -15,14 +15,22 @@ type
 
   TMnhForm = class(TForm)
     haltEvaluationButton: TButton;
+    MenuItem2: TMenuItem;
+    miEvalModeWatch: TMenuItem;
+    miEvalModeDirect: TMenuItem;
+    miEvaluateNow: TMenuItem;
+    miEvalModeDirectOnKeypress: TMenuItem;
+    miClear: TMenuItem;
+    miOpen: TMenuItem;
+    miOpenToWatch: TMenuItem;
+    miSave: TMenuItem;
+    miSaveAs: TMenuItem;
     popMiOpenPackage: TMenuItem;
     popMiOpenDeclaration: TMenuItem;
     myhl:TSynMnhSyn;
     ErrorGroupBox: TGroupBox;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
-    MenuItem2: TMenuItem;
-    MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     miExpressionEcho: TMenuItem;
     miExpressionResult: TMenuItem;
@@ -44,14 +52,27 @@ type
     procedure FormShow(Sender: TObject);
     procedure haltEvaluationButtonClick(Sender: TObject);
     procedure InputEditChange(Sender: TObject);
+    procedure InputEditKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
     procedure InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
+    procedure miClearClick(Sender: TObject);
     procedure miDecFontSizeClick(Sender: TObject);
     procedure miDeclarationEchoClick(Sender: TObject);
+    procedure miEvalModeDirectClick(Sender: TObject);
+    procedure miEvalModeDirectOnKeypressClick(Sender: TObject);
+    procedure miEvalModeWatchClick(Sender: TObject);
+    procedure miEvaluateNowClick(Sender: TObject);
     procedure miExpressionEchoClick(Sender: TObject);
     procedure miExpressionResultClick(Sender: TObject);
     procedure miIncFontSizeClick(Sender: TObject);
+    procedure miOpenClick(Sender: TObject);
+    procedure miOpenToWatchClick(Sender: TObject);
+    procedure miSaveAsClick(Sender: TObject);
+    procedure miSaveClick(Sender: TObject);
     procedure mi_settingsClick(Sender: TObject);
+    procedure OutputEditKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
     procedure OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     procedure popMiOpenDeclarationClick(Sender: TObject);
@@ -82,7 +103,7 @@ var
 
 FUNCTION evaluationThread(p:pointer):ptrint;
 PROCEDURE killEvaluationSoftly;
-PROCEDURE initEvaluation;
+PROCEDURE initEvaluation(CONST filename:ansistring);
 implementation
 
 {$R *.lfm}
@@ -155,10 +176,14 @@ procedure killEvaluationSoftly;
     until not(evaluationLoopRunning) and not(evaluationRunning);
   end;
 
-procedure initEvaluation;
+procedure initEvaluation(CONST filename:ansistring);
   begin
-    new(inputWrapper,create);
-    inputWrapper^.logCheck;
+    if trim(filename)='' then begin
+      new(P_directInputWrapper(inputWrapper),create);
+      inputWrapper^.logCheck;
+    end else begin
+      new(P_fileWrapper(inputWrapper),create(filename));
+    end;
     initMainPackage(inputWrapper);
   end;
 
@@ -198,6 +223,15 @@ procedure TMnhForm.InputEditChange(Sender: TObject);
     end;
   end;
 
+procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  VAR wordUnderCursor:string;
+  begin
+    if (key>=33) and (key<=40) then begin
+      wordUnderCursor:=InputEdit.GetWordAtRowCol(InputEdit.CaretXY);
+      if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
+    end;
+  end;
+
 procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
   VAR point:TPoint;
@@ -206,8 +240,13 @@ procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     point.x:=x;
     point.y:=y;
     wordUnderCursor:=InputEdit.GetWordAtRowCol(InputEdit.PixelsToRowColumn(point));
-    if wordUnderCursor<>'' then lastWordUnderCursor:=wordUnderCursor;
+    if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
   end;
+
+procedure TMnhForm.miClearClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
 
 procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
@@ -227,6 +266,26 @@ procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
                              else mnh_out_adapters.inputDeclEcho:=nil;
       end;
     end;
+  end;
+
+procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miEvalModeWatchClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
+  begin
+    inputWrapper^.markAsDirty;
   end;
 
 procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
@@ -261,10 +320,39 @@ procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
+procedure TMnhForm.miOpenClick(Sender: TObject);
+begin
+   {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miOpenToWatchClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miSaveAsClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
+procedure TMnhForm.miSaveClick(Sender: TObject);
+begin
+  {$WARNING TODO unimplemented}
+end;
+
 procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
     processSettings;
+  end;
+
+procedure TMnhForm.OutputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  VAR wordUnderCursor:string;
+  begin
+    if (key>=33) and (key<=40) then begin
+      wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
+    end;
   end;
 
 procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
@@ -275,7 +363,7 @@ procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     point.x:=x;
     point.y:=y;
     wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.PixelsToRowColumn(point));
-    if wordUnderCursor<>'' then lastWordUnderCursor:=wordUnderCursor;
+    if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
   end;
 
 procedure TMnhForm.popMiOpenDeclarationClick(Sender: TObject);
@@ -331,7 +419,7 @@ procedure TMnhForm.processSettings;
     settingsHaveBeenProcessed:=true;
   end;
 
-function evaluationThread(p: pointer): ptrint;
+FUNCTION evaluationThread(p: pointer): ptrint;
   VAR sleepTime:longint=1;
 
   PROCEDURE enterEval;
@@ -397,7 +485,7 @@ INITIALIZATION
   mnh_out_adapters.exprOut:=@writeExprOut;
   mnh_out_adapters.printOut:=@writePrint;
   errorOut:=nil;
-  initEvaluation;
+  initEvaluation('');
 
 end.
 

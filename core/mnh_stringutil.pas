@@ -14,7 +14,7 @@ FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
 //FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
 FUNCTION escapeString(CONST s:ansistring):ansistring;
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
-//FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
+FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
 FUNCTION startsWith(CONST input,head:ansistring):boolean;
 
 //PROCEDURE removeLeadingBlanks(VAR input:ansistring);

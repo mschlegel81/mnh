@@ -33,11 +33,11 @@ FUNCTION disposeToken(p:P_token):P_token;
   begin
     if p=nil then exit(nil);
     result:=p^.next;
-    p^.undefine;
     {$ifdef doTokenRecycling}
       with tokenRecycling do
       if fill>=length(dat) then dispose(p,destroy)
                            else begin
+                                  p^.undefine;
                                   dat[fill]:=p;
                                   inc(fill);
                                 end;
@@ -148,7 +148,7 @@ PROCEDURE T_token.define(CONST original:P_token);
     txt    :=original^.txt;
     tokType:=original^.tokType;
     data   :=original^.data;
-    if (tokType=tt_literal) or (tokType=tt_each) and (data<>nil) then P_literal(data)^.rereference;
+    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType=tt_each) and (data<>nil) then P_literal(data)^.rereference;
   end;
 
 PROCEDURE T_Token.undefine;
@@ -161,7 +161,6 @@ PROCEDURE T_Token.undefine;
     tokType:=tt_eol;
     txt:='';
   end;
-
 
 FUNCTION T_token.last:P_token;
   begin

@@ -107,6 +107,7 @@ PROCEDURE T_subrule.embrace;
 FUNCTION T_subrule.needEmbrace:boolean;
   VAR bracketLevel,i:longint;
   begin
+    exit(true);
     if length(expression)<=1 then exit(false);
     bracketLevel:=0;
     for i:=0 to length(expression)-1 do case expression[i].token^.tokType of

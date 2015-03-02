@@ -28,6 +28,7 @@ object MnhForm: TMnhForm
     ParentFont = False
     PopupMenu = EditorPopup
     TabOrder = 0
+    OnKeyDown = InputEditKeyDown
     OnMouseMove = InputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
@@ -560,6 +561,7 @@ object MnhForm: TMnhForm
     ParentFont = False
     PopupMenu = EditorPopup
     TabOrder = 3
+    OnKeyDown = OutputEditKeyDown
     OnMouseMove = OutputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
@@ -1064,15 +1066,59 @@ object MnhForm: TMnhForm
     top = 46
     object MenuItem1: TMenuItem
       Caption = 'File'
-      object MenuItem3: TMenuItem
-        Caption = 'Reset'
-      end
       object mi_settings: TMenuItem
         Caption = 'Settings'
+        ShortCut = 16464
         OnClick = mi_settingsClick
       end
-      object MenuItem2: TMenuItem
-        Caption = 'Quit'
+      object miClear: TMenuItem
+        Caption = 'Clear File'
+        ShortCut = 16462
+        OnClick = miClearClick
+      end
+      object miOpen: TMenuItem
+        Caption = 'Open (to Edit)'
+        ShortCut = 16463
+        OnClick = miOpenClick
+      end
+      object miOpenToWatch: TMenuItem
+        Caption = 'Open (watching)'
+        ShortCut = 49231
+        OnClick = miOpenToWatchClick
+      end
+      object miSave: TMenuItem
+        Caption = 'Save'
+        ShortCut = 16467
+        OnClick = miSaveClick
+      end
+      object miSaveAs: TMenuItem
+        Caption = 'Save as...'
+        ShortCut = 49235
+        OnClick = miSaveAsClick
+      end
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'Evaluation'
+      object miEvaluateNow: TMenuItem
+        Caption = 'Evaluate Now'
+        ShortCut = 116
+        OnClick = miEvaluateNowClick
+      end
+      object miEvalModeDirectOnKeypress: TMenuItem
+        Caption = 'Instantly evaluate input'
+        Checked = True
+        RadioItem = True
+        OnClick = miEvalModeDirectOnKeypressClick
+      end
+      object miEvalModeDirect: TMenuItem
+        Caption = 'Evaluate input on request'
+        RadioItem = True
+        OnClick = miEvalModeDirectClick
+      end
+      object miEvalModeWatch: TMenuItem
+        Caption = 'Watch file...'
+        RadioItem = True
+        OnClick = miEvalModeWatchClick
       end
     end
     object MenuItem4: TMenuItem

@@ -1,8 +1,9 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+
 VAR
   intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
 
@@ -11,7 +12,12 @@ PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
 //Callbacks:--------------------------------
 TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer):P_literal;
 VAR resolveNullaryCallback:T_resolveNullaryCallback;
+
+TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
+VAR stringToExprCallback:T_stringToExprCallback;
 //--------------------------------:Callbacks
+
+PROCEDURE clearValueCache;
 IMPLEMENTATION
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
@@ -390,7 +396,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION headOf(CONST x:P_literal):P_literal;
     begin
       result:=nil;
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
+      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         result:=P_listLiteral(x)^.value(0);
         result^.rereference;
       end else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
@@ -399,7 +405,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION headOf2(CONST x,y:P_literal):P_listLiteral;
     VAR i,i0:longint;
     begin
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
+      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         case y^.literalType of
           lt_int: begin
             result:=newListLiteral;
@@ -428,7 +434,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR i:longint;
     begin
       result:=nil;
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
+      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         result:=newListLiteral;
         for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
       end else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
@@ -437,7 +443,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
     VAR i,i0:longint;
     begin
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
+      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         case y^.literalType of
           lt_int: begin
             result:=newListLiteral;
@@ -465,7 +471,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then begin
         result:=newListLiteral;
         P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
         P_listLiteral(result)^.sort;
@@ -480,7 +486,7 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then
+      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then
         result:=P_listLiteral(params^.value(0))^.sortPerm
       else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
         result:=params^.value(0);
@@ -589,7 +595,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         P_listLiteral(result)^.append(aid,false);
         aid:=newListLiteral;
         aid^.append(newStringLiteral('time'),false);
-        aid^.append(newRealLiteral(time*(24*60*60)),false);
+        aid^.append(newRealLiteral(round(time*(24*60*60*1000))*1E-3),false);
         P_listLiteral(result)^.append(aid,false);
       end;
     end else raiseNotApplicableError('TIME',params,tokenLocation);
@@ -750,48 +756,236 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('LOWER',params,tokenLocation);
   end;
 
+FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      if params^.value(0)^.literalType=lt_string then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else result:=newStringLiteral(params^.value(0)^.toString);
+    end else raiseNotApplicableError('STRING',params,tokenLocation);
+  end;
+
+FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION expression_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_string: result:=stringToExprCallback(P_stringLiteral(x)^.value,tokenLocation);
+        lt_list,lt_stringList:  begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else result:=newErrorLiteralRaising('Cannot apply EXPRESSION to literal of type '+C_typeString[x^.literalType],tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=expression_rec(params^.value(0))
+    else raiseNotApplicableError('EXPRESSION',params,tokenLocation);
+  end;
+
+FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
+  VAR i,j:longint;
+      found:T_stringList;
+  begin
+    result:=newListLiteral;
+    if pathOrPathList^.literalType=lt_string then begin
+      found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
+      for i:=0 to length(found)-1 do result^.append(newStringLiteral(found[i]),false);
+    end else if pathOrPathList^.literalType=lt_stringList then begin
+      for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
+        found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
+        for i:=0 to length(found)-1 do result^.append(newStringLiteral(found[i]),false);
+      end;
+
+    end;
+  end;
+
+FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
+      result:=filesOrDirs_impl(params^.value(0),true);
+    end else raiseNotApplicableError('FILES',params,tokenLocation);
+  end;
+
+FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
+      result:=filesOrDirs_impl(params^.value(0),false);
+    end else raiseNotApplicableError('FOLDERS',params,tokenLocation);
+  end;
+
+CONST CACHE_MASK=1023; //must be 2^n-1 for some integer n
+      CACHE_FILL_LIMIT=CACHE_MASK*50;
+VAR valueCache: record
+      bin:array[0..CACHE_MASK] of array of record
+        key,value:P_literal;
+        use:longint;
+      end;
+      fill:longint;
+    end;
+
+PROCEDURE initValueCache;
+  VAR i:longint;
+  begin with valueCache do begin
+    for i:=0 to CACHE_MASK do setLength(bin[i],0);
+    fill:=0;
+  end; end;
+  
+PROCEDURE clearValueCache;
+  VAR i,j:longint;
+  begin with valueCache do begin
+    for i:=0 to CACHE_MASK do begin
+      for j:=0 to length(bin[i])-1 do begin
+        disposeLiteral(bin[i,j].key);
+        disposeLiteral(bin[i,j].value);
+      end;
+      setLength(bin[i],0);
+    end;
+    fill:=0;
+  end; end;
+  
+PROCEDURE polishValueCache;
+  VAR i,j,k:longint;
+      avgUse:double;
+  begin with valueCache do begin
+    fill:=0;
+    avgUse:=0;
+    for i:=0 to CACHE_MASK do for j:=0 to length(bin[i])-1 do begin
+      inc(fill);
+      avgUse:=avgUse+bin[i,j].use;
+    end;
+    if fill=0 then exit;
+    avgUse:=avgUse/fill;
+    for i:=0 to CACHE_MASK do begin
+      k:=0;
+      for j:=0 to length(bin[i])-1 do 
+      if bin[i,j].use>avgUse then begin
+        bin[i,k]:=bin[i,j]; inc(k);
+      end else begin
+        dec(fill);
+        disposeLiteral(bin[i,j].key);
+        disposeLiteral(bin[i,j].value);
+      end;
+      setLength(bin[i],k);
+    end;
+  end; end;
+  
+PROCEDURE putToCache(CONST key,value:P_literal);
+  VAR i,j:longint;
+  begin with valueCache do begin
+    i:=key^.hash and CACHE_MASK;
+    j:=0;
+    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
+    if j<length(bin[i]) then begin
+      disposeLiteral(bin[i,j].key);
+      disposeLiteral(bin[i,j].value);
+      dec(fill);
+    end else setLength(bin[i],j+1);
+    bin[i,j].key  :=key;
+    bin[i,j].value:=value;
+    bin[i,j].use  :=0;
+    key^.rereference;
+    value^.rereference;
+    inc(fill);
+    //if fill>CACHE_FILL_LIMIT then polishValueCache;
+  end; end;
+
+FUNCTION getFromCache(CONST key:P_literal):P_literal;
+  VAR i,j:longint;
+  begin with valueCache do begin
+    i:=key^.hash and CACHE_MASK;
+    j:=0;
+    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
+    if j<length(bin[i]) then begin
+      result:=bin[i,j].value;
+      inc(bin[i,j].use);
+    end else result:=nil;
+  end; end;
+  
+FUNCTION cachePut_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) then begin
+      putToCache(params^.value(0),params^.value(1));
+      result:=params^.value(1);
+      result^.rereference;
+    end else raiseNotApplicableError('cachePut',params,tokenLocation);
+  end;
+  
+FUNCTION isCached_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      result:=newBoolLiteral(getFromCache(params^.value(0))<>nil);
+    end else raiseNotApplicableError('isCached',params,tokenLocation);
+  end;
+  
+FUNCTION cacheGet_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      result:=getFromCache(params^.value(0));
+      if result<>nil then result^.rereference
+      else result:=newErrorLiteralRaising('Invalid cache access.',tokenLocation);
+    end else raiseNotApplicableError('cacheGet',params,tokenLocation);
+  end;
+  
 {$WARNING TODO: fileExists(filename)}
 {$WARNING TODO: readFile(filename)}
 {$WARNING TODO: writeFile(filename,string)}
-{$WARNING TODO: fileTree(filename)}
 {$WARNING TODO: replace(full,original,subst)}
 {$WARNING TODO: replaceAll(full,original,subst)}
 {$WARNING TODO: callSync(executablepath)}
 {$WARNING TODO: callAsync(executablepath)}
 
 INITIALIZATION
+  initValueCache;
   intrinsicRuleMap.create;
-  registerRule('print'   ,@print_imp   );
-  registerRule('sqr'     ,@sqr_imp     );
-  registerRule('sqrt'    ,@sqrt_imp    );
-  registerRule('sin'     ,@sin_imp     );
-  registerRule('arcsin'  ,@arcsin_imp  );
-  registerRule('cos'     ,@cos_imp     );
-  registerRule('arccos'  ,@arccos_imp  );
-  registerRule('tan'     ,@tan_imp     );
-  registerRule('arctan'  ,@arctan_imp  );
-  registerRule('exp'     ,@exp_imp     );
-  registerRule('ln'      ,@ln_imp      );
-  registerRule('round'   ,@round_imp   );
-  registerRule('ceil'    ,@ceil_imp    );
-  registerRule('floor'   ,@floor_imp   );
-  registerRule('head'    ,@head_imp    );
-  registerRule('tail'    ,@tail_imp    );
-  registerRule('sort'    ,@sort_imp    );
-  registerRule('sortPerm',@sortPerm_imp);
-  registerRule('flatten' ,@flatten_imp );
-  registerRule('random'  ,@random_imp  );
-  registerRule('max'     ,@max_imp     );
-  registerRule('min'     ,@min_imp     );
-  registerRule('size'    ,@size_imp    );
-  registerRule('time'    ,@time_imp    );
-  registerRule('split'   ,@split_imp   );
-  registerRule('softCast',@softCast_imp);
-  registerRule('trim'    ,@trim_imp    );
-  registerRule('upper'   ,@upper_imp   );
-  registerRule('lower'   ,@lower_imp   );
-
+  registerRule('print'     ,@print_imp     );
+  registerRule('sqr'       ,@sqr_imp       );
+  registerRule('sqrt'      ,@sqrt_imp      );
+  registerRule('sin'       ,@sin_imp       );
+  registerRule('arcsin'    ,@arcsin_imp    );
+  registerRule('cos'       ,@cos_imp       );
+  registerRule('arccos'    ,@arccos_imp    );
+  registerRule('tan'       ,@tan_imp       );
+  registerRule('arctan'    ,@arctan_imp    );
+  registerRule('exp'       ,@exp_imp       );
+  registerRule('ln'        ,@ln_imp        );
+  registerRule('round'     ,@round_imp     );
+  registerRule('ceil'      ,@ceil_imp      );
+  registerRule('floor'     ,@floor_imp     );
+  registerRule('head'      ,@head_imp      );
+  registerRule('tail'      ,@tail_imp      );
+  registerRule('sort'      ,@sort_imp      );
+  registerRule('sortPerm'  ,@sortPerm_imp  );
+  registerRule('flatten'   ,@flatten_imp   );
+  registerRule('random'    ,@random_imp    );
+  registerRule('max'       ,@max_imp       );
+  registerRule('min'       ,@min_imp       );
+  registerRule('size'      ,@size_imp      );
+  registerRule('time'      ,@time_imp      );
+  registerRule('split'     ,@split_imp     );
+  registerRule('softCast'  ,@softCast_imp  );
+  registerRule('trim'      ,@trim_imp      );
+  registerRule('upper'     ,@upper_imp     );
+  registerRule('lower'     ,@lower_imp     );
+  registerRule('string'    ,@string_imp    );
+  registerRule('expression',@expression_imp);
+  registerRule('files'     ,@files_impl    );
+  registerRule('folders'   ,@folders_impl  );
+  //registerRule('cachePut'  ,@cachePut_impl );
+  //registerRule('isCached'  ,@isCached_impl );
+  //registerRule('cacheGet'  ,@cacheGet_impl );
+  
 FINALIZATION
   intrinsicRuleMap.destroy;
- 
+  clearValueCache; 
 end.

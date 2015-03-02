@@ -14,10 +14,14 @@ TYPE
     FUNCTION fileLines:T_stringList; virtual; abstract;
     FUNCTION fileChanged:boolean; virtual; abstract;
     PROCEDURE logCheck; virtual; abstract;
+    PROCEDURE markAsDirty; virtual; abstract;
     DESTRUCTOR destroy; virtual; abstract;
   end;
 
   P_directInputWrapper=^T_directInputWrapper;
+
+  { T_directInputWrapper }
+
   T_directInputWrapper=object(T_codeProvider)
     private
       lines:T_stringList;
@@ -31,11 +35,15 @@ TYPE
      FUNCTION fileLines:T_stringList; virtual;
      FUNCTION fileChanged:boolean; virtual;
      PROCEDURE logCheck; virtual;
+     PROCEDURE markAsDirty; virtual;
      PROCEDURE setInput(CONST L:T_stringList);
      PROCEDURE setInput(CONST s:ansistring);
   end;
 
   P_fileWrapper=^T_fileWrapper;
+
+  { T_fileWrapper }
+
   T_fileWrapper=object(T_codeProvider)
     private
       fpath:ansistring;
@@ -47,10 +55,10 @@ TYPE
       FUNCTION filePath:ansistring; virtual; 
       FUNCTION fileIdentifier:ansistring; virtual;
       FUNCTION getCheckedAtAge:longint;
-      FUNCTION getAge:longint;
       FUNCTION getHash:QWord;
       FUNCTION fileChanged:boolean; virtual;
       PROCEDURE logCheck; virtual;
+      PROCEDURE markAsDirty; virtual;
       FUNCTION fileLines:T_stringList; virtual;
       FUNCTION exists:boolean;
       FUNCTION hasExtension(ext:ansistring):boolean;
@@ -59,8 +67,9 @@ TYPE
 
 FUNCTION fileContent(CONST name:ansistring; OUT accessed:boolean):ansistring;
 FUNCTION fileLines  (CONST name:ansistring; OUT accessed:boolean):T_stringList;
-
-FUNCTION writeFile(CONST name,textToWrite:ansistring):boolean;
+FUNCTION writeFile     (CONST name,textToWrite:ansistring):boolean;
+{$WARNING TODO: FUNCTION writeFileLines(CONST name:ansistring; CONST textToWrite:T_stringList):boolean;}
+FUNCTION find(CONST pattern:ansistring; CONST filesAndNotFolders:boolean):T_stringList;
 
 PROCEDURE clearSourceScanPaths;
 PROCEDURE addSourceScanPath(CONST path:ansistring);
@@ -117,45 +126,50 @@ FUNCTION locateSource(CONST id:ansistring):P_fileWrapper;
   
 CONSTRUCTOR T_codeProvider.forSakeOfCompleteness;  begin end;
 
-CONSTRUCTOR T_directInputWrapper.create;
+constructor T_directInputWrapper.create;
   begin setLength(lines,0); changedSinceCheck:=true; end;
 
-DESTRUCTOR T_directInputWrapper.destroy;
+destructor T_directInputWrapper.destroy;
   begin setLength(lines,0); end;
 
-FUNCTION T_directInputWrapper.fileName:ansistring;
+function T_directInputWrapper.fileName: ansistring;
   begin
     result:='<direct input>';
   end;
   
-FUNCTION T_directInputWrapper.filePath:ansistring; 
+function T_directInputWrapper.filePath: ansistring;
   begin
     result:='';
   end;
 
-FUNCTION T_directInputWrapper.fileIdentifier:ansistring;
+function T_directInputWrapper.fileIdentifier: ansistring;
   begin
     result:='main';
   end;
 
-FUNCTION T_directInputWrapper.fileLines:T_stringList;
+function T_directInputWrapper.fileLines: T_stringList;
   VAR i:longint;
   begin
     setLength(result,length(lines));
     for i:=0 to length(lines)-1 do result[i]:=lines[i];
   end;
 
-FUNCTION T_directInputWrapper.fileChanged:boolean;
+function T_directInputWrapper.fileChanged: boolean;
   begin
     result:=changedSinceCheck;
   end;
 
-PROCEDURE T_directInputWrapper.logCheck;
+procedure T_directInputWrapper.logCheck;
   begin
     changedSinceCheck:=false;
   end;
 
-PROCEDURE T_directInputWrapper.setInput(CONST L:T_stringList);
+procedure T_directInputWrapper.markAsDirty;
+  begin
+    changedSinceCheck:=true;
+  end;
+
+procedure T_directInputWrapper.setInput(const L: T_stringList);
   VAR i:longint;
   begin
     changedSinceCheck:=true;
@@ -163,34 +177,34 @@ PROCEDURE T_directInputWrapper.setInput(CONST L:T_stringList);
     for i:=0 to length(l)-1 do lines[i]:=L[i];
   end;
 
-PROCEDURE T_directInputWrapper.setInput(CONST s:ansistring);
+procedure T_directInputWrapper.setInput(const s: ansistring);
   begin
     changedSinceCheck:=true;
     setLength(lines,1);
     lines[0]:=s;
   end;
 
-CONSTRUCTOR T_fileWrapper.create(CONST filepath_:ansistring);
+constructor T_fileWrapper.create(const filepath_: ansistring);
   begin
     fpath:=filepath_;
     logCheck;
   end;
 
-DESTRUCTOR T_fileWrapper.destroy;
+destructor T_fileWrapper.destroy;
   begin
   end;
 
-FUNCTION T_fileWrapper.fileName:ansistring;
+function T_fileWrapper.fileName: ansistring;
   begin
     result:=extractFileName(fpath);
   end;
   
-FUNCTION T_fileWrapper.filePath:ansistring;
+function T_fileWrapper.filePath: ansistring;
   begin
     result:=fpath;
   end;  
 
-FUNCTION T_fileWrapper.fileIdentifier:ansistring;
+function T_fileWrapper.fileIdentifier: ansistring;
   VAR i:longint;
   begin
     result:=fileName;
@@ -199,17 +213,12 @@ FUNCTION T_fileWrapper.fileIdentifier:ansistring;
     result:=copy(result,1,i-1);
   end;
 
-FUNCTION T_fileWrapper.getCheckedAtAge:longint;
+function T_fileWrapper.getCheckedAtAge: longint;
   begin
     result:=checkedAtAge;
   end;
 
-FUNCTION T_fileWrapper.getAge:longint;
-  begin
-    result:=fileage(fpath);
-  end;
-
-FUNCTION T_fileWrapper.getHash:QWord;
+function T_fileWrapper.getHash: QWord;
   CONST prime:array[0..3] of dword=(977,983,991,997);
   VAR handle:file of longword;
       block:array[0..2047] of dword;
@@ -241,17 +250,22 @@ FUNCTION T_fileWrapper.getHash:QWord;
             (QWord(wordRes[2]) or (QWord(wordRes[3]) shl 4));
   end;
 
-FUNCTION T_fileWrapper.fileChanged:boolean;
+function T_fileWrapper.fileChanged: boolean;
   begin
-    result:=getAge<>checkedAtAge;
+    result:=fileage(fpath)<>checkedAtAge;
   end;
 
-PROCEDURE T_fileWrapper.logCheck;
+procedure T_fileWrapper.logCheck;
   begin
-    checkedAtAge:=getAge;
+    checkedAtAge:=fileage(fpath);
   end;
 
-FUNCTION T_fileWrapper.fileLines:T_stringList;
+procedure T_fileWrapper.markAsDirty;
+  begin
+    checkedAtAge:=checkedAtAge-1;
+  end;
+
+function T_fileWrapper.fileLines: T_stringList;
   VAR handle:textFile;
       i:longint;
   begin
@@ -270,18 +284,18 @@ FUNCTION T_fileWrapper.fileLines:T_stringList;
     end;
   end;
 
-FUNCTION T_fileWrapper.exists:boolean;
+function T_fileWrapper.exists: boolean;
   begin
     result:=fileExists(fPath);
   end;
 
-FUNCTION T_fileWrapper.hasExtension(ext:ansistring):boolean;
+function T_fileWrapper.hasExtension(ext: ansistring): boolean;
   begin
     if (length(ext)<1) or (ext[1]<>'.') then ext:='.'+ext;
     result:=uppercase(extractFileExt(fpath))=uppercase(ext);
   end;
 
-FUNCTION T_fileWrapper.name:ansistring;
+function T_fileWrapper.name: ansistring;
   begin
     result:=fPath;
   end;
@@ -443,7 +457,24 @@ FUNCTION writeFile(CONST name,textToWrite:ansistring):boolean;
       result:=false;
     end;
   end;
-  
+
+FUNCTION find(CONST pattern:ansistring; CONST filesAndNotFolders:boolean):T_stringList;
+  VAR info   :TSearchRec;
+      path:ansistring;
+  begin
+    path:=ExtractFilePath(pattern);
+    setLength(result,0);
+    if findFirst(pattern,faAnyFile,info)=0 then repeat
+      if (info.name<>'.') and (info.name<>'..') and
+         (((info.attr and faDirectory)= faDirectory) and not(filesAndNotFolders) or
+          ((info.attr and faDirectory)<>faDirectory) and     filesAndNotFolders ) then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=path+info.name;
+      end;
+    until (findNext(info)<>0);
+    sysutils.findClose(info);
+  end;
+
 INITIALIZATION
   clearSourceScanPaths;
 end.

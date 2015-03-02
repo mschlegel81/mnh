@@ -48,6 +48,7 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
 FUNCTION canResolveInMainPackage(CONST id:ansistring):byte;
 FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
 FUNCTION getPackageLocation(CONST id:ansistring):T_tokenLocation;
+PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 {$undef include_interface}
 IMPLEMENTATION
 {$define include_implementation}
@@ -71,6 +72,7 @@ FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadAllPackages;
   VAR i:longint;
   begin
+    clearValueCache; 
     if length(packages)<=0 then exit;
     for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);
     setLength(packages,1);
@@ -79,6 +81,7 @@ PROCEDURE reloadAllPackages;
 
 PROCEDURE reloadMainPackage;
   begin
+    clearValueCache; 
     clearErrors;
     if length(packages)>0 then packages[0]^.load;
   end;
@@ -86,6 +89,7 @@ PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
   VAR i:longint;
   begin
+    clearValueCache; 
     clearErrors;
     clearSourceScanPaths;
     for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);
@@ -127,7 +131,7 @@ FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
     else result:=packages[0]^.ruleLocation(id);
   end;
 
-function getPackageLocation(const id: ansistring): T_tokenLocation;
+FUNCTION getPackageLocation(const id: ansistring): T_tokenLocation;
   VAR i:longint;
   begin
     if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
@@ -505,6 +509,7 @@ PROCEDURE T_package.clear;
     end;
     localRules.clear;
 
+    setLength(packageUses,0);
     ready:=false;
   end;
 
@@ -634,6 +639,65 @@ FUNCTION packagePointerToSource(CONST package:pointer):P_codeProvider;
     result:=P_package(package)^.codeProvider;
   end;
 
+FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
+  VAR first,last,next:P_token;
+      loc:T_tokenLocation;
+  begin
+    loc:=location;
+    first:=firstToken(s,loc,nil);
+    last:=first;
+    next:=nil;
+    repeat
+      loc:=location;
+      next:=firstToken(s,loc,nil);
+      if next<>nil then begin
+        last^.next:=next;
+        last:=next;
+      end;
+    until (next=nil) or (errorLevel>=el3_evalError);
+    if errorLevel>=el3_evalError then begin cascadeDisposeToken(first); exit(newErrorLiteral); end;
+
+    if first^.tokType<>tt_expBraceOpen then begin
+      next:=newToken(location,'',tt_expBraceOpen);
+      next^.next:=first; first:=next;
+      last^.next:=newToken(location,'',tt_expBraceClose);
+      last:=last^.next;
+    end;
+
+    digestInlineExpression(first);
+    if (errorLevel<el3_evalError) and (first^.next<>nil) then raiseError(el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if errorLevel>=el3_evalError then begin cascadeDisposeToken(first); exit(newErrorLiteral); end;
+    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
+      disposeToken(first);
+      raiseError(el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+      exit(newErrorLiteral);
+    end;
+    result:=P_expressionLiteral(first^.data);
+    first^.tokType:=tt_eol;
+    first^.data:=nil;
+    disposeToken(first);
+  end;
+  
+PROCEDURE callMainInMain(CONST parameters:array of ansistring);
+  VAR t:P_token;
+      parLit:P_listLiteral;
+      i:longint;
+  begin
+    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready) or (errorLevel>el0_allOkay) then exit;
+    finalizeTokens;
+    t:=newToken(C_nilTokenLocation,'main',tt_identifier);
+    packages[0]^.resolveRuleId(t^,false);
+    if t^.tokType=tt_literal then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
+    else begin
+      {$WARNING TODO for more tolerance, maybe try a soft cast}
+      parLit:=newListLiteral;
+      for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
+      t^.next:=newToken(C_nilTokenLocation,'',tt_parList,parLit);
+      reduceExpression(t);
+    end;
+    cascadeDisposeToken(t);
+  end;
+
 INITIALIZATION
   setLength(packages,0);
   {$ifdef doTokenRecycling}
@@ -645,6 +709,7 @@ INITIALIZATION
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
+  stringToExprCallback:=@stringToExpression;
 FINALIZATION
   clearAllPackages;
   finalizeTokens;

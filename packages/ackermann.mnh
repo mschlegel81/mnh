@@ -1,7 +1,17 @@
-ackermann(m=0,n)->n+1;
-ackermann(m,n=0)->ackermann(m-1,1);
-ackermann(m,n)  ->ackermann(m-1,ackermann(m,n-1));
+ackermann(m=0,n)  ->n+1                            ;
+ackermann(m,n=0)  ->ackermann(m-1,1)               ;
+ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
 
 ackertime(m,n) -> "parameters: \t"&m&",\t"&n&" \t" & each(i,flatten(time({ackermann(m,n)})),&"\t"&);
 
-each(m,[1..4],each(n,[1..6],print(ackertime(m,n))));
+//ack2(m=0,n)  ->n+1                  ;
+//ack2(m,n=0)  ->isCached(["ack",m,n]) ? cacheGet(["ack",m,n]) : cachePut(["ack",m,n],ack2(m-1,1))          ;
+//ack2(m>0,n>0)->isCached(["ack",m,n]) ? cacheGet(["ack",m,n]) : cachePut(["ack",m,n],ack2(m-1,ack2(m,n-1)));
+//ack2Time(m,n)->each(i,flatten(time({ack2(m,n)})),&"\t"&);
+
+
+//main-> each(m,[1..4],each(n,[1..8-m],print(ackertime(m,n),"  ",ack2Time(m,n))));
+
+main-> each(m,[1..3],each(n,[1..5],print(ackertime(m,n))));
+
+//main-> each(m,[1..4],each(n,[1..8-m],print(ack2Time(m,n))));

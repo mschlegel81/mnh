@@ -24,7 +24,6 @@ type
     tkString,
     tkNumber,
     tkBoolean,
-    tkList,
     tkOperator,
     tkDeclarationOp,
     tkUnknown,
@@ -39,7 +38,6 @@ type
 
   TSynMnhSyn = class(TSynCustomHighlighter)
   private
-    expressionLevel:longint;
     isDeclInput:boolean;
     isExprInput:boolean;
     isOutput:boolean;
@@ -86,23 +84,25 @@ begin
   inherited Create(AOwner);
   styleTable[tkComment]:=TSynHighlighterAttributes.Create('comment');
   styleTable[tkComment].Style:=[fsItalic];
-  styleTable[tkComment].Foreground:=$00888888;
+  styleTable[tkComment].Foreground:=$00999999;
 
   styleTable[tkIdentifier]:=TSynHighlighterAttributes.Create('identifier');
   styleTable[tkIdentifier].Foreground:=identifierForeground;
 
   styleTable[tkDollarIdentifier]:=TSynHighlighterAttributes.Create('dollarIdentifier');
-  styleTable[tkDollarIdentifier].Style:=[fsBold];
+  styleTable[tkDollarIdentifier].Style:=[fsItalic];
 
   styleTable[tkUserRule]:=TSynHighlighterAttributes.Create('userRule');
   styleTable[tkUserRule].Style:=[fsBold];
   styleTable[tkUserRule].Foreground:=identifierForeground;
 
   styleTable[tkIntrinsicRuleOrKeyword]:=TSynHighlighterAttributes.Create('intrinsicRuleOrKeyword');
-  styleTable[tkIntrinsicRuleOrKeyword].Style:=[fsBold, fsUnderline];
-  styleTable[tkIntrinsicRuleOrKeyword].Foreground:=identifierForeground;
+  styleTable[tkIntrinsicRuleOrKeyword].Style:=[fsBold];
+  styleTable[tkIntrinsicRuleOrKeyword].Foreground:=$00888800;
 
   styleTable[tkTypeCheck]:=TSynHighlighterAttributes.Create('typeCheck');
+  styleTable[tkTypeCheck].Style:=[fsBold];
+  styleTable[tkTypeCheck].Foreground:=$00880088;
 
   styleTable[tkString]:=TSynHighlighterAttributes.Create('string');
   styleTable[tkString].Foreground:=$000000FF;
@@ -113,8 +113,6 @@ begin
   styleTable[tkBoolean]:=TSynHighlighterAttributes.Create('boolean');
   styleTable[tkBoolean].Foreground:=$000044FF;
   styleTable[tkBoolean].Style:=[fsItalic];
-
-  styleTable[tkList]:=TSynHighlighterAttributes.Create('list');
 
   styleTable[tkOperator]:=TSynHighlighterAttributes.Create('operator');
   styleTable[tkOperator].Foreground:=$00008800;
@@ -251,8 +249,6 @@ begin
         else fTokenID:=tkOperator;
       end;
     end;
-    '{': begin inc(expressionLevel); inc(run); fTokenId:=tkUnknown; end;
-    '}': begin dec(expressionLevel); inc(run); fTokenId:=tkUnknown; end;
     '"': begin
       inc(run);
       while (fLine[run]<>#0) and ((fLine[run]<>'"') or (fLine[run-1]='\')) do inc(run);
@@ -274,7 +270,7 @@ end;
 function TSynMnhSyn.GetRange: Pointer;
 begin
   //Result := Pointer(PtrUInt(fRange));
-  result:=pointer(expressionLevel);
+  result:=nil;
 end;
 
 function TSynMnhSyn.GetToken: String;
@@ -299,32 +295,14 @@ function TSynMnhSyn.GetTokenID: TtkTokenKind;
   end;
 
 function TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
-  VAR bgR,bgG,bgB:longint;
+  VAR bg:longint;
   begin
-    bgR:=255-30*expressionLevel;
-    bgG:=255;
-    bgB:=255-30*expressionLevel;
-    if isDeclInput then begin
-      bgR:=bgR-40;
-      bgG:=bgG-40;
-      bgB:=bgB-40;
-    end;
-    if isExprInput then begin
-      bgR:=bgR-20;
-      bgG:=bgG-20;
-      bgB:=bgB-20;
-    end;
-    if isOutput then begin
-      bgR:=bgR-10;
-      bgG:=bgG-10;
-      bgB:=bgB-10;
-    end;
-    if bgR<0 then bgR:=0;
-    if bgG<0 then bgG:=0;
-    if bgB<0 then bgB:=0;
-
+    bg:=255;
+    if isDeclInput then bg:=bg-40;
+    if isExprInput then bg:=bg-20;
+    if isOutput    then bg:=bg-10;
     result:=styleTable[fTokenID];
-    result.Background:=(bgR or (bgG shl 8) or (bgB shl 16));
+    result.Background:=(bg or (bg shl 8) or (bg shl 16));
   end;
 
 function TSynMnhSyn.GetTokenKind: integer;
@@ -340,7 +318,6 @@ end;
 procedure TSynMnhSyn.ResetRange;
 begin
   fRange := rsUnknown;
-  expressionLevel:=0;
   isDeclInput:=false;
   isExprInput:=false;
   isOutput:=false;
@@ -348,7 +325,7 @@ end;
 
 procedure TSynMnhSyn.SetRange(Value: Pointer);
 begin
-  expressionLevel:=ptrUInt(expressionLevel);
+  //expressionLevel:=ptrUInt(expressionLevel);
   //fRange := TRangeState(PtrUInt(Value));
 end;
 
