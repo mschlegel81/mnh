@@ -1,6 +1,6 @@
 :start
 @if "%1"=="" goto help
-@if "%1"=="all" %0 32o 32d 64o 64d distro backup
+@if "%1"=="all" %0 32o 32d 64o 64d distro
 
 @set delp=C:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32 gui
 @set fpc32=C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc         
@@ -20,7 +20,6 @@
 @if "%1"=="64o" goto 64bitOpt
 @if "%1"=="64d" goto 64bitDeb
 @if "%1"=="distro" goto pack
-@if "%1"=="backup" goto backup
 @goto help
 
 :64bitOpt
@@ -92,15 +91,6 @@
 @echo ------------------------------------------------------------------------------------
 @goto loop
 
-:backup
-@echo ---------------------------------- making backup -----------------------------------
-@rmdir /S /Q gui\lib
-@rmdir /S /Q gui\backup
-@del versions\mnh5_%mydate%.7z
-@%sevenZip% a -mx=9 -xr!*.7z -xr!*.exe -xr!*.o -xr!*.ppu -xr!*.bak -xr!*.dbg -xr!*.obj -xr!*.png versions\mnh5_%mydate%.7z
-@echo ------------------------------------------------------------------------------------
-@goto loop
-
 :loop
 @shift
 @if "%1"=="" goto end
@@ -113,7 +103,5 @@
 @echo   64o    - builds 32bit optimized binaries
 @echo   64d    - builds 32bit binaried for debugging
 @echo   distro - makes a distro package
-@echo   backup - creates a backup
-@echo   backup - creates a backup
-@echo   all - all of the above
+@echo   all    - all of the above
 :end
