@@ -731,7 +731,10 @@ INITIALIZATION
   profiler := TEpikTimer.create(nil);
   {$endif}
 FINALIZATION
+  {$ifdef debugMode} writeln(stdErr,'Finalizing mnh_tokens: pending tasks');  {$endif}
   pendingTasks.destroy;
+  {$ifdef debugMode} writeln(stdErr,'Finalizing mnh_tokens: packages'); {$endif}
   finalizePackages;
+  {$ifdef debugMode} writeln(stdErr,'mnh_tokens finalized'); {$endif}
 
 end.

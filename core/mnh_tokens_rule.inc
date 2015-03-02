@@ -38,17 +38,21 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
 DESTRUCTOR T_rule.destroy;
   VAR i:longint;
   begin
-    id:='';
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
     if ruleType=rt_memoized then begin
+      {$ifdef debugMode} writeln(stdErr,'Destroying cache of rule '+id); {$endif}
       cache.destroy;
+      {$ifdef debugMode} writeln(stdErr,'Destroying critical section of rule '+id); {$endif}
       system.DoneCriticalsection(rule_cs);
+      {$ifdef debugMode} writeln(stdErr,'Destroying timer of rule '+id); {$endif}
       rule_timer.Free;
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
       system.DoneCriticalsection(rule_cs);
     end;
+    {$ifdef debugMode} writeln(stdErr,'Rule '+id+' destroyed'); {$endif}
     ruleType:=rt_normal;
+    id:='';
   end;
 
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
