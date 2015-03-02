@@ -1,0 +1,34 @@
+rotFak:=2.3999632297286533221470;
+fibPoint(i:int)->sqrt(i)*[cos(rotFak*i),sin(rotFak*i)];
+fibPoint(I:intList)->each(i,I,fibPoint(i));
+mean(X)->each(x,X,+)/size(X);
+dist(x:numericList,y:numericList)->sqr(x%0-y%0)+sqr(x%1-y%1);
+dist(X,y:numericList)->each(x,X,dist(x,y));
+
+randomPath(     L  )->randomPath(L%(floor(size(L)*random)),L);
+randomPath(last,[] )->[];
+randomPath(last,L  )->randomPath(last,L,argMin(dist(L,last)));
+randomPath(last,L,i)->[L%i]|randomPath(L%i,L%([0..size(L)-1]<>i));
+
+pairDist(L)->each(i,[0..size(L)-2],dist(L%i,L%(i+1)));
+subLists(P,Indexes)->each(k,[0..size(Indexes)-2],P%[Indexes%k+1..Indexes%(k+1)]);
+
+splitPath(P)->splitPath(P,pairDist(P));
+splitPath(P,DP)->subLists(P,unique(-1|([0..size(DP)-1]%(DP>mean(DP)))|(size(P)-1)));
+
+
+doPlot->setPlotAxisStyle([0,0]) and
+        setPlotAutoscale([true,true]) and
+        setPlotPreserveAspect(true) and plot([]) and
+        each(L,splitPath(randomPath(each(p,
+                                         fibPoint([0..4881]),
+                                         |,
+                                         -50<p%0<50 and -50<p%1<50 ? [p] : []))),
+               and,
+               addPlot(L,"black"));
+
+main->doPlot and
+      renderToFile('fibonacciMaze.png',768,768,10);
+
+
+doPlot;

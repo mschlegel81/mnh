@@ -114,9 +114,9 @@ type
 CONST
   C_tics = 1;
   C_grid = 2;
-  C_finerGrid = C_grid + 4;
-  C_ticsAndGrid = C_tics + C_grid;
-  C_ticsAndFinerGrid = C_tics + C_finerGrid;
+  C_finerGrid = C_grid + 4; //=6
+  C_ticsAndGrid = C_tics + C_grid; //=3
+  C_ticsAndFinerGrid = C_tics + C_finerGrid; //=7
 
 type
   T_ticInfo = record
@@ -817,21 +817,19 @@ CONSTRUCTOR T_plot.createWithDefaults;
   end;
 
 PROCEDURE T_plot.setDefaults;
-  VAR
-    axis: char;
+  VAR axis: char;
   begin
     screenWidth := 200;
     screenHeight := 200;
     xOffset := 20;
     yOffset := 200 - 20;
-    for axis := 'x' to 'y' do
-      begin
+    for axis := 'x' to 'y' do begin
       range[axis, 0] := -1.5;
       range[axis, 1] := 1.5;
       logscale[axis] := False;
-      axisStyle[axis] := C_tics;
+      axisStyle[axis] := C_ticsAndFinerGrid;
       autoscale[axis] := True;
-      end;
+    end;
     preserveAspect := True;
     Clear;
   end;
@@ -1214,7 +1212,7 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
     if not wantTics('y') then
       xOffset := 0;
     if not wantTics('x') then
-      yOffset := 0;
+      yOffset := height;
     getRanges;
     initTics('x');
     initTics('y');
@@ -1389,14 +1387,12 @@ FUNCTION T_plot.getRange: P_listLiteral;
 
 PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
   begin
-    if (x >= 0) and (x < 255) and
-      (byte(x) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) and
-      (y >= 0) and (y < 255) and
-      (byte(y) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) then
-      begin
+    if (x >= 0) and (x < 255) and (byte(x) in [0, C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) and
+       (y >= 0) and (y < 255) and (byte(y) in [0, C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) then
+    begin
       axisStyle['x'] := x;
       axisStyle['y'] := y;
-      end;
+    end;
   end;
 
 FUNCTION T_plot.getAxisStyle: P_listLiteral;
@@ -1497,37 +1493,29 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       target.Pen.Width := scalingFactor;
       //minor grid:-------------------------------------------------------------
       target.Pen.Color := $DDDDDD;
-      for i := 0 to length(tic['y']) - 1 do
-        with tic['y'][i] do
-          if not (major) then
-            begin
-            y := round(pos * scalingFactor);
-            target.Line(0, y, screenWidth * scalingFactor, y);
-            end;
-      for i := 0 to length(tic['x']) - 1 do
-        with tic['x'][i] do
-          if not (major) then
-            begin
-            x := round(pos * scalingFactor);
-            target.Line(x, 0, x, screenHeight * scalingFactor);
-            end;
+      if (axisStyle['y'] and C_finerGrid)=C_finerGrid then
+      for i := 0 to length(tic['y']) - 1 do with tic['y'][i] do if not (major) then begin
+        y := round(pos * scalingFactor);
+        target.Line(0, y, screenWidth * scalingFactor, y);
+      end;
+      if (axisStyle['x'] and C_finerGrid)=C_finerGrid then
+      for i := 0 to length(tic['x']) - 1 do with tic['x'][i] do if not (major) then begin
+        x := round(pos * scalingFactor);
+        target.Line(x, 0, x, screenHeight * scalingFactor);
+      end;
       //-------------------------------------------------------------:minor grid
       //major grid:-------------------------------------------------------------
       target.Pen.Color := $BBBBBB;
-      for i := 0 to length(tic['y']) - 1 do
-        with tic['y'][i] do
-          if major then
-            begin
-            y := round(pos * scalingFactor);
-            target.Line(0, y, screenWidth * scalingFactor, y);
-            end;
-      for i := 0 to length(tic['x']) - 1 do
-        with tic['x'][i] do
-          if major then
-            begin
-            x := round(pos * scalingFactor);
-            target.Line(x, 0, x, screenHeight * scalingFactor);
-            end;
+      if (axisStyle['y'] and C_grid)=C_grid then
+      for i := 0 to length(tic['y']) - 1 do with tic['y'][i] do if major then begin
+        y := round(pos * scalingFactor);
+        target.Line(0, y, screenWidth * scalingFactor, y);
+      end;
+      if (axisStyle['x'] and C_grid)=C_grid then
+      for i := 0 to length(tic['x']) - 1 do with tic['x'][i] do if major then begin
+        x := round(pos * scalingFactor);
+        target.Line(x, 0, x, screenHeight * scalingFactor);
+      end;
       //-------------------------------------------------------------:major grid
       //========================================================:coordinate grid
       //row data:===============================================================
@@ -1817,10 +1805,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       target.Pen.Width := 1;
       target.Pen.EndCap := pecSquare;
 
-      if activePlot.wantTics('y') then
-        target.FillRect(0, 0, activePlot.xOffset, screenHeight);
-      if activePlot.wantTics('x') then
-        target.FillRect(activePlot.xOffset, activePlot.yOffset,
+      if wantTics('y') then
+        target.FillRect(0, 0, xOffset, screenHeight);
+      if wantTics('x') then
+        target.FillRect(xOffset, yOffset,
           screenWidth, screenHeight);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
@@ -1835,26 +1823,19 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           xOffset, yOffset);
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
-      if wantTics('y') then
-        for i := 0 to length(tic['y']) - 1 do
-          with tic['y'][i] do
-            if major then
-              begin
-              y := round(pos);
-              target.Line(xOffset - 5, y, xOffset, y);
-              target.TextOut(xOffset - 5 - target.TextWidth(txt), y -
-                target.TextHeight(txt) shr 1, txt);
-              end;
-      if wantTics('x') then
-        for i := 0 to length(tic['x']) - 1 do
-          with tic['x'][i] do
-            if major then
-              begin
-              x := round(pos);
-              target.Line(x, yOffset + 5, x, yOffset);
-              target.TextOut(x - target.TextWidth(txt) shr 1, yOffset + 5, txt);
-              end;
-
+      if wantTics('y') then for i := 0 to length(tic['y']) - 1 do
+      with tic['y'][i] do if major then begin
+        y := round(pos);
+        target.Line(xOffset - 5, y, xOffset, y);
+        target.TextOut(xOffset - 5 - target.TextWidth(txt), y -
+          target.TextHeight(txt) shr 1, txt);
+      end;
+      if wantTics('x') then for i := 0 to length(tic['x']) - 1 do
+      with tic['x'][i] do if major then begin
+        x := round(pos);
+        target.Line(x, yOffset + 5, x, yOffset);
+        target.TextOut(x - target.TextWidth(txt) shr 1, yOffset + 5, txt);
+      end;
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system
     end;
@@ -1866,13 +1847,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
     until not (setTextSize(plotImage.Canvas.TextHeight(longtestYTic),
         plotImage.Canvas.TextWidth(longtestYTic)));
 
-    if supersampling <= 1 then
-      begin
+    if supersampling <= 1 then begin
       drawGridAndRows(plotImage.Canvas, 1);
       drawCoordSys(plotImage.Canvas);
-      end
-    else
-      begin
+    end else begin
       renderImage := TImage.Create(plotImage);
       renderImage.SetInitialBounds(0, 0, screenWidth * supersampling,
         screenHeight * supersampling);
@@ -1880,7 +1858,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       scale(renderImage, plotImage, 1 / supersampling);
       renderImage.Free;
       drawCoordSys(plotImage.Canvas);
-      end;
+    end;
   end;
 
 FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation;

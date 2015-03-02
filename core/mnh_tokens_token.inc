@@ -555,18 +555,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       newLit:P_literal;
       didSubstitution:boolean;
       tt:T_tokenType;
-  PROCEDURE printState;
-    VAR i:longint;
-        p:P_token;
-    begin
-      for i:=0 to length(stack)-1 do write(stack[i]^.toString); write(' ');
-      p:=first;
-      while p<>nil do begin
-        write(p^.toString);
-        p:=p^.next;
-      end;
-      writeln;
-    end;
+  //PROCEDURE printState;
+  //  VAR i:longint;
+  //      p:P_token;
+  //  begin
+  //    for i:=0 to length(stack)-1 do write(stack[i]^.toString); write(' ');
+  //    p:=first;
+  //    while p<>nil do begin
+  //      write(p^.toString);
+  //      p:=p^.next;
+  //    end;
+  //    writeln;
+  //  end;
 
   FUNCTION cTokType(CONST index:longint):T_tokenType; inline;
     VAR p:P_token;
@@ -693,7 +693,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     VAR itList:P_listLiteral;
         i,j,k:longint;
         eachLocation:T_tokenLocation;
-        resultLiteral,newLit:P_literal;
+        resultLiteral,newLit,bodyRuleResult:P_literal;
 
     begin
       eachLocation:=first^.location;
@@ -710,40 +710,64 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       if aggregatorPresent and (itList^.size=0) then
         raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
       else if length(bodyRule)>0 then begin
-        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-        for j:=0 to length(bodyRule)-1 do begin
-          if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
-            t^.next:=newToken(tokensBetween[k]);
+        if aggregatorIsPrimitive and (callDepth<STACK_DEPTH_LIMIT) then begin
+          resultLiteral:=nil;
+          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then begin
+            bodyRuleResult:=bodyRule[j]^.directEvaluateUnary(itList^.Value(i),callDepth+1);
+            if bodyRuleResult<>nil then begin
+              if resultLiteral=nil then resultLiteral:=bodyRuleResult else begin
+                newLit:=resolveOperator(resultLiteral,
+                                        tokensBetween[0]^.tokType,
+                                        bodyRuleResult,
+                                        eachLocation);
+                disposeLiteral(bodyRuleResult);
+                if newLit<>nil then begin
+                  disposeLiteral(resultLiteral);
+                  resultLiteral:=newLit;
+                end;
+              end;
+            end else if resultLiteral=nil then resultLiteral:=newErrorLiteral;
+          end;
+          t^.next:=newToken(eachLocation,'',tt_literal,resultLiteral);
+          t:=t^.next;
+        end else begin
+          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
+          for j:=0 to length(bodyRule)-1 do begin
+            if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
+              t^.next:=newToken(tokensBetween[k]);
+              t:=t^.next;
+            end;
+            t^.next:=newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
+            bodyRuleLiteral[j]^.rereference;
+            t:=t^.next;
+            t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
             t:=t^.next;
           end;
-          t^.next:=newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
-          bodyRuleLiteral[j]^.rereference;
-          t:=t^.next;
-          t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
-          t:=t^.next;
         end;
-      end else if aggregatorIsPrimitive then begin
-        resultLiteral:=itList^.Value(0);
-        resultLiteral^.rereference;
-        for i:=1 to itList^.size-1 do if errorLevel<=el2_warning then begin
-          newLit:=resolveOperator(resultLiteral,
-                                  tokensBetween[0]^.tokType,
-                                  itList^.Value(i),
-                                  eachLocation);
-          disposeLiteral(resultLiteral);
-          resultLiteral:=newLit;
-        end;
-        t^.next:=newToken(eachLocation,'',tt_literal,resultLiteral);
-        t:=t^.next;
       end else begin
-        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
-          if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
-            t^.next:=newToken(tokensBetween[k]);
+        if aggregatorIsPrimitive then begin
+          resultLiteral:=itList^.Value(0);
+          resultLiteral^.rereference;
+          for i:=1 to itList^.size-1 do if errorLevel<=el2_warning then begin
+            newLit:=resolveOperator(resultLiteral,
+                                    tokensBetween[0]^.tokType,
+                                    itList^.Value(i),
+                                    eachLocation);
+            disposeLiteral(resultLiteral);
+            resultLiteral:=newLit;
+          end;
+          t^.next:=newToken(eachLocation,'',tt_literal,resultLiteral);
+          t:=t^.next;
+        end else begin
+          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
+            if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
+              t^.next:=newToken(tokensBetween[k]);
+              t:=t^.next;
+            end;
+            t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
+            itList^.value(i)^.rereference;
             t:=t^.next;
           end;
-          t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
-          itList^.value(i)^.rereference;
-          t:=t^.next;
         end;
       end;
       //----------------------------------------------------------iterate over itList
@@ -859,6 +883,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
 
   begin
     setLength(stack,0);
+    try
     repeat
       didSubstitution:=false;
       //writeln(tokensToString(first));
@@ -1091,6 +1116,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end;
       //printState;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
+    except
+      ON EOutOfMemory DO begin
+        raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        while (length(stack)>0) do stack_popDestroy;
+      end else begin
+        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        while (length(stack)>0) do stack_popDestroy;
+      end;
+    end;
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
                    else raiseError(el0_allOkay,'Reduce expression done',first^.location);

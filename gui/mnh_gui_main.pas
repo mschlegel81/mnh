@@ -293,7 +293,7 @@ PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
   VAR aidX,aidY:longint;
   begin
     aidX:=0;
-    if miXTics.Checked      then aidX:=C_tics;;
+    if miXTics.Checked      then aidX:=C_tics;
     if miXGrid.Checked      then aidX:=aidX or C_grid;
     if miXFinerGrid.Checked then aidX:=aidX or C_finerGrid;
     aidY:=0;
@@ -301,6 +301,7 @@ PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
     if miYGrid.Checked      then aidY:=aidY or C_grid;
     if miYFinerGrid.Checked then aidY:=aidY or C_finerGrid;
     activePlot.setAxisStyle(aidX,aidY);
+
     activePlot.setPreserveAspect(miPreserveAspect.Checked);
     activePlot.setLogscale(miLogscaleX.Checked,miLogscaleY.Checked);
     activePlot.setAutoscale(miAutoscaleX.Checked,miAutoscaleY.Checked);
@@ -377,7 +378,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
       if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
         then plotSubsystem.state:=pss_plotOnShow
         else doPlot();
-    end;
+    end else pullPlotSettingsToGui();
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 

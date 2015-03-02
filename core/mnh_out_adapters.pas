@@ -120,7 +120,7 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel;
 
 FUNCTION errorLevel: T_errorLevel;
   begin
-    result := maxErrorLevel;
+    if hasHaltMessage then result:=el5_systemError else result := maxErrorLevel;
   end;
 
 PROCEDURE plainConsoleOut(CONST s: ansistring);
@@ -137,14 +137,11 @@ PROCEDURE plainStdErrOut(CONST error: T_storedError);
 
 VAR
   MEMORY_MANAGER: TMemoryManager;
-  memCheckTally:longint=0;
 
 FUNCTION isMemoryFree(CONST usage: string): boolean;
   CONST
     MAX_MEMORY_THRESHOLD = 1500 * 1024 * 1024; //=1500 MB
   begin
-    InterLockedIncrement(memCheckTally);
-    if (memCheckTally and 1023)<>0 then exit(true);
     result := (MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed < MAX_MEMORY_THRESHOLD);
     if not (result) and (maxErrorLevel < el5_systemError) then
       raiseError(el5_systemError, 'Out of memory! (' + usage + ')', C_nilTokenLocation);

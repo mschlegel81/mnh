@@ -80,6 +80,7 @@ FUNCTION main(p:pointer):ptrint;
 
 PROCEDURE ad_clearFile;
   begin
+    clearSourceScanPaths;
     if evaluationState.value=es_running then haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.clear;
@@ -99,7 +100,7 @@ PROCEDURE ad_haltEvaluation;
   begin
     if evaluationState.value=es_running then haltEvaluation;
     pendingRequest.value:=er_none;
-    while evaluationState.value=es_running do sleep(1);
+    while evaluationState.value=es_running do begin hasHaltMessage:=true;  pendingRequest.value:=er_none; sleep(1); end;
     raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
 
@@ -109,6 +110,7 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
   begin
     ad_haltEvaluation;
     if path<>mainPackageProvider.getPath then begin
+      addSourceScanPath(path);
       mainPackageProvider.setPath(path);
       if mainPackageProvider.fileHasChanged then begin
         mainPackageProvider.load;
@@ -117,6 +119,7 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
         for i:=0 to length(LL)-1 do L.Append(LL[i]);
         setLength(LL,0);
       end;
+      getMainPackage^.clear;
     end;
   end;
 

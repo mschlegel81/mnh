@@ -112,7 +112,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     if length(expression)<=1 then exit(false);
     bracketLevel:=0;
     for i:=0 to length(expression)-1 do case expression[i].token.tokType of
-      tt_parallelEach, tt_each, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
+      tt_each, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
       tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
       tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
@@ -218,7 +218,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
     then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,firstRep,lastRep)
     else begin
       result:=false;
-      if isDeclaredInline then raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+      if isDeclaredInline then begin
+        if param=nil then raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                     else raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+      end;
     end;
   end;
 
@@ -240,6 +243,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end else begin
       setLength(expression,1);
       with expression[0] do begin
+        LHS^.rereference;
         token.create; token.define(opLocation,'',tt_literal,LHS);
         parIdx:=-1;
       end;
@@ -263,6 +267,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end else begin
       setLength(expression,i0+1);
       with expression[i0] do begin
+        RHS^.rereference;
         token.create; token.define(opLocation,'',tt_literal,RHS);
         parIdx:=-1;
       end;

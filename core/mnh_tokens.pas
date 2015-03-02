@@ -87,7 +87,6 @@ PROCEDURE reloadMainPackage;
     clearAllCaches;
     clearErrors;
     mainPackage.load;
-
     //housekeeping:-------------------------------------------------------------
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);

@@ -1,0 +1,23 @@
+USE piPlots, continued_fractions;
+
+pi:=4*arctan(1);
+rational(x:real    ,digits:int)->each(x,CF2rat(realCF(x,digits)),&"/"&);
+rational(X:realList,digits:int)->each(x,X,rational(x,digits));
+firstTrueIndex(L:booleanList)->firstTrueIndex(L,head([0..size(L)-1]%L));
+firstTrueIndex(L:booleanList,[])->-1;
+firstTrueIndex(L:booleanList,i:int)->i;
+firstStringMatch(L:stringList,ReferenceValue:string)->firstTrueIndex(L=ReferenceValue);
+
+summandsForMatch1(n:int)->summandsForMatch1(n,0,rational(4*sum1(0),n),rational(pi,n));
+summandsForMatch2(n:int)->summandsForMatch2(n,0,rational(4*sum2(0),n),rational(pi,n));
+summandsForMatch1(n,i,A=B,B)->i;
+summandsForMatch2(n,i,A=B,B)->i;
+summandsForMatch1(n,i,A,B)->summandsForMatch1(n,i+1,rational(4*sum1(i+1),n),B);
+summandsForMatch2(n,i,A,B)->summandsForMatch2(n,i+1,rational(4*sum2(i+1),n),B);
+
+each(k,[0..10],print( rational(pi,k)&"\t"&summandsForMatch1(k)&"\t"&summandsForMatch2(k)))
+
+//print(each(k,[1..20],&"\n"&,k&"\t"&rational(pi,k)&"\t"&summandsForMatch2(k)));
+
+
+

@@ -64,7 +64,7 @@ VAR
 PROCEDURE clearSourceScanPaths;
   begin
     setLength(sourceScanPath, 0);
-    addSourceScanPath(extractFilePath(ParamStr(0)));
+    addSourceScanPath(ParamStr(0));
     addSourceScanPath('');
   end;
 
@@ -73,7 +73,7 @@ PROCEDURE addSourceScanPath(CONST path: ansistring);
     expandedPath: ansistring;
     i: longint;
   begin
-    expandedPath := expandFileName(path);
+    expandedPath := expandFileName(extractFilePath(path));
     for i := 0 to length(sourceScanPath) - 1 do
       if sourceScanPath[i] = expandedPath then
         exit;
@@ -89,8 +89,8 @@ FUNCTION locateSource(CONST id: ansistring): ansistring;
     begin
       if uppercase(extractFileExt(fname)) = sourceExt then
         begin
-        result := extractFileName(fname);
-        result := copy(result, 1, length(result) - length(sourceExt));
+          result := extractFileName(fname);
+          result := copy(result, 1, length(result) - length(sourceExt));
         end
       else
         result := '';
