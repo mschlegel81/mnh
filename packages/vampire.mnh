@@ -1,0 +1,32 @@
+//chars(s:string )->each(i,[1..length(s)],copy(s,i,1));
+chars(s:string )->copy(s,[0..length(s)-1],1);
+chars(i:int    )->sort(chars(string(i)));
+chars(i:intList)->sort(chars(each(e,i,&)));
+
+digits(n:int)->length(string(n));
+dividers(n:int)->dividers(n,floor(10**(digits(n)/2-1)),
+                            floor(sqrt(n)),
+                            floor(10**(digits(n)/2))-1);
+dividers(n,k0,k1,k2)->dividers(n,abs(k1-k0)<abs(k1-k2) ? [k0..k1] : [k1..k2]);
+dividers(n,Candidates)->Candidates%(n mod Candidates=0);
+
+factorPairs(n)->each(d,dividers(n),[n div d,d]);
+
+isVampire(i:int)->isVampire(i,chars(i));
+isVampire(i:int,iC)->(size(iC) and 1)=1 ? false : isVampire(i,iC,factorPairs(i));
+isVampire(i,iC,FP)->vampPrint(i,FP%each(p,FP,chars(p)==iC));
+vampPrint(i,[])->false;
+vampPrint(i,fangs)->print(i," is a vampire. It's fangs are: ",each(f,fangs,&" or "&,string(f)));
+
+bigStep(n)->(digits(n) and 1) = 1 ? 10^(digits(n)) : n;
+
+printFirstVampires(n<=0,k>0)->true;
+printFirstVampires(n   ,k>0)->printFirstVampires(n-(isVampire(k)?1:0),bigStep(k+1));
+
+verboseCheckIfVampire(n)->isVampire(n) ? true : print(n,' is not a vampire.');
+
+main->printFirstVampires(25,1) and
+      print('----------------------------') and
+      verboseCheckIfVampire(16758243290880) and
+      verboseCheckIfVampire(24959017348650) and
+      verboseCheckIfVampire(14593825548650);

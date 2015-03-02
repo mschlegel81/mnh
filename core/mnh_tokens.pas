@@ -28,7 +28,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
-      PROCEDURE load;
+      PROCEDURE load(CONST resolveExpressions:boolean);
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
@@ -39,17 +39,16 @@ TYPE
 CONST C_id_qualify_character='.';
   
 //FUNCTION isReloadOfMainPackageIndicated:boolean;
-PROCEDURE reloadMainPackage;
+PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
 
 VAR mainPackageProvider:T_codeProvider;
 
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT={$ifdef version64bit} 14750 {$else} 37000 {$endif};
+CONST STACK_DEPTH_LIMIT=60000;// {$ifdef version64bit} 14750 {$else} 37000 {$endif};
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
@@ -80,13 +79,13 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
 
-PROCEDURE reloadMainPackage;
+PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
   VAR i,j:longint;
       used:T_listOfString;
   begin
     clearAllCaches;
     clearErrors;
-    mainPackage.load;
+    mainPackage.load(resolveExpressions);
     //housekeeping:-------------------------------------------------------------
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
@@ -130,7 +129,7 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
         if secondaryPackages[i]^.ready then begin
           if secondaryPackages[i]^.needReload then begin
             secondaryPackages[i]^.clear;
-            secondaryPackages[i]^.load;
+            secondaryPackages[i]^.load(false);
           end;
           exit(secondaryPackages[i]);
         end else begin
@@ -145,14 +144,14 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
       new(result,create(newSource));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=result;
-      result^.load;
+      result^.load(false);
     end else begin
       raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
       result:=nil;
     end;
   end;
 
-PROCEDURE T_package.load;
+PROCEDURE T_package.load(CONST resolveExpressions:boolean);
   VAR isFirstLine:boolean=true;
   PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
@@ -346,10 +345,12 @@ PROCEDURE T_package.load;
         writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
-        predigest(first,@self);
-        writeExprEcho(tokensToString(first));
-        reduceExpression(first,0);
-        if first<>nil then writeExprOut(tokensToString(first));
+        if resolveExpressions then begin
+          predigest(first,@self);
+          writeExprEcho(tokensToString(first));
+          reduceExpression(first,0);
+          if first<>nil then writeExprOut(tokensToString(first));
+        end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
       end;
       if first<>nil then cascadeDisposeToken(first);
     end;
@@ -475,7 +476,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring): P_rule;
     if not(rules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
       rules.put(ruleId,result);
-      raiseError(el0_allOkay,'New rule '+ruleId,C_nilTokenLocation);
+      raiseError(el0_allOkay,'New rule '+ruleId,fileTokenLocation(codeProvider));
     end;
   end;
 
@@ -545,17 +546,20 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       parLit:P_listLiteral;
       i:longint;
   begin
-    if not(mainPackage.ready) or (errorLevel>el0_allOkay) then exit;
+    if not(mainPackage.ready) or (errorLevel>el1_note) then begin
+      raiseError(el5_systemError,'Call of main has been rejected due to a previous error or note.',fileTokenLocation(@mainPackageProvider));
+      exit;
+    end;
     {$ifdef doTokenRecycling}
     finalizeTokens;
     {$endif}
-    t:=newToken(C_nilTokenLocation,'main',tt_identifier);
+    t:=newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
     mainPackage.resolveRuleId(t^,false);
-    if t^.tokType=tt_identifier then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
+    if t^.tokType=tt_identifier then raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
     else begin
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
-      t^.next:=newToken(C_nilTokenLocation,'',tt_parList,parLit);
+      t^.next:=newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);
       reduceExpression(t,0);
     end;
     cascadeDisposeToken(t);

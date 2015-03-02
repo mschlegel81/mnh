@@ -12,7 +12,7 @@
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="55" Y="19"/>
+        <CursorPos X="13" Y="22"/>
         <UsageCount Value="235"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -26,7 +26,7 @@
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="594"/>
-        <CursorPos X="5" Y="597"/>
+        <CursorPos X="5" Y="595"/>
         <UsageCount Value="235"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -84,34 +84,34 @@
         <WindowIndex Value="0"/>
         <TopLine Value="362"/>
         <CursorPos X="38" Y="385"/>
-        <UsageCount Value="83"/>
+        <UsageCount Value="81"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\core\mnh_tokens.pas"/>
         <UnitName Value="mnh_tokens"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="314"/>
-        <CursorPos X="7" Y="342"/>
+        <TopLine Value="334"/>
+        <CursorPos X="12" Y="351"/>
         <UsageCount Value="102"/>
         <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\core\mnh_tokens_subrule.inc"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="192"/>
         <CursorPos X="1" Y="213"/>
-        <UsageCount Value="67"/>
+        <UsageCount Value="78"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\core\mnh_tokens_rule.inc"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="99"/>
-        <CursorPos X="1" Y="125"/>
-        <UsageCount Value="97"/>
+        <TopLine Value="1"/>
+        <CursorPos X="18" Y="14"/>
+        <UsageCount Value="105"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
@@ -120,23 +120,25 @@
         <WindowIndex Value="0"/>
         <TopLine Value="34"/>
         <CursorPos X="1" Y="60"/>
-        <UsageCount Value="43"/>
+        <UsageCount Value="41"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\core\mnh_fileWrappers.pas"/>
         <UnitName Value="mnh_fileWrappers"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="75"/>
-        <CursorPos X="50" Y="100"/>
-        <UsageCount Value="91"/>
+        <TopLine Value="367"/>
+        <CursorPos X="31" Y="394"/>
+        <UsageCount Value="89"/>
       </Unit11>
       <Unit12>
         <Filename Value="..\core\mnh_tokloc.pas"/>
         <UnitName Value="mnh_tokloc"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="43" Y="2"/>
+        <CursorPos X="27" Y="16"/>
         <UsageCount Value="56"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="..\core\mnh_out_adapters.pas"/>
@@ -144,15 +146,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="131"/>
         <CursorPos X="5" Y="146"/>
-        <UsageCount Value="86"/>
+        <UsageCount Value="84"/>
       </Unit13>
       <Unit14>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="489"/>
-        <CursorPos X="38" Y="519"/>
+        <TopLine Value="666"/>
+        <CursorPos X="22" Y="692"/>
         <UsageCount Value="120"/>
         <Loaded Value="True"/>
       </Unit14>
@@ -162,7 +164,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="208"/>
         <CursorPos X="117" Y="227"/>
-        <UsageCount Value="99"/>
+        <UsageCount Value="97"/>
       </Unit15>
       <Unit16>
         <Filename Value="..\core\mnh_litvar.pas"/>
@@ -170,17 +172,19 @@
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="965"/>
-        <CursorPos X="11" Y="973"/>
+        <CursorPos X="38" Y="973"/>
         <UsageCount Value="101"/>
         <Loaded Value="True"/>
       </Unit16>
       <Unit17>
         <Filename Value="..\core\mnh_funcs.pas"/>
         <UnitName Value="mnh_funcs"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1233"/>
-        <CursorPos X="49" Y="1242"/>
+        <TopLine Value="731"/>
+        <CursorPos X="95" Y="758"/>
         <UsageCount Value="101"/>
+        <Loaded Value="True"/>
       </Unit17>
       <Unit18>
         <Filename Value="..\core\mnh_stringutil.pas"/>
@@ -189,7 +193,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="274"/>
         <CursorPos X="24" Y="300"/>
-        <UsageCount Value="68"/>
+        <UsageCount Value="79"/>
         <Loaded Value="True"/>
       </Unit18>
       <Unit19>
@@ -197,8 +201,8 @@
         <UnitName Value="mnh_evalThread"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="73"/>
-        <CursorPos X="35" Y="102"/>
+        <TopLine Value="47"/>
+        <CursorPos X="37" Y="60"/>
         <UsageCount Value="111"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -208,15 +212,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="765"/>
         <CursorPos X="1" Y="801"/>
-        <UsageCount Value="96"/>
+        <UsageCount Value="94"/>
       </Unit20>
       <Unit21>
         <Filename Value="..\core\mnh_tokens_pattern.inc"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="38" Y="23"/>
-        <UsageCount Value="41"/>
+        <CursorPos X="7" Y="18"/>
+        <UsageCount Value="52"/>
         <Loaded Value="True"/>
       </Unit21>
       <Unit22>
@@ -225,7 +229,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="25"/>
         <CursorPos X="1" Y="47"/>
-        <UsageCount Value="44"/>
+        <UsageCount Value="42"/>
       </Unit22>
       <Unit23>
         <Filename Value="..\core\mnh_plotData.pas"/>
@@ -242,14 +246,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="123"/>
         <CursorPos X="34" Y="153"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="5"/>
       </Unit24>
       <Unit25>
         <Filename Value="..\core\mnh_tokens_parallel.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="52"/>
         <CursorPos X="29" Y="69"/>
-        <UsageCount Value="31"/>
+        <UsageCount Value="29"/>
       </Unit25>
       <Unit26>
         <Filename Value="C:\lazarus\lcl\extctrls.pp"/>
@@ -257,7 +261,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="491"/>
         <CursorPos X="3" Y="509"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="4"/>
       </Unit26>
       <Unit27>
         <Filename Value="C:\lazarus\lcl\graphics.pp"/>
@@ -265,7 +269,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1025"/>
         <CursorPos X="3" Y="1043"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:\lazarus\fpc\2.6.4\source\rtl\objpas\types.pp"/>
@@ -273,7 +277,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="2"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit28>
       <Unit29>
         <Filename Value="..\test\mnh_makeConstants.pas"/>
@@ -281,15 +285,17 @@
         <WindowIndex Value="0"/>
         <TopLine Value="6"/>
         <CursorPos X="9" Y="42"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="5"/>
       </Unit29>
       <Unit30>
         <Filename Value="..\core\mnh_caches.pas"/>
         <UnitName Value="mnh_caches"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="41"/>
-        <CursorPos X="10" Y="63"/>
-        <UsageCount Value="14"/>
+        <TopLine Value="1"/>
+        <CursorPos X="46" Y="10"/>
+        <UsageCount Value="16"/>
+        <Loaded Value="True"/>
       </Unit30>
       <Unit31>
         <Filename Value="..\core\mnh_glPlots.pas"/>
@@ -297,7 +303,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="937"/>
         <CursorPos X="5" Y="973"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit31>
     </Units>
     <General>
@@ -305,124 +311,124 @@
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="681" Column="29" TopLine="653"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position1>
       <Position2>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="776" Column="38" TopLine="748"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="479" Column="79" TopLine="449"/>
       </Position2>
       <Position3>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="681" Column="11" TopLine="665"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="556" Column="55" TopLine="526"/>
       </Position3>
       <Position4>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="673" Column="11" TopLine="665"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="580" Column="39" TopLine="550"/>
       </Position4>
       <Position5>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="655" Column="35" TopLine="639"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="597" Column="39" TopLine="567"/>
       </Position5>
       <Position6>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="653" Column="9" TopLine="639"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="562" Column="86" TopLine="546"/>
       </Position6>
       <Position7>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="615" Column="11" TopLine="598"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="550" Column="119" TopLine="531"/>
       </Position7>
       <Position8>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="786" Column="32" TopLine="754"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="556" Column="36" TopLine="538"/>
       </Position8>
       <Position9>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="711" Column="24" TopLine="710"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="558" Column="129" TopLine="540"/>
       </Position9>
       <Position10>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="766" Column="97" TopLine="760"/>
+        <Filename Value="mnh_gui.lpr"/>
+        <Caret Line="19" Column="55" TopLine="1"/>
       </Position10>
       <Position11>
         <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="542" Column="13" TopLine="537"/>
+        <Caret Line="562" Column="44" TopLine="544"/>
       </Position11>
       <Position12>
         <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="7" Column="3" TopLine="1"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position12>
       <Position13>
-        <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="374" Column="60" TopLine="346"/>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position13>
       <Position14>
-        <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="375" Column="50" TopLine="347"/>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <Caret Line="198" Column="1" TopLine="180"/>
       </Position14>
       <Position15>
-        <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="380" Column="34" TopLine="352"/>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <Caret Line="122" Column="235" TopLine="111"/>
       </Position15>
       <Position16>
-        <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="737" Column="45" TopLine="703"/>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position16>
       <Position17>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Caret Line="74" Column="1" TopLine="38"/>
       </Position17>
       <Position18>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="453" Column="9" TopLine="425"/>
+        <Caret Line="631" Column="78" TopLine="603"/>
       </Position18>
       <Position19>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="460" Column="29" TopLine="431"/>
+        <Caret Line="619" Column="24" TopLine="603"/>
       </Position19>
       <Position20>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="494" Column="26" TopLine="465"/>
+        <Caret Line="763" Column="16" TopLine="729"/>
       </Position20>
       <Position21>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="569" Column="16" TopLine="539"/>
+        <Caret Line="749" Column="7" TopLine="729"/>
       </Position21>
       <Position22>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="715" Column="13" TopLine="687"/>
+        <Caret Line="632" Column="22" TopLine="607"/>
       </Position22>
       <Position23>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="783" Column="53" TopLine="756"/>
+        <Caret Line="633" Column="15" TopLine="607"/>
       </Position23>
       <Position24>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="912" Column="16" TopLine="883"/>
+        <Caret Line="648" Column="22" TopLine="619"/>
       </Position24>
       <Position25>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="913" Column="16" TopLine="884"/>
+        <Caret Line="714" Column="15" TopLine="685"/>
       </Position25>
       <Position26>
-        <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="387" Column="27" TopLine="359"/>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <Caret Line="650" Column="11" TopLine="632"/>
       </Position26>
       <Position27>
-        <Filename Value="..\core\mnh_tokens.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <Caret Line="648" Column="11" TopLine="632"/>
       </Position27>
       <Position28>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Caret Line="633" Column="11" TopLine="626"/>
       </Position28>
       <Position29>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="456" Column="44" TopLine="426"/>
+        <Caret Line="666" Column="15" TopLine="643"/>
       </Position29>
       <Position30>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
-        <Caret Line="518" Column="38" TopLine="489"/>
+        <Caret Line="714" Column="15" TopLine="685"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

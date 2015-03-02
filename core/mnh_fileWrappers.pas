@@ -27,6 +27,7 @@ TYPE
     PROCEDURE setLines(CONST Value: T_stringList);
     PROCEDURE setLines(CONST Value: TStrings);
     PROCEDURE setLines(CONST Value: ansistring);
+    PROCEDURE appendLine(CONST Value: ansistring);
 
     PROCEDURE setPath(CONST path: ansistring);
     FUNCTION getPath: ansistring;
@@ -376,6 +377,21 @@ PROCEDURE T_codeProvider.setLines(CONST Value: ansistring);
     until lock = ThreadID;
     setLength(lineData, 1);
     lineData[0] := Value;
+    Inc(version);
+    repeat
+      lock := 0
+    until lock = 0;
+  end;
+
+PROCEDURE T_codeProvider.appendLine(CONST Value: ansistring);
+  begin
+    while (lock <> 0) and (lock <> ThreadID) do
+      sleep(1);
+    repeat
+      lock := ThreadID
+    until lock = ThreadID;
+    setLength(lineData, length(lineData)+1);
+    lineData[length(lineData)-1] := Value;
     Inc(version);
     repeat
       lock := 0

@@ -61,7 +61,7 @@ FUNCTION main(p:pointer):ptrint;
         evaluationState.value:=es_running;
         startOfEvaluation.value:=now;
         startOfEvaluationCallback();
-        reloadMainPackage;
+        reloadMainPackage(true);
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
         getMainPackage^.updateLists(localUserRules,importedUserRules);
         updateCompletionList;

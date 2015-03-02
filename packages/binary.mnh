@@ -1,9 +1,0 @@
-binaryForm(n<0)->'-'&binaryForm(-n);
-binaryForm(n:int)->replace('#'&each(i,[60..0],&,floor(n) div 2**i and 1),["#0","#"],["#",""]);
-binaryForm(n:real)->binaryForm(floor(n))&"."&replace(binaryRest(n-floor(n),100)&"#",["0#","#"],["#",""]);
-binaryRest(x>=0.5,n>0)->"1"&binaryRest(2*x-1,n-1);
-binaryRest(x< 0.5,n>0)->"0"&binaryRest(2*x  ,n-1);
-binaryRest(x,n)->"";
-
-copy("-13",1,3);
-

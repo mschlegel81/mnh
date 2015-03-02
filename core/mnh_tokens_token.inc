@@ -119,7 +119,7 @@ PROCEDURE finalizeTokens;
 
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
-  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod];
+  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_literal];
   VAR p:P_token;
       lastWasIdentifierLike:boolean=false;
   begin
@@ -616,7 +616,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         aggregatorPresent:boolean;
         aggregatorIsPrimitive:boolean;
 
-    PROCEDURE parseBody;
+    FUNCTION parseBodyOk:boolean;
       VAR bracketLevel,i:longint;
           p:P_token;
           bodyPart:array of array[0..1] of P_token;
@@ -630,7 +630,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           bodyPart[0,0]:=first^.next;
         end else begin
           raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
-          exit;
+          exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
           if      t^.tokType in [tt_braceOpen,tt_each,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
@@ -645,7 +645,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
         if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
           raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
-          exit;
+          exit(false);
         end;
         bracketClosingEach:=t;
         for i:=0 to length(bodyPart)-1 do begin
@@ -688,7 +688,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           bodyRuleLiteral[i]:=newExpressionLiteral(bodyRule[i]);
         end;
         //---------------------------------------------process other body parts (if any)
-
+        result:=true;
       end;
 
     VAR itList:P_listLiteral;
@@ -736,15 +736,17 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     PROCEDURE finalizeAggregation; inline;
       begin
         first^.tokType:=tt_literal;
-        if resultLiteral=nil then first^.data:=newErrorLiteral
-                             else first^.data:=resultLiteral;
+        if resultLiteral=nil then begin
+          if aggregatorPresent then first^.data:=newErrorLiteral
+                               else first^.data:=newListLiteral;
+        end else first^.data:=resultLiteral;
         first^.txt:='';
         first^.next:=disposeToken(bracketClosingEach);
       end;
 
     begin
       eachLocation:=first^.location;
-      parseBody;
+      if not(parseBodyOk) then exit;
 
       if (P_literal(first^.data)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
       then itList:=newOneElementListLiteral(first^.data,false)

@@ -1,4 +1,11 @@
-pure fib(i>1)->fib(i-1)+fib(i-2);
-fib(i)->1;
+pure
+fibNStep(i>=k,k)->each(j,[1..k],+,fibNStep(i-j,k));
+fibNStep(i  ,k)->1;
 
-fibTime(i)->each(L,flatten("par=",i,time({fib(i)})),&"\t"&);
+fib(i)->fibNStep(i,2);
+
+main->print('Fibonacci n-step sequence') and
+      print(' n | values') and
+      print('---+-----------------------------------------------------------------------------------------------------') and
+      print(each(k,[1..20],&"\n"&,k&"\t| "&each(i,[1..20],&"\t"&,fibNStep(i+k-3,k))));
+

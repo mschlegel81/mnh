@@ -755,19 +755,69 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string) then begin
       result:=newIntLiteral(pos(P_stringLiteral(params^.value(0))^.value,
-                                P_stringLiteral(params^.value(1))^.value));
+                                P_stringLiteral(params^.value(1))^.value)-1);
     end else raiseNotApplicableError('pos',params,tokenLocation);
   end;
 
 FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR anyList:boolean=false;
+      allOkay:boolean=true;
+      i1,i:longint;
+
+  PROCEDURE checkLength(L:P_literal);
+    VAR s:longint;
+    begin
+      s:=P_listLiteral(L)^.size;
+      if not(anyList) then begin i1:=s; anyList:=true; end
+                      else if    i1<>s then allOkay:=false;
+    end;
+
+  FUNCTION safeString(index:longint):ansistring;
+    begin
+      if params^.Value(0)^.literalType=lt_string
+        then result:=P_stringLiteral(              params^.Value(0)               )^.Value
+        else result:=P_stringLiteral(P_listLiteral(params^.Value(0))^.Value(index))^.Value;
+    end;
+
+  FUNCTION safeStart(index:longint):longint;
+    begin
+      if params^.Value(1)^.literalType=lt_int
+        then result:=P_intLiteral(              params^.Value(1)               )^.Value
+        else result:=P_intLiteral(P_listLiteral(params^.Value(1))^.Value(index))^.Value;
+      inc(result);
+    end;
+
+  FUNCTION safeLen(index:longint):longint;
+    begin
+      if params^.Value(2)^.literalType=lt_int
+        then result:=P_intLiteral(              params^.Value(2)               )^.Value
+        else result:=P_intLiteral(P_listLiteral(params^.Value(2))^.Value(index))^.Value;
+    end;
+
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string)
-                                          and (params^.value(1)^.literalType=lt_int)
-                                          and (params^.value(2)^.literalType=lt_int) then begin
-      result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
-                                    P_intLiteral   (params^.value(1))^.value,
-                                    P_intLiteral   (params^.value(2))^.value));
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType in [lt_string,lt_stringList])
+                                          and (params^.value(1)^.literalType in [lt_int   ,lt_intList])
+                                          and (params^.value(2)^.literalType in [lt_int   ,lt_intList]) then begin
+      anyList:=false;
+      if params^.Value(0)^.literalType=lt_stringList then checkLength(params^.Value(0));
+      if params^.Value(1)^.literalType=lt_intList    then checkLength(params^.Value(1));
+      if params^.Value(2)^.literalType=lt_intList    then checkLength(params^.Value(2));
+      if not(allOkay) then raiseNotApplicableError('copy',params,tokenLocation)
+      else if not(anyList) then
+        result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
+                                      P_intLiteral   (params^.value(1))^.value+1,
+                                      P_intLiteral   (params^.value(2))^.value))
+      else begin
+        result:=newListLiteral;
+        for i:=0 to i1-1 do
+          P_listLiteral(result)^.append(
+            newStringLiteral(
+              copy(safeString(i),
+                   safeStart(i),
+                   safeLen(i))),
+            false);
+      end;
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
 

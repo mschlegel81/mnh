@@ -1,14 +1,14 @@
+{$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
 USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif};
 
-VAR nextInput:ansistring;
 //by command line parameters:---------------
-    minErrorLevel:T_errorLevel=el2_warning;
+VAR minErrorLevel:T_errorLevel=el2_warning;
     fileToInterpret:ansistring='';
     parameters:array of ansistring;
 //---------------:by command line parameters
 
-PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('dec>',s); end;
+PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('in_>',s); end;
 PROCEDURE inputExprEcho(CONST s:ansistring); begin writeln('in >',s); end;
 PROCEDURE exprOut      (CONST s:ansistring); begin writeln('out>',s); end;
 PROCEDURE filteredStdErrOut(CONST error:T_storedError);
@@ -43,7 +43,7 @@ PROCEDURE parseCmdLine;
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       i,pel:longint;      
   begin
-    
+    setLength(parameters,0);
     for i:=1 to paramCount do begin
       if      paramstr(i)='+echo' then echo:=e_forcedOn
       else if paramstr(i)='-echo' then echo:=e_forcedOff
@@ -82,25 +82,45 @@ PROCEDURE parseCmdLine;
 
 PROCEDURE interactiveMode;  
   VAR time:double;
+      hasExitSignal:boolean=false;
+  PROCEDURE readInputFromConsole;
+    VAR nextInput:ansistring;
+    begin
+      mainPackageProvider.clear;
+      repeat
+        write('>'); readln(nextInput);
+        nextInput:=trim(nextInput);
+        if uppercase(nextInput)='EXIT' then begin
+          hasExitSignal:=true;
+          exit;
+        end;
+        if nextInput[length(nextInput)]='\' then begin
+          mainPackageProvider.appendLine(copy(nextInput,1,length(nextInput)-1));
+        end else begin
+          mainPackageProvider.appendLine(nextInput);
+          exit;
+        end;      
+      until false;      
+    end;
+    
   begin
     writeln;    
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
     
-    write('>'); readln(nextInput);
-    while (uppercase(trim(nextInput))<>'EXIT') do begin
-      mainPackageProvider.setLines(nextInput);
+    readInputFromConsole;
+    while not(hasExitSignal) do begin      
       time:=now;
-      reloadMainPackage;
+      reloadMainPackage(true);
       writeln('time: ',(now-time)*24*60*60:0:3,'sec');
-      write('>'); readln(nextInput);
+      readInputFromConsole;
     end;
   end;
 
 PROCEDURE fileMode;
   begin
     mainPackageProvider.setPath(fileToInterpret);
-    reloadMainPackage;
+    reloadMainPackage(false);    
     callMainInMain(parameters);
   end;
   

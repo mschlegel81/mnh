@@ -1,3 +1,4 @@
+{$MAXSTACKSIZE 100000000}
 PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}

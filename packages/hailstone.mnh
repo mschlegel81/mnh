@@ -1,0 +1,11 @@
+odd(i)->(i and 1)=1;
+
+pure
+hailstone(1  )->1;
+hailstone(i>1)->i|(odd(i) ? hailstone(3*i+1) : hailstone(i div 2));
+
+hailstone(27);
+size(hailstone(27));
+
+sizes:=0|each(i,[1..100000],size(hailstone(i)));
+print('Max length=',max(sizes),' for starting value ',argMax(sizes));
