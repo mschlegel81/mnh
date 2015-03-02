@@ -3,7 +3,7 @@ INTERFACE
 TYPE
   T_tokenType=(tt_literal,
                //identifier and resolved identifiers
-               tt_identifier, tt_parameterIdentifier, tt_userRulePointer, tt_intrinsicRulePointer,
+               tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer,
                //special operators
                tt_set,
                tt_each,
@@ -88,7 +88,7 @@ CONST
 
   C_tokenString:array[T_tokenType] of ansistring=('',
     //identifier and resolved identifiers
-    '','','','',
+    '','','','','',
     //special operators
     'set', 'each',
     //lists and list constructors
@@ -148,7 +148,8 @@ CONST
   'literal',
   'identifier',
   'parameter identifier',
-  'user function',
+  'user function (local)',
+  'user function (imported)',
   'built in function',
   'special built in function: set#defines the value of a variable and returns the new value',
   'special built in function: each#can be used for constructing and/or aggregating lists',

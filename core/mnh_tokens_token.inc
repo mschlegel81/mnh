@@ -211,7 +211,7 @@ FUNCTION T_token.toString:ansistring;
       tt_typeCheckString,  tt_typeCheckStringList,
       tt_typeCheckNumeric, tt_typeCheckNumList,
       tt_typeCheckExpression,tt_typeCheckNonemptyList,tt_typeCheckEmptyList: result:=C_tokenString[tokType];
-      tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer, tt_parameterIdentifier:result:=txt;
+      tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_parameterIdentifier:result:=txt;
       tt_literal            : result:=P_literal(data)^.toString;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
@@ -671,8 +671,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if first^.tokType=tt_userRulePointer then begin
-        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth)) then begin
+      if first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer] then begin
+        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer)) then begin
           if parameterListLiteral=nil
           then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
@@ -992,7 +992,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end else begin
           stack_push; //push set
         end;
-        tt_userRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
+        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
           tt_braceOpen: begin
             stack_push; //push rule pointer
             first^.tokType:=tt_parList_constructor; //mutate ( -> tt_parList_constructor

@@ -130,7 +130,7 @@ begin
     token:=getTokenAt(line,column);
     result.tokenText:=token.txt;
     result.tokenExplanation:=C_tokenInfoString[token.tokType];
-    if (token.tokType=tt_userRulePointer) then begin
+    if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
       loc:=P_rule(token.data)^.getLocationOfDeclaration;
       result.declaredInLine:=loc.line;
       result.declaredInFile:=loc.provider^.getPath;

@@ -2,6 +2,7 @@
   P_subrule=^T_subrule;
   T_subrule=object
     private
+      publish:boolean;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
       expression:array of record
@@ -43,7 +44,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
         token:=t^; 
         t^.tokType:=tt_eol; t:=disposeToken(t);
         token.next:=nil;
-        if token.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
+        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token.txt);
           if parIdx>=0 then token.tokType:=tt_identifier;
         end else parIdx:=-1;
@@ -80,7 +81,7 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
         token:=t^; 
         t^.tokType:=tt_eol; t:=disposeToken(t);
         token.next:=nil;
-        if token.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier] then begin
+        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier] then begin
           parIdx:=pattern.indexOfId(token.txt);
           if parIdx>=0 then token.tokType:=tt_identifier;
         end else parIdx:=-1;

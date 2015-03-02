@@ -17,7 +17,7 @@ TYPE
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_package=object
     private
-      publicRules,localRules:T_ruleMap;
+      rules:T_ruleMap;
       packageUses:array of record
         id:ansistring;
         pack:P_package;
@@ -34,8 +34,7 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION canResolveId(CONST identifier:ansistring):byte;
       FUNCTION ruleLocation(CONST identifier:ansistring):T_tokenLocation;
-      FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
-      FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
   end;
 
@@ -140,7 +139,7 @@ procedure T_package.load;
         next:=this^.next;
         if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
            ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
-           and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_userRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
+           and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
           if this^.tokType=tt_operatorMinus then begin
             if (next<>nil) and (next^.tokType = tt_literal) then begin
               this^.tokType:=tt_literal;
@@ -176,7 +175,7 @@ procedure T_package.load;
         tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
                 and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
                 and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-          t^.data:=ensureLocalRuleId(t^.next^.next^.txt);
+          t^.data:=ensureRuleId(t^.next^.next^.txt);
           t^.next:=disposeToken(t^.next); //dispose (
           t^.next:=disposeToken(t^.next); //dispose <id>
           t^.next:=disposeToken(t^.next); //dispose ,
@@ -269,7 +268,7 @@ procedure T_package.load;
           cascadeDisposeToken(first);
           exit;
         end;
-        if not(first^.tokType in [tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer]) then begin
+        if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
           raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           cascadeDisposeToken(first);
           exit;
@@ -286,7 +285,7 @@ procedure T_package.load;
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
-          if (p^.tokType in [tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer]) and isQualified(first^.txt) then begin
+          if (p^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) and isQualified(first^.txt) then begin
             raiseError(el4_parsingError,'Declaration head contains qualified ID.',p^.location);
             cascadeDisposeToken(first);
             exit;
@@ -365,9 +364,8 @@ procedure T_package.load;
         if evaluateBody then reduceExpression(ruleBody,0);
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
-          ensureLocalRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if not(ruleIsPrivate) then
-          ensurePublicRuleId(ruleId)^.addOrSetSubRule(subrule);
+          subRule^.publish:=not(ruleIsPrivate);
+          ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
           first:=nil;
         end else begin
           cascadeDisposeToken(first);
@@ -379,12 +377,12 @@ procedure T_package.load;
           specifier:P_token;
           cacheSize:longint;
       begin
-        if not(first^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_userRulePointer,tt_parameterIdentifier]) or 
+        if not(first^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer,tt_parameterIdentifier]) or
               (first^.txt<>'CACHE') or 
               (first^.next=nil) 
         then exit(false);
         ruleIdToken:=first^.next;
-        if not(ruleIdToken^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_userRulePointer,tt_parameterIdentifier])
+        if not(ruleIdToken^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer,tt_parameterIdentifier])
         then exit(false);
         specifier:=ruleIdToken^.next;
         if (specifier=nil) or (specifier^.tokType=tt_literal) 
@@ -392,8 +390,7 @@ procedure T_package.load;
                 and (specifier^.next=nil) then begin          
           if specifier=nil then cacheSize:=100
                            else cacheSize:=P_intLiteral(specifier^.data)^.value;
-          ensureLocalRuleId (ruleIdToken^.txt)^.setCached(cacheSize);
-          ensurePublicRuleId(ruleIdToken^.txt)^.setCached(cacheSize);
+          ensureRuleId (ruleIdToken^.txt)^.setCached(cacheSize);
           cascadeDisposeToken(first);
           first:=nil;
           result:=true;
@@ -473,8 +470,7 @@ constructor T_package.create(const provider: P_codeProvider);
   begin
     setLength(packageUses,0);
     codeProvider:=provider;
-    publicRules.create;
-    localRules.create;
+    rules.create;
     loadedVersion:=-1;
   end;
 
@@ -486,18 +482,11 @@ function T_package.needReload: boolean;
 procedure T_package.clear;
   VAR rule:P_rule;
   begin
-    while publicRules.size>0 do begin
-      rule:=publicRules.dropAny;
-      setLength(rule^.subRules,0);
+    while rules.size>0 do begin
+      rule:=rules.dropAny;
       dispose(rule,destroy);
     end;
-    publicRules.clear;
-
-    while localRules.size>0 do begin
-      rule:=localRules.dropAny;
-      dispose(rule,destroy);
-    end;
-    localRules.clear;
+    rules.clear;
 
     setLength(packageUses,0);
     ready:=false;
@@ -507,8 +496,7 @@ destructor T_package.destroy;
   begin
     clear;
     if codeProvider<>@mainPackageProvider then dispose(codeProvider,destroy);
-    publicRules.destroy;
-    localRules.destroy;
+    rules.destroy;
     setLength(packageUses,0);
   end;
 
@@ -528,8 +516,8 @@ procedure T_package.resolveRuleId(var token: T_token;
       ruleId   :=token.txt;
     end;
     if ((packageId=codeProvider^.id) or (packageId=''))
-    and localRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_userRulePointer;
+    and rules.containsKey(ruleId,userRule) then begin
+      token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
       exit;
     end;
@@ -537,8 +525,8 @@ procedure T_package.resolveRuleId(var token: T_token;
     for i:=length(packageUses)-1 downto 0 do
     if ((packageId=packageUses[i].id) or (packageId=''))
     and (packageUses[i].pack<>nil)
-    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_userRulePointer;
+    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then begin
+      token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
       exit;
     end;
@@ -571,11 +559,11 @@ function T_package.canResolveId(const identifier: ansistring): byte;
     result:=0;
 
     if ((packageId=codeProvider^.id) or (packageId=''))
-    and localRules.containsKey(ruleId,userRule) then exit(1);
+    and rules.containsKey(ruleId,userRule) then exit(1);
 
     for i:=length(packageUses)-1 downto 0 do
     if ((packageId=packageUses[i].id) or (packageId=''))
-    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then exit(2);
+    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then exit(2);
 
     if ((packageId='mnh') or (packageId=''))
     and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then exit(3);
@@ -599,31 +587,22 @@ function T_package.ruleLocation(const identifier: ansistring): T_tokenLocation;
     result:=C_nilTokenLocation;
 
     if ((packageId=codeProvider^.id) or (packageId=''))
-    and localRules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
+    and rules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
 
     for i:=length(packageUses)-1 downto 0 do
     if ((packageId=packageUses[i].id) or (packageId=''))
-    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
+    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
 
     if ((packageId='mnh') or (packageId=''))
     and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then result.column:=-111;
   end;
 
-function T_package.ensureLocalRuleId(const ruleId: ansistring): P_rule;
+function T_package.ensureRuleId(const ruleId: ansistring): P_rule;
   begin
-    if not(localRules.containsKey(ruleId,result)) then begin
+    if not(rules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
-      localRules.put(ruleId,result);
-      raiseError(el0_allOkay,'New private rule '+ruleId,C_nilTokenLocation);
-    end;
-  end;
-
-function T_package.ensurePublicRuleId(const ruleId: ansistring): P_rule;
-  begin
-    if not(publicRules.containsKey(ruleId,result)) then begin
-      new(result,create(ruleId));
-      publicRules.put(ruleId,result);
-      raiseError(el0_allOkay,'New public rule '+ruleId,C_nilTokenLocation);
+      rules.put(ruleId,result);
+      raiseError(el0_allOkay,'New rule '+ruleId,C_nilTokenLocation);
     end;
   end;
 
@@ -633,12 +612,12 @@ procedure T_package.updateLists(var userDefinedLocalRules, userDefinesImportedRu
       packageId:ansistring;
   begin
     userDefinedLocalRules.clear;
-    userDefinedLocalRules.addArr(localRules.keySet);
+    userDefinedLocalRules.addArr(rules.keySet);
     userDefinedLocalRules.unique;
     userDefinesImportedRules.clear;
     for i:=0 to length(packageUses)-1 do begin
       packageId:=packageUses[i].id;
-      ids:=packageUses[i].pack^.publicRules.keySet;
+      ids:=packageUses[i].pack^.rules.keySet;
       for j:=0 to length(ids)-1 do begin
         userDefinesImportedRules.add(ids[j]);
         userDefinesImportedRules.add(packageId+C_id_qualify_character+ids[j]);
