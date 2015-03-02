@@ -62,67 +62,67 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       evalCost:longint;
   begin
     case ruleType of
-    rt_memoized: begin
-      if param=nil then useParam:=newListLiteral
-                   else useParam:=param;
-      system.EnterCriticalSection(rule_cs);
-      lit:=cache.get(useParam);
-      if lit<>nil then begin
-        lit^.rereference;
-        firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
-        lastRep:=firstRep;
-        if param=nil then disposeLiteral(useParam);
-        system.LeaveCriticalSection(rule_cs);
-        exit(true);
-      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
-        if (callDepth>=STACK_DEPTH_LIMIT) then begin
+      rt_memoized: begin
+        if param=nil then useParam:=newListLiteral
+                     else useParam:=param;
+        system.EnterCriticalSection(rule_cs);
+        lit:=cache.get(useParam);
+        if lit<>nil then begin
+          lit^.rereference;
+          firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
+          lastRep:=firstRep;
+          if param=nil then disposeLiteral(useParam);
+          system.LeaveCriticalSection(rule_cs);
+          exit(true);
+        end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
+          if (callDepth>=STACK_DEPTH_LIMIT) then begin
+            system.LeaveCriticalSection(rule_cs);
+            exit(true);
+          end;
+          evalCost:=round(1000000*rule_timer.Elapsed());
+          if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
+          evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
+          if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
+            lit:=firstRep^.data;
+            cache.polish;
+            cache.put(useParam,lit,evalCost);
+          end;
+          lastRep:=firstRep^.last;
+          if param=nil then disposeLiteral(useParam);
+          if (errorLevel>=el3_evalError) then begin
+            if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
+            recycler.cascadeDisposeToken(firstRep);
+            firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
+            lastRep:=firstRep;
+          end;
           system.LeaveCriticalSection(rule_cs);
           exit(true);
         end;
-        evalCost:=round(1000000*rule_timer.Elapsed());
-        if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
-        evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
-        if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
-          lit:=firstRep^.data;
-          cache.polish;
-          cache.put(useParam,lit,evalCost);
-        end;
-        lastRep:=firstRep^.last;
-        if param=nil then disposeLiteral(useParam);
-        if (errorLevel>=el3_evalError) then begin
-          if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
-          recycler.cascadeDisposeToken(firstRep);
-          firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
-          lastRep:=firstRep;
-        end;
         system.LeaveCriticalSection(rule_cs);
-        exit(true);
+        result:=false;
       end;
-      system.LeaveCriticalSection(rule_cs);
-      result:=false;
-    end;
-    rt_synchronized: begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
-        if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
-        else begin
-          system.EnterCriticalSection(rule_cs);
-          reduceExpression(firstRep,callDepth+1,recycler);
-          lastRep:=firstRep^.last;
-          system.LeaveCriticalSection(rule_cs);
+      rt_synchronized: begin
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
+          if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+          else begin
+            system.EnterCriticalSection(rule_cs);
+            reduceExpression(firstRep,callDepth+1,recycler);
+            lastRep:=firstRep^.last;
+            system.LeaveCriticalSection(rule_cs);
+          end;
+          exit(true);
         end;
-        exit(true);
+        result:=false;
       end;
-      result:=false;
-    end;
-    rt_mutable: begin
-      system.EnterCriticalSection(rule_cs);
-      result:=(includePrivateRules or (subrules[0]^.typ=srt_normal_public)) and subrules[0]^.replaces(param,nil,firstRep,lastRep,recycler);
-      system.LeaveCriticalsection(rule_cs);
-    end;
-    rt_normal: begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
-      result:=false;
-    end;
+      rt_mutable: begin
+        system.EnterCriticalSection(rule_cs);
+        result:=(includePrivateRules or (subrules[0]^.typ=srt_normal_public)) and subrules[0]^.replaces(param,nil,firstRep,lastRep,recycler);
+        system.LeaveCriticalsection(rule_cs);
+      end;
+      rt_normal: begin
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
+        result:=false;
+      end;
     end;
   end;
 
@@ -151,19 +151,19 @@ PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
       rule_timer:= TEpikTimer.create(nil);
       rule_timer.Clear;
       rule_timer.Start;
-    end else if ruleType=rt_mutable then raiseError(el2_warning,'Mutable rules are not allowed to be memoized',location);
+    end else if ruleType=rt_mutable then raiseError(el2_warning,'A mutable rule cannot be memoized',location);
   end;
 
 PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
   begin
     if (ruleType=rt_normal) then begin
-      if length(subrules)<>1 then raiseError(el4_parsingError,'Cannot mutate a rule with more than one subrule!',location)
+      if length(subrules)<>1 then raiseError(el4_parsingError,'A rule with more than one subrule cannot be mutable!',location)
       else begin
         subrules[0]^.setMutable(location);
         ruleType:=rt_mutable;
         system.InitCriticalSection(rule_cs);
       end;
-    end else if ruleType in [rt_memoized,rt_synchronized] then raiseError(el4_parsingError,'Cannot mutate a memoized or synchronized rule!',location);
+    end else if ruleType in [rt_memoized,rt_synchronized] then raiseError(el4_parsingError,'A memoized or synchronized rule cannot be mutable!',location);
   end;
 
 PROCEDURE T_rule.setSynchronized(CONST location:T_tokenLocation);
