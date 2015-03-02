@@ -33,8 +33,6 @@ FUNCTION errorLevel: T_errorLevel;
 PROCEDURE plainConsoleOut(CONST s: ansistring);
 PROCEDURE plainStdErrOut(CONST error: T_storedError);
 
-FUNCTION isMemoryFree(CONST usage: string): boolean;
-
 PROCEDURE haltEvaluation;
 
 VAR
@@ -136,32 +134,12 @@ PROCEDURE plainStdErrOut(CONST error: T_storedError);
         ansistring(errorLocation));
   end;
 
-{$ifndef version64bit}
-VAR MEMORY_MANAGER: TMemoryManager;
-{$endif}
-FUNCTION isMemoryFree(CONST usage: string): boolean;
-  {$ifdef version64bit}
-  begin result:=true; end;
-  {$else}
-  CONST MAX_MEMORY_THRESHOLD = 1500 * 1024 * 1024; //=1500 MB
-  begin
-    result := (MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed < MAX_MEMORY_THRESHOLD);
-    if not (result) and (maxErrorLevel < el5_systemError) then
-      raiseError(el5_systemError, 'OUT of memory! (' + usage + ')', C_nilTokenLocation);
-  end;  
-  {$endif}
-
 PROCEDURE haltEvaluation;
   begin
     raiseError(el5_systemError, HALT_MESSAGE, C_nilTokenLocation);
   end;
 
-
-
 INITIALIZATION
-  {$ifndef version64bit}
-  GetMemoryManager(MEMORY_MANAGER);
-  {$endif}
   inputDeclEcho := nil;
   inputExprEcho := nil;
   exprOut := nil;

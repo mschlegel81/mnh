@@ -55,8 +55,8 @@ TYPE
   public
     CLASS FUNCTION GetLanguageName: string; override;
   public
-    CONSTRUCTOR Create(AOwner: TComponent); override;
-    DESTRUCTOR Destroy; override;
+    CONSTRUCTOR create(AOwner: TComponent); override;
+    DESTRUCTOR destroy; override;
     FUNCTION GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
       override;
     FUNCTION GetEol: boolean; override;
@@ -75,68 +75,68 @@ TYPE
 
 IMPLEMENTATION
 
-CONSTRUCTOR TSynMnhSyn.Create(AOwner: TComponent);
+CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent);
   CONST
     identifierForeground: TColor = $00FF0000;
   begin
-    INHERITED Create(AOwner);
-    styleTable[tkComment] := TSynHighlighterAttributes.Create('comment');
+    INHERITED create(AOwner);
+    styleTable[tkComment] := TSynHighlighterAttributes.create('comment');
     styleTable[tkComment].Style := [fsItalic];
     styleTable[tkComment].Foreground := $00999999;
 
-    styleTable[tkIdentifier] := TSynHighlighterAttributes.Create('identifier');
+    styleTable[tkIdentifier] := TSynHighlighterAttributes.create('identifier');
     styleTable[tkIdentifier].Foreground := identifierForeground;
 
     styleTable[tkDollarIdentifier] :=
-      TSynHighlighterAttributes.Create('dollarIdentifier');
+      TSynHighlighterAttributes.create('dollarIdentifier');
     styleTable[tkDollarIdentifier].Style := [fsItalic];
 
-    styleTable[tkUserRule] := TSynHighlighterAttributes.Create('userRule');
+    styleTable[tkUserRule] := TSynHighlighterAttributes.create('userRule');
     styleTable[tkUserRule].Style := [fsBold];
     styleTable[tkUserRule].Foreground := identifierForeground;
 
     styleTable[tkIntrinsicRuleOrKeyword] :=
-      TSynHighlighterAttributes.Create('intrinsicRuleOrKeyword');
+      TSynHighlighterAttributes.create('intrinsicRuleOrKeyword');
     styleTable[tkIntrinsicRuleOrKeyword].Style := [fsBold];
     styleTable[tkIntrinsicRuleOrKeyword].Foreground := $00888800;
 
-    styleTable[tkTypeCheck] := TSynHighlighterAttributes.Create('typeCheck');
+    styleTable[tkTypeCheck] := TSynHighlighterAttributes.create('typeCheck');
     styleTable[tkTypeCheck].Style := [fsBold];
     styleTable[tkTypeCheck].Foreground := $00880088;
 
-    styleTable[tkString] := TSynHighlighterAttributes.Create('string');
+    styleTable[tkString] := TSynHighlighterAttributes.create('string');
     styleTable[tkString].Foreground := $000000FF;
 
-    styleTable[tkNumber] := TSynHighlighterAttributes.Create('number');
+    styleTable[tkNumber] := TSynHighlighterAttributes.create('number');
     styleTable[tkNumber].Foreground := $000088FF;
 
-    styleTable[tkBoolean] := TSynHighlighterAttributes.Create('boolean');
+    styleTable[tkBoolean] := TSynHighlighterAttributes.create('boolean');
     styleTable[tkBoolean].Foreground := $000044FF;
     styleTable[tkBoolean].Style := [fsItalic];
 
-    styleTable[tkOperator] := TSynHighlighterAttributes.Create('operator');
+    styleTable[tkOperator] := TSynHighlighterAttributes.create('operator');
     styleTable[tkOperator].Foreground := $00008800;
 
-    styleTable[tkDeclarationOp] := TSynHighlighterAttributes.Create('declarationOp');
+    styleTable[tkDeclarationOp] := TSynHighlighterAttributes.create('declarationOp');
     styleTable[tkDeclarationOp].Foreground := $00008800;
     styleTable[tkDeclarationOp].Style := [fsBold];
 
-    styleTable[tkUnknown] := TSynHighlighterAttributes.Create('unknown');
+    styleTable[tkUnknown] := TSynHighlighterAttributes.create('unknown');
     styleTable[tkUnknown].Foreground := clBlack;
     styleTable[tkUnknown].Background := $000088FF;
 
-    styleTable[tkNull] := TSynHighlighterAttributes.Create('null');
+    styleTable[tkNull] := TSynHighlighterAttributes.create('null');
     styleTable[tkNull].Foreground := clBlack;
     styleTable[tkNull].Background := clYellow;
   end; { Create }
 
-DESTRUCTOR TSynMnhSyn.Destroy;
+DESTRUCTOR TSynMnhSyn.destroy;
   VAR
     tk: TtkTokenKind;
   begin
     for tk := tkComment to tkNull do
-      styleTable[tk].Destroy;
-    INHERITED Destroy;
+      styleTable[tk].destroy;
+    INHERITED destroy;
   end; { Destroy }
 
 FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;

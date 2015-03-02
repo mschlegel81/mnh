@@ -19,22 +19,22 @@
       FUNCTION needEmbrace:boolean;
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
-      CONSTRUCTOR createFromInline (CONST rep:P_Token);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR createFromInline (CONST rep:P_Token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION toString:ansistring;
-      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
-      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   end;
 
 {$endif}
 {$ifdef include_implementation}
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
   begin
     if isPrivate then typ:=srt_normal_private
@@ -48,7 +48,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
         token:=t^; 
-        t^.tokType:=tt_eol; t:=disposeToken(t);
+        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
         token.next:=nil;
         if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token.txt);
@@ -59,7 +59,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
     if needEmbrace then embrace;
   end;
 
-CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
+CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
   begin
     typ:=srt_inline_for_each;
@@ -72,7 +72,7 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
         token:=t^; 
-        t^.tokType:=tt_eol; t:=disposeToken(t);
+        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
         token.next:=nil;
         if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier] then begin
           parIdx:=pattern.indexOfId(token.txt);
@@ -169,7 +169,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
       bracketLevel:longint=0;
   begin
@@ -186,7 +186,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
           tt_expBraceOpen: inc(bracketLevel);
           tt_expBraceClose: dec(bracketLevel);
         end;
-        t^.tokType:=tt_eol; t:=disposeToken(t);
+        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
       end;
@@ -210,7 +210,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
   VAR t:P_token;
       i:longint;
   begin
@@ -218,22 +218,22 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
        (param<>nil) and pattern.matches(param^) and
        (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
       with expression[0] do if parIdx>=0 then begin
-        firstRep:=newToken(token.location,'',tt_literal,param^.value(parIdx));
+        firstRep:=recycler.newToken(token.location,'',tt_literal,param^.value(parIdx));
         param^.value(parIdx)^.rereference;
-      end else firstRep:=newToken(@token);
+      end else firstRep:=recycler.newToken(@token);
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
         if parIdx>=0 then begin
           if parIdx<maxLongint then begin
-            t^.next:=newToken(token.location,'',tt_literal,param^.value(parIdx));
+            t^.next:=recycler.newToken(token.location,'',tt_literal,param^.value(parIdx));
             param^.value(parIdx)^.rereference;
           end else begin
-            t^.next:=newToken(token.location,SELF_TOKEN_TEXT,tt_literal,selfLiteral);
+            t^.next:=recycler.newToken(token.location,SELF_TOKEN_TEXT,tt_literal,selfLiteral);
             selfLiteral^.rereference;
           end;
         end else begin
           if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
-          t^.next:=newToken(@token);
+          t^.next:=recycler.newToken(@token);
         end;
         t:=t^.next;
       end;
@@ -244,7 +244,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
             and (expression[0].token.tokType=tt_literal)
             and (P_literal(expression[0].token.data)^.literalType = lt_expression)
             and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^))
-    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep)
+    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler)
     else begin
       result:=false;
       case typ of
@@ -382,11 +382,11 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(nil,selfLiteral,firstRep,lastRep) then begin
-      reduceExpression(firstRep,callDepth+1);
+    if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -395,23 +395,26 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
         result:=nil;
         raiseError(el3_evalError,'Cannot directly resolve nullary call. Make sure the FUNCTION can be resolved without errors, returning only a literal.',declaredAt);
       end;
-      cascadeDisposeToken(firstRep);
+      recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
   end;
 
 FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+  VAR tempRecycler:T_tokenRecycler;
   begin
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,callDepth);
+    tempRecycler.create;
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,callDepth,tempRecycler);
+    tempRecycler.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
   begin
     param.create;
     param.append(x,true);
-    if replaces(@param,selfLiteral,firstRep,lastRep) then begin
-      reduceExpression(firstRep,callDepth+1);
+    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -420,7 +423,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
         result:=nil;
         raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the FUNCTION can be resolved without errors, returning only a literal.',declaredAt);
       end;
-      cascadeDisposeToken(firstRep);
+      recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
     param.destroy;
   end;

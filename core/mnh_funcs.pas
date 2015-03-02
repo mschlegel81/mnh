@@ -23,6 +23,10 @@ VAR applyUnaryOnExpressionCallback:T_applyUnaryOnExpressionCallback;
 //--------------------------------:Callbacks
 
 IMPLEMENTATION
+//Critical sections:------------------------------------------------------------
+VAR print_cs:system.TRTLCriticalSection;
+    file_cs :system.TRTLCriticalSection;
+//------------------------------------------------------------:Critical sections
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
@@ -39,14 +43,10 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literal
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-  FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,'I/O functions (print in this case) may only be called from the main thread',tokenLocation);
-      exit(nil);
-    end;
     if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
       lt_error,
       lt_boolean,
@@ -63,7 +63,9 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literal
       lt_uncheckedList,
       lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
+    system.EnterCriticalSection(print_cs);
     writePrint(stringToPrint);
+    system.LeaveCriticalsection(print_cs);
     result:=newBoolLiteral(true);
   end;
 
@@ -909,13 +911,11 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR accessed:boolean;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
-      exit(nil);
-    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      system.EnterCriticalSection(file_cs);
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
+      system.LeaveCriticalsection(file_cs);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
@@ -925,12 +925,11 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       L:T_stringList;
       i:longint;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,'I/O functions (fileLines in this case) may only be called from the main thread',tokenLocation);
-      exit(nil);
-    end;    result:=nil;
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      system.EnterCriticalSection(file_cs);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
+      system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -940,15 +939,13 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR ok:boolean;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,'I/O functions (writeFile in this case) may only be called from the main thread',tokenLocation);
-      exit(nil);
-    end;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
+      system.EnterCriticalSection(file_cs);
       ok:=writeFile(P_stringLiteral(params^.value(0))^.value,
                     P_stringLiteral(params^.value(1))^.value);
+      system.LeaveCriticalsection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
@@ -959,16 +956,14 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       L:T_stringList;
       i:longint;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,'I/O functions (writeFileLines in this case) may only be called from the main thread',tokenLocation);
-      exit(nil);
-    end;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_stringList) then begin
       setLength(L,P_listLiteral(params^.value(1))^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+      system.EnterCriticalSection(file_cs);
       ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L);
+      system.LeaveCriticalsection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
@@ -1136,6 +1131,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         cStyleComments:=true;
       end else if trim(UpperCase(name))='PASCAL' then begin
         doubleQuoteString:=false;
+        singleQuoteString:=true;
         escapeStringDelimiter:=false;
         curlyBracketsDelimitOneToken:=true;
         cStyleComments:=true;
@@ -1383,9 +1379,15 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 INITIALIZATION
+  //Critical sections:------------------------------------------------------------
+  system.InitCriticalSection(print_cs);
+  system.InitCriticalSection(file_cs);
+  //------------------------------------------------------------:Critical sections
+
+
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
-  registerRule('print'         ,@print_imp     ,'print(...);#Prints OUT the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
   //Unary Numeric -> real
   registerRule('sqrt'          ,@sqrt_imp      ,'sqrt(n);#Returns the square root of numeric parameter n');
   registerRule('sin'           ,@sin_imp       ,'sin(n);#Returns the sine of numeric parameter n');
@@ -1415,10 +1417,10 @@ INITIALIZATION
   registerRule('unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule('flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule('random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
-  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element OUT of list L#max(x,y,...);#Returns the greatest element OUT of the given parameters');
-  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element OUT of list L (or the first index if ambiguous)');
-  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element OUT of list L#min(x,y,...);#Returns the smallest element OUT of the given parameters');
-  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element OUT of list L (or the first index if ambiguous)');
+  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
+  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
+  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   //Functions on Strings:
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
@@ -1456,5 +1458,9 @@ INITIALIZATION
 FINALIZATION
   intrinsicRuleMap.destroy;
   intrinsicRuleExplanationMap.destroy;
+  //Critical sections:------------------------------------------------------------
+  system.DoneCriticalsection(print_cs);
+  system.DoneCriticalsection(file_cs);
+  //------------------------------------------------------------:Critical sections
 
 end.

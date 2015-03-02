@@ -20,4 +20,15 @@ main->info and UlamSpiral(40);
 //*Displays a n x n Ulam-Spiral
 main(n:string)->info and UlamSpiral(softCast(n));
 
-UlamPlot(500);
+//UlamPlot(500);
+
+print(each(l,Ulam(11),&"\n"&,
+      each(c,l       ,&"\t"&)));
+
+f( i, i)->i>=0 ? (2*i+1)^2
+               : (2*i)^2+1;
+f( i<=0,j)->abs(j)<=abs(i) ? f(i,j-1)-1 : j>0 ? f(i-1,j)+1 : f(i-1,j)+1;
+f( i> 0,j)->abs(j)<=abs(i) ? f(i,j+1)-1 : "-";
+
+print(each(i,[-5..5],&"\n"&,
+      each(j,[-5..5],&"\t"&,f(i,j))));                                     j

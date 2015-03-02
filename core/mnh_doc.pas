@@ -8,8 +8,8 @@ TYPE
 
   T_intrinsicFunctionDocumentation = object
     id, description: ansistring;
-    CONSTRUCTOR Create(CONST funcName: ansistring);
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create(CONST funcName: ansistring);
+    DESTRUCTOR destroy;
     FUNCTION toHtml: string;
   end;
 
@@ -20,8 +20,8 @@ TYPE
     subrules: array of record  isPrivate: boolean;
       pattern, comment: ansistring;
     end;
-    CONSTRUCTOR Create(ruleId: ansistring);
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create(ruleId: ansistring);
+    DESTRUCTOR destroy;
     PROCEDURE addSubRule(privateSubrule: boolean; pat, comment: ansistring);
     FUNCTION toHtml: ansistring;
     FUNCTION printHelpText(sourceName:ansistring):boolean;
@@ -40,8 +40,8 @@ TYPE
     rawUses: array of ansistring;
     usesPackage, usedByPackage: array of P_userPackageDocumentation;
     rules: array of T_userFunctionDocumentation;
-    CONSTRUCTOR Create(path, Name: ansistring);
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create(path, Name: ansistring);
+    DESTRUCTOR destroy;
     PROCEDURE addUses(OtherUid: ansistring);
     PROCEDURE addUsed(other: P_userPackageDocumentation);
     PROCEDURE resolveUses;
@@ -93,7 +93,7 @@ FUNCTION prettyHtml(s: ansistring): ansistring;
 
 { T_userPackageDocumentation }
 
-CONSTRUCTOR T_userPackageDocumentation.Create(path, Name: ansistring);
+CONSTRUCTOR T_userPackageDocumentation.create(path, Name: ansistring);
   begin
     lastComment := '';
     id := Name;
@@ -108,13 +108,13 @@ CONSTRUCTOR T_userPackageDocumentation.Create(path, Name: ansistring);
     packages[length(packages)-1] := @self;
   end;
 
-DESTRUCTOR T_userPackageDocumentation.Destroy;
+DESTRUCTOR T_userPackageDocumentation.destroy;
   VAR i: longint;
   begin
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
-    for i := 0 to length(rules)-1 do rules[i].Destroy;
+    for i := 0 to length(rules)-1 do rules[i].destroy;
     setLength(rules, 0);
   end;
 
@@ -211,7 +211,7 @@ PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansist
     if ruleIdx>=length(rules) then
       begin
       setLength(rules, ruleIdx+1);
-      rules[ruleIdx].Create(subruleId);
+      rules[ruleIdx].create(subruleId);
       end;
     if isMemoized then rules[ruleIdx].isMemoized := true;
     rules[ruleIdx].addSubRule(isPrivate, pattern, lastComment);
@@ -238,13 +238,13 @@ PROCEDURE T_userPackageDocumentation.printHelpText;
 
 { T_userFunctionDocumentation }
 
-CONSTRUCTOR T_userFunctionDocumentation.Create(ruleId: ansistring);
+CONSTRUCTOR T_userFunctionDocumentation.create(ruleId: ansistring);
   begin
     id := ruleId;
     setLength(subrules, 0);
   end;
 
-DESTRUCTOR T_userFunctionDocumentation.Destroy;
+DESTRUCTOR T_userFunctionDocumentation.destroy;
   begin
     setLength(subrules, 0);
   end;
@@ -298,13 +298,13 @@ FUNCTION T_userFunctionDocumentation.printHelpText(sourceName:ansistring):boolea
     end;
   end;
 
-CONSTRUCTOR T_intrinsicFunctionDocumentation.Create(CONST funcName: ansistring);
+CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
     id := funcName;
     description := intrinsicRuleExplanationMap.get(id);
   end;
 
-DESTRUCTOR T_intrinsicFunctionDocumentation.Destroy;
+DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
     id := '';
     description := '';
@@ -359,7 +359,7 @@ PROCEDURE writeUserPackageDocumentations;
     Write(outfile, '</table>');
 
     for i := 0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
-    for i := 0 to length(packages)-1 do dispose(packages [i], Destroy);
+    for i := 0 to length(packages)-1 do dispose(packages [i], destroy);
     setLength(packages, 0);
 
     assign(inFile, htmlRoot+htmlFoot); reset(inFile);
@@ -411,9 +411,9 @@ PROCEDURE documentBuiltIns;
 
     for i := 0 to length(ids)-1 do
       begin
-      doc.Create(ids [i]);
+      doc.create(ids [i]);
       writeln(outFile, doc.toHtml);
-      doc.Destroy;
+      doc.destroy;
       end;
 
     assign(inFile, htmlRoot+htmlFoot); reset(inFile);

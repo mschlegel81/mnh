@@ -7,7 +7,7 @@ uses
   Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-  mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
+    mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
 type
@@ -241,6 +241,10 @@ PROCEDURE TMnhForm.flushThroughput;
     for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
       ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+' @'+string(errorLocation) );
     setLength(errorThroughput,0);
+    if ErrorMemo.Lines.Count=0
+    then i:=0
+    else i:=round(ErrorMemo.Font.GetTextHeight('1,2,3,Test')*(1.5+ErrorMemo.Lines.Count));
+    if i<0.4*Height then ErrorGroupBox.ClientHeight:=i;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -351,7 +355,9 @@ PROCEDURE startOfEvaluationCallback;
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
-    myhl:=TSynMnhSyn.Create(nil);
+    OpenDialog.FileName:=paramstr(0);
+    SaveDialog.FileName:=paramstr(0);
+    myhl:=TSynMnhSyn.create(nil);
     InputEdit.Highlighter:=myhl;
     OutputEdit.Highlighter:=myhl;
     settingsHaveBeenProcessed:=false;
@@ -387,7 +393,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
     mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
-    myhl.Destroy;
+    myhl.destroy;
     ad_killEvaluationLoopSoftly;
   end;
 
@@ -418,6 +424,21 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
+  PROCEDURE optionalReload;
+    VAR mr:integer;
+    begin
+      mr:=closeDialogForm.showOnOutOfSync;
+      if mr=mrOK then begin
+        InputEdit.BeginUpdate();
+        ad_doReload(InputEdit.Lines);
+        InputEdit.EndUpdate;
+        UpdateTimeTimer.Interval:=200;
+        OutputEdit.ClearAll;
+      end else if mr=mrCancel then begin
+        InputEdit.Lines.SaveToFile(ad_currentFile);
+      end;
+    end;
+
   begin
     if not(settingsHaveBeenProcessed) then begin
       processSettings;
@@ -507,7 +528,7 @@ PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
   begin
     SaveDialog.Filter:='Portable network graphics (PNG)|*.png';
     if SaveDialog.Execute then begin
-      storeImage:=TImage.Create(Self);
+      storeImage:=TImage.create(Self);
       storeImage.SetInitialBounds(0,0,PlotTabSheet.Width,PlotTabSheet.Height);
       rect.Top:=0;
       rect.Left:=0;
@@ -799,15 +820,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
-    //file state:---------------------------------------------------------------
-    if ad_needReload and not(flag) then begin
-      InputEdit.BeginUpdate();
-      ad_doReload(InputEdit.Lines);
-      InputEdit.EndUpdate;
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
-      OutputEdit.ClearAll;
-    end;
-    //---------------------------------------------------------------:file state
     if output.size>0 then begin
       OutputEdit.BeginUpdate();
       L:=output.elementArray;

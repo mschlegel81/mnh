@@ -13,10 +13,11 @@
     state:T_futureTaskState;
     next:P_futureTask;
     
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal);
-    PROCEDURE   evaluate(CONST callDepth:word);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler);
+    PROCEDURE   evaluate(CONST callDepth:word; VAR recycler:T_tokenRecycler);
     FUNCTION    getResultAsLiteral:P_literal;
-    DESTRUCTOR  destroy;
+    PROCEDURE   free(VAR recycler:T_tokenRecycler);
+    DESTRUCTOR  proFormaDestroy;
   end;
 
   { T_taskQueue }
@@ -28,33 +29,33 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST x:P_literal;CONST calldepth:word):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
-    PROCEDURE activeDeqeue(CONST calldepth:word);
+    PROCEDURE activeDeqeue(CONST calldepth:word; VAR recycler:T_tokenRecycler);
   end;
 
 {$endif}
 {$ifdef include_implementation}
 VAR poolThreadsRunning:longint=0;
-    idlePoolThreads:longint=0;
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepTime:longint;
       currentTask:P_futureTask;
+      tempRecycler:T_tokenRecycler;
   begin
     sleepTime:=0;
+    tempRecycler.create;
     repeat
       currentTask:=pendingTasks.dequeue;
       if currentTask=nil then begin
-        InterLockedIncrement(idlePoolThreads);
         inc(sleepTime);
-        sleep(sleepTime);
-        InterLockedDecrement(idlePoolThreads);
+        sleep(sleepTime div 5);
       end else begin
-        currentTask^.evaluate(0);
+        currentTask^.evaluate(0,tempRecycler);
         sleepTime:=0;
       end;
-    until sleepTime>=10;
+    until sleepTime>=50;
+    tempRecycler.destroy;
     result:=0;
     InterLockedDecrement(poolThreadsRunning);
   end;
@@ -67,31 +68,31 @@ PROCEDURE ensurePoolThreads;
     end;
   end;
 
-constructor T_futureTask.createTask(const expr: P_subrule; const x: P_literal);
+CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; VAR recycler:T_tokenRecycler);
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
     param.create;
     param.append(x,true);
-    if expr^.replaces(@param,nil,task,dummy)
+    if expr^.replaces(@param,nil,task,dummy,recycler)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;
     next:=nil;
   end;
 
-procedure T_futureTask.evaluate(const callDepth: word);
+PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR recycler:T_tokenRecycler);
   begin
     if errorLevel<=el3_evalError then begin
-      reduceExpression(task,callDepth);
+      reduceExpression(task,callDepth,recycler);
     end else begin
-      cascadeDisposeToken(task);
+      recycler.cascadeDisposeToken(task);
       task:=nil;
     end;
     repeat state:=fts_ready until state=fts_ready;
   end;
 
-function T_futureTask.getResultAsLiteral: P_literal;
+FUNCTION T_futureTask.getResultAsLiteral: P_literal;
   begin
     while state in [fts_pending,fts_evaluating] do sleep(1);
     if (task<>nil) and (task^.next=nil) and (task^.tokType=tt_literal) and (task^.data<>nil)
@@ -102,10 +103,14 @@ function T_futureTask.getResultAsLiteral: P_literal;
     else result:=newErrorLiteral;
   end;
 
-destructor T_futureTask.destroy;
+PROCEDURE T_futureTask.free(VAR recycler:T_tokenRecycler);
   begin
     while state=fts_evaluating do sleep(1);
-    cascadeDisposeToken(task);
+    recycler.cascadeDisposeToken(task);
+  end;
+
+DESTRUCTOR T_futureTask.proFormaDestroy;
+  begin
   end;
 
 
@@ -122,18 +127,18 @@ DESTRUCTOR T_taskQueue.destroy;
     system.DoneCriticalsection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal;CONST calldepth:word):P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler):P_futureTask;
   begin
-    new(result,createTask(expr,x));
+    new(result,createTask(expr,x,recycler));
     if result^.state=fts_pending then begin
       system.EnterCriticalsection(cs);
       if first=nil then begin
         queuedCount:=1;
-        first:=Result;
-        last:=Result;
+        first:=result;
+        last:=result;
       end else begin
         inc(queuedCount);
-        last^.next:=Result;
+        last^.next:=result;
         last:=result;
       end;
       ensurePoolThreads;
@@ -154,11 +159,11 @@ FUNCTION  T_taskQueue.dequeue:P_futureTask;
     system.LeaveCriticalsection(cs);
   end;
 
-PROCEDURE T_taskQueue.activeDeqeue(CONST calldepth:word);
+PROCEDURE T_taskQueue.activeDeqeue(CONST calldepth:word; VAR recycler:T_tokenRecycler);
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(calldepth);
+    if task<>nil then task^.evaluate(calldepth,recycler);
   end;
 
 {$endif}

@@ -228,8 +228,11 @@ FUNCTION replaceAll(original, lookFor, replaceBy: ansistring): ansistring; inlin
 FUNCTION escapeString(CONST s: ansistring): ansistring;
   begin
     result := '"'+replaceAll(replaceAll(
-      replaceAll(replaceAll(replaceAll(s, '\', '\\'), C_tabChar, '\t'),
-      C_lineBreakChar, '\n'), C_carriageReturnChar, '\r'), '"', '\"')+'"';
+      replaceAll(replaceAll(replaceAll(s, '\', '\\'),
+                                    C_tabChar, '\t'),
+                              C_lineBreakChar, '\n'),
+                         C_carriageReturnChar, '\r'),
+                                          '"', '\"')+'"';
   end;
 
 FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ansistring;

@@ -71,7 +71,7 @@ FUNCTION execute(call:ansistring):longint;
   VAR tempProcess:TProcess;
   begin
     try
-    tempProcess :=TProcess.Create(nil);
+    tempProcess :=TProcess.create(nil);
     tempProcess.CommandLine :=call;
     tempProcess.options:=tempProcess.options+[powaitonexit];
     tempProcess.execute;

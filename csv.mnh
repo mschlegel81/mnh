@@ -1,0 +1,14 @@
+identityTransformer:={$X};
+T1A:={softCast($X)};
+T1B:={string($X)};
+T2A:={softCast(replace($X,",",".")):real ? softCast(replace($X,",",".")) :
+      $X="WAHR" ? true :
+      $X="FALSCH" ? false : softCast($X)};
+
+
+parseLine(s:string)->parseLine(s,identityTransformer);
+parseLine(s:string, transformer:expression)->each(col,split(s,";"),transformer(col));
+
+parseLine("1.2;true;FALSCH;5;7,201");
+parseLine("1.2;true;FALSCH;5;7,201",T1A);
+parseLine("1.2;true;FALSCH;5;7,201",T2A);

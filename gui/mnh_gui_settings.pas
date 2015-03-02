@@ -125,7 +125,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         else
           setLength(fileContents, 0);
         end;
-      ff.Destroy;
+      ff.destroy;
       if not (FileExists(fileInEditor)) then
         fileInEditor := '';
       end
@@ -269,7 +269,7 @@ PROCEDURE TSettingsForm.saveSettings;
       for i := 0 to length(fileContents)-1 do
         ff.writeAnsiString(fileContents [i]);
       end;
-    ff.Destroy;
+    ff.destroy;
   end;
 
 PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);

@@ -1,0 +1,23 @@
+recFolders([])->[];
+recFolders(F)->flatten(each(subFolder,folders(F&"/*"),subFolder,recFolders(subFolder)));
+
+recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),each(pat,searchPatterns,files(folder&"/"&pat))));
+recFiles(rootFolder,searchPattern:string)->recFiles(rootFolder,trim(split(searchPattern,[";",","])));
+
+containsCaseSensitive  (lookFor)->{pos(      lookFor ,      $lookIn )>=0};
+containsCaseInsensitive(lookFor)->{pos(upper(lookFor),upper($lookIn))>=0};
+
+find(rootFolder,filePattern,searchString,caseSensitive:boolean)->
+  findInFiles(recFiles(rootFolder,filePattern),
+              caseSensitive ? containsCaseSensitive  (searchString)
+                            : containsCaseInsensitive(searchString));
+
+findInFiles([]       ,F:expression)->print('No files matching the pattern were found.');
+findInFiles(fileNames,F:expression)->pEach(fname,fileNames,findInLines(fname,fileLines(fname),F));
+
+findInLines(filename:string,lines:stringList,F)->pEach(i,[0..size(lines)-1],and,F(lines%i) ?  print(filename,'@',i+1,': ',trim(lines%i)) : true);
+
+printAll([])->false;
+printAll(L)->each(l,L,and,print(l));
+
+find('../..','*.pas,*.inc','SystemInfo',false);

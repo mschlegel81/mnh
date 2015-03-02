@@ -1,0 +1,29 @@
+
+bins(x0,x1>x0,binCount>0)->
+  x0+each(i,[0..binCount],i=0        ? [i-1E-6,i+1] :
+                          i=binCount ? [i     ,i+1] :
+                                       [i     ,i+1])*(x1-x0)/binCount;
+
+histogram(L:numericList, binCount>0)->histogram(L,1/size(L),bins(min(L),max(L),binCount));
+histogram(L,wgt,bins:list)->size(L)>10000 and size(bins)>2
+                          ? recHistogram(L,L<=bins%(size(bins) div 2)%0,
+                                         wgt,
+                                         bins,[0..size(bins)-1]<size(bins) div 2)
+                          : each(bin,bins,[bin%0,wgt*trueCount(bin%0<=L<bin%1)]);
+recHistogram(L,lMask,wgt,bins,binsMask)->pEach(z,[false,true],|,histogram(L%(lMask xor z),wgt,bins%(binsMask xor z)));
+
+
+g(n)->pEach(k,[1..2],+,random(n)-0.5);
+
+//plot(histogram(g(100000),100),"red bar 0.2");
+
+autoFold(F:expression,x0,x1)->{pEach(x,x0+(x1-x0)/99*(0.5+[0..99]),+,1E-2*F(x)*F(x+$dx))};
+F1:={-0.5<=$x<=0.5 ? 1 : 0};
+F2:=autoFold(F1,-0.5,0.5);
+F3:=autoFold(F2,-0.5,0.5);
+plot(F1,-1,1,200) and
+addPlot(F2,-1,1,200) and
+addPlot(F3,-2,2,200);
+
+//addPlot({1E-2*autoFold({-0.5<=$x<=0.5 ? 1 : 0},-0.5,0.5,$dx)},-1,1,100,"blue l f");
+

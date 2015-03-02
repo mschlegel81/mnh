@@ -13,7 +13,7 @@
     public
       CONSTRUCTOR create(CONST ruleId:ansistring);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
@@ -39,26 +39,26 @@ DESTRUCTOR T_rule.destroy;
     isCached:=false;
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
       evalCost:longint;
   begin
-    if isCached {and (ThreadID=mainThread)} then begin
+    if isCached then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       lit:=cache.get(useParam);
       if lit<>nil then begin
         lit^.rereference;
-        firstRep:=newToken(C_nilTokenLocation,'',tt_literal,lit);
+        firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
         lastRep:=firstRep;
         if param=nil then disposeLiteral(useParam);
         exit(true);
-      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep) then begin
+      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
         evalCost:=GetTickCount;
-        if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1);
+        if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
         evalCost:=getTickCount-evalCost;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
@@ -69,15 +69,15 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         if param=nil then disposeLiteral(useParam);
         if (errorLevel>=el3_evalError) then begin
           if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule on level '+IntToStr(callDepth),C_nilTokenLocation);
-          cascadeDisposeToken(firstRep);
-          firstRep:=newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
+          recycler.cascadeDisposeToken(firstRep);
+          firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
           lastRep:=firstRep;
         end;
         exit(true);
       end;
       result:=false;
     end else begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep) then exit(true);
+      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
       result:=false;
     end;
   end;

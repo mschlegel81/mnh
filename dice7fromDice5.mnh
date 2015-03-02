@@ -1,0 +1,9 @@
+dice5->floor(random   *5);
+dice7->dice7(dice5*5+dice5);
+dice7(n<21)->n mod 7;
+dice7(n   )->dice7;
+
+simpleHist(L)->each(i,[0..max(L)],&"\n"&,trueCount(L=i)/size(L));
+
+main->print('Distribution of seven sided dice (100000 samples): \n',simpleHist(pEach(k,[1..100000],dice7)));
+

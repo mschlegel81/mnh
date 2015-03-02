@@ -168,7 +168,8 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
           if restrictionIdx>=0 then begin
             if (par.value(restrictionIdx)^.literalType <> L^.literalType) then exit(false);
             if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
-              if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))
+              if not(par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
+              or not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx)) ))
               then exit(false);
             end else begin
               L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation);

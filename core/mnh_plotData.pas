@@ -50,8 +50,8 @@ type
     style: byte;
     color: array[T_colorChannel] of byte;
     styleModifier: double;
-    CONSTRUCTOR Create(CONST index: byte);
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create(CONST index: byte);
+    DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
     FUNCTION loadFromFile(VAR F: T_File): boolean;
       virtual; overload;
@@ -93,12 +93,12 @@ type
     //persistent:
     style: T_style;
     sample: T_dataRow;
-    CONSTRUCTOR Create(CONST index: byte);
+    CONSTRUCTOR create(CONST index: byte);
     PROCEDURE getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
-    PROCEDURE setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint);
-    PROCEDURE computeSamplesInActivePlot(CONST secondPass: boolean);
+    PROCEDURE setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
+    PROCEDURE computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
     PROCEDURE addSample(CONST x, y: double);
-    DESTRUCTOR Destroy;
+    DESTRUCTOR destroy;
     FUNCTION loadFromFile(VAR F: T_File): boolean;
       virtual; overload;
     //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
@@ -136,7 +136,7 @@ type
 
     CONSTRUCTOR createWithDefaults;
     PROCEDURE setDefaults;
-    DESTRUCTOR Destroy;
+    DESTRUCTOR destroy;
     PROCEDURE addSampleRow(CONST sampleRow: T_sampleRow);
     PROCEDURE Clear;
     FUNCTION loadFromFile(VAR F: T_File): boolean;
@@ -206,9 +206,9 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
 
 { T_sampleRow }
 
-CONSTRUCTOR T_sampleRow.Create(CONST index: byte);
+CONSTRUCTOR T_sampleRow.create(CONST index: byte);
   begin
-    style.Create(index);
+    style.create(index);
     setLength(sample, 0);
     with computed do
       begin
@@ -247,7 +247,7 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
       end;
   end;
 
-PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint);
+PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
   begin
     if maxSamples>100
     then computed.maxSamples := maxSamples
@@ -263,37 +263,37 @@ PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST
       computed.t0 := t1;
       computed.t1 := t0;
     end;
-    computeSamplesInActivePlot(false);
+    computeSamplesInActivePlot(false,recycler);
   end;
 
-PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
+PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
   CONST
     initialSampleCount = 100;
 
   VAR
     xRule, yRule: P_expressionLiteral;
 
-  FUNCTION getSampleWithTime(CONST atTime: double): T_sampleWithTime; inline;
+  FUNCTION getSampleWithTime(CONST atTime: double; VAR recycler:T_tokenRecycler): T_sampleWithTime; inline;
     VAR
       pt: T_realLiteral;
       L: P_literal;
     begin
       result.t := atTime;
-      pt.Create(atTime);
+      pt.create(atTime);
       if xRule = nil then
         result.x := atTime
       else
         begin
-        L := P_subrule(xRule^.value)^.directEvaluateUnary(@pt,xRule, 0);
+        L := P_subrule(xRule^.value)^.directEvaluateUnary(@pt,xRule, 0,recycler);
         result.x := fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
         begin
-        L := P_subrule(yRule^.value)^.directEvaluateUnary(@pt,yRule, 0);
+        L := P_subrule(yRule^.value)^.directEvaluateUnary(@pt,yRule, 0,recycler);
         result.y := fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
-      pt.Destroy;
+      pt.destroy;
     end;
 
   VAR
@@ -411,7 +411,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
         for i := 0 to initialSampleCount do
           if errorLevel<el3_evalError then
             computed.temp[i] :=
-              getSampleWithTime(t0+(t1-t0)*i/initialSampleCount);
+              getSampleWithTime(t0+(t1-t0)*i/initialSampleCount,recycler);
 
       copyTempToData;
       end
@@ -436,7 +436,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
             ((curvature(i)>curvatureThreshold) or
             (curvature(i+1)>curvatureThreshold)) then
             addRefine(getSampleWithTime(
-              (computed.temp [i].t+computed.temp [i+1].t)*0.5));
+              (computed.temp [i].t+computed.temp [i+1].t)*0.5,recycler));
 
         if not (mergeTemp) then
           curvatureThreshold := curvatureThreshold*0.9;
@@ -451,7 +451,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
       disposeLiteral(computed.yRule);
       computed.xRule := nil;
       computed.yRule := nil;
-      end;
+    end;
   end;
 
 PROCEDURE T_sampleRow.addSample(CONST x, y: double);
@@ -467,7 +467,7 @@ PROCEDURE T_sampleRow.addSample(CONST x, y: double);
       sample[length(sample)-1, 1] := y;
   end;
 
-DESTRUCTOR T_sampleRow.Destroy;
+DESTRUCTOR T_sampleRow.destroy;
   begin
     setLength(sample, 0);
   end;
@@ -517,7 +517,7 @@ CONST
     (Name: 'purple'; color: (192, 0, 192)),
     (Name: 'orange'; color: (255, 96, 0)));
 
-CONSTRUCTOR T_style.Create(CONST index: byte);
+CONSTRUCTOR T_style.create(CONST index: byte);
   begin
     title := '';
     style := C_lineStyle_straight;
@@ -525,7 +525,7 @@ CONSTRUCTOR T_style.Create(CONST index: byte);
     styleModifier := 1;
   end;
 
-DESTRUCTOR T_style.Destroy;
+DESTRUCTOR T_style.destroy;
   begin
   end;
 
@@ -823,7 +823,7 @@ PROCEDURE T_plot.setDefaults;
     Clear;
   end;
 
-DESTRUCTOR T_plot.Destroy;
+DESTRUCTOR T_plot.destroy;
   begin
     Clear;
   end;
@@ -839,7 +839,7 @@ PROCEDURE T_plot.Clear;
     i: longint;
   begin
     for i := 0 to length(row)-1 do
-      row[i].Destroy;
+      row[i].destroy;
     setLength(row, 0);
   end;
 
@@ -865,7 +865,7 @@ FUNCTION T_plot.loadFromFile(VAR F: T_File): boolean;
     result := true;
     for i := 0 to iMax-1 do
       begin
-      row[i].Create(i);
+      row[i].create(i);
       result := result and row [i].loadFromFile(f);
       end;
   end;
@@ -897,6 +897,7 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
       i: longint;
       center, extend: double;
       boundingBox: T_boundingBox;
+      recycler:T_tokenRecycler;
     begin
       for axis := 'x' to 'y' do
         for i := 0 to 1 do
@@ -970,8 +971,10 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
           range[axis, 1] := center+1E-60;
           end;
         end;
+      recycler.create;
       for i := 0 to length(row)-1 do
-        row[i].computeSamplesInActivePlot(true);
+        row[i].computeSamplesInActivePlot(true,recycler);
+      recycler.destroy;
     end;
 
   PROCEDURE initTics(CONST axis: char);
@@ -1239,7 +1242,7 @@ FUNCTION T_plot.addRow(CONST styleOptions: string): longint;
   begin
     result := length(row);
     setLength(row, result+1);
-    row[result].Create(result);
+    row[result].create(result);
     if Trim(styleOptions)<>'' then
       row[result].style.parseStyle(styleOptions);
   end;
@@ -1909,7 +1912,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       end
     else
       begin
-      renderImage := TImage.Create(plotImage);
+      renderImage := TImage.create(plotImage);
       renderImage.SetInitialBounds(0, 0, screenWidth*supersampling,
         screenHeight*supersampling);
       drawGridAndRows(renderImage.Canvas, supersampling);
@@ -1926,15 +1929,16 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
     rowId, i, iMax: longint;
     X, Y: P_listLiteral;
 
-  FUNCTION isValidExpression(CONST p:P_literal):boolean;
+
+  FUNCTION isValidExpression(CONST p:P_literal; VAR recycler:T_tokenRecycler):boolean;
     VAR s:P_subrule;
         par:T_realLiteral;
         res:P_literal;
     begin
       if p^.literalType<>lt_expression then exit(false);
       s:=P_expressionLiteral(p)^.value;
-      par.Create(random);
-      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),callDepth+1);
+      par.create(random);
+      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),callDepth+1,recycler);
       if res=nil then begin
         raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;
@@ -1943,15 +1947,17 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         result:=false;
       end else result:=true;
       if res<>nil then disposeLiteral(res);
-      par.Destroy;
+      par.destroy;
     end;
+
+  VAR recycler:T_tokenRecycler;
 
   begin
     result:=nil;
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (addPlot in this case) may only be called from the main thread',
+        'addPlot may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;
@@ -1998,15 +2004,21 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
                   (params^.value(1)^.literalType in [lt_int, lt_real]) and
                   (params^.value(2)^.literalType in [lt_int, lt_real]) and
                   (params^.value(3)^.literalType = lt_int) then begin
-        if not(isValidExpression(params^.value(0))) then exit(nil);
+        recycler.create;
+        if not(isValidExpression(params^.value(0),recycler)) then begin
+          recycler.destroy;
+          exit(nil);
+        end;
         rowId := activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           nil,
           P_expressionLiteral(params^.value(0)),
           fReal(params^.value(1)),
           fReal(params^.value(2)),
-          round(fReal(params^.value(3))));
-        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true);
+          round(fReal(params^.value(3))),
+          recycler);
+        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
+        recycler.destroy;
         result := newBoolLiteral(true);
       end else if (sizeWithoutOptions = 5) and
                   (params^.value(0)^.literalType = lt_expression) and
@@ -2014,16 +2026,19 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
                   (params^.value(2)^.literalType in [lt_int, lt_real]) and
                   (params^.value(3)^.literalType in [lt_int, lt_real]) and
                   (params^.value(4)^.literalType = lt_int) then begin
-        if not(isValidExpression(params^.value(0))) then exit(nil);
-        if not(isValidExpression(params^.value(1))) then exit(nil);
+        recycler.create;
+        if not(isValidExpression(params^.value(0),recycler)) then begin recycler.destroy; exit(nil); end;
+        if not(isValidExpression(params^.value(1),recycler)) then begin recycler.destroy; exit(nil); end;
         rowId := activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           P_expressionLiteral(params^.value(0)),
           P_expressionLiteral(params^.value(1)),
           fReal(params^.value(2)),
           fReal(params^.value(3)),
-          round(fReal(params^.value(4))));
-        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true);
+          round(fReal(params^.value(4))),
+          recycler);
+        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
+        recycler.destroy;
         result := newBoolLiteral(true);
       end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
@@ -2036,7 +2051,7 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation;
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (plot in this case) may only be called from the main thread',
+        'plot may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;
@@ -2188,7 +2203,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (renderToFile in this case) may only be called from the main thread',
+        'renderToFile may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;
@@ -2214,12 +2229,12 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
         exit(nil);
       end;
 
-      plotImage := TImage.Create(nil);
+      plotImage := TImage.create(nil);
       plotImage.SetInitialBounds(0, 0, Width, Height);
       activePlot.setScreenSize(Width, Height);
       activePlot.renderPlot(plotImage, supersampling);
 
-      storeImage := TImage.Create(plotImage);
+      storeImage := TImage.create(plotImage);
       storeImage.SetInitialBounds(0, 0, Width, Height);
       rect.Top := 0;
       rect.Left := 0;
@@ -2289,5 +2304,5 @@ INITIALIZATION
     exOverflow, exUnderflow, exPrecision]);
 
 FINALIZATION
-  activePlot.Destroy;
+  activePlot.destroy;
 end.

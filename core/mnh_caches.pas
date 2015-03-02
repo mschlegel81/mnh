@@ -4,8 +4,8 @@ INTERFACE
 
 USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
 CONST CACHE_MOD = 2047; //must be 2^n-1 because of bitwise operation used instead of mod
-  MAX_CACHE_FILL = (CACHE_MOD+1)*4;
-  CLEANUP_PARAM = (CACHE_MOD+1)*2;
+      MAX_CACHE_FILL = (CACHE_MOD+1)*4;
+      CLEANUP_PARAM = (CACHE_MOD+1)*2;
 TYPE
   T_cacheEntry = record
     key: P_listLiteral;
@@ -22,8 +22,8 @@ TYPE
     criticalSection:TRTLCriticalSection;
     cached: array[0..CACHE_MOD] of array of T_cacheEntry;
   public
-    CONSTRUCTOR Create();
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create();
+    DESTRUCTOR destroy;
     PROCEDURE polish;
     PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal; CONST costFactor: longint);
     FUNCTION get(CONST key: P_listLiteral): P_literal;
@@ -44,7 +44,7 @@ PROCEDURE clearAllCaches;
       allCaches[i]^.Clear;
   end;
 
-CONSTRUCTOR T_cache.Create();
+CONSTRUCTOR T_cache.create();
   begin
     InitCriticalSection(criticalSection);
     fill := 0;
@@ -53,7 +53,7 @@ CONSTRUCTOR T_cache.Create();
     allCaches[length(allCaches)-1] := @self;
   end;
 
-DESTRUCTOR T_cache.Destroy;
+DESTRUCTOR T_cache.destroy;
   VAR i: longint;
   begin
     EnterCriticalsection(criticalSection);

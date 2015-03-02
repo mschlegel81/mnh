@@ -30,7 +30,7 @@ Simple example: return the input list<br>
 <code>  each(i,[0..3],i) </code> (returns <code>[0..3]</code>)<br>
 Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<br>
 <code>  each(i,[0..3],f(i)) </code> (returns <code>[f(0),f(1),f(2),f(3)]</code>)<br>
-More complex: a function returning the intersection of sets A and B
+More complex: a function returning the intersection of sets A and B<br>
 <code>  intersect(A:list,B:list) -> A%each(a,A,a in B)</code>
 
 <h4><a name="aggregation">List aggregation</a></h4>

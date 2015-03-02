@@ -15,7 +15,7 @@ TYPE
     numberOfReferences: longint;
   public
     CONSTRUCTOR init;
-    DESTRUCTOR Destroy; virtual;
+    DESTRUCTOR destroy; virtual;
     PROCEDURE rereference;
     FUNCTION unreference: longint;
     FUNCTION literalType: T_literalType; virtual;
@@ -49,8 +49,8 @@ TYPE
   private
     val: boolean;
   public
-    CONSTRUCTOR Create(CONST value: boolean);
-    DESTRUCTOR Destroy; virtual;
+    CONSTRUCTOR create(CONST value: boolean);
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
@@ -69,8 +69,8 @@ TYPE
   private
     val: int64;
   public
-    CONSTRUCTOR Create(CONST value: int64);
-    DESTRUCTOR Destroy; virtual;
+    CONSTRUCTOR create(CONST value: int64);
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
@@ -89,8 +89,8 @@ TYPE
   private
     val: extended;
   public
-    CONSTRUCTOR Create(CONST value: extended);
-    DESTRUCTOR Destroy; virtual;
+    CONSTRUCTOR create(CONST value: extended);
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
@@ -109,8 +109,8 @@ TYPE
   private
     val: ansistring;
   public
-    CONSTRUCTOR Create(CONST value: ansistring);
-    DESTRUCTOR Destroy; virtual;
+    CONSTRUCTOR create(CONST value: ansistring);
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
@@ -134,8 +134,8 @@ TYPE
   private
     val: pointer;
   public
-    CONSTRUCTOR Create(CONST value: pointer);
-    DESTRUCTOR Destroy; virtual;
+    CONSTRUCTOR create(CONST value: pointer);
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION stringForm: ansistring; virtual;
@@ -158,9 +158,9 @@ TYPE
     element: array of P_literal;
     nextAppendIsRange: boolean;
   public
-    CONSTRUCTOR Create;
+    CONSTRUCTOR create;
     PROCEDURE destroyChildren;
-    DESTRUCTOR Destroy; virtual;
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
@@ -210,7 +210,6 @@ IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-1000..1000] of T_intLiteral;
-  strLit: array[-1..255] of T_stringLiteral;
   errLit: T_scalarLiteral;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
@@ -218,7 +217,7 @@ PROCEDURE disposeLiteral(VAR l: P_literal);
     if l = nil then
       writeln(stderr, 'disposing NIL literal ?!?');
     if l^.unreference<=0 then
-      dispose(l, Destroy);
+      dispose(l, destroy);
     l := nil;
   end;
 
@@ -234,46 +233,34 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
       result := @intLit [value];
       result^.rereference;
     end else begin
-      new(result, Create(value));
-      isMemoryFree('allocating new integer literal');
+      new(result, create(value));
     end;
   end;
 
 FUNCTION newRealLiteral(CONST value: extended): P_realLiteral;
   begin
-    new(result, Create(value));
-    isMemoryFree('allocating new real literal');
+    new(result, create(value));
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
-    if length(value)<=1 then begin
-      if length(value)=0 then result:=@strLit[-1]
-                         else result:=@strLit[ord(value[1])];
-      result^.rereference;
-    end else begin
-      new(result, Create(value));
-      isMemoryFree('allocating new string literal');
-    end;
+    new(result, create(value));
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
   begin
-    new(result, Create(value));
-    isMemoryFree('allocating new expression literal');
+    new(result, create(value));
   end;
 
 FUNCTION newListLiteral: P_listLiteral;
   begin
-    new(result, Create);
-    isMemoryFree('allocating new list literal');
+    new(result, create);
   end;
 
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral;
   begin
     result := newListLiteral;
     result^.append(value, incRefs);
-    isMemoryFree('allocating new one-element-list literal');
   end;
 
 FUNCTION newErrorLiteral: P_scalarLiteral;
@@ -359,37 +346,37 @@ CONSTRUCTOR T_literal.init;
     numberOfReferences := 1;
   end;
 
-CONSTRUCTOR T_boolLiteral.Create(CONST value: boolean);
+CONSTRUCTOR T_boolLiteral.create(CONST value: boolean);
   begin
     INHERITED init;
     val := value;
   end;
 
-CONSTRUCTOR T_intLiteral.Create(CONST value: int64);
+CONSTRUCTOR T_intLiteral.create(CONST value: int64);
   begin
     INHERITED init;
     val := value;
   end;
 
-CONSTRUCTOR T_realLiteral.Create(CONST value: extended);
+CONSTRUCTOR T_realLiteral.create(CONST value: extended);
   begin
     INHERITED init;
     val := value;
   end;
 
-CONSTRUCTOR T_stringLiteral.Create(CONST value: ansistring);
+CONSTRUCTOR T_stringLiteral.create(CONST value: ansistring);
   begin
     INHERITED init;
     val := value;
   end;
 
-CONSTRUCTOR T_expressionLiteral.Create(CONST value: pointer);
+CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);
   begin
     INHERITED init;
     val := value;
   end;
 
-CONSTRUCTOR T_listLiteral.Create;
+CONSTRUCTOR T_listLiteral.create;
   begin
     INHERITED init;
     setLength(element, 0);
@@ -397,27 +384,27 @@ CONSTRUCTOR T_listLiteral.Create;
     nextAppendIsRange := false;
   end;
 
-DESTRUCTOR T_literal.Destroy;
+DESTRUCTOR T_literal.destroy;
   begin
   end;
 
-DESTRUCTOR T_boolLiteral.Destroy;
+DESTRUCTOR T_boolLiteral.destroy;
   begin
   end;
 
-DESTRUCTOR T_intLiteral.Destroy;
+DESTRUCTOR T_intLiteral.destroy;
   begin
   end;
 
-DESTRUCTOR T_realLiteral.Destroy;
+DESTRUCTOR T_realLiteral.destroy;
   begin
   end;
 
-DESTRUCTOR T_stringLiteral.Destroy;
+DESTRUCTOR T_stringLiteral.destroy;
   begin
   end;
 
-DESTRUCTOR T_expressionLiteral.Destroy;
+DESTRUCTOR T_expressionLiteral.destroy;
   begin
     disposeSubruleCallback(val);
   end;
@@ -434,7 +421,7 @@ PROCEDURE T_listLiteral.destroyChildren;
     nextAppendIsRange := false;
   end;
 
-DESTRUCTOR T_listLiteral.Destroy;
+DESTRUCTOR T_listLiteral.destroy;
   begin
     destroyChildren;
   end;
@@ -650,18 +637,15 @@ FUNCTION T_expressionLiteral.toString: ansistring;
   end;
 
 FUNCTION T_listLiteral.toString: ansistring;
-  VAR
-    i: longint;
+  VAR i: longint;
   begin
-    if length(element) = 0 then
-      result := '[]'
-    else
-      begin
-      result := '['+element [0]^.toString;
+    if length(element) = 0 then result := '[]'
+    else begin
+      result:='['+element[0]^.toString;
       for i := 1 to length(element)-1 do
-        result := result+','+element [i]^.toString;
+        result:=result+','+element[i]^.toString;
       result := result+']';
-      end;
+    end;
   end;
 
 FUNCTION T_listLiteral.toShorterString: ansistring;
@@ -842,13 +826,10 @@ FUNCTION T_stringLiteral.trim: P_stringLiteral;
     rs: ansistring;
   begin
     rs := SysUtils.trim(val);
-    if rs = val then
-      begin
+    if rs = val then begin
       result := @self;
       rereference;
-      end
-    else
-      result := newStringLiteral(rs);
+    end else result := newStringLiteral(rs);
   end;
 
 FUNCTION T_stringLiteral.upper: P_stringLiteral;
@@ -856,13 +837,10 @@ FUNCTION T_stringLiteral.upper: P_stringLiteral;
     rs: string;
   begin
     rs := uppercase(val);
-    if rs = val then
-      begin
+    if rs = val then begin
       result := @self;
       rereference;
-      end
-    else
-      result := newStringLiteral(rs);
+    end else result := newStringLiteral(rs);
   end;
 
 FUNCTION T_stringLiteral.lower: P_stringLiteral;
@@ -870,13 +848,10 @@ FUNCTION T_stringLiteral.lower: P_stringLiteral;
     rs: string;
   begin
     rs := lowercase(val);
-    if rs = val then
-      begin
+    if rs = val then begin
       result := @self;
       rereference;
-      end
-    else
-      result := newStringLiteral(rs);
+    end else result := newStringLiteral(rs);
   end;
 
 FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
@@ -1979,20 +1954,17 @@ VAR
   i: longint;
 
 INITIALIZATION
-  boolLit[false].Create(false);
-  boolLit[true].Create(true);
+  boolLit[false].create(false);
+  boolLit[true].create(true);
   errLit.init;
   for i := -1000 to 1000 do intLit[i].create(i);
-  strLit[-1].create('');
-  for i:=0 to 255 do strLit[i].Create(chr(i));
   DefaultFormatSettings.DecimalSeparator := '.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
 
 FINALIZATION
-  boolLit[false].Destroy;
-  boolLit[true].Destroy;
-  errLit.Destroy;
-  for i := -1000 to 1000 do intLit[i].Destroy;
-  for i:= -1 to 255 do strLit[i].destroy;
+  boolLit[false].destroy;
+  boolLit[true].destroy;
+  errLit.destroy;
+  for i := -1000 to 1000 do intLit[i].destroy;
 end.

@@ -2,7 +2,7 @@
   P_token=^T_token;
   T_token=object
     location:T_tokenLocation;
-    txt     :shortstring;
+    txt     :ansistring;
     tokType :T_tokenType;
     data    :pointer;
     next    :P_Token;
@@ -16,105 +16,100 @@
     FUNCTION toString:ansistring;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
   end;
+
+  T_tokenRecycler=object
+    dat:array[0..1023] of P_token;
+    fill:longint;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION disposeToken(p:P_token):P_token;
+    PROCEDURE cascadeDisposeToken(VAR p:P_token);
+    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
+    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
+    FUNCTION newToken(CONST original:T_token):P_token;
+    FUNCTION newToken(CONST original:P_token):P_token;
+  end;
+
 {$endif}
 {$ifdef include_implementation}
-{$ifdef doTokenRecycling}
-VAR tokenRecycling:record
-      dat:array[0..1023] of P_token;
-      fill:longint;
-    end;
-{$endif}
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(C_id_qualify_character,s)>0;
   end;
 
-FUNCTION disposeToken(p:P_token):P_token;
+CONSTRUCTOR T_tokenRecycler.create;
+  VAR i:longint;
   begin
-    if p=nil then exit(nil);
-    result:=p^.next;
-    {$ifdef doTokenRecycling}
-      if (tokenRecycling.fill>=length(tokenRecycling.dat)) or (ThreadID<>mainThread)
-      then dispose(p,destroy)
-      else with tokenRecycling do begin
-        p^.undefine;
-        dat[fill]:=p;
-        inc(fill);
-      end;
-    {$else}
-    dispose(p,destroy);
-    {$endif}
+    for i:=0 to length(dat)-1 do dat[i]:=nil;
+    fill:=0;
   end;
 
-PROCEDURE cascadeDisposeToken(VAR p:P_token);
+DESTRUCTOR T_tokenRecycler.destroy;
   begin
-    while p<>nil do p:=disposeToken(p);
-  end;
-
-FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
-  begin
-    {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
-      dec(fill);
-      result:=dat[fill];
-    end else {$endif} new(result,create);
-    result^.define(tokenLocation,tokenText,tokenType,ptr);
-    result^.next:=nil;
-    isMemoryFree('allocating new token (A)');
-  end;
-
-FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
-  begin
-    {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) and (ThreadID=mainThread)then with tokenRecycling do begin
-      dec(fill);
-      result:=dat[fill];
-    end else {$endif} new(result,create);
-    result^.define(tokenLocation,tokenText,tokenType);
-    result^.next:=nil;
-    isMemoryFree('allocating new token (B)');
-  end;
-
-FUNCTION newToken(CONST original:T_token):P_token;
-  begin
-    {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
-      dec(fill);
-      result:=dat[fill];
-    end else {$endif} new(result,create);
-    result^.define(original);
-    result^.next:=nil;
-    isMemoryFree('allocating new token (D)');
-  end;
-
-FUNCTION newToken(CONST original:P_token):P_token;
-  begin
-    {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
-      dec(fill);
-      result:=dat[fill];
-    end else {$endif} new(result,create);
-    result^.define(original^);
-    result^.next:=nil;
-    isMemoryFree('allocating new token (C)');
-  end;
-
-{$ifdef doTokenRecycling}
-PROCEDURE initTokens;
-  begin
-    tokenRecycling.fill:=0;
-  end;
-
-PROCEDURE finalizeTokens;
-  begin
-    with tokenRecycling do while fill>0 do begin
+    while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
   end;
-{$endif}
 
+FUNCTION T_tokenRecycler.disposeToken(p:P_token):P_token;
+  begin
+    if p=nil then exit(nil);
+    result:=p^.next;
+    if (fill>=length(dat))
+    then dispose(p,destroy)
+    else begin
+      p^.undefine;
+      dat[fill]:=p;
+      inc(fill);
+    end;
+  end;
+
+PROCEDURE T_tokenRecycler.cascadeDisposeToken(VAR p:P_token);
+  begin
+    while p<>nil do p:=disposeToken(p);
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(tokenLocation,tokenText,tokenType,ptr);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(tokenLocation,tokenText,tokenType);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original:T_token):P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original);
+    result^.next:=nil;
+  end;
+
+FUNCTION T_tokenRecycler.newToken(CONST original:P_token):P_token;
+  begin
+    if (fill>0) then begin
+      dec(fill);
+      result:=dat[fill];
+    end else new(result,create);
+    result^.define(original^);
+    result^.next:=nil;
+  end;
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
   CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_parallelEach, tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_literal];
@@ -446,7 +441,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
   end;
 
-PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
+PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_tokenRecycler);
   VAR this,next,prev:P_token;
   begin
     this:=first; prev:=nil;
@@ -459,28 +454,28 @@ PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
           if (next<>nil) and (next^.tokType = tt_literal) then begin
             this^.tokType:=tt_literal;
             this^.data:=P_literal(next^.data)^.negate(this^.location);
-            this^.next:=disposeToken(next);
+            this^.next:=recycler.disposeToken(next);
           end else this^.tokType:=tt_unaryOpMinus;
         end else begin
           if prev=nil then begin
-            first:=disposeToken(this);
+            first:=recycler.disposeToken(this);
             this:=first;
           end else begin
-            prev^.next:=disposeToken(this);
+            prev^.next:=recycler.disposeToken(this);
             this:=next;
           end;
         end;
       end else if (this^.tokType=tt_listBraceOpen) and (this^.next<>nil) and (this^.next^.tokType=tt_listBraceClose) then begin
         this^.tokType:=tt_literal;
         this^.data:=newListLiteral;
-        this^.next:=disposeToken(this^.next);
+        this^.next:=recycler.disposeToken(this^.next);
       end;
       prev:=this;
       this:=this^.next;
     end;
   end;
 
-PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
   begin
     t:=first;
@@ -494,7 +489,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
           and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
             t^.txt:=t^.next^.next^.txt;
             t^.data:=nil;
-            t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
+            t^.next:=recycler.disposeToken(recycler.disposeToken(recycler.disposeToken(t^.next))); //dispose ( , <id> and ","
           end else if t^.txt='' then begin
             raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
             exit;
@@ -504,13 +499,13 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
     end;
   end;
 
-PROCEDURE digestInlineExpression(VAR rep:P_token);
+PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
   VAR t,prev,inlineRule:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
   begin
-    predigestBeforeDeclarationParsing(rep);
-    predigest(rep,nil);
+    predigestBeforeDeclarationParsing(rep,recycler);
+    predigest(rep,nil,recycler);
     if (rep^.tokType<>tt_expBraceOpen) then begin
       raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -520,7 +515,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token);
     while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
       case t^.tokType of
         tt_expBraceOpen: begin
-          digestInlineExpression(t);
+          digestInlineExpression(t,recycler);
           if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
         end;
       end;
@@ -534,9 +529,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token);
 
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
-    disposeToken(t); //dispose closing curly bracket
+    recycler.disposeToken(t); //dispose closing curly bracket
     if   errorLevel<=el2_warning then begin
-      new(inlineSubRule,createFromInline(inlineRule));
+      new(inlineSubRule,createFromInline(inlineRule,recycler));
       if   errorLevel<=el2_warning then begin
         rep^.tokType:=tt_literal;
         rep^.data:=newExpressionLiteral(inlineSubRule);
@@ -544,23 +539,11 @@ PROCEDURE digestInlineExpression(VAR rep:P_token);
     end;
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
       tt:T_tokenType;
-  //PROCEDURE printState;
-  //  VAR i:longint;
-  //      p:P_token;
-  //  begin
-  //    for i:=0 to length(stack)-1 do write(stack[i]^.toString); write(' ');
-  //    p:=first;
-  //    while p<>nil do begin
-  //      write(p^.toString);
-  //      p:=p^.next;
-  //    end;
-  //    writeln;
-  //  end;
 
   FUNCTION cTokType(CONST index:longint):T_tokenType; inline;
     VAR p:P_token;
@@ -578,7 +561,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
 
   PROCEDURE stack_popDestroy; inline;
     begin
-      disposeToken(stack[length(stack)-1]);
+      recycler.disposeToken(stack[length(stack)-1]);
       setLength(stack,length(stack)-1);
       didSubstitution:=true;
     end;
@@ -642,7 +625,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end;
         bracketClosingEach:=t;
         for i:=0 to length(bodyPart)-1 do begin
-          if bodyPart[i,1]^.next<>bracketClosingEach then disposeToken(bodyPart[i,1]^.next);
+          if bodyPart[i,1]^.next<>bracketClosingEach then recycler.disposeToken(bodyPart[i,1]^.next);
           bodyPart[i,1]^.next:=nil;
         end;
 
@@ -665,7 +648,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           aggregatorIsPrimitive:=length(tokensBetween)=1;
         end else begin
           setLength(tokensBetween,1);
-          tokensBetween[0]:=newToken(first^.location,'',tt_separatorComma);
+          tokensBetween[0]:=recycler.newToken(first^.location,'',tt_separatorComma);
 
           first^.tokType:=tt_listBraceOpen;
           bracketClosingEach^.tokType:=tt_listBraceClose;
@@ -677,7 +660,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         setLength(bodyRule       ,length(bodyPart));
         setLength(bodyRuleLiteral,length(bodyPart));
         for i:=0 to length(bodyPart)-1 do begin
-          new(bodyRule[i],createForEachBody(first^.txt,bodyPart[i,0]));
+          new(bodyRule[i],createForEachBody(first^.txt,bodyPart[i,0],recycler));
           bodyRuleLiteral[i]:=newExpressionLiteral(bodyRule[i]);
         end;
         //---------------------------------------------process other body parts (if any)
@@ -693,7 +676,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       VAR k:longint;
       begin
         for k:=0 to length(tokensBetween)-1 do begin
-          t^.next:=newToken(tokensBetween[k]);
+          t^.next:=recycler.newToken(tokensBetween[k]);
           t:=t^.next;
         end;
       end;
@@ -707,7 +690,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         for i:=0 to itList^.size-1 do
         for j:=0 to length(bodyRule)-1 do begin
           if errorLevel<el3_evalError then begin
-            future[k]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),callDepth+1);
+            future[k]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
             if future[k]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           end else future[k]:=nil;
           inc(k);
@@ -752,7 +735,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           end else first^.data:=newListLiteral;
         end else first^.data:=resultLiteral;
         first^.txt:='';
-        first^.next:=disposeToken(bracketClosingEach);
+        first^.next:=recycler.disposeToken(bracketClosingEach);
       end;
 
     PROCEDURE aggregateFutures;
@@ -760,17 +743,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       begin
         if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
           for k:=0 to length(future)-1 do if future[k]<>nil then begin
-            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1);
+            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
             addToAggregation(future[k]^.getResultAsLiteral,true);
-            dispose(future[k],destroy);
+            future[k]^.free(recycler);
+            dispose(future[k],proFormaDestroy);
           end;
           finalizeAggregation;
         end else begin
           for k:=0 to length(future)-1 do if future[k]<>nil then begin
             if k>0 then inlineTokensBetween;
-            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1);
-            t^.next:=newToken(eachLocation,'',tt_literal,future[k]^.getResultAsLiteral);
-            dispose(future[k],destroy);
+            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
+            t^.next:=recycler.newToken(eachLocation,'',tt_literal,future[k]^.getResultAsLiteral);
+            future[k]^.free(recycler);
+            dispose(future[k],proFormaDestroy);
             t:=t^.next;
           end;
           t^.next:=bracketClosingEach;
@@ -800,16 +785,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           aggregateFutures;
         end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
-            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1),true);
+            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,recycler),true);
           finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
           for j:=0 to length(bodyRule)-1 do begin
             if (i<>0) or (j<>0) then inlineTokensBetween;
-            t^.next:=newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
+            t^.next:=recycler.newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
             bodyRuleLiteral[j]^.rereference;
             t:=t^.next;
-            t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
+            t^.next:=recycler.newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
             t:=t^.next;
           end;
           t^.next:=bracketClosingEach;
@@ -826,7 +811,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
             if (i<>0) then inlineTokensBetween;
-            t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
+            t^.next:=recycler.newToken(eachLocation,'',tt_literal,itList^.value(i));
             itList^.value(i)^.rereference;
             t:=t^.next;
           end;
@@ -836,7 +821,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRuleLiteral[i]);
-      for i:=0 to length(tokensBetween)-1 do disposeToken(tokensBetween[i]);
+      for i:=0 to length(tokensBetween)-1 do recycler.disposeToken(tokensBetween[i]);
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -851,7 +836,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer] then begin
-        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer)) then begin
+        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
           if parameterListLiteral=nil
           then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
@@ -860,7 +845,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end else if first^.tokType=tt_intrinsicRulePointer then begin
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,callDepth);
         if newLiteral<>nil then begin
-          firstReplace:=newToken(first^.location,'',tt_literal,newLiteral);
+          firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
         end else begin
           if parameterListLiteral=nil
@@ -871,13 +856,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace)) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
       end else begin
         raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
-      disposeToken(first);
-      if parameterListToken<>nil then disposeToken(parameterListToken);
+      recycler.disposeToken(first);
+      if parameterListToken<>nil then recycler.disposeToken(parameterListToken);
       first:=firstReplace;
       lastReplace^.next:=firstTokenAfterCall;
       didSubstitution:=true;
@@ -921,13 +906,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         p:=tokenBeforeElse^.next;              //store tt_iifElse-token
         tokenBeforeElse^.next:=lastThen^.next; //unlink else-expression (head)
         lastThen^.next:=nil;                   //unlink else-expression (tail);
-        cascadeDisposeToken(p);                //dispose else-expression
+        recycler.cascadeDisposeToken(p);       //dispose else-expression
       end else begin
         //take else-subexpression -> drop then-subexpression
         p:=first;
         first:=tokenBeforeElse^.next^.next;
         tokenBeforeElse^.next^.next:=nil;
-        cascadeDisposeToken(p);
+        recycler.cascadeDisposeToken(p);
       end;
       stack_popDestroy; //pop "?"
       stack_popDestroy; //pop condition literal
@@ -937,7 +922,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     VAR checkResult:boolean;
     begin
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
-      first^.next:=disposeToken(first^.next);
+      first^.next:=recycler.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
@@ -1021,7 +1006,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           tt_braceOpen : case cTokType(1) of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
-              first^.next:=disposeToken(first^.next);
+              first^.next:=recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
             tt_braceOpen: begin
@@ -1039,21 +1024,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           tt_list_constructor: case cTokType(1) of
             tt_separatorComma: begin // [ | <Lit> ,
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-              first:=disposeToken(first);
-              first:=disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_separatorCnt: begin // [ | <Lit> ,
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
-              first:=disposeToken(first);
-              first:=disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ]
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-              first:=disposeToken(first);
-              first:=disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
               stack_popLink;
               first^.tokType:=tt_literal;
               didSubstitution:=true;
@@ -1073,15 +1058,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
               stack[length(stack)-1]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
-              first:=disposeToken(first); //dispose literal
-              first:=disposeToken(first); //dispose closing bracket
+              first:=recycler.disposeToken(first); //dispose literal
+              first:=recycler.disposeToken(first); //dispose closing bracket
               stack_popLink; //pop parameter list
               stack_popLink; //pop FUNCTION
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
-              first:=disposeToken(first);
-              first:=disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_braceOpen: begin
@@ -1099,8 +1084,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             tt_separatorComma: if cTokType(2)<>tt_eol then begin
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
               P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
-              first:=disposeToken(first);
-              first:=disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
               stack_popLink;
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
             tt_braceOpen: begin
@@ -1135,11 +1120,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
         tt_braceOpen: stack_push;
         tt_expBraceOpen: begin
-          digestInlineExpression(first);
+          digestInlineExpression(first,recycler);
           didSubstitution:=true;
         end;
         tt_braceClose: if cTokType(-1)=tt_parList_constructor then begin
-          first:=disposeToken(first);
+          first:=recycler.disposeToken(first);
           stack_popLink;
           first^.tokType:=tt_parList;
           stack_popLink;
@@ -1149,7 +1134,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           //empty list
           first^.data:=newListLiteral;
           first^.tokType:=tt_literal;
-          first^.next:=disposeToken(first^.next);
+          first^.next:=recycler.disposeToken(first^.next);
           didSubstitution:=true;
         end else begin
           first^.data:=newListLiteral;
@@ -1183,9 +1168,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
         while (length(stack)>0) do stack_popDestroy;
-      end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-        while (length(stack)>0) do stack_popDestroy;
+      //end else begin
+      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+      //  while (length(stack)>0) do stack_popDestroy;
       end;
     end;
     if callDepth=0 then begin
@@ -1195,7 +1180,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     if (errorLevel>=el5_systemError) and (callDepth=0) then begin
       raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);
       while (length(stack)>0) do stack_popDestroy;
-      cascadeDisposeToken(first);
+      recycler.cascadeDisposeToken(first);
     end else while (length(stack)>0) do stack_popLink;
   end;
 

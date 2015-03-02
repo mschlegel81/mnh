@@ -20,9 +20,9 @@ TYPE
     version: longint;
 
   public
-    CONSTRUCTOR Create;
-    CONSTRUCTOR Create(CONST path: ansistring);
-    DESTRUCTOR Destroy;
+    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST path: ansistring);
+    DESTRUCTOR destroy;
     FUNCTION getLines: T_stringList;
     PROCEDURE setLines(CONST value: T_stringList);
     PROCEDURE setLines(CONST value: TStrings);
@@ -260,7 +260,7 @@ FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_strin
   begin
     result := true;
       try
-      tempProcess := TProcess.Create(nil);
+      tempProcess := TProcess.create(nil);
       tempProcess.Executable := executable;
       for i := 0 to length(parameters)-1 do
         tempProcess.Parameters.Add(parameters [i]);
@@ -280,9 +280,9 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
     n: longint;
     BytesRead: longint;
   begin
-    memStream := TMemoryStream.Create;
+    memStream := TMemoryStream.create;
     BytesRead := 0;
-    tempProcess := TProcess.Create(nil);
+    tempProcess := TProcess.create(nil);
     tempProcess.Executable := executable;
     for n := 0 to length(parameters)-1 do
       tempProcess.Parameters.Add(parameters [n]);
@@ -311,7 +311,7 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
       end;
     tempProcess.Free;
     memStream.SetSize(BytesRead);
-    output := TStringList.Create;
+    output := TStringList.create;
     output.LoadFromStream(memStream);
     memStream.Free;
   end;
@@ -405,13 +405,13 @@ PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);
     until lock = 0;
   end;
 
-CONSTRUCTOR T_codeProvider.Create;
+CONSTRUCTOR T_codeProvider.create;
   begin
     lock := 0;
     Clear;
   end;
 
-CONSTRUCTOR T_codeProvider.Create(CONST path: ansistring);
+CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
   begin
     lock := 0;
     Clear;
@@ -420,7 +420,7 @@ CONSTRUCTOR T_codeProvider.Create(CONST path: ansistring);
       load;
   end;
 
-DESTRUCTOR T_codeProvider.Destroy;
+DESTRUCTOR T_codeProvider.destroy;
   begin
     setLength(lineData, 0);
   end;
@@ -479,16 +479,12 @@ FUNCTION T_codeProvider.filename: ansistring;
   end;
 
 FUNCTION T_codeProvider.fileHasChanged: boolean;
-  VAR
-    currentFileAge: double;
+  VAR currentFileAge: double;
   begin
-    if (filepath<>'') and FileExists(filepath) then
-      begin
+    if (filepath<>'') and FileExists(filepath) then begin
       FileAge(filepath, currentFileAge);
       result := currentFileAge<>syncedFileAge;
-      end
-    else
-      result := false;
+    end else result := false;
   end;
 
 FUNCTION T_codeProvider.fileIsOutOfSync: boolean;
