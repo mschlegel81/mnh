@@ -7,7 +7,7 @@ uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier, SynHighlighterMnh,
   mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-  mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants, myGenerics;
+  mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants, myGenerics, mnh_glPlots;
 
 type
 

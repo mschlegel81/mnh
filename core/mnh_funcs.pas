@@ -1091,7 +1091,7 @@ FUNCTION interpret_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('interpret',params,tokenLocation);
   end;
 
-FUNCTION callSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_stringList;
       output:TStringList;
@@ -1112,10 +1112,10 @@ FUNCTION callSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       result:=newListLiteral;
       for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
       output.Free;
-    end else raiseNotApplicableError('callSync',params,tokenLocation);
+    end else raiseNotApplicableError('execSync',params,tokenLocation);
   end;
 
-FUNCTION callAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_stringList;
       i:longint;
@@ -1132,11 +1132,8 @@ FUNCTION callAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       runCommandAsync(executable,
                       cmdLinePar);
       result:=newBoolLiteral(true);
-    end else raiseNotApplicableError('callAsync',params,tokenLocation);
+    end else raiseNotApplicableError('execAsync',params,tokenLocation);
   end;
-
-{$WARNING TODO: callSync(executablepath)}
-{$WARNING TODO: callAsync(executablepath)}
 
 INITIALIZATION
   intrinsicRuleMap.create;
@@ -1184,6 +1181,9 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl);
   registerRule('replaceOne'    ,@replaceOne_impl);
   registerRule('replace'       ,@replace_impl);
+  registerRule('interpret'     ,@interpret_impl);
+  registerRule('execSync'      ,@execSync_impl);
+  registerRule('execAsync'     ,@execAsync_impl);
 
 FINALIZATION
   intrinsicRuleMap.destroy;

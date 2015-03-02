@@ -1,5 +1,6 @@
 UNIT mnh_plots;
- T_colorChannel=(cc_red,cc_green,cc_blue_cc_alpha);
+INTERFACE
+  T_colorChannel=(cc_red,cc_green,cc_blue_cc_alpha);
 
   T_styleOption=(so_line,so_plus,so_cross,so_impulse,so_fill,so_rectangle);
 
@@ -9,9 +10,12 @@ UNIT mnh_plots;
     color:array[T_colorChannel] of byte;
   end;
 
-  T_sampleRow=record
+  T_sampleRow=object
     style:T_style;
     sample:array of array [0..1] of double;
+    CONSTRUCTOR create;
+    PROCEDURE
+    DESTRUCTOR destroy;
   end;
 
   T_scaleStyle=(ss_linX_linY, ss_linX_logY,
@@ -33,6 +37,8 @@ UNIT mnh_plots;
     PROCEDURE finalizeAutoscale(CONST displayWidth,displayHeight:double);
     PROCEDURE clear;
   end;
+
+IMPLEMENTATION
 
  CONSTRUCTOR T_plot.createWithDefaults;
   begin
