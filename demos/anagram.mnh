@@ -1,5 +1,6 @@
 Normal(s:string)->each(c,sort(copy(s,[0..length(s)-1],1)),&);
-Dict:=each(L,fileLines("unixdict.txt"),[L,Normal(L)]);
+myDir:=splitFileName(myPath)%(splitFileName(myPath)%%0="directory")%0%1;
+Dict->each(L,fileLines(myDir&"/unixdict.txt"),[L,Normal(L)]);
 subDict(len)->Dict%(length(Dict%%1)=len);
 anagrams->each(c,unique(length(Dict%%1)),|,anagrams(subDict(c)));
 anagrams([])->[];

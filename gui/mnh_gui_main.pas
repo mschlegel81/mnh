@@ -178,7 +178,7 @@ type
     PROCEDURE pullPlotSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer(CONST plotImmediately:boolean);
     PROCEDURE doConditionalPlotReset;
-
+    PROCEDURE openFromHistory(CONST historyIdx:byte);
     { private declarations }
   public
     { public declarations }
@@ -194,6 +194,8 @@ VAR errorThroughput:array of T_storedError;
     output:T_listOfString;
     plotSubsystem:record
       rendering:boolean;
+      mouseUpTriggersPlot:boolean;
+      renderNotBefore:double;
       state:(pss_neutral, pss_plotAfterCalculation, pss_plotOnShow);
       lastMouseX,lastMouseY:longint;
     end;
@@ -234,29 +236,28 @@ PROCEDURE logError(CONST error:T_storedError);
     SetLength(errorThroughput,length(errorThroughput)+1);
     errorThroughput[length(errorThroughput)-1]:=error;
     repaintNecessary:=true;
-    //MnhForm.ErrorGroupBox.Visible:=true;
   end;
 
-PROCEDURE TMnhForm.flushThroughput;
+procedure TMnhForm.flushThroughput;
   VAR i:longint;
   begin
     OutputEdit.BeginUpdate();
     for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
-      ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+string(errorLocation) );
+      ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+' @'+string(errorLocation) );
     setLength(errorThroughput,0);
     lastFormRepaint:=now;
     repaintNecessary:=false;
     OutputEdit.EndUpdate;
   end;
 
-PROCEDURE TMnhForm.positionHelpNotifier;
+procedure TMnhForm.positionHelpNotifier;
   begin
     PopupNotifier1.ShowAtPos(left+Width-PopupNotifier1.vNotifierForm.Width,
                              ClientToScreen(Point(left,OutputEdit.Top)).y);
     InputEdit.SetFocus;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
+procedure TMnhForm.setUnderCursor(const lines: TStrings; const caret: TPoint);
   begin
     if miHelp.Checked and (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
@@ -269,7 +270,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
     end;
   end;
 
-PROCEDURE TMnhForm.doPlot;
+procedure TMnhForm.doPlot;
   VAR factor:longint;
   begin
     plotSubsystem.state:=pss_neutral;
@@ -285,7 +286,7 @@ PROCEDURE TMnhForm.doPlot;
     plotSubsystem.rendering:=false;
   end;
 
-PROCEDURE TMnhForm.pullPlotSettingsToGui;
+procedure TMnhForm.pullPlotSettingsToGui;
 begin
   miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
   miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
@@ -300,7 +301,7 @@ begin
   miLogscaleY.Checked     :=activePlot.logscale['y'];
 end;
 
-PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
+procedure TMnhForm.pushSettingsToPlotContainer(const plotImmediately: boolean);
   VAR aidX,aidY:longint;
   begin
     aidX:=0;
@@ -324,12 +325,26 @@ PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
     end else plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-PROCEDURE TMnhForm.doConditionalPlotReset;
+procedure TMnhForm.doConditionalPlotReset;
   begin
     if miAutoReset.Checked then begin
       activePlot.setDefaults;
       pullPlotSettingsToGui();
     end;
+  end;
+
+procedure TMnhForm.openFromHistory(const historyIdx: byte);
+  VAR mr:integer;
+  begin
+    if FileExists(SettingsForm.fileHistory[historyIdx]) then begin
+      if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+        mr:=closeDialogForm.showOnLoad;
+        if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+        if mr=mrCancel then exit;
+      end;
+      ad_setFile(SettingsForm.fileHistory[historyIdx],InputEdit.Lines);
+      if SettingsForm.setFileInEditor(SettingsForm.fileHistory[historyIdx]) then processFileHistory;
+    end else if SettingsForm.polishHistory then processFileHistory;
   end;
 
 PROCEDURE startOfEvaluationCallback;
@@ -344,7 +359,7 @@ PROCEDURE startOfEvaluationCallback;
   end;
 
 { TMnhForm }
-PROCEDURE TMnhForm.FormCreate(Sender: TObject);
+procedure TMnhForm.FormCreate(Sender: TObject);
   begin
     myhl:=TSynMnhSyn.Create(nil);
     InputEdit.Highlighter:=myhl;
@@ -367,18 +382,18 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     mnh_out_adapters.printOut     :=@writePrint;
   end;
 
-PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+procedure TMnhForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
   VAR mr:integer;
   begin
     if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
-      mr:=closeDialogForm.ShowModal;
+      mr:=closeDialogForm.showOnQuit;
       if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
       if mr=mrCancel then CloseAction:=caNone;
     end;
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
   end;
 
-PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
+procedure TMnhForm.FormDestroy(Sender: TObject);
   begin
     mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
     myhl.Destroy;
@@ -388,13 +403,15 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
 procedure TMnhForm.FormKeyPress(Sender: TObject; var Key: char);
 begin
   if (PageControl.ActivePageIndex=1) and (key in ['+','-']) then begin
-    if key='+' then activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,0.9)
-               else activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9);
-    doPlot();
+    if key='+' then activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
+               else activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
+    pullPlotSettingsToGui();
+    plotSubsystem.state:=pss_plotOnShow;
+    plotSubsystem.renderNotBefore:=now+(1/(24*60*60));
   end;
 end;
 
-PROCEDURE TMnhForm.FormResize(Sender: TObject);
+procedure TMnhForm.FormResize(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.mainForm.top   :=top;
@@ -408,7 +425,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-PROCEDURE TMnhForm.FormShow(Sender: TObject);
+procedure TMnhForm.FormShow(Sender: TObject);
   begin
     if not(settingsHaveBeenProcessed) then begin
       processSettings;
@@ -418,20 +435,20 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     UpdateTimeTimer.Enabled:=true;
   end;
 
-PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
+procedure TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       ad_evaluate(InputEdit.Lines);
     end;
   end;
 
-PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR Key: Word;
+procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
   begin
     setUnderCursor(InputEdit.Lines,InputEdit.CaretXY);
   end;
 
-PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
   VAR point:TPoint;
   begin
@@ -440,14 +457,20 @@ PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
-PROCEDURE TMnhForm.miClearClick(Sender: TObject);
+procedure TMnhForm.miClearClick(Sender: TObject);
+  VAR mr:integer;
   begin
+    if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+      mr:=closeDialogForm.showOnLoad;
+      if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      if mr=mrCancel then exit;
+    end;
     ad_clearFile;
     InputEdit.ClearAll;
     if SettingsForm.setFileInEditor('') then processFileHistory;
   end;
 
-PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
+procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize-1;
@@ -455,7 +478,7 @@ PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
+procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
@@ -467,24 +490,24 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
+procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
   end;
 
-PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
+procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
     miEvalModeDirectOnKeypress.Checked:=true;
   end;
 
-PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
+procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     ad_evaluate(InputEdit.Lines);
   end;
 
-PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
+procedure TMnhForm.miExportPlotClick(Sender: TObject);
   VAR storeImage:TImage;
       rect:TRect;
   begin
@@ -503,7 +526,7 @@ PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
+procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
@@ -515,7 +538,7 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
+procedure TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
@@ -527,102 +550,23 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miFileHistory0Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[0])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[0],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[0]) then processFileHistory;
-      end;
-  end;
+procedure TMnhForm.miFileHistory0Click(Sender: TObject); begin openFromHistory(0); end;
+procedure TMnhForm.miFileHistory1Click(Sender: TObject); begin openFromHistory(1); end;
+procedure TMnhForm.miFileHistory2Click(Sender: TObject); begin openFromHistory(2); end;
+procedure TMnhForm.miFileHistory3Click(Sender: TObject); begin openFromHistory(3); end;
+procedure TMnhForm.miFileHistory4Click(Sender: TObject); begin openFromHistory(4); end;
+procedure TMnhForm.miFileHistory5Click(Sender: TObject); begin openFromHistory(5); end;
+procedure TMnhForm.miFileHistory6Click(Sender: TObject); begin openFromHistory(6); end;
+procedure TMnhForm.miFileHistory7Click(Sender: TObject); begin openFromHistory(7); end;
+procedure TMnhForm.miFileHistory8Click(Sender: TObject); begin openFromHistory(8); end;
+procedure TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9); end;
 
-PROCEDURE TMnhForm.miFileHistory1Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[1])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[1],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[1]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory2Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[2])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[2],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[2]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory3Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[3])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[3],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[3]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory4Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[4])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[4],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[4]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory5Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[5])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[5],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[5]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory6Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[6])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[6],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[6]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory7Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[7])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[7],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[7]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory8Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[8])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[8],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[8]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject);
-  begin
-    if FileExists(SettingsForm.fileHistory[9])
-      then begin
-        ad_setFile(SettingsForm.fileHistory[9],InputEdit.Lines);
-        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[9]) then processFileHistory;
-      end;
-  end;
-
-PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
     ad_haltEvaluation;
   end;
 
-PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
+procedure TMnhForm.miHelpClick(Sender: TObject);
 begin
   miHelp.Checked:=not(miHelp.Checked);
   if not(miHelp.Checked) then PopupNotifier1.Visible:=false
@@ -635,7 +579,7 @@ begin
   OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
 end;
 
-PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
+procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
@@ -643,23 +587,29 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
+procedure TMnhForm.miOpenClick(Sender: TObject);
+  VAR mr:integer;
   begin
     OpenDialog.Title:='Open file';
     if OpenDialog.Execute and FileExists(OpenDialog.FileName)
     then begin
+      if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+        mr:=closeDialogForm.showOnLoad;
+        if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+        if mr=mrCancel then exit;
+      end;
       ad_setFile(OpenDialog.FileName,InputEdit.Lines);
       if SettingsForm.setFileInEditor(OpenDialog.FileName) then processFileHistory;
     end;
   end;
 
-PROCEDURE TMnhForm.miOpenNppClick(Sender: TObject);
+procedure TMnhForm.miOpenNppClick(Sender: TObject);
 begin
   if underCursor.declaredInFile<>'' then
     SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
 end;
 
-PROCEDURE TMnhForm.miOpenPlotClick(Sender: TObject);
+procedure TMnhForm.miOpenPlotClick(Sender: TObject);
 begin
   OpenDialog.Filter:='MNH-Plot|*.mnh_plot';
   if OpenDialog.Execute then begin
@@ -676,7 +626,7 @@ begin
   end;
 end;
 
-PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
+procedure TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
       MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
@@ -686,7 +636,7 @@ PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
+procedure TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile='' then miSaveAsClick(Sender)
     else begin
@@ -696,7 +646,7 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miSavePlotClick(Sender: TObject);
+procedure TMnhForm.miSavePlotClick(Sender: TObject);
   begin
     SaveDialog.Filter:='MNH-Plot|*.mnh_plot';
     if SaveDialog.Execute then begin
@@ -705,20 +655,20 @@ PROCEDURE TMnhForm.miSavePlotClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
+procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
     processSettings;
   end;
 
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR Key: Word;
+procedure TMnhForm.OutputEditKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
   begin
     setUnderCursor(OutputEdit.Lines,OutputEdit.CaretXY);
   end;
 
 
-PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
   VAR point:TPoint;
   begin
@@ -727,7 +677,7 @@ PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     setUnderCursor(OutputEdit.Lines,OutputEdit.PixelsToRowColumn(point));
   end;
 
-PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
+procedure TMnhForm.PageControlChange(Sender: TObject);
 begin
   if PageControl.ActivePageIndex=0 then begin
     submenuEditorAppearance.Visible:=true;
@@ -753,14 +703,15 @@ begin
   end;
 end;
 
-PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+procedure TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
   VAR p:T_point;
   begin
     p:=activePlot.screenToReal(x,y);
     StatusBar.SimpleText:='x='+FloatToStr(p[0])+'; y='+FloatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
-      activePlot.panByPixels(lastMouseX-x,lastMouseY-y);
-      doPlot();
+      activePlot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+      mouseUpTriggersPlot:=true;
     end;
     with plotSubsystem do begin
       lastMouseX:=x;
@@ -771,8 +722,8 @@ PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y:
 procedure TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if ssLeft in Shift then with plotSubsystem do begin
-    activePlot.panByPixels(x-lastMouseX,y-lastMouseY);
+  with plotSubsystem do if mouseUpTriggersPlot then begin
+    pullPlotSettingsToGui();
     lastMouseX:=x;
     lastMouseY:=y;
     doPlot();
@@ -785,13 +736,13 @@ begin
   miHelp.Checked:=false;
 end;
 
-PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
+procedure TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR Value: string;
-  SourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+procedure TMnhForm.SynCompletionCodeCompletion(var Value: string;
+  SourceValue: string; var SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
   Shift: TShiftState);
   begin
     if (pos('.',value)>0) then begin
@@ -801,7 +752,7 @@ PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR Value: string;
     end;
   end;
 
-PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
+procedure TMnhForm.SynCompletionExecute(Sender: TObject);
   VAR i:longint;
       s:string;
   begin
@@ -811,7 +762,7 @@ PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
       if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.Add(completionList[i]);
   end;
 
-PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
+procedure TMnhForm.SynCompletionSearchPosition(var APosition: integer);
   VAR i:longint;
       s:string;
   begin
@@ -822,7 +773,7 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
     if SynCompletion.ItemList.Count>0 then APosition:=0 else APosition:=-1;
   end;
 
-PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
         MAX_INTERVALL=5000;
         REPAINT_INTERVAL_IN_SECONDS=1;
@@ -834,6 +785,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin
     //Show ask form?
     if askForm.displayPending then askForm.ShowModal;
+
 
     updateStart:=now;
     //Form caption:-------------------------------------------------------------
@@ -873,13 +825,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     repaintNecessary:=repaintNecessary or (UpdateTimeTimer.Interval=MIN_INTERVALL);
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
-    if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) and repaintNecessary then begin
+    if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) then begin
       lastFormRepaint:=now;
       flushThroughput;
       if ((plotSubsystem.state=pss_plotAfterCalculation) or
           (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
          not(ad_evaluationRunning) and
-         not(plotSubsystem.rendering) then begin
+         not(plotSubsystem.rendering) and
+         not(now<plotSubsystem.renderNotBefore) then begin
         doPlot();
       end;
     end;
@@ -889,7 +842,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
   end;
 
-PROCEDURE TMnhForm.processSettings;
+procedure TMnhForm.processSettings;
   begin
     if not(settingsHaveBeenProcessed) then begin
       InputEdit.BeginUpdate();
@@ -932,7 +885,7 @@ PROCEDURE TMnhForm.processSettings;
     settingsHaveBeenProcessed:=true;
   end;
 
-PROCEDURE TMnhForm.processFileHistory;
+procedure TMnhForm.processFileHistory;
   FUNCTION historyMenuItem(index:byte):TMenuItem;
     begin
       case index of
@@ -959,83 +912,83 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   end;
 
-PROCEDURE TMnhForm.miAntialiasingOffClick(Sender: TObject);
+procedure TMnhForm.miAntialiasingOffClick(Sender: TObject);
   begin
     if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
        then plotSubsystem.state:=pss_plotOnShow
        else doPlot();
   end;
 
-PROCEDURE TMnhForm.miAutoResetClick(Sender: TObject);
+procedure TMnhForm.miAutoResetClick(Sender: TObject);
 begin
   miAutoReset.Checked:=not(miAutoReset.Checked);
 end;
 
-PROCEDURE TMnhForm.miAutoscaleXClick(Sender: TObject);
+procedure TMnhForm.miAutoscaleXClick(Sender: TObject);
 begin
   miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miAutoscaleYClick(Sender: TObject);
+procedure TMnhForm.miAutoscaleYClick(Sender: TObject);
 begin
   miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miLogscaleXClick(Sender: TObject);
+procedure TMnhForm.miLogscaleXClick(Sender: TObject);
   begin
     miLogscaleX.Checked:=not(miLogscaleX.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-PROCEDURE TMnhForm.miLogscaleYClick(Sender: TObject);
+procedure TMnhForm.miLogscaleYClick(Sender: TObject);
   begin
     miLogscaleY.Checked:=not(miLogscaleY.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-PROCEDURE TMnhForm.miPreserveAspectClick(Sender: TObject);
+procedure TMnhForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect.Checked:=not(miPreserveAspect.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-PROCEDURE TMnhForm.miXFinerGridClick(Sender: TObject);
+procedure TMnhForm.miXFinerGridClick(Sender: TObject);
 begin
   miXFinerGrid.Checked:=not(miXFinerGrid.Checked);
   if miXFinerGrid.Checked then miXGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miXGridClick(Sender: TObject);
+procedure TMnhForm.miXGridClick(Sender: TObject);
 begin
   miXGrid.Checked:=not(miXGrid.Checked);
   if not(miXGrid.Checked) then miXFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miXTicsClick(Sender: TObject);
+procedure TMnhForm.miXTicsClick(Sender: TObject);
 begin
   miXTics.Checked:=not(miXTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miYFinerGridClick(Sender: TObject);
+procedure TMnhForm.miYFinerGridClick(Sender: TObject);
 begin
   miYFinerGrid.Checked:=not(miYFinerGrid.Checked);
   if miYFinerGrid.Checked then miYGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miYGridClick(Sender: TObject);
+procedure TMnhForm.miYGridClick(Sender: TObject);
 begin
   miYGrid.Checked:=not(miYGrid.Checked);
   if not(miYGrid.Checked) then miYFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TMnhForm.miYTicsClick(Sender: TObject);
+procedure TMnhForm.miYTicsClick(Sender: TObject);
 begin
   miYTics.Checked:=not(miYTics.Checked);
   pushSettingsToPlotContainer(true);

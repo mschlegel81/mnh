@@ -243,10 +243,7 @@ end;
 
 function T_userFunctionDocumentation.toHtml: ansistring;
 VAR i:longint;
-    anyPublic:boolean=false;
 begin
-
-
   result:='<table><tr class="ruleHead"><td>';
   if isPure then result:=result+'<div class="red">';
   if id='main' then result:=result+'<b>'+id+'</b>'
@@ -258,10 +255,8 @@ begin
     result:=result+'<tr><td>';
     if comment<>'' then result:=result+'<i>'+ comment+'</i><br>';
     result:=result+'<code>'+id+pattern+'</code></td></tr>';
-    anyPublic:=true;
   end;
   result:=result+'</table>';
-
 end;
 
 constructor T_intrinsicFunctionDocumentation.create(const funcName: ansistring);

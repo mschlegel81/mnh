@@ -1,0 +1,16 @@
+USE basic;
+
+private pascal(n<=0)->1;
+private pascal(n>0 )->pascal(n-1)|0+0|pascal(n-1);
+private polySum(P)->each(i,[0..size(P)-1],sum(flatten(P%%i)));
+canonicPolynomial(x0,Coeff)->polySum(each(i,[0..size(Coeff)-1],Coeff%i*(pascal(i)*x0^[i..0])));
+
+polyExpression(Coeff)->
+  each(pair,
+       each(i,[0..size(Coeff)-1],|,
+            Coeff%i=0 ? [] : [[i,Coeff%i]]),
+       +,
+       pair%1*{$x}^pair%0);
+
+polyExpression(0,Coeff)->polyExpression(Coeff);
+polyExpression(x0,Coeff)->polyExpression(canonicPolynomial(x0,Coeff));

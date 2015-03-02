@@ -48,7 +48,6 @@ FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
 
 VAR mainPackageProvider:T_codeProvider;
-    mainThread:TThreadID;
     
 {$undef include_interface}
 IMPLEMENTATION

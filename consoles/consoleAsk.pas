@@ -1,6 +1,6 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs,sysutils,mnh_litVar,mnh_tokloc,mnh_constants;
+USES mnh_funcs,sysutils,mnh_litVar,mnh_tokloc,mnh_constants,mnh_out_adapters;
 
 IMPLEMENTATION
 FUNCTION ask(CONST question:ansistring):ansistring;
@@ -34,6 +34,10 @@ FUNCTION ask_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   VAR opt:array of ansistring;
       i:longint;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (ask in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value));

@@ -5,7 +5,7 @@ unit askDialog;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, mnh_funcs, mnh_litVar,mnh_tokloc,mnh_constants;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, mnh_funcs, mnh_litVar,mnh_tokloc,mnh_constants,mnh_out_adapters;
 
 type
 
@@ -104,6 +104,10 @@ FUNCTION ask_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   VAR opt:array of ansistring;
       i:longint;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);

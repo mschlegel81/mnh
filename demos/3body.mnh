@@ -1,0 +1,47 @@
+
+norm(X)->sqr(X%0)+sqr(X%1);
+acceleration(P)->acceleration(P,(P%1-P%0)*norm(P%1-P%0)^-1.5,
+                                (P%2-P%0)*norm(P%2-P%0)^-1.5,
+                                (P%1-P%2)*norm(P%1-P%2)^-1.5);
+acceleration(P,F10,F20,F12)->[F10+F20,-F10-F12,F12-F20];
+D(Sys)->[Sys%1,acceleration(Sys%0)];
+
+pi:=4*arctan(1);
+sc(t)->[sin(2*pi*t),cos(2*pi*t)];
+
+//initialSys->[[sc(0)   ,sc(     1/3)  ,sc(     2/3)],
+//        0.76*[sc(0.25),sc(0.25+1/3),sc(0.25+2/3)]];
+initialSys->[[sc(0)   ,sc(0.5 ),[0,0]],
+        1.12*[sc(0.25),sc(0.75),[0,0]]];
+
+
+evolve (      S0,dt,t   )->[S0%0]|evolve (S0,S0+dt*D(S0),dt,t-dt);
+evolve (   S1,S0,dt,t   )->[S0%0]|evolve_(S1,D(S1),S0,D(S0),S0+dt*(3/2*D(S0)-1/2*D(S1)),dt,t-dt);
+
+evolve_(S2,F2,S1,F1,S0   ,dt,t> 0)->       evolve_(S2,F2,S1,F1,S0,D(S0),dt,t);
+evolve_(S2,F2,S1,F1,S0,F0,dt,t> 0)->[S0%0]|evolve_(S1,F1,S0,F0,S0+dt*(1.91666666666667*F0
+                                                                     -1.33333333333333*F1
+                                                                     +0.41666666666667*F2),dt,t-dt);
+evolve_(S2,F2,S1,F1,S0   ,dt,t<=0)->[S0%0];
+
+last(L)->L%[size(L)-1];
+plotSys(E)->setPlotAutoscale([true,true]) and
+            setPlotPreserveAspect(true) and
+            setPlotAxisStyle([3,3]) and
+            plot   (E%%0,"0.5 red"  ) and addPlot(last(E%%0),"2 . red"  ) and
+            addPlot(E%%1,"0.5 green") and addPlot(last(E%%1),"2 . green") and
+            addPlot(E%%2,"0.5 blue" ) and addPlot(last(E%%2),"2 . blue" );
+
+pngName(s:string)->replace(myPath&"#",".mnh#","_"&copy(s,length(s)-4,4)&".png");
+pngName(i:int)->pngName("000"&i);
+
+
+plotSeries(E,i,chunkSize)->size(E)>(i-1)*chunkSize ?
+  plotSys(head(E,i*chunkSize)) and
+  print('Writing file ',pngName(i)) and
+  renderToFile(pngName(i),768,768,2) and
+  plotSeries(E,i+1,chunkSize)
+  :true;
+
+
+main->plotSeries(evolve(initialSys,0.9e-2,120),1,10);

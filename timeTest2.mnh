@@ -1,2 +1,0 @@
-data:=expression(fileContents("data.txt"))();
-plot(data%%0,data%%1,'.') and addPlot(data%%0,data%%2,'+ x');

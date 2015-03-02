@@ -68,6 +68,10 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (print in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
       lt_error,
       lt_boolean,
@@ -958,6 +962,10 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR accessed:boolean;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
@@ -970,7 +978,10 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       L:T_stringList;
       i:longint;
   begin
-    result:=nil;
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileLines in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;    result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
       result:=newListLiteral;
@@ -982,6 +993,10 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR ok:boolean;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (writeFile in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
@@ -997,6 +1012,10 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       L:T_stringList;
       i:longint;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (writeFileLines in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_stringList) then begin
@@ -1301,6 +1320,32 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('isInRange',params,tokenLocation);
   end;
 
+FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
+    VAR aid:P_listLiteral;
+    begin
+      aid:=newListLiteral;
+      aid^.append(newStringLiteral(el0),false);
+      aid^.append(newStringLiteral(el1),false);
+      P_listLiteral(result)^.append(aid,false);
+    end;
+
+  VAR name:string;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.Value(0)^.literalType=lt_string) then begin
+      result:=newListLiteral;
+      name:=P_stringLiteral(params^.Value(0))^.Value;
+      appendPair(result,'input',name);
+      appendPair(result,'expanded',ExpandFileName(name));
+      appendPair(result,'relative',ExtractRelativepath(ExpandFileName(''),name));
+      appendPair(result,'directory',ExtractFileDir(name));
+      appendPair(result,'filename',ExtractFileName(name));
+      appendPair(result,'extension',ExtractFileExt(name));
+    end else raiseNotApplicableError('splitFileName',params,tokenLocation);
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
@@ -1334,7 +1379,7 @@ INITIALIZATION
   registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
-  registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none');
+  registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule('copy'          ,@copy_imp      ,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
   registerRule('time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('split'         ,@split_imp     ,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
@@ -1361,6 +1406,7 @@ INITIALIZATION
   registerRule('isNan'         ,@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
   registerRule('isInfinite'    ,@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule('isInRange'     ,@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
+  registerRule('splitFileName' ,@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

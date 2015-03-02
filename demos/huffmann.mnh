@@ -24,6 +24,6 @@ main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') a
                        print(" code\tchar\n "&
                              each(e,huffman(charactersInFile(filename)),&"\n "&,
                                   e%0&"\t"&escapeChar(e%1)));
-main->main(myPath);
+main->main((splitFileName(myPath)%(splitFileName(myPath)%%0="directory")%0%1)&"/kjv.txt");
 
 main;

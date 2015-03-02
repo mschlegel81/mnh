@@ -244,6 +244,7 @@ CONST
     'Ps.Error: ',
     'Sys.Err.: ');
 
+VAR mainThread:TThreadID;
 IMPLEMENTATION
 
 end.

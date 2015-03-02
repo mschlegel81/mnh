@@ -61,6 +61,7 @@ TYPE
     PROCEDURE getFileContents(CONST Data: TStrings);
     FUNCTION setFileInEditor(CONST filename: ansistring): boolean;
     FUNCTION getFileInEditor: ansistring;
+    FUNCTION polishHistory:boolean;
   END;
 
 VAR
@@ -82,7 +83,7 @@ FUNCTION defaultConsoleName: string;
 
 { TSettingsForm }
 
-PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
+procedure TSettingsForm.FormCreate(Sender: TObject);
   VAR
     ff: T_file;
     iMax, i: longint;
@@ -190,7 +191,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       end;
   end;
 
-PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
+procedure TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.Execute then
       begin
@@ -203,34 +204,34 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
       end;
   end;
 
-PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
+procedure TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
   end;
 
-PROCEDURE TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
+procedure TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
   begin
     mnh_console_executable := MnhConsoleFileNameEdit.FileName;
   end;
 
-FUNCTION TSettingsForm.getFontSize: longint;
+function TSettingsForm.getFontSize: longint;
   begin
     result := StrToInt64Def(Trim(FontSizeEdit.Text), 12);
   end;
 
-PROCEDURE TSettingsForm.setFontSize(Value: longint);
+procedure TSettingsForm.setFontSize(Value: longint);
   begin
     FontSizeEdit.Text := IntToStr(Value);
     EditorFontDialog.Font.Size := Value;
   end;
 
-FUNCTION TSettingsForm.getEditorFontName: string;
+function TSettingsForm.getEditorFontName: string;
   begin
     result := editorFontname;
   end;
 
-FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring;
-  CONST lineNumber: longint): boolean;
+function TSettingsForm.canOpenFile(const filename: ansistring;
+  const lineNumber: longint): boolean;
   VAR
     par: T_stringList;
   begin
@@ -252,7 +253,7 @@ FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring;
       result := False;
   end;
 
-PROCEDURE TSettingsForm.saveSettings;
+procedure TSettingsForm.saveSettings;
   VAR
     ff: T_file;
     i: longint;
@@ -291,7 +292,7 @@ PROCEDURE TSettingsForm.saveSettings;
     ff.Destroy;
   end;
 
-PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);
+procedure TSettingsForm.setFileContents(const Data: TStrings);
   VAR
     i: longint;
   begin
@@ -305,7 +306,7 @@ PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);
       fileContents[i] := Data[i];
   end;
 
-PROCEDURE TSettingsForm.getFileContents(CONST Data: TStrings);
+procedure TSettingsForm.getFileContents(const Data: TStrings);
   VAR
     i: longint;
   begin
@@ -316,38 +317,44 @@ PROCEDURE TSettingsForm.getFileContents(CONST Data: TStrings);
       Data.Append(fileContents[i]);
   end;
 
-FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
+function TSettingsForm.setFileInEditor(const filename: ansistring): boolean;
   VAR
     i: longint;
     tmp: ansistring;
   begin
-    if fileInEditor <> '' then
-      begin
+    if fileInEditor <> '' then begin
+      polishHistory;
       i := 0;
-      while (i < length(fileHistory)) and (fileHistory[i] <> fileInEditor) do
-        Inc(i);
-      if (i >= length(fileHistory)) then
-        begin
+      while (i < length(fileHistory)) and (fileHistory[i] <> fileInEditor) do Inc(i);
+      if (i >= length(fileHistory)) then begin
         i := length(fileHistory) - 1;
         fileHistory[i] := fileInEditor;
-        end;
-      while (i > 0) do
-        begin
+      end;
+      while (i > 0) do begin
         tmp := fileHistory[i];
         fileHistory[i] := fileHistory[i - 1];
         fileHistory[i - 1] := tmp;
         Dec(i);
-        end;
+      end;
       result := True;
-      end
-    else
-      result := False;
+    end else result := polishHistory;
     fileInEditor := filename;
   end;
 
-FUNCTION TSettingsForm.getFileInEditor: ansistring;
+function TSettingsForm.getFileInEditor: ansistring;
   begin
     result := fileInEditor;
+  end;
+
+function TSettingsForm.polishHistory:boolean;
+  VAR i,j:longint;
+  begin
+    result:=false;
+    for i:=0 to length(fileHistory)-1 do if (fileHistory[i]<>'') and not(FileExists(fileHistory[i])) then begin
+      for j:=i to length(fileHistory)-2 do fileHistory[j]:=fileHistory[j+1];
+      fileHistory[length(fileHistory)-1]:='';
+      result:=true;
+    end;
   end;
 
 end.

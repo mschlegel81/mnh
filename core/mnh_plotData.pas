@@ -176,8 +176,8 @@ type
     PROCEDURE setPreserveAspect(CONST flag: boolean);
     FUNCTION getPreserveAspect: P_boolLiteral;
 
-    PROCEDURE zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double);
-    PROCEDURE panByPixels(CONST pixelDX,pixelDY:longint);
+    PROCEDURE zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double; VAR plotImage: TImage);
+    PROCEDURE panByPixels(CONST pixelDX,pixelDY:longint; VAR plotImage: TImage);
 
     PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
   end;
@@ -1446,8 +1446,9 @@ FUNCTION T_plot.getPreserveAspect: P_boolLiteral;
     result := newBoolLiteral(preserveAspect);
   end;
 
-PROCEDURE T_plot.zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double);
+PROCEDURE T_plot.zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double; VAR plotImage: TImage);
   VAR holdX,holdY:double;
+      rectA,rectB:TRect;
   begin
     autoscale['x']:=false;
     autoscale['y']:=false;
@@ -1457,10 +1458,23 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX,pixelY:longint; CONST factor:double);
     range['x',1]:=(range['x',1]-holdX)*factor+holdX;
     range['y',0]:=(range['y',0]-holdY)*factor+holdY;
     range['y',1]:=(range['y',1]-holdY)*factor+holdY;
+
+    rectA.Top := 0;
+    rectA.Left := 0;
+    rectA.Right := plotImage.Width;
+    rectA.Bottom := plotImage.Height;
+
+    rectB.Top := round((-pixelY)*factor+pixelY);
+    rectB.Left := round((-pixelX)*factor+pixelX);
+    rectB.Right := round((plotImage.Width-pixelX)*factor+pixelX);
+    rectB.Bottom := round((plotImage.Height-pixelY)*factor+pixelY);
+
+    plotImage.Canvas.CopyRect(rectA,plotImage.Canvas,rectB);
   end;
 
-PROCEDURE T_plot.panByPixels(CONST pixelDX,pixelDY:longint);
+PROCEDURE T_plot.panByPixels(CONST pixelDX,pixelDY:longint; VAR plotImage: TImage);
   VAR worldDX,worldDY:double;
+      rectA,rectB:TRect;
   begin
     autoscale['x']:=false;
     autoscale['y']:=false;
@@ -1470,6 +1484,18 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX,pixelDY:longint);
     range['x',1]:=range['x',1]+worldDX;
     range['y',0]:=range['y',0]+worldDY;
     range['y',1]:=range['y',1]+worldDY;
+
+    rectA.Top := 0;
+    rectA.Left := 0;
+    rectA.Right := plotImage.Width;
+    rectA.Bottom := plotImage.Height;
+
+    rectB.Top := 0+pixelDY;
+    rectB.Left := 0+pixelDX;
+    rectB.Right := plotImage.Width+pixelDX;
+    rectB.Bottom := plotImage.Height+pixelDY;
+
+    plotImage.Canvas.CopyRect(rectA,plotImage.Canvas,rectB);
   end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
@@ -1907,6 +1933,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
     X, Y: P_listLiteral;
 
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     if (params <> nil) and (params^.size >= 1) then
       begin
       if (params^.Value(params^.size - 1)^.literalType = lt_string) then
@@ -2003,6 +2033,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation;
   CONST callDepth: word): P_literal;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     activePlot.Clear;
     result := addPlot(params, tokenLocation, callDepth);
   end;
@@ -2161,6 +2195,10 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral;
     Width, Height, supersampling: longint;
     rect: TRect;
   begin
+    if threadId<>MainThread then begin
+      raiseError(el3_evalError,'I/O functions (fileContents in this case) may only be called from the main thread',tokenLocation);
+      exit(nil);
+    end;
     result := nil;
     if (params <> nil) and (params^.size >= 3) and
       (params^.Value(0)^.literalType = lt_string) and
@@ -2256,12 +2294,13 @@ INITIALIZATION
   mnh_funcs.registerRule('getPlotRange', @getPlotRange,
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
   mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
-    'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true.');
-  //C_tics = 1;
-  //C_grid = 2;
-  //C_finerGrid = C_grid + 4; //=6
-  //C_ticsAndGrid = C_tics + C_grid; //=3
-  //C_ticsAndFinerGrid = C_tics + C_finerGrid; //=7
+    'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true. #valid options are:'+
+    '#  0; //no tics, no grid'+
+    '#  1; //tics, no gris'+
+    '#  2; //no tics, coarse grid'+
+    '#  3; //tics, and coarse grid'+
+    '#  6; //no tics, finer grid'+
+    '#  7; //tics and finer grid');
   mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,
     'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
   mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,

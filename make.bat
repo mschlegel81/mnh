@@ -70,6 +70,7 @@
 @mkdir distro\doc
 @copy packages\*.mnh distro\packages
 @copy demos\*.mnh distro\demos
+@copy demos\*.txt distro\demos
 @copy doc\* distro\doc
 @cd distro
 @copy ..\bin64\*.exe .
