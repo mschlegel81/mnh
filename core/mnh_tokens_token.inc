@@ -2,7 +2,7 @@
   P_token=^T_token;
   T_token=object
     location:T_tokenLocation;
-    txt     :ansistring;
+    txt     :shortstring;
     tokType :T_tokenType;
     data    :pointer;
     next    :P_Token;
@@ -698,18 +698,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end;
       end;
 
-    VAR future:array of T_futureTask;
+    VAR future:array of P_futureTask;
     PROCEDURE initFutures;
       VAR i,j,k:longint;
       begin
         k:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
-        for j:=0 to length(bodyRule)-1 do if errorLevel<el3_evalError then begin
-          future[k].createTask(bodyRule[j],itList^.value(i),callDepth);
-          if future[k].state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
+        for j:=0 to length(bodyRule)-1 do begin
+          if errorLevel<el3_evalError then begin
+            future[k]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),callDepth+1);
+            if future[k]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
+          end else future[k]:=nil;
           inc(k);
-        end else future[k].createTaskInErrorState;
+        end;
       end;
 
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
@@ -757,16 +759,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       VAR k:longint;
       begin
         if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
-          for k:=0 to length(future)-1 do begin
-            addToAggregation(future[k].getResult_blocking(callDepth),true);
-            future[k].destroy;
+          for k:=0 to length(future)-1 do if future[k]<>nil then begin
+            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1);
+            addToAggregation(future[k]^.getResultAsLiteral,true);
+            dispose(future[k],destroy);
           end;
           finalizeAggregation;
         end else begin
-          for k:=0 to length(future)-1 do begin
+          for k:=0 to length(future)-1 do if future[k]<>nil then begin
             if k>0 then inlineTokensBetween;
-            t^.next:=newToken(eachLocation,'',tt_literal,future[k].getResult_blocking(callDepth));
-            future[k].destroy;
+            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1);
+            t^.next:=newToken(eachLocation,'',tt_literal,future[k]^.getResultAsLiteral);
+            dispose(future[k],destroy);
             t:=t^.next;
           end;
           t^.next:=bracketClosingEach;
@@ -1176,12 +1180,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       //printState;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
     except
-      ON EOutOfMemory do begin
+      on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
         while (length(stack)>0) do stack_popDestroy;
-      //end else begin
-      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-      //  while (length(stack)>0) do stack_popDestroy;
+      end else begin
+        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        while (length(stack)>0) do stack_popDestroy;
       end;
     end;
     if callDepth=0 then begin

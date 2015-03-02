@@ -6,9 +6,9 @@
 @set fpc32=C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc         
 @set fpc64=c:\lazarus64\fpc\2.6.4\bin\x86_64-win64\fpc.exe 
 @rem @set optimize=-O2 -CX -XX -Scghi2 
-@set optimize=-O3 -CX -XX -Scghi2 
-@set debug=-g -glh -Scgh2 -ddebugMode 
-@set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scghi -Fucore -Fuutil -Ficore 
+@set optimize=-O3 -CX -XX -Si
+@set debug=-g -glh -Si -ddebugMode 
+@set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scgh -Fucore -Fuutil -Ficore 
 @set guiOpt32=-FuC:\lazarus\components\synedit\units\i386-win32\win32     -FuC:\lazarus\lcl\units\i386-win32\win32     -FuC:\lazarus\lcl\units\i386-win32     -FuC:\lazarus\components\lazutils\lib\i386-win32     -FuC:\lazarus\packager\units\i386-win32     %guiOpt%
 @set guiOpt64=-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64 -FuC:\lazarus64\components\lazutils\lib\x86_64-win64 -FuC:\lazarus64\packager\units\x86_64-win64 %guiOpt% -dversion64bit
 @set sevenZip="c:\Program Files\7-Zip\7z.exe"

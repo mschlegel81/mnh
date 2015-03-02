@@ -14,4 +14,4 @@ private initial:=[0,1];
 private exact  :={1/16*($t^2+4)^2};
 
 //*Solves the Runge-Kutta task from <fga href="http://rosettacode.org/wiki/Runge-Kutta_method">Rosetta Code</a>
-main->print(each(p,evolve(df,initial,0.1,10),&"\n"&,(p%0)&"\t"&(p%1)&"\t"&(abs(p%1-exact(p%0)))));
+main->print(each(p,rk4evolve(df,initial,0.1,10),&"\n"&,(p%0)&"\t"&(p%1)&"\t"&(abs(p%1-exact(p%0)))));

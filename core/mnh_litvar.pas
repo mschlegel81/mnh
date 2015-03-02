@@ -209,8 +209,8 @@ IMPLEMENTATION
 
 VAR
   boolLit: array[false..true] of T_boolLiteral;
-  intLit: array[-1000..1000] of P_intLiteral;
-  strLit: array[-1..255] of P_stringLiteral;
+  intLit: array[-1000..1000] of T_intLiteral;
+  strLit: array[-1..255] of T_stringLiteral;
   errLit: T_scalarLiteral;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
@@ -231,7 +231,7 @@ FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral;
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
   begin
     if (value>=-1000) and (value<=1000) then begin
-      result := intLit [value];
+      result := @intLit [value];
       result^.rereference;
     end else begin
       new(result, Create(value));
@@ -248,8 +248,8 @@ FUNCTION newRealLiteral(CONST value: extended): P_realLiteral;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
     if length(value)<=1 then begin
-      if length(value)=0 then result:=strLit[-1]
-                         else result:=strLit[ord(value[1])];
+      if length(value)=0 then result:=@strLit[-1]
+                         else result:=@strLit[ord(value[1])];
       result^.rereference;
     end else begin
       new(result, Create(value));
@@ -278,7 +278,6 @@ FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean
 
 FUNCTION newErrorLiteral: P_scalarLiteral;
   begin
-    raiseError(el3_evalError, 'Error literal was created.', C_nilTokenLocation);
     result := @errLit;
     errLit.rereference;
   end;
@@ -1983,9 +1982,9 @@ INITIALIZATION
   boolLit[false].Create(false);
   boolLit[true].Create(true);
   errLit.init;
-  for i := -1000 to 1000 do new(intLit[i],create(i));
-  new(strLit[-1],create(''));
-  for i:=0 to 255 do new(strLit[i],Create(chr(i)));
+  for i := -1000 to 1000 do intLit[i].create(i);
+  strLit[-1].create('');
+  for i:=0 to 255 do strLit[i].Create(chr(i));
   DefaultFormatSettings.DecimalSeparator := '.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
@@ -1994,6 +1993,6 @@ FINALIZATION
   boolLit[false].Destroy;
   boolLit[true].Destroy;
   errLit.Destroy;
-  for i := -1000 to 1000 do if intLit[i]<>nil then dispose(intLit [i], Destroy);
-  for i:= -1 to 255 do if strLit[i]<>nil then dispose(strLit[i],destroy);
+  for i := -1000 to 1000 do intLit[i].Destroy;
+  for i:= -1 to 255 do strLit[i].destroy;
 end.

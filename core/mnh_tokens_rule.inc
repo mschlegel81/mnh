@@ -7,6 +7,7 @@
     private
       isCached:boolean;
       cache:T_cache;
+
       id:ansistring;
       subrules:array of P_subrule;
     public
@@ -44,7 +45,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       useParam:P_listLiteral;
       evalCost:longint;
   begin
-    if isCached and (ThreadID=mainThread) then begin
+    if isCached {and (ThreadID=mainThread)} then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       lit:=cache.get(useParam);
@@ -61,6 +62,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         evalCost:=getTickCount-evalCost;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
+          if (ThreadID=mainThread) and (poolThreadsRunning=0) then cache.polish;
           cache.put(useParam,lit,evalCost);
         end;  
         lastRep:=firstRep^.last;

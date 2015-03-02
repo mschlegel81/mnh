@@ -13,7 +13,7 @@
 <h3><a     href="#restrictions">Parameter restrictions</a></h3>
 <h3><a     href="#modifiers">Modifiers</a></h3><ul>
 <li><h4><a href="#privateMod">private</a></h4></li>
-<li><h4><a href="#pureMod">pure</a></h4></li></ul>
+<li><h4><a href="#memoizedMod">memoized</a></h4></li></ul>
 <div align="right"><hr> </font></div>
 <h3><a name="declarations">Declarations</a></h3>
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
@@ -57,12 +57,12 @@ There is a shorthand for tests on equality: the first comparand can be omitted:<
 The <i>private modifier</i> can be used to hide a subrule from importing packages.
 Inside of the package containing the modified subrule it is usable as any other rule.
 
-<h4><a name="pureMod">pure</a></h4>
-The <i>pure modifier</i> enables caching for the complete rule; if one subrule of a rule is marked as pure, then the complete rule is pure.
+<h4><a name="memoizedMod">memoized</a></h4>
+The <i>memoized modifier</i> enables caching for the complete rule; if one subrule of a rule is marked as memoized, then the complete rule is memoized.
 <br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
-map has a size limit - if this limit is exceeded, the least recently used key-value-pairs are "forgotten".<br>
+map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
 Used appropriately, caching results in enormous speedup. <br>
-Note that pure functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
+Note that memoized functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
 
 <div align="right"><hr> </font></div>
 </body>

@@ -56,6 +56,7 @@ CONST STACK_DEPTH_LIMIT=60000;// {$ifdef version64bit} 14750 {$else} 37000 {$end
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
+    pendingTasks:T_taskQueue;
 
 FUNCTION guessPackageForToken(CONST token:T_token):P_package;
   VAR provider:P_codeProvider;
@@ -81,8 +82,9 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_token.inc}
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
-{$include mnh_tokens_rule.inc}
 {$include mnh_tokens_futureTask.inc}
+{$include mnh_tokens_rule.inc}
+
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
   VAR i,j:longint;
@@ -655,6 +657,7 @@ INITIALIZATION
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);
+  pendingTasks.create;
   {$ifdef doTokenRecycling}
   initTokens;
   {$endif}
@@ -668,6 +671,7 @@ INITIALIZATION
   applyUnaryOnExpressionCallback:=@subruleApplyFuncImpl;
 
 FINALIZATION
+  pendingTasks.destroy;
   finalizePackages;
   {$ifdef doTokenRecycling}
   finalizeTokens;

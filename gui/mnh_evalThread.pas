@@ -54,6 +54,7 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   begin
+    result:=0;
     evaluationState.value:=es_idle;
     updateCompletionList;
     mainThread:=ThreadId;

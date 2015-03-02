@@ -249,27 +249,20 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
 
 PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint);
   begin
-    if maxSamples>100 then
-      computed.maxSamples := maxSamples
-    else
-      computed.maxSamples := 100;
+    if maxSamples>100
+    then computed.maxSamples := maxSamples
+    else computed.maxSamples := 100;
     computed.xRule := forXOrNil;
     computed.yRule := forY;
-    if forXOrNil<>nil then
-      forXOrNil^.rereference;
-    if forY<>nil then
-      forY^.rereference;
-
-    if t1>t0 then
-      begin
+    if forXOrNil<>nil then forXOrNil^.rereference;
+    if forY     <>nil then forY     ^.rereference;
+    if t1>t0 then begin
       computed.t0 := t0;
       computed.t1 := t1;
-      end
-    else
-      begin
+    end else begin
       computed.t0 := t1;
       computed.t1 := t0;
-      end;
+    end;
     computeSamplesInActivePlot(false);
   end;
 
@@ -2013,6 +2006,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           fReal(params^.value(1)),
           fReal(params^.value(2)),
           round(fReal(params^.value(3))));
+        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true);
         result := newBoolLiteral(true);
       end else if (sizeWithoutOptions = 5) and
                   (params^.value(0)^.literalType = lt_expression) and
@@ -2029,6 +2023,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           fReal(params^.value(2)),
           fReal(params^.value(3)),
           round(fReal(params^.value(4))));
+        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true);
         result := newBoolLiteral(true);
       end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
@@ -2265,37 +2260,6 @@ INITIALIZATION
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   mnh_funcs.registerRule('setPlotAutoscale', @setAutoscale,
     'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
   mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,
@@ -2310,9 +2274,9 @@ INITIALIZATION
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
   mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
     'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true. #valid options are:'+
-    '#  0; //no tics, no grid'+'#  1; //tics, no gris'+
-    '#  2; //no tics, coarse grid'+'#  3; //tics, and coarse grid'+
-    '#  6; //no tics, finer grid'+'#  7; //tics and finer grid');
+    '#  0; //no tics, no grid#  1; //tics, no gris'+
+    '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
+    '#  6; //no tics, finer grid#  7; //tics and finer grid');
   mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,
     'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
   mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,

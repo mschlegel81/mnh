@@ -1,8 +1,8 @@
 f(x<1)->sin(x);
 f(x)->f(sin(x)+sin(2*x));
 
-F:={$x<1?sin($x):$self(sin($x)+sin(2*$x))};
+pi2:=8*arctan(1);
 
-plot(F,0,2,100);
+F:={$x<0?$self(-$x):$x<pi2?1+cos($x):1+cos($x)-$self($x*0.5)};
 
-
+plot(F,0,100,1000,"l");
