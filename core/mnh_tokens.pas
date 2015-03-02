@@ -34,6 +34,8 @@ TYPE
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
   end;
 
+CONST C_id_qualify_character='.';
+  
 FUNCTION isReloadOfAllPackagesIndicated:boolean;
 FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadAllPackages;
@@ -108,21 +110,22 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
 
 FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
   VAR i:longint;
-      newSource:P_fileWrapper;
+      newSource:P_codeProvider=nil;
   begin
-    for i:=0 to length(packages)-1 do if packages[i]^.codeProvider^.fileIdentifier = packageId then begin
-      if packages[i]^.ready then exit(packages[i])
-                            else begin
-                              raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+packageId+'"',tokenLocation);
-                              exit(nil);
-                            end;
-    end;
+    for i:=0 to length(packages)-1 do 
+      if packages[i]^.codeProvider^.fileIdentifier = packageId then begin
+        if packages[i]^.ready then exit(packages[i])
+                              else begin
+                                raiseError(el4_parsingError,'Cyclic package dependencies encountered; already ^ "'+packageId+'"',tokenLocation);
+                                exit(nil);
+                              end;
+      end;
+    
     newSource:=locateSource(packageId);
     if newSource<>nil then begin
       new(result,create(newSource));
       setLength(packages,length(packages)+1);
       packages[length(packages)-1]:=result;
-
       result^.load;
     end else begin
       raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
@@ -210,8 +213,12 @@ PROCEDURE T_package.load;
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=disposeToken(temp);
         while first<>nil do begin
-          if first^.tokType=tt_identifier then begin
+          if first^.tokType=tt_identifier then begin            
             newId:=first^.txt;
+            if isQualified(newId) then begin
+              raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.toString,first^.location);
+              exit;            
+            end;
             //no duplicates are created; packages are always added at the end
             i:=0;
             while (i<length(packageUses)) and (packageUses[i].id<>newId) do inc(i);
@@ -249,6 +256,7 @@ PROCEDURE T_package.load;
           ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
       begin
+        {$WARNING TODO reject qualified IDs}
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;
@@ -277,8 +285,18 @@ PROCEDURE T_package.load;
             cascadeDisposeToken(first);
             exit;
           end;
-          p:=first; first:=disposeToken(p);
+          first:=disposeToken(first);          
         end;
+        p:=first;
+        while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
+          if (p^.tokType in [tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer]) and isQualified(first^.txt) then begin
+            raiseError(el4_parsingError,'Declaration head contains qualified ID.',p^.location);
+            cascadeDisposeToken(first);
+            exit;
+          end;
+          p:=p^.next;
+        end;
+        
         ruleId:=trim(first^.txt);
         p:=first;
         first:=disposeToken(p);
@@ -466,24 +484,38 @@ DESTRUCTOR T_package.destroy;
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
+    
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
+      packageId,ruleId:ansistring;
   begin
-    if localRules.containsKey(token.txt,userRule) then begin
+    i:=pos(C_id_qualify_character,token.txt);
+    if i>0 then begin
+      packageId:=copy(token.txt,1,i-1);
+      ruleId   :=copy(token.txt,i+1,length(token.txt));
+    end else begin
+      packageId:='';
+      ruleId   :=token.txt;
+    end;
+
+    if ((packageId=codeProvider^.fileIdentifier) or (packageId='')) 
+    and localRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_userRulePointer;
       token.data:=userRule;
       exit;
     end;
 
     for i:=length(packageUses)-1 downto 0 do
-      if packageUses[i].pack^.publicRules.containsKey(token.txt,userRule) then begin
-        token.tokType:=tt_userRulePointer;
-        token.data:=userRule;
-        exit;
-      end;
+    if ((packageId=packageUses[i].id) or (packageId='')) 
+    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then begin
+      token.tokType:=tt_userRulePointer;
+      token.data:=userRule;
+      exit;
+    end;
 
-    if intrinsicRuleAliases.containsKey(token.txt,intrinsicFuncPtr) then begin
+    if ((packageId='mnh') or (packageId='')) 
+    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
       exit;

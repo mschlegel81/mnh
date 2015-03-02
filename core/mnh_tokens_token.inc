@@ -24,6 +24,10 @@ VAR tokenRecycling:record
       fill:longint;
     end;
 {$endif}
+FUNCTION isQualified(CONST s:string):boolean;
+  begin
+    result:=pos(C_id_qualify_character,s)>0;
+  end;
 
 FUNCTION disposeToken(p:P_token):P_token;
   begin
@@ -104,6 +108,12 @@ FUNCTION tokensToString(CONST first:P_token):ansistring;
     end;
   end;
 
+FUNCTION safeTokenToString(CONST t:P_token):ansistring;
+  begin
+    if t=nil then result:='<EOL>'
+    else result:=t^.toString;
+  end;
+
 CONSTRUCTOR T_token.create;
   begin
   end;
@@ -149,6 +159,7 @@ PROCEDURE T_Token.undefine;
       else data:=nil;
     end;
     tokType:=tt_eol;
+    txt:='';
   end;
 
 
@@ -214,11 +225,26 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       parsedLength:=len;
     end;
 
-  FUNCTION leadingId:ansistring;
+  FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
     VAR i:longint;
+        dotFound:boolean;
     begin
       i:=1;
-      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_']) do inc(i);
+      dotFound:=false;
+      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_id_qualify_character]) do begin
+        inc(i);
+        if line[i]=C_id_qualify_character then begin
+          if not(allowQualified) then begin
+            raiseError(el4_parsingError,'No qualified is identifier accepted here. '+line,lineLocation);
+            parsedLength:=i-1;
+            exit(copy(line,1,i-1));          
+          end else if dotFound then begin
+            raiseError(el4_parsingError,'Over-qualified identifier! Only one level is allowed. '+line,lineLocation);
+            parsedLength:=i-1;
+            exit(copy(line,1,i-1));
+          end else dotFound:=true;
+        end;
+      end;
       parsedLength:=i;
       result:=copy(line,1,i);
     end;
@@ -257,11 +283,11 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         end;
       end;
       '$': begin
-        id:=leadingId;
+        id:=leadingId(false);
         result:=resultFrom(length(id),tt_parameterIdentifier);
       end;
       'a'..'z','A'..'Z': begin
-        id:=leadingId;
+        id:=leadingId(true);
         if      id='xor'   then result:=resultFrom(3,tt_operatorXor   )
         else if id='set'   then result:=resultFrom(3,tt_set           )
         else if id='or'    then result:=resultFrom(2,tt_operatorOr    )
@@ -274,7 +300,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id='false' then begin result:=resultFrom(5,tt_literal); result^.data:=newBoolLiteral(false); end
         else if id='Nan'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Nan); end
         else if id='Inf'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Infinity); end
-        else if intrinsicRuleMap.containsKey(id,intrinsicFuncPtr) then begin
+        else if intrinsicRuleMap.containsKey('mnh.'+id,intrinsicFuncPtr) then begin
           result:=resultFrom(length(id),tt_intrinsicRulePointer);
           result^.data:=intrinsicFuncPtr;
         end else begin
@@ -318,7 +344,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
                                            else raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
       ':': if startsWith(line,':=') then result:=resultFrom(2,tt_assign)
            else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
-             id:=leadingId;
+             id:=leadingId(false);
              if      id=':booleanList' then result:=newToken(lineLocation,'',tt_typeCheckBoolList  )
              else if id=':boolean'     then result:=newToken(lineLocation,'',tt_typeCheckBoolean   )
              else if id=':expression'  then result:=newToken(lineLocation,'',tt_typeCheckExpression)
@@ -335,7 +361,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              else raiseError(el4_parsingError,'Cannot parse: '+line+C_lineBreakChar+'expected type check token (one of :scalar, :list, :boolean, :booleanList, :int, :intList, :real, :realList, :string, :stringList, :numeric, :numericList, :expression)',lineLocation);
            end else result:=resultFrom(1,tt_iifElse);
       else begin
-        raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
+        raiseError(el4_parsingError,'Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')' ,lineLocation);
         line:='';
       end;
     end;
@@ -806,7 +832,7 @@ PROCEDURE reduceExpression(VAR first:P_token);
             tt_iifCheck: stack_push;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
-            else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+first^.next^.toString+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
+            else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           else case cTokType(1) of
             tt_braceOpen: begin

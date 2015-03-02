@@ -9,7 +9,7 @@ CONST
 FUNCTION formatTabs(s:ansistring):ansistring;
 FUNCTION isBlank(CONST s:ansistring):boolean;
 //FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
-//FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
+FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
 //FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
 //FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
 FUNCTION escapeString(CONST s:ansistring):ansistring;
@@ -183,19 +183,6 @@ FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
     end;
 
 FUNCTION escapeString(CONST s:ansistring):ansistring;
-  FUNCTION replaceAll(input,original,replacement:string):string;
-    VAR p:longint;
-    begin
-      result:='';
-      p:=pos(original,input);
-      while p>0 do begin
-        result:=result+copy(input,1,p-1)+replacement;
-        input :=copy(input,p+length(original),length(input));
-        p:=pos(original,input);
-      end;
-      result:=result+input;
-    end;
-
   begin
     result:='"'+replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(s,
       '\'                 ,'\\'),

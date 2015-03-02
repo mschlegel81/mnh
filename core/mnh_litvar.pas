@@ -1137,7 +1137,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
     end;
   end;
-
+  
 VAR i:longint;
 INITIALIZATION
   boolLit[false].create(false);

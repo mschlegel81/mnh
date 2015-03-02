@@ -5,7 +5,6 @@ TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 VAR
   intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
-  intrinsicRuleAliases:specialize G_stringKeyMap<T_intFuncCallback>;
 
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
 
@@ -528,8 +527,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
   begin
-    intrinsicRuleAliases.put(name,ptr);
-    intrinsicRuleMap.put(uppercase(name),ptr);
+    intrinsicRuleMap.put(name,ptr);
   end;
 
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -763,7 +761,6 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
 INITIALIZATION
   intrinsicRuleMap.create;
-  intrinsicRuleAliases.create;
   registerRule('print'   ,@print_imp   );
   registerRule('sqr'     ,@sqr_imp     );
   registerRule('sqrt'    ,@sqrt_imp    );
@@ -796,5 +793,5 @@ INITIALIZATION
 
 FINALIZATION
   intrinsicRuleMap.destroy;
-  intrinsicRuleAliases.destroy;
+ 
 end.

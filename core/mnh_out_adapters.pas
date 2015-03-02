@@ -27,6 +27,14 @@ PROCEDURE plainStdErrOut(CONST errorLevel:T_errorLevel; CONST errorMessage:ansis
 
 FUNCTION isMemoryFree(CONST usage:string):boolean;
 
+PROCEDURE haltEvaluation;
+
+VAR storedErrors:array of record
+                   errorLevel:T_errorLevel;
+                   errorMessage:ansistring;
+                   errorLocation:T_tokenLocation
+                 end;
+
 IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;
 PROCEDURE writeExprEcho(CONST s:ansistring); begin if inputExprEcho<>nil then inputExprEcho(s); end;
@@ -55,12 +63,19 @@ PROCEDURE writePrint   (CONST s:ansistring);
 PROCEDURE clearErrors;
   begin
     maxErrorLevel:=el0_allOkay;
+    setLength(storedErrors,0);
   end;
 
 PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+  VAR i:longint;
   begin
     if errorLevel>maxErrorLevel then maxErrorLevel:=errorLevel;
     if errorOut<>nil then errorOut(errorLevel,errorMessage,errorLocation);
+    i:=length(storedErrors);
+    setLength(storedErrors,i+1);
+    storedErrors[i].errorLevel   :=errorLevel;
+    storedErrors[i].errorMessage :=errorMessage;
+    storedErrors[i].errorLocation:=errorLocation;
   end;
 
 FUNCTION errorLevel:T_errorLevel;
@@ -87,6 +102,11 @@ FUNCTION isMemoryFree(CONST usage:string):boolean;
     if not(result) and (maxErrorLevel<el5_systemError) then raiseError(el5_systemError,'Out of memory! ('+usage+')',C_nilTokenLocation);
   end;
 
+PROCEDURE haltEvaluation;
+  begin
+    raiseError(el5_systemError,'Evaluation haltet (most probably by user).',C_nilTokenLocation);
+  end;
+
 INITIALIZATION
   GetMemoryManager(MEMORY_MANAGER);
   inputDeclEcho:=nil;
@@ -96,5 +116,6 @@ INITIALIZATION
   printOut     :=@plainConsoleOut;
   tablePrintOut:=nil;
   maxErrorLevel:=el0_allOkay;
+
 
 end.

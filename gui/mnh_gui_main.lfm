@@ -9,8 +9,9 @@ object MnhForm: TMnhForm
   Color = clWhite
   Menu = MainMenu1
   OnCreate = FormCreate
+  OnShow = FormShow
   LCLVersion = '1.2.2.0'
-  inline SynEdit1: TSynEdit
+  inline InputEdit: TSynEdit
     Left = 0
     Height = 150
     Top = 0
@@ -452,7 +453,7 @@ object MnhForm: TMnhForm
     MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
-      'SynEdit1'
+      'InputEdit'
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ScrollBars = ssAutoBoth
@@ -481,6 +482,7 @@ object MnhForm: TMnhForm
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     LineHighlightColor.FrameEdges = sfeAround
+    OnChange = InputEditChange
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17
@@ -502,7 +504,7 @@ object MnhForm: TMnhForm
       end
     end
   end
-  object GroupBox1: TGroupBox
+  object ErrorGroupBox: TGroupBox
     Left = 0
     Height = 105
     Top = 225
@@ -512,7 +514,7 @@ object MnhForm: TMnhForm
     ClientHeight = 87
     ClientWidth = 316
     TabOrder = 1
-    object StringGrid1: TStringGrid
+    object ErrorStringGrid: TStringGrid
       Left = 0
       Height = 87
       Top = 0
@@ -522,7 +524,12 @@ object MnhForm: TMnhForm
       ColCount = 3
       FixedCols = 0
       FixedRows = 0
+      Font.Color = clRed
+      GridLineWidth = 0
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSpanning, goSmoothScroll]
+      ParentFont = False
       TabOrder = 0
+      TitleFont.Color = clRed
     end
   end
   object Splitter1: TSplitter
@@ -534,7 +541,7 @@ object MnhForm: TMnhForm
     Align = alTop
     ResizeAnchor = akTop
   end
-  inline SynEdit2: TSynEdit
+  inline OutputEdit: TSynEdit
     Left = 0
     Height = 70
     Top = 155
@@ -976,7 +983,7 @@ object MnhForm: TMnhForm
     MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
-      'SynEdit2'
+      'OutputEdit'
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ScrollBars = ssAutoBoth
@@ -1040,6 +1047,10 @@ object MnhForm: TMnhForm
       Caption = 'File'
       object MenuItem3: TMenuItem
         Caption = 'Reset'
+      end
+      object mi_settings: TMenuItem
+        Caption = 'Settings'
+        OnClick = mi_settingsClick
       end
       object MenuItem2: TMenuItem
         Caption = 'Quit'

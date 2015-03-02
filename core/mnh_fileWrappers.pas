@@ -98,10 +98,12 @@ FUNCTION locateSource(CONST id:ansistring):P_fileWrapper;
   PROCEDURE recursePath(CONST path:ansistring);
     VAR info   :TSearchRec;
     begin
-      if findFirst(path+'*',faAnyFile,info)=0 then repeat
+      if findFirst(path+'*',faAnyFile,info)=0 then repeat        
         if (info.attr and faDirectory)=faDirectory then begin
           if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
-        end else if nameToId(info.name)=id then new(result,create(path+info.name));
+        end else if nameToId(info.name)=id then begin
+          new(result,create(path+info.name));
+        end;
       until (findNext(info)<>0) or (result<>nil);
       sysutils.findClose(info);
     end;
@@ -168,7 +170,7 @@ PROCEDURE T_directInputWrapper.setInput(CONST s:ansistring);
 
 CONSTRUCTOR T_fileWrapper.create(CONST filepath_:ansistring);
   begin
-    fpath:=filepath;
+    fpath:=filepath_;
     logCheck;
   end;
 
