@@ -2,7 +2,8 @@
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
                  srt_inline_for_literal,
-                 srt_inline_for_each);
+                 srt_inline_for_each,
+                 srt_mutable);
   P_subrule=^T_subrule;
   T_subrule=object
     private
@@ -31,6 +32,8 @@
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION getInlineValue:P_literal;
+      PROCEDURE setMutable(CONST location:T_tokenLocation);
+      PROCEDURE setMutableValue(CONST val:P_literal);
   end;
 
 {$endif}
@@ -450,11 +453,11 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
     end else result:=nil;
   end;
 
-FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
   VAR tempRecycler:T_tokenRecycler;
   begin
     tempRecycler.create;
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,callDepth,tempRecycler);
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempRecycler);
     tempRecycler.destroy;
   end;
 
@@ -481,11 +484,31 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin
-    if length(expression)<>1 then exit(nil);
+    if (length(expression)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal,srt_mutable]) then exit(nil);
     with expression[0] do if token.tokType=tt_literal then begin
       result:=token.data;
       result^.rereference;
     end else result:=nil;
+  end;
+
+PROCEDURE T_subrule.setMutable(CONST location:T_tokenLocation);
+  begin
+    if length(pattern.sig)>0 then
+      raiseError(el3_evalError,'Only nullary functions can be made mutable.',location)
+    else if (length(expression)<>1) or (expression[0].token.tokType<>tt_literal) then
+      raiseError(el3_evalError,'Only functions returning a simple literal can be made mutable.',location)
+    else typ:=srt_mutable;
+  end;
+
+PROCEDURE T_subrule.setMutableValue(CONST val:P_literal);
+  begin
+    if (typ<>srt_mutable) then begin
+      raiseError(el5_systemError,'This should not have happened: trying to mutate an immutable subrule!',C_nilTokenLocation);
+      exit;
+    end;
+    disposeLiteral(expression[0].token.data);
+    expression[0].token.data:=val;
+    val^.rereference;
   end;
 
 {$endif}

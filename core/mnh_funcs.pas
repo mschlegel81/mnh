@@ -2,7 +2,7 @@ UNIT mnh_funcs;
 INTERFACE
 USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,EpikTimer;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
@@ -12,7 +12,7 @@ PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 
 //Callbacks:--------------------------------
-TYPE T_resolveNullaryCallback=FUNCTION (CONST selfPointer:P_expressionLiteral; CONST callDepth:word):P_literal;
+TYPE T_resolveNullaryCallback=FUNCTION (CONST selfPointer:P_expressionLiteral):P_literal;
 VAR resolveNullaryCallback:T_resolveNullaryCallback;
 
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
@@ -43,7 +43,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -66,7 +66,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     system.EnterCriticalSection(print_cs);
     writePrint(stringToPrint);
     system.LeaveCriticalsection(print_cs);
-    result:=newBoolLiteral(true);
+    result:=newVoidLiteral;
   end;
 
 {$MACRO ON}
@@ -95,54 +95,54 @@ begin
   else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
 end}
 
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=sqrt}
 {$define ID_MACRO:='sqrt'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=sin}
 {$define ID_MACRO:='sin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=arcsin}
 {$define ID_MACRO:='arcsin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=cos}
 {$define ID_MACRO:='cos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=arccos}
 {$define ID_MACRO:='arccos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=tan}
 {$define ID_MACRO:='tan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=arctan}
 {$define ID_MACRO:='arctan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=exp}
 {$define ID_MACRO:='exp'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=ln}
 {$define ID_MACRO:='ln'}
 UNARY_NUM_TO_REAL;
 
 {$undef UNARY_NUM_TO_REAL}
 
-FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -192,12 +192,12 @@ begin
   else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
 end}
 
-FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=abs}
 {$define ID_MACRO:='abs'}
 UNARY_NUM_TO_SAME;
 
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=sqr}
 {$define ID_MACRO:='sqr'}
 UNARY_NUM_TO_SAME;
@@ -271,24 +271,24 @@ UNARY_NUM_TO_SAME;
     else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
   end}
 
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=round}
 {$define ID_MACRO:='round'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=ceil}
 {$define ID_MACRO:='ceil'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=floor}
 {$define ID_MACRO:='floor'}
 ROUND_IMPLEMENTATION;
 
 {$undef ROUND_IMPLEMENTATION}
 
-FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -313,7 +313,7 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('sign',params,tokenLocation);
   end;
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION headOf(CONST x:P_literal):P_literal;
     begin
       result:=nil;
@@ -353,7 +353,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('head',params,tokenLocation);
   end;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION tailOf(CONST x:P_literal):P_listLiteral;
     VAR i:longint;
     begin
@@ -392,7 +392,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('tail',params,tokenLocation);
   end;
 
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList]) then begin
@@ -402,7 +402,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
 
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList])
@@ -410,7 +410,7 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     else raiseNotApplicableError('sortPerm',params,tokenLocation);
   end;
 
-FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -422,7 +422,7 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('unique',params,tokenLocation);
   end;
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE recurse_flatten(CONST L:P_listLiteral);
     VAR i:longint;
     begin
@@ -442,7 +442,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
@@ -466,7 +466,7 @@ PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST
       then intrinsicRuleExplanationMap.put(name,explanation);
   end;
 
-FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -481,7 +481,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else raiseNotApplicableError('max',params,tokenLocation);
   end;
 
-FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -502,7 +502,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('argMax',params,tokenLocation);
   end;
 
-FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -517,7 +517,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else raiseNotApplicableError('min',params,tokenLocation);
   end;
 
-FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -539,7 +539,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 
-FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -550,7 +550,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('size',params,tokenLocation);
   end;
 
-FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
@@ -567,7 +567,7 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('length',params,tokenLocation);
   end;
 
-FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string) then begin
@@ -576,7 +576,7 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end else raiseNotApplicableError('pos',params,tokenLocation);
   end;
 
-FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
       i1,i:longint;
@@ -639,10 +639,10 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   end;
 
 
-FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR res:P_literal;
-      runCount:longint=1;
       profiler:TEpikTimer;
+      t:double;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     VAR aid:P_listLiteral;
@@ -659,25 +659,19 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       profiler := TEpikTimer.create(nil);
       profiler.Clear;
       profiler.Start;
-      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
+      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)));
+      t:=profiler.Elapsed;
       if res<>nil then begin
-        while (profiler.Elapsed<0.01) and (res<>nil) do begin
-          disposeLiteral(res);
-          res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
-          if res=nil then exit(nil);
-          inc(runCount);
-        end;
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
-        appendPair(result,'result'    ,res);
-        appendPair(result,'time'      ,newRealLiteral(profiler.Elapsed/runCount));
-        appendPair(result,'samples'   ,newIntLiteral(runCount));
+        appendPair(result,'result',res);
+        appendPair(result,'time'  ,newRealLiteral(t));
       end;
       profiler.Free;
     end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
-FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR splitters:array of ansistring;
   PROCEDURE initSplitters;
     VAR i:longint;
@@ -745,7 +739,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('SPLIT',params,tokenLocation);
   end;
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -769,7 +763,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     else raiseNotApplicableError('SOFTCAST',params,tokenLocation);
   end;
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION trim_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -791,7 +785,7 @@ FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('TRIM',params,tokenLocation);
   end;
 
-FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION upper_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -813,7 +807,7 @@ FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('upper',params,tokenLocation);
   end;
 
-FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION lower_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -835,7 +829,7 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     else raiseNotApplicableError('lower',params,tokenLocation);
   end;
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -846,7 +840,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('string',params,tokenLocation);
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -884,7 +878,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end;
   end;
 
-FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -892,7 +886,7 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('files',params,tokenLocation);
   end;
 
-FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -900,7 +894,7 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('folders',params,tokenLocation);
   end;
 
-FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
@@ -908,7 +902,7 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
-FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
   begin
     result:=nil;
@@ -920,7 +914,7 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
 
-FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
       L:T_stringList;
       i:longint;
@@ -948,7 +942,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('fileLines',params,tokenLocation);
   end;
 
-FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR ok:boolean;
   begin
     result:=nil;
@@ -963,7 +957,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
   end;
 
-FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR ok:boolean;
       L:T_stringList;
       i:longint;
@@ -981,7 +975,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
   end;
 
-FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR originalAndResult:ansistring;
       lookFor,replaceBy:P_literal;
       i:longint;
@@ -1019,7 +1013,7 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('replaceOne',params,tokenLocation);
   end;
 
-FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR originalAndResult:ansistring;
       lookFor,replaceBy:P_literal;
       i:longint;
@@ -1062,7 +1056,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
-//FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 //  VAR executable:ansistring;
 //      cmdLinePar:T_stringList;
 //      output:TStringList;
@@ -1087,7 +1081,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 //    end else raiseNotApplicableError('execSync',params,tokenLocation);
 //  end;
 //
-//FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 //  VAR executable:ansistring;
 //      cmdLinePar:T_stringList;
 //      i:longint;
@@ -1108,7 +1102,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 //    end else raiseNotApplicableError('execAsync',params,tokenLocation);
 //  end;
 
-FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToSplit:ansistring;
       i0,i1:longint;
 
@@ -1218,14 +1212,14 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
   end;
 
-FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     if (tokenLocation.provider=nil) or
        (tokenLocation.provider^.getPath='') then result:=newStringLiteral('<Unknown>')
                                             else result:=newStringLiteral(tokenLocation.provider^.getPath);
   end;
 
-FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR B:P_literal;
       i,c:longint;
   begin
@@ -1245,7 +1239,7 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     raiseNotApplicableError('trueCount',params,tokenLocation);
   end;
 
-FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
@@ -1269,7 +1263,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('isNan',params,tokenLocation);
   end;
 
-FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
@@ -1293,7 +1287,7 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('isInfinite',params,tokenLocation);
   end;
 
-FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR r0,r1:extended;
   FUNCTION inRange(CONST L:P_literal):boolean; inline;
     VAR i:int64;
@@ -1331,7 +1325,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('isInRange',params,tokenLocation);
   end;
 
-FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
     VAR aid:P_listLiteral;
     begin
@@ -1357,7 +1351,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else raiseNotApplicableError('splitFileName',params,tokenLocation);
   end;
 
-FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     VAR aid:P_listLiteral;
     begin
@@ -1390,7 +1384,7 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('systime',params,tokenLocation);
   end;
 
-FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin

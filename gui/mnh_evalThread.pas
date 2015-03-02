@@ -56,6 +56,7 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add(C_tokenString[tt_operatorAnd]   );
       completionList.add(C_tokenString[tt_modifier_private] );
       completionList.add(C_tokenString[tt_modifier_memoized]);
+      completionList.add(C_tokenString[tt_modifier_mutable]);
       completionList.add(C_tokenString[tt_each]             );
       completionList.add(C_tokenString[tt_parallelEach]     );
       completionList.add(C_boolText[true]);

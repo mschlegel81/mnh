@@ -13,7 +13,8 @@
 <h3><a     href="#restrictions">Parameter restrictions</a></h3>
 <h3><a     href="#modifiers">Modifiers</a></h3><ul>
 <li><h4><a href="#privateMod">private</a></h4></li>
-<li><h4><a href="#memoizedMod">memoized</a></h4></li></ul>
+<li><h4><a href="#memoizedMod">memoized</a></h4></li>
+<li><h4><a href="#mutableMod">mutable</a></h4></li></ul>
 <div align="right"><hr> </font></div>
 <h3><a name="declarations">Declarations</a></h3>
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
@@ -63,6 +64,14 @@ The <i>memoized modifier</i> enables caching for the complete rule; if one subru
 map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
 Used appropriately, caching results in enormous speedup. <br>
 Note that memoized functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
+
+<h4><a name="mutableMod">mutable</a></h4>
+The <i>mutable modifier</i> allows for a rule to be mutable. The following restrictions apply:<ul>
+  <li> A mutable rule also is private per definition </li>
+  <li> A mutable rule also is not memoized per definition </li>
+  <li> A mutable rule must have exactly one subrule </li>
+  <li> A mutable rule must be nullary </li>
+</ul>
 
 <div align="right"><hr> </font></div>
 </body>

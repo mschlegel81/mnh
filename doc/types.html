@@ -57,7 +57,10 @@ Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin
 Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
 If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
 Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
-  f(a,b)->{a+b*$x}</code> will return a linear scalar function.
+  f(a,b)->{a+b*$x}</code> will return a linear scalar function.<br>
+Expressions allow for anonymous recursion via the <code>$self</code> pseudo-literal, e.g. (Fibonacci numbers again):<code>
+  fib:={$i<=1 ? 1 : $self($i-1)+$self($i-2)};
+</code>
 
 <h4><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="each.html">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>

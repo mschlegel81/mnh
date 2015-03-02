@@ -35,7 +35,7 @@ TYPE
     //inline if: (<condition>?<then>:<else>)
     tt_iifCheck, tt_iifElse,
     //assignment operators:
-    tt_declare, tt_assign,
+    tt_declare, tt_assign, tt_mutate,
     //type checks:
     tt_typeCheckScalar, tt_typeCheckList,
     tt_typeCheckBoolean, tt_typeCheckBoolList,
@@ -50,6 +50,7 @@ TYPE
     //modifiers:
     tt_modifier_private,
     tt_modifier_memoized,
+    tt_modifier_mutable,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -127,7 +128,7 @@ CONST
     //inline if: (<condition>?<then>:<else>)
     '?', ':',
     //assignment operators:
-    '->', ':=',
+    '->', ':=', ':=',
     //type checks:
     ':scalar', ':list',
     ':boolean', ':booleanList',
@@ -142,6 +143,7 @@ CONST
     ';',
     'private',
     'memoized',
+    'mutable',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -167,18 +169,18 @@ CONST
     'literal',
     'identifier',
     'parameter identifier',
-    'user FUNCTION (local)',
-    'user FUNCTION (imported)',
-    'built in FUNCTION',
-    'special built in FUNCTION: each#can be used for constructing and/or aggregating lists',
-    'special built in FUNCTION: pEach#can be used for constructing and/or aggregating lists#parallel equivalent to each',
+    'user function (local)',
+    'user function (imported)',
+    'built in function',
+    'special built in function: each#can be used for constructing and/or aggregating lists',
+    'special built in function: pEach#can be used for constructing and/or aggregating lists#parallel equivalent to each',
     'round opening bracket',
     'round closing bracket',
-    'parameter list CONSTRUCTOR',
+    'parameter list constructor',
     'parameter list',
     'square opening bracket#for list construction',
     'square closing bracket#for list construction',
-    'list CONSTRUCTOR',
+    'list constructor',
     'curly opening bracket#for inline expressions',
     'curly closing bracket#for inline expressions',
     'colon#separator',
@@ -213,6 +215,7 @@ CONST
     'ternary inline-if-operator#Completed by corresponding ?',
     'declaration operator',
     'assignment operator',
+    'mutate/assign operator',
     'type check: scalar#matches to all primitive (i.e. non-list) types',
     'type check: list#matches to all list types',
     'type check: boolean#matches to primitive booleans',
@@ -231,6 +234,7 @@ CONST
     'semicolon#marks the end of a statement, assignment or declaration',
     'private modifier#hides the subrule from all importing packages',
     'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
+    'mutable modifier#makes the rule mutable',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE

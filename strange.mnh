@@ -5,4 +5,14 @@ pi2:=8*arctan(1);
 
 F:={$x<0?$self(-$x):$x<pi2?1+cos($x):1+cos($x)-$self($x*0.5)};
 
-plot(F,0,100,1000,"l");
+autoFold(F:expression,x0,x1,dx)->each(x,x0+(x1-x0)*1E-3*[0..1000],+,F(x)*F(x-dx))/1001;
+
+//plot({autoFold(F,0,2*pi2,$t)},0,10*pi2,100);
+
+25.44/(4*arctan(1));
+
+8*4*arctan(1);
+
+plot(F,0,10*pi2,500) and addPlot({F($t+8*4*arctan(1))},0,10*pi2,500);
+
+

@@ -181,13 +181,13 @@ type
 VAR
   activePlot: T_plot;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
 
 IMPLEMENTATION
 
@@ -1922,7 +1922,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       end;
   end;
 
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     options: ansistring = '';
     sizeWithoutOptions: longint;
@@ -1938,7 +1938,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
       if p^.literalType<>lt_expression then exit(false);
       s:=P_expressionLiteral(p)^.value;
       par.create(random);
-      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),callDepth+1,recycler);
+      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),0,recycler);
       if res=nil then begin
         raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;
@@ -2046,7 +2046,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
     end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
   end;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     if threadId<>MainThread then
       begin
@@ -2056,10 +2056,10 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation;
       exit(nil);
       end;
     activePlot.Clear;
-    result := addPlot(params, tokenLocation, callDepth);
+    result := addPlot(params, tokenLocation);
   end;
 
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2077,12 +2077,12 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         tokenLocation);
   end;
 
-FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := activePlot.getAutoscale;
   end;
 
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2100,12 +2100,12 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
         tokenLocation);
   end;
 
-FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := activePlot.getLogscale;
   end;
 
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     x, y: P_literal;
     x0, y0, x1, y1: double;
@@ -2146,12 +2146,12 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         tokenLocation);
   end;
 
-FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := activePlot.getRange;
   end;
 
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2169,12 +2169,12 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         tokenLocation);
   end;
 
-FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := activePlot.getAxisStyle;
   end;
 
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2188,12 +2188,12 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
         'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
 
-FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result := activePlot.getPreserveAspect;
   end;
 
-FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     plotImage, storeImage: TImage;
     filename: ansistring;

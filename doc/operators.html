@@ -191,15 +191,19 @@ Type check operators can be employed to test a value or an expression for it's t
 Example: Test if 3 is an integer<code>
   3:int</code>
 
-
 <h3><a name="assignmentOps"> Assignment operators</a></h3>
-For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs without a return value and with side effects.
+For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs with side effects.
 <br>For details on user defined functions see <a href="functions.html">MNH5 - Function definitions</a>.<br>
 <table border="0">
 <tr><td><code>-></code></td><td><h5>Declaration operator</h5></td></tr><tr><td></td><td>
-Declares a function.</td></tr>
+Declares a function, returning nothing.</td></tr>
 <tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
-Declares a function and resolves the right-hand-side immediately.</td></tr>
+Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
+It can also be used to assign a value to a mutable rule, returning the value after assigning:<code>
+  mutable last_x_in_f:=void;
+  f(x)->print('Last x was: ',last_x_in_f) and
+        print('This x is : ',last_x_in_f:=x);
+</code> </td></tr>
 </table>
 
 <div align="right"><font color="#a0a0a0"><hr> </font></div>

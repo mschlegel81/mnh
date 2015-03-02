@@ -98,7 +98,7 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
     ownerThread := 0;
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR opt: array of ansistring;
     i: longint;
   begin

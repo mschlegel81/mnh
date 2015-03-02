@@ -173,6 +173,7 @@ type
     needEvaluation:boolean;
     doNotEvaluateBefore:double;
     doNotMarkWordBefore:double;
+    needMarkPaint:boolean;
 
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
@@ -264,10 +265,9 @@ PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
   begin
     if (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
-      if isIdentifier(underCursor.tokenText,true) and (now>doNotMarkWordBefore) and
+      if isIdentifier(underCursor.tokenText,true) and
          (inputHighlighter.setMarkedWord(underCursor.tokenText) and outputHighlighter.setMarkedWord(underCursor.tokenText)) then begin
-        doNotMarkWordBefore:=now+ONE_SECOND;
-        Repaint;
+        needMarkPaint:=true;
       end;
       if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
         PopupNotifier1.Title:=underCursor.tokenText;
@@ -367,6 +367,7 @@ PROCEDURE startOfEvaluationCallback;
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     needEvaluation:=false;
+    needMarkPaint:=false;
     doNotEvaluateBefore:=now;
     doNotMarkWordBefore:=now;
     OpenDialog.FileName:=paramstr(0);
@@ -867,6 +868,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       needEvaluation:=false;
     end;
 
+    //paint marks:--------------------------------------------------------------
+    if needMarkPaint and (now>doNotMarkWordBefore) then begin
+      needMarkPaint:=false;
+      doNotMarkWordBefore:=now+ONE_SECOND;
+      Repaint;
+    end;
+    //--------------------------------------------------------------:paint marks
+
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
     i:=round((now-updateStart)*24*60*60*1000);
     if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
@@ -1030,53 +1039,53 @@ begin
   pushSettingsToPlotContainer(true);
 end;
 
-FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.plot(params,tokenLocation,callDepth);
+    result:=mnh_plotData.plot(params,tokenLocation);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     activePlot.setScreenSize(MnhForm.PlotTabSheet.Width,
                              MnhForm.PlotTabSheet.Height);
-    result:=mnh_plotData.addPlot(params,tokenLocation,callDepth);
+    result:=mnh_plotData.addPlot(params,tokenLocation);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAutoscale(params,tokenLocation,callDepth);
+    result:=mnh_plotData.setAutoscale(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setLogscale(params,tokenLocation,callDepth);
+    result:=mnh_plotData.setLogscale(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPlotRange(params,tokenLocation,callDepth);
+    result:=mnh_plotData.setPlotRange(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAxisStyle(params,tokenLocation,callDepth);
+    result:=mnh_plotData.setAxisStyle(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPreserveAspect(params,tokenLocation,callDepth);
+    result:=mnh_plotData.setPreserveAspect(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 

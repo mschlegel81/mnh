@@ -1,11 +1,17 @@
 //*Special case: Prime numbers lesser/equal 2
-memoized
-primes(maxP<=2)->[2];
-//*General case: find Prime numbers using a recursive approach
-primes(maxP)->resieve(primes(floor(sqrt(maxP))),[floor(sqrt(maxP))+1..ceil(maxP)]);
-private resieve(primes,candidates)->primes|(candidates%pEach(p,primes,and,candidates mod p != 0));
+mutable cached_primes:=[2];
+mutable max_cached:=2;
 
-isPrime(n)->n=2 or (n>1 and trueCount(n mod primes(sqrt(n))=0) = 0);
+private resieve(primes,candidates)->primes|(candidates%pEach(p,primes%(primes<=sqrt(max(candidates))),and,candidates mod p != 0));
+private onlySecond(x,y)->y;
+primes(n:int)->n<=max_cached            ? cached_primes%(cached_primes<=n)
+             : n<=max_cached*max_cached ? cached_primes:=resieve(cached_primes,[max_cached+1..max_cached:=n])
+                                        : onlySecond(primes(max_cached*max_cached),primes(n));
+primes(n:real)->primes(floor(n));
+
+isPrime(n)->n in cached_primes ? true : 
+            n <= max_cached ? false :
+            trueCount(n mod primes(sqrt(n))=0)=0;
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
 memoized factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));

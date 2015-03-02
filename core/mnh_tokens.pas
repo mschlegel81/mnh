@@ -230,6 +230,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       VAR p,n,nn,nnn:P_token;
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
+          ruleIsMutable:boolean=false;
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
@@ -244,19 +245,23 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
 
         //plausis:
         if (ruleBody=nil) then begin
-          raiseError(el4_parsingError,'Missing FUNCTION body after assignment/declaration token.',assignmentToken^.location);
+          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
         p:=ruleBody^.getDeclarationOrAssignmentToken;
         if (p<>nil) then begin
-          raiseError(el4_parsingError,'FUNCTION body contains unplausible assignment/declaration token.',p^.location);
+          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized]) do begin
-          if first^.tokType=tt_modifier_private then ruleIsPrivate:=true;
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable]) do begin
+          if first^.tokType=tt_modifier_private  then ruleIsPrivate :=true;
           if first^.tokType=tt_modifier_memoized then ruleIsMemoized:=true;
+          if first^.tokType=tt_modifier_mutable  then begin
+            ruleIsMutable :=true;
+            evaluateBody:=true;
+          end;
           first:=recycler.disposeToken(first);
         end;
         if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
@@ -347,7 +352,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if ruleIsMemoized then ensureRuleId(ruleId)^.setMemoized;
+          if ruleIsMemoized then ensureRuleId(ruleId)^.setMemoized(ruleDeclarationStart);
+          if ruleIsMutable  then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
           first:=nil;
           if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate);
         end else if errorLevel<el5_systemError then

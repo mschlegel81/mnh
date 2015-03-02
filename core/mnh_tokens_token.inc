@@ -19,7 +19,7 @@
   end;
 
   T_tokenRecycler=object
-    dat:array[0..2047] of P_token;
+    dat:array[0..1023] of P_token;
     fill:longint;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -199,6 +199,7 @@ FUNCTION T_token.toString:ansistring;
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
+      tt_mutate,
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -310,6 +311,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id=C_tokenString[tt_operatorAnd]       then result.tokType:=tt_operatorAnd
         else if id=C_tokenString[tt_modifier_private]  then result.tokType:=tt_modifier_private
         else if id=C_tokenString[tt_modifier_memoized] then result.tokType:=tt_modifier_memoized
+        else if id=C_tokenString[tt_modifier_mutable]  then result.tokType:=tt_modifier_mutable
         else if id=C_tokenString[tt_each]         then begin result.tokType:=tt_each;         result.data:=nil; result.txt:=''; end
         else if id=C_tokenString[tt_parallelEach] then begin result.tokType:=tt_parallelEach; result.data:=nil; result.txt:=''; end
         else if id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
@@ -491,11 +493,29 @@ PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_to
 
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
+      rule:P_rule;
   begin
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier: if t^.data=nil then t^.data:=inPackage;
+        tt_identifier: begin
+          if t^.data=nil then t^.data:=inPackage;
+          if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+            inPackage^.resolveRuleId(t^,false);
+            if errorLevel<el3_evalError then begin
+              if t^.tokType=tt_localUserRulePointer then begin
+                rule:=t^.data;
+                if rule^.ruleType=rt_mutable then begin
+                  t^.data:=rule;
+                  t^.tokType:=tt_mutate;
+                  t^.txt:=t^.txt+C_tokenString[tt_mutate];
+                  t^.next:=recycler.disposeToken(t^.next);
+                end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
+              end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_tokenInfoString[t^.tokType],t^.next^.location);
+            end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Identifier '+t^.txt+' cannot be resolved.',t^.next^.location);
+          end;
+        end;
+
         tt_each,tt_parallelEach:
           if  (t^.data=nil)
           and (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
@@ -876,7 +896,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         profiler.Clear;
         profiler.Start;
         {$endif}       
-        newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,callDepth);
+        newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         {$ifdef PROFILING}
         writeln(stderr,'PROFILING;applying intrinsic rule;' + FloatToStr(profiler.Elapsed));
         {$endif}           
@@ -969,6 +989,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
+    end;
+
+  PROCEDURE applyMutation;
+    VAR newValue:P_literal;
+    begin
+      newValue:=first^.next^.data;
+      P_rule(first^.data)^.setMutableValue(newValue);
+      first:=recycler.disposeToken(first);
     end;
 
   begin
@@ -1164,6 +1192,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
+          tt_mutate: begin
+            case cTokType(1) of
+              tt_comparatorEq..tt_operatorPot: begin
+                stack_push;
+                stack_push;
+              end;
+              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
+                stack_popLink;
+                applyMutation;
+              end;
+            end;
+          end;
           else case cTokType(1) of
             tt_braceOpen: begin
               stack_push;
@@ -1212,6 +1252,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
                                            else raiseError(el3_evalError,'Cannot resolve id "'+first^.txt+'"',first^.location);
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
+        tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
           tt_braceOpen: begin
             stack_push; //push rule pointer

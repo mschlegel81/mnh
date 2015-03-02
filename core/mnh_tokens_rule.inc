@@ -2,10 +2,11 @@
   P_rule=^T_rule;
 
   { T_rule }
+  T_ruleType=(rt_normal,rt_cached,rt_mutable);
 
   T_rule=object
     private
-      isCached:boolean;
+      ruleType:T_ruleType;
       cache:T_cache;
       cache_cs:system.TRTLCriticalSection;
 
@@ -16,9 +17,10 @@
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
-      PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
-      PROCEDURE setMemoized;
+      PROCEDURE setMemoized(CONST location:T_tokenLocation);
+      PROCEDURE setMutable(CONST location:T_tokenLocation);
+      PROCEDURE setMutableValue(CONST value:P_literal);
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
     end;
@@ -26,7 +28,7 @@
 {$ifdef include_implementation}
 CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
   begin
-    isCached:=false;
+    ruleType:=rt_normal;
     id:=ruleId;
     setLength(subrules,0);
   end;
@@ -37,11 +39,13 @@ DESTRUCTOR T_rule.destroy;
     id:='';
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
-    if isCached then begin
+    if ruleType=rt_cached then begin
       cache.destroy;
       system.DoneCriticalsection(cache_cs);
+    end else if ruleType=rt_mutable then begin
+      system.DoneCriticalsection(cache_cs);
     end;
-    isCached:=false;
+    ruleType:=rt_normal;
   end;
 
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
@@ -50,7 +54,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       useParam:P_listLiteral;
       evalCost:longint;
   begin
-    if isCached then begin
+    if ruleType=rt_cached then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       system.EnterCriticalSection(cache_cs);
@@ -101,16 +105,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-  end;
-
-PROCEDURE T_rule.addOrSetSubRule(CONST rule: P_subrule);
-  VAR i:longint;
-  begin
-    writeln('adding or setting subrule: ',rule^.toString);
-    i:=0;
-    while (i<length(subrules)) and not(rule^.pattern.isEquivalent(subrules[i]^.pattern)) do inc(i);
-    if i>=length(subrules) then setLength(subrules,i+1);
-    subrules[i]:=rule;
+    if (length(subrules)>1) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
   end;
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
@@ -118,13 +113,34 @@ FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
     result:=subrules[0]^.declaredAt;
   end;
 
-PROCEDURE T_rule.setMemoized;
+PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
   begin
-    if not(isCached) then begin
-      isCached:=true;
+    if (ruleType=rt_normal) then begin
+      ruleType:=rt_cached;
       cache.create;
       system.InitCriticalSection(cache_cs);
-    end;
+    end else if ruleType=rt_mutable then raiseError(el2_warning,'Mutable rules are not allowed to be memoized',location);
+  end;
+
+PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
+  begin
+    if (ruleType=rt_normal) then begin
+      if length(subrules)<>1 then raiseError(el4_parsingError,'Cannot mutate a rule with more than one subrule!',location)
+      else begin
+        subrules[0]^.setMutable(location);
+        ruleType:=rt_mutable;
+        system.InitCriticalSection(cache_cs);
+      end;
+    end else if ruleType=rt_cached then raiseError(el4_parsingError,'Cannot mutate a memoized rule!',location);
+  end;
+
+PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
+  begin
+    if (ruleType=rt_mutable) then begin
+      system.EnterCriticalSection(cache_cs);
+      subrules[0]^.setMutableValue(value);
+      system.LeaveCriticalSection(cache_cs);
+    end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;
@@ -139,5 +155,6 @@ FUNCTION T_rule.getInlineValue:P_literal;
     if length(subrules)=1 then result:=subrules[0]^.getInlineValue
                           else result:=nil;
   end;
+
 
 {$endif}
