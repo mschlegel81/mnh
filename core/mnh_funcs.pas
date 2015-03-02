@@ -1423,6 +1423,34 @@ FUNCTION fileCursorNext_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end else raiseNotApplicableError('fileCursorNext',params,tokenLocation);
   end;
 
+FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION recurse(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_boolean: if P_boolLiteral(x)^.value
+                    then exit(newIntLiteral(1))
+                    else exit(newIntLiteral(0));
+        lt_int: begin x^.rereference; exit(x); end;
+        lt_string : if length(P_stringLiteral(x)^.value)=1
+                    then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
+                    else exit(newIntLiteral(-1));
+        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation));
+        else begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        end;
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=recurse(params^.value(0))
+    else raiseNotApplicableError('ord',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1504,6 +1532,7 @@ INITIALIZATION
   registerRule('fileCursorOpen',@fileCursorOpen_imp,'fileCursorOpen(filename:string);#Opens the file cursor for the given file name and returns true on success, false otherwise.');
   registerRule('fileCursorHasNext',@fileCursorHasNext_imp,'fileCursorHasNext;#Returns true if the file cursor is open and a next element is available, false otherwise.');
   registerRule('fileCursorNext',@fileCursorNext_imp,'fileCursorNext;#Returns the next line from the file cursor or the empty string if there is no such line (i.e. the cursor is closed or has reached the end of the file).');
+  registerRule('ord'           ,@ord_imp           ,'ord(x);#Returns the ordinal value of x');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

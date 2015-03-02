@@ -633,7 +633,7 @@ FUNCTION T_scalarLiteral.toString: ansistring;
 
 FUNCTION T_voidLiteral.toString: ansistring;
   begin
-    result :='<void>';
+    result :='void';
   end;
 
 FUNCTION T_boolLiteral.toString: ansistring;

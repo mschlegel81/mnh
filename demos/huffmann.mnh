@@ -7,11 +7,11 @@ private huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) 
 private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
                                               traverseBinaryTree(codePrefix&1,T%1) ;
-private codeSort(L)->L%(sortPerm(each(code,L%%0,length(code))));
+private codeSort(L)->L%(sortPerm(each(code,L%%0,-length(code))));
 
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
 private charactersInString     (s:string)->charFreq(copy(s,[0..min(1000000,length(s))-1],1));
-private charFreq(L)->each(c,unique(L),[size(L%(L=c)),c]);
+private charFreq(L)->pEach(c,unique(L),[size(L%(L=c)),c]);
 
 private escapeChar("\n")->'\\n';
 private escapeChar("\r")->'\\r';
@@ -24,6 +24,6 @@ main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') a
                        print(" code\tchar\n "&
                              each(e,huffman(charactersInFile(filename)),&"\n "&,
                                   e%0&"\t"&escapeChar(e%1)));
-main->main((splitFileName(myPath)%"directory")&"/kjv.txt");
+//*Calls main with unixdict.txt as input
+main->main((splitFileName(myPath)%"directory")&"/inputs/unixdict.txt");
 
-main;

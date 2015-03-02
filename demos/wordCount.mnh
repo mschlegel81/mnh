@@ -1,16 +1,22 @@
-private inputFile:=(splitFileName(myPath)%"directory")&"/kjv.txt";
-private specials:= ([0..9]&"")|["\r","\n",",",".","[","]","(",")",'"',":",";","?","_","-","^","  "];
-private clean(S)->split(trim(lower(replace(S,specials,each(s,specials," "))))," ");
-private allWords:=flatten(each(l,fileLines(inputFile),clean(l)));
+private duplicates(sortedList)->unique(tail(sortedList)%(head(sortedList,size(sortedList)-1)=tail(sortedList)));
 
-private wordCount__(S)-> each(w,unique(S),[w,trueCount(S=w)]);
-private wordCount_ (S)->pEach(c,unique(copy(S,1,1)),|,wordCount__(S%(copy(S,1,1)=c)));
-private wordCount  (S)->pEach(c,unique(copy(S,0,1)),|,wordCount_ (S%(copy(S,0,1)=c)));
-private sortBySecond(S)->S%sortPerm(S%%1);
+private IGNORE_CHARS:=["","!","\"","#","&","'","(",")",",","-",".","/","0","1","2","3","4","5","6","7","8","9",":",";","=","?","[","]","^","_","`","$","%","*","+","<",">","@","\\","{","|","}","Ã"];
+private cleanString(s:string)->lower(trim(replace(replace(s,IGNORE_CHARS," "),"  "," ")));
+private cleanSplit(s:string)->s='' ? void : split(s,' ');
 
-private H:=sortBySecond(wordCount(allWords));
-//*Analyzes the King James Version of the bible and returns a word-count, ascending by order of frequency
-main->print(each(c,H,&"\n"&,each(p,c,&"\t"&))) and
-      print(size(allWords),' words in total') and
-      print(size(H),' distinct words');
+private fileWords(filename)->print('Reading file ',filename) ? flatten(pEach(l,fileLines(filename),cleanSplit(cleanString(l)))) : false;
 
+private deltaIndexes(L)->0|[1..size(L)-1]%(head(L,size(L)-1)<>tail(L))|size(L);
+private histogram(words)->histogram(words,deltaIndexes(words));
+private histogram(words,IDX)->pEach(i,[0..size(IDX)-2],[words%(IDX%i),(IDX%(i+1)-IDX%i)]);
+
+private analyze  (wordList  )->print('Words total:    ',size(wordList)) ? analyze_A(size(wordList),histogram(sort(wordList))) : false;
+private analyze_A(total,hist)->print('Distinct words: ',size(hist    )) ? analyze_B(total,head(hist%sortPerm(-(hist%%1)),50)) : false;
+private analyze_B(total,hist)->print('Most frequent:') and print('word\tcount\t%\n', each(h,hist,&"\n"&,'  "'&(h%0)&'"\t'&(h%1)&'\t'&round(h%1/total*100,2)));
+
+private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));
+
+//*Displays a short info on words in kjv.txt
+main->analyze(fileWords(splitFileName(myPath)%"directory"&"\\inputs\\kjv.txt"));
+//*Displays a short info on words in the given file or files matching a search pattern
+main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));

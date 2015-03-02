@@ -10,6 +10,7 @@
 
       id:ansistring;
       subrules:array of P_subrule;
+
     public
       CONSTRUCTOR create(CONST ruleId:ansistring);
       DESTRUCTOR destroy;
@@ -19,7 +20,8 @@
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       PROCEDURE setMemoized;
       FUNCTION hasPublicSubrule:boolean;
-  end;
+      FUNCTION getInlineValue:P_literal;
+    end;
 {$endif}
 {$ifdef include_implementation}
 CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
@@ -120,6 +122,12 @@ FUNCTION T_rule.hasPublicSubrule: boolean;
   begin
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then exit(true);
     result:=false;
+  end;
+
+FUNCTION T_rule.getInlineValue:P_literal;
+  begin
+    if length(subrules)=1 then result:=subrules[0]^.getInlineValue
+                          else result:=nil;
   end;
 
 {$endif}

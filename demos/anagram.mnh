@@ -1,15 +1,20 @@
-Normal(s:string)->each(c,sort(copy(s,[0..length(s)-1],1)),&);
-//Dict->each(L,fileLines((splitFileName(myPath)%"directory")&"/unixdict.txt"),[L,Normal(L)]);
-Dict:=pEach(L,fileLines("mydict.txt"),[L,Normal(L)]);
-subDict(len)->Dict%(length(Dict%%1)=len);
-anagrams->pEach(c,unique(length(Dict%%1)),|,anagrams(subDict(c)));
-anagrams([])->[];
-anagrams(D)->pEach(d,unique(D%%1),|,filter(D%(D%%1=d)%%0));
-filter(L)->size(L)<=1 ? [] : [L];
+private default_dictionary:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
 
-joined([])->"--none--";
-joined(L)->each(l,L%(sortPerm(each(x,L,size(x)))),&"\n"&,each(i,l,&", "&,string(i)));
+private normalForm(s:string)->each(char,sort(copy(s,[0..length(s)-1],1)),&);
 
-main->print(joined(anagrams));
+private readDict(filename)->sort(pEach(word,fileLines(filename),[normalForm(word),word]));
 
-main;
+private duplicates(sortedList)->unique(tail(sortedList)%(head(sortedList,size(sortedList)-1)=tail(sortedList)));
+private splitDict(DICT)->splitDict(DICT,size(DICT) div 2);
+private splitDict(DICT,i)->DICT%i%0 = DICT%(i-1)%0 ? splitDict(DICT,i+1) : [head(DICT,i),tail(DICT,i)];
+
+private anagramsInDict(DICT)->size(DICT)>1000 ? pEach(subDict,splitDict(DICT),|,anagramsInDict(subDict))
+                                              : pEach(m,duplicates(DICT%%0),DICT%(DICT%%0=m)%%1);
+
+private orderListsBySize(L)->L%sortPerm(each(subList,L,size(subList)));
+
+//*Finds anagrams in unixdict.txt
+main->main(default_dictionary);
+
+//*Finds anagrams in a custom dictionary
+main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),and,print(each(el,set,&", "&)));

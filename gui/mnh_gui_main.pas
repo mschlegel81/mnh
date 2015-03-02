@@ -658,8 +658,7 @@ end;
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
-      MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
-      ad_setFile(SaveDialog.FileName,InputEdit.Lines);
+      ad_saveFile(SaveDialog.FileName,InputEdit.Lines);
       if SettingsForm.setFileInEditor(SaveDialog.FileName) then processFileHistory;
       SettingsForm.saveSettings;
     end;
@@ -669,7 +668,7 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile='' then miSaveAsClick(Sender)
     else begin
-      MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      ad_saveFile(ad_currentFile,InputEdit.Lines);
       if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
       SettingsForm.saveSettings;
     end;

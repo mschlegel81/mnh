@@ -1,15 +1,9 @@
-private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
-private expandPrimes(P:intList,pMax:int,C:intList)-> P|each(c,C,each(p,c mod P<>0,and) ? c : void);
-
-//*Special case 1: Prime numbers lesser than 3
+//*Special case: Prime numbers lesser/equal 2
 memoized
-primes(nMax<3)->[2];
-//*Special case 2: Prime numbers lesser than 5
-primes(nMax<5)->[2,3];
-//*Special case 3: Prime numbers lesser than 7
-primes(nMax<7)->[2,3,5];
-//*General case: Generate list of primes from preceding primes
-primes(nMax)->expandPrimes(primes(round(sqrt(nMax))),floor(nMax));
+primes(maxP<=2)->[2];
+//*General case: find Prime numbers using a recursive approach
+primes(maxP)->resieve(primes(floor(sqrt(maxP))),[floor(sqrt(maxP))+1..maxP]);
+private resieve(primes,candidates)->primes|(candidates%pEach(p,primes,and,candidates mod p = 0));
 
 isPrime(n)->trueCount(n mod primes(sqrt(n))=0) = 0;
 

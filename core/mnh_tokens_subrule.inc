@@ -18,6 +18,7 @@
       PROCEDURE embrace;
       FUNCTION needEmbrace:boolean;
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
+      PROCEDURE constructExpression(CONST rep:P_token; VAR recycler:T_tokenRecycler);
     public
       CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
@@ -29,59 +30,60 @@
       FUNCTION toString:ansistring;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION getInlineValue:P_literal;
   end;
 
 {$endif}
 {$ifdef include_implementation}
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenRecycler);
+  VAR t:P_token;
+      inlineLiteral:P_literal;
+  begin
+    setLength(expression,0);
+    t:=rep;
+    while t<>nil do begin
+      setLength(expression,length(expression)+1);
+      with expression[length(expression)-1] do begin
+        token:=t^;
+        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
+        token.next:=nil;
+        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
+          parIdx:=pattern.indexOfId(token.txt);
+          if parIdx>=0 then token.tokType:=tt_identifier else begin
+            if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
+            if token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer] then begin
+              inlineLiteral:=P_rule(token.data)^.getInlineValue;
+              if inlineLiteral<>nil then begin
+                token.data:=inlineLiteral;
+                token.txt:='';
+                token.tokType:=tt_literal;
+              end;
+            end;
+          end;
+        end else parIdx:=-1;
+      end;
+    end;
+  end;
 
 CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
-  VAR t:P_token;
+
   begin
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
     pattern:=pat;
     pattern.finalizeRefs;
     declaredAt:=declAt;
-    setLength(expression,0);
-    t:=rep;
-    while t<>nil do begin
-      setLength(expression,length(expression)+1);
-      with expression[length(expression)-1] do begin
-        token:=t^; 
-        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
-        token.next:=nil;
-        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
-          parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then token.tokType:=tt_identifier
-          else if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
-        end else parIdx:=-1;
-      end;
-    end;
+    constructExpression(rep,recycler);
     if needEmbrace then embrace;
   end;
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
-  VAR t:P_token;
   begin
     typ:=srt_inline_for_each;
     pattern.create;
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
-    setLength(expression,0);
-    t:=rep;
-    while t<>nil do begin
-      setLength(expression,length(expression)+1);
-      with expression[length(expression)-1] do begin
-        token:=t^; 
-        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
-        token.next:=nil;
-        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier] then begin
-          parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then token.tokType:=tt_identifier
-          else if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
-        end else parIdx:=-1;
-      end;
-    end;
+    constructExpression(rep,recycler);
     if needEmbrace then embrace;
   end;
 
@@ -102,13 +104,52 @@ PROCEDURE T_subrule.embrace;
   end;
 
 FUNCTION T_subrule.needEmbrace:boolean;
-  VAR bracketLevel,i:longint;
+  VAR bracketStack:array of longint;
+  PROCEDURE push(CONST index:longint);
+    begin
+      setLength(bracketStack,length(bracketStack)+1);
+      bracketStack[length(bracketStack)-1]:=index;
+    end;
+
+  PROCEDURE pop(CONST index:longint);
+    FUNCTION compatible(CONST oT,cT:T_tokenType):boolean;
+      begin
+        result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
+             or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
+             or (oT = tt_expBraceOpen) and (ct=tt_expBraceClose);
+      end;
+
+    begin
+      if length(bracketStack)=0 then begin
+        raiseError(el4_parsingError,'Unbalanced paranthesis: missing opening bracket',expression[index].token.location);
+        exit;
+      end;
+      if not(compatible(expression[bracketStack[length(bracketStack)-1]].token.tokType,
+                        expression[index                               ].token.tokType)) then begin
+        raiseError(el4_parsingError,'Unbalanced paranthesis: bracket mismatch (open)' ,expression[bracketStack[length(bracketStack)-1]].token.location);
+        raiseError(el4_parsingError,'Unbalanced paranthesis: bracket mismatch (close)',expression[index                               ].token.location);
+      end;
+      setLength(bracketStack,length(bracketStack)-1);
+    end;
+
+  PROCEDURE checkStackAtEnd;
+    VAR i:longint;
+    begin
+      if length(bracketStack)>0 then for i:=0 to length(bracketStack)-1 do
+        raiseError(el4_parsingError,'Unbalanced paranthesis: missing closing bracket',expression[bracketStack[i]].token.location);
+      setLength(bracketStack,0);
+    end;
+
+  VAR i:longint;
   begin
+    setLength(bracketStack,0);
     if length(expression)<=1 then exit(false);
-    bracketLevel:=0;
+
+    result:=false;
     for i:=0 to length(expression)-1 do case expression[i].token.tokType of
-      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
-      tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
+      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: push(i);
+      tt_braceClose, tt_listBraceClose, tt_expBraceClose: pop(i);
+
       tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
@@ -125,9 +166,9 @@ FUNCTION T_subrule.needEmbrace:boolean;
       tt_typeCheckNumeric, tt_typeCheckNumList,
       tt_typeCheckExpression,
       tt_typeCheckNonemptyList,
-      tt_typeCheckEmptyList: if bracketLevel=0 then exit(true);
+      tt_typeCheckEmptyList: if length(bracketStack)=0 then result:=true;
     end;
-    result:=false;
+    checkStackAtEnd;
   end;
 
 FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
@@ -436,4 +477,14 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     end else result:=nil;
     param.destroy;
   end;
+
+FUNCTION T_subrule.getInlineValue:P_literal;
+  begin
+    if length(expression)<>1 then exit(nil);
+    with expression[0] do if token.tokType=tt_literal then begin
+      result:=token.data;
+      result^.rereference;
+    end else result:=nil;
+  end;
+
 {$endif}

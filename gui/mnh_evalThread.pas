@@ -14,6 +14,7 @@ PROCEDURE ad_clearFile;
 PROCEDURE ad_evaluate(CONST L:TStrings);
 PROCEDURE ad_haltEvaluation;
 PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
+PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
 FUNCTION ad_currentFile:string;
 FUNCTION ad_evaluationRunning:Boolean;
 PROCEDURE ad_killEvaluationLoopSoftly;
@@ -136,6 +137,17 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
       end;
       getMainPackage^.clear;
     end;
+  end;
+
+PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
+  begin
+    L.SaveToFile(path);
+    if path<>mainPackageProvider.getPath then begin
+      setMainPackagePath(path);
+      mainPackageProvider.setPath(path);
+    end;
+    mainPackageProvider.setLines(L);
+    mainPackageProvider.save;
   end;
 
 FUNCTION ad_currentFile: string;
