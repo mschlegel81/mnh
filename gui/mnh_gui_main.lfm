@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 408
+  Left = 573
   Height = 373
-  Top = 126
+  Top = 197
   Width = 320
   Caption = 'MNH5'
   ClientHeight = 353

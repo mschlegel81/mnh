@@ -322,11 +322,11 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         id:=leadingId(true);
         parsedLength:=length(id);
         if      id='xor'   then result.tokType:=tt_operatorXor
-        else if id='set'   then result.tokType:=tt_set
+        else if id='set'   then begin result.tokType:=tt_set; result.txt:=''; end
         else if id='or'    then result.tokType:=tt_operatorOr
         else if id='mod'   then result.tokType:=tt_operatorMod
         else if id='in'    then result.tokType:=tt_operatorIn
-        else if id='each'  then result.tokType:=tt_each
+        else if id='each'  then begin result.tokType:=tt_each; result.txt:=''; end
         else if id='div'   then result.tokType:=tt_operatorDivInt
         else if id='and'   then result.tokType:=tt_operatorAnd
         else if id='true'  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
@@ -508,7 +508,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
         t^.next:=disposeToken(t^.next); //dispose (
         t^.next:=disposeToken(t^.next); //dispose <id>
         t^.next:=disposeToken(t^.next); //dispose ,
-      end else begin
+      end else if t^.txt='' then begin
         raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
         exit;
       end;
@@ -518,8 +518,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
         t^.txt:=t^.next^.next^.txt;
         t^.data:=nil;
         t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
-      end else begin
-        raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
+      end else if t^.txt='' then begin
+        raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
         exit;
       end;
 
@@ -1074,10 +1074,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           stack_push;
         end;
         tt_identifier: begin
-          if first^.data=nil then begin
-            raiseError(el2_warning,'Encountered an identifier without associated package!',first^.location);
-            first^.data:=guessPackageForToken(first^);
-          end;
+          if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;

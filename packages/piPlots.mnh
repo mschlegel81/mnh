@@ -1,18 +1,34 @@
+sum([])->0;
+sum(L)->each(e,L,+);
+
+pascal(n)->pascal([1],n);
+pascal(L,n>0)->pascal(0|L+L|0,n-1);
+pascal(L,n)->each(i,[max(1,size(L)-1)..1],sum(head(L,i)))/sum(L);
+CACHE pascal;
+limitLength(L,maxLen)->tail(L,size(L)-maxLen);
+
+W(0,n)->1;
+W(k,n)->limitLength(each(i,[0..n-k],1)|pascal(k),n);
+
+atSummand(i)->(-1)^i/(2*i+1);
+CACHE atSummand;
+
 pi:=4*arctan(1);
-pi1(n:int)->4*each(i,1/(4*[0..n-1]+1)-1/(4*[0..n-1]+3),+);
-pi1(N:intList)->each(n,N,pi1(n));
-CACHE pi1;
-pi2(n:int)->pi1(n)+  0.5*4/(4*n+1);
-pi2(N:intList)->each(n,N,pi2(n));
-pi3(n:int)->pi1(n)+0.875*4/(4*n+1)-0.5*4/(4*n+3)+0.125*4/(4*n+5);
-pi3(N:intList)->each(n,N,pi3(n));
-N:=round(sqrt(2)**[1..36]);
+
+piA(k:int,n:int)->4*sum(W(k,n)*atSummand([0..n-1]));
+piA(k:int,N:intList)->each(n,N,piA(k,n));
+CACHE piA;
+piAError(k,n)->abs(piA(k,n)-pi);
+
+//N:=round(sqrt(2)**[1..18]);
+N:=[1..500];
 doPlot->setPlotLogscale([true,true]) and
-        setPlotAutoscale([true,true]) and
-        setPlotPreserveAspect(false) and
-        plot   (N,abs(pi-pi1(N)),"l .") and
-        addPlot(N,abs(pi-pi2(N)),"l +") and
-        addPlot(N,abs(pi-pi3(N)),"l x");
+        setPlotRange([[min(N),max(N)],[1E-18,5]]) and
+        plot                      (N,piAError(0,N),"black") and
+        each(k,[1..20],and,addPlot(N,piAError(k,N),"black"));
 
-main->doPlot;
+doPlot;
 
+delta(L)->tail(L)-head(L,size(L)-1);
+convOrder(k:int)->(ln(piAError(k,29))-ln(piAError(k,30)))/(ln(29)-ln(30));
+print(each(k,[0..20],&'\n'&,k&"\t"&convOrder(k)));

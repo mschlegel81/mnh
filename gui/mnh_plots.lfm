@@ -1,7 +1,7 @@
 object plotForm: TplotForm
-  Left = 578
+  Left = 812
   Height = 240
-  Top = 163
+  Top = 255
   Width = 320
   Caption = 'MNH Plots'
   ClientHeight = 220
@@ -39,9 +39,36 @@ object plotForm: TplotForm
     end
     object MenuItem1: TMenuItem
       Caption = 'Options'
-      object miAntialiasing: TMenuItem
-        Caption = 'Antialiasing'
-        OnClick = miAntialiasingClick
+      object miAntialiasingOff: TMenuItem
+        AutoCheck = True
+        Caption = 'Antialiasing Off'
+        Checked = True
+        RadioItem = True
+        OnClick = miAntialiasingOffClick
+      end
+      object miAntiAliasing2: TMenuItem
+        AutoCheck = True
+        Caption = 'Antialiasing Level 1'
+        RadioItem = True
+        OnClick = miAntialiasingOffClick
+      end
+      object miAntiAliasing3: TMenuItem
+        AutoCheck = True
+        Caption = 'Antialiasing Level 2'
+        RadioItem = True
+        OnClick = miAntialiasingOffClick
+      end
+      object miAntiAliasing4: TMenuItem
+        AutoCheck = True
+        Caption = 'Antialiasing Level 3'
+        RadioItem = True
+        OnClick = miAntialiasingOffClick
+      end
+      object miAntiAliasing5: TMenuItem
+        AutoCheck = True
+        Caption = 'Antialiasing Level 4'
+        RadioItem = True
+        OnClick = miAntialiasingOffClick
       end
       object miAutoReset: TMenuItem
         Caption = 'Reset plot options on re-evaluation'

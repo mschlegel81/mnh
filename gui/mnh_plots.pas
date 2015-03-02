@@ -15,6 +15,10 @@ type
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
+    miAntiAliasing5: TMenuItem;
+    miAntiAliasing3: TMenuItem;
+    miAntiAliasing4: TMenuItem;
+    miAntiAliasing2: TMenuItem;
     miLoadPlot: TMenuItem;
     miSavePlot: TMenuItem;
     miExportBmp: TMenuItem;
@@ -34,13 +38,13 @@ type
     miXGrid: TMenuItem;
     miXFinerGrid: TMenuItem;
     miYTics: TMenuItem;
-    miAntialiasing: TMenuItem;
+    miAntialiasingOff: TMenuItem;
     OpenDialog: TOpenDialog;
     plotImage: TImage;
     SaveDialog: TSaveDialog;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormResize(Sender: TObject);
-    PROCEDURE miAntialiasingClick(Sender: TObject);
+    PROCEDURE miAntialiasingOffClick(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
@@ -59,6 +63,8 @@ type
   private
     { private declarations }
   public
+    rendering:boolean;
+    renderStartTime:double;
     { public declarations }
     PROCEDURE doPlot();
     PROCEDURE pullSettingsToGui();
@@ -77,41 +83,42 @@ implementation
 
 { TplotForm }
 
-PROCEDURE TplotForm.FormCreate(Sender: TObject);
+procedure TplotForm.FormCreate(Sender: TObject);
   begin
     pullSettingsToGui();
+    rendering:=false;
   end;
 
-PROCEDURE TplotForm.FormResize(Sender: TObject);
+procedure TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
     doPlot();
   end;
 
-PROCEDURE TplotForm.miAntialiasingClick(Sender: TObject);
+procedure TplotForm.miAntialiasingOffClick(Sender: TObject);
   begin
-    miAntialiasing.Checked:=not(miAntialiasing.Checked);
-    doPlot();
+    if ad_evaluationRunning then plotDisplayRequired:=true
+                            else doPlot();
   end;
 
-PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
+procedure TplotForm.miAutoResetClick(Sender: TObject);
 begin
   miAutoReset.Checked:=not(miAutoReset.Checked);
 end;
 
-PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
+procedure TplotForm.miAutoscaleXClick(Sender: TObject);
 begin
   miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
+procedure TplotForm.miAutoscaleYClick(Sender: TObject);
 begin
   miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miExportBmpClick(Sender: TObject);
+procedure TplotForm.miExportBmpClick(Sender: TObject);
 VAR storeImage:TImage;
     rect:TRect;
 begin
@@ -119,21 +126,18 @@ begin
   if SaveDialog.Execute then begin
     storeImage:=TImage.Create(Self);
     storeImage.SetInitialBounds(0,0,plotImage.Width,plotImage.Height);
-
     rect.Top:=0;
     rect.Left:=0;
     rect.Right:=plotImage.Width;
     rect.Bottom:=plotImage.Height;
     storeImage.Canvas.CopyRect(rect,plotImage.Canvas,rect);
-
     SaveDialog.FileName:=ChangeFileExt(SaveDialog.FileName,'.png');
     storeImage.Picture.PNG.SaveToFile(SaveDialog.FileName);
     storeImage.Free;
-    storeImage.Destroy;
   end;
 end;
 
-PROCEDURE TplotForm.miLoadPlotClick(Sender: TObject);
+procedure TplotForm.miLoadPlotClick(Sender: TObject);
   begin
     OpenDialog.Filter:='MNH-Plot|*.mnh_plot';
     if OpenDialog.Execute then begin
@@ -146,25 +150,25 @@ PROCEDURE TplotForm.miLoadPlotClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
+procedure TplotForm.miLogscaleXClick(Sender: TObject);
 begin
   miLogscaleX.Checked:=not(miLogscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miLogscaleYClick(Sender: TObject);
+procedure TplotForm.miLogscaleYClick(Sender: TObject);
 begin
   miLogscaleY.Checked:=not(miLogscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
+procedure TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect.Checked:=not(miPreserveAspect.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-PROCEDURE TplotForm.miSavePlotClick(Sender: TObject);
+procedure TplotForm.miSavePlotClick(Sender: TObject);
   begin
     SaveDialog.Filter:='MNH-Plot|*.mnh_plot';
     if SaveDialog.Execute then begin
@@ -173,96 +177,53 @@ PROCEDURE TplotForm.miSavePlotClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
+procedure TplotForm.miXFinerGridClick(Sender: TObject);
 begin
   miXFinerGrid.Checked:=not(miXFinerGrid.Checked);
   if miXFinerGrid.Checked then miXGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miXGridClick(Sender: TObject);
+procedure TplotForm.miXGridClick(Sender: TObject);
 begin
   miXGrid.Checked:=not(miXGrid.Checked);
   if not(miXGrid.Checked) then miXFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miXTicsClick(Sender: TObject);
+procedure TplotForm.miXTicsClick(Sender: TObject);
 begin
   miXTics.Checked:=not(miXTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miYFinerGridClick(Sender: TObject);
+procedure TplotForm.miYFinerGridClick(Sender: TObject);
 begin
   miYFinerGrid.Checked:=not(miYFinerGrid.Checked);
   if miYFinerGrid.Checked then miYGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miYGridClick(Sender: TObject);
+procedure TplotForm.miYGridClick(Sender: TObject);
 begin
   miYGrid.Checked:=not(miYGrid.Checked);
   if not(miYGrid.Checked) then miYFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
+procedure TplotForm.miYTicsClick(Sender: TObject);
 begin
   miYTics.Checked:=not(miYTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-PROCEDURE TplotForm.doPlot();
-  VAR wcol:array of word;
-  PROCEDURE readPixels;
-    //VAR  ScanLineImage,                 //image with representation as in T_24BitImage
-    //     tempIntfImage: TLazIntfImage;  //image with representation as in TBitmap
-    //     y: Integer;                    //line counter
-    //     ImgFormatDescription: TRawImageDescription;
-    //
-    {$WARNING this routine needs performance tuning!}
-    VAR i,j,k,abgr:longint;
-    begin
-      if length(wcol)<3*plotImage.Height*plotImage.Width then begin
-        setLength(wcol,3*plotImage.Height*plotImage.Width);
-        for i:=0 to length(wcol)-1 do wcol[i]:=0;
-      end;
-
-      for j:=0 to plotImage.Height-1 do
-      for i:=0 to plotImage.Width-1 do begin
-        k:=(j*plotImage.Width+i)*3;
-        abgr:=plotImage.Canvas.Pixels[i,j];
-        inc(wcol[k  ], abgr         and 255);
-        inc(wcol[k+1],(abgr shr  8) and 255);
-        inc(wcol[k+2],(abgr shr 16) and 255);
-      end;
-    end;
-
-  PROCEDURE averagePixels;
-    //VAR  ScanLineImage,                 //image with representation as in T_24BitImage
-    //     tempIntfImage: TLazIntfImage;  //image with representation as in TBitmap
-    //     y: Integer;                    //line counter
-    //     ImgFormatDescription: TRawImageDescription;
-    {$WARNING this routine needs performance tuning!}
-    VAR i,j,k:longint;
-    begin
-      for j:=0 to plotImage.Height-1 do
-      for i:=0 to plotImage.Width-1 do begin
-        k:=(j*plotImage.Width+i)*3;
-        if length(wcol)>=k+3 then plotImage.Canvas.Pixels[i,j]:=
-           (wcol[k  ] shr 4)        +
-          ((wcol[k+1] shr 4) shl  8)+
-          ((wcol[k+2] shr 4) shl 16);
-      end;
-    end;
-
-  PROCEDURE plotWithOffset(CONST dx,dy:double; CONST runIdx:byte);
+procedure TplotForm.doPlot;
+  PROCEDURE drawGridAndRows(CONST target:TCanvas; CONST scalingFactor:longint);
     VAR rowId,i,x,y,yBaseLine,lastX,lastY:longint;
         symSize:double;
         lastWasValid,currentIsValid:boolean;
         sample:T_point;
-//        firstPattern:boolean;
+        patternIdx:byte;
         rowColor:longint;
 
     PROCEDURE drawPatternRect(x0,y0,x1,y1:longint);
@@ -275,152 +236,137 @@ PROCEDURE TplotForm.doPlot();
           locY:=round(y0+(y1-y0)*(x-x0)/(x1-x0));
           if locY>yBaseLine then begin
             for y:=yBaseLine to locY do
-            if (x and 1)+2*(y and 1)=(runIdx+rowId) and 3 then
-              plotImage.Canvas.Pixels[x,y]:=rowColor;
+            if (x and 1)+2*(y and 1)=patternIdx then
+              target.Pixels[x,y]:=rowColor;
           end else begin
             for y:=yBaseLine downto locY do
-            if (x and 1)+2*(y and 1)=(runIdx+rowId) and 3 then
-              plotImage.Canvas.Pixels[x,y]:=rowColor;
+            if (x and 1)+2*(y and 1)=patternIdx then
+              target.Pixels[x,y]:=rowColor;
           end;
         end;
       end;
 
     begin
       //Clear:------------------------------------------------------------------
-      plotImage.Canvas.Brush.Style:=bsSolid;
-      plotImage.Canvas.Brush.Color:=clWhite;
-      plotImage.Canvas.Pen.Style:=psClear;
-      plotImage.Canvas.Pen.EndCap:=pecSquare;
-      plotImage.Canvas.Clear;
+      target.Brush.Style:=bsSolid;
+      target.Brush.Color:=clWhite;
+      target.Pen.Style  :=psClear;
+      target.Pen.EndCap :=pecSquare;
+      target.FillRect(0,0,target.Width-1,target.Height-1);
+      target.Clear;
       //------------------------------------------------------------------:Clear
       //coordinate grid:========================================================
-      plotImage.Canvas.Pen.Style:=psSolid;
-      plotImage.Canvas.Pen.Width:=1;
+      target.Pen.Style:=psSolid;
+      target.Pen.Width:=scalingFactor;
       for i:=0 to length(activePlot.tic['y'])-1 do with activePlot.tic['y'][i] do begin
-        y:=round(pos+dy);
-        if major then plotImage.Canvas.Pen.Color:=$BBBBBB
-                 else plotImage.Canvas.Pen.Color:=$DDDDDD;
-        plotImage.Canvas.Line(0,y,plotImage.Canvas.Width,y);
+        y:=round(pos*scalingFactor);
+        if major then target.Pen.Color:=$BBBBBB
+                 else target.Pen.Color:=$DDDDDD;
+        target.Line(0,y,activePlot.screenWidth*scalingFactor,y);
       end;
       for i:=0 to length(activePlot.tic['x'])-1 do with activePlot.tic['x'][i] do begin
-        x:=round(pos+dx);
-        if major then plotImage.Canvas.Pen.Color:=$BBBBBB
-                 else plotImage.Canvas.Pen.Color:=$DDDDDD;
-        plotImage.Canvas.Line(x,0,x,plotImage.Canvas.Height);
+        x:=round(pos*scalingFactor);
+        if major then target.Pen.Color:=$BBBBBB
+                 else target.Pen.Color:=$DDDDDD;
+        target.Line(x,0,x,activePlot.screenHeight*scalingFactor);
       end;
       //========================================================:coordinate grid
       //row data:===============================================================
-      if activePlot.logscale['y'] then yBaseLine:=round(activePlot.realToScreen('y',1))
-                                  else yBaseLine:=round(activePlot.realToScreen('y',0));
-      if yBaseLine<0 then yBaseLine:=0 else if yBaseLine>=plotImage.Height then yBaseLine:=plotImage.Height-1;
-
+      if activePlot.logscale['y'] then yBaseLine:=round(activePlot.realToScreen('y',1)*scalingFactor)
+                                  else yBaseLine:=round(activePlot.realToScreen('y',0)*scalingFactor);
+      if yBaseLine<0 then yBaseLine:=0 else if yBaseLine>=target.Height then yBaseLine:=target.Height-1;
       for rowId:=0 to length(activePlot.row)-1 do begin
         rowColor:=activePlot.row[rowId].style.getTColor;
-        //case byte(rowId mod 15) of
-        //  0: firstPattern:=odd( runIdx         );
-        //  1: firstPattern:=odd( runIdx    shr 1);
-        //  2: firstPattern:=odd((runIdx+1) shr 1);
-        //  3: firstPattern:=odd( runIdx    shr 2);
-        //  4: firstPattern:=odd((runIdx+2) shr 2);
-        //  5: firstPattern:=odd( runIdx    shr 3);
-        //  6: firstPattern:=odd((runIdx+4) shr 3);
-        //  7: firstPattern:=odd((runIdx+1) shr 2);
-        //  8: firstPattern:=odd((runIdx+3) shr 2);
-        //  9: firstPattern:=odd((runIdx+2) shr 3);
-        // 10: firstPattern:=odd((runIdx+6) shr 3);
-        // 11: firstPattern:=odd((runIdx+1) shr 3);
-        // 12: firstPattern:=odd((runIdx+3) shr 3);
-        // 13: firstPattern:=odd((runIdx+5) shr 3);
-        // 14: firstPattern:=odd((runIdx+7) shr 3);
-        //end;
+        patternIdx:=rowId and 3;
+
         if activePlot.row[rowId].style.wantStraightLines then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecRound;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              x:=round(sample[0]+dx);
-              y:=round(sample[1]+dy);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
               if lastWasValid then begin
-                plotImage.Canvas.LineTo(round(sample[0]+dx),round(sample[1]+dy));
+                target.LineTo(x,y);
                 if activePlot.row[rowId].style.wantFill then drawPatternRect(lastX,lastY,x,y);
-              end else plotImage.Canvas.MoveTo(round(sample[0]+dx),round(sample[1]+dy));
+              end else target.MoveTo(x,y);
               lastX:=x;
               lastY:=y;
             end;
             lastWasValid:=currentIsValid;
           end;
         end else if activePlot.row[rowId].style.wantLeftSteps then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecRound;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              x:=round(sample[0]+dx);
-              y:=round(sample[1]+dy);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
               if lastWasValid then begin
-                plotImage.Canvas.LineTo(lastX,y);
-                plotImage.Canvas.LineTo(    x,y);
+                target.LineTo(lastX,y);
+                target.LineTo(    x,y);
                 if activePlot.row[rowId].style.wantFill then drawPatternRect(lastX,y,x,y);
-              end else plotImage.Canvas.MoveTo(x,y);
+              end else target.MoveTo(x,y);
               lastX:=x;
               lastY:=y;
             end;
             lastWasValid:=currentIsValid;
           end;
         end else if activePlot.row[rowId].style.wantRightSteps then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecRound;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              x:=round(sample[0]+dx);
-              y:=round(sample[1]+dy);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
               if lastWasValid then begin
-                plotImage.Canvas.LineTo(x,lastY);
-                plotImage.Canvas.LineTo(x,    y);
+                target.LineTo(x,lastY);
+                target.LineTo(x,    y);
                 if activePlot.row[rowId].style.wantFill then drawPatternRect(lastX,lastY,x,lastY);
-              end else plotImage.Canvas.MoveTo(x,y);
+              end else target.MoveTo(x,y);
               lastX:=x;
               lastY:=y;
             end;
             lastWasValid:=currentIsValid;
           end;
         end else if activePlot.row[rowId].style.wantBars then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecRound;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecRound;
 
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              x:=round(sample[0]+dx);
-              y:=round(sample[1]+dy);
+              x:=round(sample[0]*scalingFactor);
+              y:=round(sample[1]*scalingFactor);
               if lastWasValid then begin
                 drawPatternRect(round(lastX*0.95+x*0.05),lastY,
                                 round(lastX*0.05+x*0.95),lastY);
-                plotImage.Canvas.Line(round(lastX*0.95+x*0.05),yBaseLine,round(lastX*0.95+x*0.05),lastY);
-                plotImage.Canvas.Line(round(lastX*0.95+x*0.05),lastY    ,round(lastX*0.05+x*0.95),lastY);
-                plotImage.Canvas.Line(round(lastX*0.05+x*0.95),yBaseLine,round(lastX*0.05+x*0.95),lastY);
+                target.Line(round(lastX*0.95+x*0.05),yBaseLine,round(lastX*0.95+x*0.05),lastY);
+                target.Line(round(lastX*0.95+x*0.05),lastY    ,round(lastX*0.05+x*0.95),lastY);
+                target.Line(round(lastX*0.05+x*0.95),yBaseLine,round(lastX*0.05+x*0.95),lastY);
               end;
               lastX:=x;
               lastY:=y;
@@ -429,136 +375,171 @@ PROCEDURE TplotForm.doPlot();
           end;
 
         end else if activePlot.row[rowId].style.wantBoxes then begin
-          plotImage.Canvas.Pen.Style:=psClear;
-          plotImage.Canvas.Brush.Style:=bsSolid;
-          plotImage.Canvas.Brush.Color:=rowColor;
+          target.Pen.Style:=psClear;
+          target.Brush.Style:=bsSolid;
+          target.Brush.Color:=rowColor;
           lastWasValid:=false;
           i:=0;
           while i+1<length(activePlot.row[rowId].sample) do begin
             sample:=activePlot.row[rowId].sample[i];
-            if not(IsNan(sample[0])) and not(IsNan(sample[1])) then begin
+            if activePlot.isSampleValid(sample) then begin
               sample:=activePlot.realToScreen(sample);
-              lastX:=round(sample[0]+dx);
-              lastY:=round(sample[1]+dy);
+              lastX:=round(sample[0]*scalingFactor);
+              lastY:=round(sample[1]*scalingFactor);
               sample:=activePlot.row[rowId].sample[i+1];
-              if not(IsNan(sample[0])) and not(IsNan(sample[1])) then begin
+              if activePlot.isSampleValid(sample) then begin
                 sample:=activePlot.realToScreen(sample);
-                x:=round(sample[0]+dx);
-                y:=round(sample[1]+dy);
-                plotImage.Canvas.Rectangle(lastX,lastY,x,y);
+                x:=round(sample[0]*scalingFactor);
+                y:=round(sample[1]*scalingFactor);
+                target.Rectangle(lastX,lastY,x,y);
               end;
             end;
             inc(i,2);
           end;
         end;
         if activePlot.row[rowId].style.wantDot then begin
-          plotImage.Canvas.Pen.Style:=psClear;
-          plotImage.Canvas.Brush.Style:=bsSolid;
-          plotImage.Canvas.Brush.Color:=rowColor;
-          symSize:=activePlot.row[rowId].style.getSymbolWidth;
+          target.Pen.Style:=psClear;
+          target.Brush.Style:=bsSolid;
+          target.Brush.Color:=rowColor;
+          symSize:=activePlot.row[rowId].style.getSymbolWidth*scalingFactor;
 
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              plotImage.Canvas.Ellipse(round(sample[0]+dx-symSize),round(sample[1]+dy-symSize),
-                                       round(sample[0]+dx+symSize),round(sample[1]+dy+symSize));
+              target.Ellipse(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor-symSize),
+                                       round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor+symSize));
             end;
           end;
         end;
         if activePlot.row[rowId].style.wantPlus then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecSquare;
-          symSize:=activePlot.row[rowId].style.getSymbolWidth;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
+          symSize:=activePlot.row[rowId].style.getSymbolWidth*scalingFactor;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              plotImage.Canvas.Line(round(sample[0]+dx-symSize),round(sample[1]+dy),
-                                    round(sample[0]+dx+symSize),round(sample[1]+dy));
-              plotImage.Canvas.Line(round(sample[0]+dx),round(sample[1]+dy-symSize),
-                                    round(sample[0]+dx),round(sample[1]+dy+symSize));
+              target.Line(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor),
+                                    round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor));
+              target.Line(round(sample[0]*scalingFactor),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor),round(sample[1]*scalingFactor+symSize));
             end;
           end;
         end;
         if activePlot.row[rowId].style.wantCross then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecSquare;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
           symSize:=activePlot.row[rowId].style.getSymbolRad;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              plotImage.Canvas.Line(round(sample[0]+dx-symSize),round(sample[1]+dy-symSize),
-                                    round(sample[0]+dx+symSize),round(sample[1]+dy+symSize));
-              plotImage.Canvas.Line(round(sample[0]+dx+symSize),round(sample[1]+dy-symSize),
-                                    round(sample[0]+dx-symSize),round(sample[1]+dy+symSize));
+              target.Line(round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor+symSize));
+              target.Line(round(sample[0]*scalingFactor+symSize),round(sample[1]*scalingFactor-symSize),
+                                    round(sample[0]*scalingFactor-symSize),round(sample[1]*scalingFactor+symSize));
             end;
           end;
         end;
         if activePlot.row[rowId].style.wantImpulses then begin
-          plotImage.Canvas.Pen.Style:=psSolid;
-          plotImage.Canvas.Pen.Color:=rowColor;
-          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
-          plotImage.Canvas.Pen.EndCap:=pecSquare;
+          target.Pen.Style:=psSolid;
+          target.Pen.Color:=rowColor;
+          target.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.EndCap:=pecSquare;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
-            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            currentIsValid:=activePlot.isSampleValid(sample);
             if currentIsValid then begin
               sample:=activePlot.realToScreen(sample);
-              plotImage.Canvas.Line(round(sample[0]+dx),yBaseLine,
-                                    round(sample[0]+dx),round(sample[1]+dy));
+              target.Line(round(sample[0]*scalingFactor),yBaseLine,
+                                    round(sample[0]*scalingFactor),round(sample[1]*scalingFactor));
             end;
           end;
         end;
       end;
       //===============================================================:row data
+    end;
+
+  PROCEDURE scaleDown(CONST source,target:TCanvas; CONST scalingFactor:longint);
+    VAR r,g,b:longint;
+    PROCEDURE resetRGB; begin r:=0; g:=0; b:=0; end;
+    PROCEDURE addRGB(CONST rgba:longint);
+      begin
+        inc(r, rgba         and 255);
+        inc(g,(rgba shr  8) and 255);
+        inc(b,(rgba shr 16) and 255);
+      end;
+
+    FUNCTION averageRGB:longint;
+      begin
+        r:=r div sqr(scalingFactor); if r<0 then r:=0 else if r>255 then r:=255;
+        g:=g div sqr(scalingFactor); if g<0 then g:=0 else if g>255 then g:=255;
+        b:=b div sqr(scalingFactor); if b<0 then b:=0 else if b>255 then b:=255;
+
+        result:=r         or
+               (g shl  8) or
+               (b shl 16);
+      end;
+
+    VAR x,y,ix,iy:longint;
+    begin
+      for y:=0 to activePlot.screenHeight-1 do
+      for x:=0 to activePlot.screenWidth-1 do begin
+        resetRGB;
+        for iy:=y*scalingFactor to (y+1)*scalingFactor-1 do
+        for ix:=x*scalingFactor to (x+1)*scalingFactor-1 do addRGB(source.Pixels[ix,iy]);
+        target.Pixels[x,y]:=averageRGB;
+      end;
+    end;
+
+  PROCEDURE drawCoordSys(CONST target:TCanvas);
+    VAR i,x,y:longint;
+    begin
       //coordinate system:======================================================
       //clear border:-----------------------------------------------------------
-      plotImage.Canvas.Brush.Style:=bsSolid;
-      plotImage.Canvas.Brush.Color:=clWhite;
-      plotImage.Canvas.Pen.Style:=psClear;
-      plotImage.Canvas.Pen.Width:=1;
-      plotImage.Canvas.Pen.EndCap:=pecSquare;
+      target.Brush.Style:=bsSolid;
+      target.Brush.Color:=clWhite;
+      target.Pen.Style:=psClear;
+      target.Pen.Width:=1;
+      target.Pen.EndCap:=pecSquare;
       if activePlot.wantTics('y') then
-        plotImage.Canvas.FillRect(0,0,activePlot.xOffset,plotImage.Height);
+        target.FillRect(0,0,activePlot.xOffset,plotImage.Height);
       if activePlot.wantTics('x') then
-        plotImage.Canvas.FillRect(activePlot.xOffset,activePlot.yOffset,
+        target.FillRect(activePlot.xOffset,activePlot.yOffset,
                                   plotImage.Width   ,plotImage.Height);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
-      plotImage.Canvas.Pen.Style:=psSolid;
-      plotImage.Canvas.Pen.Color:=clBlack;
-      plotImage.Canvas.Pen.Width:=1;
+      target.Pen.Style:=psSolid;
+      target.Pen.Color:=clBlack;
+      target.Pen.Width:=1;
       if activePlot.wantTics('y') then
-        plotImage.Canvas.Line(activePlot.xOffset    ,0                 ,
+        target.Line(activePlot.xOffset    ,0                 ,
                               activePlot.xOffset,activePlot.yOffset);
       if activePlot.wantTics('x') then
-        plotImage.Canvas.Line(activePlot.screenWidth,activePlot.yOffset,
+        target.Line(activePlot.screenWidth,activePlot.yOffset,
                               activePlot.xOffset    ,activePlot.yOffset);
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
       if activePlot.wantTics('y') then begin
         for i:=0 to length(activePlot.tic['y'])-1 do with activePlot.tic['y'][i] do if major then begin
-          y:=round(pos+dy);
-          plotImage.Canvas.Line(activePlot.xOffset-5,y,activePlot.xOffset,y);
           y:=round(pos);
-          plotImage.Canvas.TextOut(activePlot.xOffset-5-plotImage.Canvas.TextWidth(txt),y-plotImage.Canvas.TextHeight(txt) shr 1,txt);
+          target.Line(activePlot.xOffset-5,y,activePlot.xOffset,y);
+          target.TextOut(activePlot.xOffset-5-target.TextWidth(txt),y-target.TextHeight(txt) shr 1,txt);
         end;
       end;
       if activePlot.wantTics('x') then begin
         for i:=0 to length(activePlot.tic['x'])-1 do with activePlot.tic['x'][i] do if major then begin
-          x:=round(pos+dx);
-          plotImage.Canvas.Line(x,activePlot.yOffset+5,x,activePlot.yOffset);
           x:=round(pos);
-          plotImage.Canvas.TextOut(x-plotImage.Canvas.TextWidth(txt) shr 1 ,activePlot.yOffset+5,txt);
+          target.Line(x,activePlot.yOffset+5,x,activePlot.yOffset);
+          target.TextOut(x-target.TextWidth(txt) shr 1 ,activePlot.yOffset+5,txt);
         end;
       end;
 
@@ -566,9 +547,12 @@ PROCEDURE TplotForm.doPlot();
       //======================================================:coordinate system
     end;
 
-  VAR i,j:longint;
+  VAR factor:longint;
+      renderImage:TImage;
   begin
     plotDisplayRequired:=false;
+    rendering:=true;
+    renderStartTime:=now;
     plotImage.Canvas.AntialiasingMode:=amOn;
     //Prepare transformations:--------------------------------------------------
     activePlot.setScreenSize(plotImage.Width,plotImage.Height);
@@ -577,17 +561,25 @@ PROCEDURE TplotForm.doPlot();
         plotImage.Canvas.TextHeight(activePlot.longtestYTic),
         plotImage.Canvas.TextWidth (activePlot.longtestYTic)));
     //--------------------------------------------------:Prepare transformations
-    if miAntialiasing.Checked then begin
-      for i:=0 to 3 do for j:=0 to 3 do begin
-        plotWithOffset(cos(0.1)*(i*0.25-0.375)+sin(0.1)*(j*0.25-0.375),
-                      -sin(0.1)*(i*0.25-0.375)+cos(0.1)*(j*0.25-0.375),i*4+j);
-        readPixels;
-      end;
-      averagePixels;
-    end else plotWithOffset(0,0,0);
+    if miAntialiasingOff.Checked then begin
+      drawGridAndRows(plotImage.Canvas,1);
+      drawCoordSys(plotImage.Canvas);
+    end else begin
+      if      miAntiAliasing5.Checked then factor:=5
+      else if miAntiAliasing4.Checked then factor:=4
+      else if miAntiAliasing3.Checked then factor:=3
+      else factor:=2;
+      renderImage:=TImage.Create(Self);
+      renderImage.SetInitialBounds(0,0,plotImage.Width*factor,plotImage.Height*factor);
+      drawGridAndRows(renderImage.Canvas,factor);
+      scaleDown(renderImage.Canvas,plotImage.Canvas,factor);
+      renderImage.Free;
+      drawCoordSys(plotImage.Canvas);
+    end;
+    rendering:=false;
   end;
 
-PROCEDURE TplotForm.pullSettingsToGui;
+procedure TplotForm.pullSettingsToGui;
   begin
     miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
     miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
@@ -602,7 +594,7 @@ PROCEDURE TplotForm.pullSettingsToGui;
     miLogscaleY.Checked     :=activePlot.logscale['y'];
   end;
 
-PROCEDURE TplotForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
+procedure TplotForm.pushSettingsToPlotContainer(const plotImmediately: boolean);
   VAR aidX,aidY:longint;
   begin
     aidX:=0;
@@ -622,13 +614,14 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
                        else plotDisplayRequired:=true;
   end;
 
-PROCEDURE TplotForm.doConditionalReset;
+procedure TplotForm.doConditionalReset;
   begin
     if miAutoReset.Checked then begin
       activePlot.setDefaults;
       pullSettingsToGui();
     end;
   end;
+
 
 FUNCTION fReal(CONST X:P_literal):double; inline;
   begin
@@ -650,17 +643,17 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       t0,t1:double;
 
   PROCEDURE addFuncRow(CONST fx:P_subrule);
-    VAR j:longint;
-        t:P_realLiteral;
+    VAR j,k,refRun:longint;
+        t:T_realLiteral;
         td:double;
         res:P_literal;
     begin
       for j:=0 to 100 do begin
         td:=t0+(t1-t0)*(j*0.01);
-        t:=newRealLiteral(td);
-        res:=fx^.directEvaluateUnary(t,callDepth+1);
+        t.create(td);
+        res:=fx^.directEvaluateUnary(@t,callDepth+1);
+        t.destroy;
         activePlot.row[rowId].addSample(td,fReal(res));
-        disposeLiteral(t);
         disposeLiteral(res);
       end;
     end;
@@ -731,7 +724,10 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         rowId:=activePlot.addRow(options);
         t0:=fReal(params^.value(1));
         t1:=fReal(params^.value(2));
-        addFuncRow(P_expressionLiteral(params^.value(0))^.value);
+        try
+          addFuncRow(P_expressionLiteral(params^.value(0))^.value);
+        finally
+        end;
         plotDisplayRequired:=true;
         result:=newBoolLiteral(true);
       end else if (sizeWithoutOptions=4) and
@@ -743,8 +739,11 @@ FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         rowId:=activePlot.addRow(options);
         t0:=fReal(params^.value(2));
         t1:=fReal(params^.value(3));
-        addFuncRow(P_expressionLiteral(params^.value(0))^.value,
-                   P_expressionLiteral(params^.value(1))^.value);
+        try
+          addFuncRow(P_expressionLiteral(params^.value(0))^.value,
+                     P_expressionLiteral(params^.value(1))^.value);
+        finally
+        end;
         plotDisplayRequired:=true;
         result:=newBoolLiteral(true);
       end else result:=newErrorLiteralRaising('Functions plot and addPlot cannot be applied to parameter list'+params^.toParameterListString(true),tokenLocation);
@@ -808,6 +807,7 @@ FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
            not(IsNan(y0)) and not(IsInfinite(y0)) and
            not(IsNan(y1)) and not(IsInfinite(y1)) then begin
           activePlot.setRange(x0,y0,x1,y1);
+          plotForm.pullSettingsToGui();
           result:=newBoolLiteral(true);
         end else result:=newErrorLiteralRaising('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
       end else result:=newErrorLiteralRaising('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);

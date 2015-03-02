@@ -580,8 +580,9 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
     flag:=ad_evaluationRunning;
-    if flag then aid:=formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
-            else aid:=endOfEvaluationText.value;
+    if flag                    then aid:='Evaluating: '+formatFloat('0.000',(now-startOfEvaluation.value )*(24*60*60))+'s'
+    else if plotForm.rendering then aid:='Rendering: ' +formatFloat('0.000',(now-plotForm.renderStartTime)*(24*60*60))+'s'
+    else aid:=endOfEvaluationText.value;
     if StatusBar.SimpleText<>aid then begin
       StatusBar.SimpleText:=aid;
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
@@ -609,7 +610,7 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       lastFormRepaint:=now;
       flushThroughput;
       repaint;
-      if mnh_Plots.plotDisplayRequired then begin
+      if mnh_Plots.plotDisplayRequired and not(ad_evaluationRunning) then begin
         plotForm.Show;
         plotForm.doPlot();
       end;
