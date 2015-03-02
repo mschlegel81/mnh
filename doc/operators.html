@@ -144,6 +144,10 @@ number of elements as the left hand side operand:<code>
   ["a","b","c"]%[true,false,true] -> ["a","c"];
   ["a","b","c"]%[2,1,0] -> ["c","b","a"];
 </code>
+Another possible use of the extraction-operator is access to Key-Value lists, i.e. nested lists of the form <code>[["key1",value1],["key2",value2],...]</code>. You can use the key as right hand side operand to obtain the 
+corresponding value (or the first of such if there are more than one):<code>
+  [["a",1],["b",2]]%"a" -> 1;
+</code>
 </td></tr>
 <tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> 
 The level 2 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>

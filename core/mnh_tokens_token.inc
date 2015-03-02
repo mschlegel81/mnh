@@ -719,7 +719,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
         for j:=0 to length(bodyRule)-1 do if errorLevel<el3_evalError then begin
-          future[k].createTask(bodyRule[j],itList^.Value(i));
+          future[k].createTask(bodyRule[j],itList^.Value(i),callDepth);
           if future[k].state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           inc(k);
         end else future[k].createTaskInErrorState;

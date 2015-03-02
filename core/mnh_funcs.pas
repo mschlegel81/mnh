@@ -7,7 +7,7 @@ TYPE
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
-  mnh_console_executable:ansistring;
+
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 

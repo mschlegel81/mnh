@@ -1,0 +1,16 @@
+private inputFile:=(splitFileName(myPath)%"directory")&"/kjv.txt";
+private specials:= ([0..9]&"")|["\r","\n",",",".","[","]","(",")",'"',":",";","?","_","-","^","  "];
+private clean(S)->split(trim(lower(replace(S,specials,each(s,specials," "))))," ");
+private allWords:=flatten(each(l,fileLines(inputFile),clean(l)));
+
+private wordCount__(S)-> each(w,unique(S),[w,trueCount(S=w)]);
+private wordCount_ (S)->pEach(c,unique(copy(S,1,1)),|,wordCount__(S%(copy(S,1,1)=c)));
+private wordCount  (S)->pEach(c,unique(copy(S,0,1)),|,wordCount_ (S%(copy(S,0,1)=c)));
+private sortBySecond(S)->S%sortPerm(S%%1);
+
+private H:=sortBySecond(wordCount(allWords));
+//*Analyzes the King James Version of the bible and returns a word-count, ascending by order of frequency
+main->print(each(c,H,&"\n"&,each(p,c,&"\t"&))) and
+      print(size(allWords),' words in total') and
+      print(size(H),' distinct words');
+

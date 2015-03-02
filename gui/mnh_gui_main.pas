@@ -390,6 +390,7 @@ procedure TMnhForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
       if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
       if mr=mrCancel then CloseAction:=caNone;
     end;
+    SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
   end;
 
@@ -418,6 +419,7 @@ procedure TMnhForm.FormResize(Sender: TObject);
       SettingsForm.mainForm.left  :=left;
       SettingsForm.mainForm.width :=width;
       SettingsForm.mainForm.height:=height;
+      SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
       if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
         then plotSubsystem.state:=pss_plotOnShow
         else doPlot();
@@ -494,12 +496,14 @@ procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
+    SettingsForm.instantEvaluation:=false;
   end;
 
 procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
     miEvalModeDirectOnKeypress.Checked:=true;
+    SettingsForm.instantEvaluation:=true;
   end;
 
 procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
@@ -857,7 +861,6 @@ procedure TMnhForm.processSettings;
     else InputEdit.Font.Quality:=fqNonAntialiased;
 
     OutputEdit.Font     :=InputEdit.Font;
-    //ErrorStringGrid.Font:=InputEdit.Font;
 
     top   :=SettingsForm.mainForm.top;
     left  :=SettingsForm.mainForm.left;
@@ -874,6 +877,12 @@ procedure TMnhForm.processSettings;
       miExpressionResult.Checked:=doShowExpressionOut;
       if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
                              else mnh_out_adapters.exprOut:=nil;
+    end;
+    if not(settingsHaveBeenProcessed) then begin
+      if SettingsForm.mainForm.isFullscreen then WindowState:=wsMaximized;
+      miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
+      miEvalModeDirect.Checked:=not(SettingsForm.instantEvaluation);
+      miEvalModeDirectOnKeypress.Checked:=SettingsForm.instantEvaluation;
     end;
     if ad_currentFile<>SettingsForm.getFileInEditor then begin
       if SettingsForm.getFileInEditor=''
@@ -922,6 +931,7 @@ procedure TMnhForm.miAntialiasingOffClick(Sender: TObject);
 procedure TMnhForm.miAutoResetClick(Sender: TObject);
 begin
   miAutoReset.Checked:=not(miAutoReset.Checked);
+  SettingsForm.resetPlotOnEvaluation:=miAutoReset.Checked;
 end;
 
 procedure TMnhForm.miAutoscaleXClick(Sender: TObject);

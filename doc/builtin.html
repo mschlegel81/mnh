@@ -68,6 +68,7 @@
 <a href="#sort">sort</a> &nbsp; 
 <a href="#sortPerm">sortPerm</a> &nbsp; 
 <a href="#split">split</a> &nbsp; 
+<a href="#splitFileName">splitFileName</a> &nbsp; 
 <a href="#sqr">sqr</a> &nbsp; 
 <a href="#sqrt">sqrt</a> &nbsp; 
 <a href="#string">string</a> &nbsp; 
@@ -121,7 +122,7 @@
 <h4><a name="myPath">myPath</a></h4>returns the path to the current package
 <h4><a name="not">not</a></h4><code>not(b:boolean);</code><br><code>not(b:booleanList);</code><br>Returns the negated value of b<br><code>not(i:int);</code><br><code>not(i:intList);</code><br>Returns the bitwise negated value of i
 <h4><a name="plot">plot</a></h4><code>plot(list,[options]); //plots flat numeric list or xy-list</code><br><code>plot(xList,yList,[options]); //plots flat numeric list or xy-list</code><br><code>plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]</code><br><code>plot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]</code><br>options are optional and given in the form of a string, the individual option items being delimited by spaces<br>valid options are:<br>Style/size modifier: any real number<br>Styles:<br><code>  line; l;</code><br><code>  stepLeft;</code><br><code>  stepRight;</code><br><code>  fill;</code><br><code>  bar;</code><br><code>  box;</code><br><code>  dot; .;</code><br><code>  plus; +;</code><br><code>  cross; x;</code><br><code>  impulse; i;</code><br>Colors:<br><code>  black;</code><br><code>  red;</code><br><code>  blue;</code><br><code>  green;</code><br><code>  purple;</code><br><code>  orange;</code><br><code>  RGB$,$,$; //With three real numbers in range [0,1]</code><br><code>  HSV$,$,$; //With three real numbers in range [0,1]</code><br><code>  HUE$; //With one real number </code><br><code>  GREY$; //With one real number in range [0,1]</code>
-<h4><a name="pos">pos</a></h4><code>pos(subString,searchInString);</code><br>Returns the index of the first occurence of subString in searchInString or 0 if there is none
+<h4><a name="pos">pos</a></h4><code>pos(subString,searchInString);</code><br>Returns the index of the first occurence of subString in searchInString or -1 if there is none
 <h4><a name="print">print</a></h4><code>print(...);</code><br>Prints out the given parameters and returns true<br>if tabs and line breaks are part of the output, a default pretty-printing is used
 <h4><a name="random">random</a></h4><code>random;</code><br>Returns a random value in range [0,1]<br><code>random(n);Returns a list of n random values in range [0,1]</code>
 <h4><a name="renderToFile">renderToFile</a></h4><code>renderToFile(filename,width,height,[supersampling]);</code><br>Renders the current plot to a file.
@@ -129,7 +130,7 @@
 <h4><a name="replaceOne">replaceOne</a></h4><code>replaceOne(source:string,lookFor,replaceBy);</code><br>Replaces the first occurences of lookFor in source by replaceBy<br>lookFor and replaceBy may be of type string or stringList
 <h4><a name="round">round</a></h4><code>round(x);</code><br>Returns the value of x, rounded to the nearest integer<br><code>round(x,k);</code><br>Returns the value of x rounded to k-digits precision
 <h4><a name="setPlotAutoscale">setPlotAutoscale</a></h4><code>setPlotAutoscale([forX,forY]);</code><br>Sets autoscale per axis and returns true<br>Expects a tuple of two booleans as parameter.
-<h4><a name="setPlotAxisStyle">setPlotAxisStyle</a></h4><code>setPlotAxisStyle([sx,sy]);</code><br>Sets the axis style for the next plot and returns true.
+<h4><a name="setPlotAxisStyle">setPlotAxisStyle</a></h4><code>setPlotAxisStyle([sx,sy]);</code><br>Sets the axis style for the next plot and returns true. <br>valid options are:<br><code>  0; //no tics, no grid</code><br><code>  1; //tics, no gris</code><br><code>  2; //no tics, coarse grid</code><br><code>  3; //tics, and coarse grid</code><br><code>  6; //no tics, finer grid</code><br><code>  7; //tics and finer grid</code>
 <h4><a name="setPlotLogscale">setPlotLogscale</a></h4><code>setPlotLogscale([forX,forY]);</code><br>Sets log-scale per axis and returns true<br>Expects a tuple of two booleans as parameter.
 <h4><a name="setPlotPreserveAspect">setPlotPreserveAspect</a></h4><code>setPlotPreserveAspect(b:boolean);</code><br>Sets or un-sets preservation of aspect ratio for the next plot.
 <h4><a name="setPlotRange">setPlotRange</a></h4><code>setPlotRange([[x0,x1],[y0,y1]]);</code><br>Sets the plot-range for the next plot and returns true.
@@ -140,6 +141,7 @@
 <h4><a name="sort">sort</a></h4><code>sort(L);</code><br>Returns list L sorted ascending (using fallbacks for uncomparable types)
 <h4><a name="sortPerm">sortPerm</a></h4><code>sortPerm(L);</code><br>Returns indexes I so that L%I==sort(L)
 <h4><a name="split">split</a></h4><code>split(S:string;splitter:string);</code><br>Returns a list of strings obtained by splitting S at the specified splitters<br>The splitters themselves are not contained in the result
+<h4><a name="splitFileName">splitFileName</a></h4><code>splitFilename(name:string);</code><br>Returns various representations and parts of the given name
 <h4><a name="sqr">sqr</a></h4><code>sqr(n);</code><br>Returns the square of numeric parameter n
 <h4><a name="sqrt">sqrt</a></h4><code>sqrt(n);</code><br>Returns the square root of numeric parameter n
 <h4><a name="string">string</a></h4><code>string(X);</code><br>Returns a string-representation of X

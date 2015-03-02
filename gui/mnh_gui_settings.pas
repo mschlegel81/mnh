@@ -16,11 +16,9 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = CLASS(TForm)
-    MnhConsoleFileNameEdit: TFileNameEdit;
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;
-    Label4: TLabel;
     NotepadFileNameEdit: TFileNameEdit;
     EditorFontDialog: TFontDialog;
     Label1: TLabel;
@@ -32,7 +30,6 @@ TYPE
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
-    PROCEDURE MnhConsoleFileNameEditChange(Sender: TObject);
   private
     { private declarations }
     editorFontname: string;
@@ -43,12 +40,16 @@ TYPE
     { public declarations }
     mainForm: RECORD
       top, left, Width, Height: longint;
+      isFullscreen:boolean;
     END;
     outputBehaviour: RECORD
       doEchoInput: boolean;
       doEchoDeclaration: boolean;
       doShowExpressionOut: boolean;
     END;
+    instantEvaluation:boolean;
+    resetPlotOnEvaluation:boolean;
+
 
     fileContents: ARRAY OF ansistring;
     fileHistory: ARRAY[0..9] OF ansistring;
@@ -76,11 +77,6 @@ FUNCTION settingsFileName: string;
     Result := ExpandFileName(extractFilePath(ParamStr(0))) + 'mnh_gui.settings';
   end;
 
-FUNCTION defaultConsoleName: string;
-  begin
-    result := replaceOne(ParamStr(0), 'mnh_gui', 'mnh_console');
-  end;
-
 { TSettingsForm }
 
 procedure TSettingsForm.FormCreate(Sender: TObject);
@@ -94,8 +90,6 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       ff.createToRead(settingsFileName);
 
       NotepadFileNameEdit.FileName := ff.readAnsiString;
-      mnh_funcs.mnh_console_executable := ff.readAnsiString;
-      MnhConsoleFileNameEdit.FileName := mnh_funcs.mnh_console_executable;
 
       setFontSize(ff.readLongint);
       editorFontname := ff.readAnsiString;
@@ -108,6 +102,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         left := ff.readLongint;
         Width := ff.readLongint;
         Height := ff.readLongint;
+        isFullscreen:=ff.readBoolean;
         end;
       WITH outputBehaviour do
         begin
@@ -115,6 +110,8 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         doEchoDeclaration := ff.readBoolean;
         doShowExpressionOut := ff.readBoolean;
         end;
+      instantEvaluation:=ff.readBoolean;
+      resetPlotOnEvaluation:=ff.readBoolean;
       for i := 0 to 9 do
         fileHistory[i] := ff.readAnsiString;
 
@@ -136,36 +133,24 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         fileInEditor := '';
       end
     else
-      begin
-      if FileExists(default_notepad_path) then
-        NotepadFileNameEdit.Filename := default_notepad_path;
-      if FileExists(defaultConsoleName) then
-        begin
-        mnh_console_executable := defaultConsoleName;
-        MnhConsoleFileNameEdit.FileName := defaultConsoleName;
-        end
-      else
-        begin
-        mnh_console_executable := '';
-        MnhConsoleFileNameEdit.FileName := '';
-        end;
-      for i := 0 to 9 do
+      begin for i := 0 to 9 do
         fileHistory[i] := '';
       editorFontname := 'Courier New';
       fontSize := 11;
-      WITH mainForm do
-        begin
+      WITH mainForm do begin
         top := 0;
         left := 0;
         Width := 480;
         Height := 480;
-        end;
-      WITH outputBehaviour do
-        begin
+        isFullscreen:=false;
+      end;
+      WITH outputBehaviour do begin
         doEchoInput := True;
         doEchoDeclaration := True;
         doShowExpressionOut := True;
-        end;
+      end;
+      instantEvaluation:=true;
+      resetPlotOnEvaluation:=false;
       fileInEditor := '';
       end;
     FontButton.Font.Name := editorFontname;
@@ -207,11 +192,6 @@ procedure TSettingsForm.FontButtonClick(Sender: TObject);
 procedure TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
-  end;
-
-procedure TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
-  begin
-    mnh_console_executable := MnhConsoleFileNameEdit.FileName;
   end;
 
 function TSettingsForm.getFontSize: longint;
@@ -261,25 +241,25 @@ procedure TSettingsForm.saveSettings;
     ff.createToWrite(settingsFileName);
 
     ff.writeAnsiString(NotepadFileNameEdit.FileName);
-    ff.writeAnsiString(mnh_console_executable);
 
     ff.writeLongint(getFontSize);
     ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
-    WITH mainForm do
-      begin
+    WITH mainForm do begin
       ff.writeLongint(top);
       ff.writeLongint(left);
       ff.writeLongint(Width);
       ff.writeLongint(Height);
-      end;
-    WITH outputBehaviour do
-      begin
+      ff.writeBoolean(isFullscreen);
+    end;
+    WITH outputBehaviour do begin
       ff.writeBoolean(doEchoInput);
       ff.writeBoolean(doEchoDeclaration);
       ff.writeBoolean(doShowExpressionOut);
-      end;
+    end;
+    ff.writeBoolean(instantEvaluation);
+    ff.writeBoolean(resetPlotOnEvaluation);
     for i := 0 to 9 do
       ff.writeAnsiString(fileHistory[i]);
     ff.writeAnsiString(fileInEditor);

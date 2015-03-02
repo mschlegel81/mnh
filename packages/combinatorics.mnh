@@ -2,12 +2,16 @@ private drop(L<>[],i:int)->L%each(j,[0..size(L)-1],j<>i);
 private myUnique([])->[];
 private myUnique(L)->[head(L)]|myUnique(L%each(E,L,not(E==head(L))));
 
+//*Returns all permutations of list <code>[0..i-1]</code>
 permutations(i:int)->permutations([],[0..i-1]);
+//*Returns all permutations of list <code>L</code>
 permutations(L:list)->myUnique(permutations([],L));
 private permutations(Head:list,[])->[Head];
 private permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
 
+//*Returns <code>[[],[S]]</code>
 subsets(S:scalar)->[[],[S]];
+//*Returns the set of all subsets of <code>L</code>
 subsets(L:list)->myUnique(subsets([],L));
 private subsets(Head:list,[])->[Head];
 private subsets(Head:list,L)->subsets(Head,tail(L))|subsets(Head|head(L),tail(L));

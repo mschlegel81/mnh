@@ -126,8 +126,7 @@ PROCEDURE fileMode;
     callMainInMain(parameters);
   end;
   
-begin  
-  mnh_funcs.mnh_console_executable:=paramstr(0);
+begin    
   parseCmdLine;
   if fileToInterpret='' then interactiveMode
                         else fileMode;

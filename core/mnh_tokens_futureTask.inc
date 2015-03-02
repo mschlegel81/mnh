@@ -6,7 +6,7 @@
     task:P_token;
     state:T_futureTaskState;
     
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal; CONST callDepth:word);
     CONSTRUCTOR createTaskInErrorState;
     PROCEDURE   evaluate(CONST callDepth:word);
     FUNCTION    getResult_blocking(CONST callDepth:word):P_literal;
@@ -14,13 +14,16 @@
   end;
 {$endif}
 {$ifdef include_implementation}
+VAR futureThreadsRunning:longint=0;
+
 FUNCTION futureTaskEvalThread(p:pointer):ptrint;
   begin
     P_futureTask(p)^.evaluate(STACK_DEPTH_LIMIT);
+    InterLockedDecrement(futureThreadsRunning);
     result:=0;
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal);
+CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal; CONST callDepth:word);
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
@@ -30,7 +33,12 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal);
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;
-    beginThread(@futureTaskEvalThread,@self);
+    if state=fts_pending then begin
+      if futureThreadsRunning<random(16) then begin
+        InterLockedIncrement(futureThreadsRunning);
+        beginThread(@futureTaskEvalThread,@self)
+      end else evaluate(callDepth);
+    end;
   end;
 
 CONSTRUCTOR T_futureTask.createTaskInErrorState;

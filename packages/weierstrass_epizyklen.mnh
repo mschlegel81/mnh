@@ -1,5 +1,5 @@
-F(a,b)->{each(i,[0..20],+,b^i*sin($t*a^i))};
-G(a,b)->{each(i,[0..20],+,b^i*cos($t*a^i))};
+F(a,b)->{each(i,[0..30],+,b^i*sin($t*a^i))};
+G(a,b)->{each(i,[0..30],+,b^i*cos($t*a^i))};
 
 pi:=4*arctan(1);
-plot(F(2,0.6),G(2,0.6),0,2*pi,1000);
+plot(F(2,0.6),G(2,0.6),0,2*pi,10000);
