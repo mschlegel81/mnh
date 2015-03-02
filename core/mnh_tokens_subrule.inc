@@ -15,15 +15,20 @@
       CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation);
       CONSTRUCTOR createConstant  (CONST value:P_literal);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
-      CONSTRUCTOR createFromInline(CONST rep:P_Token);
+      CONSTRUCTOR createFromInline(CONST rep:P_Token);      
+      CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       
-      CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);            
+      
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
       FUNCTION toString:ansistring;
       PROCEDURE performSet(CONST newValue:P_literal);
       FUNCTION directEvaluateNullary():P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal):P_literal;
+      
+      FUNCTION referencesExternalPattern(CONST extPattern:T_pattern):boolean;
+      CONSTRUCTOR createSpecialClone(CONST originalInlineRule:P_subrule; CONST extPattern:T_pattern; CONST extParam:P_listLiteral);
+      
   end;
 
 {$endif}
@@ -43,10 +48,14 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
         token:=t; 
         t:=t^.next;
         token^.next:=nil;
-        if token^.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier] then begin
+        if token^.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token^.txt);
           if parIdx>=0 then token^.tokType:=tt_identifier;
-        end else parIdx:=-1;
+        end else if (token^.tokType=tt_literal) 
+          and (P_literal(token^.data)^.literalType=lt_expression)
+          and (P_subrule(P_expressionLiteral(token^.data)^.value)^.referencesExternalPattern(pattern))
+          then parIdx:=maxlongint
+        else parIdx:=-1;
       end;
     end;
     if length(expression)>1 then embrace;
@@ -82,7 +91,11 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
         if token^.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier] then begin
           parIdx:=pattern.indexOfId(token^.txt);
           if parIdx>=0 then token^.tokType:=tt_identifier;
-        end else parIdx:=-1;
+        end else if (token^.tokType=tt_literal) 
+          and (P_literal(token^.data)^.literalType=lt_expression)
+          and (P_subrule(P_expressionLiteral(token^.data)^.value)^.referencesExternalPattern(pattern))
+          then parIdx:=maxlongint
+        else parIdx:=-1;
       end;
     end;
     if length(expression)>1 then embrace;
@@ -159,19 +172,30 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
   VAR t:P_token;
       i:longint;
+      sub:P_subrule;
   begin
     if (param=nil) and (length(pattern.sig)=0) or  pattern.matches(param^) then begin
       with expression[0] do if parIdx>=0 then begin
-        firstRep:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
-        param^.value(parIdx)^.rereference;
+        if (token^.tokType=tt_identifier) then begin
+          firstRep:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
+          param^.value(parIdx)^.rereference;
+        end else if (token^.tokType=tt_literal) then begin
+          new(sub,createSpecialClone(P_expressionLiteral(token^.data)^.value,pattern,param));
+          firstRep:=newToken(token^.location,'',tt_literal,newExpressionLiteral(sub));
+        end;
       end else firstRep:=newToken(token);
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
         if parIdx>=0 then begin
-          t^.next:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
-          param^.value(parIdx)^.rereference;
+          if (token^.tokType=tt_identifier) then begin
+            t^.next:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
+            param^.value(parIdx)^.rereference;
+          end else if (token^.tokType=tt_literal) then begin
+            new(sub,createSpecialClone(P_expressionLiteral(token^.data)^.value,pattern,param));
+            t^.next:=newToken(token^.location,'',tt_literal,newExpressionLiteral(sub));
+          end;
         end else begin
-          if (token^.tokType = tt_identifier) then P_package(token^.data)^.resolveRuleId(token^);
+          if (token^.tokType = tt_identifier) and (token^.data<>nil) then P_package(token^.data)^.resolveRuleId(token^);
           t^.next:=newToken(token);
         end;
         t:=t^.next;
@@ -311,6 +335,38 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal):P_literal;
     end else result:=nil;
     disposeLiteral(param);
   end;
+  
+FUNCTION T_subrule.referencesExternalPattern(CONST extPattern:T_pattern):boolean;
+  VAR i:longint;
+  begin
+    result:=false;
+    for i:=0 to length(expression)-1 do with expression[i] do 
+      if (parIdx<0) 
+      and (token^.tokType in [tt_userRulePointer,tt_identifier,tt_intrinsicRulePointer,tt_parameterIdentifier]) 
+      and (extPattern.indexOfId(token^.txt)>=0) 
+      then exit(true);
+  end;
 
+CONSTRUCTOR T_subrule.createSpecialClone(CONST originalInlineRule:P_subrule; CONST extPattern:T_pattern; CONST extParam:P_listLiteral);
+  VAR i,j:longint;
+  begin
+    pattern:=originalInlineRule^.pattern;
+    declaredAt:=originalInlineRule^.declaredAt;
+    isDeclaredInline:=originalInlineRule^.isDeclaredInline;
+          
+    setLength(expression,length(originalInlineRule^.expression));
+    for i:=0 to length(expression)-1 do with expression[i] do begin
+      writeln('cloning ',originalInlineRule^.expression[i].token^.toString);
+      parIdx:=originalInlineRule^.expression[i].parIdx;
+      if (originalInlineRule^.expression[i].token^.tokType in [tt_userRulePointer,tt_identifier,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
+        j:=extPattern.indexOfId(originalInlineRule^.expression[i].token^.txt);
+        if j<0 then token:=newToken(originalInlineRule^.expression[i].token)
+               else begin
+                 token:=newToken(declaredAt,'',tt_literal,extParam^.value(j));
+                 extParam^.value(j)^.rereference;
+               end;
+      end else token:=newToken(originalInlineRule^.expression[i].token);
+    end;
+  end;
   
 {$endif}

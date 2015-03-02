@@ -595,7 +595,7 @@ PROCEDURE reduceExpression(VAR first:P_token);
     setLength(stack,0);
     repeat
       didSubstitution:=false;
-      //writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
+      writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
           tt_set: stack_popLink;
@@ -775,6 +775,13 @@ PROCEDURE reduceExpression(VAR first:P_token);
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn: 
           raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
         tt_braceOpen: stack_push;
+        tt_braceClose: if cTokType(-1)=tt_parList_constructor then begin
+          first:=disposeToken(first);
+          stack_popLink;
+          first^.tokType:=tt_parList;
+          stack_popLink;
+          didSubstitution:=true;
+        end;
         tt_listBraceOpen: if cTokType(1)=tt_listBraceClose then begin
           //empty list
           first^.data:=newListLiteral;

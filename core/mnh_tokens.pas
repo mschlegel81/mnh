@@ -74,7 +74,7 @@ PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
   VAR i:longint;
   begin
-      clearErrors;
+    clearErrors;
     clearSourceScanPaths;
     for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);      
     setLength(packages,0);  
@@ -198,7 +198,7 @@ PROCEDURE T_package.load;
     VAR t:P_token;                
     begin
       t:=first; 
-      while t^.next<>nil do begin
+      while t<>nil do begin
         case t^.tokType of
           tt_expBraceOpen: digestInlineExpression(t);
           tt_identifier: t^.data:=@self;
@@ -487,7 +487,7 @@ DESTRUCTOR T_package.destroy;
     clear;  
     dispose(codeProvider,destroy);
     publicRules.destroy;
-    localRules.destroy;
+    localRules.destroy;    
     setLength(packageUses,0);    
   end;
   

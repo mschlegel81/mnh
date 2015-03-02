@@ -1,6 +1,6 @@
 PROGRAM mnh_console;
 USES mnh_tokens, mnh_out_adapters, mnh_constants, fileWrappers,sysutils;
-VAR input_adapter:T_directInputWrapper;
+VAR input_adapter:P_directInputWrapper;
     nextInput:ansistring;
     
     
@@ -38,15 +38,15 @@ PROCEDURE interactiveMode;
   begin
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
-    input_adapter.create;
+    new(input_adapter,create);
     write('>');
     readln(nextInput);
-    input_adapter.setInput(nextInput);
+    input_adapter^.setInput(nextInput);
     if (uppercase(trim(nextInput))<>'EXIT') then begin
-      initMainPackage(@input_adapter);
+      initMainPackage(input_adapter);
       write('>'); readln(nextInput);
       while (uppercase(trim(nextInput))<>'EXIT') do begin
-        input_adapter.setInput(nextInput);
+        input_adapter^.setInput(nextInput);
         time:=now;
         if isReloadOfAllPackagesIndicated then reloadAllPackages
                                           else reloadMainPackage;
