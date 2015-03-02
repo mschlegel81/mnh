@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 29
+  Left = 955
   Height = 373
-  Top = 95
+  Top = 101
   Width = 320
   Caption = 'MNH5'
   ClientHeight = 353
@@ -26,9 +26,9 @@ object MnhForm: TMnhForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
-    PopupMenu = EditorPopup
+    ParentShowHint = False
     TabOrder = 0
-    OnKeyDown = InputEditKeyDown
+    OnKeyUp = InputEditKeyDown
     OnMouseMove = InputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
@@ -208,10 +208,6 @@ object MnhForm: TMnhForm
         ShortCut = 16451
       end    
       item
-        Command = ecBlockIndent
-        ShortCut = 24649
-      end    
-      item
         Command = ecLineBreak
         ShortCut = 16461
       end    
@@ -250,10 +246,6 @@ object MnhForm: TMnhForm
       item
         Command = ecRedo
         ShortCut = 24666
-      end    
-      item
-        Command = ecGotoMarker0
-        ShortCut = 16432
       end    
       item
         Command = ecGotoMarker1
@@ -366,10 +358,6 @@ object MnhForm: TMnhForm
       item
         Command = EcFoldLevel9
         ShortCut = 41017
-      end    
-      item
-        Command = EcFoldLevel0
-        ShortCut = 41008
       end    
       item
         Command = EcFoldCurrent
@@ -509,33 +497,36 @@ object MnhForm: TMnhForm
         MarkupInfo.Foreground = clGray
         MarkupInfo.FrameEdges = sfeAround
       end
+      object SynGutterChanges1: TSynGutterChanges
+        Width = 4
+        Visible = False
+        MouseActions = <>
+        ModifiedColor = 59900
+        SavedColor = clGreen
+      end
     end
   end
   object ErrorGroupBox: TGroupBox
     Left = 0
-    Height = 105
-    Top = 225
+    Height = 77
+    Top = 253
     Width = 320
     Align = alBottom
     Caption = 'Errors'
-    ClientHeight = 87
+    ClientHeight = 59
     ClientWidth = 316
-    TabOrder = 1
-    object ErrorStringGrid: TStringGrid
+    TabOrder = 2
+    object ErrorMemo: TMemo
       Left = 0
-      Height = 87
+      Height = 59
       Top = 0
       Width = 316
       Align = alClient
-      AutoEdit = False
-      FixedCols = 0
-      FixedRows = 0
       Font.Color = clRed
-      GridLineWidth = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSpanning, goSmoothScroll]
       ParentFont = False
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
       TabOrder = 0
-      TitleFont.Color = clRed
     end
   end
   object Splitter1: TSplitter
@@ -545,11 +536,12 @@ object MnhForm: TMnhForm
     Top = 150
     Width = 320
     Align = alTop
+    OnMoved = Splitter1Moved
     ResizeAnchor = akTop
   end
   inline OutputEdit: TSynEdit
     Left = 0
-    Height = 70
+    Height = 93
     Top = 155
     Width = 320
     Align = alClient
@@ -559,9 +551,8 @@ object MnhForm: TMnhForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
-    PopupMenu = EditorPopup
-    TabOrder = 3
-    OnKeyDown = OutputEditKeyDown
+    TabOrder = 1
+    OnKeyUp = OutputEditKeyDown
     OnMouseMove = OutputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
@@ -1051,6 +1042,15 @@ object MnhForm: TMnhForm
     Width = 320
     Panels = <>
   end
+  object Splitter2: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 5
+    Top = 248
+    Width = 320
+    Align = alBottom
+    ResizeAnchor = akBottom
+  end
   object MainMenu1: TMainMenu
     left = 82
     top = 48
@@ -1080,6 +1080,12 @@ object MnhForm: TMnhForm
         Caption = 'Save as...'
         ShortCut = 49235
         OnClick = miSaveAsClick
+      end
+      object miOpenNpp: TMenuItem
+        Caption = 'Open externally'
+        Enabled = False
+        ShortCut = 113
+        OnClick = miOpenNppClick
       end
     end
     object MenuItem2: TMenuItem
@@ -1132,21 +1138,17 @@ object MnhForm: TMnhForm
         ShortCut = 16573
         OnClick = miDecFontSizeClick
       end
+      object miHelp: TMenuItem
+        Caption = 'Display help'
+        ShortCut = 112
+        OnClick = miHelpClick
+      end
     end
   end
   object UpdateTimeTimer: TTimer
     OnTimer = UpdateTimeTimerTimer
     left = 88
     top = 19
-  end
-  object EditorPopup: TPopupMenu
-    OnPopup = EditorPopupPopup
-    left = 191
-    top = 72
-    object popMiOpenDeclaration: TMenuItem
-      Caption = 'Open declaration of "..." ()'
-      OnClick = popMiOpenDeclarationClick
-    end
   end
   object OpenDialog: TOpenDialog
     Title = 'Open file...'
@@ -1161,5 +1163,16 @@ object MnhForm: TMnhForm
     Options = [ofExtensionDifferent, ofEnableSizing, ofViewDetail]
     left = 81
     top = 105
+  end
+  object PopupNotifier1: TPopupNotifier
+    Color = 15066597
+    Icon.Data = {
+      07544269746D617000000000
+    }
+    Text = 'Text'
+    Title = 'Caption'
+    Visible = False
+    left = 228
+    top = 46
   end
 end

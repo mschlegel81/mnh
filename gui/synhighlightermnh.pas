@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_tokloc;
 
 CONST C_DeclEchoHead=#10+' in>';
       C_ExprEchoHead=#10+'_in>';
@@ -154,7 +154,6 @@ end; { SetLine }
 procedure TSynMnhSyn.Next;
 VAR localId:shortString;
     i:longint;
-    idInfo:T_idInfo;
 begin
   fTokenID:=tkUnknown;
   fTokenPos := Run;
@@ -203,10 +202,10 @@ begin
       else if (localId='set') or (localId='each')
            or (localId='CACHE') or (localId='USE') then fTokenId:=tkIntrinsicRuleOrKeyword
       else begin
-        idInfo:=ad_getIdInfo(localId);
-        if      idInfo.isBuiltIn     then fTokenID:=tkIntrinsicRuleOrKeyword
-        else if idInfo.isUserDefined then fTokenID:=tkUserRule
-        else                              fTokenID:=tkIdentifier;
+        if localUserRules.contains(localId) then fTokenID:=tkUserRule
+        else if importedUserRules.contains(localId) then fTokenID:=tkUserRule
+        else if intrinsicRules.contains(localId) then fTokenID:=tkIntrinsicRuleOrKeyword
+        else fTokenID:=tkIdentifier;
       end;
     end;
     '|','^','?','+','&','%','*','=','<','>': begin

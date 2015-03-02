@@ -10,7 +10,7 @@
     DESTRUCTOR destroy;
     PROCEDURE define(CONST tokenLocation: T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
     PROCEDURE define(CONST tokenLocation: T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType);
-    PROCEDURE define(CONST original:P_token);
+    PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
     FUNCTION toString:ansistring;
@@ -75,7 +75,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
     isMemoryFree('allocating new token (B)');
   end;
 
-FUNCTION newToken(CONST original:P_token):P_token;
+FUNCTION newToken(CONST original:T_token):P_token;
   begin
     {$ifdef doTokenRecycling}
     with tokenRecycling do if fill>0 then begin
@@ -83,6 +83,18 @@ FUNCTION newToken(CONST original:P_token):P_token;
       result:=dat[fill];
     end else {$endif} new(result,create);
     result^.define(original);
+    result^.next:=nil;
+    isMemoryFree('allocating new token (D)');
+  end;
+
+FUNCTION newToken(CONST original:P_token):P_token;
+  begin
+    {$ifdef doTokenRecycling}
+    with tokenRecycling do if fill>0 then begin
+      dec(fill);
+      result:=dat[fill];
+    end else {$endif} new(result,create);
+    result^.define(original^);
     result^.next:=nil;
     isMemoryFree('allocating new token (C)');
   end;
@@ -142,12 +154,12 @@ PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; tokenText:ansistri
     data:=nil;
   end;
 
-PROCEDURE T_token.define(CONST original:P_token);
+PROCEDURE T_token.define(CONST original:T_token);
   begin
-    location:=original^.location;
-    txt    :=original^.txt;
-    tokType:=original^.tokType;
-    data   :=original^.data;
+    location:=original.location;
+    txt    :=original.txt;
+    tokType:=original.tokType;
+    data   :=original.data;
     if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType=tt_each) and (data<>nil) then P_literal(data)^.rereference;
   end;
 
@@ -187,7 +199,7 @@ FUNCTION T_token.toString:ansistring;
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
-      tt_operatorStrConcat,
+      tt_operatorStrConcat, tt_unaryOpMinus, tt_unaryOpPlus,
       tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
       tt_operatorConcat, tt_operatorIn,
       tt_iifCheck, tt_iifElse,
@@ -214,8 +226,9 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
     else result:=nil;
   end;
 
-FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package):P_token;
+FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
   VAR parsedLength:longint=0;
+
   FUNCTION resultFrom(CONST len:longint; CONST tt:T_tokenType):P_token;
     begin
       result:=newToken(lineLocation,'',tt);
@@ -228,6 +241,13 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       parsedLength:=length(id);
     end;
 
+  PROCEDURE fail(CONST message:ansistring);
+    begin
+      if inEvaluationLoop then begin
+        raiseError(el4_parsingError,message,lineLocation);
+      end else parsedLength:=length(line);
+    end;
+
   FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
     VAR i:longint;
         dotFound:boolean;
@@ -238,11 +258,11 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         inc(i);
         if line[i]=C_id_qualify_character then begin
           if not(allowQualified) then begin
-            raiseError(el4_parsingError,'No qualified is identifier accepted here. '+line,lineLocation);
+            fail('No qualified is identifier accepted here. '+line);
             parsedLength:=i-1;
             exit(copy(line,1,i-1));          
           end else if dotFound then begin
-            raiseError(el4_parsingError,'Over-qualified identifier! Only one level is allowed. '+line,lineLocation);
+            fail('Over-qualified identifier! Only one level is allowed. '+line);
             parsedLength:=i-1;
             exit(copy(line,1,i-1));
           end else dotFound:=true;
@@ -262,113 +282,175 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
 
   VAR id:ansistring;
-      intrinsicFuncPtr:T_intFuncCallback;
-      literal:P_literal;
+     
   begin
     removeLeadingBlanks;
-    if length(line)<1 then exit(nil);
-    result:=nil;
+    result.location:=lineLocation;
+    result.txt:='';
+    result.tokType:=tt_eol;
+    result.data:=nil;
+    result.next:=nil;
+    if length(line)<1 then exit(result);
     case line[1] of
       '0'..'9': begin
-        literal:=parseNumber(line,parsedLength);
-        if literal=nil then raiseError(el4_parsingError,'Cannot parse numeric literal '+line,lineLocation)
+        result.data:=parseNumber(line,parsedLength);
+        if result.data=nil
+        then fail('Cannot parse numeric literal '+line)
         else begin
-          result:=resultFrom(parsedLength,tt_literal);
-          result^.data:=literal;
+          result.tokType:=tt_literal;
+          if not(inEvaluationLoop) then disposeLiteral(result.data);
         end;
       end;
-      '"': begin
+      '"','''': begin        
         id:=unescapeString(line,parsedLength);
-        if parsedLength=0 then raiseError(el4_parsingError,'Cannot parse string literal '+line,lineLocation)
+        if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
-          result:=resultFrom(parsedLength,tt_literal);
-          result^.data:=newStringLiteral(id);
+          result.tokType:=tt_literal;
+          if inEvaluationLoop then result.data:=newStringLiteral(id);
         end;
       end;
       '$': begin
-        id:=leadingId(false);
-        result:=resultFrom(id,tt_parameterIdentifier);
+        result.txt:=leadingId(false);
+        parsedLength:=length(result.txt);
+        result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
         id:=leadingId(true);
-        if      id='xor'   then result:=resultFrom(3,tt_operatorXor   )
-        else if id='set'   then result:=resultFrom(3,tt_set           )
-        else if id='or'    then result:=resultFrom(2,tt_operatorOr    )
-        else if id='mod'   then result:=resultFrom(3,tt_operatorMod   )
-        else if id='in'    then result:=resultFrom(2,tt_operatorIn    )
-        else if id='each'  then result:=resultFrom(4,tt_each          )
-        else if id='div'   then result:=resultFrom(3,tt_operatorDivInt)
-        else if id='and'   then result:=resultFrom(3,tt_operatorAnd   )
-        else if id='true'  then begin result:=resultFrom(4,tt_literal); result^.data:=newBoolLiteral(true); end
-        else if id='false' then begin result:=resultFrom(5,tt_literal); result^.data:=newBoolLiteral(false); end
-        else if id='Nan'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Nan); end
-        else if id='Inf'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Infinity); end
-        else if intrinsicRuleMap.containsKey('mnh.'+id,intrinsicFuncPtr) then begin
-          result:=resultFrom(id,tt_intrinsicRulePointer);
-          result^.data:=intrinsicFuncPtr;
-        end else begin
-          result:=resultFrom(id,tt_identifier);
-          result^.data:=inPackage;
+        parsedLength:=length(id);
+        if      id='xor'   then result.tokType:=tt_operatorXor
+        else if id='set'   then result.tokType:=tt_set
+        else if id='or'    then result.tokType:=tt_operatorOr
+        else if id='mod'   then result.tokType:=tt_operatorMod
+        else if id='in'    then result.tokType:=tt_operatorIn
+        else if id='each'  then result.tokType:=tt_each
+        else if id='div'   then result.tokType:=tt_operatorDivInt
+        else if id='and'   then result.tokType:=tt_operatorAnd
+        else if id='true'  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
+        else if id='false' then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
+        else if id='Nan'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
+        else if id='Inf'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
+        else begin
+          result.txt:=id;
+          result.tokType:=tt_identifier;
+          result.data:=inPackage;
+          if not(inEvaluationLoop) then inPackage^.resolveRuleId(result,true);
         end;
       end;
-      ';': result:=resultFrom(1,tt_eol);
-      '}': result:=resultFrom(1,tt_expBraceClose);
-      '|': result:=resultFrom(1,tt_operatorConcat);
-      '{': result:=resultFrom(1,tt_expBraceOpen);
-      '^': result:=resultFrom(1,tt_operatorPot);
-      ']': result:=resultFrom(1,tt_listBraceClose);
-      '[': result:=resultFrom(1,tt_listBraceOpen);
-      '?': result:=resultFrom(1,tt_iifCheck);
-      ',': result:=resultFrom(1,tt_separatorComma);
-      '+': result:=resultFrom(1,tt_operatorPlus);
-      ')': result:=resultFrom(1,tt_braceClose);
-      '(': result:=resultFrom(1,tt_braceOpen);
-      '&': result:=resultFrom(1,tt_operatorStrConcat);
-      '-': if startsWith(line,'->')        then result:=resultFrom(2,tt_declare)
-                                           else result:=resultFrom(1,tt_operatorMinus);
-      '*': if startsWith(line,'**')        then result:=resultFrom(2,tt_operatorPot)
-                                           else result:=resultFrom(1,tt_operatorMult);
-      '>': if startsWith(line,'>=')        then result:=resultFrom(2,tt_comparatorGeq)
-                                           else result:=resultFrom(1,tt_comparatorGrt);
-      '=': if      startsWith(line,'=[]')  then result:=resultFrom(3,tt_typeCheckEmptyList)
-           else if startsWith(line,'==')   then result:=resultFrom(2,tt_comparatorListEq)
-           else                                 result:=resultFrom(1,tt_comparatorEq);
-      '<': if      startsWith(line,'<>[]') then result:=resultFrom(4,tt_typeCheckNonemptyList)
-           else if startsWith(line,'<>'  ) then result:=resultFrom(2,tt_comparatorNeq)
-           else if startsWith(line,'<='  ) then result:=resultFrom(2,tt_comparatorLeq)
-           else                                 result:=resultFrom(1,tt_comparatorLss);
-      '/': if      startsWith(line,'//')   then begin result:=nil; parsedLength:=length(line); end //comments
-                                           else result:=resultFrom(1,tt_operatorDivReal);
-      '%': if      startsWith(line,'%%%%') then result:=resultFrom(4,tt_operatorExtractL3)
-           else if startsWith(line,'%%%')  then result:=resultFrom(3,tt_operatorExtractL2)
-           else if startsWith(line,'%%')   then result:=resultFrom(2,tt_operatorExtractL1)
-           else                                 result:=resultFrom(1,tt_operatorExtractL0);
-      '.': if startsWith(line,'..')        then result:=resultFrom(2,tt_separatorCnt)
-                                           else raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
-      ':': if startsWith(line,':=') then result:=resultFrom(2,tt_assign)
-           else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
+      ';': begin parsedLength:=1; result.tokType:=tt_semicolon; end;
+      '}': begin parsedLength:=1; result.tokType:=tt_expBraceClose; end;
+      '|': begin parsedLength:=1; result.tokType:=tt_operatorConcat; end;
+      '{': begin parsedLength:=1; result.tokType:=tt_expBraceOpen; end;
+      '^': begin parsedLength:=1; result.tokType:=tt_operatorPot; end;
+      ']': begin parsedLength:=1; result.tokType:=tt_listBraceClose; end;
+      '[': begin parsedLength:=1; result.tokType:=tt_listBraceOpen; end;
+      '?': begin parsedLength:=1; result.tokType:=tt_iifCheck; end;
+      ',': begin parsedLength:=1; result.tokType:=tt_separatorComma; end;
+      '+': begin parsedLength:=1; result.tokType:=tt_operatorPlus; end;
+      ')': begin parsedLength:=1; result.tokType:=tt_braceClose; end;
+      '(': begin parsedLength:=1; result.tokType:=tt_braceOpen; end;
+      '&': begin parsedLength:=1; result.tokType:=tt_operatorStrConcat; end;
+      '-': if startsWith(line,'->') then begin
+             parsedLength:=2;
+             result.tokType:=tt_declare;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_operatorMinus;
+           end;
+      '*': if startsWith(line,'**') then begin
+             parsedLength:=2;
+             result.tokType:=tt_operatorPot;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_operatorMult;
+           end;
+      '>': if startsWith(line,'>=') then begin
+             parsedLength:=2;
+             result.tokType:=tt_comparatorGeq;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_comparatorGrt;
+           end;
+      '=': if startsWith(line,'=[]') then begin
+             parsedLength:=3;
+             result.tokType:=tt_typeCheckEmptyList;
+           end else if startsWith(line,'==') then begin
+             parsedLength:=2;
+             result.tokType:=tt_comparatorListEq;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_comparatorEq;
+           end;
+      '<': if startsWith(line,'<>[]') then begin
+             parsedLength:=4;
+             result.tokType:=tt_typeCheckNonemptyList;
+           end else if startsWith(line,'<>') then begin
+             parsedLength:=2;
+             result.tokType:=tt_comparatorNeq;
+           end else if startsWith(line,'<=') then begin
+             parsedLength:=2;
+             result.tokType:=tt_comparatorLeq;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_comparatorLss;
+           end;
+      '/': if startsWith(line,'//') then begin //comments
+             parsedLength:=length(line);
+             result.tokType:=tt_eol;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_operatorDivReal;
+           end;
+      '%': if startsWith(line,'%%%%') then begin
+             parsedLength:=4;
+             result.tokType:=tt_operatorExtractL3;
+           end else if startsWith(line,'%%%') then begin
+             parsedLength:=3;
+             result.tokType:=tt_operatorExtractL2;
+           end else if startsWith(line,'%%') then begin
+             parsedLength:=2;
+             result.tokType:=tt_operatorExtractL1;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_operatorExtractL0;
+           end;
+      '.': if startsWith(line,'..') then begin
+             parsedLength:=2;
+             result.tokType:=tt_separatorCnt;
+           end else fail('Cannot parse: '+line);
+      ':': if startsWith(line,':=') then begin
+             parsedLength:=2;
+             result.tokType:=tt_assign;
+           end else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
              id:=leadingId(false);
-             if      id=':booleanList' then result:=newToken(lineLocation,'',tt_typeCheckBoolList  )
-             else if id=':boolean'     then result:=newToken(lineLocation,'',tt_typeCheckBoolean   )
-             else if id=':expression'  then result:=newToken(lineLocation,'',tt_typeCheckExpression)
-             else if id=':intList'     then result:=newToken(lineLocation,'',tt_typeCheckIntList   )
-             else if id=':int'         then result:=newToken(lineLocation,'',tt_typeCheckInt       )
-             else if id=':list'        then result:=newToken(lineLocation,'',tt_typeCheckList      )
-             else if id=':numericList' then result:=newToken(lineLocation,'',tt_typeCheckNumList   )
-             else if id=':numeric'     then result:=newToken(lineLocation,'',tt_typeCheckNumeric   )
-             else if id=':stringList'  then result:=newToken(lineLocation,'',tt_typeCheckStringList)
-             else if id=':scalar'      then result:=newToken(lineLocation,'',tt_typeCheckScalar    )
-             else if id=':string'      then result:=newToken(lineLocation,'',tt_typeCheckString    )
-             else if id=':realList'    then result:=newToken(lineLocation,'',tt_typeCheckRealList  )
-             else if id=':real'        then result:=newToken(lineLocation,'',tt_typeCheckReal      )
-             else raiseError(el4_parsingError,'Cannot parse: '+line+C_lineBreakChar+'expected type check token (one of :scalar, :list, :boolean, :booleanList, :int, :intList, :real, :realList, :string, :stringList, :numeric, :numericList, :expression)',lineLocation);
-           end else result:=resultFrom(1,tt_iifElse);
+             parsedLength:=length(id);
+             if      id=':booleanList' then result.tokType:=tt_typeCheckBoolList
+             else if id=':boolean'     then result.tokType:=tt_typeCheckBoolean
+             else if id=':expression'  then result.tokType:=tt_typeCheckExpression
+             else if id=':intList'     then result.tokType:=tt_typeCheckIntList
+             else if id=':int'         then result.tokType:=tt_typeCheckInt
+             else if id=':list'        then result.tokType:=tt_typeCheckList
+             else if id=':numericList' then result.tokType:=tt_typeCheckNumList
+             else if id=':numeric'     then result.tokType:=tt_typeCheckNumeric
+             else if id=':stringList'  then result.tokType:=tt_typeCheckStringList
+             else if id=':scalar'      then result.tokType:=tt_typeCheckScalar
+             else if id=':string'      then result.tokType:=tt_typeCheckString
+             else if id=':realList'    then result.tokType:=tt_typeCheckRealList
+             else if id=':real'        then result.tokType:=tt_typeCheckReal
+             else begin
+               parsedLength:=1;
+               result.tokType:=tt_iifElse;
+             end;
+           end else begin
+             parsedLength:=1;
+             result.tokType:=tt_iifElse;
+           end;
       else begin
-        raiseError(el4_parsingError,'Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')' ,lineLocation);
+        fail('Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')');
         line:='';
       end;
     end;
     if parsedLength>0 then begin
+      if not(inEvaluationLoop) then result.txt:=copy(line,1,parsedLength);
       line:=copy(line,parsedLength+1,length(line));
       inc(lineLocation.column,parsedLength);
     end;
@@ -417,6 +499,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       newLit:P_literal;
       didSubstitution:boolean;
       tt:T_tokenType;
+  PROCEDURE printState;
+    VAR i:longint;
+        p:P_token;
+    begin
+      for i:=0 to length(stack)-1 do write(stack[i]^.toString); write(' ');
+      p:=first;
+      while p<>nil do begin
+        write(p^.toString);
+        p:=p^.next;
+      end;
+      writeln;
+    end;
 
   FUNCTION cTokType(CONST index:longint):T_tokenType; inline;
     VAR p:P_token;
@@ -678,14 +772,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     setLength(stack,0);
     repeat
       didSubstitution:=false;
-      // writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
+      //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
           tt_set: stack_popLink;
           tt_unaryOpPlus: stack_popDestroy;
           tt_unaryOpMinus: begin
             newLit:=P_literal(first^.data)^.negate(stack[length(stack)-1]^.location);
-            disposeToken(first^.data);
+            disposeLiteral(first^.data);
             first^.data:=newLit;
             stack_popDestroy;
           end;
@@ -736,6 +830,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
               stack_popDestroy; //pop operator from stack
               stack_popDestroy; //pop LHS-Literal from stack
             end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
+            else if tt=tt_braceOpen then begin
+              stack_push;
+              first^.tokType:=tt_parList_constructor;
+              first^.data:=newListLiteral;
+              stack_push;
+            end
             else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
             else begin
               stack_push;
@@ -910,6 +1010,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
+      //printState;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)

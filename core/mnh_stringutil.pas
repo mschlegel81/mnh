@@ -194,25 +194,33 @@ FUNCTION escapeString(CONST s:ansistring):ansistring;
 
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
   VAR i:longint;
+      doubleQuoted:boolean;
   begin
-    if (length(input)>=1) and (input[1]='"') then begin
+    if (length(input)>=1) and (input[1] in ['"','''']) then begin
       result:='';
+      doubleQuoted:=input[1]='"';
       i:=2;
-      while (i<=length(input)) and (input[i]<>'"') do
+      while (i<=length(input)) and (doubleQuoted  and (input[i]<>'"') or
+                                not(doubleQuoted) and (input[i]<>'''')) do
         if (input[i]='\') then begin
           if i<length(input) then case input[i+1] of
             '\': begin result:=result+'\';             inc(i,2); end;
             't': begin result:=result+C_tabChar;       inc(i,2); end;
             'n': begin result:=result+C_lineBreakChar; inc(i,2); end;
             'r': begin result:=result+C_carriageReturnChar; inc(i,2); end;
-            '"': begin result:=result+'"';             inc(i,2); end;
-            else i:=length(input)+1;
+            '"': if     doubleQuoted  then begin result:=result+'"' ; inc(i,2); end else begin parsedLength:=0; exit(''); end;
+           '''': if not(doubleQuoted) then begin result:=result+''''; inc(i,2); end else begin parsedLength:=0; exit(''); end;
+            else begin
+              parsedLength:=0;
+              exit('');
+            end;
           end else i:=length(input)+1;
         end else begin
           result:=result+input[i];
           inc(i);
         end;
       parsedLength:=i;
+      if i>length(input) then parsedLength:=0;
     end else begin
       parsedLength:=0;
       result:='';

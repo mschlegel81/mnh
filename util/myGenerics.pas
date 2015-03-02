@@ -11,6 +11,7 @@ TYPE
       entry:ENTRY_TYPE_ARRAY;
       sortedUntilIndex:longint;
       isUnique:boolean;
+      lock:TThreadID;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -52,8 +53,8 @@ TYPE
   end;
   
   T_arrayOfString=array of ansistring;
+  { G_stringKeyMap }
 
-  { G_stringIndexedMap }
   GENERIC G_stringKeyMap<VALUE_TYPE>=object
     TYPE VALUE_TYPE_ARRAY=array of VALUE_TYPE;
          KEY_VALUE_PAIR=record
@@ -61,11 +62,13 @@ TYPE
            key:ansistring;
            value:VALUE_TYPE;
          end;
+         KEY_VALUE_LIST=array of KEY_VALUE_PAIR;
     private VAR
+      lock:TThreadID;
       entryCount:longint;
       rebalanceFac:double;
       bitMask:longint;
-      bucket:array of array of KEY_VALUE_PAIR;
+      bucket:array of KEY_VALUE_LIST;
       PROCEDURE rehash(grow:boolean);
     public
       CONSTRUCTOR create(rebalanceFactor:double);
@@ -78,6 +81,7 @@ TYPE
       PROCEDURE clear;
       FUNCTION keySet:T_arrayOfString;
       FUNCTION valueSet:VALUE_TYPE_ARRAY;
+      FUNCTION entrySet:KEY_VALUE_LIST;
       FUNCTION size:longint;
       FUNCTION dropAny:VALUE_TYPE;
   end;
@@ -88,7 +92,6 @@ TYPE
 
   GENERIC G_safeVar<ENTRY_TYPE>=object
     private
-      cs:TRTLCriticalSection;
       v :ENTRY_TYPE;
       FUNCTION getValue:ENTRY_TYPE;
       PROCEDURE setValue(newValue:ENTRY_TYPE);
@@ -115,31 +118,26 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 function G_safeVar.getValue: ENTRY_TYPE;
 begin
-  EnterCriticalsection(cs);
   result:=v;
-  LeaveCriticalsection(cs);
 end;
 
 procedure G_safeVar.setValue(newValue: ENTRY_TYPE);
 begin
-  EnterCriticalsection(cs);
   v:=newValue;
-  LeaveCriticalsection(cs);
+  while v<>newValue do begin sleep(1); v:=newValue; end;
 end;
 
 constructor G_safeVar.create(const intialValue: ENTRY_TYPE);
 begin
-  InitCriticalSection(cs);
   v:=intialValue;
 end;
 
 destructor G_safeVar.destroy;
 begin
-  DoneCriticalsection(cs);
 end;
 
 CONSTRUCTOR G_list.create;
-  begin clear; end;
+  begin lock:=0; clear; end;
 
 DESTRUCTOR G_list.destroy;
   begin clear; end;
@@ -150,68 +148,95 @@ FUNCTION G_list.contains(CONST value:ENTRY_TYPE):boolean;
 FUNCTION G_list.indexOf(CONST value:ENTRY_TYPE):longint;
   VAR i0,i1:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     i0:=0;
     i1:=sortedUntilIndex-1;
     while i1>=i0 do begin
       result:=(i0+i1) shr 1;
       if      entry[result]<value then i0:=result+1
       else if entry[result]>value then i1:=result-1
-      else exit(result);
+      else begin
+        repeat lock:=0 until lock=0;
+        exit(result);
+      end;
     end;
     for i0:=sortedUntilIndex to length(entry)-1 do
-      if entry[i0]=value then exit(i0);
+      if entry[i0]=value then begin
+        repeat lock:=0 until lock=0;
+        exit(i0);
+      end;
     result:=-1;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.add(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     i:=length(entry);
     setLength(entry,i+1);
     entry[i]:=value;
     isUnique:=false;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.remIndex(CONST index:longint);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     if (index>=0) and (index<length(entry)) then begin
       if index<sortedUntilIndex then dec(sortedUntilIndex);
       for i:=index to length(entry)-2 do entry[i]:=entry[i+1];
       setLength(entry,length(entry)-1);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.remValue(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     i:=indexOf(value);
     while i>=0 do begin
       remIndex(i);
       i:=indexOf(value);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.remValues(CONST values:ENTRY_TYPE_ARRAY);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     for i:=0 to length(values)-1 do remValue(values[i]);
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.addArr(CONST values:ENTRY_TYPE_ARRAY);
   VAR i,i0:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     i0:=length(entry);
     setLength(entry,length(entry)+length(values));
     for i:=0 to length(values)-1 do entry[i0+i]:=values[i];
     isunique:=false;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.clear;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(entry,0);
     sortedUntilIndex:=0;
     isUnique:=true;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.sort;
@@ -219,7 +244,9 @@ PROCEDURE G_list.sort;
       i,j0,j1,k:longint;
       temp     :ENTRY_TYPE_ARRAY;
   begin
-if sortedUntilIndex<length(entry) then begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
+    if sortedUntilIndex<length(entry) then begin
       scale:=1;
       setLength(temp,length(entry)-sortedUntilIndex);
       while scale<length(temp) do begin
@@ -276,11 +303,14 @@ if sortedUntilIndex<length(entry) then begin
       while (j1<length(temp))     do begin entry[k]:=temp[j1]; inc(k); inc(j1); end;
       sortedUntilIndex:=length(entry);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
 PROCEDURE G_list.unique;
   VAR i,j:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     if not(isUnique) then begin
       sort;
       j:=1;
@@ -291,16 +321,32 @@ PROCEDURE G_list.unique;
       sortedUntilIndex:=length(entry);
     end;
     isUnique:=true;
+    repeat lock:=0 until lock=0;
   end;
 
 FUNCTION G_list.size:longint;
-  begin result:=length(entry); end;
+  begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
+    result:=length(entry);
+    repeat lock:=0 until lock=0;
+  end;
 
 FUNCTION G_list.getEntry(CONST index:longint):ENTRY_TYPE;
-  begin result:=entry[index]; end;
+  begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
+    result:=entry[index];
+    repeat lock:=0 until lock=0;
+  end;
 
 FUNCTION G_list.elementArray:ENTRY_TYPE_ARRAY;
-  begin result:=entry; end;
+  begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
+    result:=entry;
+    repeat lock:=0 until lock=0;
+  end;
 
 
 {CONSTRUCTOR G_hashMap.create(hashFunc:HASH_FUNC; rebalanceFactor:double);
@@ -583,7 +629,7 @@ FUNCTION G_sparseArray.getEntry(CONST iterator:longint):ENTRY_TYPE;
                        else result:=map[0,0].value;
   end;  
 
-PROCEDURE G_stringKeyMap.rehash(grow: boolean);
+procedure G_stringKeyMap.rehash(grow: boolean);
   VAR i,i0,j,k,c0,c1,newMask:longint;
       temp:array of KEY_VALUE_PAIR;
   begin
@@ -621,34 +667,38 @@ PROCEDURE G_stringKeyMap.rehash(grow: boolean);
     end;
   end;
 
-CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
+constructor G_stringKeyMap.create(rebalanceFactor: double);
   begin
+    lock:=0;
     rebalanceFac:=rebalanceFactor;
     clear;
   end;
 
-PROCEDURE G_stringKeyMap.clear;
+procedure G_stringKeyMap.clear;
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,1);
     bitMask:=0;
     entryCount:=0;
+    repeat lock:=0 until lock=0;
   end;
 
-CONSTRUCTOR G_stringKeyMap.create();
+constructor G_stringKeyMap.create;
   begin
     create(4);
   end;
 
-DESTRUCTOR G_stringKeyMap.destroy;
+destructor G_stringKeyMap.destroy;
   VAR i:longint;
   begin
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,0);
   end;
 
-FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;
+function G_stringKeyMap.containsKey(const key: ansistring; out value: VALUE_TYPE): boolean;
   VAR i,j:longint;
   begin
     i:=hashOfAnsiString(key) and bitMask;
@@ -660,14 +710,16 @@ FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE
     end else result:=false;
   end;
 
-FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
+function G_stringKeyMap.get(const key: ansistring): VALUE_TYPE;
   begin
     containsKey(key,result);
   end;
 
-PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
+procedure G_stringKeyMap.put(const key: ansistring; const value: VALUE_TYPE);
   VAR i,j,h:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     h:=hashOfAnsiString(key);
     i:=h and bitMask;
     j:=0;
@@ -682,11 +734,14 @@ PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
     end else begin
       bucket[i][j].value:=value;
     end;
+    repeat lock:=0 until lock=0;
   end;
 
-PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
+procedure G_stringKeyMap.dropKey(const key: ansistring);
   VAR i,j:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     i:=hashOfAnsiString(key) and bitMask;
     j:=0;
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
@@ -699,11 +754,14 @@ PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
       dec(entryCount);
       if entryCount<0.4*length(bucket)*rebalanceFac then rehash(false);
     end;
+    repeat lock:=0 until lock=0;
   end;
   
-FUNCTION G_stringKeyMap.dropAny:VALUE_TYPE;
+function G_stringKeyMap.dropAny: VALUE_TYPE;
   VAR i,j:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     for i:=0 to length(bucket)-1 do begin
       j:=length(bucket[i]);
       if j>0 then begin
@@ -711,14 +769,18 @@ FUNCTION G_stringKeyMap.dropAny:VALUE_TYPE;
         result:=bucket[i][j].value;
         setLength(bucket[i],j);
         dec(entryCount);
+        repeat lock:=0 until lock=0;
         exit(result);
       end;
     end;
+    repeat lock:=0 until lock=0;
   end;
 
-FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
+function G_stringKeyMap.keySet: T_arrayOfString;
   VAR k,i,j:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -726,11 +788,14 @@ FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
       result[k]:=bucket[i][j].key;
       inc(k);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
-FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
+function G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
   VAR k,i,j:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -738,9 +803,25 @@ FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
       result[k]:=bucket[i][j].value;
       inc(k);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
-FUNCTION G_stringKeyMap.size: longint;
+function G_stringKeyMap.entrySet: KEY_VALUE_LIST;
+  VAR k,i,j:longint;
+  begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
+    setLength(result,entryCount);
+    k:=0;
+    for i:=0 to length(bucket)-1 do
+    for j:=0 to length(bucket[i])-1 do begin
+      result[k]:=bucket[i][j];
+      inc(k);
+    end;
+    repeat lock:=0 until lock=0;
+  end;
+
+function G_stringKeyMap.size: longint;
   begin
     result:=entryCount;
   end;

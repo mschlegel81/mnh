@@ -4,9 +4,6 @@ USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
      mnh_funcs, mnh_out_adapters, mnh_caches; //even more specific
 
-VAR
-  poolCs:TRTLCriticalSection;
-
 {$define doTokenRecycling}
 {$define include_interface}
 TYPE
@@ -17,11 +14,10 @@ TYPE
   {$include mnh_tokens_rule.inc}
 
   { T_package }
-
+  T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_package=object
     private
-      publicRules:specialize G_stringKeyMap<P_rule>;
-      localRules:specialize G_stringKeyMap<P_rule>;
+      publicRules,localRules:T_ruleMap;
       packageUses:array of record
         id:ansistring;
         pack:P_package;
@@ -40,15 +36,16 @@ TYPE
       FUNCTION ruleLocation(CONST identifier:ansistring):T_tokenLocation;
       FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
-      FUNCTION getIdInfoList:T_idInfoKeyValueList;
+      PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
   end;
 
 CONST C_id_qualify_character='.';
   
-FUNCTION isReloadOfMainPackageIndicated:boolean;
+//FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadMainPackage;
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
+FUNCTION getTokenAt(CONST line:AnsiString; CONST charIndex:longint):T_token;
 VAR mainPackageProvider:T_codeProvider;
 {$undef include_interface}
 IMPLEMENTATION
@@ -61,12 +58,12 @@ VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
     
-FUNCTION isReloadOfMainPackageIndicated:boolean;
-  begin
-    EnterCriticalsection(poolCs);
-    result:=not(packagesAreFinalized) and mainPackage.needReload;
-    DoneCriticalsection(poolCs);
-  end;
+//FUNCTION isReloadOfMainPackageIndicated:boolean;
+//  begin
+//    EnterCriticalsection(poolCs);
+//    result:=not(packagesAreFinalized) and mainPackage.needReload;
+//    DoneCriticalsection(poolCs);
+//  end;
 
 PROCEDURE reloadMainPackage;
   VAR i,j:longint;
@@ -99,7 +96,6 @@ PROCEDURE finalizePackages;
   VAR i:longint;
   begin
     if packagesAreFinalized then exit;
-    EnterCriticalsection(poolCs);
     mainPackage.destroy;
     mainPackageProvider.destroy;  
     clearAllCaches;
@@ -108,7 +104,6 @@ PROCEDURE finalizePackages;
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
     setLength(secondaryPackages,0);
     packagesAreFinalized:=true;
-    LeaveCriticalsection(poolCs);
   end;
 
 FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
@@ -443,7 +438,8 @@ procedure T_package.load;
 
   VAR codeLines:T_stringList;
       i:longint;
-      first,next,last:P_token;
+      next:T_token;
+      first,last:P_token;
       location:T_TokenLocation;
   begin
     clear;
@@ -451,30 +447,24 @@ procedure T_package.load;
     codeLines:=codeProvider^.getLines;
 
     first:=nil;
-    next :=nil;
     last :=nil;
     location.provider:=codeProvider;
     for i:=0 to length(codeLines)-1 do if (errorLevel<el3_evalError) then begin
       location.line:=i+1;
       location.column:=1;
       while not(isBlank(codeLines[i])) and (errorLevel<el3_evalError) do begin
-        next:=firstToken(codeLines[i],location,@self);
-        if (next<>nil) and (next^.tokType=tt_eol) then begin //EOL (end of input or semicolon)
-          disposeToken(next);
-          next:=nil;
-          last:=nil;
-        end;
-        if next=nil then begin          
+        next:=firstToken(codeLines[i],location,@self,true);
+        if (next.tokType=tt_semicolon) then begin
           if first<>nil then interpret(first);
           last:=nil;
           first:=nil;
-        end else begin
+        end else if (next.tokType<>tt_eol) then begin
           if first=nil then begin
-            first:=next;
-            last :=next;
+            first:=newToken(next);
+            last :=first
           end else begin
-            last^.next:=next;
-            last      :=next;
+            last^.next:=newToken(next);
+            last      :=last^.next;
           end;
         end;
       end;
@@ -644,72 +634,49 @@ function T_package.ensurePublicRuleId(const ruleId: ansistring): P_rule;
     end;
   end;
 
-function T_package.getIdInfoList: T_idInfoKeyValueList;
+procedure T_package.updateLists(var userDefinedLocalRules, userDefinesImportedRules: T_listOfString);
   VAR i,j:longint;
-      e:T_idInfoKeyValuePair;
-      list:T_arrayOfString;
+      ids:T_arrayOfString;
+      packageId:ansistring;
   begin
-    setLength(result,0);
+    userDefinedLocalRules.clear;
+    userDefinedLocalRules.addArr(localRules.keySet);
+    userDefinedLocalRules.unique;
+    userDefinesImportedRules.clear;
     for i:=0 to length(packageUses)-1 do begin
-      e.key:=packageUses[i].id;
-      e.value.fileLine:=0;
-      e.value.filename:=packageUses[i].pack^.codeProvider^.getPath;
-      e.value.isBuiltIn:=false;
-      e.value.isUserDefined:=false;
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=e;
+      packageId:=packageUses[i].id;
+      ids:=packageUses[i].pack^.publicRules.keySet;
+      for j:=0 to length(ids)-1 do begin
+        userDefinesImportedRules.add(ids[j]);
+        userDefinesImportedRules.add(packageId+C_id_qualify_character+ids[j]);
+      end;
     end;
-    list:=intrinsicRuleMap.keySet;
-    for i:=0 to length(list)-1 do begin
-      e.key:=list[i];
-      e.value.fileLine:=-1;
-      e.value.filename:='';
-      e.value.isBuiltIn:=true;
-      e.value.isUserDefined:=false;
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=e;
-    end;
-    for j:=0 to length(packageUses)-1 do begin
-      e.key:=list[i];
-      e.value.fileLine:=-1;
-      e.value.filename:='';
-      e.value.isBuiltIn:=true;
-      e.value.isUserDefined:=false;
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=e;
-    end;
-
-
-
-    result:='';
+    userDefinesImportedRules.unique;
   end;
 
-//FUNCTION packagePointerToSource(CONST package:pointer):P_codeProvider;
-//  begin
-//    result:=P_package(package)^.codeProvider;
-//  end;
-
 FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
-  VAR first,last,next:P_token;
+  VAR next:T_token;
+      first,last,temp:P_token;
       loc:T_tokenLocation;
   begin
     loc:=location;
-    first:=firstToken(s,loc,nil);
+    next:=firstToken(s,loc,nil,true);
+    if next.tokType=tt_eol then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
+    first:=newToken(next);
     last:=first;
-    next:=nil;
     repeat
       loc:=location;
-      next:=firstToken(s,loc,nil);
-      if next<>nil then begin
-        last^.next:=next;
-        last:=next;
+      next:=firstToken(s,loc,nil,true);
+      if next.tokType<>tt_eol then begin
+        last^.next:=newToken(next);
+        last:=last^.next;
       end;
-    until (next=nil) or (errorLevel>=el3_evalError);
+    until (next.tokType in [tt_eol,tt_semicolon]) or (errorLevel>=el3_evalError);
     if errorLevel>=el3_evalError then begin cascadeDisposeToken(first); exit(newErrorLiteral); end;
 
     if first^.tokType<>tt_expBraceOpen then begin
-      next:=newToken(location,'',tt_expBraceOpen);
-      next^.next:=first; first:=next;
+      temp:=newToken(location,'',tt_expBraceOpen);
+      temp^.next:=first; first:=temp;
       last^.next:=newToken(location,'',tt_expBraceClose);
       last:=last^.next;
     end;
@@ -737,7 +704,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     finalizeTokens;
     t:=newToken(C_nilTokenLocation,'main',tt_identifier);
     mainPackage.resolveRuleId(t^,false);
-    if t^.tokType=tt_literal then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
+    if t^.tokType=tt_identifier then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
     else begin
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
@@ -752,8 +719,24 @@ function getMainPackage: P_package;
     result:=@mainPackage;
   end;
 
+function getTokenAt(const line: AnsiString; const charIndex: longint): T_token;
+  VAR copyOfLine:AnsiString;
+      lineLocation:T_tokenLocation;
+  begin
+    copyOfLine:=line;
+    lineLocation.provider:=mainPackage.codeProvider;
+    lineLocation.line:=0;
+    lineLocation.column:=1;
+    if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
+      copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
+      inc(lineLocation.column,5);
+    end;
+    result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+    while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
+      result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+  end;
+
 INITIALIZATION
-  InitCriticalSection(poolCs);
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);
@@ -770,5 +753,5 @@ INITIALIZATION
 FINALIZATION
   finalizePackages;
   finalizeTokens;
-  DoneCriticalsection(poolCs);
+ 
 end.

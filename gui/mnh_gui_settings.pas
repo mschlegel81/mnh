@@ -44,6 +44,7 @@ type
       doEchoDeclaration:boolean;
       doShowExpressionOut:boolean;
     end;
+    fileInEditor:ansistring;
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName:string;
     FUNCTION canOpenFile(CONST filename:ansistring; CONST lineNumber:longint):boolean;
@@ -87,7 +88,9 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         doEchoDeclaration:=ff.readBoolean;
         doShowExpressionOut:=ff.readBoolean;
       end;
+      fileInEditor:=ff.readAnsiString;
       ff.destroy;
+      if not(FileExists(fileInEditor)) then fileInEditor:='';
     end else begin
       if FileExists(default_notepad_path) then NotepadFileNameEdit.Filename:=default_notepad_path;
       editorFontname:='Courier New';
@@ -103,6 +106,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         doEchoDeclaration:=true;
         doShowExpressionOut:=true;
       end;
+      fileInEditor:='';
     end;
     FontButton.Font.Name:=editorFontname;
     FontButton.Font.Size:=getFontSize;
@@ -155,6 +159,7 @@ procedure TSettingsForm.FormDestroy(Sender: TObject);
       ff.writeBoolean(doEchoDeclaration);
       ff.writeBoolean(doShowExpressionOut);
     end;
+    ff.writeAnsiString(fileInEditor);
     ff.destroy;
   end;
 

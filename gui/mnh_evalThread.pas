@@ -1,9 +1,14 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mnh_constants,mnh_tokloc;
+USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mnh_constants,mnh_tokloc,mnh_funcs;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
+  T_tokenInfo=record
+    tokenText, tokenExplanation:ansistring;
+    declaredInLine:longint;
+    declaredInFile:ansistring;
+  end;
 
 PROCEDURE ad_clearFile;
 PROCEDURE ad_evaluate(CONST L:TStrings);
@@ -11,16 +16,22 @@ PROCEDURE ad_haltEvaluation;
 PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
 FUNCTION ad_currentFile:string;
 FUNCTION ad_evaluationRunning:Boolean;
-FUNCTION ad_getIdInfo(CONST id:string):T_idInfo;
 PROCEDURE ad_killEvaluationLoopSoftly;
+FUNCTION ad_getTokenInfo(CONST line:ansistring; CONST column:longint):T_tokenInfo;
+FUNCTION ad_needReload:boolean;
+PROCEDURE ad_doReload(CONST L:TStrings);
+
 VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     startOfEvaluation  :specialize G_safeVar<double>;
     endOfEvaluationText:specialize G_safeVar<AnsiString>;
     startOfEvaluationCallback:PROCEDURE;
+
+    intrinsicRules,
+    localUserRules,
+    importedUserRules:T_listOfString;
+
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
-    infoMapCs:TRTLCriticalSection;
-    infoMap:specialize G_stringKeyMap<T_idInfo>;
 
 FUNCTION main(p:pointer):ptrint;
   VAR idleCount:longint=0;
@@ -35,9 +46,7 @@ FUNCTION main(p:pointer):ptrint;
         startOfEvaluationCallback();
         reloadMainPackage;
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
-        EnterCriticalsection(infoMapCS);
-        infoMap.clear;
-        LeaveCriticalsection(infoMapCS);
+        getMainPackage^.updateLists(localUserRules,importedUserRules);
         evaluationState.value:=es_idle;
         if hasMessage(el5_systemError,HALT_MESSAGE)
         then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
@@ -57,7 +66,6 @@ procedure ad_clearFile;
 
 procedure ad_evaluate(const L: TStrings);
   begin
-    while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.setLines(L);
     pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
@@ -69,6 +77,7 @@ procedure ad_evaluate(const L: TStrings);
 procedure ad_haltEvaluation;
   begin
     if evaluationState.value=es_running then haltEvaluation;
+    pendingRequest.value:=er_none;
     while evaluationState.value=es_running do sleep(1);
     raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
@@ -100,63 +109,89 @@ function ad_evaluationRunning: Boolean;
     result:=evaluationState.value=es_running;
   end;
 
-function ad_getIdInfo(const id: string): T_idInfo;
-  VAR t:T_token;
-      p:P_package;
-      loc:T_tokenLocation;
-  begin
-    EnterCriticalsection(infoMapCS);
-    if not(infoMap.containsKey(id,result)) then begin
-      p:=getMainPackage;
-      if p<>nil then begin
-        t.create;
-        t.txt:=id;
-        t.tokType:=tt_identifier;
-        p^.resolveRuleId(t,true);
-        with result do begin
-          if t.tokType=tt_intrinsicRulePointer then begin
-            isBuiltIn:=true;
-            isUserDefined:=false;
-            filename:='';
-            fileLine:=-1;
-          end else if t.tokType=tt_userRulePointer then begin
-            isBuiltIn:=false;
-            loc:=P_rule(t.data)^.getLocationOfDeclaration;
-            filename:=loc.provider^.getPath;
-            fileLine:=loc.line;
-            isUserDefined:=true;
-          end else begin
-            isBuiltIn:=false;
-            isUserDefined:=false;
-            filename:=p^.locationOfUsedPackage(id);
-            fileLine:=-1;
-          end;
-        end;
-        infoMap.put(id,result);
-        t.destroy;
-      end else with result do begin
-        isBuiltIn:=false;
-        isUserDefined:=false;
-        filename:='';
-        fileLine:=-1;
-      end;
-    end;
-    LeaveCriticalsection(infoMapCS);
-  end;
-
 PROCEDURE ad_killEvaluationLoopSoftly;
   begin
     if evaluationState.value=es_running then haltEvaluation;
     repeat pendingRequest.value:=er_die; sleep(1); until evaluationState.value=es_dead;
   end;
 
+function ad_getTokenInfo(const line: ansistring; const column: longint): T_tokenInfo;
+VAR token:T_token;
+    loc:T_tokenLocation;
+begin
+  result.tokenText:='';
+  result.tokenExplanation:='';
+  result.declaredInFile:='';
+  result.declaredInLine:=-1;
+  if evaluationState.value<>es_running then begin
+    token:=getTokenAt(line,column);
+    result.tokenText:=token.txt;
+    result.tokenExplanation:=C_tokenInfoString[token.tokType];
+    if (token.tokType=tt_userRulePointer) then begin
+      loc:=P_rule(token.data)^.getLocationOfDeclaration;
+      result.declaredInLine:=loc.line;
+      result.declaredInFile:=loc.provider^.getPath;
+      result.tokenExplanation:=result.tokenExplanation+'#@Line '+IntToStr(loc.line);
+      if trim(result.declaredInFile)<>'' then
+        result.tokenExplanation:=result.tokenExplanation+'#in '+result.declaredInFile;
+    end else if (token.tokType=tt_identifier) then begin
+      if token.txt='USE' then begin
+        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'
+                                                        +'#As first token in a package, it marks the use-clause (importing packages)';
+      end else if token.txt='CACHE' then begin
+        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context specific interpretation'
+                                                        +'#In conjunction with a further identifier it enables caching for a specific rule.'
+      end;
+    end else if (token.tokType=tt_literal) then begin
+      if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
+      else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'
+      else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
+      else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
+      else if (pos('.',token.txt)>0) or (pos('E',UpperCase(token.txt))>0) then result.tokenExplanation:='real literal'
+      else result.tokenExplanation:='integer literal';
+    end;
+  end;
+end;
+
+function ad_needReload: boolean;
+  begin
+    result:=mainPackageProvider.fileHasChanged;
+  end;
+
+procedure ad_doReload(const L: TStrings);
+  VAR lines:T_stringList;
+      i:longint;
+  begin
+    ad_haltEvaluation;
+    L.Clear;
+    mainPackageProvider.load;
+    lines:=mainPackageProvider.getLines;
+    for i:=0 to length(lines)-1 do L.Append(lines[i]);
+  end;
+
+PROCEDURE initIntrinsicRuleList;
+  VAR ids:T_arrayOfString;
+      i:longint;
+  begin
+    ids:=mnh_funcs.intrinsicRuleMap.keySet;
+    intrinsicRules.clear;
+    for i:=0 to length(ids)-1 do begin
+      intrinsicRules.add(ids[i]);
+      intrinsicRules.add('mnh.'+ids[i]);
+    end;
+    intrinsicRules.unique;
+  end;
+
+
 INITIALIZATION
-  InitCriticalSection(infoMapCS);
-  infoMap.create();
   pendingRequest.create(er_none);
   evaluationState.create(es_dead);
   startOfEvaluation.create(now);
   endOfEvaluationText.create('');
+  intrinsicRules.create;
+  initIntrinsicRuleList;
+  localUserRules.create;
+  importedUserRules.create;
   beginThread(@main);
 
 FINALIZATION
@@ -165,7 +200,8 @@ FINALIZATION
   evaluationState.destroy;
   startOfEvaluation.destroy;
   endOfEvaluationText.destroy;
-  infoMap.destroy;
-  DoneCriticalsection(infoMapCS);
-  
+  intrinsicRules.destroy;
+  localUserRules.destroy;
+  importedUserRules.destroy;
+
 end.

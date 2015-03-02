@@ -5,7 +5,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, SynHighlighterMnh,
+  ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier, SynHighlighterMnh,
   mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
   mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants;
 
@@ -14,7 +14,10 @@ type
   { TMnhForm }
 
   TMnhForm = class(TForm)
+    ErrorMemo: TMemo;
     MenuItem2: TMenuItem;
+    miOpenNpp: TMenuItem;
+    miHelp: TMenuItem;
     miHaltEvalutaion: TMenuItem;
     miEvalModeDirect: TMenuItem;
     miEvaluateNow: TMenuItem;
@@ -24,7 +27,6 @@ type
     miSave: TMenuItem;
     miSaveAs: TMenuItem;
     OpenDialog: TOpenDialog;
-    popMiOpenDeclaration: TMenuItem;
     myhl:TSynMnhSyn;
     ErrorGroupBox: TGroupBox;
     MainMenu1: TMainMenu;
@@ -36,15 +38,14 @@ type
     miDecFontSize: TMenuItem;
     miIncFontSize: TMenuItem;
     mi_settings: TMenuItem;
-    EditorPopup: TPopupMenu;
+    PopupNotifier1: TPopupNotifier;
     SaveDialog: TSaveDialog;
     Splitter1: TSplitter;
+    Splitter2: TSplitter;
     StatusBar: TStatusBar;
-    ErrorStringGrid: TStringGrid;
     InputEdit: TSynEdit;
     OutputEdit: TSynEdit;
     UpdateTimeTimer: TTimer;
-    procedure EditorPopupPopup(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormResize(Sender: TObject);
@@ -63,8 +64,10 @@ type
     procedure miExpressionEchoClick(Sender: TObject);
     procedure miExpressionResultClick(Sender: TObject);
     procedure miHaltEvalutaionClick(Sender: TObject);
+    procedure miHelpClick(Sender: TObject);
     procedure miIncFontSizeClick(Sender: TObject);
     procedure miOpenClick(Sender: TObject);
+    procedure miOpenNppClick(Sender: TObject);
     procedure miSaveAsClick(Sender: TObject);
     procedure miSaveClick(Sender: TObject);
     procedure mi_settingsClick(Sender: TObject);
@@ -72,17 +75,16 @@ type
       Shift: TShiftState);
     procedure OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
-    procedure popMiOpenDeclarationClick(Sender: TObject);
+    procedure Splitter1Moved(Sender: TObject);
     procedure UpdateTimeTimerTimer(Sender: TObject);
 
   private
-    lastWordUnderCursor:string;
-    underCursor:T_idInfo;
-
+    underCursor:T_tokenInfo;
     settingsHaveBeenProcessed:boolean;
     procedure processSettings;
     PROCEDURE flushThroughput;
-    PROCEDURE clearThroughput;
+    PROCEDURE positionHelpNotifier;
+    PROCEDURE setUnderCursor(const lines:TStrings; const caret:TPoint);
     { private declarations }
   public
     { public declarations }
@@ -92,9 +94,7 @@ var
   MnhForm: TMnhForm;
 
 implementation
-VAR throughputCS:TRTLCriticalSection;
-    errorThroughput:array of T_storedError;
-    outputThroughput:array of ansistring;
+VAR errorThroughput:array of T_storedError;
     lastFormRepaint:double=0;
     repaintNecessary:boolean=false;
 
@@ -102,10 +102,8 @@ VAR throughputCS:TRTLCriticalSection;
 
 PROCEDURE appendToOutputThroughput(CONST text:ansistring);
   begin
-    EnterCriticalsection(throughputCS);
-    setLength(outputThroughput,length(outputThroughput)+1);
-    outputThroughput[length(outputThroughput)-1]:=text;
-    LeaveCriticalsection(throughputCS);
+    MnhForm.OutputEdit.Lines.Append(text);
+    repaintNecessary:=true;
   end;
 
 PROCEDURE writeDeclEcho(CONST s:ansistring);
@@ -134,63 +132,49 @@ PROCEDURE logError(CONST error:T_storedError);
     mnh_out_adapters.plainStdErrOut(error);
     {$endif}
     if error.errorLevel<el2_warning then exit;
-    EnterCriticalsection(throughputCS);
     SetLength(errorThroughput,length(errorThroughput)+1);
     errorThroughput[length(errorThroughput)-1]:=error;
-    LeaveCriticalsection(throughputCS);
+    repaintNecessary:=true;
   end;
 
 procedure TMnhForm.flushThroughput;
   VAR i:longint;
-      row:longint;
   begin
-    EnterCriticalsection(throughputCS);
-    for i:=0 to length(outputThroughput)-1 do OutputEdit.Lines.Append(outputThroughput[i]);
-    SetLength(outputThroughput,0);
-
-    //ErrorGroupBox.Visible:=ErrorGroupBox.Visible or (length(errorThroughput)>0);
-    for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do begin
-      row:=ErrorStringGrid.RowCount;
-      ErrorStringGrid.RowCount:=row+1;
-      ErrorStringGrid.Cells[0,row]:=C_errorLevelTxt[errorLevel];
-      ErrorStringGrid.Cells[1,row]:=errorMessage;
-      ErrorStringGrid.Cells[2,row]:=errorLocation;
-      if (errorLocation.provider=nil) or (errorLocation.provider^.getPath='') then begin
-        ErrorStringGrid.Cells[3,row]:='';
-        ErrorStringGrid.Cells[4,row]:='';
-      end else begin
-        ErrorStringGrid.Cells[3,row]:=errorLocation.provider^.getPath;
-        ErrorStringGrid.Cells[4,row]:=IntToStr(errorLocation.line);
-      end;
-    end;
-    if (length(errorThroughput)>0) then ErrorStringGrid.AutoSizeColumns;
+    for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
+      ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+string(errorLocation) );
     setLength(errorThroughput,0);
     lastFormRepaint:=now;
     repaintNecessary:=false;
-    LeaveCriticalsection(throughputCS);
   end;
 
-procedure TMnhForm.clearThroughput;
+procedure TMnhForm.positionHelpNotifier;
   begin
-    EnterCriticalsection(throughputCS);
-    SetLength(outputThroughput,0);
-    setLength(errorThroughput,0);
-    LeaveCriticalsection(throughputCS);
+    PopupNotifier1.ShowAtPos(left+Width-PopupNotifier1.vNotifierForm.Width,
+                             ClientToScreen(Point(left,OutputEdit.Top)).y);
+    InputEdit.SetFocus;
+  end;
+
+procedure TMnhForm.setUnderCursor(const lines:TStrings; const caret:TPoint);
+  begin
+    if (caret.y>0) and (caret.y<=lines.Count) then begin
+      underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
+      if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
+        PopupNotifier1.Title:=underCursor.tokenText;
+        PopupNotifier1.Text:=replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar);
+        miOpenNpp.Enabled:=underCursor.declaredInFile<>'';
+        if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
+      end;
+    end;
   end;
 
 PROCEDURE startOfEvaluationCallback;
   begin
-    try
-      EnterCriticalsection(throughputCS);
-      MnhForm.clearThroughput;
-      MnhForm.OutputEdit.Lines.Clear;
-      MnhForm.ErrorStringGrid.RowCount:=0;
-      //MnhForm.ErrorGroupBox.Visible:=false;
-      repaintNecessary:=true;
-      lastFormRepaint:=now;
-      LeaveCriticalsection(throughputCS);
-    except
-    end;
+    setLength(errorThroughput,0);
+    MnhForm.OutputEdit.Lines.Clear;
+    MnhForm.ErrorMemo.Clear;
+    //MnhForm.ErrorGroupBox.Visible:=false;
+    repaintNecessary:=true;
+    lastFormRepaint:=now;
   end;
 
 { TMnhForm }
@@ -205,22 +189,16 @@ procedure TMnhForm.FormCreate(Sender: TObject);
       ' at: '+{$I %TIME%}+
       ' with FPC'+{$I %FPCVERSION%}+
       ' for '+{$I %FPCTARGET%};
+    OutputEdit.Lines.Append('       compiled on: '+{$I %DATE%});
+    OutputEdit.Lines.Append('       at: '+{$I %TIME%});
+    OutputEdit.Lines.Append('       with FPC'+{$I %FPCVERSION%});
+    OutputEdit.Lines.Append('       for '+{$I %FPCTARGET%});
     mnh_out_adapters.errorOut:=@logError;
     mnh_evalThread.startOfEvaluationCallback:=@startOfEvaluationCallback;
     mnh_out_adapters.inputDeclEcho:=@writeDeclEcho;
     mnh_out_adapters.inputExprEcho:=@writeExprEcho;
     mnh_out_adapters.exprOut      :=@writeExprOut;
     mnh_out_adapters.printOut     :=@writePrint;
-  end;
-
-procedure TMnhForm.EditorPopupPopup(Sender: TObject);
-  begin
-    underCursor:=ad_getIdInfo(lastWordUnderCursor);
-    if underCursor.isBuiltIn then popMiOpenDeclaration.Caption:='"'+lastWordUnderCursor+'" is a built in function'
-    else if underCursor.isUserDefined then popMiOpenDeclaration.Caption:='Open declaration of "'+lastWordUnderCursor+'" ('+underCursor.filename+')'
-    else if underCursor.filename<>'' then popMiOpenDeclaration.Caption:='Open package "'+underCursor.filename+'"'
-    else popMiOpenDeclaration.Caption:='"'+lastWordUnderCursor+'" cannot be resolved';
-    popMiOpenDeclaration.Enabled:=underCursor.filename<>'';
   end;
 
 procedure TMnhForm.FormDestroy(Sender: TObject);
@@ -238,6 +216,7 @@ procedure TMnhForm.FormResize(Sender: TObject);
       SettingsForm.mainForm.width :=width;
       SettingsForm.mainForm.height:=height;
     end;
+    if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
 procedure TMnhForm.FormShow(Sender: TObject);
@@ -253,28 +232,22 @@ procedure TMnhForm.InputEditChange(Sender: TObject);
   end;
 
 procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-  VAR wordUnderCursor:string;
   begin
-    if (key>=33) and (key<=40) then begin
-      wordUnderCursor:=InputEdit.GetWordAtRowCol(InputEdit.CaretXY);      
-      if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
-    end;
+    setUnderCursor(InputEdit.Lines,InputEdit.CaretXY);
   end;
 
-procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
   VAR point:TPoint;
-      wordUnderCursor:string;
   begin
     point.x:=x;
     point.y:=y;
-    wordUnderCursor:=InputEdit.GetWordAtRowCol(InputEdit.PixelsToRowColumn(point));
-    if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
+    setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
 procedure TMnhForm.miClearClick(Sender: TObject);
   begin
     ad_clearFile;
+    SettingsForm.fileInEditor:='';
   end;
 
 procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
@@ -343,6 +316,13 @@ procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
     ad_haltEvaluation;
   end;
 
+procedure TMnhForm.miHelpClick(Sender: TObject);
+begin
+  miHelp.Checked:=not(miHelp.Checked);
+  if not(miHelp.Checked) then PopupNotifier1.Visible:=false
+                         else if underCursor.tokenText<>'' then positionHelpNotifier;
+end;
+
 procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -355,14 +335,24 @@ procedure TMnhForm.miOpenClick(Sender: TObject);
   begin
     OpenDialog.Title:='Open file';
     if OpenDialog.Execute and FileExists(OpenDialog.FileName)
-    then ad_setFile(OpenDialog.FileName,InputEdit.Lines);
+    then begin
+      ad_setFile(OpenDialog.FileName,InputEdit.Lines);
+      SettingsForm.fileInEditor:=OpenDialog.FileName;
+    end;
   end;
+
+procedure TMnhForm.miOpenNppClick(Sender: TObject);
+begin
+  if underCursor.declaredInFile<>'' then
+    SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
+end;
 
 procedure TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
       MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
       ad_setFile(SaveDialog.FileName,InputEdit.Lines);
+      SettingsForm.fileInEditor:=SaveDialog.FileName;
     end;
   end;
 
@@ -378,40 +368,31 @@ procedure TMnhForm.mi_settingsClick(Sender: TObject);
   end;
 
 procedure TMnhForm.OutputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-  VAR wordUnderCursor:string;
   begin
-    if (key>=33) and (key<=40) then begin
-      wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
-      if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
-    end;
+    setUnderCursor(OutputEdit.Lines,OutputEdit.CaretXY);
   end;
 
-procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+
+procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
   VAR point:TPoint;
-      wordUnderCursor:string;
   begin
     point.x:=x;
     point.y:=y;
-    wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.PixelsToRowColumn(point));
-    if isIdentifier(wordUnderCursor,true) then lastWordUnderCursor:=wordUnderCursor;
+    setUnderCursor(OutputEdit.Lines,OutputEdit.PixelsToRowColumn(point));
   end;
 
-procedure TMnhForm.popMiOpenDeclarationClick(Sender: TObject);
+procedure TMnhForm.Splitter1Moved(Sender: TObject);
   begin
-    with underCursor do
-    if filename<>''
-    then SettingsForm.canOpenFile(filename,fileline);
+    if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
 procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
         MAX_INTERVALL=1000;
-        REPAINT_INTERVAL_IN_SECONDS=1;
+        REPAINT_INTERVAL_IN_SECONDS=0.2;
   VAR aid:string;
       flag:boolean;
   begin
-    EnterCriticalsection(throughputCS);
     //Form caption:-------------------------------------------------------------
     aid:='MNH5 '+ad_currentFile;
     if aid<>Caption then begin Caption:=aid; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
@@ -423,7 +404,7 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if flag<>miEvaluateNow.Enabled then begin miEvaluateNow.Enabled:=flag; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
-    flag:=(evaluationState.value=es_running);
+    flag:=ad_evaluationRunning;
     if flag then aid:=formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
             else aid:=endOfEvaluationText.value;
     if StatusBar.SimpleText<>aid then begin
@@ -431,13 +412,20 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
+    //file state:---------------------------------------------------------------
+    if ad_needReload then begin
+      ad_doReload(InputEdit.Lines);
+      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+      OutputEdit.ClearAll;
+    end;
+    //---------------------------------------------------------------:file state
     repaintNecessary:=repaintNecessary or (UpdateTimeTimer.Interval=MIN_INTERVALL);
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
     if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) and repaintNecessary then begin
       lastFormRepaint:=now;
       flushThroughput;
+      repaint;
     end;
-    LeaveCriticalsection(throughputCS);
   end;
 
 procedure TMnhForm.processSettings;
@@ -467,17 +455,15 @@ procedure TMnhForm.processSettings;
       if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
                              else mnh_out_adapters.exprOut:=nil;
     end;
+    if ad_currentFile<>SettingsForm.fileInEditor then begin
+      if ad_currentFile='' then ad_clearFile
+                           else ad_setFile(SettingsForm.fileInEditor,InputEdit.Lines);
+    end;
     settingsHaveBeenProcessed:=true;
   end;
 
 initialization
-  InitCriticalSection(throughputCS);
   setLength(errorThroughput,0);
-  setLength(outputThroughput,0);
-
-finalization;
-  DoneCriticalsection(throughputCS);
-
 
 end.
 

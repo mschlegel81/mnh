@@ -1,0 +1,8 @@
+d(h)->(sin(h)-sin(-h))/(2*h);
+print(d(0.1));
+
+d(x,h,e:expression)->d(x,h,e,1);
+d(x,h,e:expression,0)->e(x);
+d(x,h,e:expression,1)->(e(x+h)-e(x-h))/(2*h);
+d(x,h,e:expression,i>1)->(d(x+h,h,e,i-1)-d(x-h,h,e,i-1))/(2*h);
+d(0,0.0000001,{sin($x)},0);

@@ -193,7 +193,7 @@ VAR boolLit:array[false..true] of T_boolLiteral;
     intLit :array[0..127] of P_intLiteral;
     errLit :T_scalarLiteral;
 
-PROCEDURE disposeLiteral(VAR l:P_literal); 
+PROCEDURE disposeLiteral(VAR l:P_literal);
   begin
     if l=nil then begin
       writeln(stderr,'disposing NIL literal ?!?');
@@ -1015,8 +1015,8 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
   VAR i,i1,j:longint;
   begin
     //writeln('resolving operator ',op);
-    //writeln('             LHS = ',LHS^.toString);
-    //writeln('             RHS = ',RHS^.toString);
+    //writeln('             LHS = @',ptrint(LHS));
+    //writeln('             RHS = @',ptrint(RHS));
     //HANDLE ERROR LITERALS:---------------------------------------------------
     if (LHS^.literalType=lt_error) then begin LHS^.rereference; exit(LHS); end;
     if (RHS^.literalType=lt_error) then begin RHS^.rereference; exit(RHS); end;

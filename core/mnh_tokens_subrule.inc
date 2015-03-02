@@ -233,7 +233,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       r:=P_expressionLiteral(LHS)^.value;
       setLength(expression,length(r^.expression));
       for i:=0 to length(expression)-1 do with expression[i] do begin
-        token.create; token.define(@(r^.expression[i].token));
+        token.create; token.define(r^.expression[i].token);
         parIdx:=-1;
       end;
     end else begin
@@ -256,7 +256,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       r:=P_expressionLiteral(RHS)^.value;
       setLength(expression,i0+length(r^.expression));
       for i:=0 to length(r^.expression)-1 do with expression[i0+i] do begin
-        token.create; token.define(@(r^.expression[i].token));
+        token.create; token.define(r^.expression[i].token);
         parIdx:=-1;
       end;
     end else begin

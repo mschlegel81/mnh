@@ -10,6 +10,7 @@ TYPE
 
   T_codeProvider=object
     private
+      lock:TThreadID;
       filepath:ansistring;
       lineData:T_stringList;
       syncedFileAge:double;
@@ -205,39 +206,53 @@ FUNCTION find(CONST pattern:ansistring; CONST filesAndNotFolders:boolean):T_stri
 
 function T_codeProvider.getLines: T_stringList;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     result:=lineData;
+    repeat lock:=0 until lock=0;
   end;
 
 procedure T_codeProvider.setLines(const value: T_stringList);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(lineData,length(value));
     for i:=0 to length(value)-1 do lineData[i]:=value[i];
     inc(version);
+    repeat lock:=0 until lock=0;
   end;
 
 procedure T_codeProvider.setLines(const value: TStrings);
   VAR i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(lineData,value.Count);
     for i:=0 to value.Count-1 do lineData[i]:=value[i];
     inc(version);
+    repeat lock:=0 until lock=0;
   end;
   
 PROCEDURE T_codeProvider.setLines(CONST value:ansistring);
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     setLength(lineData,1);
     lineData[0]:=value;
     inc(version);
+    repeat lock:=0 until lock=0;
   end;
   
 constructor T_codeProvider.create;
   begin
+    lock:=0;
     clear;
   end;
 
 constructor T_codeProvider.create(const path: ansistring);
   begin
+    lock:=0;
     clear;
     filepath:=path;
     if FileExists(path) then load;
@@ -263,6 +278,8 @@ procedure T_codeProvider.load;
       L:T_stringList;
       i:longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     L:=fileLines(filepath,accessed);
     if accessed then begin
       setLength(lineData,length(L));
@@ -270,12 +287,16 @@ procedure T_codeProvider.load;
       FileAge(filepath,syncedFileAge);
       inc(version);
     end;
+    repeat lock:=0 until lock=0;
   end;
 
 procedure T_codeProvider.save;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     if (filepath<>'') and writeFileLines(filepath,lineData) then
       FileAge(filepath,syncedFileAge);
+    repeat lock:=0 until lock=0;
   end;
 
 function T_codeProvider.filename: ansistring;
@@ -294,8 +315,11 @@ function T_codeProvider.fileHasChanged: boolean;
 
 function T_codeProvider.getVersion(const reloadIfNecessary: boolean): longint;
   begin
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock:=ThreadID until lock=ThreadID;
     if reloadIfNecessary and fileHasChanged then load;
     result:=version;
+    repeat lock:=0 until lock=0;
   end;
 
 function T_codeProvider.id: ansistring;
