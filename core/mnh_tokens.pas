@@ -2,6 +2,7 @@ UNIT mnh_tokens;
 INTERFACE
 USES LCLIntf, myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
+     {$ifdef PROFILING}epiktimer,{$endif}
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
 
 {$define include_interface}
@@ -56,6 +57,9 @@ VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
+    {$ifdef PROFILING}
+    profiler: Tepiktimer;
+    {$endif}
 
 FUNCTION guessPackageForToken(CONST token:T_token):P_package;
   VAR provider:P_codeProvider;
@@ -95,6 +99,8 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     recycler.create;
     mainPackage.load(usecase,recycler);
     //housekeeping:-------------------------------------------------------------
+    fileCursor_close;
+    clearAllCaches;
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
     for i:=0 to length(secondaryPackages)-1 do
@@ -465,6 +471,11 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
       intrinsicFuncPtr:T_intFuncCallback;
       packageId,ruleId:ansistring;
   begin    
+    {$ifdef PROFILING}
+    profiler.Clear;
+    profiler.Start;
+    {$endif}
+
     i:=pos(C_id_qualify_character,token.txt);
     if i>0 then begin
       packageId:=copy(token.txt,1,i-1);
@@ -477,6 +488,9 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
     and rules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;T_package.resolveRuleId (0);' + FloatToStr(profiler.Elapsed));
+      {$endif}
       exit;
     end;
 
@@ -486,6 +500,9 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
     and (packageUses[i].pack^.rules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
       token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;T_package.resolveRuleId (1);' + FloatToStr(profiler.Elapsed));
+      {$endif}
       exit;
     end;
 
@@ -493,8 +510,14 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
     and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;T_package.resolveRuleId (2);' + FloatToStr(profiler.Elapsed));
+      {$endif}
       exit;
     end;
+    {$ifdef PROFILING}
+    writeln(stderr,'PROFILING;T_package.resolveRuleId (X);' + FloatToStr(profiler.Elapsed));
+    {$endif}
 
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
@@ -635,6 +658,11 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   VAR copyOfLine:ansistring;
       lineLocation:T_tokenLocation;
   begin
+    {$ifdef PROFILING}
+    profiler.Clear;
+    profiler.Start;
+    {$endif}
+    
     try
       copyOfLine:=line;
       lineLocation.provider:=mainPackage.codeProvider;
@@ -651,6 +679,9 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
       result.create;
       result.define(C_nilTokenLocation,'ERR',tt_eol);
     end;
+    {$ifdef PROFILING}
+    writeln(stderr,'PROFILING;getTokenAt;' + FloatToStr(profiler.Elapsed));
+    {$endif}
   end;
 
 PROCEDURE findAndDocumentAllPackages;
@@ -688,7 +719,9 @@ INITIALIZATION
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
   applyUnaryOnExpressionCallback:=@subruleApplyFuncImpl;
-
+  {$ifdef PROFILING}
+  profiler := TEpikTimer.create(nil);
+  {$endif}
 FINALIZATION
   pendingTasks.destroy;
   finalizePackages;

@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,LCLIntf;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,EpikTimer;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
@@ -642,7 +642,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR res:P_literal;
       runCount:longint=1;
-      startTick,ticks:DWord;
+      profiler:TEpikTimer;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     VAR aid:P_listLiteral;
@@ -656,23 +656,24 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      startTick:=GetTickCount;
+      profiler := TEpikTimer.create(nil);
+      profiler.Clear;
+      profiler.Start;
       res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
-      ticks:=GetTickCount-startTick;
       if res<>nil then begin
-        while (ticks<200) and (res<>nil) do begin //measure at least half a second
+        while (profiler.Elapsed<0.01) and (res<>nil) do begin
           disposeLiteral(res);
           res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
           if res=nil then exit(nil);
-          ticks:=GetTickCount-startTick;
           inc(runCount);
         end;
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
         appendPair(result,'result'    ,res);
-        appendPair(result,'time'      ,newRealLiteral(ticks/runCount*1E-3));
+        appendPair(result,'time'      ,newRealLiteral(profiler.Elapsed/runCount));
         appendPair(result,'samples'   ,newIntLiteral(runCount));
       end;
+      profiler.Free;
     end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
@@ -929,6 +930,18 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       system.EnterCriticalSection(file_cs);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
+      system.LeaveCriticalsection(file_cs);
+      result:=newListLiteral;
+      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
+      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+    end else if (params<>nil) and (params^.size=3) and
+                (params^.value(0)^.literalType=lt_string) and
+                (params^.value(1)^.literalType=lt_int) and
+                (params^.value(2)^.literalType=lt_int) then begin
+      system.EnterCriticalSection(file_cs);
+      L:=fileLines(P_stringLiteral(params^.value(0))^.value,
+                   P_intLiteral   (params^.value(1))^.value,
+                   P_intLiteral   (params^.value(2))^.value,accessed);
       system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
@@ -1378,6 +1391,38 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('systime',params,tokenLocation);
   end;
 
+FUNCTION fileCursorOpen_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      EnterCriticalsection(file_cs);
+      result:=newBoolLiteral(fileCursor_open(P_stringLiteral(params^.value(0))^.value));
+      LeaveCriticalsection(file_cs);
+    end else raiseNotApplicableError('fileCursorOpen',params,tokenLocation);
+  end;
+
+FUNCTION fileCursorHasNext_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then begin
+      EnterCriticalsection(file_cs);
+      result:=newBoolLiteral(fileCursor_hasNext);
+      LeaveCriticalsection(file_cs);
+    end else raiseNotApplicableError('fileCursorHasNext',params,tokenLocation);
+  end;
+
+FUNCTION fileCursorNext_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then begin
+      EnterCriticalsection(file_cs);
+      result:=newStringLiteral(fileCursor_next);
+      LeaveCriticalsection(file_cs);
+    end else raiseNotApplicableError('fileCursorNext',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1439,7 +1484,8 @@ INITIALIZATION
   registerRule('folders'       ,@folders_impl     ,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
   registerRule('fileExists'    ,@fileExists_impl  ,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
   registerRule('fileContents'  ,@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
-  registerRule('fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost');
+  registerRule('fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
+                                                   'fileLines(filename:string,firstIdx:int,lastIdx:int);#Returns the specified range of lines or the empty list if no line was found in the range. Indexes are inclusive and start with 0.');
   registerRule('writeFile'     ,@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
   registerRule('writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
@@ -1454,6 +1500,10 @@ INITIALIZATION
   registerRule('isInRange'     ,@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
   registerRule('splitFileName' ,@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
   registerRule('systime'       ,@systime_imp,'sytime;#Returns the current time in various representations');
+
+  registerRule('fileCursorOpen',@fileCursorOpen_imp,'fileCursorOpen(filename:string);#Opens the file cursor for the given file name and returns true on success, false otherwise.');
+  registerRule('fileCursorHasNext',@fileCursorHasNext_imp,'fileCursorHasNext;#Returns true if the file cursor is open and a next element is available, false otherwise.');
+  registerRule('fileCursorNext',@fileCursorNext_imp,'fileCursorNext;#Returns the next line from the file cursor or the empty string if there is no such line (i.e. the cursor is closed or has reached the end of the file).');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

@@ -45,6 +45,7 @@ CONST sourceExt = '.MNH';
 
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
 FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
+FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_stringList;
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
@@ -56,8 +57,18 @@ FUNCTION locateSources: T_stringList;
 FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
 FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
 
+FUNCTION fileCursor_open(CONST filename:ansistring):boolean;
+FUNCTION fileCursor_hasNext:boolean;
+FUNCTION fileCursor_next:ansistring;
+PROCEDURE fileCursor_close;
+
 IMPLEMENTATION
 VAR mainPackagePath: ansistring;
+    fileCursor:record
+      filename:ansistring;
+      handle:TextFile;
+      isOpen:boolean;
+    end;
 
 PROCEDURE setMainPackagePath(CONST path: ansistring);
   begin
@@ -159,29 +170,37 @@ FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
   end;
 
 FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
-  VAR
-    handle: textFile;
+  begin
+    result:=fileLines(name,0,maxLongint,accessed);
+  end;
+
+FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_stringList;
+  VAR handle: textFile;
+      lineIndex:longint=0;
+      tempLine:ansistring;
   begin
     setLength(result, 0);
-    if trim(Name) = '' then
-      begin
+    if trim(Name) = '' then begin
       accessed := false;
       exit;
-      end;
-      try
+    end;
+    try
       accessed := true;
       assign(handle, Name);
       reset(handle);
-      while not (EOF(handle)) do
-        begin
-        setLength(result, length(result)+1);
-        readln(handle, result [length(result)-1]);
+      while not (EOF(handle)) and (lineIndex<=lastIdx) do begin
+        readln(handle,tempLine);
+        if (lineIndex>=firstIdx) and (lineIndex<=lastIdx) then begin
+          setLength(result, length(result)+1);
+          result [length(result)-1]:=tempLine;
         end;
+        inc(lineIndex);
+      end;
       close(handle);
-      except
+    except
       accessed := false;
       setLength(result, 0);
-      end;
+    end;
   end;
 
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
@@ -527,6 +546,46 @@ PROCEDURE T_codeProvider.Clear;
     syncedFileAge := 0;
   end;
 
+FUNCTION fileCursor_open(CONST filename:ansistring):boolean;
+  begin
+    if fileCursor.isOpen then fileCursor_close;
+    fileCursor.filename:=filename;
+    try
+      assign(fileCursor.handle,filename);
+      reset(fileCursor.handle);
+      fileCursor.isOpen:=true;
+      result:=true;
+    except
+      fileCursor.isOpen:=false;
+      result:=false;
+    end;
+  end;
+
+FUNCTION fileCursor_hasNext:boolean;
+  begin
+    result:=fileCursor.isOpen;
+    if result and eof(fileCursor.handle) then begin
+      result:=false;
+      fileCursor_close;
+    end;
+  end;
+
+FUNCTION fileCursor_next:ansistring;
+  begin
+    if not(fileCursor_hasNext) then exit('');
+    readln(fileCursor.handle,result);
+  end;
+
+PROCEDURE fileCursor_close;
+  begin
+    with fileCursor do if isOpen then begin
+      close(handle);
+      isOpen:=false;
+    end;
+  end;
+
 INITIALIZATION
   setMainPackagePath('');
+  fileCursor.filename:='';
+  fileCursor.isOpen:=false;
 end.

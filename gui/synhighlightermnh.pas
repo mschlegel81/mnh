@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   SysUtils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litvar,mnh_constants;
 CONST
   C_DeclEchoHead = #10+' in>';
   C_ExprEchoHead = #10+'_in>';
@@ -218,15 +218,24 @@ PROCEDURE TSynMnhSyn.Next;
           localId := localId+fLine [run];
           Inc(run);
           end;
-        if (localId = 'xor') or (localId = 'or') or (localId = 'mod') or
-          (localId = 'in') or (localId = 'div') or (localId = 'and') then
+        if (localId = C_tokenString[tt_operatorXor]   ) or
+           (localId = C_tokenString[tt_operatorOr]    ) or
+           (localId = C_tokenString[tt_operatorMod]   ) or
+           (localId = C_tokenString[tt_operatorIn]    ) or
+           (localId = C_tokenString[tt_operatorDivInt]) or
+           (localId = C_tokenString[tt_operatorAnd]   ) then
           fTokenId := tkOperator
-        else if (localId = 'true') or (localId = 'false') then
+        else if (localId = C_boolText[true]) or (localId = C_boolText[false]) then
           fTokenId := tkBoolean
-        else if (localId = 'Nan') or (localId = 'Inf') then
+        else if (localId = 'Nan') or (localId = 'Inf')  then
           fTokenId := tkNumber
-        else if (localId = 'each') or (localId = 'pEach') or
-          (localId = 'memoized') or (localId = 'USE') or (localId = 'private') or (localId = 'main') then
+        else if (localId = 'void') or
+                (localId = 'main') or
+                (localId = 'USE') or
+                (localId = C_tokenString[tt_modifier_private] ) or
+                (localId = C_tokenString[tt_modifier_memoized]) or
+                (localId = C_tokenString[tt_each]             ) or
+                (localId = C_tokenString[tt_parallelEach]     ) then
           fTokenId := tkIntrinsicRuleOrKeyword
         else
         if localUserRules.contains(localId) then

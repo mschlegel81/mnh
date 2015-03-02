@@ -359,7 +359,7 @@ PROCEDURE startOfEvaluationCallback;
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
-    needEvaluation:=False;
+    needEvaluation:=false;
     doNotEvaluateBefore:=now;
     OpenDialog.FileName:=paramstr(0);
     SaveDialog.FileName:=paramstr(0);

@@ -1,5 +1,5 @@
-memoized private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
-         private expandPrimes(P:intList,pMax:int,C:intList)-> P|C%each(c,C,each(p,c mod P<>0,and));
+private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
+private expandPrimes(P:intList,pMax:int,C:intList)-> P|each(c,C,each(p,c mod P<>0,and) ? c : void);
 
 //*Special case 1: Prime numbers lesser than 3
 memoized
@@ -30,4 +30,3 @@ memoized factors(n:int)->factors(n,primes(sqrt(sqrt(n)))%(n mod primes(sqrt(sqrt
 private factors(1,[])->[];
 private factors(n:int,[])->factorize(n);
 private factors(n:int,dividers:intList)->dividers|factors(n div each(d,dividers,*));
-

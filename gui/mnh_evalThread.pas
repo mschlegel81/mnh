@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mnh_constants,mnh_tokloc,mnh_funcs;
+USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mnh_constants,mnh_tokloc,mnh_funcs,mnh_litvar;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -44,9 +44,21 @@ FUNCTION main(p:pointer):ptrint;
       completionList.clear;
       completionList.add(C_tokenString[tt_modifier_memoized]);
       completionList.add('USE');
-      completionList.add(C_tokenString[tt_modifier_private]);
-      completionList.add(C_tokenString[tt_each]);
-      completionList.add(C_tokenString[tt_parallelEach]);
+      completionList.add('Nan');
+      completionList.add('Inf');
+      completionList.add('void');
+      completionList.add(C_tokenString[tt_operatorXor]   );
+      completionList.add(C_tokenString[tt_operatorOr]    );
+      completionList.add(C_tokenString[tt_operatorMod]   );
+      completionList.add(C_tokenString[tt_operatorIn]    );
+      completionList.add(C_tokenString[tt_operatorDivInt]);
+      completionList.add(C_tokenString[tt_operatorAnd]   );
+      completionList.add(C_tokenString[tt_modifier_private] );
+      completionList.add(C_tokenString[tt_modifier_memoized]);
+      completionList.add(C_tokenString[tt_each]             );
+      completionList.add(C_tokenString[tt_parallelEach]     );
+      completionList.add(C_boolText[true]);
+      completionList.add(C_boolText[false]);
       completionList.addArr(localUserRules.elementArray);
       completionList.addArr(importedUserRules.elementArray);
       completionList.addArr(intrinsicRules.elementArray);
@@ -174,6 +186,7 @@ begin
       if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
       else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'
       else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
+      else if (token.txt='void') then result.tokenExplanation:='void literal'
       else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
       else if (pos('.',token.txt)>0) or (pos('E',UpperCase(token.txt))>0) then result.tokenExplanation:='real literal'
       else result.tokenExplanation:='integer literal';

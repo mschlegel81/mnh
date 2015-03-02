@@ -67,7 +67,8 @@ TYPE
     lt_stringList,
     lt_flatList,
     lt_uncheckedList,
-    lt_listWithError);
+    lt_listWithError,
+    lt_void);
 
 CONST
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
@@ -157,7 +158,8 @@ CONST
     'stringList',
     'flatList',
     'UNCHECKED LIST!',
-    'list(containing error)');
+    'list(containing error)',
+    'void-type');
 
   C_tokenInfoString: array[T_tokenType] of string = (
     'literal',

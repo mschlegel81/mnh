@@ -15,6 +15,7 @@
   <li><h4><a href="#reals">Reals</a></h4></li>
   <li><h4><a href="#strings">Strings</a></h4></li>
   <li><h4><a href="#expressions">Expressions</a></h4></li>
+  <li><h4><a href="#void">void</a></h4></li>
   <li><h4><a href="#errors">Errors</a></h4></li>
 </ul>
 <h3>      <a href="#lists">List types</a></h3>
@@ -58,6 +59,16 @@ If an expression literal accepts more than one parameter, the parameters have to
 Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
   f(a,b)->{a+b*$x}</code> will return a linear scalar function.
 
+<h4><a name="void">void</a></h4>
+The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="each.html">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
+each(i,[2..7*7],(i>2 and i mod 2=0) or
+                (i>3 and i mod 3=0) or
+                (i>5 and i mod 5=0) or
+                (i>7 and i mod 7=0) ? void : i);
+</code> 
+For usual operators, <code>void</code> behaves as neutral element. <br>
+It cannot be passed as a function argument.
+  
 <h4><a name="errors">Errors</a></h4>
 Errors are no functional literals. They form a fallback for cases, where a literal result was expected but none could be provided (e.g. when invoking an operator with incompatible operands).<br>
 You should see them rarely and when you see them they should have a corresponding error message.<br>

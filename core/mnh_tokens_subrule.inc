@@ -52,7 +52,8 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
         token.next:=nil;
         if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then token.tokType:=tt_identifier;
+          if parIdx>=0 then token.tokType:=tt_identifier
+          else if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
         end else parIdx:=-1;
       end;
     end;
@@ -76,7 +77,8 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
         token.next:=nil;
         if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier] then begin
           parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then token.tokType:=tt_identifier;
+          if parIdx>=0 then token.tokType:=tt_identifier
+          else if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
         end else parIdx:=-1;
       end;
     end;
@@ -214,6 +216,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
   VAR t:P_token;
       i:longint;
   begin
+    {$ifdef PROFILING}
+    profiler.Clear;
+    profiler.Start;
+    {$endif}  
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^) and
        (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
@@ -258,6 +264,9 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         end;
       end;
     end;
+    {$ifdef PROFILING}
+    writeln(stderr,'PROFILING;T_subrule.replaces;' + FloatToStr(profiler.Elapsed));
+    {$endif}   
   end;
 
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);

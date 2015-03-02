@@ -7,7 +7,7 @@
 @set fpc64=c:\lazarus64\fpc\2.6.4\bin\x86_64-win64\fpc.exe 
 @rem @set optimize=-O2 -CX -XX -Scghi2 
 @set optimize=-O3 -CX -XX -Si
-@set debug=-g -glh -Si -ddebugMode 
+@set debug=-g -glh -Si -ddebugMode
 @set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scgh -Fucore -Fuutil -Ficore 
 @set guiOpt32=-FuC:\lazarus\components\synedit\units\i386-win32\win32     -FuC:\lazarus\lcl\units\i386-win32\win32     -FuC:\lazarus\lcl\units\i386-win32     -FuC:\lazarus\components\lazutils\lib\i386-win32     -FuC:\lazarus\packager\units\i386-win32     %guiOpt%
 @set guiOpt64=-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64 -FuC:\lazarus64\components\lazutils\lib\x86_64-win64 -FuC:\lazarus64\packager\units\x86_64-win64 %guiOpt% -dversion64bit
@@ -25,9 +25,11 @@
 
 :64bitOpt
 @echo --------------------- building optimized 64 bit binaries ---------------------------
-@%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe   %optimize% %guiOpt64% 
-@%fpc64% consoles\mnh_console.pas -o.\mnh_console.exe %optimize% %guiOpt64% -dplots
-@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui.exe     %optimize% %guiOpt64% -WG 
+@%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe        %optimize% %guiOpt64% 
+@%fpc64% consoles\mnh_console.pas -o.\mnh_console.exe      %optimize% %guiOpt64% -dplots
+@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui.exe          %optimize% %guiOpt64% -WG 
+@%delp%
+@%fpc64% consoles\mnh_console.pas -o.\mnh_console_prof.exe %optimize% %guiOpt64% -dplots -dPROFILING
 @echo ------------------------------------------------------------------------------------
 @%delp%
 @del *.lfm *.res *.obj

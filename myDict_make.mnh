@@ -1,0 +1,7 @@
+ignoreChar:=["!","\"","#","&","'","(",")",",","-",".","/","0","1","2","3","4","5","6","7","8","9",":",";","=","?","[","]","^","_","`"];
+polishString(s:string)->replace(lower(s),ignoreChar," ");
+fetchChunk->unique(flatten(each(i,[0..99],split(polishString(fileCursorNext)," "))));
+seqRead(filename)-> fileCursorOpen(filename) ? seqRead_ : ['no file'];
+seqRead_-> fileCursorHasNext ? unique(flatten(pEach(i,[0..1],i=0 ? fetchChunk : seqRead_))) : [];
+
+main->writeFileLines('myDict.txt',unique(flatten(seqRead("demos/unixdict.txt"),seqRead("demos/kjv.txt"))));

@@ -43,6 +43,15 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
+  P_voidLiteral = ^T_voidLiteral;
+
+  T_voidLiteral = object(T_scalarLiteral)
+    CONSTRUCTOR create();
+    DESTRUCTOR destroy; virtual;
+    FUNCTION literalType: T_literalType; virtual;
+    FUNCTION toString: ansistring; virtual;
+  end;
+
   P_boolLiteral = ^T_boolLiteral;
 
   T_boolLiteral = object(T_scalarLiteral)
@@ -53,7 +62,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION value: boolean;
@@ -73,7 +81,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION value: int64;
@@ -93,7 +100,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION value: extended;
@@ -138,7 +144,6 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     FUNCTION value: pointer;
@@ -202,6 +207,7 @@ FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean
 FUNCTION newErrorLiteral: P_scalarLiteral; inline;
 FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; inline;
 FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; inline;
+FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation): P_literal; inline;
 FUNCTION parseNumber(CONST input: ansistring; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
@@ -211,6 +217,7 @@ VAR
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-1000..1000] of T_intLiteral;
   errLit: T_scalarLiteral;
+  voidLit: T_voidLiteral;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
@@ -281,9 +288,13 @@ FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType
   begin
     result := @errLit;
     errLit.rereference;
-    raiseError(el3_evalError, 'Operator '+C_tokenString [op]+
-      ' is not supported for types '+C_typeString [x]+' and '+
-      C_typeString [y], tokenLocation);
+    raiseError(el3_evalError, 'Operator '+C_tokenString [op]+ ' is not supported for types '+C_typeString [x]+' and '+ C_typeString [y], tokenLocation);
+  end;
+
+FUNCTION newVoidLiteral: P_voidLiteral; inline;
+  begin
+    result:=@voidLit;
+    voidLit.rereference;
   end;
 
 FUNCTION myFloatToStr(CONST x: extended): string;
@@ -347,6 +358,11 @@ CONSTRUCTOR T_literal.init;
     numberOfReferences := 1;
   end;
 
+CONSTRUCTOR T_voidLiteral.create();
+  begin
+    inherited init;
+  end;
+
 CONSTRUCTOR T_boolLiteral.create(CONST value: boolean);
   begin
     inherited init;
@@ -386,6 +402,10 @@ CONSTRUCTOR T_listLiteral.create;
   end;
 
 DESTRUCTOR T_literal.destroy;
+  begin
+  end;
+
+DESTRUCTOR T_voidLiteral.destroy;
   begin
   end;
 
@@ -446,6 +466,11 @@ FUNCTION T_literal.literalType: T_literalType;
 FUNCTION T_scalarLiteral.literalType: T_literalType;
   begin
     result := lt_error;
+  end;
+
+FUNCTION T_voidLiteral.literalType: T_literalType;
+  begin
+    result:= lt_void;
   end;
 
 FUNCTION T_boolLiteral.literalType: T_literalType;
@@ -606,6 +631,11 @@ FUNCTION T_scalarLiteral.toString: ansistring;
     result := '<ERR>';
   end;
 
+FUNCTION T_voidLiteral.toString: ansistring;
+  begin
+    result :='<void>';
+  end;
+
 FUNCTION T_boolLiteral.toString: ansistring;
   begin
     result := C_boolText [val];
@@ -685,36 +715,15 @@ FUNCTION T_scalarLiteral.stringForm: ansistring;
     result := toString;
   end;
 
-FUNCTION T_boolLiteral.stringForm: ansistring;
-  begin
-    result := toString;
-  end;
-
-FUNCTION T_intLiteral.stringForm: ansistring;
-  begin
-    result := toString;
-  end;
-
-FUNCTION T_realLiteral.stringForm: ansistring;
-  begin
-    result := toString;
-  end;
-
 FUNCTION T_stringLiteral.stringForm: ansistring;
   begin
     result := val;
-  end;
-
-FUNCTION T_expressionLiteral.stringForm: ansistring;
-  begin
-    result := toString;
   end;
 
 FUNCTION T_scalarLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
   begin
     result := false;
   end;
-
 
 FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
   VAR
@@ -1112,6 +1121,7 @@ FUNCTION T_expressionLiteral.operate(CONST op: T_tokenType; CONST other: P_scala
 
 PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
   begin
+    if L^.literalType=lt_void then exit;
     if L = nil then begin
       raiseError(el3_evalError, 'Trying to append NIL literal to list',
         C_nilTokenLocation);
@@ -1135,11 +1145,10 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
     i0, i1: int64;
     c0, c1: char;
   begin
-    if not (nextAppendIsRange) then
-      begin
+    if not (nextAppendIsRange) then begin
       append(L, true);
       exit;
-      end;
+    end;
     nextAppendIsRange := false;
 
     if length(element) = 0 then
@@ -1385,7 +1394,7 @@ PROCEDURE T_listLiteral.unique;
 FUNCTION T_listLiteral.isKeyValueList: boolean;
   VAR i: longint;
   begin
-    if (literalType<>lt_list) or (length(element)<=0) then exit(false);
+    if (literalType<>lt_list) or (length(element)<=0) then exit(length(element)=0);
     for i := 0 to length(element)-1 do if not(
         (element [i]^.literalType in [lt_list..lt_listWithError]) and
         (P_listLiteral(element [i])^.size = 2) and
@@ -1496,6 +1505,8 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     i, i1, j: longint;
     key: ansistring;
   begin
+    if (LHS^.literalType=lt_void) then begin RHS^.rereference; exit(RHS); end;
+    if (RHS^.literalType=lt_void) then begin LHS^.rereference; exit(LHS); end;
     //writeln('resolving operator ',op);
     //writeln('             LHS = @',ptrint(LHS));
     //writeln('             RHS = @',ptrint(RHS));
@@ -1798,13 +1809,11 @@ FUNCTION T_realLiteral.hash: longint;
   end;
 
 FUNCTION T_stringLiteral.hash: longint;
-  VAR
-    i: longint;
+  VAR i: longint;
   begin
     {$Q-}
     result := longint(lt_string)+length(val);
-    for i := 1 to length(val) do
-      result := result*31+Ord(val [i]);
+    for i := 1 to length(val) do result := result*31+Ord(val [i]);
     {$Q+}
   end;
 
@@ -1950,6 +1959,7 @@ INITIALIZATION
   boolLit[false].create(false);
   boolLit[true].create(true);
   errLit.init;
+  voidLit.create();
   for i := -1000 to 1000 do intLit[i].create(i);
   DefaultFormatSettings.DecimalSeparator := '.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
@@ -1959,5 +1969,6 @@ FINALIZATION
   boolLit[false].destroy;
   boolLit[true].destroy;
   errLit.destroy;
+  voidLit.destroy;
   for i := -1000 to 1000 do intLit[i].destroy;
 end.
