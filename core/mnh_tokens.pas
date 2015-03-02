@@ -231,6 +231,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
           ruleIsMutable:boolean=false;
+          ruleIsSynchronized:boolean=false;
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
@@ -255,9 +256,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           recycler.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable]) do begin
-          if first^.tokType=tt_modifier_private  then ruleIsPrivate :=true;
-          if first^.tokType=tt_modifier_memoized then ruleIsMemoized:=true;
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_synchronized]) do begin
+          if first^.tokType=tt_modifier_private      then ruleIsPrivate :=true;
+          if first^.tokType=tt_modifier_memoized     then ruleIsMemoized:=true;
+          if first^.tokType=tt_modifier_synchronized then ruleIsSynchronized:=true;
           if first^.tokType=tt_modifier_mutable  then begin
             ruleIsMutable :=true;
             evaluateBody:=true;
@@ -352,8 +354,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if ruleIsMemoized then ensureRuleId(ruleId)^.setMemoized(ruleDeclarationStart);
-          if ruleIsMutable  then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
+          if ruleIsMemoized     then ensureRuleId(ruleId)^.setMemoized(ruleDeclarationStart);
+          if ruleIsMutable      then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
+          if ruleIsSynchronized then ensureRuleId(ruleId)^.setSynchronized(ruleDeclarationStart);
           first:=nil;
           if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate);
         end else if errorLevel<el5_systemError then

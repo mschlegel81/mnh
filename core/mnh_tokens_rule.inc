@@ -2,7 +2,7 @@
   P_rule=^T_rule;
 
   { T_rule }
-  T_ruleType=(rt_normal,rt_cached,rt_mutable);
+  T_ruleType=(rt_normal,rt_cached,rt_mutable,rt_synchronized);
 
   T_rule=object
     private
@@ -18,8 +18,9 @@
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
-      PROCEDURE setMemoized(CONST location:T_tokenLocation);
-      PROCEDURE setMutable(CONST location:T_tokenLocation);
+      PROCEDURE setMemoized    (CONST location:T_tokenLocation);
+      PROCEDURE setMutable     (CONST location:T_tokenLocation);
+      PROCEDURE setSynchronized(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST value:P_literal);
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
@@ -42,7 +43,7 @@ DESTRUCTOR T_rule.destroy;
     if ruleType=rt_cached then begin
       cache.destroy;
       system.DoneCriticalsection(cache_cs);
-    end else if ruleType=rt_mutable then begin
+    end else if ruleType in [rt_mutable,rt_synchronized] then begin
       system.DoneCriticalsection(cache_cs);
     end;
     ruleType:=rt_normal;
@@ -86,7 +87,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         lastRep:=firstRep^.last;
         if param=nil then disposeLiteral(useParam);
         if (errorLevel>=el3_evalError) then begin
-          if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule on level '+IntToStr(callDepth),C_nilTokenLocation);
+          if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
           recycler.cascadeDisposeToken(firstRep);
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
           lastRep:=firstRep;
@@ -96,7 +97,18 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       end;
       result:=false;
     end else begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
+      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
+        if ruleType=rt_synchronized then begin
+          if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+          else begin
+            system.EnterCriticalSection(cache_cs);
+            reduceExpression(firstRep,callDepth+1,recycler);
+            lastRep:=firstRep^.last;
+            system.LeaveCriticalSection(cache_cs);
+          end;
+        end;
+        exit(true);
+      end;
       result:=false;
     end;
   end;
@@ -135,7 +147,15 @@ PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
         ruleType:=rt_mutable;
         system.InitCriticalSection(cache_cs);
       end;
-    end else if ruleType=rt_cached then raiseError(el4_parsingError,'Cannot mutate a memoized rule!',location);
+    end else if ruleType in [rt_cached,rt_synchronized] then raiseError(el4_parsingError,'Cannot mutate a memoized or synchronized rule!',location);
+  end;
+
+PROCEDURE T_rule.setSynchronized(CONST location:T_tokenLocation);
+  begin
+    if (ruleType=rt_normal) then begin
+      ruleType:=rt_synchronized;
+      system.InitCriticalSection(cache_cs);
+    end else if ruleType = rt_mutable then raiseError(el4_parsingError,'A mutable rule cannot be synchronized!',location);
   end;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal);

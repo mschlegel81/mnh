@@ -312,6 +312,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id=C_tokenString[tt_modifier_private]  then result.tokType:=tt_modifier_private
         else if id=C_tokenString[tt_modifier_memoized] then result.tokType:=tt_modifier_memoized
         else if id=C_tokenString[tt_modifier_mutable]  then result.tokType:=tt_modifier_mutable
+        else if id=C_tokenString[tt_modifier_synchronized]  then result.tokType:=tt_modifier_synchronized
         else if id=C_tokenString[tt_each]         then begin result.tokType:=tt_each;         result.data:=nil; result.txt:=''; end
         else if id=C_tokenString[tt_parallelEach] then begin result.tokType:=tt_parallelEach; result.data:=nil; result.txt:=''; end
         else if id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end

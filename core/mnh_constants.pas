@@ -51,6 +51,7 @@ TYPE
     tt_modifier_private,
     tt_modifier_memoized,
     tt_modifier_mutable,
+    tt_modifier_synchronized,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -144,6 +145,7 @@ CONST
     'private',
     'memoized',
     'mutable',
+    'synchronized',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -234,7 +236,8 @@ CONST
     'semicolon#marks the end of a statement, assignment or declaration',
     'private modifier#hides the subrule from all importing packages',
     'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
-    'mutable modifier#makes the rule mutable',
+    'mutable modifier#makes the rule mutable, i.e. the value may be redefined at evaluation-time',
+    'synchronized modifier#makes the rule synchronized, i.e. only one instance of the rule is evaluated at any time',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE

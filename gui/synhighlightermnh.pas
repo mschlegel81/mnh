@@ -246,6 +246,7 @@ PROCEDURE TSynMnhSyn.Next;
                 (localId = C_tokenString[tt_modifier_private] ) or
                 (localId = C_tokenString[tt_modifier_memoized]) or
                 (localId = C_tokenString[tt_modifier_mutable] ) or
+                (localId = C_tokenString[tt_modifier_synchronized]) or
                 (localId = C_tokenString[tt_each]             ) or
                 (localId = C_tokenString[tt_parallelEach]     ) then
           fTokenId := tkIntrinsicRuleOrKeyword
