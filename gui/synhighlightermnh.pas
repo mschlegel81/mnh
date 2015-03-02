@@ -1,19 +1,20 @@
-unit SynHighlighterMnh;
+UNIT SynHighlighterMnh;
 
 {I SynEdit.inc}
 
-interface
+INTERFACE
 
-uses
+USES
   SysUtils, Classes, FileUtil, Controls, Graphics,
   SynEditTypes, SynEditHighlighter, mnh_evalThread;
 
-CONST C_DeclEchoHead=#10+' in>';
-      C_ExprEchoHead=#10+'_in>';
-      C_ExprOutHead =#10+'out>';
+CONST
+  C_DeclEchoHead = #10 + ' in>';
+  C_ExprEchoHead = #10 + '_in>';
+  C_ExprOutHead = #10 + 'out>';
 
 
-type
+TYPE
   TtkTokenKind = (
     tkComment,
     tkIdentifier,
@@ -29,320 +30,384 @@ type
     tkUnknown,
     tkNull);
 
-  TProcTableProc = PROCEDURE of object;
+  TProcTableProc = PROCEDURE of OBJECT;
 
   TRangeState = (rsANil, rsAnsi, rsPasStyle, rsCStyle, rsUnKnown);
 
-type
+TYPE
   { TSynMnhSyn }
 
-  TSynMnhSyn = class(TSynCustomHighlighter)
+  TSynMnhSyn = CLASS(TSynCustomHighlighter)
   private
-    isDeclInput:boolean;
-    isExprInput:boolean;
-    isOutput:boolean;
+    isDeclInput: boolean;
+    isExprInput: boolean;
+    isOutput: boolean;
 
     fLine: PChar;
     styleTable: array[TtkTokenKind] of TSynHighlighterAttributes;
     fRange: TRangeState;
-    Run: LongInt;
-    fTokenPos: Integer;
+    Run: longint;
+    fTokenPos: integer;
     fTokenID: TtkTokenKind;
-    fLineNumber : Integer;
+    fLineNumber: integer;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
   public
-    class FUNCTION GetLanguageName: string; override;
+    CLASS FUNCTION GetLanguageName: string; override;
   public
     CONSTRUCTOR Create(AOwner: TComponent); override;
     DESTRUCTOR Destroy; override;
     FUNCTION GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
       override;
-    FUNCTION GetEol: Boolean; override;
+    FUNCTION GetEol: boolean; override;
     FUNCTION GetRange: Pointer; override;
     FUNCTION GetTokenID: TtkTokenKind;
-    FUNCTION GetToken: String; override;
+    FUNCTION GetToken: string; override;
     PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
     FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
     FUNCTION GetTokenKind: integer; override;
-    FUNCTION GetTokenPos: Integer; override;
+    FUNCTION GetTokenPos: integer; override;
     PROCEDURE Next; override;
     PROCEDURE ResetRange; override;
     PROCEDURE SetRange(Value: Pointer); override;
-    PROCEDURE SetLine(CONST NewValue: String; LineNumber: Integer); override;
+    PROCEDURE SetLine(CONST NewValue: string; LineNumber: integer); override;
   end;
 
-implementation
+IMPLEMENTATION
+
 CONSTRUCTOR TSynMnhSyn.Create(AOwner: TComponent);
-CONST identifierForeground:TColor=$00FF0000;
-begin
-  inherited Create(AOwner);
-  styleTable[tkComment]:=TSynHighlighterAttributes.Create('comment');
-  styleTable[tkComment].Style:=[fsItalic];
-  styleTable[tkComment].Foreground:=$00999999;
+  CONST
+    identifierForeground: TColor = $00FF0000;
+  begin
+    INHERITED Create(AOwner);
+    styleTable[tkComment] := TSynHighlighterAttributes.Create('comment');
+    styleTable[tkComment].Style := [fsItalic];
+    styleTable[tkComment].Foreground := $00999999;
 
-  styleTable[tkIdentifier]:=TSynHighlighterAttributes.Create('identifier');
-  styleTable[tkIdentifier].Foreground:=identifierForeground;
+    styleTable[tkIdentifier] := TSynHighlighterAttributes.Create('identifier');
+    styleTable[tkIdentifier].Foreground := identifierForeground;
 
-  styleTable[tkDollarIdentifier]:=TSynHighlighterAttributes.Create('dollarIdentifier');
-  styleTable[tkDollarIdentifier].Style:=[fsItalic];
+    styleTable[tkDollarIdentifier] :=
+      TSynHighlighterAttributes.Create('dollarIdentifier');
+    styleTable[tkDollarIdentifier].Style := [fsItalic];
 
-  styleTable[tkUserRule]:=TSynHighlighterAttributes.Create('userRule');
-  styleTable[tkUserRule].Style:=[fsBold];
-  styleTable[tkUserRule].Foreground:=identifierForeground;
+    styleTable[tkUserRule] := TSynHighlighterAttributes.Create('userRule');
+    styleTable[tkUserRule].Style := [fsBold];
+    styleTable[tkUserRule].Foreground := identifierForeground;
 
-  styleTable[tkIntrinsicRuleOrKeyword]:=TSynHighlighterAttributes.Create('intrinsicRuleOrKeyword');
-  styleTable[tkIntrinsicRuleOrKeyword].Style:=[fsBold];
-  styleTable[tkIntrinsicRuleOrKeyword].Foreground:=$00888800;
+    styleTable[tkIntrinsicRuleOrKeyword] :=
+      TSynHighlighterAttributes.Create('intrinsicRuleOrKeyword');
+    styleTable[tkIntrinsicRuleOrKeyword].Style := [fsBold];
+    styleTable[tkIntrinsicRuleOrKeyword].Foreground := $00888800;
 
-  styleTable[tkTypeCheck]:=TSynHighlighterAttributes.Create('typeCheck');
-  styleTable[tkTypeCheck].Style:=[fsBold];
-  styleTable[tkTypeCheck].Foreground:=$00880088;
+    styleTable[tkTypeCheck] := TSynHighlighterAttributes.Create('typeCheck');
+    styleTable[tkTypeCheck].Style := [fsBold];
+    styleTable[tkTypeCheck].Foreground := $00880088;
 
-  styleTable[tkString]:=TSynHighlighterAttributes.Create('string');
-  styleTable[tkString].Foreground:=$000000FF;
+    styleTable[tkString] := TSynHighlighterAttributes.Create('string');
+    styleTable[tkString].Foreground := $000000FF;
 
-  styleTable[tkNumber]:=TSynHighlighterAttributes.Create('number');
-  styleTable[tkNumber].Foreground:=$000088FF;
+    styleTable[tkNumber] := TSynHighlighterAttributes.Create('number');
+    styleTable[tkNumber].Foreground := $000088FF;
 
-  styleTable[tkBoolean]:=TSynHighlighterAttributes.Create('boolean');
-  styleTable[tkBoolean].Foreground:=$000044FF;
-  styleTable[tkBoolean].Style:=[fsItalic];
+    styleTable[tkBoolean] := TSynHighlighterAttributes.Create('boolean');
+    styleTable[tkBoolean].Foreground := $000044FF;
+    styleTable[tkBoolean].Style := [fsItalic];
 
-  styleTable[tkOperator]:=TSynHighlighterAttributes.Create('operator');
-  styleTable[tkOperator].Foreground:=$00008800;
+    styleTable[tkOperator] := TSynHighlighterAttributes.Create('operator');
+    styleTable[tkOperator].Foreground := $00008800;
 
-  styleTable[tkDeclarationOp]:=TSynHighlighterAttributes.Create('declarationOp');
-  styleTable[tkDeclarationOp].Foreground:=$00008800;
-  styleTable[tkDeclarationOp].Style:=[fsBold];
+    styleTable[tkDeclarationOp] := TSynHighlighterAttributes.Create('declarationOp');
+    styleTable[tkDeclarationOp].Foreground := $00008800;
+    styleTable[tkDeclarationOp].Style := [fsBold];
 
-  styleTable[tkUnknown]:=TSynHighlighterAttributes.Create('unknown');
-  styleTable[tkUnknown].Foreground:=clBlack;
-  styleTable[tkUnknown].Background:=$000088FF;
+    styleTable[tkUnknown] := TSynHighlighterAttributes.Create('unknown');
+    styleTable[tkUnknown].Foreground := clBlack;
+    styleTable[tkUnknown].Background := $000088FF;
 
-  styleTable[tkNull]:=TSynHighlighterAttributes.Create('null');
-  styleTable[tkNull].Foreground:=clBlack;
-  styleTable[tkNull].Background:=clYellow;
-end; { Create }
+    styleTable[tkNull] := TSynHighlighterAttributes.Create('null');
+    styleTable[tkNull].Foreground := clBlack;
+    styleTable[tkNull].Background := clYellow;
+  end; { Create }
 
 DESTRUCTOR TSynMnhSyn.Destroy;
-  VAR tk:TtkTokenKind;
-begin
-  for tk:=tkComment to tkNull do styleTable[tk].destroy;
-  inherited Destroy;
-end; { Destroy }
+  VAR
+    tk: TtkTokenKind;
+  begin
+    for tk := tkComment to tkNull do
+      styleTable[tk].Destroy;
+    INHERITED Destroy;
+  end; { Destroy }
 
-FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer
-  ): TSynHighlighterAttributes;
-begin
-  result:=styleTable[tkUnknown];
-end;
+FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+  begin
+    result := styleTable[tkUnknown];
+  end;
 
-PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: String; LineNumber:Integer);
-begin
-  inherited;
-  isDeclInput:=false;
-  isExprInput:=false;
-  isOutput:=false;
-  fLine := PChar(NewValue);
-  Run := 0;
-  fLineNumber := LineNumber;
-  Next;
-end; { SetLine }
+PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
+  begin
+    INHERITED;
+    isDeclInput := False;
+    isExprInput := False;
+    isOutput := False;
+    fLine := PChar(NewValue);
+    Run := 0;
+    fLineNumber := LineNumber;
+    Next;
+  end; { SetLine }
 
 PROCEDURE TSynMnhSyn.Next;
-VAR localId:shortString;
-    i:longint;
-begin
-  fTokenID:=tkUnknown;
-  fTokenPos := Run;
-  if (run=0) and (fLine[0]=#10) then begin
-    i:=0;
-    localId:='';
-    while (length(localId)<length(C_ExprOutHead)) and (fLine[i]<>#0) do begin
-      localId:=localId+fLine[i];
-      inc(i);
-    end;
-    if localId=C_DeclEchoHead then begin
-      isDeclInput:=true; run:=i+1; exit;
-    end else if localId=C_ExprEchoHead then begin
-      isExprInput:=true; run:=i+1; exit;
-    end else if localId=C_ExprOutHead then begin
-      isOutput   :=true; run:=i+1; exit;
-    end;
-  end;
+  VAR
+    localId: shortString;
+    i: longint;
+  begin
+    fTokenID := tkUnknown;
+    fTokenPos := Run;
+    if (run = 0) and (fLine[0] = #10) then
+      begin
+      i := 0;
+      localId := '';
+      while (length(localId) < length(C_ExprOutHead)) and (fLine[i] <> #0) do
+        begin
+        localId := localId + fLine[i];
+        Inc(i);
+        end;
+      if localId = C_DeclEchoHead then
+        begin
+        isDeclInput := True;
+        run := i + 1;
+        exit;
+        end
+      else if localId = C_ExprEchoHead then
+          begin
+          isExprInput := True;
+          run := i + 1;
+          exit;
+          end
+        else if localId = C_ExprOutHead then
+            begin
+            isOutput := True;
+            run := i + 1;
+            exit;
+            end;
+      end;
 
-  case fLine[Run] of
-    #0: fTokenID:=tkNull;
-    ';': begin
-      inc(run);
-      fTokenID:=tkUnknown;
-      ResetRange;
-    end;
-    '0'..'9': begin
-      while fLine[run] in ['0'..'9','-','+','.','E','e'] do inc(run);
-      fTokenId:=tkNumber;
-    end;
-    '$': begin
-      inc(run);
-      while fLine[run] in ['a'..'z','A'..'Z','_','0'..'9'] do inc(run);
-      fTokenID:=tkDollarIdentifier;
-    end;
-    'a'..'z','A'..'Z':begin
-      localId:=fLine[run];
-      inc(run);
-      while fLine[run] in ['a'..'z','A'..'Z','_','0'..'9','.'] do begin
-        localId:=localId+fLine[run];
-        inc(run);
-      end;
-      if (localId='xor') or (localId='or') or (localId='mod') or (localId='in') or (localId='div') or (localId='and') then fTokenId:=tkOperator
-      else if (localId='true') or (localId='false') then fTokenId:=tkBoolean
-      else if (localId='Nan') or (localId='Inf') then fTokenId:=tkNumber
-      else if (localId='Peach') or (localId='each')
-           or (localId='CACHE') or (localId='USE') or (localId='private') then fTokenId:=tkIntrinsicRuleOrKeyword
-      else begin
-        if localUserRules.contains(localId) then fTokenID:=tkUserRule
-        else if importedUserRules.contains(localId) then fTokenID:=tkUserRule
-        else if intrinsicRules.contains(localId) then fTokenID:=tkIntrinsicRuleOrKeyword
-        else fTokenID:=tkIdentifier;
-      end;
-    end;
-    '|','^','?','+','&','%','*','=','<','>': begin
-      inc(run);
-      fTokenID:=tkOperator;
-    end;
-    '-': begin
-      inc(run);
-      if fLine[run]='>' then begin
-        inc(run);
-        fTokenID:=tkDeclarationOp;
-      end else fTokenID:=tkOperator;
-    end;
-    '/': begin
-      inc(run);
-      if fLine[run]='/' then begin
-        while fLine[run]<>#0 do inc(run);
-        fTokenId:=tkComment;
-      end else fTokenId:=tkOperator;
-    end;
-    ':': begin
-      inc(run);
-      case fLine[run] of
-        'b','e','i','l','n','s','r': begin
-          localId:=':';
-          while fLine[run] in ['a'..'z','A'..'Z','_','0'..'9'] do begin
-            localId:=localId+fLine[run];
-            inc(run);
+    case fLine[Run] of
+      #0: fTokenID := tkNull;
+      ';': begin
+        Inc(run);
+        fTokenID := tkUnknown;
+        ResetRange;
+        end;
+      '0'..'9': begin
+        while fLine[run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
+          Inc(run);
+        fTokenId := tkNumber;
+        end;
+      '$': begin
+        Inc(run);
+        while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
+          Inc(run);
+        fTokenID := tkDollarIdentifier;
+        end;
+      'a'..'z', 'A'..'Z': begin
+        localId := fLine[run];
+        Inc(run);
+        while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', '.'] do
+          begin
+          localId := localId + fLine[run];
+          Inc(run);
           end;
-          if (localId=':booleanList') or (localId=':boolean') or (localId=':expression') or (localId=':intList') or
-             (localId=':int') or (localId=':list') or (localId=':numericList') or (localId=':numeric') or
-             (localId=':stringList') or (localId=':scalar') or (localId=':string') or (localId=':realList') or (localId=':real')
-          then fTokenID:=tkTypeCheck
-          else fTokenID:=tkUnknown;
+        if (localId = 'xor') or (localId = 'or') or (localId = 'mod') or
+          (localId = 'in') or (localId = 'div') or (localId = 'and') then
+          fTokenId := tkOperator
+        else if (localId = 'true') or (localId = 'false') then
+            fTokenId := tkBoolean
+          else if (localId = 'Nan') or (localId = 'Inf') then
+              fTokenId := tkNumber
+            else if (localId = 'Peach') or (localId = 'each') or
+                (localId = 'CACHE') or (localId = 'USE') or (localId = 'private') then
+                fTokenId := tkIntrinsicRuleOrKeyword
+              else
+                if localUserRules.contains(localId) then
+                  fTokenID := tkUserRule
+                else if importedUserRules.contains(localId) then
+                    fTokenID := tkUserRule
+                  else if intrinsicRules.contains(localId) then
+                      fTokenID := tkIntrinsicRuleOrKeyword
+                    else
+                      fTokenID := tkIdentifier;
         end;
-        '=': begin
-          inc(run);
-          fTokenID:=tkDeclarationOp;
+      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>': begin
+        Inc(run);
+        fTokenID := tkOperator;
         end;
-        else fTokenID:=tkOperator;
+      '-': begin
+        Inc(run);
+        if fLine[run] = '>' then
+          begin
+          Inc(run);
+          fTokenID := tkDeclarationOp;
+          end
+        else
+          fTokenID := tkOperator;
+        end;
+      '/': begin
+        Inc(run);
+        if fLine[run] = '/' then
+          begin
+          while fLine[run] <> #0 do
+            Inc(run);
+          fTokenId := tkComment;
+          end
+        else
+          fTokenId := tkOperator;
+        end;
+      ':': begin
+        Inc(run);
+        case fLine[run] of
+          'b', 'e', 'i', 'l', 'n', 's', 'r': begin
+            localId := ':';
+            while fLine[run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
+              begin
+              localId := localId + fLine[run];
+              Inc(run);
+              end;
+            if (localId = ':booleanList') or (localId = ':boolean') or
+              (localId = ':expression') or (localId = ':intList') or
+              (localId = ':int') or (localId = ':list') or
+              (localId = ':numericList') or (localId = ':numeric') or
+              (localId = ':stringList') or (localId = ':scalar') or
+              (localId = ':string') or (localId = ':realList') or
+              (localId = ':real') then
+              fTokenID := tkTypeCheck
+            else
+              fTokenID := tkUnknown;
+            end;
+          '=': begin
+            Inc(run);
+            fTokenID := tkDeclarationOp;
+            end;
+          else fTokenID := tkOperator;
+          end;
+        end;
+      '"': begin
+        Inc(run);
+        while (fLine[run] <> #0) and ((fLine[run] <> '"') or
+            (fLine[run - 1] = '\') and (fLine[run - 2] <> '\')) DO
+          Inc(run);
+        IF (fLine[run] = '"') then
+          Inc(run);
+        fTokenId := tkString;
+        end;
+      '''': begin
+        Inc(run);
+        while (fLine[run] <> #0) and ((fLine[run] <> '''') or (fLine[run - 1] = '\')) DO
+          Inc(run);
+        IF (fLine[run] = '''') then
+          Inc(run);
+        fTokenId := tkString;
+        end;
+      else begin
+        fTokenID := tkUnknown;
+        Inc(Run);
+        end;
       end;
-    end;
-    '"': begin
-      inc(run);
-      while (fLine[run]<>#0) and ((fLine[run]<>'"') or (fLine[run-1]='\') and (fLine[run-2]<>'\')) do inc(run);
-      if (fLine[run]='"') then inc(run);
-      fTokenId:=tkString;
-    end;
-    '''': begin
-      inc(run);
-      while (fLine[run]<>#0) and ((fLine[run]<>'''') or (fLine[run-1]='\')) do inc(run);
-      if (fLine[run]='''') then inc(run);
-      fTokenId:=tkString;
-    end;
-    else begin
-      fTokenID:=tkUnknown;
-      inc(Run);
-    end;
   end;
-end;
 
-FUNCTION TSynMnhSyn.GetEol: Boolean;
-begin
-  Result := fTokenId = tkNull;
-end;
+FUNCTION TSynMnhSyn.GetEol: boolean;
+  begin
+    result := fTokenId = tkNull;
+  end;
 
 FUNCTION TSynMnhSyn.GetRange: Pointer;
-begin
-  //Result := Pointer(PtrUInt(fRange));
-  result:=nil;
-end;
+  begin
+    //result := Pointer(PtrUInt(fRange));
+    result := nil;
+  end;
 
-FUNCTION TSynMnhSyn.GetToken: String;
-VAR
-  Len: LongInt;
-begin
-  Len := Run - fTokenPos;
-  Result:='';
-  SetString(Result, (FLine + fTokenPos), Len);
-end;
+FUNCTION TSynMnhSyn.GetToken: string;
+  VAR
+    Len: longint;
+  begin
+    Len := Run - fTokenPos;
+    result := '';
+    SetString(result, (FLine + fTokenPos), Len);
+  end;
 
-PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar;
-  OUT TokenLength: integer);
-begin
-  TokenLength:=Run-fTokenPos;
-  TokenStart:=FLine + fTokenPos;
-end;
+PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer);
+  begin
+    TokenLength := Run - fTokenPos;
+    TokenStart := FLine + fTokenPos;
+  end;
 
 FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
   begin
-    Result := fTokenId;
+    result := fTokenId;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
-  VAR bg:longint;
+  VAR
+    bg: longint;
   begin
-    bg:=255;
-    if isDeclInput then bg:=bg-40;
-    if isExprInput then bg:=bg-20;
-    if isOutput    then bg:=bg-10;
-    result:=styleTable[fTokenID];
-    result.Background:=(bg or (bg shl 8) or (bg shl 16));
+    bg := 255;
+    if isDeclInput then
+      bg := bg - 40;
+    if isExprInput then
+      bg := bg - 20;
+    if isOutput then
+      bg := bg - 10;
+    result := styleTable[fTokenID];
+    result.Background := (bg or (bg shl 8) or (bg shl 16));
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;
-begin
-  Result := Ord(fTokenId);
-end;
+  begin
+    result := Ord(fTokenId);
+  end;
 
-FUNCTION TSynMnhSyn.GetTokenPos: Integer;
-begin
-  Result := fTokenPos;
-end;
+FUNCTION TSynMnhSyn.GetTokenPos: integer;
+  begin
+    result := fTokenPos;
+  end;
 
 PROCEDURE TSynMnhSyn.ResetRange;
-begin
-  fRange := rsUnknown;
-  isDeclInput:=false;
-  isExprInput:=false;
-  isOutput:=false;
-end;
+  begin
+    fRange := rsUnknown;
+    isDeclInput := False;
+    isExprInput := False;
+    isOutput := False;
+  end;
 
 PROCEDURE TSynMnhSyn.SetRange(Value: Pointer);
-begin
-  //expressionLevel:=ptrUInt(expressionLevel);
-  //fRange := TRangeState(PtrUInt(Value));
-end;
+  begin
+    //expressionLevel:=ptrUInt(expressionLevel);
+    //fRange := TRangeState(PtrUInt(Value));
+  end;
 
-class FUNCTION TSynMnhSyn.GetLanguageName: string;
-begin
-  Result := 'mnh';
-end;
+CLASS FUNCTION TSynMnhSyn.GetLanguageName: string;
+  begin
+    result := 'mnh';
+  end;
 
 FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
-begin
-  Result := ['a'..'z','A'..'Z','.','_','0'..'9'];
-end;
+  begin
+    result := ['a'..'z', 'A'..'Z', '.', '_', '0'..'9'];
+  end;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 end.
-

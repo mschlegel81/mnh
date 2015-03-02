@@ -23,7 +23,7 @@ PROCEDURE ad_doReload(CONST L:TStrings);
 
 VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     startOfEvaluation  :specialize G_safeVar<double>;
-    endOfEvaluationText:specialize G_safeVar<AnsiString>;
+    endOfEvaluationText:specialize G_safeVar<ansistring>;
     startOfEvaluationCallback:PROCEDURE;
 
     intrinsicRules,
@@ -53,9 +53,10 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   begin
+    mainThread:=ThreadID;
     evaluationState.value:=es_idle;
     updateCompletionList;
-    mainThread:=ThreadID;
+
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         pendingRequest.value:=er_none;
@@ -182,12 +183,12 @@ begin
   end;
 end;
 
-function ad_needReload: boolean;
+FUNCTION ad_needReload: boolean;
   begin
     result:=mainPackageProvider.fileHasChanged;
   end;
 
-procedure ad_doReload(const L: TStrings);
+PROCEDURE ad_doReload(CONST L: TStrings);
   VAR lines:T_stringList;
       i:longint;
   begin

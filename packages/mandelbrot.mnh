@@ -1,0 +1,35 @@
+mbIt(cr,ci,depth)->mbIt(cr,ci,0,0,depth);
+mbIt(cr,ci,xr,xi,depth>0)->
+  mbIt(cr,ci,
+       xr*xr-xi*xi+cr,
+       2*xr*xi+ci,
+       depth-1);
+mbIt(cr,ci,xr,xi,depth)->xr*xr+xi*xi;
+isValid(L:list)->each(l,L,isValid(l));
+isValid(l:scalar)->round(l)<100 and round(l)>=0;
+
+densityPlot(x0:numeric,x1>x0,
+            y0:numeric,y1>y0,
+            gridSize>0)->
+  densityPlot(Peach(ix,[x0..floor((x1-x0)/gridSize)],|,
+              Peach(iy,[y0..floor((y1-y0)/gridSize)],
+                       [ix,iy,binaryFunc(x0+(ix+0.5)*gridSize,
+                                         y0+(iy+0.5)*gridSize)])),
+              x0,y0,gridSize);
+
+private densityPlot(L:list,x0:numeric,y0:numeric,gridSize)->
+  densityPlot(Peach(subList,
+                    each(interval,
+                         intervals(decils(L%%2)),
+                         L%(L%%2>interval%0 and L%%2<=interval%1)%%[0,1]),
+                    Peach(tuple,
+                          subList,
+                           tuple   *gridSize+[x0,y0],
+                          (tuple+1)*gridSize+[x0,y0])));
+private densityPlot(splittedList)->
+     plot(splittedList%0,"GREY0   box") and
+     each(i,[1..size(splittedList)-1],and,
+             addPlot(splittedList%i,"GREY"&(i/(size(splittedList)-1))&" box"));
+
+
+

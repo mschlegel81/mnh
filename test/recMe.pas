@@ -5,7 +5,8 @@ FUNCTION f(CONST i:longint):longint;
     if i>0 then result:=f(i-1)
            else result:=0;
   end;
-VAR j:longint;
+
+ VAR j:longint;
 begin
   j:=1;
   repeat

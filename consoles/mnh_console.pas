@@ -1,5 +1,5 @@
 PROGRAM mnh_console;
-USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs, mnh_plotData;
+USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif};
 
 VAR nextInput:ansistring;
 //by command line parameters:---------------

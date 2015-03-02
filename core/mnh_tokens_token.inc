@@ -20,10 +20,14 @@
 {$ifdef include_implementation}
 {$ifdef doTokenRecycling}
 VAR tokenRecycling:record
+      associatedThread:TThreadID;
       dat:array[0..1023] of P_token;
       fill:longint;
     end;
+
 {$endif}
+
+
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(C_id_qualify_character,s)>0;
@@ -34,10 +38,9 @@ FUNCTION disposeToken(p:P_token):P_token;
     if p=nil then exit(nil);
     result:=p^.next;
     {$ifdef doTokenRecycling}
-      with tokenRecycling do
-        if (fill>=length(dat)) or (threadId<>mainThread)
+      if (ThreadID<>mainThread) or (tokenRecycling.fill>=length(tokenRecycling.dat))
       then dispose(p,destroy)
-      else begin
+      else with tokenRecycling do begin
         p^.undefine;
         dat[fill]:=p;
         inc(fill);
@@ -55,7 +58,7 @@ PROCEDURE cascadeDisposeToken(VAR p:P_token);
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
+    if (ThreadID=mainThread) and (tokenRecycling.fill>0) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -67,7 +70,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
+    if (ThreadID=mainThread) and (tokenRecycling.fill>0) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -79,7 +82,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST original:T_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
+    if (ThreadID=mainThread) and (tokenRecycling.fill>0) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -91,7 +94,7 @@ FUNCTION newToken(CONST original:T_token):P_token;
 FUNCTION newToken(CONST original:P_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
+    if (ThreadID=mainThread) and (tokenRecycling.fill>0) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -100,15 +103,21 @@ FUNCTION newToken(CONST original:P_token):P_token;
     isMemoryFree('allocating new token (C)');
   end;
 
+{$ifdef doTokenRecycling}
+PROCEDURE initTokens;
+  begin
+    tokenRecycling.fill:=0;
+  end;
+
 PROCEDURE finalizeTokens;
   begin
-    {$ifdef doTokenRecycling}
     with tokenRecycling do while fill>0 do begin
       dec(fill);
       dispose(dat[fill],destroy);
     end;
-    {$endif}
   end;
+{$endif}
+
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
   CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_parallelEach,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod];
@@ -707,7 +716,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         setLength(pEachResult,itList^.size*length(bodyRule));
         for i:=0 to length(pEachResult)-1 do pEachResult[i]:=nil;
         setLength(myWorkers,0);
-        for chunk:=0 to 7 do if (chunk=7) or not(canDelegate(chunk)) then
+        for chunk:=0 to 7 do if not(canDelegate(chunk)) then
           evaluatePEachChunk(bodyRule,itList,chunk,pEachResult,callDepth+1);
         for i:=0 to length(myWorkers)-1 do myWorkers[i]^.waitForEvaluationThenFree;
       end;

@@ -1,0 +1,45 @@
+fak(n>0)->each(i,[1..n],*);
+fak(n)->1;
+
+sum([])->0;
+sum(L:numericList)->each(e,L,+);
+
+F_lnRowSummand    :={(-1)^($i+1)/$i*$x^$i};
+F_lnAnalytic      :={ln($x+1)};
+F_sinRowSummand   :={(-1)^$i*$x^(2*$i+1)/fak(2*$i+1)};
+F_sinAnalytic     :={sin($x)};
+F_cosRowSummand   :={(-1)^$i*$x^(2*$i)/fak(2*$i)};
+F_cosAnalytic     :={cos($x)};
+F_arctanRowSummand:={(-1)^$i*$x^(2*$i+1)/(2*$i+1)};
+F_arctanAnalytic  :={arctan($x)};
+
+makeRow(func:expression,
+        summands>0,
+        x:real)->Peach(i,[0..summands-1],func(i,x));
+
+binomWeights(n)->binomWeights([1],n);
+binomWeights(L,n>0)->binomWeights(0.5*(0|L+L|0),n-1);
+binomWeights(L,n)->each(i,[max(1,size(L)-1)..1],sum(head(L,i)));
+CACHE binomWeights;
+
+convError(F_rowSummand:expression,
+          F_analytic:expression,
+          x:real,
+          summands:int)->
+  convError(makeRow(F_rowSummand,summands,x),
+            F_analytic(x));
+
+convError(summands,analyticResult)->[each(i,[1..size(summands)],abs(sum(                head(summands,i))-analyticResult)),
+                                     each(i,[1..size(summands)],abs(sum(binomWeights(i)*head(summands,i))-analyticResult))];
+
+addPlotCompound(L,color:string)->
+  addPlot(L%0,color&" l +") and addPlot(L%1,color&" l .");
+
+clearPlot->plot([0]);
+
+clearPlot and addPlotCompound(convError(F_arctanRowSummand,F_arctanAnalytic,0.9,100),"black")
+          and addPlotCompound(convError(F_arctanRowSummand,F_arctanAnalytic,1.0,100),"red")
+          and addPlotCompound(convError(F_arctanRowSummand,F_arctanAnalytic,1.1,100),"blue")
+
+
+

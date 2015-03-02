@@ -2,7 +2,7 @@ UNIT myGenerics;
 
 {mode objfpc}{H+}
 
-interface
+INTERFACE
 USES math,sysutils;
 TYPE
   GENERIC G_list<ENTRY_TYPE>=object
@@ -102,7 +102,7 @@ TYPE
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
-implementation
+IMPLEMENTATION
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
   VAR i:longint;
@@ -268,7 +268,7 @@ PROCEDURE G_list.sort;
         inc(scale,scale);
         if (scale<length(temp)) then begin
           //The following is equivalent to the above with swapped roles of "list" and "temp".
-          //While making the code a little more complicated it avoids unnecessary copys.
+          //while making the code a little more complicated it avoids unnecessary copys.
           //merge lists of size [scale] to lists of size [scale+scale]:---------------
           i:=0;
           while i<length(temp) do begin

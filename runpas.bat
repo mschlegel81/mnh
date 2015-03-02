@@ -3,7 +3,7 @@
 
 :cleanup
   @c:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin
-  @del *.exe test\*.exe consoles\*.exe bin\*.exe gui\*.exe gui\*.gdb
+  @del test\*.exe consoles\*.exe bin\*.exe gui\*.exe gui\*.gdb
   @goto end
 
 :run

@@ -7,6 +7,7 @@
 
   P_workerThread=^T_workerThread;
   T_workerThread=object
+    recyclerIndex:longint;
     rules:T_subruleList;
     param:P_listLiteral;
     mod4Rest:byte;
@@ -14,7 +15,7 @@
 
     state:T_workerThreadState;
 
-    CONSTRUCTOR create();
+    CONSTRUCTOR create(CONST threadRecyclerIdx:longint);
     DESTRUCTOR destroy;
     FUNCTION putRequest(CONST rulesToEvaluate:T_subruleList; CONST itList:P_listLiteral; CONST filterByte:byte; CONST results:P_literalList):boolean;
     PROCEDURE waitForEvaluationThenFree;
@@ -27,7 +28,7 @@ PROCEDURE evaluatePEachChunk(CONST rulesToEvaluate:T_subruleList; CONST itList:P
 PROCEDURE initWorkerThreads;
   VAR i:longint;
   begin
-    for i:=0 to length(workerThread)-1 do workerThread[i].create();
+    for i:=0 to length(workerThread)-1 do workerThread[i].create(i+1);
   end;
   
 PROCEDURE finalizeWorkerThreads;
@@ -41,14 +42,15 @@ FUNCTION workerThreadThread(p:pointer):ptrint;
     P_workerThread(p)^.evaluate(STACK_DEPTH_LIMIT+1);
   end;
   
-CONSTRUCTOR T_workerThread.create();
+CONSTRUCTOR T_workerThread.create(CONST threadRecyclerIdx:longint);
   begin
+    recyclerIndex:=threadRecyclerIdx;
     state:=wts_free;
   end;
 
 DESTRUCTOR T_workerThread.destroy;
   begin
-    while state<>wts_free do sleep(1);
+    waitForEvaluationThenFree;
   end;
 
 FUNCTION T_workerThread.putRequest(CONST rulesToEvaluate:T_subruleList; CONST itList:P_listLiteral; CONST filterByte:byte; CONST results:P_literalList):boolean;
@@ -62,7 +64,6 @@ FUNCTION T_workerThread.putRequest(CONST rulesToEvaluate:T_subruleList; CONST it
       resultContainer:=results;
       mod4Rest:=filterByte;
       beginThread(@workerThreadThread,@self);
-      //workerThreadThread(@self);
       result:=true;
     end else result:=false;
   end;
@@ -76,21 +77,16 @@ PROCEDURE T_workerThread.waitForEvaluationThenFree;
 PROCEDURE evaluatePEachChunk(CONST rulesToEvaluate:T_subruleList; CONST itList:P_listLiteral; CONST filterByte:byte; VAR results:T_literalList; CONST callDepth:word); inline;
   VAR i,j,k:longint;
   begin
-    //writeln('evaluatePEachChunk ',longint(ThreadID),
-    //  ' with ',length(rulesToEvaluate),' rules, ',itList^.size,' literals and a filter byte of ',filterByte,' results size=',length(results));
     k:=0;
     for i:=0 to itList^.size-1 do for j:=0 to length(rulesToEvaluate)-1 do if errorLevel<el3_evalError then begin
-      if (k and 7)=filterByte then begin
-        //writeln('chunk task #',k,' (',i,'/',j,')');
+      if (k and 7)=filterByte then
         results[k]:=rulesToEvaluate[j]^.directEvaluateUnary(itList^.value(i),callDepth);
-      end;
       inc(k);
     end;
   end;
 
 PROCEDURE T_workerThread.evaluate(CONST callDepth:word);
   begin
-    //writeln('T_workerThread.evaluate ',longint(ThreadID));
     evaluatePEachChunk(rules,param,mod4Rest,resultContainer^,callDepth);
     repeat state:=wts_resultReady until state=wts_resultReady;
   end;

@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,LCLIntf;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
@@ -774,8 +774,8 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR res:P_literal;
-      startTime,time:double;
       runCount:longint=1;
+      startTick,ticks:DWord;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     VAR aid:P_listLiteral;
@@ -789,21 +789,21 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      startTime:=now;
+      startTick:=GetTickCount;
       res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
-      time:=now-startTime;
+      ticks:=GetTickCount-startTick;
       if res<>nil then begin
-        while (time*24*60*60<0.5) and (res<>nil) do begin //measure at least half a second
+        while (ticks<200) and (res<>nil) do begin //measure at least half a second
           disposeLiteral(res);
           res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
           if res=nil then exit(nil);
-          time:=now-startTime;
+          ticks:=GetTickCount-startTick;
           inc(runCount);
         end;
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
         appendPair(result,'result'    ,res);
-        appendPair(result,'time'      ,newRealLiteral(round(time/runCount*(24*60*60*100000))*1E-5));
+        appendPair(result,'time'      ,newRealLiteral(ticks/runCount*1E-3));
         appendPair(result,'samples'   ,newIntLiteral(runCount));
       end;
     end else raiseNotApplicableError('time',params,tokenLocation);
@@ -1007,11 +1007,11 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
-      for i:=0 to length(found)-1 do result^.append(newStringLiteral(found[i]),false);
+      for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
-        for i:=0 to length(found)-1 do result^.append(newStringLiteral(found[i]),false);
+        for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
       end;
 
     end;
@@ -1037,7 +1037,7 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(FileExists(P_stringLiteral(params^.value(0))^.value));
+      result:=newBoolLiteral(FileExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
@@ -1256,7 +1256,7 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  VAR stringToSplit:AnsiString;
+  VAR stringToSplit:ansistring;
       i0,i1:longint;
 
   PROCEDURE stepToken;
@@ -1279,8 +1279,10 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           end;
           '''','"': begin //strings
             unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),i1);
-            if i1<=0 then i1:=i0
-                     else i1:=i0+i1;
+            if i1<=0 then begin
+              i1:=i0+1;
+              while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>stringToSplit[i0]) do inc(i1);
+            end else i1:=i0+i1;
           end;
           '0'..'9': begin //numbers
             parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
@@ -1291,7 +1293,9 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
             i1:=i0;
             while (i1<=length(stringToSplit)) and (stringToSplit[i1] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar]) do inc(i1);
           end;
-          else i1:=i0+1; //symbols, etc.
+          else begin
+            i1:=i0+1; //symbols, etc.
+          end;
         end;
         stepToken;
       end;

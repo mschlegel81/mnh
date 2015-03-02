@@ -43,14 +43,15 @@ CONST C_id_qualify_character='.';
 PROCEDURE reloadMainPackage;
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
-FUNCTION getTokenAt(CONST line:AnsiString; CONST charIndex:longint):T_token;
+FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
+
 VAR mainPackageProvider:T_codeProvider;
-    mainThread:TThreadID;
+
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=45000;
-VAR workerThread:array[0..15] of T_workerThread;
+VAR workerThread:array[0..2] of T_workerThread;
     secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
@@ -593,8 +594,8 @@ FUNCTION getMainPackage: P_package;
     result:=@mainPackage;
   end;
 
-FUNCTION getTokenAt(CONST line: AnsiString; CONST charIndex: longint): T_token;
-  VAR copyOfLine:AnsiString;
+FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
+  VAR copyOfLine:ansistring;
       lineLocation:T_tokenLocation;
   begin
     if not(mainPackage.ready) then begin
@@ -626,7 +627,7 @@ INITIALIZATION
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);
   {$ifdef doTokenRecycling}
-  tokenRecycling.fill:=0;
+  initTokens;
   {$endif}
   //callbacks in mnh_litvar:
   disposeSubruleCallback :=@disposeSubruleImpl;
@@ -636,8 +637,11 @@ INITIALIZATION
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
   initWorkerThreads;
+
 FINALIZATION
   finalizeWorkerThreads;
   finalizePackages;
+  {$ifdef doTokenRecycling}
   finalizeTokens;
+  {$endif}
 end.

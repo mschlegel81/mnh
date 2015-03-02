@@ -45,8 +45,8 @@ TYPE
 
     PROCEDURE writeShortstring(x:shortstring);
     FUNCTION   readShortstring  :shortstring;
-    PROCEDURE writeAnsiString (x:AnsiString);
-    FUNCTION   readAnsiString   :AnsiString;
+    PROCEDURE writeAnsiString (x:ansistring);
+    FUNCTION   readAnsiString   :ansistring;
     PROCEDURE writeBuf(p:pbyte; psize:longint);
     PROCEDURE readBuf (p:pbyte; psize:longint);
   end;
@@ -204,14 +204,14 @@ FUNCTION  T_file. readShortstring  :shortstring;
     for i:=1 to charsToRead do result:=result+readChar;
   end;
 
-PROCEDURE T_file.writeAnsiString (x:AnsiString);
+PROCEDURE T_file.writeAnsiString (x:ansistring);
   VAR i:longint;
   begin
     writeWord(length(x));
     for i:=1 to length(x) do writeChar(x[i]);
   end;
 
-FUNCTION  T_file. readAnsiString   :AnsiString;
+FUNCTION  T_file. readAnsiString   :ansistring;
   VAR i:longint;
       charsToRead:word;
   begin

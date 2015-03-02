@@ -1,22 +1,21 @@
-program mnh_gui;
+PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-uses
-  {$IFDEF UNIX}{$IFDEF UseCThreads}
-  cthreads,
-  {$ENDIF}{$ENDIF}
+USES {$IFDEF UNIX} {$IFDEF UseCThreads}
+  cthreads, {$ENDIF} {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, mnh_gui_settings, mnh_gui_main;
+  Forms,
+  mnh_gui_settings,
+  mnh_gui_main;
 
 {$R *.res}
 
-begin
+BEGIN
   RequireDerivedFormResource := True;
   Application.Initialize;
 
   Application.CreateForm(TMnhForm, MnhForm);
   Application.CreateForm(TSettingsForm, SettingsForm);
   Application.Run;
-end.
-
+END.

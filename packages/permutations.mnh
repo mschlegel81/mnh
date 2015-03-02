@@ -1,0 +1,10 @@
+private drop(L<>[],i:int)->L%each(j,[0..size(L)-1],j<>i);
+private myUnique([])->[];
+private myUnique(L)->[head(L)]|myUnique(L%each(E,L,not(E==head(L))));
+
+permutations(i:int)->permutations([],[0..i-1]);
+permutations(L:list)->myUnique(permutations([],L));
+permutations(Head:list,[])->[Head];
+permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
+
+

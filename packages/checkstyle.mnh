@@ -1,24 +1,29 @@
 recFolders(path)->flatten(each(f,folders(path),f,recFolders(f&"\\*")));
 allSourceFiles:=files(recFolders("*")&"\\*.inc")|files(recFolders("*")&"\\*.pas");
 
-upWords:=['PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT'];
-downWords:=['begin','end','if','case','then','else'];
+myCase:=unique(['begin','end','if','case','then','else','record','array','of','ansistring','for','to','do','while','repeat','until','result','inline','try','except',
+                'PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT','IMPLEMENTATION','INTERFACE','INITIALIZATION','FINALIZATION']);
+upMyCase:=upper(myCase);
+
+valid(token)->not(upper(token) in upMyCase and not(token in myCase));
+
+fixToken(token)->upper(token) in upMyCase ? head(myCase%(upMyCase=upper(token))) : token;
 
 violations(filename:string)->
 each(item,
   unique(
     flatten(
       each(token,tokenSplit(fileContents(filename)),
-        upper(token) in upWords   and not(token in upWords) or
-        lower(token) in downWords and not(token in downWords)?token:''))),
+        valid(token)?'':token))),
   &' '&);
-
+  
 fix(filename:string)->fix(filename,tokenSplit(fileContents(filename)));
 fix(filename:string,old:stringList)->fix(filename,old,
-  each(token,old,upper(token) in upWords ? upper(token) : lower(token) in downWords ? lower(token) : token));
+  each(token,old,fixToken(token)));
 fix(filename:string,old:stringList,new==old)->false;
 fix(filename:string,old:stringList,new:stringList)->writeFile(filename,each(token,new,&));
 
 main->print(each(fname,allSourceFiles,&"\n"&,fname&"\t"&violations(fname)&"\t"&fix(fname)));
 
+//main->print(Peach(fname,allSourceFiles,&"\n"&,fname&"\t"&violations(fname)));
 
