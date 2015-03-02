@@ -1,0 +1,21 @@
+logEqIt(x,a,steps> 0)->logEqIt(a*x*(1-x),a,steps-1);
+logEqIt(x,a,steps<=0)->x;
+logEqTuple(a:real,steps:int)->[a,logEqIt(random,a,steps)];
+logEqChunk(a:realList,steps:int)->interlace(a,logEqIt(random(size(a)),a,steps));
+
+interlace(A<>[],B<>[])->each(i,[0..min(size(A),size(B))-1],[A%i,B%i]);
+
+
+//268.042 (debug)
+// 77.252 (optimized)
+//plot(each(a,3+[0..10000]/10000,logEqTuple(a,1000)),"0.3 .");
+
+//220.885 (debug)
+// 59.374 (optimized)
+//plot(Peach(a,3+[0..10000]/10000,logEqTuple(a,1000)),"0.3 .");
+
+//10.655 (optimized)
+//plot(each(i,[0..100]*100,|,logEqChunk(3+[i..i+99]/10000,1000)),"0.3 .");
+
+// 5.132 (optimized)
+plot(Peach(i,[0..15],|,logEqChunk(3+random(10000),1000)),"0.2 .");

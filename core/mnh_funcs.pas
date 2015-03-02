@@ -791,9 +791,10 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
       time:=now-startTime;
       if res<>nil then begin
-        while (time*24*60*60<0.5) do begin //measure at least half a second
+        while (time*24*60*60<0.5) and (res<>nil) do begin //measure at least half a second
           disposeLiteral(res);
           res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
+          if res=nil then exit(nil);
           time:=now-startTime;
           inc(runCount);
         end;

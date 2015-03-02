@@ -112,7 +112,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     if length(expression)<=1 then exit(false);
     bracketLevel:=0;
     for i:=0 to length(expression)-1 do case expression[i].token.tokType of
-      tt_set, tt_each, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
+      tt_parallelEach, tt_each, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
       tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
       tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
@@ -306,8 +306,10 @@ FUNCTION T_subrule.directEvaluateNullary(CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,firstRep,lastRep) then begin
+      predigestBeforeDeclarationParsing(firstRep);
+      predigest(firstRep,nil);
       reduceExpression(firstRep,callDepth+1);
-      if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
@@ -326,12 +328,15 @@ FUNCTION evaluateNullary(CONST subrulePointer:pointer; CONST callDepth:word):P_l
 
 FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
-      param:P_listLiteral;
+      param:T_listLiteral;
   begin
-    param:=newOneElementListLiteral(x,true);
-    if replaces(param,firstRep,lastRep) then begin
+    param.create;
+    param.append(x,true);
+    if replaces(@param,firstRep,lastRep) then begin
+      predigestBeforeDeclarationParsing(firstRep);
+      predigest(firstRep,nil);
       reduceExpression(firstRep,callDepth+1);
-      if (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
@@ -341,6 +346,6 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):
       end;
       cascadeDisposeToken(firstRep);
     end else result:=nil;
-    disposeLiteral(param);
+    param.destroy;
   end;
 {$endif}

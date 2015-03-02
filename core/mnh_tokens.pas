@@ -35,6 +35,7 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
   end;
+  {$include mnh_tokens_parallel.inc}
 
 CONST C_id_qualify_character='.';
   
@@ -43,11 +44,14 @@ PROCEDURE reloadMainPackage;
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:AnsiString; CONST charIndex:longint):T_token;
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
 VAR mainPackageProvider:T_codeProvider;
+    mainThread:TThreadID;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=45000;
-VAR secondaryPackages:array of P_package;
+VAR workerThread:array[0..15] of T_workerThread;
+    secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
 
@@ -76,6 +80,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
+{$include mnh_tokens_parallel.inc}
 
 PROCEDURE reloadMainPackage;
   VAR i,j:longint;
@@ -468,7 +473,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
       packageId:='';
       ruleId   :=token.txt;
     end;
-    if ((packageId=codeProvider^.id) or (packageId=''))
+    if ((codeProvider<>nil) and (packageId=codeProvider^.id) or (packageId=''))
     and rules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
@@ -476,7 +481,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
     end;
 
     for i:=length(packageUses)-1 downto 0 do
-    if ((packageId=packageUses[i].id) or (packageId=''))
+    if ((packageId=packageUses[i].id) and (packageUses[i].pack<>nil) and (packageUses[i].pack^.ready) or (packageId=''))
     and (packageUses[i].pack<>nil)
     and (packageUses[i].pack^.rules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
       token.tokType:=tt_importedUserRulePointer;
@@ -592,20 +597,31 @@ FUNCTION getTokenAt(CONST line: AnsiString; CONST charIndex: longint): T_token;
   VAR copyOfLine:AnsiString;
       lineLocation:T_tokenLocation;
   begin
-    copyOfLine:=line;
-    lineLocation.provider:=mainPackage.codeProvider;
-    lineLocation.line:=0;
-    lineLocation.column:=1;
-    if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
-      copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
-      inc(lineLocation.column,5);
+    if not(mainPackage.ready) then begin
+      result.create;
+      result.define(C_nilTokenLocation,'ERR',tt_eol);
+      exit(result);
     end;
-    result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
-    while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
+    try
+      copyOfLine:=line;
+      lineLocation.provider:=mainPackage.codeProvider;
+      lineLocation.line:=0;
+      lineLocation.column:=1;
+      if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
+        copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
+        inc(lineLocation.column,5);
+      end;
       result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+      while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
+        result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+    except
+      result.create;
+      result.define(C_nilTokenLocation,'ERR',tt_eol);
+    end;
   end;
 
 INITIALIZATION
+  mainThread:=ThreadID;
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);
@@ -619,8 +635,9 @@ INITIALIZATION
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
+  initWorkerThreads;
 FINALIZATION
+  finalizeWorkerThreads;
   finalizePackages;
   finalizeTokens;
- 
 end.

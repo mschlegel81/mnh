@@ -342,8 +342,8 @@ DESTRUCTOR T_listLiteral.destroy;
     destroyChildren;
   end;
 
-PROCEDURE T_literal.rereference;         begin inc(numberOfReferences); end;
-FUNCTION T_literal.unreference:longint;  begin dec(numberOfReferences); result:=numberOfReferences; end;
+PROCEDURE T_literal.rereference;         begin InterLockedIncrement(numberOfReferences); end;
+FUNCTION T_literal.unreference:longint;  begin InterLockedDecrement(numberOfReferences); result:=numberOfReferences; end;
 
 FUNCTION T_literal.literalType:T_literalType;           begin result:=lt_error;      end;
 FUNCTION T_scalarLiteral.literalType: T_literalType;     begin result:=lt_error;      end;
@@ -1042,41 +1042,134 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
                tt_operatorAnd, tt_operatorOr, tt_operatorXor,
                tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
                tt_operatorStrConcat]) then begin
-      if (LHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
-        if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
-          exit(P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(RHS),tokenLocation));
-        end else begin
-          result:=newListLiteral;
+      case LHS^.literalType of
+        lt_boolean, lt_int, lt_real, lt_string, lt_expression: begin
           case RHS^.literalType of
-            lt_listWithError: exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
-            lt_list: for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(LHS,          op,                P_listLiteral(RHS)^.element[i] ,tokenLocation),false);
-            else     for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(P_listLiteral(RHS)^.element[i]),tokenLocation),false);
+            lt_boolean, lt_int, lt_real, lt_string, lt_expression: begin
+              //scalar X scalar
+              exit(P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(RHS),tokenLocation));
+            end;
+            lt_list: begin
+              //scalar X nested list
+              result:=newListLiteral;
+              for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(
+                resolveOperator(LHS,op,P_listLiteral(RHS)^.element[i],tokenLocation),
+                false);
+              exit(result);
+            end;
+            lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_flatList: begin
+              //scalar X flat list
+              result:=newListLiteral;
+              for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(
+                P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(P_listLiteral(RHS)^.element[i]),tokenLocation),
+                false);
+              exit(result);
+            end;
+            else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
           end;
-          exit(result);
         end;
-      end else begin
-        if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
-          result:=newListLiteral;
-          case LHS^.literalType of
-            lt_listWithError: exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
-            lt_list: for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i]          ,op,                RHS ,tokenLocation),false);
-            else     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element[i])^.operate(op,P_scalarLiteral(RHS),tokenLocation),false);
+        lt_list: begin
+          case RHS^.literalType of
+            lt_boolean, lt_int, lt_real, lt_string, lt_expression: begin
+              //nested list X scalar
+              result:=newListLiteral;
+              for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(
+                resolveOperator(P_listLiteral(LHS)^.element[i],op,RHS,tokenLocation),
+                false);
+              exit(result);
+            end;
+            lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_flatList: begin
+              //nested list X flat/nested list
+              i :=length(P_listLiteral(LHS)^.element);
+              i1:=length(P_listLiteral(RHS)^.element);
+              if i=i1 then begin
+                result:=newListLiteral;
+                for i:=0 to i1-1 do
+                  P_listLiteral(result)^.append(resolveOperator(
+                    P_listLiteral(LHS)^.element[i],op,
+                    P_listLiteral(RHS)^.element[i],tokenLocation),false);
+                exit(result);
+              end else exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString[op],tokenLocation));
+            end;
+            else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
           end;
-          exit(result);
-        end else begin
-          i :=length(P_listLiteral(LHS)^.element);
-          i1:=length(P_listLiteral(RHS)^.element);
-          if i=i1 then begin
-            result:=newListLiteral;
-            for i:=0 to i1-1 do
-              P_listLiteral(result)^.append(resolveOperator(
-                P_listLiteral(LHS)^.element[i],op,
-                P_listLiteral(RHS)^.element[i],tokenLocation),false);
-            exit(result);
-          end else exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString[op],tokenLocation));
+        end;
+        lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_flatList:
+          case RHS^.literalType of
+            lt_boolean, lt_int, lt_real, lt_string, lt_expression: begin
+              //flat list X scalar
+              result:=newListLiteral;
+              for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(
+                P_scalarLiteral(P_listLiteral(LHS)^.element[i])^.operate(op,P_scalarLiteral(RHS),tokenLocation),
+                false);
+              exit(result);
+            end;
+            lt_list: begin
+              //flat list X nested list
+              i :=length(P_listLiteral(LHS)^.element);
+              i1:=length(P_listLiteral(RHS)^.element);
+              if i=i1 then begin
+                result:=newListLiteral;
+                for i:=0 to i1-1 do
+                  P_listLiteral(result)^.append(resolveOperator(
+                    P_listLiteral(LHS)^.element[i],op,
+                    P_listLiteral(RHS)^.element[i],tokenLocation),false);
+                exit(result);
+              end else exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString[op],tokenLocation));
+            end;
+            lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_flatList: begin
+              //flat list X flat list
+              i :=length(P_listLiteral(LHS)^.element);
+              i1:=length(P_listLiteral(RHS)^.element);
+              if i=i1 then begin
+                result:=newListLiteral;
+                for i:=0 to i1-1 do
+                  P_listLiteral(result)^.append(
+                    P_scalarLiteral(P_listLiteral(LHS)^.element[i])^.operate(op,
+                    P_scalarLiteral(P_listLiteral(RHS)^.element[i]),tokenLocation),false);
+                exit(result);
+              end else exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString[op],tokenLocation));
+            end;
+            else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
+          end;
+          else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
         end;
       end;
-    end;
+    //  if (LHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
+    //    if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
+    //      exit(P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(RHS),tokenLocation));
+    //    end else begin
+    //      result:=newListLiteral;
+    //      case RHS^.literalType of
+    //        lt_listWithError: exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
+    //        lt_list: for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(LHS,          op,                P_listLiteral(RHS)^.element[i] ,tokenLocation),false);
+    //        else     for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.operate(op,P_scalarLiteral(P_listLiteral(RHS)^.element[i]),tokenLocation),false);
+    //      end;
+    //      exit(result);
+    //    end;
+    //  end else begin
+    //    if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) then begin
+    //      result:=newListLiteral;
+    //      case LHS^.literalType of
+    //        lt_listWithError: exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
+    //        lt_list: for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i]          ,op,                RHS ,tokenLocation),false);
+    //        else     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element[i])^.operate(op,P_scalarLiteral(RHS),tokenLocation),false);
+    //      end;
+    //      exit(result);
+    //    end else begin
+    //      i :=length(P_listLiteral(LHS)^.element);
+    //      i1:=length(P_listLiteral(RHS)^.element);
+    //      if i=i1 then begin
+    //        result:=newListLiteral;
+    //        for i:=0 to i1-1 do
+    //          P_listLiteral(result)^.append(resolveOperator(
+    //            P_listLiteral(LHS)^.element[i],op,
+    //            P_listLiteral(RHS)^.element[i],tokenLocation),false);
+    //        exit(result);
+    //      end else exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString[op],tokenLocation));
+    //    end;
+    //  end;
+    //end;
     //---------------------------------------------:HANDLE S x S -> S OPERATORS
     case op of
       tt_operatorConcat: begin

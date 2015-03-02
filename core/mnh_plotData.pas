@@ -1,6 +1,6 @@
 UNIT mnh_plotData;
 INTERFACE
-USES myFiles,sysutils,math,mnh_litvar,mnh_tokens,mnh_constants;
+USES myFiles,sysutils,math,mnh_litvar,mnh_tokens,mnh_constants,mnh_out_adapters;
 TYPE
   T_colorChannel=(cc_red,cc_green,cc_blue);
 
@@ -17,7 +17,7 @@ CONST
   C_symbolStyle_cross  = 64;
   C_symbolStyle_impulse=128;
 
-  C_anyLineStyle=3;
+  C_anyLineStyle=15;
 
   C_styleName:array[0..9] of record
     idx:byte;
@@ -80,13 +80,14 @@ TYPE
       temp:array of T_sampleWithTime;
       xRule,yRule:P_expressionLiteral;
       t0,t1:double;
+      maxSamples:longint;
     end;
     //persistent:
     style:T_style;
     sample:T_dataRow;
     CONSTRUCTOR create(CONST index:byte);
     PROCEDURE getBoundingBox(CONST logX,logY:boolean; VAR box:T_boundingBox);
-    PROCEDURE setRules(CONST forXOrNil,forY:P_expressionLiteral; CONST t0,t1:double);
+    PROCEDURE setRules(CONST forXOrNil,forY:P_expressionLiteral; CONST t0,t1:double; CONST maxSamples:longint);
     PROCEDURE computeSamplesInActivePlot(CONST secondPass:boolean);
     PROCEDURE addSample(CONST x,y:double);
     DESTRUCTOR destroy;
@@ -201,8 +202,10 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean;
     end;
   end;
 
-PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double);
+PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples:longint);
   begin
+    if maxSamples>100 then computed.maxSamples:=maxSamples
+                      else computed.maxSamples:=100;
     computed.xRule:=forXOrNil;
     computed.yRule:=forY;
     if forXOrNil<>nil then forXOrNil^.rereference;
@@ -286,7 +289,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass:boolean);
 
       setLength(computed.temp,0);
       with computed do
-        for i:=0 to initialSampleCount do
+        for i:=0 to initialSampleCount do if errorLevel<el3_evalError then
           injectSample(t0+(t1-t0)*i/initialSampleCount);
 
       copyTempToData;
@@ -301,7 +304,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass:boolean);
 
       repeat
         i:=0;
-        while (i<length(computed.temp)) do begin
+        while (i<length(computed.temp)) and (errorLevel<el3_evalError) do begin
           if (curvature(i)>averageCurvature) or (curvature(i+1)>averageCurvature) then begin
             injectSample((computed.temp[i].t+computed.temp[i+1].t)*0.5);
             inc(i);
@@ -309,7 +312,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass:boolean);
           inc(i);
         end;
         averageCurvature:=averageCurvature*0.99;
-      until length(computed.temp)>=10*initialSampleCount;
+      until (length(computed.temp)>=computed.maxSamples) or (errorLevel>=el3_evalError);
 
       copyTempToData;
       setLength(computed.temp,0);
@@ -485,7 +488,9 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         mightBeColor:=false;
       end;
       for i:=0 to length(C_styleName)-1 do with C_styleName[i] do if (part=name[0]) or (part=name[1]) then begin
-        style:=style or idx;
+        if idx in [C_lineStyle_box,C_lineStyle_bar,C_lineStyle_straight,C_lineStyle_stepRight,C_lineStyle_stepLeft]
+           then style:=style and not(C_anyLineStyle) or idx
+           else style:=style or idx;
         mightBeColor:=false;
       end;
       if mightBeColor then parseColorOption(part,color[cc_red],color[cc_green],color[cc_blue]);
@@ -772,17 +777,43 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
         else exit(IntToStr(value)+'E'+IntToStr(scale));
       end;
 
-    FUNCTION notToManyTics:boolean;
-      VAR i,majors:longint;
+    FUNCTION tooManyTotalTics:boolean;
+      CONST distanceTol=5;
+      VAR i:longint;
+          lastPos:double;
       begin
-        //too many total tics?
-        if length(tic[axis])>100 then exit(false);
-        //too many major tics?
-        majors:=0;
-        for i:=0 to length(tic[axis])-1 do if tic[axis][i].major then inc(majors);
-        if majors>20 then exit(false);
-        //labels are too close?
-        {$WARNING unimplemented}
+        lastPos:=-1E50;
+        for i:=0 to length(tic[axis])-1 do begin
+          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
+          lastPos:=tic[axis][i].pos
+        end;
+        result:=false;
+      end;
+
+    FUNCTION tooManyMajorTics:boolean;
+      VAR i:longint;
+          distanceTol:longint;
+          lastPos:double;
+      begin
+        if axis='y' then distanceTol:=(screenHeight-yOffset)
+                    else distanceTol:=xOffset;
+        lastPos:=-1E50;
+        for i:=0 to length(tic[axis])-1 do if tic[axis][i].major then begin
+          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
+          lastPos:=tic[axis][i].pos
+        end;
+        result:=false;
+      end;
+
+    PROCEDURE initLinearTics(CONST power,majorTicRest,minorTicRest:longint);
+      VAR j:longint;
+      begin
+        setLength(tic[axis],0);
+        for j:=floor(range[axis,0]*pot10(-power)) to
+               ceil (range[axis,1]*pot10(-power)) do
+        if j mod minorTicRest=0 then
+          addTic(pot10(power)*j,niceText(j div 10,power+1),(j mod majorTicRest)=0);
+
       end;
 
     VAR i,j:longint;
@@ -791,20 +822,39 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
       if logscale[axis] then begin
         for i:=floor(range[axis,0]) to ceil(range[axis,1]) do
           for j:=1 to 9 do addTic(pot10(i)*j,niceText(j,i),j=1);
-        if length(tic[axis])<50 then exit else setLength(tic[axis],0);
+        if not(tooManyMajorTics) then exit else setLength(tic[axis],0);
         for i:=floor(range[axis,0]) to ceil(range[axis,1]) do begin
           addTic(pot10(i)  ,niceText(1,i),true);
           addTic(pot10(i)*2,niceText(1,i),false);
           addTic(pot10(i)*5,niceText(1,i),false);
         end;
-        if length(tic[axis])<50 then exit else setLength(tic[axis],0);
-        for i:=floor(range[axis,0]) to ceil(range[axis,1]) do addTic(pot10(i)  ,niceText(1,i),(i mod 3)=0);
-      end else begin
-        i:=floor(ln(range[axis,1]-range[axis,0])/ln(10))-1;
-        for j:=floor(range[axis,0]*pot10(-i)) to
-               ceil (range[axis,1]*pot10(-i)) do begin
-          addTic(pot10(i)*j,niceText(j,i),(j mod 10)=0);
+        if not(tooManyMajorTics) then exit else setLength(tic[axis],0);
+        for j:=2 to 10 do begin
+          if not(tooManyMajorTics) then exit else setLength(tic[axis],0);
+          for i:=floor(range[axis,0]) to ceil(range[axis,1]) do addTic(pot10(i)  ,niceText(1,i),(i mod j)=0);
         end;
+      end else begin
+        i:=floor(ln(range[axis,1]-range[axis,0])/ln(10))-3;
+        repeat
+          initLinearTics(i,10,1);
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i,10,2) else exit;
+            if tooManyTotalTics then initLinearTics(i,10,5) else exit;
+          end;
+          initLinearTics(i,20,1);
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i,20, 2) else exit;
+            if tooManyTotalTics then initLinearTics(i,20, 5) else exit;
+            if tooManyTotalTics then initLinearTics(i,20,10) else exit;
+          end;
+          initLinearTics(i,50,1);
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i,50, 2) else exit;
+            if tooManyTotalTics then initLinearTics(i,50, 5) else exit;
+            if tooManyTotalTics then initLinearTics(i,50,10) else exit;
+          end;
+          inc(i);
+        until false;
       end;
     end;
 

@@ -199,7 +199,7 @@ begin
       if (localId='xor') or (localId='or') or (localId='mod') or (localId='in') or (localId='div') or (localId='and') then fTokenId:=tkOperator
       else if (localId='true') or (localId='false') then fTokenId:=tkBoolean
       else if (localId='Nan') or (localId='Inf') then fTokenId:=tkNumber
-      else if (localId='set') or (localId='each')
+      else if (localId='Peach') or (localId='each')
            or (localId='CACHE') or (localId='USE') or (localId='private') then fTokenId:=tkIntrinsicRuleOrKeyword
       else begin
         if localUserRules.contains(localId) then fTokenID:=tkUserRule

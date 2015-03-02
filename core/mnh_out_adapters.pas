@@ -75,7 +75,12 @@ PROCEDURE raiseError(CONST thisErrorLevel:T_errorLevel; CONST errorMessage:ansis
     newError.errorLocation:=errorLocation;
     if thisErrorLevel>maxErrorLevel then maxErrorLevel:=thisErrorLevel;
     if errorMessage=HALT_MESSAGE then hasHaltMessage:=true;
-    if errorOut<>nil then errorOut(newError);
+    if errorOut<>nil then begin
+      try
+        errorOut(newError);
+      except
+      end;
+    end;
   end;
 
 FUNCTION errorLevel:T_errorLevel;

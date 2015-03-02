@@ -20,7 +20,6 @@
 {$ifdef include_implementation}
 {$ifdef doTokenRecycling}
 VAR tokenRecycling:record
-      forThread:TThreadID;
       dat:array[0..1023] of P_token;
       fill:longint;
     end;
@@ -36,12 +35,13 @@ FUNCTION disposeToken(p:P_token):P_token;
     result:=p^.next;
     {$ifdef doTokenRecycling}
       with tokenRecycling do
-      if fill>=length(dat) then dispose(p,destroy)
-                           else begin
-                                  p^.undefine;
-                                  dat[fill]:=p;
-                                  inc(fill);
-                                end;
+        if (fill>=length(dat)) or (threadId<>mainThread)
+      then dispose(p,destroy)
+      else begin
+        p^.undefine;
+        dat[fill]:=p;
+        inc(fill);
+      end;
     {$else}
     dispose(p,destroy);
     {$endif}
@@ -55,7 +55,7 @@ PROCEDURE cascadeDisposeToken(VAR p:P_token);
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if fill>0 then begin
+    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -67,7 +67,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if fill>0 then begin
+    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -79,7 +79,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST original:T_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if fill>0 then begin
+    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -91,7 +91,7 @@ FUNCTION newToken(CONST original:T_token):P_token;
 FUNCTION newToken(CONST original:P_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    with tokenRecycling do if fill>0 then begin
+    with tokenRecycling do if (fill>0) and (ThreadID=mainThread) then begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -111,7 +111,7 @@ PROCEDURE finalizeTokens;
   end;
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
-  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_set,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod];
+  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_parallelEach,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod];
   VAR p:P_token;
       lastWasIdentifierLike:boolean=false;
   begin
@@ -165,14 +165,14 @@ PROCEDURE T_token.define(CONST original:T_token);
     txt    :=original.txt;
     tokType:=original.tokType;
     data   :=original.data;
-    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType=tt_each) and (data<>nil) then P_literal(data)^.rereference;
+    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference;
   end;
 
 PROCEDURE T_Token.undefine;
   begin
     case tokType of
       tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
-      tt_each: if data<>nil then disposeLiteral(data);
+      tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
       else data:=nil;
     end;
     tokType:=tt_eol;
@@ -193,9 +193,10 @@ FUNCTION T_token.toString:ansistring;
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_set: begin
-        result:='set';
-        if data<>nil then result:=result+'('+P_rule(data)^.id+',';
+      tt_parallelEach: begin
+        result:='Peach';
+        if txt<>'' then result:=result+'('+txt+',';
+        if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
       tt_braceOpen    ,tt_braceClose    ,
       tt_listBraceOpen,tt_listBraceClose,
@@ -233,18 +234,6 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
 
 FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
   VAR parsedLength:longint=0;
-
-  FUNCTION resultFrom(CONST len:longint; CONST tt:T_tokenType):P_token;
-    begin
-      result:=newToken(lineLocation,'',tt);
-      parsedLength:=len;
-    end;
-    
-  FUNCTION resultFrom(CONST id:ansistring; CONST tt:T_tokenType):P_token;
-    begin
-      result:=newToken(lineLocation,id,tt);
-      parsedLength:=length(id);
-    end;
 
   PROCEDURE fail(CONST message:ansistring);
     begin
@@ -322,11 +311,11 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         id:=leadingId(true);
         parsedLength:=length(id);
         if      id='xor'   then result.tokType:=tt_operatorXor
-        else if id='set'   then begin result.tokType:=tt_set; result.txt:=''; end
         else if id='or'    then result.tokType:=tt_operatorOr
         else if id='mod'   then result.tokType:=tt_operatorMod
         else if id='in'    then result.tokType:=tt_operatorIn
         else if id='each'  then begin result.tokType:=tt_each; result.txt:=''; end
+        else if id='Peach' then begin result.tokType:=tt_parallelEach; result.txt:=''; end
         else if id='div'   then result.tokType:=tt_operatorDivInt
         else if id='and'   then result.tokType:=tt_operatorAnd
         else if id='true'  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
@@ -467,7 +456,7 @@ PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
     while this<>nil do begin
       next:=this^.next;
       if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
-         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
+         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_parallelEach,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
          and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
         if this^.tokType=tt_operatorMinus then begin
           if (next<>nil) and (next^.tokType = tt_literal) then begin
@@ -501,28 +490,17 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
     while t<>nil do begin
       case t^.tokType of
       tt_identifier: t^.data:=inPackage;
-      tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-              and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-              and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-        t^.data:=inPackage^.ensureRuleId(t^.next^.next^.txt);
-        t^.next:=disposeToken(t^.next); //dispose (
-        t^.next:=disposeToken(t^.next); //dispose <id>
-        t^.next:=disposeToken(t^.next); //dispose ,
-      end else if t^.txt='' then begin
-        raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
-        exit;
-      end;
-      tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-              and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-              and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-        t^.txt:=t^.next^.next^.txt;
-        t^.data:=nil;
-        t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
-      end else if t^.txt='' then begin
-        raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
-        exit;
-      end;
-
+      tt_each,tt_parallelEach:
+        if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+        and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+        and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+          t^.txt:=t^.next^.next^.txt;
+          t^.data:=nil;
+          t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
+        end else if t^.txt='' then begin
+          raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
+          exit;
+        end;
       end;
       t:=t^.next;
     end;
@@ -532,7 +510,6 @@ PROCEDURE digestInlineExpression(VAR rep:P_token);
   VAR t,prev,inlineRule:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
-      inPackage:P_package;
   begin
     predigestBeforeDeclarationParsing(rep);
     predigest(rep,nil);
@@ -626,82 +603,122 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveEach;
-    VAR bracketLevel,i,j,k:longint;
-        t,p,bracketClosingEach:P_token;
+  PROCEDURE resolveEach(CONST isPeach:boolean);
+    VAR t,bracketClosingEach:P_token;
         tokensBetween:array of P_token;
-        bodyRule:array of P_expressionLiteral;
-        bodyPart:array of array[0..1] of P_token;
-        tempRule:P_subrule;
-        itList:P_listLiteral;
+        bodyRule:T_subruleList;
+        bodyRuleLiteral:array of P_expressionLiteral;
         aggregatorPresent:boolean;
+
+    PROCEDURE parseBody;
+      VAR bracketLevel,i:longint;
+          p:P_token;
+          bodyPart:array of array[0..1] of P_token;
+      begin
+        //first token is <each>-Token
+        //find closing bracket and body parts
+        bracketLevel:=0; //note: first token will raise bracket Level to 1
+        t:=first; p:=nil;
+        if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+          setLength(bodyPart,1);
+          bodyPart[0,0]:=first^.next;
+        end else begin
+          raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+          exit;
+        end;
+        while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+          if      t^.tokType in [tt_braceOpen,tt_parallelEach,tt_each,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
+          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
+          else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+            bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
+            setLength(bodyPart,length(bodyPart)+1);
+            bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
+          end;
+          p:=t; t:=t^.next;
+        end;
+        bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
+        if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+          raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+          exit;
+        end;
+        bracketClosingEach:=t;
+        for i:=0 to length(bodyPart)-1 do begin
+          if bodyPart[i,1]^.next<>bracketClosingEach then disposeToken(bodyPart[i,1]^.next);
+          bodyPart[i,1]^.next:=nil;
+        end;
+
+        //process aggregator part (if any)----------------------------------------------
+        if (bodyPart[0,0]^.tokType in [tt_comparatorEq..tt_operatorIn]) and
+           (bodyPart[0,1]^.tokType in [tt_comparatorEq..tt_operatorIn]) then begin
+          setLength(tokensBetween,0);
+          t:=bodyPart[0,0];
+          while t<>nil do begin
+            setLength(tokensBetween,length(tokensBetween)+1);
+            tokensBetween[length(tokensBetween)-1]:=t;
+            t:=t^.next;
+          end;
+          for i:=0 to length(bodyPart)-2 do bodyPart[i]:=bodyPart[i+1];
+          setLength(bodyPart,length(bodyPart)-1);
+
+          first^.tokType:=tt_braceOpen;
+          bracketClosingEach^.tokType:=tt_braceClose;
+          aggregatorPresent:=true;
+        end else begin
+          setLength(tokensBetween,1);
+          tokensBetween[0]:=newToken(first^.location,'',tt_separatorComma);
+
+          first^.tokType:=tt_listBraceOpen;
+          bracketClosingEach^.tokType:=tt_listBraceClose;
+          aggregatorPresent:=false;
+        end;
+        //----------------------------------------------process aggregator part (if any)
+        //process other body parts (if any)---------------------------------------------
+        setLength(bodyRule       ,length(bodyPart));
+        setLength(bodyRuleLiteral,length(bodyPart));
+        for i:=0 to length(bodyPart)-1 do begin
+          new(bodyRule[i],createForEachBody(first^.txt,bodyPart[i,0]));
+          bodyRuleLiteral[i]:=newExpressionLiteral(bodyRule[i]);
+        end;
+        //---------------------------------------------process other body parts (if any)
+
+      end;
+
+    VAR itList:P_listLiteral;
+        pEachResult:T_literalList;
+
+    PROCEDURE makePEachResult;
+      VAR myWorkers:array of P_workerThread;
+
+      FUNCTION canDelegate(CONST filterByte:byte):boolean; inline;
+        VAR workerIdx:longint;
+        begin
+          for workerIdx:=0 to length(workerThread)-1 do
+          if workerThread[workerIdx].putRequest(bodyRule,itList,filterByte,@pEachResult) then begin
+            setLength(myWorkers,length(myWorkers)+1);
+            myWorkers[length(myWorkers)-1]:=@workerThread[workerIdx];
+            exit(true);
+          end;
+          result:=false;
+        end;
+
+      VAR chunk:byte;
+          i:longint;
+      begin
+        setLength(pEachResult,itList^.size*length(bodyRule));
+        for i:=0 to length(pEachResult)-1 do pEachResult[i]:=nil;
+        setLength(myWorkers,0);
+        for chunk:=0 to 7 do if (chunk=7) or not(canDelegate(chunk)) then
+          evaluatePEachChunk(bodyRule,itList,chunk,pEachResult,callDepth+1);
+        for i:=0 to length(myWorkers)-1 do myWorkers[i]^.waitForEvaluationThenFree;
+      end;
+
+    VAR i,j,k:longint;
         eachLocation:T_tokenLocation;
+
     begin
       eachLocation:=first^.location;
-      //first token is <each>-Token
-      //find closing bracket and body parts
-      bracketLevel:=0; //note: first token will raise bracket Level to 1
-      t:=first; p:=nil;
-      if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-        setLength(bodyPart,1);
-        bodyPart[0,0]:=first^.next;
-      end else begin
-        raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
-        exit;
-      end;
-      while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-        if      t^.tokType in [tt_braceOpen,tt_set,tt_each,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
-        else if t^.tokType in [tt_braceClose              ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
-        else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-          bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-          setLength(bodyPart,length(bodyPart)+1);
-          bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-        end;
-        p:=t; t:=t^.next;
-      end;
-      bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-      if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-        raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
-        exit;
-      end;
-      bracketClosingEach:=t;
-      for i:=0 to length(bodyPart)-1 do begin
-        if bodyPart[i,1]^.next<>bracketClosingEach then disposeToken(bodyPart[i,1]^.next);
-        bodyPart[i,1]^.next:=nil;
-      end;
+      parseBody;
 
-      //process aggregator part (if any)----------------------------------------------
-      if (bodyPart[0,0]^.tokType in [tt_comparatorEq..tt_operatorIn]) and
-         (bodyPart[0,1]^.tokType in [tt_comparatorEq..tt_operatorIn]) then begin
-        setLength(tokensBetween,0);
-        t:=bodyPart[0,0];
-        while t<>nil do begin
-          setLength(tokensBetween,length(tokensBetween)+1);
-          tokensBetween[length(tokensBetween)-1]:=t;
-          t:=t^.next;
-        end;
-        for i:=0 to length(bodyPart)-2 do bodyPart[i]:=bodyPart[i+1];
-        setLength(bodyPart,length(bodyPart)-1);
-
-        first^.tokType:=tt_braceOpen;
-        bracketClosingEach^.tokType:=tt_braceClose;
-        aggregatorPresent:=true;
-      end else begin
-        setLength(tokensBetween,1);
-        tokensBetween[0]:=newToken(first^.location,'',tt_separatorComma);
-
-        first^.tokType:=tt_listBraceOpen;
-        bracketClosingEach^.tokType:=tt_listBraceClose;
-        aggregatorPresent:=false;
-      end;
-      //----------------------------------------------process aggregator part (if any)
-      //process other body parts (if any)---------------------------------------------
-      setLength(bodyRule,length(bodyPart));
-      for i:=0 to length(bodyPart)-1 do begin
-        new(tempRule,createForEachBody(first^.txt,bodyPart[i,0]));
-        bodyRule[i]:=newExpressionLiteral(tempRule);
-      end;
-      //---------------------------------------------process other body parts (if any)
       if (P_literal(first^.data)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
       then itList:=newOneElementListLiteral(first^.data,false)
       else itList:=first^.data;
@@ -713,18 +730,36 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       if aggregatorPresent and (itList^.size=0) then
         raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
       else if length(bodyRule)>0 then begin
-        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-        for j:=0 to length(bodyRule)-1 do begin
-          if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
-            t^.next:=newToken(tokensBetween[k]);
+        if isPeach and (callDepth<STACK_DEPTH_LIMIT) then begin
+          makePEachResult;
+          if errorLevel<el3_evalError then begin
+            for i:=0 to length(pEachResult)-1 do begin
+              if i>0 then for k:=0 to length(tokensBetween)-1 do begin
+                t^.next:=newToken(tokensBetween[k]);
+                t:=t^.next;
+              end;
+              t^.next:=newToken(eachLocation,'',tt_literal,pEachResult[i]);
+              t:=t^.next;
+            end;
+          end else begin
+            for i:=0 to length(pEachResult)-1 do
+              if pEachResult[i]<>nil then disposeLiteral(pEachResult[i]);
+          end;
+          setLength(pEachResult,0);
+        end else begin
+          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
+          for j:=0 to length(bodyRule)-1 do begin
+            if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
+              t^.next:=newToken(tokensBetween[k]);
+              t:=t^.next;
+            end;
+            t^.next:=newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
+            bodyRuleLiteral[j]^.rereference;
+            t:=t^.next;
+            t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
             t:=t^.next;
           end;
-          t^.next:=newToken(eachLocation,'',tt_literal,bodyRule[j]);
-          bodyRule[j]^.rereference;
-          t:=t^.next;
-          t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
-          t:=t^.next;
-        end
+        end;
       end else begin
         for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
           if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
@@ -739,7 +774,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       //----------------------------------------------------------iterate over itList
       t^.next:=bracketClosingEach;
       //cleanup----------------------------------------------------------------------
-      for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRule[i]);
+      for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRuleLiteral[i]);
       for i:=0 to length(tokensBetween)-1 do disposeToken(tokensBetween[i]);
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
@@ -796,8 +831,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_set,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,               tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+          tt_braceClose,                        tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -809,8 +844,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_set,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,               tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+          tt_braceClose,                        tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -921,20 +956,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
               stack_push;
             end;
           end;
-          tt_set: case cTokType(1) of // set(X, | <Lit>
-            tt_braceClose: stack_popLink;  // set(X, | <Lit> )
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
-            tt_comparatorEq..tt_operatorIn,tt_separatorCnt,tt_separatorComma: begin stack_push; stack_push; end; // set(X, | <Lit> +
-            tt_iifCheck: stack_push;                                 // set(X, | <Lit> ?
-            tt_parList:  applyRule(first^.next,first^.next^.next);   // set(X, | <Lit> (...)
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;   // set(X, | <Lit> :type
-            else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
-          end;
           tt_braceOpen : case cTokType(1) of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
@@ -1012,7 +1033,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
-          tt_each: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
+          tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
             tt_separatorComma: if cTokType(2)<>tt_eol then begin
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
               P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
@@ -1078,18 +1099,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
-        tt_each: if (first^.data=nil) then stack_push
-                                      else resolveEach;
-        tt_set: if (cTokType(1)=tt_literal)
-                and (cTokType(2)=tt_braceClose) then begin
-          P_rule(first^.data)^.performSet(first^.next^.data);
-          first:=disposeToken(first); //dispose set
-          first^.next:=disposeToken(first^.next); //dispose closing bracket
-          //result is set literal
-          didSubstitution:=true;
-        end else if cTokType(1)<>tt_eol then begin
-          stack_push; //push set
-        end;
+        tt_each        : if (first^.data=nil) then stack_push else resolveEach(false);
+        tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(ThreadID=mainThread);
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
           tt_braceOpen: begin
             stack_push; //push rule pointer

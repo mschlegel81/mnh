@@ -5,8 +5,7 @@ TYPE
                //identifier and resolved identifiers
                tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer,
                //special operators
-               tt_set,
-               tt_each,
+               tt_each, tt_parallelEach,
                //lists and list constructors
                tt_braceOpen    ,tt_braceClose    ,tt_parList_constructor  ,tt_parList,
                tt_listBraceOpen,tt_listBraceClose,tt_list_constructor     ,
@@ -90,7 +89,7 @@ CONST
     //identifier and resolved identifiers
     '','','','','',
     //special operators
-    'set', 'each',
+    'each', 'Peach',
     //lists and list constructors
     '(', ')', ''  ,'' ,
     '[', ']', '' ,
@@ -151,8 +150,8 @@ CONST
   'user function (local)',
   'user function (imported)',
   'built in function',
-  'special built in function: set#defines the value of a variable and returns the new value',
   'special built in function: each#can be used for constructing and/or aggregating lists',
+  'special built in function: Peach#can be used for constructing and/or aggregating lists#Is evaluated parallel',
   'round opening bracket',
   'round closing bracket',
   'parameter list constructor',
