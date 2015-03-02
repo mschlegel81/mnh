@@ -1,0 +1,10 @@
+#ignore thumbnails created by windows
+Thumbs.db
+#ignore binaries
+*.exe
+*.ppu
+*.o
+*.res
+#ignore images and zips
+*.png
+*.7z
