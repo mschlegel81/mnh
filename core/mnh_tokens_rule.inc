@@ -2,13 +2,14 @@
   P_rule=^T_rule;
 
   { T_rule }
-  T_ruleType=(rt_normal,rt_cached,rt_mutable,rt_synchronized);
+  T_ruleType=(rt_normal,rt_memoized,rt_mutable,rt_synchronized);
 
   T_rule=object
     private
       ruleType:T_ruleType;
       cache:T_cache;
-      cache_cs:system.TRTLCriticalSection;
+      rule_cs:system.TRTLCriticalSection;
+      rule_timer:TEpikTimer;
 
       id:ansistring;
       subrules:array of P_subrule;
@@ -40,11 +41,12 @@ DESTRUCTOR T_rule.destroy;
     id:='';
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
-    if ruleType=rt_cached then begin
+    if ruleType=rt_memoized then begin
       cache.destroy;
-      system.DoneCriticalsection(cache_cs);
+      system.DoneCriticalsection(rule_cs);
+      rule_timer.Free;
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
-      system.DoneCriticalsection(cache_cs);
+      system.DoneCriticalsection(rule_cs);
     end;
     ruleType:=rt_normal;
   end;
@@ -54,32 +56,28 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       lit:P_literal;
       useParam:P_listLiteral;
       evalCost:longint;
-      profiler:TEpikTimer;
   begin
     case ruleType of
-    rt_cached: begin
+    rt_memoized: begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
-      system.EnterCriticalSection(cache_cs);
+      system.EnterCriticalSection(rule_cs);
       lit:=cache.get(useParam);
       if lit<>nil then begin
         lit^.rereference;
         firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
         lastRep:=firstRep;
         if param=nil then disposeLiteral(useParam);
-        system.LeaveCriticalSection(cache_cs);
+        system.LeaveCriticalSection(rule_cs);
         exit(true);
       end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
         if (callDepth>=STACK_DEPTH_LIMIT) then begin
-          system.LeaveCriticalSection(cache_cs);
+          system.LeaveCriticalSection(rule_cs);
           exit(true);
         end;
-        profiler := TEpikTimer.create(nil);
-        profiler.Clear;
-        profiler.Start;
+        evalCost:=round(1000000*rule_timer.Elapsed());
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
-        evalCost:=round(10000*profiler.Elapsed());
-        profiler.Free;
+        evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
           cache.polish;
@@ -93,28 +91,29 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
           lastRep:=firstRep;
         end;
-        system.LeaveCriticalSection(cache_cs);
+        system.LeaveCriticalSection(rule_cs);
         exit(true);
       end;
+      system.LeaveCriticalSection(rule_cs);
       result:=false;
     end;
     rt_synchronized: begin
       for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
         if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
         else begin
-          system.EnterCriticalSection(cache_cs);
+          system.EnterCriticalSection(rule_cs);
           reduceExpression(firstRep,callDepth+1,recycler);
           lastRep:=firstRep^.last;
-          system.LeaveCriticalSection(cache_cs);
+          system.LeaveCriticalSection(rule_cs);
         end;
         exit(true);
       end;
       result:=false;
     end;
     rt_mutable: begin
-      system.EnterCriticalSection(cache_cs);
+      system.EnterCriticalSection(rule_cs);
       result:=(includePrivateRules or (subrules[0]^.typ=srt_normal_public)) and subrules[0]^.replaces(param,nil,firstRep,lastRep,recycler);
-      system.LeaveCriticalsection(cache_cs);
+      system.LeaveCriticalsection(rule_cs);
     end;
     rt_normal: begin
       for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
@@ -142,9 +141,12 @@ FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
 PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
   begin
     if (ruleType=rt_normal) then begin
-      ruleType:=rt_cached;
+      ruleType:=rt_memoized;
       cache.create;
-      system.InitCriticalSection(cache_cs);
+      system.InitCriticalSection(rule_cs);
+      rule_timer:= TEpikTimer.create(nil);
+      rule_timer.Clear;
+      rule_timer.Start;
     end else if ruleType=rt_mutable then raiseError(el2_warning,'Mutable rules are not allowed to be memoized',location);
   end;
 
@@ -155,25 +157,25 @@ PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
       else begin
         subrules[0]^.setMutable(location);
         ruleType:=rt_mutable;
-        system.InitCriticalSection(cache_cs);
+        system.InitCriticalSection(rule_cs);
       end;
-    end else if ruleType in [rt_cached,rt_synchronized] then raiseError(el4_parsingError,'Cannot mutate a memoized or synchronized rule!',location);
+    end else if ruleType in [rt_memoized,rt_synchronized] then raiseError(el4_parsingError,'Cannot mutate a memoized or synchronized rule!',location);
   end;
 
 PROCEDURE T_rule.setSynchronized(CONST location:T_tokenLocation);
   begin
     if (ruleType=rt_normal) then begin
       ruleType:=rt_synchronized;
-      system.InitCriticalSection(cache_cs);
+      system.InitCriticalSection(rule_cs);
     end else if ruleType = rt_mutable then raiseError(el4_parsingError,'A mutable rule cannot be synchronized!',location);
   end;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
   begin
     if (ruleType=rt_mutable) then begin
-      system.EnterCriticalSection(cache_cs);
+      system.EnterCriticalSection(rule_cs);
       subrules[0]^.setMutableValue(value);
-      system.LeaveCriticalSection(cache_cs);
+      system.LeaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
 
