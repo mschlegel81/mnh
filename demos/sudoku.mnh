@@ -1,88 +1,82 @@
-//Create a riddle with everything possible, i.e. every cell has possible values [1..9] apart from the diagonal
-private allPossible->each(i,[0..8],each(j,[0..8],i=j ? j+1 : [1..9]));
+private oneElemListToScalar(L)->size(L)=1 ? L%0 : L;
+private dropSet(x:int,L)->x in L ? [] : x;
+private dropSet(X    ,L)->oneElemListToScalar(X%not(each(x,X,x in L)));
+private Connectivity:=each(i,[0..8],|,each(j,[0..8],
+                    unique(dropSet(flatten(i*9+[0..8], //indexes in the same row
+                                           [0..8]*9+j, //indexes in the same column
+                                           (i div 3)*27+(j div 3)*3+[0..2,9..11,18..20]),
+                                   [i*9+j])))); //indexes in the same block
 
-private touching(i0,j0,i1,j1)->i0=i1 ? true :
-                               j0=j1 ? true :
-                               (i0 div 3) = (i1 div 3) and (j0 div 3) = (j1 div 3);
+private randomRowOrColPerm->each(i,3*sortPerm(random(3)),|,i+sortPerm(random(3)));
+private randomRowAndColPerm->randomRowAndColPerm(randomRowOrColPerm,randomRowOrColPerm);
+private randomRowAndColPerm(I,J)->each(i,I,|,i*9+J);
+private scrambledRiddle(Board)->scrambledRiddle(Board%randomRowAndColPerm,1+sortPerm(random(9)));
+private scrambledRiddle(Board,V)->each(b,Board,b:int?(V%(b-1)):b);
 
-//drop: remove an entry (=value) from an integer set (=set)
-private drop(set:intList,value)->set%(set!=value);
-private drop(set:int,value)->set;
-private drop([],value)->[];
-//Random in [0..8]
-private rand8->floor(random*9);
-//Random element from given list:
-private randomFrom(set:intList)->set%floor(random*(size(set)-1));
-//Set a number in the sudoku and solve it
-private setNumber(Board,iRow,jCol,value)->(each(i,[0..8],each(j,[0..8],i=iRow and j=jCol ? value : Board%i%j)));
-private blacklist(Board)->blacklist(each(i,[0..8],flatten(each(j,[0..8],(Board%i%j):int ? Board%i%j : []))),
-                                    each(j,[0..8],flatten(each(i,[0..8],(Board%i%j):int ? Board%i%j : []))),
-                                    each(b,[[0,0],[0,3],[0,6],
-                                            [3,0],[3,3],[3,6],
-                                            [6,0],[6,3],[6,6]],flatten(each(i,b%0+[0..2],each(j,b%1+[0..2],(Board%i%j):int ? Board%i%j : [])))));
+private filterInt(B)->each(b,B,b:int ? b : []);
+private randomFromList(L)->L%floor(random*(size(L)-1));
 
-private blacklist(FI,FJ,FB)->each(i,[0..8],each(j,[0..8],unique((FI%i)|(FJ%j)|(FB%(3*(i div 3)+(j div 3))))));
-private oneElementListToScalar(L:int)->int;
-private oneElementListToScalar(L)->size(L)=1 ? L%0 : L;
-private solve(Board)->solve(Board,blacklist(Board));
-private solve(B,F)->solve_retry(B,each(i,[0..8],each(j,[0..8],(B%i%j):int ? B%i%j : oneElementListToScalar(flatten(each(x,B%i%j,x in F%i%j ? [] : x))))));
-private solve_retry(oldBoard,newBoard==oldBoard)->newBoard;
-private solve_retry(oldBoard,newBoard)->solve(newBoard);
+private randomNonIntIndex(B)->randomFromList([0..80]%not(each(i,[0..80],(B%i):int)));
+private randomIntIndex   (B)->randomFromList([0..80]%   (each(i,[0..80],(B%i):int)));
+private difficulty       (B)->trueCount     (        not(each(i,[0..80],(B%i):int)));
 
-//Set a random cell in the Board to one of the possible values
-private setRandom(Board)->setRandom(Board,rand8,rand8);
-private setRandom(Board,iRow,jCol)->(Board%iRow%jCol):intList ? setNumber(Board,iRow,jCol,randomFrom(Board%iRow%jCol)) : setRandom(Board);
-//Un-set a random cell in the Board
-private unsetRandom(Board)->unsetRandom(Board,rand8,rand8);
-private unsetRandom(Board,iRow,jCol)->(Board%iRow%jCol):int ? each(i,[0..8],each(j,[0..8],i=iRow and j=jCol ? [1..9] : Board%i%j)) : unsetRandom(Board);
+private restrictRandom(B)->restrictRandom(B,randomNonIntIndex(B));
+private loosenRandom  (B)->loosenRandom  (B,randomIntIndex   (B));
+private restrictRandom(B,i:int)->solve(each(j,[0..80],i=j ? randomFromList(B%j) : B%j));
+private loosenRandom  (B,i:int)->      each(j,[0..80],i=j ? [1..9]              : B%j) ;
 
-//Is the Board valid (no conflicts?)
-private isValid (Board)->each(row,Board,and,each(cell,row,and,size(cell)>=1));
-//Is the Board solved? 
-private isSolved(Board)->each(row,Board,and,each(cell,row,and,     cell:int));
-//Is the Board solvable? 
-private canSolve(Board)->isSolved(solve(each(row,Board,each(cell,row,cell:int ? [cell] : cell))));
+private blacklist(B)->each(c,Connectivity,flatten(B%c));
+private solve(   Board                             )->solve(Board,blacklist(filterInt(Board)));
+private solve(   Board,blacklist                   )->solve(Board,blacklist,each(i,[0..80],dropSet(Board%i,blacklist%i)));
+private solve(oldBoard,blacklist,newBoard==oldBoard)->oldBoard;
+private solve(oldBoard,blacklist,newBoard          )->solve(newBoard);
+private canSolve(Board)->isSolved(solve(Board));
 
-//Construct a solution by randomly restricting cells
-private restrict(Board)->restrict(Board,isValid(Board),isSolved(Board));
-private restrict(Board,true ,false)->restrict(solve(setRandom(Board)));
-private restrict(Board,true ,true )->Board;
-private restrict(Board,false,o    )->restrict(allPossible);
-//Construct a riddle from a solution by randomly un-setting cells and testing for solveability
-private riddleFromSolution(Board,retries)->riddleFromSolution(Board,unsetRandom(Board),retries);
-private riddleFromSolution(prevBoard,Board,retries         )->riddleFromSolution(prevBoard,Board,retries,canSolve(Board));
-private riddleFromSolution(prevBoard,Board,retries   ,true )->riddleFromSolution(Board,unsetRandom(Board),retries);
-private riddleFromSolution(prevBoard,Board,retries<=0,false)->prevBoard;
-private riddleFromSolution(prevBoard,Board,retries   ,false)->riddleFromSolution(prevBoard,unsetRandom(prevBoard),retries-1);
-//Pretty-print a board:
-private printSudoku(Board)->print('=========#=========#=========') and
-                            print(each(i,[0..8],&"\n"&,
-                                  each(j,[0..8],&, replace(" "&string(Board%i%j)&" "," [1,2,3,4,5,6,7,8,9] ","   ") & (j in [2,5] ? "|" : "")) &
-                                  (i in [2,5] ? "\n---------+---------+---------":""))) and
-                            print('=========#=========#=========\n');
+private isSolved (B)->each(b,B,and,b:int);
+private isInvalid(B)->each(b,B,or ,b==[]);
 
-//For creation of lazy sudoku constants:=========================================================
-short(Board)->replace(string(Board-1),["[0,1,2,3,4,5,6,7,8]","[","]",",","99","AA","BB"],["9","","","","A","B","C"]);
-printShort(Board)->print(short(Board));
-difficulty(Board)->trueCount(flatten(each(row,Board,each(cell,row,cell:intList))));
-findDifficultRiddle(Board)->findDifficultRiddle(Board,riddleFromSolution(Board,0),0);
-findDifficultRiddle(Board,Riddle,maxDifficulty)->findDifficultRiddle(Board,Riddle,maxDifficulty,difficulty(Riddle));
-findDifficultRiddle(Board,Riddle,maxDifficulty,thisDifficulty> maxDifficulty)->print('Difficulty: ',thisDifficulty) and printSudoku(Riddle) and printShort(Riddle) ?
-                                                                               findDifficultRiddle(Board,riddleFromSolution(Board,3*thisDifficulty),thisDifficulty) : 0;
-findDifficultRiddle(Board,Riddle,maxDifficulty,thisDifficulty<=maxDifficulty)->findDifficultRiddle(Board,riddleFromSolution(Board,3*maxDifficulty),maxDifficulty );
-//=========================================================:For creation of lazy sudoku constants
+private initialBoard:=solve(each(i,[0..80],i mod 10 = 0 ? (i div 10)+1 : [1..9]));
+private randomSolution->randomSolution(initialBoard,restrictRandom(initialBoard),10);
+private randomSolution(oldBoard,newBoard,retries                           )->randomSolution(oldBoard,newBoard,retries,isSolved(newBoard),isInvalid(newBoard));
+private randomSolution(oldBoard,newBoard,retries,solved=true ,invalid=false)->newBoard;
+private randomSolution(oldBoard,newBoard,retries,solved=false,invalid=false)->randomSolution(newBoard,restrictRandom(newBoard),retries);
+private randomSolution(oldBoard,newBoard,0      ,solved      ,invalid=true )->randomSolution;
+private randomSolution(oldBoard,newBoard,retries,solved      ,invalid=true )->randomSolution(oldBoard,restrictRandom(oldBoard),retries-1);
 
-//*Writes out a Sodoku (Solution and solveable Riddle)
-main->print('Call with parameter "findHardOne" to stubbornly look for harder riddles.') and  main_(restrict(allPossible));
-private main_(B)->printSudoku(B) and 
-                  printSudoku(riddleFromSolution(B,10));
-//*Looks for a hard riddle - WARNING: This is an endless loop!
-main("findHardOne")->print('********************************************************\n',
-                           '* This is an endless loop. Abort program using Ctrl+C. *\n',
-                           '********************************************************\n') and findDifficultRiddle(restrict(allPossible));
-main("findMany")->print('********************************************************\n',
-                        '* This is an endless loop. Abort program using Ctrl+C. *\n',
-                        '********************************************************\n') and
-                  main_many;
-main_many->main_many(pEach(i,[0..9],riddleFromSolution(restrict(allPossible),200)));
-main_many(Riddles)->each(R,Riddles,and,print('Difficulty ',difficulty(R),'; ',short(R))) ? main_many : main_many;
+private randomRiddle->randomRiddle(randomSolution);
+private randomRiddle(oldBoard                         )->randomRiddle(oldBoard,loosenRandom(oldBoard),    100);
+private randomRiddle(oldBoard,newBoard,retries        )->randomRiddle(oldBoard,newBoard              ,retries,canSolve(newBoard));
+private randomRiddle(oldBoard,newBoard,retries  ,true )->randomRiddle(newBoard,loosenRandom(newBoard),retries  );
+private randomRiddle(oldBoard,newBoard,retries>0,false)->randomRiddle(oldBoard,loosenRandom(oldBoard),retries-1);
+private randomRiddle(oldBoard,newBoard,retries=0,false)->             oldBoard;
+
+private format(Board)->each(i,[0..8],&"\n"&,each(j,[0..8],&"\t"&,string(Board%(i*9+j))));
+private format2(Board)->"=========#=========#=========\n"&
+                each(i,[0..8],&"\n"&,((i=3 or i=6)? "---------+---------+---------\n" : "")&
+                each(j,[0..8],&     ,((j=3 or j=6)? "|"                               : "")&
+                     " "&replace(string(Board%(i*9+j)),"[1,2,3,4,5,6,7,8,9]"," ")&" "))&
+                "\n=========#=========#=========\n";
+
+private pack(Board)->replace(each(b,Board,&,string(b)),
+                     ["[1,2,3,4,5,6,7,8,9]","000000000","00000000","0000000","000000","00000","0000","000","00"],
+                     ["0"                  ,"a"        ,"b"       ,"c"      ,"d"     ,"e"    ,"f"   ,"g"  ,"h"]);
+private pure unpack(s:string)->each(c,copy(replace(s,["a".."h"],["b".."h","0"]&0),[0..80],1),c="0" ? [1..9] : softCast(c));
+
+private printRiddle  (B)->print(format2(B)) and print('Difficulty: ',difficulty(B)," '",pack(B),"'");
+private printDiffPack(B)->                      print('Difficulty: ',difficulty(B)," '",pack(B),"'");
+
+//*Create one random solution
+main->print(format2(randomSolution));
+//*Create one random riddle
+main("riddle")->printRiddle(randomRiddle);
+//*Create count random riddles in packed form
+main(count:string)->each(l,pEach(i,[1..softCast(count)],pack(randomRiddle)),print(l));
+
+private 
+PREPARED:=["17b2g4h3f921c9h5090703h2054f7d17b48f5f9","h9h3025f1f6b8024075c9017h5a50403e6018h8d9","1h3f502h704e69f5e6g4h52h3g78f208d3h1h5d4g9",
+           "1g904c51g43g607g401a83e26f6403g2a037h2h9","1d3f601g45089d947h1h8g3e2h6h7g2g6e45e7e9","09d7026h4f5h6h98805e1g3b8b543c201h2g70309",
+           "0509ag104035h2e40907h302f8e6f1d52h7104f6f39","0785h9g2g78e809g3d6f2ah1h405e3f104h6g43209","e29065h6g70903h58e47e86c7ag9h101h2g37g8g9",
+           "c9062d4g50801d9h2346c1h8h5g206f7g105805c9","149ag607h3d2f18g60859e7g4g8f7d1508g102g9","09c52g78h8h14h7h70402f3h5h4g9h6e18f5b6e1h9",
+           "04h32h69h7c3g1g9h8f7e4g541h307g52g1f6a0509","08e405d6d41g3a02h6h8527e9g3h5h169f227d9","0905h2h4b7g64h808g1506g35d1ae19f708237d9"];
+//*Create count random riddles from prepared ones
+main("lazy",count:string)->each(i,[1..softCast(count)],and,print("\n"&format2(scrambledRiddle(unpack(PREPARED%floor(random*(size(PREPARED)-1)))))));

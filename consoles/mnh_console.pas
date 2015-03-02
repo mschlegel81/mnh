@@ -6,6 +6,7 @@ USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh
 VAR minErrorLevel:T_errorLevel=el2_warning;
     fileToInterpret:ansistring='';
     parameters:array of ansistring;
+    wantHelpDisplay:boolean=false;
 //---------------:by command line parameters
 
 PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('in_>',s); end;
@@ -24,22 +25,22 @@ PROCEDURE displayVersionInfo;
     writeln('FPC version: ',{$I %FPCVERSION%});
     writeln('Target CPU : ',{$I %FPCTARGET%});    
   end;
-  
-PROCEDURE parseCmdLine;
-  PROCEDURE displayHelp;
-    begin
-      displayVersionInfo;
-      writeln('Accepted parameters: ');
-      writeln('  [-h] [+echo/-echo] [-el#] [filename [parameters]]');
-      writeln('  filename: if present the file is interpreted; parameters are passed if present');
-      writeln('            if not present, interactive mode is entered');
-      writeln('  +echo: force echo on (default for interactive mode)');
-      writeln('  -echo: force echo off (default for interpretation mode)');
-      writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
-      writeln('  -h   : display this help and quit');
-      halt;
-    end;
-    
+
+PROCEDURE displayHelp;
+  begin
+    displayVersionInfo;
+    writeln;
+    writeln('Accepted parameters: ');
+    writeln('  [-h] [+echo/-echo] [-el#] [filename [parameters]]');
+    writeln('  filename: if present the file is interpreted; parameters are passed if present');
+    writeln('            if not present, interactive mode is entered');
+    writeln('  +echo: force echo on (default for interactive mode)');
+    writeln('  -echo: force echo off (default for interpretation mode)');
+    writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
+    writeln('  -h   : display this help and quit');
+  end;
+
+PROCEDURE parseCmdLine;    
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       i,pel:longint;      
   begin
@@ -47,7 +48,7 @@ PROCEDURE parseCmdLine;
     for i:=1 to paramCount do begin
       if      paramstr(i)='+echo' then echo:=e_forcedOn
       else if paramstr(i)='-echo' then echo:=e_forcedOff
-      else if startsWith(paramStr(i),'-h') then displayHelp
+      else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
       else if startsWith(paramStr(i),'-el') then begin
         pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
         if (pel<0) or (pel>ord(el5_systemError)) then begin
@@ -105,6 +106,11 @@ PROCEDURE interactiveMode;
     end;
     
   begin
+    if wantHelpDisplay then begin
+      displayHelp;      
+      halt;
+    end;
+    
     writeln;    
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
@@ -122,7 +128,12 @@ PROCEDURE interactiveMode;
 PROCEDURE fileMode;
   begin
     mainPackageProvider.setPath(fileToInterpret);
-    reloadMainPackage(lu_forImport);    
+    if wantHelpDisplay then begin
+      displayHelp;
+      printMainPackageDocText;
+      halt;
+    end;
+    reloadMainPackage(lu_forImport);
     callMainInMain(parameters);
   end;
   

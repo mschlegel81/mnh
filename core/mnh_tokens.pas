@@ -43,6 +43,7 @@ CONST C_id_qualify_character='.';
   
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
+PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
@@ -593,6 +594,12 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     cascadeDisposeToken(t);
   end;
 
+PROCEDURE printMainPackageDocText;
+  begin
+    mainPackageProvider.load;
+    reloadMainPackage(lu_forDocGeneration);
+    writeUserPackageHelpText;
+  end;
 
 FUNCTION getMainPackage: P_package;
   begin

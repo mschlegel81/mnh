@@ -21,7 +21,7 @@ private doPlot->setPlotAxisStyle([0,0]) and
                 findPath(fibPoint(5000),fibPoint([0..5000]),[]);
 
 private main_impl(filename:string,xRes:int,yRes:int)->doPlot and renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
-//*Plots a fibonacci maze to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>
+//*Plots a fibonacci maze to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));
 //*Plots a fibonacci maze to file <code>filename</code> using a custom resolution
 main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,softCast(yRes));

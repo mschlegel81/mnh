@@ -72,6 +72,7 @@
 <a href="#sqr">sqr</a> &nbsp; 
 <a href="#sqrt">sqrt</a> &nbsp; 
 <a href="#string">string</a> &nbsp; 
+<a href="#systime">systime</a> &nbsp; 
 <a href="#tail">tail</a> &nbsp; 
 <a href="#tan">tan</a> &nbsp; 
 <a href="#time">time</a> &nbsp; 
@@ -145,10 +146,11 @@
 <h4><a name="sqr">sqr</a></h4><code>sqr(n);</code><br>Returns the square of numeric parameter n
 <h4><a name="sqrt">sqrt</a></h4><code>sqrt(n);</code><br>Returns the square root of numeric parameter n
 <h4><a name="string">string</a></h4><code>string(X);</code><br>Returns a string-representation of X
+<h4><a name="systime">systime</a></h4><code>sytime;</code><br>Returns the current time in various representations
 <h4><a name="tail">tail</a></h4><code>tail(L);</code><br>Returns list L without the first element<br><code>tail(L,k);</code><br>Returns L without the first k elements
 <h4><a name="tan">tan</a></h4><code>tan(n);</code><br>Returns the tangent of numeric parameter n
 <h4><a name="time">time</a></h4><code>time(E:expression);</code><br>Evaluates E (without parameters) and returns a nested List with evaluation details.
-<h4><a name="tokenSplit">tokenSplit</a></h4><code>tokenSplit(S:string);</code><br>Returns a list of strings from S
+<h4><a name="tokenSplit">tokenSplit</a></h4><code>tokenSplit(S:string,language:string);</code><br>Returns a list of strings from S for a given language<br>Languages: <code>Mnh, Pascal, Java<code>
 <h4><a name="trim">trim</a></h4><code>trim(S:string);</code><br>Returns string S without leading or trailing spaces
 <h4><a name="trueCount">trueCount</a></h4><code>trueCount(B:booleanList);</code><br>Returns the number of true values in B
 <h4><a name="unique">unique</a></h4><code>unique(L);</code><br>Returns list L sorted ascending and without duplicates

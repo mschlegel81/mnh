@@ -107,16 +107,16 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel;
     newError.errorLevel := thisErrorLevel;
     newError.errorMessage := errorMessage;
     newError.errorLocation := errorLocation;
-    if thisErrorLevel > maxErrorLevel then
+    if thisErrorLevel > maxErrorLevel then begin
       maxErrorLevel := thisErrorLevel;
-    if errorMessage = HALT_MESSAGE then
-      hasHaltMessage := true;
-    if errorOut <> nil then
-        try
-        errorOut(newError);
-        except
-          plainStdErrOut(newError);
-        end;
+      errorCount:=0;
+    end;
+    if errorMessage = HALT_MESSAGE then hasHaltMessage := true;
+    if errorOut <> nil then try
+      errorOut(newError);
+    except
+      plainStdErrOut(newError);
+    end;
   end;
 
 FUNCTION errorLevel: T_errorLevel;

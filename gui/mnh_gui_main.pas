@@ -189,8 +189,6 @@ VAR
 
 IMPLEMENTATION
 VAR errorThroughput:array of T_storedError;
-    lastFormRepaint:double=0;
-    repaintNecessary:boolean=false;
     output:T_listOfString;
     plotSubsystem:record
       rendering:boolean;
@@ -235,20 +233,14 @@ PROCEDURE logError(CONST error:T_storedError);
     if error.errorLevel<el2_warning then exit;
     setLength(errorThroughput,length(errorThroughput)+1);
     errorThroughput[length(errorThroughput)-1]:=error;
-    repaintNecessary:=true;
   end;
 
 PROCEDURE TMnhForm.flushThroughput;
   VAR i:longint;
   begin
-
     for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
       ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+' @'+string(errorLocation) );
     setLength(errorThroughput,0);
-    lastFormRepaint:=now;
-    repaintNecessary:=false;
-
-
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -354,9 +346,6 @@ PROCEDURE startOfEvaluationCallback;
     setLength(errorThroughput,0);
     MnhForm.OutputEdit.Lines.Clear;
     MnhForm.ErrorMemo.Clear;
-    //MnhForm.ErrorGroupBox.Visible:=false;
-    repaintNecessary:=false;
-    lastFormRepaint:=now;
   end;
 
 { TMnhForm }
@@ -779,9 +768,8 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
-  CONST MIN_INTERVALL=50;
+  CONST MIN_INTERVALL=200;
         MAX_INTERVALL=5000;
-        REPAINT_INTERVAL_IN_SECONDS=1;
   VAR aid:string;
       flag:boolean;
       L:array of ansistring;
@@ -790,7 +778,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin
     //Show ask form?
     if askForm.displayPending then askForm.ShowModal;
-
 
     updateStart:=now;
     //Form caption:-------------------------------------------------------------
@@ -826,30 +813,21 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       L:=output.elementArray;
       output.clear;
       for i:=0 to length(L)-1 do OutputEdit.Lines.Append(L[i]);
-      repaintNecessary:=true;
       OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
       OutputEdit.EndUpdate;
     end;
     flushThroughput;
 
-    repaintNecessary:=repaintNecessary or (UpdateTimeTimer.Interval=MIN_INTERVALL);
+    if ((plotSubsystem.state=pss_plotAfterCalculation) or
+        (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
+       not(ad_evaluationRunning) and
+       not(plotSubsystem.rendering) and
+       not(now<plotSubsystem.renderNotBefore) then doPlot();
+
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
-    if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) then begin
-      lastFormRepaint:=now;
-
-      if ((plotSubsystem.state=pss_plotAfterCalculation) or
-          (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
-         not(ad_evaluationRunning) and
-         not(plotSubsystem.rendering) and
-         not(now<plotSubsystem.renderNotBefore) then begin
-        doPlot();
-      end;
-    end;
-
     i:=round((now-updateStart)*24*60*60*1000);
     if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
-
   end;
 
 PROCEDURE TMnhForm.processSettings;
@@ -1069,9 +1047,9 @@ INITIALIZATION
   mnh_funcs.registerRule('setPlotRange',@setPlotRange,'');
   mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,'');
   mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,'');
-
   mnh_evalThread.initIntrinsicRuleList;
 
+  plotSubsystem.renderNotBefore:=now;
   plotSubsystem.state:=pss_neutral;
   plotSubsystem.rendering:=false;
 

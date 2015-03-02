@@ -1933,46 +1933,56 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
     rowId, i, iMax: longint;
     X, Y: P_listLiteral;
 
+  FUNCTION isValidExpression(CONST p:P_literal):boolean;
+    VAR s:P_subrule;
+        par:T_realLiteral;
+        res:P_literal;
+    begin
+      if p^.literalType<>lt_expression then exit(false);
+      s:=P_expressionLiteral(p)^.value;
+      par.Create(random);
+      res:=s^.directEvaluateUnary(@par,callDepth+1);
+      if res=nil then begin
+        raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary function.',tokenLocation);
+        result:=false;
+      end else if not(res^.literalType in [lt_int,lt_real]) then begin
+        raiseError(el3_evalError,'Expression to plot '+p^.toString+' returns '+C_typeString[res^.literalType]+'; should be int or real.',tokenLocation);
+        result:=false;
+      end else result:=true;
+      if res<>nil then disposeLiteral(res);
+      par.Destroy;
+    end;
+
   begin
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (fileContents in this case) may only be called from the main thread',
+        'I/O functions (addPlot in this case) may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;
-    if (params<>nil) and (params^.size>=1) then
-      begin
-      if (params^.value(params^.size-1)^.literalType = lt_string) then
-        begin
+    if (params<>nil) and (params^.size>=1) then begin
+      if (params^.value(params^.size-1)^.literalType = lt_string) then begin
         options := P_stringLiteral(params^.value(params^.size-1))^.value;
         sizeWithoutOptions := params^.size-1;
-        end
-      else
-        begin
+      end else begin
         options := '';
         sizeWithoutOptions := params^.size;
-        end;
-      if (sizeWithoutOptions = 1) and (params^.value(0)^.literalType = lt_list) then
-        begin
+      end;
+      if (sizeWithoutOptions = 1) and
+         (params^.value(0)^.literalType = lt_list) then begin
         rowId := activePlot.addRow(options);
         X := P_listLiteral(params^.value(0));
         for i := 0 to X^.size-1 do
-          if (X^.value(i)^.literalType in [lt_intList, lt_realList, lt_numList]) then
-            begin
+          if (X^.value(i)^.literalType in [lt_intList, lt_realList, lt_numList]) then begin
             Y := P_listLiteral(X^.value(i));
-            if Y^.size = 2 then
-              activePlot.row[rowId].addSample(fReal(Y^.value(0)), fReal(Y^.value(1)))
-            else
-              activePlot.row[rowId].addSample(Nan, Nan);
-            end
-          else
-            activePlot.row[rowId].addSample(Nan, Nan);
-
+            if Y^.size = 2
+            then activePlot.row[rowId].addSample(fReal(Y^.value(0)), fReal(Y^.value(1)))
+            else activePlot.row[rowId].addSample(Nan, Nan);
+          end else activePlot.row[rowId].addSample(Nan, Nan);
         result := newBoolLiteral(true);
-        end
-      else if (sizeWithoutOptions = 1) and (params^.value(0)^.literalType in
-        [lt_intList, lt_realList, lt_numList]) then
+      end else if (sizeWithoutOptions = 1) and
+                  (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) then
         begin
         rowId := activePlot.addRow(options);
         X := P_listLiteral(params^.value(0));
@@ -1980,24 +1990,21 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           activePlot.row[rowId].addSample(i, fReal(X^.value(i)));
         result := newBoolLiteral(true);
         end
-      else if (sizeWithoutOptions = 2) and (params^.value(0)^.literalType in
-        [lt_intList, lt_realList, lt_numList]) and
-        (params^.value(1)^.literalType in [lt_intList, lt_realList, lt_numList]) then
-        begin
+      else if (sizeWithoutOptions = 2) and
+              (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) and
+              (params^.value(1)^.literalType in [lt_intList, lt_realList, lt_numList]) then begin
         rowId := activePlot.addRow(options);
         X := P_listLiteral(params^.value(0));
         Y := P_listLiteral(params^.value(1));
         iMax := Min(X^.size, Y^.size);
-        for i := 0 to iMax-1 do
-          activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
+        for i := 0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         result := newBoolLiteral(true);
-        end
-      else if (sizeWithoutOptions = 4) and
-        (params^.value(0)^.literalType = lt_expression) and
-        (params^.value(1)^.literalType in [lt_int, lt_real]) and
-        (params^.value(2)^.literalType in [lt_int, lt_real]) and
-        (params^.value(3)^.literalType = lt_int) then
-        begin
+      end else if (sizeWithoutOptions = 4) and
+                  (params^.value(0)^.literalType = lt_expression) and
+                  (params^.value(1)^.literalType in [lt_int, lt_real]) and
+                  (params^.value(2)^.literalType in [lt_int, lt_real]) and
+                  (params^.value(3)^.literalType = lt_int) then begin
+        if not(isValidExpression(params^.value(0))) then exit(nil);
         rowId := activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           nil,
@@ -2006,14 +2013,14 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           fReal(params^.value(2)),
           round(fReal(params^.value(3))));
         result := newBoolLiteral(true);
-        end
-      else if (sizeWithoutOptions = 5) and
-        (params^.value(0)^.literalType = lt_expression) and
-        (params^.value(1)^.literalType = lt_expression) and
-        (params^.value(2)^.literalType in [lt_int, lt_real]) and
-        (params^.value(3)^.literalType in [lt_int, lt_real]) and
-        (params^.value(4)^.literalType = lt_int) then
-        begin
+      end else if (sizeWithoutOptions = 5) and
+                  (params^.value(0)^.literalType = lt_expression) and
+                  (params^.value(1)^.literalType = lt_expression) and
+                  (params^.value(2)^.literalType in [lt_int, lt_real]) and
+                  (params^.value(3)^.literalType in [lt_int, lt_real]) and
+                  (params^.value(4)^.literalType = lt_int) then begin
+        if not(isValidExpression(params^.value(0))) then exit(nil);
+        if not(isValidExpression(params^.value(1))) then exit(nil);
         rowId := activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           P_expressionLiteral(params^.value(0)),
@@ -2022,16 +2029,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           fReal(params^.value(3)),
           round(fReal(params^.value(4))));
         result := newBoolLiteral(true);
-        end
-      else
-        result := newErrorLiteralRaising(
-          'Functions plot and addPlot cannot be applied to parameter list'+
-          params^.toParameterListString(true), tokenLocation);
-      end
-    else
-      result := newErrorLiteralRaising(
-        'Function plot and addPlot cannot be applied to empty parameter list',
-        tokenLocation);
+      end else result := newErrorLiteralRaising('Functions plot and addPlot cannot be applied to parameter list'+
+                                                params^.toParameterListString(true),
+                                                tokenLocation);
+    end else result := newErrorLiteralRaising('Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
   end;
 
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
@@ -2039,7 +2040,7 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation;
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (fileContents in this case) may only be called from the main thread',
+        'I/O functions (plot in this case) may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;
@@ -2191,7 +2192,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
-        'I/O functions (fileContents in this case) may only be called from the main thread',
+        'I/O functions (renderToFile in this case) may only be called from the main thread',
         tokenLocation);
       exit(nil);
       end;

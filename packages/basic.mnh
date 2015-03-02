@@ -8,6 +8,16 @@ sum([]):=0;
 //*Returns the sum of all elements in <code>L</code>
 sum(L:numericList)->each(n,L,+);
 
+//*The running sum of the empty list is <code>[]</code>
+runningSum([])->[];
+//*Returns the running sum of numeric list L (nested numeric lists are supported)
+runningSum(L)->(size(L)<10 ? each(i,[1..size(L)],each(s,head(L,i),+)) : runningSum_merge(runningSum(head(L,size(L) div 2)),runningSum(tail(L,size(L) div 2))));
+private safePlus(summand:list,list<>[])->each(l,list,l+summand);
+private safePlus(summand     ,list<>[])->summand+list;
+private runningSum_merge(L1,L2)->L1|safePlus(L1%(size(L1)-1),L2);
+
+
+
 //*The product of the empty list is <code>1</code>
 prod([]):=1;
 //*Returns the product of all elements in <code>L</code>
@@ -66,4 +76,3 @@ histogram(L<>[])          ->histogram(L,1);
 //*Returns a histogram of <code>L</code> with bin size of <code>h</code>
 histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
 private histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,flag?1:0)/size(L)/h]);
-

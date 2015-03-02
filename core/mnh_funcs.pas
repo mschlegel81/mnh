@@ -1144,22 +1144,32 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       i0:=i1;
     end;
 
-  VAR doubleQuoteString:boolean=true;
-      singleQuoteString:boolean=true;
-      escapeStringDelimiter:boolean=true;
-      curlyBracketsDelimitOneToken:boolean=true;
-      cStyleComments:boolean=true;
+  VAR doubleQuoteString:boolean=false;
+      singleQuoteString:boolean=false;
+      escapeStringDelimiter:boolean=false;
+      curlyBracketsDelimitOneToken:boolean=false;
+      cStyleComments:boolean=false;
 
   PROCEDURE setLanguage(name:string);
     begin
       if trim(UpperCase(name))='MNH' then begin
-
+        doubleQuoteString:=true;
+        singleQuoteString:=true;
+        escapeStringDelimiter:=true;
+        curlyBracketsDelimitOneToken:=true;
+        cStyleComments:=true;
       end else if trim(UpperCase(name))='JAVA' then begin
+        doubleQuoteString:=true;
+        singleQuoteString:=true;
+        escapeStringDelimiter:=true;
         curlyBracketsDelimitOneToken:=false;
+        cStyleComments:=true;
       end else if trim(UpperCase(name))='PASCAL' then begin
         doubleQuoteString:=false;
         escapeStringDelimiter:=false;
-      end else raiseError(el3_evalError,'tokenSplit expects one of the following as second parameter: MNH, Java, Pascal',tokenLocation);
+        curlyBracketsDelimitOneToken:=true;
+        cStyleComments:=true;
+      end;
     end;
 
   begin
@@ -1205,11 +1215,6 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       end;
 
     end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
-  end;
-
-FUNCTION false_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  begin
-    result:=newBoolLiteral(false);
   end;
 
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -1351,6 +1356,39 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else raiseNotApplicableError('splitFileName',params,tokenLocation);
   end;
 
+FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
+    VAR aid:P_listLiteral;
+    begin
+      aid:=newListLiteral;
+      aid^.append(newStringLiteral(el0),false);
+      aid^.append(                 el1 ,false);
+      P_listLiteral(result)^.append(aid,false);
+    end;
+
+  VAR t:double;
+      x:string;
+
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=9) then begin
+      result:=newListLiteral;
+      t:=Now;
+      appendPair(result,'time',newRealLiteral(t));
+      appendPair(result,'timeOfDay',newRealLiteral(frac(t)));
+      appendPair(result,'date_string',newStringLiteral(DateToStr(t)));
+      appendPair(result,'time_string',newStringLiteral(TimeToStr(t)));
+      DateTimeToString(x,'yyyy',t); appendPair(result,'year',       newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'mm',t);   appendPair(result,'month',      newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'dd',t);   appendPair(result,'day',        newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'dddd',t); appendPair(result,'day of week',newStringLiteral(x));
+      DateTimeToString(x,'h',t);    appendPair(result,'hour',       newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'n',t);    appendPair(result,'minute',     newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'s',t);    appendPair(result,'second',     newIntLiteral(StrToIntDef(x,0)));
+      DateTimeToString(x,'z',t);    appendPair(result,'millisecond',newIntLiteral(StrToIntDef(x,0)));
+    end else raiseNotApplicableError('systime',params,tokenLocation);
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
@@ -1413,13 +1451,14 @@ INITIALIZATION
   registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
-  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language');
+  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>Mnh, Pascal, Java<code>');
   registerRule('myPath'        ,@myPath_impl,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
   registerRule('isNan'         ,@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
   registerRule('isInfinite'    ,@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule('isInRange'     ,@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
   registerRule('splitFileName' ,@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
+  registerRule('systime'       ,@systime_imp,'sytime;#Returns the current time in various representations');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

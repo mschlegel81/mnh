@@ -198,30 +198,17 @@ FUNCTION T_token.toString:ansistring;
         result:=C_tokenString[tokType];
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
-      end;         tt_braceOpen    ,tt_braceClose    ,
-      tt_listBraceOpen,tt_listBraceClose,
-      tt_expBraceOpen ,tt_expBraceClose,
-      tt_separatorComma, tt_separatorCnt,
-      tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt,
-      tt_operatorAnd, tt_operatorOr, tt_operatorXor,
-      tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
-      tt_operatorStrConcat, tt_unaryOpMinus, tt_unaryOpPlus,
-      tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
-      tt_operatorConcat, tt_operatorIn,
-      tt_iifCheck, tt_iifElse,
-      tt_declare, tt_assign,
-      tt_typeCheckScalar,  tt_typeCheckList,
-      tt_typeCheckBoolean, tt_typeCheckBoolList,
-      tt_typeCheckInt,     tt_typeCheckIntList,
-      tt_typeCheckReal,    tt_typeCheckRealList,
-      tt_typeCheckString,  tt_typeCheckStringList,
-      tt_typeCheckNumeric, tt_typeCheckNumList,
-      tt_typeCheckExpression,tt_typeCheckNonemptyList,tt_typeCheckEmptyList: result:=C_tokenString[tokType];
-      tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_parameterIdentifier:result:=txt;
+      end;
+      tt_identifier,
+      tt_localUserRulePointer,
+      tt_importedUserRulePointer,
+      tt_intrinsicRulePointer,
+      tt_parameterIdentifier: result:=txt;
       tt_literal            : result:=P_literal(data)^.toString;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
+      else result:=C_tokenString[tokType];
     end;
   end;
 

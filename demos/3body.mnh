@@ -45,3 +45,5 @@ plotSeries(E,i,chunkSize)->size(E)>(i-1)*chunkSize ?
 
 
 main->plotSeries(evolve(initialSys,0.9e-2,120),1,10);
+
+plotSys(evolve(initialSys,0.9e-2,120));

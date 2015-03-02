@@ -1,0 +1,32 @@
+//*The running sum of the empty list is <code>[]</code>
+runningSum([])->[];
+//*Returns the running sum of numeric list L (nested numeric lists are supported)
+runningSum(L)->(size(L)<10 ? each(i,[1..size(L)],each(s,head(L,i),+)) : runningSum_merge(runningSum(head(L,size(L) div 2)),runningSum(tail(L,size(L) div 2))));
+private safePlus(summand:list,list<>[])->each(l,list,l+summand);
+private safePlus(summand     ,list<>[])->summand+list;
+private runningSum_merge(L1,L2)->L1|safePlus(L1%(size(L1)-1),L2);
+
+interlace(X,Y)->each(i,[0..size(X)-1],[X%i,Y%i]);
+kochCurve(depth)->kochCurve(depth,1,0);
+private kochCurve(depth>=0,LX,LY)->kochCurve(depth-1,
+  (LX*0.333)|(LX*0.167-LY*0.288)|(LX*0.167+LY*0.288)|(LX*0.333),
+  (LY*0.333)|(LY*0.167+LX*0.288)|(LY*0.167-LX*0.288)|(LY*0.333));
+private kochCurve(depth,LX,LY)->interlace(runningSum(LX),runningSum(LY));
+
+private main_impl(filename:string,xRes:int,yRes:int)->
+  setPlotAutoscale([true,true]) and
+  setPlotLogscale([false,false]) and
+  setPlotPreserveAspect(true) and
+  setPlotAxisStyle([1,1]) and
+  plot(kochCurve(7),"0.5") and
+  renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
+
+//*Plots a Koch Curve to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
+main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));
+//*Plots a Koch Curve to file <code>filename</code> using a custom resolution
+main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,softCast(yRes));
+//*Plots a Koch Curve to file <code>filename</code> using a resolution of 1366x768
+main(filename           )->main_impl(filename                        ,1366,768);
+//*Plots a Koch Curve using the package path and a resolution of 1366x768
+main                     ->main_impl(replace(myPath&"#","mnh#","png"),1366,768);
+

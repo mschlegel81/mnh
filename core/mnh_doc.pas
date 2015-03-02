@@ -24,6 +24,7 @@ TYPE
     DESTRUCTOR Destroy;
     PROCEDURE addSubRule(privateSubrule: boolean; pat, comment: ansistring);
     FUNCTION toHtml: ansistring;
+    FUNCTION printHelpText(sourceName:ansistring):boolean;
   end;
 
   P_userPackageDocumentation = ^T_userPackageDocumentation;
@@ -49,9 +50,11 @@ TYPE
     PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isPure, isPrivate: boolean);
     FUNCTION getHref: ansistring;
     FUNCTION isExecutable: boolean;
+    PROCEDURE printHelpText;
   end;
 
 PROCEDURE writeUserPackageDocumentations;
+PROCEDURE writeUserPackageHelpText;
 PROCEDURE documentBuiltIns;
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
@@ -227,6 +230,12 @@ FUNCTION T_userPackageDocumentation.isExecutable: boolean;
     for i := 0 to length(rules)-1 do if rules [i].id = 'main' then exit(true);
   end;
 
+PROCEDURE T_userPackageDocumentation.printHelpText;
+  VAR i:longint;
+  begin
+    for i:=0 to length(rules)-1 do rules[i].printHelpText(uid);
+  end;
+
 { T_userFunctionDocumentation }
 
 CONSTRUCTOR T_userFunctionDocumentation.Create(ruleId: ansistring);
@@ -258,13 +267,35 @@ FUNCTION T_userFunctionDocumentation.toHtml: ansistring;
     if isPure then result := result+' (pure)</div>';
 
     result := result+'</td></tr>';
-    for i := 0 to length(subrules)-1 do with subrules [i] do if not(isPrivate) then
-          begin
-          result := result+'<tr><td>';
-          if comment<>'' then result := result+'<i>'+comment+'</i><br>';
-          result := result+'<code>'+id+pattern+'</code></td></tr>';
-          end;
+    for i := 0 to length(subrules)-1 do with subrules [i] do if not(isPrivate) then begin
+      result := result+'<tr><td>';
+      if comment<>'' then result := result+'<i>'+comment+'</i><br>';
+      result := result+'<code>'+id+pattern+'</code></td></tr>';
+    end;
     result := result+'</table>';
+  end;
+
+FUNCTION T_userFunctionDocumentation.printHelpText(sourceName:ansistring):boolean;
+  FUNCTION noHtml(s:string):string;
+    FUNCTION removeTag(s:string; tag:string):string;
+      begin result:=replaceAll(replaceAll(s,'<'+tag+'>',''),'</'+tag+'>',''); end;
+    begin
+      result:=removeTag(s,'code');
+      result:=removeTag(result,'i');
+      result:=removeTag(result,'b');
+      result:=removeTag(result,'u');
+      result:=replaceAll(result,'</a>','');
+      result:=replaceAll(result,'<a href="','');
+      result:=replaceAll(result,'">',' ');
+    end;
+  VAR i:longint;
+  begin
+    if id<>'main' then exit(false);
+    writeln('main functions in ',sourceName);
+    for i:=0 to length(subrules)-1 do with subrules[i] do begin
+      if comment<>'' then writeln('  ',noHtml(comment),':');
+      writeln('    ',id,pattern);
+    end;
   end;
 
 CONSTRUCTOR T_intrinsicFunctionDocumentation.Create(CONST funcName: ansistring);
@@ -282,6 +313,17 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.Destroy;
 FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
   begin
     result := '<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
+  end;
+
+PROCEDURE writeUserPackageHelpText;
+  VAR i:longint;
+  begin
+    writeln;
+    for i:=0 to length(packages)-1 do begin
+      packages[i]^.printHelpText;
+      dispose(packages[i],destroy);
+    end;
+    setLength(packages,0);
   end;
 
 PROCEDURE writeUserPackageDocumentations;
