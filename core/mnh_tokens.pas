@@ -46,10 +46,10 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
 {$undef include_interface}
 IMPLEMENTATION
 {$define include_implementation}
-{$include mnh_tokens_token}
-{$include mnh_tokens_pattern}
-{$include mnh_tokens_subrule}
-{$include mnh_tokens_rule}
+{$include mnh_tokens_token.inc}
+{$include mnh_tokens_pattern.inc}
+{$include mnh_tokens_subrule.inc}
+{$include mnh_tokens_rule.inc}
 VAR packages:array of P_package;
 FUNCTION isReloadOfAllPackagesIndicated:boolean;
   VAR i:longint;
@@ -256,7 +256,6 @@ PROCEDURE T_package.load;
           ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
       begin
-        {$WARNING TODO reject qualified IDs}
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;

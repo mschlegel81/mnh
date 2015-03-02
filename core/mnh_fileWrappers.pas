@@ -92,25 +92,30 @@ FUNCTION locateSource(CONST id:ansistring):P_fileWrapper;
       if uppercase(extractFileExt(fname))=sourceExt then begin
         result:=extractFileName(fname);
         result:=copy(result,1,length(result)-length(sourceExt));
-      end else result:=#13;
+      end else result:='';
     end;
 
   PROCEDURE recursePath(CONST path:ansistring);
     VAR info   :TSearchRec;
     begin
+      writeln('searching in path ',path);
       if findFirst(path+'*',faAnyFile,info)=0 then repeat        
         if (info.attr and faDirectory)=faDirectory then begin
-          if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
-        end else if nameToId(info.name)=id then begin
+          if (info.name<>'.') and (info.name<>'..')
+          then recursePath(path+info.name+DirectorySeparator);
+        end else if nameToId(info.name)=id then
           new(result,create(path+info.name));
-        end;
       until (findNext(info)<>0) or (result<>nil);
       sysutils.findClose(info);
     end;
+
   VAR i:longint;
   begin
     result:=nil;
-    for i:=0 to length(sourceScanPath)-1 do if result=nil then recursePath(sourceScanPath[i]);
+    for i:=0 to length(sourceScanPath)-1 do
+    if result=nil then recursePath(sourceScanPath[i]);
+    if result=nil then writeln('search failed')
+                  else writeln('search completed');
   end;
   
 CONSTRUCTOR T_codeProvider.forSakeOfCompleteness;  begin end;

@@ -673,7 +673,7 @@ PROCEDURE reduceExpression(VAR first:P_token);
     setLength(stack,0);
     repeat
       didSubstitution:=false;
-      //writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
+      // writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
           tt_set: stack_popLink;

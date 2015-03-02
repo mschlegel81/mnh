@@ -190,7 +190,8 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
   VAR t:P_token;
       i:longint;
   begin
-    if (param=nil) and (length(pattern.sig)=0) or  pattern.matches(param^) then begin
+    if (param= nil) and pattern.matchesNilPattern or
+       (param<>nil) and pattern.matches(param^) then begin
       with expression[0] do if parIdx>=0 then begin
         firstRep:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
         param^.value(parIdx)^.rereference;

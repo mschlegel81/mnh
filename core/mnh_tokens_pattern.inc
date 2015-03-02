@@ -19,6 +19,7 @@
     FUNCTION indexOfId(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
     FUNCTION matches(VAR par:T_listLiteral):boolean;
+    FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
   end;
@@ -111,12 +112,16 @@ PROCEDURE T_pattern.finalizeRefs;
         then sig[i].restrictionIdx:=j;
   end;
 
+FUNCTION T_pattern.matchesNilPattern:boolean;
+  begin
+    result:=(length(sig)=0);
+  end;
+  
 FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
   VAR i:longint;
       L:P_literal;
   begin
     //writeln('trying to match ',toString,' with ',par.toParameterListString(true));
-
     if (par.size<>length(sig)) then exit(false);
     for i:=0 to length(sig)-1 do begin
       //writeln('trying to match parameter #',i,' index=',sig[i].restrictionIdx);

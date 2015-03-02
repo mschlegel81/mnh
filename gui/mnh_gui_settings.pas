@@ -8,6 +8,8 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, EditBtn, myFiles;
 
+CONST default_notepad_path='c:\Program Files (x86)\Notepad++\notepad++.exe';
+
 type
 
   { TSettingsForm }
@@ -34,6 +36,9 @@ type
     PROCEDURE setFontSize(value:longint);
   public
     { public declarations }
+    mainForm:record
+      top,left,width,height:longint;
+    end;
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName:string;
   end;
@@ -64,14 +69,41 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       editorFontname:=ff.readAnsiString;
       EditorFontDialog.Font.Name:=editorFontname;
 
-      FontButton.Font.Name:=editorFontname;
-      FontButton.Font.Size:=getFontSize;
-      FontButton.Caption:=editorFontname;
-
       AntialiasCheckbox.Checked:=ff.readBoolean;
-
+      with mainForm do begin
+        top   :=ff.readLongint;
+        left  :=ff.readLongint;
+        width :=ff.readLongint;
+        height:=ff.readLongint;
+      end;
       ff.destroy;
+    end else begin
+      if FileExists(default_notepad_path) then NotepadFileNameEdit.Filename:=default_notepad_path;
+      editorFontname:='Courier New';
+      fontSize:=11;
+      with mainForm do begin
+        top   :=0;
+        left  :=0;
+        width :=480;
+        height:=480;
+      end;
     end;
+    FontButton.Font.Name:=editorFontname;
+    FontButton.Font.Size:=getFontSize;
+    FontButton.Caption:=editorFontname;
+    with mainForm do begin
+      if top<0 then top:=0;
+      if left<0 then left:=0;
+      if height>Screen.Height-top then height:=screen.Height-top;
+      if width>screen.Width-left then width:=screen.Width-left;
+      if (height<0) or (width<0) then begin
+        top   :=0;
+        left  :=0;
+        width :=480;
+        height:=480;
+      end;
+    end;
+
   end;
 
 procedure TSettingsForm.FontButtonClick(Sender: TObject);
@@ -94,10 +126,17 @@ procedure TSettingsForm.FormDestroy(Sender: TObject);
     ff.writeAnsiString(NotepadFileNameEdit.FileName);
 
     ff.writeLongint(getFontSize);
-    ff.writeAnsiString(EditorFontDialog.Font.Name);
+    ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
+    with mainForm do begin
+      ff.writeLongint(top);
+      ff.writeLongint(left);
+      ff.writeLongint(width);
+      ff.writeLongint(height);
+    end;
     ff.destroy;
+    writeln('TSettingsForm.FormDestroy done');
   end;
 
 function TSettingsForm.getFontSize: longint;

@@ -8,7 +8,10 @@ object MnhForm: TMnhForm
   ClientWidth = 320
   Color = clWhite
   Menu = MainMenu1
+  OnChangeBounds = FormResize
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnResize = FormResize
   OnShow = FormShow
   LCLVersion = '1.2.2.0'
   inline InputEdit: TSynEdit
@@ -482,6 +485,7 @@ object MnhForm: TMnhForm
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     LineHighlightColor.FrameEdges = sfeAround
+    WantTabs = False
     OnChange = InputEditChange
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
@@ -536,15 +540,15 @@ object MnhForm: TMnhForm
     Cursor = crVSplit
     Left = 0
     Height = 5
-    Top = 150
+    Top = 175
     Width = 320
     Align = alTop
     ResizeAnchor = akTop
   end
   inline OutputEdit: TSynEdit
     Left = 0
-    Height = 70
-    Top = 155
+    Height = 45
+    Top = 180
     Width = 320
     Align = alClient
     Font.Height = -13
@@ -986,6 +990,7 @@ object MnhForm: TMnhForm
       'OutputEdit'
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
+    ReadOnly = True
     ScrollBars = ssAutoBoth
     SelectedColor.FrameEdges = sfeAround
     SelectedColor.BackPriority = 50
@@ -1012,6 +1017,7 @@ object MnhForm: TMnhForm
     LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     LineHighlightColor.FrameEdges = sfeAround
+    WantTabs = False
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterLineNumber1: TSynGutterLineNumber
         Width = 17
@@ -1039,6 +1045,17 @@ object MnhForm: TMnhForm
     Top = 330
     Width = 320
     Panels = <>
+  end
+  object haltEvaluationButton: TButton
+    Left = 0
+    Height = 25
+    Top = 150
+    Width = 320
+    Align = alTop
+    Caption = 'halt evaluation'
+    OnClick = haltEvaluationButtonClick
+    TabOrder = 5
+    Visible = False
   end
   object MainMenu1: TMainMenu
     left = 82
