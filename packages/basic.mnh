@@ -1,0 +1,11 @@
+
+//basic aggregators
+sum([])->0;
+sum(L:list)->each(el,L,+);
+
+prod([])->1;
+prod(L:list)->each(el,L,*);
+
+join([])->"";
+join(L:list)->each(el,flatten(L),&);
+

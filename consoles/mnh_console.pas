@@ -1,5 +1,5 @@
 PROGRAM mnh_console;
-USES mnh_tokens, mnh_out_adapters, mnh_constants, fileWrappers,sysutils;
+USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils;
 VAR input_adapter:P_directInputWrapper;
     nextInput:ansistring;
     
@@ -58,6 +58,7 @@ PROCEDURE fileMode;
     for i:=1 to paramCount do begin
       time:=now;
       initMainPackage(paramStr(i));
+      reloadMainPackage;
       writeln('time: ',(now-time)*24*60*60:0:3,'sec');
       clearAllPackages;
     end;

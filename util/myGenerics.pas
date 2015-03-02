@@ -3,7 +3,7 @@ UNIT myGenerics;
 {mode objfpc}{H+}
 
 interface
-USES math,sysutils,myFiles;
+USES math,sysutils;
 TYPE
   GENERIC G_list<ENTRY_TYPE>=object
     TYPE ENTRY_TYPE_ARRAY=array of ENTRY_TYPE;
@@ -49,14 +49,14 @@ TYPE
       FUNCTION getIndex(CONST iterator:longint):longint;
   end;
   
-  T_arrayOfString=array of string;
+  T_arrayOfString=array of ansistring;
 
   { G_stringIndexedMap }
   GENERIC G_stringKeyMap<VALUE_TYPE>=object
     TYPE VALUE_TYPE_ARRAY=array of VALUE_TYPE;
          KEY_VALUE_PAIR=record
            hash:longint;
-           key:string;
+           key:ansistring;
            value:VALUE_TYPE;
          end;
     private VAR
@@ -69,60 +69,18 @@ TYPE
       CONSTRUCTOR create(rebalanceFactor:double);
       CONSTRUCTOR create();
       DESTRUCTOR destroy;
-      FUNCTION containsKey(CONST key:string; OUT value:VALUE_TYPE):boolean;
-      FUNCTION get(CONST key:string):VALUE_TYPE;
-      PROCEDURE put(CONST key:string; CONST value:VALUE_TYPE);
-      PROCEDURE dropKey(CONST key:string);
+      FUNCTION containsKey(CONST key:ansistring; OUT value:VALUE_TYPE):boolean;
+      FUNCTION get(CONST key:ansistring):VALUE_TYPE;
+      PROCEDURE put(CONST key:ansistring; CONST value:VALUE_TYPE);
+      PROCEDURE dropKey(CONST key:ansistring);
       PROCEDURE clear;
       FUNCTION keySet:T_arrayOfString;
       FUNCTION valueSet:VALUE_TYPE_ARRAY;
       FUNCTION size:longint;
+      FUNCTION dropAny:VALUE_TYPE;
   end;
 
-  T_listOfString=specialize G_list<string>;  
-  
-  //CONSTRUCTOR G_hashMap.create(hashFunc:HASH_FUNC; rebalanceFactor:double);
-  //CONSTRUCTOR G_hashMap.create(hashFunc:HASH_FUNC);
-  //PROCEDURE G_hashMap.rehash(grow:boolean);
-  //DESTRUCTOR G_hashMap.destroy;
-  //FUNCTION G_hashMap.containsKey(key:KEY_TYPE; OUT value:VALUE_TYPE):boolean;
-  //PROCEDURE G_hashMap.put(key:KEY_TYPE; value:VALUE_TYPE);
-  //PROCEDURE G_hashMap.dropKey(key:KEY_TYPE);
-  //PROCEDURE G_hashMap.clear;
-  //FUNCTION G_hashMap.keySet:KEY_TYPE_ARRAY;
-  //FUNCTION G_hashMap.valueSet:VALUE_TYPE_ARRAY;
-  //FUNCTION G_hashMap.size:longint;
-  
-
-  { T_indexSet }
-
-  T_indexSet=object(T_serializable)
-    private
-      mask:array of byte;
-      PROCEDURE setEntry(index:longint; value:boolean);
-      FUNCTION  getEntry(index:longint):boolean;
-    public
-      CONSTRUCTOR create;
-      DESTRUCTOR destroy;
-      PROPERTY entry[index:longint]:boolean read getEntry write setEntry; default;
-      FUNCTION maxEntryIndex:longint;
-      FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
-      PROCEDURE saveToFile(VAR F:T_File);           virtual; overload; //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
-      FUNCTION extractFrom(VAR s:T_arrayOfString):T_arrayOfString;
-      FUNCTION equals(CONST s:T_indexSet):boolean;
-      FUNCTION lesser(CONST s:T_indexSet):boolean;
-  end;
-  
-  P_setOfPointers=^T_setOfPointers;
-  T_setOfPointers=object
-    dat:array of array of pointer;
-    hashMask:longint;
-    
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    FUNCTION contains(CONST p:pointer):boolean;
-    PROCEDURE put(CONST p:pointer);
-  end;
+  T_listOfString=specialize G_list<ansistring>;  
   
 
   
@@ -136,6 +94,7 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
     {$Q-}
     result:=length(x);
     for i:=1 to length(x) do result:=result*31+ord(x[i]);
+    {$Q+}
   end;
 
 CONSTRUCTOR G_list.create;
@@ -583,104 +542,6 @@ FUNCTION G_sparseArray.getEntry(CONST iterator:longint):ENTRY_TYPE;
                        else result:=map[0,0].value;
   end;  
 
-PROCEDURE T_indexSet.setEntry(index:longint; value:boolean);
-  VAR i,j:longint;
-      m:byte;
-  begin
-    if index>=0 then begin
-      i:=index shr 3;
-      m:=1 shl (index and 7);
-      if value then begin
-        if i>=length(mask) then begin
-          j:=length(mask);
-          setLength(mask,i+1);
-          while j<length(mask) do begin
-            mask[j]:=0;
-            inc(j);
-          end;
-        end;
-        mask[i]:=mask[i] or m;
-      end else begin
-        if i<length(mask) then mask[i]:=mask[i] and not(m);
-        if (i=length(mask)-1) and (mask[i]=0) then setLength(mask,length(mask)-1);
-      end;
-    end;
-  end;
-
-FUNCTION  T_indexSet.getEntry(index:longint):boolean;
-  VAR i:longint;
-      m:byte;
-  begin
-    i:=index shr 3;
-    m:=1 shl (index and 7);
-    result:=(i<length(mask)) and (mask[i] and m>0);
-  end;
-
-CONSTRUCTOR T_indexSet.create;
-  begin
-    setLength(mask,0);
-  end;
-
-DESTRUCTOR T_indexSet.destroy;
-  begin
-    setLength(mask,0);
-  end;
-
-FUNCTION T_indexSet.maxEntryIndex:longint;
-  begin
-    result:=length(mask) shl 3-1;
-  end;
-
-FUNCTION  T_indexSet.loadFromFile(VAR F:T_File):boolean;
-  VAR i,len:longint;
-  begin
-    len:=f.readLongint;
-    if len<0 then exit(false);
-    setLength(mask,len);
-    for i:=0 to len-1 do mask[i]:=f.readByte;
-    result:=true;
-  end;
-
-PROCEDURE T_indexSet.saveToFile(VAR F:T_File);
-  VAR i:longint;
-  begin
-    f.writelongint(length(mask));
-    for i:=0 to length(mask)-1 do f.writeByte(mask[i]);
-  end;
-
-FUNCTION T_indexSet.extractFrom(VAR s:T_arrayOfString):T_arrayOfString;
-  VAR i,iMax:longint;
-  begin
-    iMax:=maxEntryIndex;
-    if length(s)<=iMax then iMax:=length(s)-1;
-    setLength(result,0);
-    for i:=0 to iMax do if getEntry(i) then begin
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=s[i];
-    end;
-  end;
-
-FUNCTION T_indexSet.equals(const s: T_indexSet): boolean;
-  VAR i:longint;
-  begin
-    result:=length(mask)=length(s.mask);
-    i:=0;
-    while result and (i<length(mask)) do begin
-      result:=result and (mask[i]=s.mask[i]);
-      inc(i);
-    end;
-  end;
-
-FUNCTION T_indexSet.lesser(const s: T_indexSet): boolean;
-  VAR i:longint;
-  begin
-    for i:=0 to min(length(mask),length(s.mask))-1 do begin
-      if      mask[i]<s.mask[i] then exit(true)
-      else if mask[i]>s.mask[i] then exit(false);
-    end;
-    result:= length(s.mask)>length(mask);
-  end;
-
 PROCEDURE G_stringKeyMap.rehash(grow: boolean);
   VAR i,i0,j,k,c0,c1,newMask:longint;
       temp:array of KEY_VALUE_PAIR;
@@ -720,17 +581,24 @@ PROCEDURE G_stringKeyMap.rehash(grow: boolean);
   end;
 
 CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
-begin
-  setLength(bucket,1);
-  bitMask:=0;
-  rebalanceFac:=rebalanceFactor;
-  entryCount:=0;
-end;
+  begin
+    rebalanceFac:=rebalanceFactor;
+    clear;
+  end;
+
+PROCEDURE G_stringKeyMap.clear;
+  VAR i:longint;
+  begin
+    for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
+    setLength(bucket,1);
+    bitMask:=0;
+    entryCount:=0;
+  end;
 
 CONSTRUCTOR G_stringKeyMap.create();
-begin
-  create(4);
-end;
+  begin
+    create(4);
+  end;
 
 DESTRUCTOR G_stringKeyMap.destroy;
   VAR i:longint;
@@ -739,7 +607,7 @@ DESTRUCTOR G_stringKeyMap.destroy;
     setLength(bucket,0);
   end;
 
-FUNCTION G_stringKeyMap.containsKey(CONST key: string; out value: VALUE_TYPE): boolean;
+FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;
   VAR i,j:longint;
   begin
     i:=hashOfAnsiString(key) and bitMask;
@@ -751,12 +619,12 @@ FUNCTION G_stringKeyMap.containsKey(CONST key: string; out value: VALUE_TYPE): b
     end else result:=false;
   end;
 
-FUNCTION G_stringKeyMap.get(CONST key: string): VALUE_TYPE;
+FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
   begin
     containsKey(key,result);
   end;
 
-PROCEDURE G_stringKeyMap.put(CONST key: string; CONST value: VALUE_TYPE);
+PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
   VAR i,j,h:longint;
   begin
     h:=hashOfAnsiString(key);
@@ -775,7 +643,7 @@ PROCEDURE G_stringKeyMap.put(CONST key: string; CONST value: VALUE_TYPE);
     end;
   end;
 
-PROCEDURE G_stringKeyMap.dropKey(CONST key: string);
+PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
   VAR i,j:longint;
   begin
     i:=hashOfAnsiString(key) and bitMask;
@@ -791,14 +659,20 @@ PROCEDURE G_stringKeyMap.dropKey(CONST key: string);
       if entryCount<0.4*length(bucket)*rebalanceFac then rehash(false);
     end;
   end;
-
-PROCEDURE G_stringKeyMap.clear;
-  VAR i:longint;
+  
+FUNCTION G_stringKeyMap.dropAny:VALUE_TYPE;
+  VAR i,j:longint;
   begin
-    for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
-    setLength(bucket,1);
-    bitMask:=0;
-    entryCount:=0;
+    for i:=0 to length(bucket)-1 do begin
+      j:=length(bucket[i]);
+      if j>0 then begin
+        dec(j);
+        result:=bucket[i][j].value;
+        setLength(bucket[i],j);
+        dec(entryCount);
+        exit(result);
+      end;
+    end;
   end;
 
 FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
@@ -829,59 +703,6 @@ FUNCTION G_stringKeyMap.size: longint;
   begin
     result:=entryCount;
   end;
-    
-CONSTRUCTOR T_setOfPointers.create;
-  begin
-    setLength(dat,1);
-    setLength(dat[0],0);
-    hashMask:=0;
-  end;
-
-DESTRUCTOR T_setOfPointers.destroy;
-  VAR i:longint;
-  begin
-    for i:=0 to length(dat)-1 do setLength(dat[i],0);
-    setLength(dat,0);
-    hashMask:=-1;
-  end;
-
-FUNCTION T_setOfPointers.contains(CONST p:pointer):boolean;
-  VAR i,j:longint;
-  begin
-    i:=qword(p) and hashMask;
-    for j:=0 to length(dat[i])-1 do if dat[i,j]=p then exit(true);
-    result:=false;
-  end;
-
-PROCEDURE T_setOfPointers.put(CONST p:pointer);
-  VAR h,i,j,k,l,oldLen:longint;
-  begin
-    i:=qword(p) and hashMask;
-    for j:=0 to length(dat[i])-1 do if dat[i,j]=p then exit;
-    j:=length(dat[i]);
-    setLength(dat[i],j+1);
-    dat[i,j]:=p;    
-    if (length(dat[i])>32) and (length(dat)<200000) then begin
-      oldLen:=length(dat);
-      setLength(dat,oldLen+oldLen);
-      hashMask:=oldLen+oldLen-1;
-      for i:=0 to oldLen-1 do begin
-        k:=0;
-        for j:=0 to length(dat[i])-1 do begin
-          h:=longint(dat[i,j]) and hashMask;
-          if h=i then begin
-            dat[i,k]:=dat[i,j];
-            inc(k);
-          end else begin
-            l:=length(dat[h]);
-            setLength(dat[h],l+1);
-            dat[h,l]:=dat[i,j];
-          end;
-        end;
-        setLength(dat[i],k);
-      end;      
-    end;  
-  end;
-  
+      
 end.
 

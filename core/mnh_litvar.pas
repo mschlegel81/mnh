@@ -1,10 +1,10 @@
 UNIT mnh_litvar;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil;  
+USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil;
 {$define literalRecycling}
-CONST 
+CONST
   C_boolText:array[false..true] of string=('false','true');
-  
+
 TYPE
   T_tokenLocation=record
     package:pointer;
@@ -22,19 +22,19 @@ TYPE
       PROCEDURE rereference;
       FUNCTION unreference:longint;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
   end;
-  
+
   P_scalarLiteral=^T_scalarLiteral;
   T_scalarLiteral=object(T_literal)
     FUNCTION literalType:T_literalType; virtual;
-    FUNCTION toString:ansistring;  virtual; 
+    FUNCTION toString:ansistring;  virtual;
     FUNCTION stringForm:ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-    FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;     
-    FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;    
-  end;  
+    FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+    FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
+    FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
+  end;
 
   P_boolLiteral=^T_boolLiteral;
   T_boolLiteral=object(T_scalarLiteral)
@@ -42,16 +42,16 @@ TYPE
       val:boolean;
     public
       CONSTRUCTOR create(CONST value:boolean);
-      DESTRUCTOR destroy; virtual;     
+      DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION stringForm:ansistring; virtual;
-      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual; 
+      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
       FUNCTION value:boolean;
-      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
+      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
   end;
-  
+
   P_intLiteral=^T_intLiteral;
   T_intLiteral=object(T_scalarLiteral)
     private
@@ -60,12 +60,12 @@ TYPE
       CONSTRUCTOR create(CONST value:int64);
       DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION stringForm:ansistring; virtual;
-      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual; 
+      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
       FUNCTION value:int64;
-      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
+      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
   end;
 
   P_realLiteral=^T_realLiteral;
@@ -74,14 +74,14 @@ TYPE
       val:extended;
     public
       CONSTRUCTOR create(CONST value:extended);
-      DESTRUCTOR destroy; virtual;   
+      DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION stringForm:ansistring; virtual;
-      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual; 
+      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
       FUNCTION value:extended;
-      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
+      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
   end;
 
   P_stringLiteral=^T_stringLiteral;
@@ -90,12 +90,12 @@ TYPE
       val:ansistring;
     public
       CONSTRUCTOR create(CONST value:ansistring);
-      DESTRUCTOR destroy; virtual;   
+      DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION stringForm:ansistring; virtual;
-      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual; 
+      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
       FUNCTION value:ansistring;
       FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
       FUNCTION softCast:P_scalarLiteral;
@@ -103,23 +103,23 @@ TYPE
       FUNCTION upper:P_stringLiteral;
       FUNCTION lower:P_stringLiteral;
   end;
-  
+
   P_expressionLiteral=^T_expressionLiteral;
   T_expressionLiteral=object(T_scalarLiteral)
     private
       val:pointer;
     public
       CONSTRUCTOR create(CONST value:pointer);
-      DESTRUCTOR destroy; virtual;    
+      DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION stringForm:ansistring; virtual;
-      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual; 
-      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual; 
+      FUNCTION isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;  virtual;
+      FUNCTION operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; virtual;
       FUNCTION value:pointer;
-      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
+      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
   end;
-  
+
   P_listLiteral=^T_listLiteral;
   T_listLiteral=object(T_literal)
     private
@@ -131,33 +131,33 @@ TYPE
       PROCEDURE destroyChildren;
       DESTRUCTOR destroy; virtual;
       FUNCTION literalType:T_literalType; virtual;
-      FUNCTION toString:ansistring;  virtual; 
+      FUNCTION toString:ansistring;  virtual;
       FUNCTION toParameterListString(CONST isFinalized:boolean):ansistring;
       PROCEDURE append(CONST L:P_literal; CONST incRefs:boolean);
-      PROCEDURE appendAll(CONST L:P_listLiteral);      
+      PROCEDURE appendAll(CONST L:P_listLiteral);
       PROCEDURE appendConstructing(CONST L:P_literal; CONST tokenLocation:T_tokenLocation);
       PROCEDURE setRangeAppend;
       FUNCTION size:longint;
       FUNCTION value(index:longint):P_literal;
-      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;          
+      FUNCTION negate(CONST minusLocation:T_tokenLocation):P_literal; virtual;
       PROCEDURE sort;
       FUNCTION sortPerm:P_listLiteral;
-      
+
   end;
-  
+
 TYPE
   T_disposeSubruleCallback =PROCEDURE(VAR p:pointer);
   T_pointerToStringCallback=FUNCTION(CONST p:pointer):string;
   T_subruleApplyOpCallback =FUNCTION(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):pointer;
-  
-  
-VAR 
+
+
+VAR
   disposeSubruleCallback :T_disposeSubruleCallback;
   subruleToStringCallback:T_pointerToStringCallback;
   subruleApplyOpCallback :T_subruleApplyOpCallback;
   packagePointerToSourceNameCallback:T_pointerToStringCallback;
-  
-OPERATOR :=(x:T_tokenLocation):string;
+
+OPERATOR :=(x:T_tokenLocation):ansistring;
 
 PROCEDURE disposeLiteral     (VAR l:P_literal);
 FUNCTION newBoolLiteral      (CONST value:boolean   ):P_boolLiteral;
@@ -172,7 +172,7 @@ FUNCTION newErrorLiteralRaising(CONST x,y:T_literalType; CONST op:T_tokenType; C
 FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 FUNCTION parseNumber(CONST input:ansistring; OUT parsedLength:longint):P_scalarLiteral;
 IMPLEMENTATION
-OPERATOR :=(x:T_tokenLocation):string;
+OPERATOR :=(x:T_tokenLocation):ansistring;
   begin
     if x.package=nil then result:='unknown location'
     else result:=packagePointerToSourceNameCallback(x.package)
@@ -201,43 +201,51 @@ VAR boolLit:array[false..true] of T_boolLiteral;
       fill:longint;
     end;
     {$endif}
-    
+
 PROCEDURE disposeLiteral(VAR l:P_literal); inline;
   begin
     if l^.unreference<=0 then begin
     {$ifdef literalRecycling} case l^.literalType of
-      lt_int:                    with intLitRecycling do if fill>=length(dat) 
-                                 then dispose(l,destroy)
-                                 else begin
-                                   dat[fill]:=P_intLiteral(l);
-                                   inc(fill);
-                                 end;
-      lt_real:                   with realLitRecycling do if fill>=length(dat) 
-                                 then dispose(l,destroy)
-                                 else begin
-                                   dat[fill]:=P_realLiteral(l);
-                                   inc(fill);
-                                 end;
-      lt_string:                 with stringLitRecycling do if fill>=length(dat) 
-                                 then dispose(l,destroy)
-                                 else begin
-                                   dat[fill]:=P_stringLiteral(l);
-                                   dat[fill]^.val:='';
-                                   inc(fill);
-                                 end;
-      lt_list..lt_listWithError: with listLitRecycling do if fill>=length(dat) 
-                                 then dispose(l,destroy)
-                                 else begin
-                                   P_listLiteral(l)^.destroyChildren;
-                                   dat[fill]:=P_listLiteral(l);
-                                   inc(fill);
-                                 end;
+      lt_int:
+        with intLitRecycling do
+        if fill>=length(dat)
+        then dispose(l,destroy)
+        else begin
+          dat[fill]:=P_intLiteral(l);
+          inc(fill);
+        end;
+      lt_real:
+        with realLitRecycling do
+        if fill>=length(dat)
+        then dispose(l,destroy)
+        else begin
+          dat[fill]:=P_realLiteral(l);
+          inc(fill);
+        end;
+      lt_string:
+        with stringLitRecycling do
+        if fill>=length(dat)
+        then dispose(l,destroy)
+        else begin
+          dat[fill]:=P_stringLiteral(l);
+          dat[fill]^.val:='';
+          inc(fill);
+        end;
+      lt_list..lt_listWithError:
+        with listLitRecycling do
+        if fill>=length(dat)
+        then dispose(l,destroy)
+        else begin
+          P_listLiteral(l)^.destroyChildren;
+          dat[fill]:=P_listLiteral(l);
+          inc(fill);
+        end;
       else dispose(l,destroy);
       end; //case
     {$else}
     dispose(l,destroy);
-    {$endif} 
-    end;    
+    {$endif}
+    end;
     l:=nil;
   end;
 
@@ -253,6 +261,7 @@ FUNCTION newIntLiteral(CONST value:int64     ):P_intLiteral; inline;
       if intLit[value]=nil then new(intLit[value],create(value));
       result:=intLit[value];
       result^.rereference;
+      isMemoryFree('allocating new integer literal');
     end else begin
       {$ifdef literalRecycling}
       with intLitRecycling do if fill>0 then begin
@@ -260,13 +269,15 @@ FUNCTION newIntLiteral(CONST value:int64     ):P_intLiteral; inline;
         result:=dat[fill];
         result^.val:=value;
         result^.rereference;
-      end else 
+      end else
       {$endif}
-      new(result,create(value));
+      begin
+        new(result,create(value));
+        isMemoryFree('allocating new integer literal');
+      end;
     end;
-    isMemoryFree('allocating new integer literal');
   end;
-  
+
 FUNCTION newRealLiteral(CONST value:extended  ):P_realLiteral; inline;
   begin
     {$ifdef literalRecycling}
@@ -275,12 +286,14 @@ FUNCTION newRealLiteral(CONST value:extended  ):P_realLiteral; inline;
       result:=dat[fill];
       result^.val:=value;
       result^.rereference;
-    end else 
+    end else
     {$endif}
-    new(result,create(value));
-    isMemoryFree('allocating new real literal');
+    begin
+      new(result,create(value));
+      isMemoryFree('allocating new real literal');
+    end;
   end;
-  
+
 FUNCTION newStringLiteral    (CONST value:ansistring):P_stringLiteral; inline;
   begin
     {$ifdef literalRecycling}
@@ -289,10 +302,12 @@ FUNCTION newStringLiteral    (CONST value:ansistring):P_stringLiteral; inline;
       result:=dat[fill];
       result^.val:=value;
       result^.rereference;
-    end else 
-    {$endif}    
-    new(result,create(value));
-    isMemoryFree('allocating new string literal');
+    end else
+    {$endif}
+    begin
+      new(result,create(value));
+      isMemoryFree('allocating new string literal');
+    end;
   end;
 
 FUNCTION newExpressionLiteral(CONST value:pointer   ):P_expressionLiteral; inline;
@@ -300,20 +315,25 @@ FUNCTION newExpressionLiteral(CONST value:pointer   ):P_expressionLiteral; inlin
     new(result,create(value));
     isMemoryFree('allocating new expression literal');
   end;
-  
+
 FUNCTION newListLiteral:P_listLiteral; inline;
   begin
     {$ifdef literalRecycling}
     with listLitRecycling do if fill>0 then begin
+      try
       dec(fill);
       result:=dat[fill];
       result^.rereference;
-    end else 
+      except
+        writeln('fill on exception is: ',fill);
+        halt;
+      end;
+    end else
     {$endif}
     new(result,create);
     isMemoryFree('allocating new list literal');
-  end;  
-  
+  end;
+
 FUNCTION newOneElementListLiteral(CONST value:P_literal; CONST incRefs:boolean):P_listLiteral; inline;
   begin
     {$ifdef literalRecycling}
@@ -321,20 +341,20 @@ FUNCTION newOneElementListLiteral(CONST value:P_literal; CONST incRefs:boolean):
       dec(fill);
       result:=dat[fill];
       result^.rereference;
-    end else 
+    end else
     {$endif}
     new(result,create);
     result^.append(value,incRefs);
     isMemoryFree('allocating new one-element-list literal');
   end;
-  
+
 FUNCTION newErrorLiteralRaising(CONST errorMessage:ansistring; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; inline;
   begin
     result:=@errLit;
     errLit.rereference;
-    raiseError(el2_warning,errorMessage,tokenLocation);  
+    raiseError(el2_warning,errorMessage,tokenLocation);
   end;
-  
+
 FUNCTION newErrorLiteralRaising(CONST x,y:T_literalType; CONST op:T_tokenType; CONST tokenLocation:T_tokenLocation):P_scalarLiteral; inline;
   begin
     result:=@errLit;
@@ -342,17 +362,17 @@ FUNCTION newErrorLiteralRaising(CONST x,y:T_literalType; CONST op:T_tokenType; C
     raiseError(el2_warning,'Operator '+C_tokenString[op]+' is not supported for types '+C_typeString[x]+' and '+C_typeString[y],tokenLocation);
   end;
 
-FUNCTION myFloatToStr(CONST x:extended):string; 
+FUNCTION myFloatToStr(CONST x:extended):string;
   begin
     result:=FloatToStr(x);
     if (pos('E',UpperCase(result))<=0) and //occurs in exponents
        (pos('N',UpperCase(result))<=0) and //occurs in "Nan or Inf"
        (pos('.',          result )<=0) then result:=result+'.0';
   end;
-  
+
 FUNCTION parseNumber(CONST input:ansistring; OUT parsedLength:longint):P_scalarLiteral;
   VAR i:longint;
-  begin    
+  begin
     result:=nil;
     if (length(input)>=1) and (input[1] in ['0'..'9','-','+']) then begin
       i:=1;
@@ -376,7 +396,7 @@ FUNCTION parseNumber(CONST input:ansistring; OUT parsedLength:longint):P_scalarL
       end else begin
         result:=newIntLiteral(StrToInt64Def(copy(input,1,parsedLength),0));
       end;
-    end;    
+    end;
   end;
 
 //=====================================================================================================================
@@ -394,17 +414,20 @@ DESTRUCTOR T_intLiteral.destroy;         begin end;
 DESTRUCTOR T_realLiteral.destroy;        begin end;
 DESTRUCTOR T_stringLiteral.destroy;      begin end;
 DESTRUCTOR T_expressionLiteral.destroy;  begin disposeSubruleCallback(val); end;
-PROCEDURE T_listLiteral.destroyChildren; 
+PROCEDURE T_listLiteral.destroyChildren;
   VAR i:longint;
   begin
     for i:=0 to length(element)-1 do if element[i]<>nil then disposeLiteral(element[i]);
     setLength(element,0);
     strictType:=lt_uncheckedList;
+    nextAppendIsRange:=false;
   end;
-  
-DESTRUCTOR T_listLiteral.destroy;        
+
+DESTRUCTOR T_listLiteral.destroy;
   begin
+    destroyChildren;
   end;
+
 PROCEDURE T_literal.rereference;         begin inc(numberOfReferences); end;
 FUNCTION T_literal.unreference:longint;  begin dec(numberOfReferences); result:=numberOfReferences; end;
 
@@ -415,9 +438,9 @@ FUNCTION T_intLiteral.literalType:T_literalType;        begin result:=lt_int;   
 FUNCTION T_realLiteral.literalType:T_literalType;       begin result:=lt_real;       end;
 FUNCTION T_stringLiteral.literalType:T_literalType;     begin result:=lt_string;     end;
 FUNCTION T_expressionLiteral.literalType:T_literalType; begin result:=lt_expression; end;
-FUNCTION T_listLiteral.literalType:T_literalType;       
-  VAR i:longint;    
-      containsError:boolean=false;  
+FUNCTION T_listLiteral.literalType:T_literalType;
+  VAR i:longint;
+      containsError:boolean=false;
       allInt :boolean=true;
       allReal:boolean=true;
       allNum :boolean=true;
@@ -426,7 +449,7 @@ FUNCTION T_listLiteral.literalType:T_literalType;
   begin
     if strictType<>lt_uncheckedList then exit(strictType);
     if length(element)>0 then begin
-      for i:=0 to length(element)-1 do if element[i]=nil 
+      for i:=0 to length(element)-1 do if element[i]=nil
       then containsError:=true
       else begin
         case element[i]^.literalType of
@@ -437,7 +460,7 @@ FUNCTION T_listLiteral.literalType:T_literalType;
           lt_string     : begin allInt:=false; allReal:=false; allNum:=false; allBool:=false;                end;
           else            begin allInt:=false; allReal:=false; allNum:=false; allBool:=false; allStr:=false; end;
         end;
-      end;  
+      end;
       if containsError then strictType:=lt_listWithError
       else if allInt   then strictType:=lt_intList
       else if allReal  then strictType:=lt_realList
@@ -449,7 +472,7 @@ FUNCTION T_listLiteral.literalType:T_literalType;
       strictType:=lt_list;
     end;
     result:=strictType;
-  end;  
+  end;
 
 FUNCTION T_intLiteral.value:int64;          begin result:=val; end;
 FUNCTION T_realLiteral.value:extended;      begin result:=val; end;
@@ -459,7 +482,7 @@ FUNCTION T_expressionLiteral.value:pointer; begin result:=val; end;
 FUNCTION T_listLiteral.size:longint;        begin result:=length(element); end;
 FUNCTION T_listLiteral.value(index:longint):P_literal;    begin result:=element[index]; end;
 
-  
+
 FUNCTION T_literal.toString:ansistring;           begin result:='<ERR>'; end;
 FUNCTION T_scalarLiteral.toString:ansistring;     begin result:='<ERR>'; end;
 FUNCTION T_boolLiteral.toString:ansistring;       begin result:=C_boolText[val]; end;
@@ -477,7 +500,7 @@ FUNCTION T_listLiteral.toString:ansistring;
       result:=result+']';
     end;
   end;
-  
+
 FUNCTION T_listLiteral.toParameterListString(CONST isFinalized:boolean):ansistring;
   VAR i:longint;
   begin
@@ -498,10 +521,10 @@ FUNCTION T_intLiteral.stringForm:ansistring;        begin result:=toString; end;
 FUNCTION T_realLiteral.stringForm:ansistring;       begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm:ansistring;     begin result:=val;      end;
 FUNCTION T_expressionLiteral.stringForm:ansistring; begin result:=toString; end;
-  
+
 FUNCTION T_scalarLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   begin result:=false; end;
-  
+
 FUNCTION T_boolLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   VAR ovl:boolean;
   begin
@@ -512,13 +535,13 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_
             (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_intLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;   
+FUNCTION T_intLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   VAR ovi:int64;
       ovr:extended;
   begin
-    case other^.literalType of 
+    case other^.literalType of
       lt_int: begin
-        ovi:=P_intLiteral(other)^.val;      
+        ovi:=P_intLiteral(other)^.val;
         result:=(val=ovi) and (relation in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorLeq, tt_comparatorGeq]) or
                 (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss]) or
                 (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
@@ -533,13 +556,13 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_s
     end;
   end;
 
-FUNCTION T_realLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;   
+FUNCTION T_realLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   VAR ovi:int64;
       ovr:extended;
   begin
-    case other^.literalType of 
+    case other^.literalType of
       lt_int: begin
-        ovi:=P_intLiteral(other)^.val;      
+        ovi:=P_intLiteral(other)^.val;
         result:=(val=ovi) and (relation in [tt_comparatorEq,tt_comparatorListEq,tt_comparatorLeq, tt_comparatorGeq]) or
                 (val<ovi) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss]) or
                 (val>ovi) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
@@ -554,7 +577,7 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_
     end;
   end;
 
-FUNCTION T_stringLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;   
+FUNCTION T_stringLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   VAR ovl:ansistring;
   begin
     if other^.literalType<>lt_string then exit(false);
@@ -563,22 +586,22 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:
             (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss]) or
             (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
-  
-FUNCTION T_stringLiteral.softCast:P_scalarLiteral;  
+
+FUNCTION T_stringLiteral.softCast:P_scalarLiteral;
   VAR len:longint;
   begin
     if lowercase(val)=C_boolText[false] then exit(newBoolLiteral(false));
     if lowercase(val)=C_boolText[true ] then exit(newBoolLiteral(true ));
     result:=parseNumber(val,len);
     if (result<>nil) then begin
-      if (len=length(val)) 
+      if (len=length(val))
       then exit(result)
       else disposeLiteral(result);
     end;
     result:=@self;
     rereference;
   end;
-  
+
 FUNCTION T_stringLiteral.trim:P_stringLiteral;
   VAR rs:string;
   begin
@@ -597,7 +620,7 @@ FUNCTION T_stringLiteral.upper:P_stringLiteral;
       result:=@self;
       rereference;
     end else result:=newStringLiteral(rs);
-  end;  
+  end;
 
 FUNCTION T_stringLiteral.lower:P_stringLiteral;
   VAR rs:string;
@@ -608,12 +631,12 @@ FUNCTION T_stringLiteral.lower:P_stringLiteral;
       rereference;
     end else result:=newStringLiteral(rs);
   end;
-  
-FUNCTION T_expressionLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;   
+
+FUNCTION T_expressionLiteral.isInRelationTo(CONST relation:T_tokenType; CONST other:P_scalarLiteral):boolean;
   begin
     result:=false;
   end;
-  
+
 FUNCTION T_scalarLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;
   begin
     result:=@errLit;
@@ -622,27 +645,27 @@ FUNCTION T_scalarLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiter
 
 FUNCTION T_boolLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;
   begin
-    if other^.literalType=lt_expression then 
+    if other^.literalType=lt_expression then
       result:=newExpressionLiteral(subruleApplyOpCallback(@self,op,other,tokenLocation))
     else case op of
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq:
         result:=newBoolLiteral(isInRelationTo(op,other));
       tt_operatorAnd:
-        if other^.literalType=lt_boolean then result:=newBoolLiteral(val and P_boolLiteral(other)^.val) 
+        if other^.literalType=lt_boolean then result:=newBoolLiteral(val and P_boolLiteral(other)^.val)
                                                  else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorOr:
-        if other^.literalType=lt_boolean then result:=newBoolLiteral(val or P_boolLiteral(other)^.val) 
+        if other^.literalType=lt_boolean then result:=newBoolLiteral(val or P_boolLiteral(other)^.val)
                                                  else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorXor:
-        if other^.literalType=lt_boolean then result:=newBoolLiteral(val xor P_boolLiteral(other)^.val) 
+        if other^.literalType=lt_boolean then result:=newBoolLiteral(val xor P_boolLiteral(other)^.val)
                                                  else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorStrConcat: result:=newStringLiteral(stringForm+other^.stringForm);
       else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
     end;
   end;
 
-FUNCTION T_intLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;  
-  FUNCTION pot_int_int(x,y:int64):P_scalarLiteral; 
+FUNCTION T_intLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;
+  FUNCTION pot_int_int(x,y:int64):P_scalarLiteral;
     VAR temp:int64;
         tx,rx:extended;
     begin
@@ -650,7 +673,7 @@ FUNCTION T_intLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral;
         temp:=1;
         while y>0 do begin
           if odd(y) then temp:=temp*x;
-          x:=x*x;
+          x:=int64(x)*int64(x);
           y:=y shr 1;
         end;
         result:=newIntLiteral(temp);
@@ -666,19 +689,19 @@ FUNCTION T_intLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral;
     end;
 
   begin
-    if other^.literalType=lt_expression then 
+    if other^.literalType=lt_expression then
       result:=newExpressionLiteral(subruleApplyOpCallback(@self,op,other,tokenLocation))
     else case op of
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq:
         result:=newBoolLiteral(isInRelationTo(op,other));
       tt_operatorAnd:
-        if other^.literalType=lt_int then result:=newIntLiteral(val and P_intLiteral(other)^.val) 
+        if other^.literalType=lt_int then result:=newIntLiteral(val and P_intLiteral(other)^.val)
                                              else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorOr:
-        if other^.literalType=lt_int then result:=newIntLiteral(val or P_intLiteral(other)^.val) 
+        if other^.literalType=lt_int then result:=newIntLiteral(val or P_intLiteral(other)^.val)
                                              else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorXor:
-        if other^.literalType=lt_int then result:=newIntLiteral(val xor P_intLiteral(other)^.val) 
+        if other^.literalType=lt_int then result:=newIntLiteral(val xor P_intLiteral(other)^.val)
                                              else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorPlus: case other^.literalType of
           lt_int : result:=newIntLiteral (val + P_intLiteral (other)^.val);
@@ -700,7 +723,7 @@ FUNCTION T_intLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral;
           lt_real: result:=newRealLiteral(val / P_realLiteral(other)^.val);
           else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
         end;
-      tt_operatorDivInt: 
+      tt_operatorDivInt:
         if other^.literalType=lt_int then try
                                                     result:=newIntLiteral(val div P_intLiteral(other)^.val);
                                                   except
@@ -742,7 +765,7 @@ FUNCTION T_realLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral
     end;
 
   begin
-    if other^.literalType=lt_expression then 
+    if other^.literalType=lt_expression then
       result:=newExpressionLiteral(subruleApplyOpCallback(@self,op,other,tokenLocation))
     else case op of
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq:
@@ -777,15 +800,15 @@ FUNCTION T_realLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral
     end;
   end;
 
-FUNCTION T_stringLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;  
+FUNCTION T_stringLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;
   begin
-    if other^.literalType=lt_expression then 
+    if other^.literalType=lt_expression then
       result:=newExpressionLiteral(subruleApplyOpCallback(@self,op,other,tokenLocation))
     else case op of
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq:
         result:=newBoolLiteral(isInRelationTo(op,other));
-      tt_operatorPlus: 
-        if other^.literalType=lt_string 
+      tt_operatorPlus:
+        if other^.literalType=lt_string
         then result:=newStringLiteral(val+P_stringLiteral(other)^.val)
         else result:=newErrorLiteralRaising(literalType,other^.literalType,op,tokenLocation);
       tt_operatorStrConcat: result:=newStringLiteral(stringForm+other^.stringForm);
@@ -793,7 +816,7 @@ FUNCTION T_stringLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiter
     end;
   end;
 
-FUNCTION T_expressionLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;  
+FUNCTION T_expressionLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarLiteral; CONST tokenLocation:T_tokenLocation):P_scalarLiteral;
   begin
     result:=newExpressionLiteral(subruleApplyOpCallback(@self,op,other,tokenLocation));
   end;
@@ -805,31 +828,31 @@ PROCEDURE T_listLiteral.append(CONST L:P_literal; CONST incRefs:boolean);
     if incRefs then L^.rereference;
     strictType:=lt_uncheckedList;
   end;
-  
-PROCEDURE T_listLiteral.appendAll(CONST L:P_listLiteral);  
+
+PROCEDURE T_listLiteral.appendAll(CONST L:P_listLiteral);
   VAR i:longint;
   begin
     for i:=0 to length(L^.element)-1 do append(L^.element[i],true);
   end;
-  
+
 PROCEDURE T_listLiteral.appendConstructing(CONST L:P_literal; CONST tokenLocation:T_tokenLocation);
   VAR last:P_literal;
       i0,i1:int64;
       c0,c1:char;
   begin
     if not(nextAppendIsRange) then begin
-      append(L,true); 
+      append(L,true);
       exit;
     end;
     nextAppendIsRange:=false;
-    
+
     if length(element)=0 then begin
       strictType:=lt_listWithError;
       raiseError(el3_evalError,'Cannot append range to empty list',tokenLocation);
       exit;
-    end; 
+    end;
     last:=element[length(element)-1];
-    if (last^.literalType=lt_int) and (L^.literalType=lt_int) then begin      
+    if (last^.literalType=lt_int) and (L^.literalType=lt_int) then begin
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
       while (i0<i1) and (errorLevel<el3_evalError) do begin
@@ -857,12 +880,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L:P_literal; CONST tokenLocatio
       raiseError(el3_evalError,'Invalid range expression '+last^.toString+'..'+L^.toString,tokenLocation);
     end;
   end;
-  
+
 PROCEDURE T_listLiteral.setRangeAppend;
   begin
     nextAppendIsRange:=true;
   end;
-  
+
 PROCEDURE T_listLiteral.sort;
   VAR temp:array of P_scalarLiteral;
       scale    :longint;
@@ -898,7 +921,7 @@ PROCEDURE T_listLiteral.sort;
           j1:=i+scale;
           k :=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do begin
-            if temp[j0]^.isInRelationTo(tt_comparatorLeq, temp[j1]) 
+            if temp[j0]^.isInRelationTo(tt_comparatorLeq, temp[j1])
               then begin element[k]:=temp[j0]; inc(k); inc(j0); end
               else begin element[k]:=temp[j1]; inc(k); inc(j1); end;
           end;
@@ -912,7 +935,7 @@ PROCEDURE T_listLiteral.sort;
     end;
     setLength(temp,0);
   end;
-  
+
 FUNCTION T_listLiteral.sortPerm:P_listLiteral;
   VAR temp1,temp2:array of record
         v:P_scalarLiteral;
@@ -920,7 +943,7 @@ FUNCTION T_listLiteral.sortPerm:P_listLiteral;
       end;
       scale    :longint;
       i,j0,j1,k:longint;
-    
+
   begin
     setLength(temp1,length(element));
     setLength(temp2,length(element));
@@ -954,7 +977,7 @@ FUNCTION T_listLiteral.sortPerm:P_listLiteral;
           j1:=i+scale;
           k :=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do begin
-            if temp2[j0].v^.isInRelationTo(tt_comparatorLeq, temp2[j1].v) 
+            if temp2[j0].v^.isInRelationTo(tt_comparatorLeq, temp2[j1].v)
               then begin temp1[k]:=temp2[j0]; inc(k); inc(j0); end
               else begin temp1[k]:=temp2[j1]; inc(k); inc(j1); end;
           end;
@@ -971,8 +994,8 @@ FUNCTION T_listLiteral.sortPerm:P_listLiteral;
     for i:=0 to length(temp1)-1 do result^.append(newIntLiteral(temp1[i].index),false);
     setLength(temp1,0);
   end;
-  
-  
+
+
 FUNCTION T_literal.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=@self; rereference; end;
 FUNCTION T_scalarLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=@self; rereference; end;
 FUNCTION T_stringLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=newErrorLiteralRaising('Cannot negate string.',minusLocation); end;
@@ -980,7 +1003,7 @@ FUNCTION T_boolLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; be
 FUNCTION T_intLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=newIntLiteral(-value); end;
 FUNCTION T_realLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=newRealLiteral(-value); end;
 FUNCTION T_expressionLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; begin result:=newErrorLiteralRaising('Cannot negate expression. Please use "-1*..." instead.',minusLocation); end;
-FUNCTION T_listLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal; 
+FUNCTION T_listLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal;
   VAR res:P_listLiteral;
       i:longint;
   begin
@@ -988,15 +1011,15 @@ FUNCTION T_listLiteral.negate(CONST minusLocation:T_tokenLocation):P_literal;
     for i:=0 to length(element)-1 do res^.append(element[i]^.negate(minusLocation),false);
     result:=res;
   end;
-  
-FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;  
+
+FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION equals(CONST LHS,RHS:P_literal):boolean;
     VAR i:longint;
     begin
       if LHS=RHS then exit(true);
       case LHS^.literalType of
         lt_int,lt_real,lt_boolean,lt_string,lt_expression:
-          if RHS^.literalType in [lt_int,lt_real,lt_boolean,lt_string,lt_expression] 
+          if RHS^.literalType in [lt_int,lt_real,lt_boolean,lt_string,lt_expression]
           then exit(P_scalarLiteral(LHS)^.isInRelationTo(tt_comparatorEq,P_scalarLiteral(RHS)))
           else exit(false);
         lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList:
@@ -1012,7 +1035,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
         else exit(false);
       end;
     end;
-    
+
   FUNCTION isContained(CONST LHS,RHS:P_literal):boolean;
     VAR i:longint;
     begin
@@ -1036,7 +1059,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
     if (RHS^.literalType=lt_error) then begin RHS^.rereference; exit(RHS); end;
     //---------------------------------------------------:HANDLE ERROR LITERALS
     //HANDLE EXPRESSION LITERALS:----------------------------------------------
-    if (LHS^.literalType=lt_expression) or (RHS^.literalType=lt_expression) 
+    if (LHS^.literalType=lt_expression) or (RHS^.literalType=lt_expression)
     then exit(newExpressionLiteral(subruleApplyOpCallback(LHS,op,RHS,tokenLocation)));
     //----------------------------------------------:HANDLE EXPRESSION LITERALS
     //HANDLE S x S -> S OPERATORS:---------------------------------------------
@@ -1070,7 +1093,7 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
           i1:=length(P_listLiteral(RHS)^.element);
           if i=i1 then begin
             result:=newListLiteral;
-            for i:=0 to i1-1 do 
+            for i:=0 to i1-1 do
               P_listLiteral(result)^.append(resolveOperator(
                 P_listLiteral(LHS)^.element[i],op,
                 P_listLiteral(RHS)^.element[i],tokenLocation),false);
@@ -1083,12 +1106,12 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
     case op of
       tt_operatorConcat: begin
         result:=newListLiteral;
-        if (LHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) 
+        if (LHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
         then begin P_listLiteral(result)^.append(LHS,true); end
-        else P_listLiteral(result)^.appendAll(P_listLiteral(LHS)); 
-        if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]) 
+        else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
+        if (RHS^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
         then begin P_listLiteral(result)^.append(RHS,true); end
-        else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));         
+        else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         exit(result);
       end;
       tt_comparatorListEq: exit(newBoolLiteral(equals(LHS,RHS)));
@@ -1115,28 +1138,28 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
         lt_booleanList: begin
           result:=newListLiteral;
           i1:=length(P_listLiteral(LHS)^.element);
-          if i1=length(P_listLiteral(RHS)^.element) then for i:=0 to length(P_listLiteral(RHS)^.element)-1 do 
-            if P_boolLiteral(P_listLiteral(RHS)^.element[i])^.val 
+          if i1=length(P_listLiteral(RHS)^.element) then for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
+            if P_boolLiteral(P_listLiteral(RHS)^.element[i])^.val
             then P_listLiteral(result)^.append(P_listLiteral(LHS)^.element[i],true);
-          exit(result);         
+          exit(result);
         end;
         else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       tt_operatorExtractL1: if LHS^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
         result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do 
+        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
           P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i],tt_operatorExtractL0,RHS,tokenLocation),false);
         exit(result);
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       tt_operatorExtractL2: if LHS^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
         result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do 
+        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
           P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i],tt_operatorExtractL1,RHS,tokenLocation),false);
         exit(result);
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       tt_operatorExtractL3: if LHS^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList] then begin
         result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do 
+        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
           P_listLiteral(result)^.append(resolveOperator(P_listLiteral(LHS)^.element[i],tt_operatorExtractL2,RHS,tokenLocation),false);
         exit(result);
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
@@ -1158,16 +1181,17 @@ INITIALIZATION
   stringLitRecycling.fill:=0;
   listLitRecycling  .fill:=0;
   {$endif}
-  
+
 FINALIZATION
   boolLit[false].destroy;
   boolLit[true] .destroy;
   errLit.destroy;
-  for i:=0 to length(intLit)-1 do if intLit[i]<>nil then dispose(intLit[i],destroy);
+
   {$ifdef literalRecycling}
+  with listLitRecycling   do while fill>0 do begin dec(fill); dispose(dat[fill],destroy); end;
   with intLitRecycling    do while fill>0 do begin dec(fill); dispose(dat[fill],destroy); end;
   with realLitRecycling   do while fill>0 do begin dec(fill); dispose(dat[fill],destroy); end;
   with stringLitRecycling do while fill>0 do begin dec(fill); dispose(dat[fill],destroy); end;
-  with listLitRecycling   do while fill>0 do begin dec(fill); dispose(dat[fill],destroy); end;
   {$endif}
+  for i:=0 to length(intLit)-1 do if intLit[i]<>nil then dispose(intLit[i],destroy);
 end.

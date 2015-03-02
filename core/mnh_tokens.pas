@@ -1,16 +1,17 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics,mnh_constants,math,mnh_litvar,sysutils,fileWrappers,mnh_stringUtil,mnh_funcs,mnh_out_adapters;
+USES myGenerics,mnh_constants,math,mnh_litvar,sysutils,mnh_fileWrappers,mnh_stringUtil,mnh_funcs,mnh_out_adapters;
+{$define doTokenRecycling}
 {$define include_interface}
 TYPE
   P_package=^T_package;
   {$i mnh_tokens_token}
-  {$i mnh_tokens_pattern}      
-  {$i mnh_tokens_subrule}    
-  {$i mnh_tokens_rule}    
-    
+  {$i mnh_tokens_pattern}
+  {$i mnh_tokens_subrule}
+  {$i mnh_tokens_rule}
+
   T_package=object
-    private 
+    private
       publicRules:specialize G_stringKeyMap<P_rule>;
       localRules:specialize G_stringKeyMap<P_rule>;
       packageUses:array of record
@@ -28,7 +29,7 @@ TYPE
       FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
   end;
-  
+
 FUNCTION isReloadOfAllPackagesIndicated:boolean;
 FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadAllPackages;
@@ -60,14 +61,14 @@ PROCEDURE reloadAllPackages;
   VAR i:longint;
   begin
     if length(packages)<=0 then exit;
-    for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);      
+    for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);
     setLength(packages,1);
-    reloadMainPackage;  
+    reloadMainPackage;
   end;
-  
+
 PROCEDURE reloadMainPackage;
   begin
-    clearErrors;    
+    clearErrors;
     if length(packages)>0 then packages[0]^.load;
   end;
 
@@ -76,34 +77,34 @@ PROCEDURE clearAllPackages;
   begin
     clearErrors;
     clearSourceScanPaths;
-    for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);      
-    setLength(packages,0);  
+    for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);
+    setLength(packages,0);
   end;
 
 PROCEDURE initMainPackage(CONST filename:ansistring);
   VAR fileWrapper:P_fileWrapper;
   begin
     if length(packages)>0 then exit;
-      clearErrors;    
+      clearErrors;
     new(fileWrapper,create(filename));
     if fileWrapper^.exists then begin
       addSourceScanPath(extractFilePath(filename));
       setLength(packages,1);
-      new(packages[0],create(fileWrapper));          
+      new(packages[0],create(fileWrapper));
     end else dispose(fileWrapper,destroy);
   end;
 
 PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
   begin
     if length(packages)>0 then exit;
-      clearErrors;    
+      clearErrors;
     setLength(packages,1);
-    new(packages[0],create(directInputWrapper));    
+    new(packages[0],create(directInputWrapper));
   end;
 
 FUNCTION loadPackage(CONST packageId,tokenLocation:ansistring):P_package;
-  VAR i:longint;      
-      newSource:P_fileWrapper;      
+  VAR i:longint;
+      newSource:P_fileWrapper;
   begin
     for i:=0 to length(packages)-1 do if packages[i]^.codeProvider^.fileIdentifier = packageId then begin
       if packages[i]^.ready then exit(packages[i])
@@ -114,15 +115,17 @@ FUNCTION loadPackage(CONST packageId,tokenLocation:ansistring):P_package;
     end;
     newSource:=locateSource(packageId);
     if newSource<>nil then begin
+      new(result,create(newSource));
       setLength(packages,length(packages)+1);
-      new(packages[length(packages)-1],create(newSource));
-      packages[length(packages)-1]^.load;
+      packages[length(packages)-1]:=result;
+
+      result^.load;
     end else begin
       raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
       result:=nil;
     end;
   end;
-    
+
 PROCEDURE T_package.load;
   PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
     VAR this,next,prev:P_token;
@@ -130,11 +133,11 @@ PROCEDURE T_package.load;
       this:=first; prev:=nil;
       while this<>nil do begin
         next:=this^.next;
-        if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and 
-           ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) 
+        if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
+           ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
            and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_userRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
           if this^.tokType=tt_operatorMinus then begin
-            if (next<>nil) and (next^.tokType = tt_literal) then begin            
+            if (next<>nil) and (next^.tokType = tt_literal) then begin
               this^.tokType:=tt_literal;
               this^.data:=P_literal(next^.data)^.negate(this^.location);
               this^.next:=disposeToken(next);
@@ -157,22 +160,18 @@ PROCEDURE T_package.load;
         this:=this^.next;
       end;
     end;
-    
-  PROCEDURE predigest(VAR first:P_token);  
-    VAR t:P_token;                
+
+  PROCEDURE predigest(VAR first:P_token);
+    VAR t:P_token;
     begin
-      t:=first; 
+      t:=first;
       while t<>nil do begin
         case t^.tokType of
-//          tt_expBraceOpen:                predigestInlineExpression(t,@self);
-        tt_identifier: begin
-          resolveRuleId(t^,true);
-          if t^.tokType=tt_identifier then t^.data:=@self;
-        end;
+        tt_identifier: t^.data:=@self;
         tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
                 and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
                 and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-          t^.data:=ensureLocalRuleId(t^.next^.next^.txt); 
+          t^.data:=ensureLocalRuleId(t^.next^.next^.txt);
           t^.next:=disposeToken(t^.next); //dispose (
           t^.next:=disposeToken(t^.next); //dispose <id>
           t^.next:=disposeToken(t^.next); //dispose ,
@@ -195,13 +194,13 @@ PROCEDURE T_package.load;
         t:=t^.next;
       end;
     end;
-    
+
   VAR isFirstLine:boolean=true;
-  PROCEDURE interpret(VAR first:P_token);    
+  PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
       VAR temp:P_token;
           i,j:longint;
-          locationForErrorFeedback:ansistring;            
+          locationForErrorFeedback:ansistring;
           newId:string;
       begin
         locationForErrorFeedback:=first^.location;
@@ -217,7 +216,7 @@ PROCEDURE T_package.load;
             with packageUses[length(packageUses)-1] do begin
               id:=first^.txt;
               pack:=nil;
-            end;            
+            end;
           end else if first^.tokType<>tt_separatorComma then begin
             raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.toString,first^.location);
             exit;
@@ -225,11 +224,18 @@ PROCEDURE T_package.load;
           temp:=first; first:=disposeToken(temp);
         end;
         for i:=0 to length(packageUses)-1 do with packageUses[i] do pack:=loadPackage(id,locationForErrorFeedback);
+        i:=0;
+        while i<length(packageUses) do begin
+          if packageUses[i].pack=nil then begin
+            for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
+            setLength(packageUses,length(packageUses)-1);
+          end else inc(i);
+        end;
       end;
-     
+
     VAR assignmentToken:P_token;
 
-    PROCEDURE parseRule;      
+    PROCEDURE parseRule;
       VAR p,n,nn,nnn:P_token;
           ruleIsPrivate:boolean=false;
           ruleId:string;
@@ -238,32 +244,32 @@ PROCEDURE T_package.load;
           ruleBody:P_token;
           ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
-      begin        
+      begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;
         //plausis:
-        if (ruleBody=nil) then begin 
-          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location); 
+        if (ruleBody=nil) then begin
+          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
           cascadeDisposeToken(first);
-          exit; 
-        end;        
+          exit;
+        end;
         p:=ruleBody^.getDeclarationOrAssignmentToken;
         if (p<>nil) then begin
-          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);  
+          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);
           cascadeDisposeToken(first);
           exit;
         end;
         if not(first^.tokType in [tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer]) then begin
-          raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);  
+          raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           cascadeDisposeToken(first);
           exit;
-        end;        
+        end;
         //:plausis
         if (first^.next^.tokType=tt_identifier) and (first^.tokType=tt_identifier) then begin
           if trim(first^.txt)='private' then ruleIsPrivate:=true
           else if trim(first^.txt)<>'public' then begin
-            raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
+            raiseError(el4_parsingError,'Invalid declaration head.',first^.location);
             cascadeDisposeToken(first);
             exit;
           end;
@@ -273,7 +279,7 @@ PROCEDURE T_package.load;
         p:=first;
         first:=disposeToken(p);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-          raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
+          raiseError(el4_parsingError,'Invalid declaration head.',first^.location);
           cascadeDisposeToken(first);
           exit;
         end;
@@ -284,7 +290,7 @@ PROCEDURE T_package.load;
             n  :=first^.next;
             nn :=n    ^.next;
             nnn:=nn   ^.next;
-            if (first^.tokType=tt_identifier) 
+            if (first^.tokType=tt_identifier)
             and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendFreeId(first^.txt);
               first:=disposeToken(first);
@@ -298,14 +304,14 @@ PROCEDURE T_package.load;
               rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
               first:=disposeToken(first);
               first:=disposeToken(first);
-            end else if (first^.tokType=tt_identifier) 
+            end else if (first^.tokType=tt_identifier)
                      and (n^.tokType in [tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList, tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList, tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList])
                      and (nn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendTypeCheck(first^.txt,n^.tokType);
               first:=disposeToken(first);
               first:=disposeToken(first);
               first:=disposeToken(first);
-            end else if (first^.tokType=tt_identifier) 
+            end else if (first^.tokType=tt_identifier)
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
                      and (nn^.tokType=tt_literal) and (P_literal(nn^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
@@ -314,9 +320,9 @@ PROCEDURE T_package.load;
               first:=disposeToken(first);
               first:=disposeToken(first);
               first:=disposeToken(first);
-            end else if (first^.tokType=tt_identifier) 
+            end else if (first^.tokType=tt_identifier)
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (nn^.tokType=tt_identifier) 
+                     and (nn^.tokType=tt_identifier)
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendComparison(first^.txt,n^.tokType,nn^.txt);
               first:=disposeToken(first);
@@ -336,27 +342,27 @@ PROCEDURE T_package.load;
           raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-        
+
         if evaluateBody then reduceExpression(ruleBody);
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           ensureLocalRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if not(ruleIsPrivate) then 
+          if not(ruleIsPrivate) then
           ensurePublicRuleId(ruleId)^.addOrSetSubRule(subrule);
           first:=nil;
         end else begin
           cascadeDisposeToken(first);
         end;
       end;
-      
+
     begin
       if first=nil then exit;
-      if isFirstLine then begin      
+      if isFirstLine then begin
         isFirstLine:=false;
-        if (          first^.tokType=tt_identifier) and 
-           (uppercase(first^.txt)='USE') and 
-           (          first^.next<>nil) and 
-           (          first^.next^.tokType=tt_identifier) 
+        if (          first^.tokType=tt_identifier) and
+           (uppercase(first^.txt)='USE') and
+           (          first^.next<>nil) and
+           (          first^.next^.tokType=tt_identifier)
         then begin
           interpretUseClause;
           exit;
@@ -381,19 +387,19 @@ PROCEDURE T_package.load;
       i:longint;
       first,next,last:P_token;
       location:T_TokenLocation;
-  begin   
-    clear;    
+  begin
+    clear;
     codeLines:=codeProvider^.fileLines;
     codeProvider^.logCheck;
-    
+
     first:=nil;
-    next :=nil;     
+    next :=nil;
     last :=nil;
     location.package:=@self;
     for i:=0 to length(codeLines)-1 do begin
       location.line:=i+1;
       location.column:=1;
-      while (codeLines[i]<>'') and (errorLevel<el3_evalError) do begin        
+      while (codeLines[i]<>'') and (errorLevel<el3_evalError) do begin
         next:=firstToken(codeLines[i],location,@self);
         if (next<>nil) and (next^.tokType=tt_eol) then begin //EOL (end of input or semicolon)
           disposeToken(next);
@@ -403,7 +409,7 @@ PROCEDURE T_package.load;
         if next=nil then begin
           if first<>nil then interpret(first);
           last:=nil;
-          first:=nil;        
+          first:=nil;
         end else begin
           if first=nil then begin
             first:=next;
@@ -418,46 +424,43 @@ PROCEDURE T_package.load;
     if first<>nil then interpret(first);
     ready:=true;
   end;
-  
+
 CONSTRUCTOR T_package.create(CONST provider:P_codeProvider);
   begin
     setLength(packageUses,0);
-    codeProvider:=provider;      
+    codeProvider:=provider;
     publicRules.create;
     localRules.create;
   end;
-  
+
 PROCEDURE T_package.clear;
-  VAR keySet:T_arrayOfString;
-      i:longint;
-      rule:P_rule;
+  VAR rule:P_rule;
   begin
-    keySet:=publicRules.keySet;
-    for i:=0 to length(keySet)-1 do begin
-      rule:=publicRules.get(keySet[i]);
+    while publicRules.size>0 do begin
+      rule:=publicRules.dropAny;
       setLength(rule^.subRules,0);
       dispose(rule,destroy);
     end;
     publicRules.clear;
-    
-    keySet:=localRules.keySet;
-    for i:=0 to length(keySet)-1 do begin
-      rule:=localRules.get(keySet[i]);
+
+    while localRules.size>0 do begin
+      rule:=localRules.dropAny;
       dispose(rule,destroy);
     end;
     localRules.clear;
+
     ready:=false;
   end;
-  
+
 DESTRUCTOR T_package.destroy;
   begin
-    clear;  
+    clear;
     dispose(codeProvider,destroy);
     publicRules.destroy;
-    localRules.destroy;    
-    setLength(packageUses,0);    
+    localRules.destroy;
+    setLength(packageUses,0);
   end;
-  
+
 PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
   VAR i:longint;
       userRule:P_rule;
@@ -468,21 +471,23 @@ PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean)
       token.data:=userRule;
       exit;
     end;
-    for i:=length(packageUses)-1 downto 0 do begin
-    if packageUses[i].pack^.publicRules.containsKey(token.txt,userRule) then begin
-      token.tokType:=tt_userRulePointer;
-      token.data:=userRule;
-      exit;
-    end;
-    end;
+
+    for i:=length(packageUses)-1 downto 0 do
+      if packageUses[i].pack^.publicRules.containsKey(token.txt,userRule) then begin
+        token.tokType:=tt_userRulePointer;
+        token.data:=userRule;
+        exit;
+      end;
+
     if intrinsicRuleAliases.containsKey(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
       exit;
     end;
+
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
-  
+
 FUNCTION T_package.ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
   begin
     if not(localRules.containsKey(ruleId,result)) then begin
@@ -490,7 +495,7 @@ FUNCTION T_package.ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       localRules.put(ruleId,result);
     end;
   end;
-  
+
 FUNCTION T_package.ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
   begin
     if not(publicRules.containsKey(ruleId,result)) then begin
@@ -498,15 +503,17 @@ FUNCTION T_package.ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
       publicRules.put(ruleId,result);
     end;
   end;
-  
+
 FUNCTION packagePointerToSourceName(CONST package:pointer):string;
   begin
     result:=P_package(package)^.codeProvider^.filename;
-  end;  
-  
+  end;
+
 INITIALIZATION
   setLength(packages,0);
+  {$ifdef doTokenRecycling}
   tokenRecycling.fill:=0;
+  {$endif}
   //callbacks in mnh_litvar:
   disposeSubruleCallback :=@disposeSubruleImpl;
   subruleToStringCallback:=@subruleToStringImpl;

@@ -2,4 +2,6 @@ ackermann(m=0,n)->n+1;
 ackermann(m,n=0)->ackermann(m-1,1);
 ackermann(m,n)  ->ackermann(m-1,ackermann(m,n-1));
 
-ackermann(3,8);
+ackertime(m,n) -> "parameters: \t"&m&",\t"&n&" \t" & each(i,flatten(time({ackermann(m,n)})),&"\t"&);
+
+each(m,[1..4],each(n,[1..6],print(ackertime(m,n))));

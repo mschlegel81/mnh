@@ -120,10 +120,10 @@ FUNCTION formatTabs(s:ansistring):ansistring;
 FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
   VAR i:longint;
   begin
-    if length(inputAndRest)<maxLineLength then begin 
-      result:=inputAndRest; 
-      inputAndRest:=''; 
-      exit(result); 
+    if length(inputAndRest)<maxLineLength then begin
+      result:=inputAndRest;
+      inputAndRest:='';
+      exit(result);
     end;
     i:=maxLineLength;
     while (i>minLineLength) and (inputAndRest[i]<>' ') do dec(i);
@@ -154,7 +154,7 @@ FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isV
     end else result:=original;
   end;
 
-  
+
 FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
     VAR p:longint;
     begin
@@ -193,7 +193,7 @@ FUNCTION escapeString(CONST s:ansistring):ansistring;
 
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
   VAR i:longint;
-  begin    
+  begin
     if (length(input)>=1) and (input[1]='"') then begin
       result:='';
       i:=2;
@@ -217,7 +217,7 @@ FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansist
       result:='';
     end;
   end;
-  
+
 FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
   VAR i:longint;
       dotAllowed:boolean;
@@ -238,5 +238,5 @@ FUNCTION startsWith(CONST input,head:ansistring):boolean;
   begin
     result:=copy(input,1,length(head))=head;
   end;
- 
+
 end.

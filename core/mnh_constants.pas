@@ -3,9 +3,9 @@ INTERFACE
 TYPE
   T_tokenType=(tt_literal,
                //identifier and resolved identifiers
-               tt_identifier, tt_parameterIdentifier, tt_userRulePointer, tt_intrinsicRulePointer, 
+               tt_identifier, tt_parameterIdentifier, tt_userRulePointer, tt_intrinsicRulePointer,
                //special operators
-               tt_set, 
+               tt_set,
                tt_each,
                //lists and list constructors
                tt_braceOpen    ,tt_braceClose    ,tt_parList_constructor  ,tt_parList,
@@ -26,7 +26,7 @@ TYPE
                //list operators:
                tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
                tt_operatorConcat, tt_operatorIn,
-               //inline if: (<condition>?<then>:<else>) 
+               //inline if: (<condition>?<then>:<else>)
                tt_iifCheck, tt_iifElse,
                //assignment operators:
                tt_declare, tt_assign,
@@ -42,7 +42,7 @@ TYPE
                tt_typeCheckEmptyList,
                //special: [E]nd [O]f [L]ine
                tt_eol);
- 
+
   T_literalType=(lt_error,
                  lt_boolean,
                  lt_int,
@@ -92,7 +92,7 @@ CONST
     //lists and list constructors
     '(', ')', ''  ,'' ,
     '[', ']', '' ,
-    '{', '}', 
+    '{', '}',
     //separators
     ',', '..',
     //comparators
@@ -123,7 +123,7 @@ CONST
     '=[]',
     //special: [E]nd [O]f [L]ine
     '');
-    
+
   C_typeString:array[T_literalType] of string=(
     'error',
     'boolean',
@@ -148,7 +148,7 @@ TYPE
                 el4_parsingError,
                 el5_systemError);
 CONST
-  C_errorLevelTxt:array[T_errorLevel] of string=('          ', 
+  C_errorLevelTxt:array[T_errorLevel] of string=('          ',
                                                  'Note    : ',
                                                  'Warning : ',
                                                  'Ev.Error: ',

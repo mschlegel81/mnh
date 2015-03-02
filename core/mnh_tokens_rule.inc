@@ -6,8 +6,8 @@
       subrules:array of P_subrule;
     public
       CONSTRUCTOR create(CONST ruleId:string);
-      DESTRUCTOR destroy;  
-      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token):boolean; 
+      DESTRUCTOR destroy;
+      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       PROCEDURE performSet(CONST value:P_literal);
@@ -15,26 +15,26 @@
 {$endif}
 {$ifdef include_implementation}
 CONSTRUCTOR T_rule.create(CONST ruleId:string);
-  begin 
+  begin
     id:=ruleId;
     setLength(subrules,0);
   end;
 
-DESTRUCTOR T_rule.destroy;  
+DESTRUCTOR T_rule.destroy;
   VAR i:longint;
   begin
     id:='';
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
   end;
-  
-FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token):boolean; 
+
+FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token):boolean;
   VAR i:longint;
   begin
     for i:=0 to length(subrules)-1 do if subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
     result:=false;
   end;
-  
+
 PROCEDURE T_rule.addOrReplaceSubRule(CONST rule:P_subrule);
   VAR i:longint;
   begin
@@ -44,7 +44,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule:P_subrule);
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
   end;
-  
+
 PROCEDURE T_rule.addOrSetSubRule(CONST rule:P_subrule);
   VAR i:longint;
   begin
@@ -53,7 +53,7 @@ PROCEDURE T_rule.addOrSetSubRule(CONST rule:P_subrule);
     if i>=length(subrules) then setLength(subrules,i+1);
     subrules[i]:=rule;
   end;
-  
+
 PROCEDURE T_rule.performSet(CONST value:P_literal);
   VAR i:longint;
   begin
