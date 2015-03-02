@@ -20,3 +20,5 @@ private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));
 main->analyze(fileWords(splitFileName(myPath)%"directory"&"\\inputs\\kjv.txt"));
 //*Displays a short info on words in the given file or files matching a search pattern
 main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));
+
+unique(flatten(each(w,filesWords("core/*plot*.pas"),copy(w,[0..length(w)-1],1))));

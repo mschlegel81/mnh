@@ -68,7 +68,7 @@ type
     miSave: TMenuItem;
     miSaveAs: TMenuItem;
     OpenDialog: TOpenDialog;
-    myhl:TSynMnhSyn;
+    inputHighlighter,outputHighlighter:TSynMnhSyn;
     ErrorGroupBox: TGroupBox;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
@@ -172,6 +172,8 @@ type
     settingsHaveBeenProcessed:boolean;
     needEvaluation:boolean;
     doNotEvaluateBefore:double;
+    doNotMarkWordBefore:double;
+
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     PROCEDURE flushThroughput;
@@ -260,8 +262,13 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 
 PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
   begin
-    if miHelp.Checked and (caret.y>0) and (caret.y<=lines.Count) then begin
+    if (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
+      if isIdentifier(underCursor.tokenText,true) and (now>doNotMarkWordBefore) and
+         (inputHighlighter.setMarkedWord(underCursor.tokenText) and outputHighlighter.setMarkedWord(underCursor.tokenText)) then begin
+        doNotMarkWordBefore:=now+ONE_SECOND;
+        Repaint;
+      end;
       if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
         PopupNotifier1.Title:=underCursor.tokenText;
         PopupNotifier1.Text:=replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar);
@@ -361,11 +368,13 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     needEvaluation:=false;
     doNotEvaluateBefore:=now;
+    doNotMarkWordBefore:=now;
     OpenDialog.FileName:=paramstr(0);
     SaveDialog.FileName:=paramstr(0);
-    myhl:=TSynMnhSyn.create(nil);
-    InputEdit.Highlighter:=myhl;
-    OutputEdit.Highlighter:=myhl;
+    inputHighlighter:=TSynMnhSyn.create(nil,false);
+    outputHighlighter:=TSynMnhSyn.create(nil,true);
+    InputEdit.Highlighter:=inputHighlighter;
+    OutputEdit.Highlighter:=outputHighlighter;
     settingsHaveBeenProcessed:=false;
     StatusBar.SimpleText:=
       'compiled on: '+{$I %DATE%}+
@@ -399,7 +408,8 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
     mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
-    myhl.destroy;
+    inputHighlighter.destroy;
+    outputHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
   end;
 
