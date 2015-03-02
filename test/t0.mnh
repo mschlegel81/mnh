@@ -2,10 +2,13 @@ d(x,h,e:expression)->d(x,h,e,1);
 d(x,h,e:expression,0)->e(x); //direct expression
 d(x,h,e:expression,1)->(e(x+h)-e(x-h))/(2*h); //difference quotient
 d(x,h,e:expression,i>1)->(d(x+h,h,e,i-1)-d(x-h,h,e,i-1))/(2*h);
+CACHE d;
 FList:=[{1E18*sin(1E-6*$x)},{sin($x)},{1E-18*sin(1E6*$x)}];
-HList:=10^[-12..12];
-print("h\td1\td2\td3\n"&
-  each(h,HList,&"\n"&,h&"\t"&
+HList:=2^[-30..30];
+print("d1\td2\td3\n"&
+  each(h,HList,&"\n"&,
     each(f,FList,&"\t"&,
       d(0,h,f,3))));
 
+DX:=each(h,HList,d(0,h,{sin($x)},3));
+DX%argMin(abs(head(DX,size(DX)-2)-tail(DX,2)));

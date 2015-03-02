@@ -31,6 +31,7 @@ TYPE
       FUNCTION elementArray:ENTRY_TYPE_ARRAY;
   end;
   
+  T_listOfString=specialize G_list<ansistring>;
   T_listOfIntegers=specialize G_list<longint>;
   
   GENERIC G_sparseArray<ENTRY_TYPE>=object
@@ -85,8 +86,6 @@ TYPE
       FUNCTION size:longint;
       FUNCTION dropAny:VALUE_TYPE;
   end;
-
-  T_listOfString=specialize G_list<ansistring>;
 
   { G_safeVar }
 

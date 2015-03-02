@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES sysutils,classes;
+USES sysutils,classes,process;
 TYPE
   T_stringList=array of ansistring;
 
@@ -45,6 +45,10 @@ FUNCTION find(CONST pattern:ansistring; CONST filesAndNotFolders:boolean):T_stri
 PROCEDURE clearSourceScanPaths;
 PROCEDURE addSourceScanPath(CONST path:ansistring);
 FUNCTION locateSource(CONST id:ansistring):ansistring;
+
+FUNCTION runCommandAsync(CONST executable:ansistring; CONST parameters:T_stringList):boolean;
+FUNCTION runCommand(CONST executable:ansistring; CONST parameters:T_stringList; OUT output:TStringList):boolean;
+
 IMPLEMENTATION
 VAR sourceScanPath:T_stringList;
 PROCEDURE clearSourceScanPaths;
@@ -94,6 +98,7 @@ FUNCTION locateSource(CONST id:ansistring):ansistring;
     for i:=0 to length(sourceScanPath)-1 do
     if result='' then recursePath(sourceScanPath[i]);
   end;
+
   
 FUNCTION fileContent(CONST name:ansistring; OUT accessed:boolean):ansistring;
   VAR handle:file of char;
@@ -200,6 +205,59 @@ FUNCTION find(CONST pattern:ansistring; CONST filesAndNotFolders:boolean):T_stri
       end;
     until (findNext(info)<>0);
     sysutils.findClose(info);
+  end;
+
+FUNCTION runCommandAsync(CONST executable:ansistring; CONST parameters:T_stringList):boolean;
+  VAR tempProcess:TProcess;
+      i:longint;
+  begin
+    result:=true;
+    try
+      tempProcess :=TProcess.Create(nil);
+      tempProcess.Executable:=executable;
+      for i:=0 to length(parameters)-1 do  tempProcess.Parameters.Add(parameters[i]);
+      tempProcess.execute;
+      tempProcess.Free;
+    except
+      result:=false;
+    end;
+  end;
+
+FUNCTION runCommand(CONST executable:ansistring; CONST parameters:T_stringList; OUT output:TStringList):boolean;
+  CONST READ_BYTES = 2048;
+  VAR memStream: TMemoryStream;
+      tempProcess: TProcess;
+      n: LongInt;
+      BytesRead: LongInt;
+  begin
+    memStream := TMemoryStream.Create;
+    BytesRead := 0;
+    tempProcess := TProcess.Create(nil);
+    tempProcess.Executable:=executable;
+    for n:=0 to length(parameters)-1 do  tempProcess.Parameters.Add(parameters[n]);
+    tempProcess.Options := [poUsePipes,poStderrToOutPut];
+    tempProcess.ShowWindow:=swoHIDE;
+    try
+      tempProcess.Execute;
+      while tempProcess.Running do begin
+        memStream.SetSize(BytesRead + READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory + BytesRead)^, READ_BYTES);
+        if n>0  then Inc(BytesRead, n) else Sleep(10);
+      end;
+      repeat
+        memStream.SetSize(BytesRead + READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory + BytesRead)^, READ_BYTES);
+        if n > 0 then Inc(BytesRead, n);
+      until n <= 0;
+      result:=(tempProcess.ExitStatus=0);
+    except
+      result:=false;
+    end;
+    tempProcess.Free;
+    memStream.SetSize(BytesRead);
+    output := TStringList.Create;
+    output.LoadFromStream(memStream);
+    memStream.Free;
   end;
 
 { T_codeProvider }

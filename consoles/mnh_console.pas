@@ -1,5 +1,5 @@
 PROGRAM mnh_console;
-USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc;
+USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs;
 VAR nextInput:ansistring;
 //by command line parameters:---------------
     minErrorLevel:T_errorLevel=el0_allOkay;
@@ -106,6 +106,7 @@ PROCEDURE fileMode;
   end;
   
 begin
+  mnh_funcs.mnh_console_executable:=paramstr(0);
   parseCmdLine;
   if fileToInterpret='' then interactiveMode
                         else fileMode;

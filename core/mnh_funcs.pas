@@ -1,12 +1,12 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
 VAR
   intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
-
+  mnh_console_executable:ansistring;
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
 
 //Callbacks:--------------------------------
@@ -55,6 +55,52 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
     writePrint(stringToPrint);
     result:=newBoolLiteral(true);
+  end;
+
+FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION abs_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : result:=newIntLiteral (abs(P_intLiteral (x)^.value));
+        lt_real: result:=newRealLiteral(abs(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(abs_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('abs',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=abs_rec(params^.value(0))
+    else raiseNotApplicableError('abs',params,tokenLocation);
+  end;
+
+FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION sign_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
+        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
+        lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
+        lt_list,lt_intList,lt_realList,lt_numList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=sign_rec(params^.value(0))
+    else raiseNotApplicableError('sign',params,tokenLocation);
   end;
 
 FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -442,7 +488,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         result:=newListLiteral;
         for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
-      end else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
     end;
 
   FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
@@ -460,16 +506,16 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do result^.append(tailOf2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
-      end else raiseError(el3_evalError,'Function TAIL cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=tailOf(params^.value(0)) else
     if (params<>nil) and (params^.size=2) then result:=tailOf2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('TAIL',params,tokenLocation);
+    else raiseNotApplicableError('tail',params,tokenLocation);
   end;
 
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -483,8 +529,8 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       end else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
         result:=params^.value(0);
         result^.rereference;
-      end else raiseError(el3_evalError,'Function SORT can only be applied to flat lists containing comparable types',tokenLocation);
-    end else raiseNotApplicableError('SORT',params,tokenLocation);
+      end else raiseError(el3_evalError,'Function sort can only be applied to flat lists containing comparable types',tokenLocation);
+    end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
 
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -533,7 +579,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       end;
     end;
     result:=nil;
-    raiseNotApplicableError('RANDOM',params,tokenLocation);
+    raiseNotApplicableError('random',params,tokenLocation);
   end;
 
 PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
@@ -553,7 +599,28 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end else raiseNotApplicableError('MAX',params,tokenLocation);
+    end else raiseNotApplicableError('max',params,tokenLocation);
+  end;
+
+FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR x,xMin:P_scalarLiteral;
+      L:P_listLiteral;
+      i,iMin:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+      L:=P_listLiteral(params^.value(0));
+      iMin:=0;
+      xMin:=P_scalarLiteral(L^.value(0));
+      for i:=1 to L^.size-1 do begin
+        x:=P_scalarLiteral(L^.value(i));
+        if x^.isInRelationTo(tt_comparatorGrt,xMin) then begin
+          iMin:=i;
+          xMin:=x;
+        end;
+      end;
+      result:=newIntLiteral(iMin);
+    end else raiseNotApplicableError('argMax',params,tokenLocation);
   end;
 
 FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -568,8 +635,30 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end else raiseNotApplicableError('MIN',params,tokenLocation);
+    end else raiseNotApplicableError('min',params,tokenLocation);
   end;
+
+FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR x,xMin:P_scalarLiteral;
+      L:P_listLiteral;
+      i,iMin:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+      L:=P_listLiteral(params^.value(0));
+      iMin:=0;
+      xMin:=P_scalarLiteral(L^.value(0));
+      for i:=1 to L^.size-1 do begin
+        x:=P_scalarLiteral(L^.value(i));
+        if x^.isInRelationTo(tt_comparatorLss,xMin) then begin
+          iMin:=i;
+          xMin:=x;
+        end;
+      end;
+      result:=newIntLiteral(iMin);
+    end else raiseNotApplicableError('argMin',params,tokenLocation);
+  end;
+
 
 FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   begin
@@ -579,7 +668,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         lt_error..  lt_expression: result:=newIntLiteral(1);
         lt_list..lt_listWithError: result:=newIntLiteral(P_listLiteral(params^.value(0))^.size);
       end;
-    end else raiseNotApplicableError('SIZE',params,tokenLocation);
+    end else raiseNotApplicableError('size',params,tokenLocation);
   end;
 
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -968,12 +1057,92 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
+FUNCTION interpret_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR fileByScriptName,filename:ansistring;
+      cmdLinePar:T_stringList;
+      i:longint;
+      output:TStringList;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      filename        :=             P_stringLiteral(params^.value(0))^.value;
+      fileByScriptName:=locateSource(P_stringLiteral(params^.value(0))^.value);
+      if (fileByScriptName      <>'') and FileExists(fileByScriptName) then filename:=fileByScriptName;
+      if (filename              <>'') and FileExists(filename) and
+         (mnh_console_executable<>'') and FileExists(mnh_console_executable) then begin
+        setLength(cmdLinePar,1);
+        cmdLinePar[0]:=filename;
+        if params^.size=2 then begin
+          setLength(cmdLinePar,1+P_listLiteral(params^.value(1))^.size);
+          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+            cmdLinePar[i+1]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+        end;
+        runCommand(mnh_console_executable,
+                   cmdLinePar,
+                   output);
+        result:=newListLiteral;
+        for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+        output.Free;
+      end else begin
+        raiseError(el1_note,'File or script "'+P_stringLiteral(params^.value(0))^.value+'" cannot be found.',tokenLocation);
+        result:=newListLiteral;
+      end;
+    end else raiseNotApplicableError('interpret',params,tokenLocation);
+  end;
+
+FUNCTION callSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR executable:ansistring;
+      cmdLinePar:T_stringList;
+      output:TStringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      setLength(cmdLinePar,0);
+      if params^.size=2 then begin
+        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+      end;
+      runCommand(executable,
+                 cmdLinePar,
+                 output);
+      result:=newListLiteral;
+      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+      output.Free;
+    end else raiseNotApplicableError('callSync',params,tokenLocation);
+  end;
+
+FUNCTION callAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR executable:ansistring;
+      cmdLinePar:T_stringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      setLength(cmdLinePar,0);
+      if params^.size=2 then begin
+        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+      end;
+      runCommandAsync(executable,
+                      cmdLinePar);
+      result:=newBoolLiteral(true);
+    end else raiseNotApplicableError('callAsync',params,tokenLocation);
+  end;
+
 {$WARNING TODO: callSync(executablepath)}
 {$WARNING TODO: callAsync(executablepath)}
 
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule('print'         ,@print_imp     );
+  registerRule('abs'           ,@abs_imp       );
+  registerRule('sign'          ,@sign_imp      );
   registerRule('sqr'           ,@sqr_imp       );
   registerRule('sqrt'          ,@sqrt_imp      );
   registerRule('sin'           ,@sin_imp       );
@@ -994,7 +1163,9 @@ INITIALIZATION
   registerRule('flatten'       ,@flatten_imp   );
   registerRule('random'        ,@random_imp    );
   registerRule('max'           ,@max_imp       );
+  registerRule('argMax'        ,@argMax_imp    );
   registerRule('min'           ,@min_imp       );
+  registerRule('argMin'        ,@argMin_imp    );
   registerRule('size'          ,@size_imp      );
   registerRule('time'          ,@time_imp      );
   registerRule('split'         ,@split_imp     );

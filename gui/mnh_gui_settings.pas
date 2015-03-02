@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, process;
+  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs;
 
 CONST default_notepad_path='c:\Program Files (x86)\Notepad++\notepad++.exe';
 
@@ -15,9 +15,11 @@ type
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    MnhConsoleFileNameEdit: TFileNameEdit;
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;
+    Label4: TLabel;
     NotepadFileNameEdit: TFileNameEdit;
     EditorFontDialog: TFontDialog;
     Label1: TLabel;
@@ -29,6 +31,7 @@ type
     procedure FontButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure MnhConsoleFileNameEditChange(Sender: TObject);
   private
     { private declarations }
     editorFontname:string;
@@ -63,6 +66,11 @@ FUNCTION settingsFileName:string;
     result:=ExpandFileName(extractFilePath(paramstr(0)))+'mnh_gui.settings';
   end;
 
+FUNCTION defaultConsoleName:string;
+  begin
+    result:=replaceOne(paramstr(0),'mnh_gui','mnh_console');
+  end;
+
 { TSettingsForm }
 
 procedure TSettingsForm.FormCreate(Sender: TObject);
@@ -72,6 +80,8 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       ff.createToRead(settingsFileName);
 
       NotepadFileNameEdit.FileName:=ff.readAnsiString;
+      mnh_funcs.mnh_console_executable:=ff.readAnsiString;
+      MnhConsoleFileNameEdit.FileName:=mnh_funcs.mnh_console_executable;
 
       setFontSize(ff.readLongint);
       editorFontname:=ff.readAnsiString;
@@ -94,6 +104,13 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
       if not(FileExists(fileInEditor)) then fileInEditor:='';
     end else begin
       if FileExists(default_notepad_path) then NotepadFileNameEdit.Filename:=default_notepad_path;
+      if FileExists(defaultConsoleName) then begin
+        mnh_console_executable:=defaultConsoleName;
+        MnhConsoleFileNameEdit.FileName:=defaultConsoleName;
+      end else begin
+        mnh_console_executable:='';
+        MnhConsoleFileNameEdit.FileName:='';
+      end;
       editorFontname:='Courier New';
       fontSize:=11;
       with mainForm do begin
@@ -143,6 +160,11 @@ procedure TSettingsForm.FormDestroy(Sender: TObject);
     saveSettings;
   end;
 
+procedure TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
+  begin
+    mnh_console_executable:=MnhConsoleFileNameEdit.FileName;
+  end;
+
 function TSettingsForm.getFontSize: longint;
   begin
     result:=StrToInt64Def(Trim(FontSizeEdit.Text),12);
@@ -160,21 +182,15 @@ function TSettingsForm.getEditorFontName: string;
   end;
 
 function TSettingsForm.canOpenFile(const filename: ansistring; const lineNumber: longint): boolean;
-  //FUNCTION safeFilename(CONST naiveName:ansistring):ansistring;
-  //  begin
-  //    if (Pos(' ',naiveName)>0) and (naiveName[1]<>'"') then result:='"'+UTF8ToSys(naiveName)+'"' else result:=UTF8ToSys(naiveName);
-  //  end;
-  VAR tempProcess:TProcess;
+  VAR par:T_stringList;
   begin
     if (trim(NotepadFileNameEdit.Filename)<>'') and not(FileExistsUTF8(NotepadFileNameEdit.Filename)) then NotepadFileNameEdit.Filename:='';
     if (trim(NotepadFileNameEdit.Filename)<>'') then begin
-      tempProcess :=TProcess.Create(nil);
-      tempProcess.Executable:=NotepadFileNameEdit.FileName;
-      tempProcess.Parameters.Add(filename);
-      if (lineNumber>0) then tempProcess.Parameters.Add('-n'+IntToStr(lineNumber));
-      tempProcess.execute;
-      tempProcess.Free;
-      result:=true;
+      setLength(par,1); par[0]:=filename;
+      if lineNumber>0 then begin
+        setLength(par,2); par[1]:='-n'+IntToStr(lineNumber);
+      end;
+      result:=runCommandAsync(NotepadFileNameEdit.FileName,par);
     end else result:=false;
   end;
 
@@ -184,6 +200,7 @@ procedure TSettingsForm.saveSettings;
     ff.createToWrite(settingsFileName);
 
     ff.writeAnsiString(NotepadFileNameEdit.FileName);
+    ff.writeAnsiString(mnh_console_executable);
 
     ff.writeLongint(getFontSize);
     ff.writeAnsiString(editorFontname);

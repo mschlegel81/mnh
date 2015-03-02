@@ -7,7 +7,7 @@ uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier, SynHighlighterMnh,
   mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-  mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants;
+  mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants, myGenerics;
 
 type
 
@@ -97,13 +97,12 @@ implementation
 VAR errorThroughput:array of T_storedError;
     lastFormRepaint:double=0;
     repaintNecessary:boolean=false;
-
+    output:T_listOfString;
 {$R *.lfm}
 
 PROCEDURE appendToOutputThroughput(CONST text:ansistring);
   begin
-    MnhForm.OutputEdit.Lines.Append(text);
-    repaintNecessary:=true;
+    output.add(text);
   end;
 
 PROCEDURE writeDeclEcho(CONST s:ansistring);
@@ -135,6 +134,7 @@ PROCEDURE logError(CONST error:T_storedError);
     SetLength(errorThroughput,length(errorThroughput)+1);
     errorThroughput[length(errorThroughput)-1]:=error;
     repaintNecessary:=true;
+    //MnhForm.ErrorGroupBox.Visible:=true;
   end;
 
 procedure TMnhForm.flushThroughput;
@@ -173,7 +173,7 @@ PROCEDURE startOfEvaluationCallback;
     MnhForm.OutputEdit.Lines.Clear;
     MnhForm.ErrorMemo.Clear;
     //MnhForm.ErrorGroupBox.Visible:=false;
-    repaintNecessary:=true;
+    repaintNecessary:=false;
     lastFormRepaint:=now;
   end;
 
@@ -249,6 +249,7 @@ procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: 
 procedure TMnhForm.miClearClick(Sender: TObject);
   begin
     ad_clearFile;
+    InputEdit.ClearAll;
     SettingsForm.fileInEditor:='';
   end;
 
@@ -394,9 +395,11 @@ procedure TMnhForm.Splitter1Moved(Sender: TObject);
 procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
         MAX_INTERVALL=1000;
-        REPAINT_INTERVAL_IN_SECONDS=0.2;
+        REPAINT_INTERVAL_IN_SECONDS=1;
   VAR aid:string;
       flag:boolean;
+      L:array of AnsiString;
+      i:longint;
   begin
     //Form caption:-------------------------------------------------------------
     aid:='MNH5 '+ad_currentFile;
@@ -424,6 +427,13 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       OutputEdit.ClearAll;
     end;
     //---------------------------------------------------------------:file state
+    if output.size>0 then begin
+      L:=output.elementArray;
+      output.clear;
+      for i:=0 to length(L)-1 do OutputEdit.Lines.Append(L[i]);
+      repaintNecessary:=true;
+    end;
+
     repaintNecessary:=repaintNecessary or (UpdateTimeTimer.Interval=MIN_INTERVALL);
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
     if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) and repaintNecessary then begin
@@ -469,7 +479,10 @@ procedure TMnhForm.processSettings;
   end;
 
 initialization
+  output.create;
   setLength(errorThroughput,0);
 
+finalization
+  output.destroy;
 end.
 
