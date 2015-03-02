@@ -1,6 +1,6 @@
 UNIT mnh_plotData;
 INTERFACE
-USES myFiles,sysutils,math,myFloat;
+USES myFiles,sysutils,math,mnh_litvar;
 TYPE
   T_colorChannel=(cc_red,cc_green,cc_blue);
 
@@ -304,8 +304,6 @@ procedure T_style.parseStyle(const styleString: ansistring);
       i:longint;
       size:extended;
       mightBeColor:boolean;
-      cr,cg,cb:byte;
-
   begin
     options:=Trim(styleString);
     repeat
@@ -335,7 +333,6 @@ procedure T_style.parseStyle(const styleString: ansistring);
 
 function T_style.loadFromFile(var F: T_File): boolean;
   VAR cc:T_colorChannel;
-      plausibleStyle:boolean=false;
   begin
     title:=f.readAnsiString;
     style:=f.readByte;
@@ -501,7 +498,6 @@ procedure T_plot.setScreenSize(const width, height: longint);
 
     FUNCTION notToManyTics:boolean;
       VAR i,majors:longint;
-          lastPos:double;
       begin
         //too many total tics?
         if length(tic[axis])>100 then exit(false);

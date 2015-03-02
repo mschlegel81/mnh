@@ -362,9 +362,12 @@ procedure TMnhForm.miSaveAsClick(Sender: TObject);
 
 procedure TMnhForm.miSaveClick(Sender: TObject);
   begin
-    if ad_currentFile<>'' then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
-    SettingsForm.fileInEditor:=ad_currentFile;
-    SettingsForm.saveSettings;
+    if ad_currentFile='' then miSaveAsClick(Sender)
+    else begin
+      MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      SettingsForm.fileInEditor:=ad_currentFile;
+      SettingsForm.saveSettings;
+    end;
   end;
 
 procedure TMnhForm.mi_settingsClick(Sender: TObject);

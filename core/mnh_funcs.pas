@@ -470,8 +470,10 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     begin
       result:=nil;
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
-        result:=P_listLiteral(x)^.value(0);
-        result^.rereference;
+        if P_listLiteral(x)^.size>0 then begin
+          result:=P_listLiteral(x)^.value(0);
+          result^.rereference;
+        end else result:=newListLiteral;
       end else raiseNotApplicableError('head',x^.literalType,'',tokenLocation);
     end;
 

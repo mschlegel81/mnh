@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, mnh_funcs, mnh_tokloc, mnh_litvar, mnh_tokens, math, myFloat,myFiles,mnh_plotData;
+  Menus, mnh_funcs, mnh_litvar, mnh_tokens, math, mnh_plotData;
 
 type
   { TplotForm }

@@ -340,10 +340,12 @@ FUNCTION G_list.getEntry(CONST index:longint):ENTRY_TYPE;
   end;
 
 FUNCTION G_list.elementArray:ENTRY_TYPE_ARRAY;
+  VAR i:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock:=ThreadID until lock=ThreadID;
-    result:=entry;
+    setLength(result,length(entry));
+    for i:=0 to length(result)-1 do result[i]:=entry[i];
     repeat lock:=0 until lock=0;
   end;
 

@@ -1,0 +1,33 @@
+
+//firstHand->firstHand([1..10,1..10,1..10]%sortPerm(random(30)));
+firstHand->firstHand([1..6,1..6,1..6,1..6]%sortPerm(random(24)));
+firstHand(all)->[all%[0..7],all%[8..15],all%[16..23]];
+
+value([])->0;
+value(x:int)->x;
+
+draw(L)->put(L%0,L%1,L%2,[]);
+
+put(A,B,C,Stake)->compare(tail(A),value(head(A)),
+                          tail(B),value(head(B)),
+                          tail(C),value(head(C)),
+                          flatten(Stake,head(A),head(B),head(C)));
+put2(A,aPlays,B,bPlays,C,cPlays,Stake)->compare(aPlays?tail(A,2):A,aPlays?value(A%1):0,
+                                                bPlays?tail(B,2):B,bPlays?value(B%1):0,
+                                                cPlays?tail(C,2):C,cPlays?value(C%1):0,
+                                                flatten(Stake,aPlays?head(A,2):[],bPlays?head(B,2):[],cPlays?head(C,2):[]));
+
+compare(A,va,B,vb<va,C,vc<va,Stake)->[flatten(A,Stake),B,C];
+compare(A,va<vb,B,vb,C,vc<vb,Stake)->[A,flatten(B,Stake),C];
+compare(A,va<vc,B,vb<vc,C,vc,Stake)->[A,B,flatten(C,Stake)];
+compare(A,va,   B,vb   ,C,vc,Stake)->put2(A,va=max(va,vb,vc),
+                                          B,vb=max(va,vb,vc),
+                                          C,vc=max(va,vb,vc),
+                                          Stake);
+
+gameOver(L)->each(l,L,+,size(l)=0?1:0)=2;
+play(Hands,rounds>0)->[each(h,Hands,size(h))]|(gameOver(Hands)?[]:play(draw(Hands),rounds-1));
+play(Hands,rounds  )->[each(h,Hands,size(h))];
+
+each(n,[1..100],size(play(firstHand,1000)));
+
