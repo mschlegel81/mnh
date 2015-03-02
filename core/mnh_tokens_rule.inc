@@ -7,10 +7,10 @@
     private
       isCached:boolean;
       cache:T_cache;
+      cache_cs:system.TRTLCriticalSection;
 
       id:ansistring;
       subrules:array of P_subrule;
-
     public
       CONSTRUCTOR create(CONST ruleId:ansistring);
       DESTRUCTOR destroy;
@@ -37,7 +37,10 @@ DESTRUCTOR T_rule.destroy;
     id:='';
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
-    if isCached then cache.destroy;
+    if isCached then begin
+      cache.destroy;
+      system.DoneCriticalsection(cache_cs);
+    end;
     isCached:=false;
   end;
 
@@ -50,23 +53,28 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
     if isCached then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
+      system.EnterCriticalSection(cache_cs);
       lit:=cache.get(useParam);
       if lit<>nil then begin
         lit^.rereference;
         firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
         lastRep:=firstRep;
         if param=nil then disposeLiteral(useParam);
+        system.LeaveCriticalSection(cache_cs);
         exit(true);
       end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
-        if (callDepth>=STACK_DEPTH_LIMIT) or (ThreadID<>mainThread) then exit(true);
+        if (callDepth>=STACK_DEPTH_LIMIT) then begin
+          system.LeaveCriticalSection(cache_cs);
+          exit(true);
+        end;
         evalCost:=GetTickCount;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
         evalCost:=getTickCount-evalCost;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
-          if (ThreadID=mainThread) and (poolThreadsRunning=0) then cache.polish;
+          cache.polish;
           cache.put(useParam,lit,evalCost);
-        end;  
+        end;
         lastRep:=firstRep^.last;
         if param=nil then disposeLiteral(useParam);
         if (errorLevel>=el3_evalError) then begin
@@ -75,6 +83,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
           lastRep:=firstRep;
         end;
+        system.LeaveCriticalSection(cache_cs);
         exit(true);
       end;
       result:=false;
@@ -114,6 +123,7 @@ PROCEDURE T_rule.setMemoized;
     if not(isCached) then begin
       isCached:=true;
       cache.create;
+      system.InitCriticalSection(cache_cs);
     end;
   end;
 

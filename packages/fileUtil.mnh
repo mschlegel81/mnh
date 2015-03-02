@@ -21,4 +21,4 @@ findInLines(filename:string,[],F)->print('Empty file ',filename,' ?');
 printAll([])->false;
 printAll(L)->each(l,L,and,print(l));
 
-find('../art','*.pas,*.inc','SystemInfo',false);
+main(patterns,searchString)->find('.',patterns,searchString,false);

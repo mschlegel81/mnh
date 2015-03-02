@@ -881,7 +881,6 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
         found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
         for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
       end;
-
     end;
   end;
 
@@ -1063,51 +1062,51 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
-FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  VAR executable:ansistring;
-      cmdLinePar:T_stringList;
-      output:TStringList;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
-      setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
-      if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
-      end;
-      runCommand(executable,
-                 cmdLinePar,
-                 output);
-      result:=newListLiteral;
-      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
-      output.Free;
-    end else raiseNotApplicableError('execSync',params,tokenLocation);
-  end;
-
-FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  VAR executable:ansistring;
-      cmdLinePar:T_stringList;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
-      setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
-      if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
-      end;
-      runCommandAsync(executable,
-                      cmdLinePar);
-      result:=newBoolLiteral(true);
-    end else raiseNotApplicableError('execAsync',params,tokenLocation);
-  end;
+//FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//  VAR executable:ansistring;
+//      cmdLinePar:T_stringList;
+//      output:TStringList;
+//      i:longint;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+//      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+//      setLength(cmdLinePar,0);
+//      executable:=P_stringLiteral(params^.value(0))^.value;
+//      if params^.size=2 then begin
+//        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+//        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+//          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+//      end;
+//      runCommand(executable,
+//                 cmdLinePar,
+//                 output);
+//      result:=newListLiteral;
+//      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+//      output.Free;
+//    end else raiseNotApplicableError('execSync',params,tokenLocation);
+//  end;
+//
+//FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+//  VAR executable:ansistring;
+//      cmdLinePar:T_stringList;
+//      i:longint;
+//  begin
+//    result:=nil;
+//    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+//      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+//      setLength(cmdLinePar,0);
+//      executable:=P_stringLiteral(params^.value(0))^.value;
+//      if params^.size=2 then begin
+//        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+//        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+//          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+//      end;
+//      runCommandAsync(executable,
+//                      cmdLinePar);
+//      result:=newBoolLiteral(true);
+//    end else raiseNotApplicableError('execAsync',params,tokenLocation);
+//  end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR stringToSplit:ansistring;
@@ -1391,38 +1390,6 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('systime',params,tokenLocation);
   end;
 
-FUNCTION fileCursorOpen_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      EnterCriticalsection(file_cs);
-      result:=newBoolLiteral(fileCursor_open(P_stringLiteral(params^.value(0))^.value));
-      LeaveCriticalsection(file_cs);
-    end else raiseNotApplicableError('fileCursorOpen',params,tokenLocation);
-  end;
-
-FUNCTION fileCursorHasNext_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0)
-    then begin
-      EnterCriticalsection(file_cs);
-      result:=newBoolLiteral(fileCursor_hasNext);
-      LeaveCriticalsection(file_cs);
-    end else raiseNotApplicableError('fileCursorHasNext',params,tokenLocation);
-  end;
-
-FUNCTION fileCursorNext_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0)
-    then begin
-      EnterCriticalsection(file_cs);
-      result:=newStringLiteral(fileCursor_next);
-      LeaveCriticalsection(file_cs);
-    end else raiseNotApplicableError('fileCursorNext',params,tokenLocation);
-  end;
-
 FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -1518,8 +1485,8 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified PROGRAM and returns the text output');
-  registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified PROGRAM and returns true');
+  //registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified PROGRAM and returns the text output');
+  //registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified PROGRAM and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule('myPath'        ,@myPath_impl,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
@@ -1529,9 +1496,6 @@ INITIALIZATION
   registerRule('splitFileName' ,@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
   registerRule('systime'       ,@systime_imp,'sytime;#Returns the current time in various representations');
 
-  registerRule('fileCursorOpen',@fileCursorOpen_imp,'fileCursorOpen(filename:string);#Opens the file cursor for the given file name and returns true on success, false otherwise.');
-  registerRule('fileCursorHasNext',@fileCursorHasNext_imp,'fileCursorHasNext;#Returns true if the file cursor is open and a next element is available, false otherwise.');
-  registerRule('fileCursorNext',@fileCursorNext_imp,'fileCursorNext;#Returns the next line from the file cursor or the empty string if there is no such line (i.e. the cursor is closed or has reached the end of the file).');
   registerRule('ord'           ,@ord_imp           ,'ord(x);#Returns the ordinal value of x');
 
 FINALIZATION

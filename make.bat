@@ -2,7 +2,7 @@
 @if "%1"=="" goto help
 @if "%1"=="all" %0 32o 32d 64o 64d distro backup
 
-@set delp=C:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32
+@set delp=C:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32 gui
 @set fpc32=C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc         
 @set fpc64=c:\lazarus64\fpc\2.6.4\bin\x86_64-win64\fpc.exe 
 @rem @set optimize=-O2 -CX -XX -Scghi2 

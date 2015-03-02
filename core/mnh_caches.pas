@@ -19,7 +19,7 @@ TYPE
   private
     timeTally: longint;
     fill: longint;
-    criticalSection:TRTLCriticalSection;
+    //criticalSection:TRTLCriticalSection;
     cached: array[0..CACHE_MOD] of array of T_cacheEntry;
   public
     CONSTRUCTOR create();
@@ -46,7 +46,7 @@ PROCEDURE clearAllCaches;
 
 CONSTRUCTOR T_cache.create();
   begin
-    InitCriticalSection(criticalSection);
+//    InitCriticalSection(criticalSection);
     fill := 0;
     timeTally := 0;
     setLength(allCaches, length(allCaches)+1);
@@ -56,7 +56,7 @@ CONSTRUCTOR T_cache.create();
 DESTRUCTOR T_cache.destroy;
   VAR i: longint;
   begin
-    EnterCriticalsection(criticalSection);
+//    EnterCriticalsection(criticalSection);
     Clear;
     i := 0;
     while (i<length(allCaches)) and (allCaches [i]<>@self) do Inc(i);
@@ -64,8 +64,8 @@ DESTRUCTOR T_cache.destroy;
       allCaches[i] := allCaches [length(allCaches)-1];
       setLength(allCaches, length(allCaches)-1);
     end;
-    LeaveCriticalsection(criticalSection);
-    DoneCriticalsection(criticalSection);
+    //LeaveCriticalsection(criticalSection);
+    //DoneCriticalsection(criticalSection);
   end;
 
 PROCEDURE T_cache.polish;
@@ -99,7 +99,7 @@ PROCEDURE T_cache.polish;
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST costFactor: longint);
   VAR binIdx, i: longint;
   begin
-    EnterCriticalsection(criticalSection);
+    //EnterCriticalsection(criticalSection);
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
@@ -116,13 +116,13 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST co
     cached[binIdx, i].useTime := timeTally; Inc(timeTally);
     if costFactor<=0 then cached[binIdx, i].cost := 1
                      else cached[binIdx, i].cost := 10*costFactor;
-    LeaveCriticalsection(criticalSection);
+    //LeaveCriticalsection(criticalSection);
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR binIdx, i: longint;
   begin
-    EnterCriticalsection(criticalSection);
+    //EnterCriticalsection(criticalSection);
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
@@ -132,7 +132,7 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       cached[binIdx, i].useTime := timeTally; Inc(timeTally);
       result := cached [binIdx, i].value;
     end;
-    LeaveCriticalsection(criticalSection);
+    //LeaveCriticalsection(criticalSection);
   end;
 
 PROCEDURE T_cache.Clear;

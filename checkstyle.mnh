@@ -10,10 +10,10 @@ fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict
 
 check(filename)->each(t,tokenSplit(fileContents(filename),language),and,fixToken(t)<>t ? print(filename&": "&t) : true);
 fix(filename)->fix(filename,tokenSplit(fileContents(filename),language));
-fix(filename,oldTokens)->fix(filename,oldTokens,each(t,oldTokens,fixToken(t)));
+fix(filename,oldTokens)->fix(filename,oldTokens,pEach(t,oldTokens,fixToken(t)));
 fix(filename,oldTokens,newTokens==oldTokens)->true;
 fix(filename,oldTokens,newTokens)->writeFile(filename,each(t,newTokens,&)) and print('file ',filename,' modified');
 
-each(s,recFiles(".","*.pas,*.inc"),and,check(s));
+each(s,recFiles(".","*.pas,*.inc"),and,fix(s));
 
 //each(s,recFiles("../art/source","*.pas,*.inc"),and,fix(s));

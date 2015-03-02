@@ -1,8 +1,6 @@
 UNIT mnh_fileWrappers;
-
 INTERFACE
-
-USES SysUtils, Classes, process;
+USES SysUtils,Classes,process;
 TYPE
   T_stringList = array of ansistring;
 
@@ -41,6 +39,19 @@ TYPE
     PROCEDURE Clear;
   end;
 
+  //T_fileCursor=object
+  //  filename:ansistring;
+  //  handle:TextFile;
+  //  isOpen:boolean;
+  //
+  //  CONSTRUCTOR create(CONST fname:string);
+  //  FUNCTION hasNext:boolean;
+  //  FUNCTION next:ansistring;
+  //  PROCEDURE close;
+  //  PROCEDURE resetCursor;
+  //  DESTRUCTOR destroy;
+  //end;
+
 CONST sourceExt = '.MNH';
 
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
@@ -55,20 +66,11 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_stringList;
 
 FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
-
-FUNCTION fileCursor_open(CONST filename:ansistring):boolean;
-FUNCTION fileCursor_hasNext:boolean;
-FUNCTION fileCursor_next:ansistring;
-PROCEDURE fileCursor_close;
+//FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
 
 IMPLEMENTATION
 VAR mainPackagePath: ansistring;
-    fileCursor:record
-      filename:ansistring;
-      handle:TextFile;
-      isOpen:boolean;
-    end;
+
 
 PROCEDURE setMainPackagePath(CONST path: ansistring);
   begin
@@ -273,67 +275,65 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_s
   end;
 
 FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
-  VAR
-    tempProcess: TProcess;
-    i: longint;
+  VAR tempProcess: TProcess;
+       i: longint;
   begin
     result := true;
-      try
+    try
       tempProcess := TProcess.create(nil);
       tempProcess.Executable := executable;
-      for i := 0 to length(parameters)-1 do
-        tempProcess.Parameters.Add(parameters [i]);
+      for i := 0 to length(parameters)-1 do tempProcess.Parameters.Add(parameters [i]);
       tempProcess.Execute;
       tempProcess.Free;
-      except
+    except
       result := false;
-      end;
+    end;
   end;
-
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
-  CONST
-    READ_BYTES = 2048;
-  VAR
-    memStream: TMemoryStream;
-    tempProcess: TProcess;
-    n: longint;
-    BytesRead: longint;
-  begin
-    memStream := TMemoryStream.create;
-    BytesRead := 0;
-    tempProcess := TProcess.create(nil);
-    tempProcess.Executable := executable;
-    for n := 0 to length(parameters)-1 do
-      tempProcess.Parameters.Add(parameters [n]);
-    tempProcess.Options := [poUsePipes, poStderrToOutPut];
-    tempProcess.ShowWindow := swoHIDE;
-      try
-      tempProcess.Execute;
-      while tempProcess.Running do
-        begin
-        memStream.SetSize(BytesRead+READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-        if n>0 then
-          Inc(BytesRead, n)
-        else
-          Sleep(10);
-        end;
-      repeat
-        memStream.SetSize(BytesRead+READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-        if n>0 then
-          Inc(BytesRead, n);
-      until n<=0;
-      result := (tempProcess.ExitStatus = 0);
-      except
-      result := false;
-      end;
-    tempProcess.Free;
-    memStream.SetSize(BytesRead);
-    output := TStringList.create;
-    output.LoadFromStream(memStream);
-    memStream.Free;
-  end;
+//
+//FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
+//  CONST
+//    READ_BYTES = 2048;
+//  VAR
+//    memStream: TMemoryStream;
+//    tempProcess: TProcess;
+//    n: longint;
+//    BytesRead: longint;
+//  begin
+//    memStream := TMemoryStream.create;
+//    BytesRead := 0;
+//    tempProcess := TProcess.create(nil);
+//    tempProcess.Executable := executable;
+//    for n := 0 to length(parameters)-1 do
+//      tempProcess.Parameters.Add(parameters [n]);
+//    tempProcess.Options := [poUsePipes, poStderrToOutPut];
+//    tempProcess.ShowWindow := swoHIDE;
+//      try
+//      tempProcess.Execute;
+//      while tempProcess.Running do
+//        begin
+//        memStream.SetSize(BytesRead+READ_BYTES);
+//        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+//        if n>0 then
+//          Inc(BytesRead, n)
+//        else
+//          Sleep(10);
+//        end;
+//      repeat
+//        memStream.SetSize(BytesRead+READ_BYTES);
+//        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+//        if n>0 then
+//          Inc(BytesRead, n);
+//      until n<=0;
+//      result := (tempProcess.ExitStatus = 0);
+//      except
+//      result := false;
+//      end;
+//    tempProcess.Free;
+//    memStream.SetSize(BytesRead);
+//    output := TStringList.create;
+//    output.LoadFromStream(memStream);
+//    memStream.Free;
+//  end;
 
 { T_codeProvider }
 
@@ -515,9 +515,7 @@ FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do
       sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
+    repeat lock := ThreadID until lock = ThreadID;
     if reloadIfNecessary and fileHasChanged then
       load;
     result := version;
@@ -546,46 +544,55 @@ PROCEDURE T_codeProvider.Clear;
     syncedFileAge := 0;
   end;
 
-FUNCTION fileCursor_open(CONST filename:ansistring):boolean;
-  begin
-    if fileCursor.isOpen then fileCursor_close;
-    fileCursor.filename:=filename;
-    try
-      assign(fileCursor.handle,filename);
-      reset(fileCursor.handle);
-      fileCursor.isOpen:=true;
-      result:=true;
-    except
-      fileCursor.isOpen:=false;
-      result:=false;
-    end;
-  end;
-
-FUNCTION fileCursor_hasNext:boolean;
-  begin
-    result:=fileCursor.isOpen;
-    if result and eof(fileCursor.handle) then begin
-      result:=false;
-      fileCursor_close;
-    end;
-  end;
-
-FUNCTION fileCursor_next:ansistring;
-  begin
-    if not(fileCursor_hasNext) then exit('');
-    readln(fileCursor.handle,result);
-  end;
-
-PROCEDURE fileCursor_close;
-  begin
-    with fileCursor do if isOpen then begin
-      close(handle);
-      isOpen:=false;
-    end;
-  end;
+//CONSTRUCTOR T_fileCursor.create(CONST fname:ansistring);
+//  begin
+//    filename:=fname;
+//    try
+//      assign(handle,filename);
+//      reset(handle);
+//      isOpen:=true;
+//    except
+//      isOpen:=false;
+//    end;
+//  end;
+//
+//FUNCTION T_fileCursor.hasNext:boolean;
+//  begin
+//    if isOpen and eof(handle) then begin
+//      result:=false;
+//      close;
+//    end else result:=isOpen;
+//  end;
+//
+//FUNCTION T_fileCursor.next:ansistring;
+//  begin
+//    if not(hasNext) then exit('');
+//    readln(handle,result);
+//  end;
+//
+//PROCEDURE T_fileCursor.close;
+//  begin
+//    if isOpen then begin
+//      system.close(handle);
+//      isOpen:=false;
+//    end;
+//  end;
+//
+//PROCEDURE T_fileCursor.resetCursor;
+//  begin
+//    close;
+//    try
+//      reset(handle);
+//      isOpen:=true;
+//    except
+//      isOpen:=false;
+//    end;
+//  end;
+//
+//DESTRUCTOR T_fileCursor.destroy;
+//  begin close; end;
 
 INITIALIZATION
   setMainPackagePath('');
-  fileCursor.filename:='';
-  fileCursor.isOpen:=false;
+
 end.

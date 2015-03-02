@@ -68,7 +68,8 @@ TYPE
     lt_flatList,
     lt_uncheckedList,
     lt_listWithError,
-    lt_void);
+    lt_void,
+    lt_fileLinesIterator);
 
 CONST
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
@@ -159,7 +160,8 @@ CONST
     'flatList',
     'UNCHECKED LIST!',
     'list(containing error)',
-    'void-type');
+    'void-type',
+    'file-lines-iterator');
 
   C_tokenInfoString: array[T_tokenType] of string = (
     'literal',

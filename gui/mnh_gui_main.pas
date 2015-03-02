@@ -955,22 +955,22 @@ PROCEDURE TMnhForm.miAntialiasingOffClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miAutoResetClick(Sender: TObject);
-begin
-  miAutoReset.Checked:=not(miAutoReset.Checked);
-  SettingsForm.resetPlotOnEvaluation:=miAutoReset.Checked;
-end;
+  begin
+    miAutoReset.Checked:=not(miAutoReset.Checked);
+    SettingsForm.resetPlotOnEvaluation:=miAutoReset.Checked;
+  end;
 
 PROCEDURE TMnhForm.miAutoscaleXClick(Sender: TObject);
-begin
-  miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
-  pushSettingsToPlotContainer(true);
-end;
+  begin
+    miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
+    pushSettingsToPlotContainer(true);
+  end;
 
 PROCEDURE TMnhForm.miAutoscaleYClick(Sender: TObject);
-begin
-  miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
-  pushSettingsToPlotContainer(true);
-end;
+  begin
+    miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
+    pushSettingsToPlotContainer(true);
+  end;
 
 PROCEDURE TMnhForm.miLogscaleXClick(Sender: TObject);
   begin

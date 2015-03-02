@@ -9,9 +9,12 @@ private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%
                                               traverseBinaryTree(codePrefix&1,T%1) ;
 private codeSort(L)->L%(sortPerm(each(code,L%%0,-length(code))));
 
+private deltaIndexes(L)->0|[1..size(L)-1]%(head(L,size(L)-1)<>tail(L))|size(L);
+private histogram(words)->histogram(words,deltaIndexes(words));
+private histogram(words,IDX)->pEach(i,[0..size(IDX)-2],[(IDX%(i+1)-IDX%i),words%(IDX%i)]);
+
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
-private charactersInString     (s:string)->charFreq(copy(s,[0..min(1000000,length(s))-1],1));
-private charFreq(L)->pEach(c,unique(L),[size(L%(L=c)),c]);
+private charactersInString     (s:string)->histogram(sort(copy(s,[0..length(s)-1],1)));
 
 private escapeChar("\n")->'\\n';
 private escapeChar("\r")->'\\r';
@@ -27,3 +30,4 @@ main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') a
 //*Calls main with unixdict.txt as input
 main->main((splitFileName(myPath)%"directory")&"/inputs/unixdict.txt");
 
+main;

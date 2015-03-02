@@ -1,11 +1,12 @@
 {$ifdef include_interface}
   P_token=^T_token;
-  T_token=object
+  T_token=packed object
+    next    :P_Token;
     location:T_tokenLocation;
-    txt     :ansistring;
+    txt     :shortstring;
     tokType :T_tokenType;
     data    :pointer;
-    next    :P_Token;
+
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE define(CONST tokenLocation: T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
@@ -18,16 +19,16 @@
   end;
 
   T_tokenRecycler=object
-    dat:array[0..1023] of P_token;
+    dat:array[0..2047] of P_token;
     fill:longint;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION disposeToken(p:P_token):P_token;
+    FUNCTION disposeToken(p:P_token):P_token; inline;
     PROCEDURE cascadeDisposeToken(VAR p:P_token);
-    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
-    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
-    FUNCTION newToken(CONST original:T_token):P_token;
-    FUNCTION newToken(CONST original:P_token):P_token;
+    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token; inline;
+    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token; inline;
+    FUNCTION newToken(CONST original:T_token):P_token; inline;
+    FUNCTION newToken(CONST original:P_token):P_token; inline;
   end;
 
 {$endif}

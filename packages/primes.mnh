@@ -2,10 +2,10 @@
 memoized
 primes(maxP<=2)->[2];
 //*General case: find Prime numbers using a recursive approach
-primes(maxP)->resieve(primes(floor(sqrt(maxP))),[floor(sqrt(maxP))+1..maxP]);
-private resieve(primes,candidates)->primes|(candidates%pEach(p,primes,and,candidates mod p = 0));
+primes(maxP)->resieve(primes(floor(sqrt(maxP))),[floor(sqrt(maxP))+1..ceil(maxP)]);
+private resieve(primes,candidates)->primes|(candidates%pEach(p,primes,and,candidates mod p != 0));
 
-isPrime(n)->trueCount(n mod primes(sqrt(n))=0) = 0;
+isPrime(n)->n=2 or (n>1 and trueCount(n mod primes(sqrt(n))=0) = 0);
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
 memoized factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));

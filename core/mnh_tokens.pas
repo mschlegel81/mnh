@@ -52,7 +52,7 @@ VAR mainPackageProvider:T_codeProvider;
     
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT=60000;// {$ifdef version64bit} 14750 {$else} 37000 {$endif};
+CONST STACK_DEPTH_LIMIT=60000;
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
@@ -99,7 +99,6 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     recycler.create;
     mainPackage.load(usecase,recycler);
     //housekeeping:-------------------------------------------------------------
-    fileCursor_close;
     clearAllCaches;
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
