@@ -1,16 +1,17 @@
 UNIT mnh_out_adapters;
 INTERFACE
-USES mnh_stringutil, mnh_constants;
+USES mnh_stringutil, mnh_constants, mnh_tokLoc;
 
 TYPE
   T_writeCallback=PROCEDURE(CONST s:ansistring);
+  T_writeErrorCallback=PROCEDURE(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
 
 VAR inputDeclEcho,
     inputExprEcho,
-    exprOut ,
-    errorOut,
+    exprOut ,    
     printOut,
     tablePrintOut:T_writeCallback;
+    errorOut     :T_writeErrorCallback;
     maxErrorLevel:T_errorLevel;
 
 PROCEDURE writeDeclEcho(CONST s:ansistring);
@@ -18,11 +19,11 @@ PROCEDURE writeExprEcho(CONST s:ansistring);
 PROCEDURE writeExprOut (CONST s:ansistring);
 PROCEDURE writePrint   (CONST s:ansistring);
 PROCEDURE clearErrors;
-PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
+PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
 FUNCTION errorLevel:T_errorLevel;
 
 PROCEDURE plainConsoleOut(CONST s:ansistring);
-PROCEDURE plainStdErrOut(CONST s:ansistring);
+PROCEDURE plainStdErrOut(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
 
 FUNCTION isMemoryFree(CONST usage:string):boolean;
 
@@ -56,10 +57,10 @@ PROCEDURE clearErrors;
     maxErrorLevel:=el0_allOkay;
   end;
 
-PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
+PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
   begin
     if errorLevel>maxErrorLevel then maxErrorLevel:=errorLevel;
-    if errorOut<>nil then errorOut(C_errorLevelTxt[errorLevel]+errorMessage+'  @'+errorLocation);
+    if errorOut<>nil then errorOut(errorLevel,errorMessage,errorLocation);
   end;
 
 FUNCTION errorLevel:T_errorLevel;
@@ -72,9 +73,9 @@ PROCEDURE plainConsoleOut(CONST s:ansistring);
     writeln(s);
   end;
 
-PROCEDURE plainStdErrOut(CONST s:ansistring);
+PROCEDURE plainStdErrOut(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
   begin
-    writeln(stdErr,s);
+    writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
   end;
 
 VAR MEMORY_MANAGER:TMemoryManager;
@@ -83,7 +84,7 @@ FUNCTION isMemoryFree(CONST usage:string):boolean;
   CONST MAX_MEMORY_THRESHOLD=1500*1024*1024; //=1500 MB
   begin
     result:=(MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed<MAX_MEMORY_THRESHOLD);
-    if not(result) and (maxErrorLevel<el5_systemError) then raiseError(el5_systemError,'Out of memory!',usage);
+    if not(result) and (maxErrorLevel<el5_systemError) then raiseError(el5_systemError,'Out of memory! ('+usage+')',C_nilTokenLocation);
   end;
 
 INITIALIZATION

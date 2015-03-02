@@ -1,17 +1,14 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
-     mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
-     mnh_funcs, mnh_out_adapters; //even more specific
-     
+USES myGenerics,mnh_constants,math,mnh_litvar,sysutils,mnh_fileWrappers,mnh_stringUtil,mnh_funcs,mnh_out_adapters;
 {$define doTokenRecycling}
 {$define include_interface}
 TYPE
   P_package=^T_package;
   {$include mnh_tokens_token.inc}
-  {$include mnh_tokens_pattern.inc}
-  {$include mnh_tokens_subrule.inc}
-  {$include mnh_tokens_rule.inc}
+  {$include mnh_tokens_pattern}
+  {$include mnh_tokens_subrule}
+  {$include mnh_tokens_rule}
 
   T_package=object
     private
@@ -106,7 +103,7 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
     new(packages[0],create(directInputWrapper));
   end;
 
-FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
+FUNCTION loadPackage(CONST packageId,tokenLocation:ansistring):P_package;
   VAR i:longint;
       newSource:P_fileWrapper;
   begin
@@ -204,7 +201,7 @@ PROCEDURE T_package.load;
     PROCEDURE interpretUseClause;
       VAR temp:P_token;
           i,j:longint;
-          locationForErrorFeedback:T_tokenLocation;
+          locationForErrorFeedback:ansistring;
           newId:string;
       begin
         locationForErrorFeedback:=first^.location;
@@ -399,7 +396,7 @@ PROCEDURE T_package.load;
     first:=nil;
     next :=nil;
     last :=nil;
-    location.provider:=codeProvider;
+    location.package:=@self;
     for i:=0 to length(codeLines)-1 do begin
       location.line:=i+1;
       location.column:=1;
@@ -508,9 +505,9 @@ FUNCTION T_package.ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
     end;
   end;
 
-FUNCTION packagePointerToSource(CONST package:pointer):P_codeProvider;
+FUNCTION packagePointerToSourceName(CONST package:pointer):string;
   begin
-    result:=P_package(package)^.codeProvider;
+    result:=P_package(package)^.codeProvider^.filename;
   end;
 
 INITIALIZATION
@@ -522,6 +519,7 @@ INITIALIZATION
   disposeSubruleCallback :=@disposeSubruleImpl;
   subruleToStringCallback:=@subruleToStringImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
+  packagePointerToSourceNameCallback:=@packagePointerToSourceName;
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
 FINALIZATION

@@ -56,7 +56,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
 CONSTRUCTOR T_subrule.createConstant  (CONST value:P_literal);
   begin
     pattern.create;
-    declaredAt.package:=nil;
+    declaredAt.provider:=nil;
     isDeclaredInline:=true;
     setLength(expression,1);
     with expression[0] do begin
@@ -174,7 +174,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
-    declaredAt.package:=nil;
+    declaredAt:=C_nilTokenLocation;
     pattern.destroy;
     for i:=0 to length(expression)-1 do disposeToken(expression[i].token);
     setLength(expression,0);
@@ -345,9 +345,9 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal):P_literal;
 PROCEDURE T_subrule.getLineNumbers(VAR collector:T_listOfIntegers);
   VAR i:longint;
   begin
-    result.add(declaredAt.line);
+    collector.add(declaredAt.line);
     for i:=0 to length(expression)-1 do with expression[i].token^.location do 
-      if package<>nil then result.add(line);
-    result.unique;
+      if provider<>nil then collector.add(line);
+    collector .unique;
   end;
 {$endif}

@@ -1,16 +1,11 @@
 UNIT mnh_litvar;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil;
+USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil, mnh_tokloc;
 {$define literalRecycling}
 CONST
   C_boolText:array[false..true] of string=('false','true');
 
 TYPE
-  T_tokenLocation=record
-    package:pointer;
-    line,column:longint;
-  end;
-
   PP_literal=^P_literal;
   P_literal=^T_literal;
   T_literal=object
@@ -146,18 +141,14 @@ TYPE
   end;
 
 TYPE
-  T_disposeSubruleCallback =PROCEDURE(VAR p:pointer);
-  T_pointerToStringCallback=FUNCTION(CONST p:pointer):string;
+  T_disposeSubruleCallback =PROCEDURE(VAR p:pointer);  
   T_subruleApplyOpCallback =FUNCTION(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):pointer;
-
+  T_pointerToStringCallback=FUNCTION(CONST p:pointer):string;
 
 VAR
   disposeSubruleCallback :T_disposeSubruleCallback;
   subruleToStringCallback:T_pointerToStringCallback;
   subruleApplyOpCallback :T_subruleApplyOpCallback;
-  packagePointerToSourceNameCallback:T_pointerToStringCallback;
-
-OPERATOR :=(x:T_tokenLocation):ansistring;
 
 PROCEDURE disposeLiteral     (VAR l:P_literal);
 FUNCTION newBoolLiteral      (CONST value:boolean   ):P_boolLiteral;
@@ -172,13 +163,6 @@ FUNCTION newErrorLiteralRaising(CONST x,y:T_literalType; CONST op:T_tokenType; C
 FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 FUNCTION parseNumber(CONST input:ansistring; OUT parsedLength:longint):P_scalarLiteral;
 IMPLEMENTATION
-OPERATOR :=(x:T_tokenLocation):ansistring;
-  begin
-    if x.package=nil then result:='unknown location'
-    else result:=packagePointerToSourceNameCallback(x.package)
-                +intToStr(x.line)+','
-                +intToStr(x.column);
-  end;
 
 VAR boolLit:array[false..true] of T_boolLiteral;
     intLit :array[0..127] of P_intLiteral;
