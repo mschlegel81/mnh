@@ -41,9 +41,9 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR  destroy;
     PROCEDURE   updateViewport;
-    PROCEDURE	rescale   (newWidth,newHeight:longint);
+    PROCEDURE   rescale   (newWidth,newHeight:longint);
     PROCEDURE   moveCenter(dx,dy:double);
-    PROCEDURE	rezoom    (factorX,factorY,invariantX,invariantY:double);
+    PROCEDURE   rezoom    (factorX,factorY,invariantX,invariantY:double);
     PROCEDURE   checkRanges;
     PROCEDURE   addGraph;
     PROCEDURE   addRect(x0,y0,x1,y1:Extended; colorOption:string);
@@ -437,23 +437,7 @@ PROCEDURE T_plot.dropGraph;
 
 PROCEDURE T_plot.drawGrid;
   PROCEDURE prepareGrid;
-    CONST logSubGrid:array[1..9] of double=(ln(1)/ln(10),ln(2)/ln(10),ln(3)/ln(10),ln(4)/ln(10),ln(5)/ln(10),ln(6)/ln(10),ln(7)/ln(10),ln(8)/ln(10),ln(9)/ln(10));
-    FUNCTION shorterString(x:double; L10Max,L10Min:longint):string;
-      VAR numString1:string;
-      begin
-        if (x<-1E3) or (x>1E3) then result:='' else begin
-          str(x*system.exp(-L10Max*system.ln(10)):0:(L10Max-L10Min),numString1);
-          numString1:=numString1+'E'+intToStr(L10Max);
-          if L10Min<0 then begin
-            str(x:0:-L10Min,result);
-            while result[length(result)]='0' do result:=copy(result,1,length(result)-1);
-            if result[length(result)]='.' then result:=copy(result,1,length(result)-1);
-          end else str(x:0:0,result);
-          if result='-0' then result:='0';
-          if length(numString1)<length(result) then result:=numString1;  //return shorter representation
-        end;
-      end;
-
+    CONST logSubGrid:array[1..9] of double=(ln(1)/ln(10),ln(2)/ln(10),ln(3)/ln(10),ln(4)/ln(10),ln(5)/ln(10),ln(6)/ln(10),ln(7)/ln(10),ln(8)/ln(10),ln(9)/ln(10));    
     VAR i,j:longint;
 
         cover_5,

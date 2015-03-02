@@ -84,6 +84,7 @@
         <Filename Value="mnh_plots.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="plotForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_plots"/>
       </Unit5>

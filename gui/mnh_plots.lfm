@@ -26,6 +26,7 @@ object plotForm: TplotForm
       Caption = 'Options'
       object miPreserveAspect: TMenuItem
         Caption = 'Preserve aspect'
+        OnClick = miPreserveAspectClick
       end
       object miLogscaleX: TMenuItem
         Caption = 'Log-Scale X'
