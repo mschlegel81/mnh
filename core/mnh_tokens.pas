@@ -365,9 +365,10 @@ procedure T_package.load;
           subRule^.publish:=not(ruleIsPrivate);
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
           first:=nil;
-        end else begin
-          cascadeDisposeToken(first);
-        end;
+        end else if errorLevel<el5_systemError then
+          cascadeDisposeToken(first)
+        else
+          first:=nil;
       end;
       
     FUNCTION parseCache:boolean;

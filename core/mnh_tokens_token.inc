@@ -20,6 +20,7 @@
 {$ifdef include_implementation}
 {$ifdef doTokenRecycling}
 VAR tokenRecycling:record
+      forThread:TThreadID;
       dat:array[0..1023] of P_token;
       fill:longint;
     end;
@@ -110,13 +111,17 @@ PROCEDURE finalizeTokens;
   end;
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
+  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_set,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod];
   VAR p:P_token;
+      lastWasIdentifierLike:boolean=false;
   begin
     result:='';
     p:=first;
     while p<>nil do begin
       result:=result+p^.toString;
+      lastWasIdentifierLike:=p^.tokType in idLikes;
       p:=p^.next;
+      if (p<>nil) and lastWasIdentifierLike and (p^.tokType in idLikes) then result:=result+' ';
     end;
   end;
 
@@ -633,25 +638,29 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       t:=first;
       if aggregatorPresent and (itList^.size=0) then
         raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
-      else if length(bodyRule)>0 then for i:=0 to itList^.size-1 do
-      for j:=0 to length(bodyRule)-1 do begin
-        if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
-          t^.next:=newToken(tokensBetween[k]);
+      else if length(bodyRule)>0 then begin
+        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
+        for j:=0 to length(bodyRule)-1 do begin
+          if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
+            t^.next:=newToken(tokensBetween[k]);
+            t:=t^.next;
+          end;
+          t^.next:=newToken(eachLocation,'',tt_literal,bodyRule[j]);
+          bodyRule[j]^.rereference;
+          t:=t^.next;
+          t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
+          t:=t^.next;
+        end
+      end else begin
+        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
+          if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
+            t^.next:=newToken(tokensBetween[k]);
+            t:=t^.next;
+          end;
+          t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
+          itList^.value(i)^.rereference;
           t:=t^.next;
         end;
-        t^.next:=newToken(eachLocation,'',tt_literal,bodyRule[j]);
-        bodyRule[j]^.rereference;
-        t:=t^.next;
-        t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
-        t:=t^.next;
-      end else for i:=0 to itList^.size-1 do begin
-        if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
-          t^.next:=newToken(tokensBetween[k]);
-          t:=t^.next;
-        end;
-        t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
-        itList^.value(i)^.rereference;
-        t:=t^.next;
       end;
       //----------------------------------------------------------iterate over itList
       t^.next:=bracketClosingEach;
@@ -768,10 +777,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
     setLength(stack,0);
     repeat
       didSubstitution:=false;
+      //writeln(tokensToString(first));
       //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
-          tt_set: stack_popLink;
           tt_unaryOpPlus: stack_popDestroy;
           tt_unaryOpMinus: begin
             newLit:=P_literal(first^.data)^.negate(stack[length(stack)-1]^.location);
@@ -838,7 +847,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
               stack_push;
             end;
           end;
-          tt_braceOpen: case cTokType(1) of // ( | <Lit>
+          tt_set: case cTokType(1) of // set(X, | <Lit>
+            tt_braceClose: stack_popLink;  // set(X, | <Lit> )
+            tt_braceOpen: begin
+              stack_push;
+              first^.tokType:=tt_parList_constructor;
+              first^.data:=newListLiteral;
+              stack_push;
+            end;
+            tt_comparatorEq..tt_operatorIn,tt_separatorCnt,tt_separatorComma: begin stack_push; stack_push; end; // set(X, | <Lit> +
+            tt_iifCheck: stack_push;                                 // set(X, | <Lit> ?
+            tt_parList:  applyRule(first^.next,first^.next^.next);   // set(X, | <Lit> (...)
+            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;   // set(X, | <Lit> :type
+            else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
+          end;
+          tt_braceOpen : case cTokType(1) of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
               first^.next:=disposeToken(first^.next);
@@ -989,7 +1012,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           first^.next:=disposeToken(first^.next); //dispose closing bracket
           //result is set literal
           didSubstitution:=true;
-        end else begin
+        end else if cTokType(1)<>tt_eol then begin
           stack_push; //push set
         end;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of

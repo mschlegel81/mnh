@@ -48,7 +48,7 @@ FUNCTION main(p:pointer):ptrint;
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
         getMainPackage^.updateLists(localUserRules,importedUserRules);
         evaluationState.value:=es_idle;
-        if hasMessage(el5_systemError,HALT_MESSAGE)
+        if hasHaltMessage
         then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
         else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
         sleepTime:=0;
@@ -144,7 +144,10 @@ begin
       end else if token.txt='CACHE' then begin
         result.tokenExplanation:=result.tokenExplanation+'#Identifier has context specific interpretation'
                                                         +'#In conjunction with a further identifier it enables caching for a specific rule.'
-      end;
+      end else if token.txt='private' then begin
+        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context specific interpretation'
+                                                        +'#Before a declaration/assignment it makes the created (sub-)rule private, i.e. inaccessible for importing packages.'
+      end
     end else if (token.tokType=tt_literal) then begin
       if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
       else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'

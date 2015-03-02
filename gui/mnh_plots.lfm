@@ -26,6 +26,7 @@ object plotForm: TplotForm
       Caption = 'Options'
       object miAntialiasing: TMenuItem
         Caption = 'Antialiasing'
+        OnClick = miAntialiasingClick
       end
       object miPreserveAspect: TMenuItem
         Caption = 'Preserve aspect'

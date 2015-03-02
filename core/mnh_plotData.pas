@@ -17,6 +17,8 @@ CONST
   C_symbolStyle_cross  = 64;
   C_symbolStyle_impulse=128;
 
+  C_anyLineStyle=3;
+
   C_styleName:array[0..9] of record
     idx:byte;
     name:array[0..1] of string;
@@ -33,6 +35,7 @@ CONST
 
 TYPE
   T_point=array[0..1] of double;
+  T_dataRow=array of T_point;
 
   { T_style }
 
@@ -47,21 +50,27 @@ TYPE
     PROCEDURE parseStyle(CONST styleString:ansistring);
     FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
     PROCEDURE saveToFile(VAR F:T_File);           virtual; overload; //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
+
+    FUNCTION getTColor:longint;
+    FUNCTION wantStraightLines:boolean;
   end;
 
   { T_sampleRow }
+
+  T_boundingBox=array['x'..'y',0..1] of double;
 
   T_sampleRow=object(T_serializable)
     //non-persistent:
     sampleTime:array of double;
     //persistent:
     style:T_style;
-    sample:array of T_point;
+    sample:T_dataRow;
     computed:boolean;
     CONSTRUCTOR create(CONST index:byte);
     PROCEDURE setComputed;
     FUNCTION isComputed:boolean;
-    PROCEDURE getBoundingBox(CONST logX,logY:boolean; VAR x0,x1,y0,y1:double);
+    PROCEDURE getBoundingBox(CONST logX,logY:boolean; VAR box:T_boundingBox);
+    PROCEDURE addSample(CONST x,y:double);
     DESTRUCTOR destroy;
     FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
     PROCEDURE saveToFile(VAR F:T_File);           virtual; overload; //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
@@ -76,22 +85,24 @@ CONST
   C_ticsAndFinerGrid=C_tics+C_finerGrid;
 
 TYPE
+  T_ticInfo=record
+    pos:double;
+    major:boolean;
+    txt:ansistring;
+  end;
+
   T_plot=object(T_serializable)
     //non-persistent:
     screenWidth,screenHeight:longint;
     xOffset,yOffset:longint;
 
-    tic:array['x'..'y'] of array of record
-      pos:double;
-      prio:longint;
-      txt:ansistring;
-    end;
+    tic:array['x'..'y'] of array of T_ticInfo;
     //persistent:
     range:array['x'..'y',0..1] of double;
     axisStyle:array['x'..'y'] of byte;
     autoscale,logscale:array['x'..'y'] of boolean;
     preserveAspect:boolean;
-    line:array of T_sampleRow;
+    row:array of T_sampleRow;
 
     CONSTRUCTOR createWithDefaults;
     DESTRUCTOR destroy;
@@ -102,6 +113,11 @@ TYPE
     PROCEDURE setScreenSize(CONST width,height:longint);
     FUNCTION longtestYTic:ansistring;
     FUNCTION setTextSize(CONST xTicHeight,yTicWidth:longint):boolean;
+    //pure query:
+    FUNCTION wantTics(CONST axis:char):boolean;
+    FUNCTION realToScreen(CONST p :T_point):T_point;
+    FUNCTION realToScreen(CONST x,y:double):T_point;
+    FUNCTION realToScreen(CONST axis:char; CONST p:double):double;
   end;
 
 VAR activePlot:T_plot;
@@ -127,19 +143,27 @@ function T_sampleRow.isComputed: boolean;
     result:=computed;
   end;
 
-procedure T_sampleRow.getBoundingBox(CONST logX,logY:boolean; VAR x0, x1, y0, y1: double);
+procedure T_sampleRow.getBoundingBox(const logX, logY: boolean;
+  var box: T_boundingBox);
   VAR i:longint;
       x,y:double;
   begin
     for i:=0 to length(sample)-1 do begin
       x:=sample[i,0]; if computed or logX and (x<0) then x:=NaN;
       y:=sample[i,1]; if             logY and (y<0) then y:=NaN;
-      if IsNan(x0) or (not(IsNan(x)) and (x<x0)) then x0:=x;
-      if IsNan(x1) or (not(IsNan(x)) and (x>x1)) then x1:=x;
-      if IsNan(y0) or (not(IsNan(y)) and (y<y0)) then y0:=y;
-      if IsNan(y1) or (not(IsNan(y)) and (y>y1)) then y1:=y;
+      if IsNan(box['x',0]) or (not(IsNan(x)) and (x<box['x',0])) then box['x',0]:=x;
+      if IsNan(box['x',1]) or (not(IsNan(x)) and (x>box['x',1])) then box['x',1]:=x;
+      if IsNan(box['y',0]) or (not(IsNan(y)) and (y<box['y',0])) then box['y',0]:=y;
+      if IsNan(box['y',1]) or (not(IsNan(y)) and (y>box['y',1])) then box['y',1]:=y;
     end;
   end;
+
+procedure T_sampleRow.addSample(const x, y: double);
+begin
+  setLength(sample,length(sample)+1);
+  sample[length(sample)-1,0]:=x;
+  sample[length(sample)-1,1]:=y;
+end;
 
 destructor T_sampleRow.destroy;
   begin
@@ -184,7 +208,7 @@ CONST C_defaultColor:array[0..5] of record name:string; color:array[T_colorChann
       (name:'purple';color:(192,  0,192)),
       (name:'orange';color:(255, 96,  0)));
 
-CONSTRUCTOR T_style.create(const index: byte);
+constructor T_style.create(const index: byte);
   begin
     title:='';
     style:=C_lineStyle_straight;
@@ -196,7 +220,7 @@ destructor T_style.destroy;
   begin
   end;
 
-PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
+procedure T_style.parseStyle(const styleString: ansistring);
   FUNCTION parseColorOption(colorOption: string; OUT r,g,b:byte):boolean;
     PROCEDURE HSV2RGB(H,S,V:single; OUT r,g,b:byte);
       VAR hi,p,q,t:byte;
@@ -329,21 +353,37 @@ procedure T_style.saveToFile(var F: T_File);
     f.writeDouble(styleModifier);
   end;
 
+function T_style.getTColor: longint;
+begin
+  result:=color[cc_red] or (color[cc_green] shl 8) or (color[cc_blue] shl 16);
+end;
+
+function T_style.wantStraightLines: boolean;
+begin
+  result:=(style and C_anyLineStyle)=C_lineStyle_straight;
+end;
+
 constructor T_plot.createWithDefaults;
   VAR axis:char;
+      i:longint;
   begin
     screenWidth:=200;
     screenHeight:=200;
     xOffset:=20;
     yOffset:=200-20;
     for axis:='x' to 'y' do begin
-      range[axis,0]:=-1;
-      range[axis,1]:= 1;
+      range[axis,0]:=-1.5;
+      range[axis,1]:= 1.5;
       logscale[axis]:=false;
       axisStyle[axis]:=C_tics;
     end;
     preserveAspect:=true;
     clear;
+
+    setLength(row,1);
+    row[0].create(1);
+
+    for i:=-150 to 150 do row[0].addSample(i/100,sin(2*i/100));
   end;
 
 destructor T_plot.destroy;
@@ -351,15 +391,15 @@ destructor T_plot.destroy;
 
 procedure T_plot.addSampleRow(const sampleRow: T_sampleRow);
   begin
-    setLength(line,length(line)+1);
-    line[length(line)-1]:=sampleRow;
+    setLength(row,length(row)+1);
+    row[length(row)-1]:=sampleRow;
   end;
 
 procedure T_plot.clear;
   VAR i:longint;
   begin
-    for i:=0 to length(line)-1 do with line[i] do setLength(sample,0);
-    setLength(line,0);
+    for i:=0 to length(row)-1 do with row[i] do setLength(sample,0);
+    setLength(row,0);
   end;
 
 function T_plot.loadFromFile(var F: T_File): boolean;
@@ -373,73 +413,134 @@ begin
 end;
 
 procedure T_plot.setScreenSize(const width, height: longint);
-  VAR boundingBox, displayBox:record x0,x1,y0,y1:double; end;
-
   PROCEDURE getRanges;
-    VAR i:longint;
+    VAR axis:char;
+        i:longint;
         center,extend:double;
+        boundingBox:T_boundingBox;
     begin
-      with boundingBox  do begin
-        x0:=NaN;
-        x1:=NaN;
-        y0:=NaN;
-        y1:=NaN;
-        for i:=0 to length(line)-1 do line[i].getBoundingBox(
-          logscale['x'],
-          logscale['y'],
-          x0,x1,y0,y1);
-        if IsNan(x0) or IsNan(x1) then begin if logscale['x'] then x0:=1E-3 else x0:=-1; x1:=1; end;
-        if IsNan(y0) or IsNan(y1) then begin if logscale['y'] then y0:=1E-3 else y0:=-1; y1:=1; end;
-      end;
-      displayBox:=boundingBox;
-      if autoscale['x'] then begin range['x',0]:=boundingBox.x0; range['x',1]:=boundingBox.x1; end else begin displayBox.x0:=range['x',0]; displayBox.x1:=range['x',1]; end;
-      if autoscale['y'] then begin range['y',0]:=boundingBox.y0; range['y',1]:=boundingBox.y1; end else begin displayBox.y0:=range['y',0]; displayBox.y1:=range['y',1]; end;
+      for axis:='x' to 'y' do for i:=0 to 1 do boundingBox[axis,i]:=Nan;
+      for i:=0 to length(row)-1 do row[i].getBoundingBox(logscale['x'],logscale['y'],boundingBox);
+      for axis:='x' to 'y' do
+        for i:=0 to 1 do
+          if boundingBox[axis,i]=Nan
+          then boundingBox[axis,i]:=range[axis,i]
+          else if logscale[axis]
+               then boundingBox[axis,i]:=ln(boundingBox[axis,i])/ln(10);
 
       if preserveAspect and (autoscale['x'] or autoscale['y']) and (logscale['x']=logscale['y']) then begin
-        if logscale['x'] then with displayBox do begin x0:=ln(x0); x1:=ln(x1); end;
-        if logscale['y'] then with displayBox do begin y0:=ln(y0); y1:=ln(y1); end;
-        {$WARNING todo: aspect preserving auto scale?}
         if autoscale['x'] then begin
           if autoscale['y'] then begin
-            if (displayBox.x1-displayBox.x0)/(screenWidth-xOffset)>(displayBox.y1-displayBox.y0)/yOffset then begin
-              center:=(displayBox.y1+displayBox.y0)*0.5;
-              extend:=(displayBox.x1-displayBox.x0)/(screenWidth-xOffset)*yOffset*0.5;
-              displayBox.y0:=center-extend;
-              displayBox.y1:=center+extend;
+            if (range['x',1]-range['x',0])/(screenWidth-xOffset)>(range['y',1]-range['y',0])/yOffset then begin
+              center:=(range['y',1]+range['y',0])*0.5;
+              extend:=(range['x',1]-range['x',0])/(screenWidth-xOffset)*yOffset*0.5;
+              range['y',0]:=center-extend;
+              range['y',1]:=center+extend;
             end else begin
-              center:=(displayBox.x1+displayBox.x0)*0.5;
-              extend:=(displayBox.y1-displayBox.y0)/yOffset*(screenWidth-xOffset)*0.5;
-              displayBox.x0:=center-extend;
-              displayBox.x1:=center+extend;
+              center:=(range['x',1]+range['x',0])*0.5;
+              extend:=(range['y',1]-range['y',0])/yOffset*(screenWidth-xOffset)*0.5;
+              range['x',0]:=center-extend;
+              range['x',1]:=center+extend;
             end;
           end else begin
-            center:=(displayBox.y1+displayBox.y0)*0.5;
-            extend:=(displayBox.x1-displayBox.x0)/(screenWidth-xOffset)*yOffset*0.5;
-            displayBox.y0:=center-extend;
-            displayBox.y1:=center+extend;
+            center:=(range['y',1]+range['y',0])*0.5;
+            extend:=(range['x',1]-range['x',0])/(screenWidth-xOffset)*yOffset*0.5;
+            range['y',0]:=center-extend;
+            range['y',1]:=center+extend;
           end;
         end else if autoscale['y'] then begin
-          center:=(displayBox.x1+displayBox.x0)*0.5;
-          extend:=(displayBox.y1-displayBox.y0)/yOffset*(screenWidth-xOffset)*0.5;
-          displayBox.x0:=center-extend;
-          displayBox.x1:=center+extend;
+          center:=(range['x',1]+range['x',0])*0.5;
+          extend:=(range['y',1]-range['y',0])/yOffset*(screenWidth-xOffset)*0.5;
+          range['x',0]:=center-extend;
+          range['x',1]:=center+extend;
         end;
-        if logscale['x'] then with displayBox do begin x0:=exp(x0); x1:=exp(x1); end;
-        if logscale['y'] then with displayBox do begin y0:=exp(y0); y1:=exp(y1); end;
       end;
     end;
 
   PROCEDURE initTics(CONST axis:char);
+    PROCEDURE addTic(CONST realPos:double; CONST realTxt:ansistring; CONST isMajorTic:boolean);
+      begin
+
+        setLength(tic[axis],length(tic[axis])+1);
+        with tic[axis][length(tic[axis])-1] do begin
+          pos:=realToScreen(axis,realPos);
+          major:=isMajorTic;
+          if major then txt:=realTxt else txt:='';
+        end;
+      end;
+
+    FUNCTION pot10(y:int64):extended; inline;
+      VAR p10:extended;
+      begin
+        if y>=0 then begin
+          p10:=10;
+        end else begin
+          p10:=0.1;
+          y:=-y;
+        end;
+        result:=1;
+        while y>0 do begin
+          if odd(y) then result:=result*p10;
+          p10:=p10*p10;
+          y:=y shr 1;
+        end;
+      end;
+
+    FUNCTION niceText(CONST value,scale:longint):string;
+      CONST suf:array[0..3] of string=('','0','00','000');
+      begin
+        if value=0 then exit('0');
+        if (scale >=-3) and (scale<0) then begin
+          result:=IntToStr(value);
+          while length(result)<2 do result:='0'+result;
+          exit(copy(result,1,length(result)  +scale)+'.'+
+               copy(result,  length(result)+1+scale,-scale));
+        end else if (scale>=0) and (scale<3) then exit(IntToStr(value)+suf[scale])
+        else exit(IntToStr(value)+'E'+IntToStr(scale));
+      end;
+
+    FUNCTION notToManyTics:boolean;
+      VAR i,majors:longint;
+          lastPos:double;
+      begin
+        //too many total tics?
+        if length(tic[axis])>100 then exit(false);
+        //too many major tics?
+        majors:=0;
+        for i:=0 to length(tic[axis])-1 do if tic[axis][i].major then inc(majors);
+        if majors>20 then exit(false);
+        //labels are too close?
+        {$WARNING unimplemented}
+      end;
+
+    VAR i,j:longint;
     begin
       setLength(tic[axis],0);
-
+      if logscale[axis] then begin
+        for i:=floor(range[axis,0]) to ceil(range[axis,1]) do
+          for j:=1 to 9 do addTic(pot10(i)*j,niceText(j,i),j=1);
+        if length(tic[axis])<50 then exit else setLength(tic[axis],0);
+        for i:=floor(range[axis,0]) to ceil(range[axis,1]) do begin
+          addTic(pot10(i)  ,niceText(1,i),true);
+          addTic(pot10(i)*2,niceText(1,i),false);
+          addTic(pot10(i)*5,niceText(1,i),false);
+        end;
+        if length(tic[axis])<50 then exit else setLength(tic[axis],0);
+        for i:=floor(range[axis,0]) to ceil(range[axis,1]) do addTic(pot10(i)  ,niceText(1,i),(i mod 3)=0);
+      end else begin
+        i:=floor(ln(range[axis,1]-range[axis,0])/ln(10))-1;
+        for j:=floor(range[axis,0]*pot10(-i)) to
+               ceil (range[axis,1]*pot10(-i)) do begin
+          addTic(pot10(i)*j,niceText(j,i),(j mod 10)=0);
+        end;
+      end;
     end;
 
   begin
     screenWidth:=width;
     screenHeight:=height;
-    if (axisStyle['x'] and C_tics)=0 then xOffset:=0;
-    if (ax
+    if not wantTics('y') then xOffset:=0;
+    if not wantTics('x') then yOffset:=0;
     getRanges;
     initTics('x');
     initTics('y');
@@ -453,18 +554,46 @@ function T_plot.longtestYTic: ansistring;
     if result='' then result:='.0E';
   end;
 
-FUNCTION T_plot.setTextSize(const xTicHeight, yTicWidth: longint):boolean;
+function T_plot.setTextSize(const xTicHeight, yTicWidth: longint): boolean;
   begin
     result:=false;
-    if xOffset<>              yTicWidth +5 then begin
-      xOffset:=               yTicWidth +5;
+    if wantTics('y') and
+     (xOffset<>yTicWidth +5) then begin
+      xOffset:=yTicWidth +5;
       result:=true;
     end;
-    if yOffset<>screenHeight-(xTicHeight+5) then begin
-      yOffset:= screenHeight-(xTicHeight+5);
+    if wantTics('x') and
+     (yOffset<>screenHeight-(xTicHeight+5)) then begin
+      yOffset:=screenHeight-(xTicHeight+5);
       result:=true;
     end;
     if result then setScreenSize(screenWidth,screenHeight);
+  end;
+
+function T_plot.wantTics(const axis: char): boolean;
+  begin
+    result:=(axisStyle[axis] and C_tics)>0;
+  end;
+
+function T_plot.realToScreen(const p: T_point): T_point;
+  begin
+    result:=realToScreen(p[0],p[1]);
+  end;
+
+function T_plot.realToScreen(const x, y: double): T_point;
+  begin
+    if logscale['x']
+    then result[0]:=(ln(x)/ln(10)-range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset
+    else result[0]:=(   x        -range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset;
+    if logscale['y']
+    then result[1]:=(ln(y)/ln(10)-range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset
+    else result[1]:=(   y        -range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset;
+  end;
+
+function T_plot.realToScreen(const axis: char; const p: double): double;
+  begin
+    if axis='x' then result:=realToScreen(p,1)[0]
+                else result:=realToScreen(1,p)[1];
   end;
 
 INITIALIZATION

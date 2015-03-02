@@ -67,7 +67,7 @@ CONST
      4, 4, 3, 3, 3, 3, 2, //arthmetical operators
      8, 8,                //unaries
      5,                   //special: string concatenation
-     1, 1, 1, 1, 0, 0);   //list operators
+     0, 0, 0, 0, 1, 1);   //list operators
 
   C_matchingTypes:array[tt_typeCheckScalar..tt_typeCheckEmptyList] of set of T_literalType=
   {tt_typeCheckScalar}     ([lt_boolean,lt_int,lt_real,lt_string],
@@ -100,15 +100,15 @@ CONST
     //comparators
     '=','<>','<=','>=','<','>','==',
     //logical operators
-    ' and ',' or ',' xor ',
+    'and','or','xor',
     //arthmetical operators
-    '+','-','*','/',' div ',' mod ','^',
+    '+','-','*','/','div','mod','^',
     //partially evaluated operators
     '+','-',
     //special: string concatenation
     '&',
     //list operators:
-    '%','%%','%%%','%%%%','|',' in ',
+    '%','%%','%%%','%%%%','|','in',
     //inline if: (<condition>?<then>:<else>)
     '?',':',
     //assignment operators:

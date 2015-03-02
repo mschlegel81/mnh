@@ -200,7 +200,7 @@ begin
       else if (localId='true') or (localId='false') then fTokenId:=tkBoolean
       else if (localId='Nan') or (localId='Inf') then fTokenId:=tkNumber
       else if (localId='set') or (localId='each')
-           or (localId='CACHE') or (localId='USE') then fTokenId:=tkIntrinsicRuleOrKeyword
+           or (localId='CACHE') or (localId='USE') or (localId='private') then fTokenId:=tkIntrinsicRuleOrKeyword
       else begin
         if localUserRules.contains(localId) then fTokenID:=tkUserRule
         else if importedUserRules.contains(localId) then fTokenID:=tkUserRule

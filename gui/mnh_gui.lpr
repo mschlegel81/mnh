@@ -14,7 +14,7 @@ uses
 begin
   RequireDerivedFormResource := True;
   Application.Initialize;
-  //Application.CreateForm(TplotForm, plotForm);
+//  Application.CreateForm(TplotForm, plotForm);
   Application.CreateForm(TMnhForm, MnhForm);
   Application.CreateForm(TSettingsForm, SettingsForm);
 

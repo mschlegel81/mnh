@@ -33,6 +33,28 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literal
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
+FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  FUNCTION not_rec(CONST x:P_literal):P_literal;
+    VAR i:longint;
+    begin
+      case x^.literalType of
+        lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
+        lt_list,lt_booleanList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(x)^.size-1 do
+            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
+        end;
+        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=not_rec(params^.value(0))
+    else raiseNotApplicableError('not',params,tokenLocation);
+  end;
+
 FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
@@ -542,8 +564,23 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
         result:=params^.value(0);
         result^.rereference;
-      end else raiseError(el3_evalError,'Function SORTPERM can only be applied to flat lists containing comparable types',tokenLocation);
-    end else raiseNotApplicableError('SORTPERM',params,tokenLocation);
+      end else raiseError(el3_evalError,'Function sortPerm can only be applied to flat lists containing comparable types',tokenLocation);
+    end else raiseNotApplicableError('sortPerm',params,tokenLocation);
+  end;
+
+FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      if (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList]) then begin
+        result:=newListLiteral;
+        P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
+        P_listLiteral(result)^.unique;
+      end else if (params^.value(0)^.literalType=lt_list) and (P_listLiteral(params^.value(0))^.size=0) then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else raiseError(el3_evalError,'Function unique can only be applied to flat lists containing comparable types',tokenLocation);
+    end else raiseNotApplicableError('unique',params,tokenLocation);
   end;
 
 FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -1181,6 +1218,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 INITIALIZATION
   intrinsicRuleMap.create;
+  registerRule('not'           ,@not_imp       );
   registerRule('print'         ,@print_imp     );
   registerRule('abs'           ,@abs_imp       );
   registerRule('sign'          ,@sign_imp      );
@@ -1201,6 +1239,7 @@ INITIALIZATION
   registerRule('tail'          ,@tail_imp      );
   registerRule('sort'          ,@sort_imp      );
   registerRule('sortPerm'      ,@sortPerm_imp  );
+  registerRule('unique'        ,@unique_imp    );
   registerRule('flatten'       ,@flatten_imp   );
   registerRule('random'        ,@random_imp    );
   registerRule('max'           ,@max_imp       );

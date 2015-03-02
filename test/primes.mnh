@@ -1,0 +1,19 @@
+private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
+private expandPrimes(P:intList,pMax:int,C:intList)->
+  P|C%each(c,C,each(p,P,and,c mod p<>0));
+
+primes(nMax<3)->[2];
+primes(nMax<5)->[2,3];
+primes(nMax<7)->[2,3,5];
+primes(nMax)->expandPrimes(primes(round(sqrt(nMax))),round(nMax));
+CACHE primes;
+
+factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));
+private factorize(1,[])->[];
+private factorize(n:int,[])->n;
+private factorize(n:int,dividers:intList)->dividers|factorize(n div each(d,dividers,*));
+
+
+
+
+

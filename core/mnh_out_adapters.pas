@@ -35,8 +35,9 @@ FUNCTION isMemoryFree(CONST usage:string):boolean;
 
 PROCEDURE haltEvaluation;
 
-VAR storedErrors:array of T_storedError;
-FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
+//VAR storedErrors:array of T_storedError;
+//FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
+VAR hasHaltMessage:boolean=false;
 IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;
 PROCEDURE writeExprEcho(CONST s:ansistring); begin if inputExprEcho<>nil then inputExprEcho(s); end;
@@ -65,7 +66,8 @@ PROCEDURE writePrint   (CONST s:ansistring);
 PROCEDURE clearErrors;
   begin
     maxErrorLevel:=el0_allOkay;
-    setLength(storedErrors,0);
+    hasHaltMessage:=false;
+    //setLength(storedErrors,0);
   end;
 
 PROCEDURE raiseError(CONST thisErrorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
@@ -76,20 +78,21 @@ PROCEDURE raiseError(CONST thisErrorLevel:T_errorLevel; CONST errorMessage:ansis
     newError.errorMessage :=errorMessage;
     newError.errorLocation:=errorLocation;
     if thisErrorLevel>maxErrorLevel then maxErrorLevel:=thisErrorLevel;
-    i:=length(storedErrors);
-    setLength(storedErrors,i+1);
-    storedErrors[i]:=newError;
+    if errorMessage=HALT_MESSAGE then hasHaltMessage:=true;
+    //i:=length(storedErrors);
+    //setLength(storedErrors,i+1);
+    //storedErrors[i]:=newError;
     if errorOut<>nil then errorOut(newError);
   end;
 
-FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
-  VAR i:longint;
-  begin
-    for i:=0 to length(storedErrors)-1 do with storedErrors[i] do
-      if  (errorLevel  =level  )
-      and (errorMessage=message) then exit(true);
-    result:=false;
-  end;
+//FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(storedErrors)-1 do with storedErrors[i] do
+//      if  (errorLevel  =level  )
+//      and (errorMessage=message) then exit(true);
+//    result:=false;
+//  end;
 
 FUNCTION errorLevel:T_errorLevel;
   begin

@@ -1,7 +1,7 @@
 UNIT mnh_litvar;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil, mnh_tokloc;
-{$define literalRecycling}
+
 CONST
   C_boolText:array[false..true] of string=('false','true');
 
@@ -193,72 +193,6 @@ IMPLEMENTATION
 VAR boolLit:array[false..true] of T_boolLiteral;
     intLit :array[0..127] of P_intLiteral;
     errLit :T_scalarLiteral;
-{$ifdef literalRecycling}
-    recycle_bin:record
-      intDat   : array [0..1023] of P_intLiteral;
-      realDat  : array [0..1023] of P_realLiteral;
-      stringDat: array [0..1023] of P_stringLiteral;
-      listDat  : array [0..1023] of P_listLiteral;
-      intFill   : longint;
-      realFill  : longint;
-      stringFill: longint;
-      listFill  : longint;
-    end;
-
-PROCEDURE initialize_recycle_bin;
-  VAR i:longint;
-  begin with recycle_bin do begin
-    for i:=0 to length(intDat)-1 do intDat[i]:=nil;
-    intFill:=0;
-    for i:=0 to length(realDat)-1 do realDat[i]:=nil;
-    realFill:=0;
-    for i:=0 to length(stringDat)-1 do stringDat[i]:=nil;
-    stringFill:=0;
-    for i:=0 to length(listDat)-1 do listDat[i]:=nil;
-    listFill:=0;
-  end; end;
-
-PROCEDURE finalize_recycle_bin;
-  VAR i:longint;
-  begin with recycle_bin do begin
-    for i:=0 to length(intDat)-1    do if intDat   [i]<>nil then dispose(intDat   [i],destroy);
-    for i:=0 to length(realDat)-1   do if realDat  [i]<>nil then dispose(realDat  [i],destroy);
-    for i:=0 to length(stringDat)-1 do if stringDat[i]<>nil then dispose(stringDat[i],destroy);
-    for i:=0 to length(listDat)-1   do if listDat  [i]<>nil then dispose(listDat  [i],destroy);
-  end; end;
-
-PROCEDURE put_to_bin(VAR l:P_literal); inline;
-  begin
-    with recycle_bin do
-    case l^.literalType of
-      lt_int: if intFill<length(intDat) then begin
-        l^.destroy;
-        intDat[intFill]:=P_intLiteral(l);
-        inc(intFill);
-      end;
-      lt_real: if realFill<length(realDat) then begin
-        l^.destroy;
-        realDat[realFill]:=P_realLiteral(l);
-        inc(realFill);
-      end;
-      lt_string: if stringFill<length(stringDat) then begin
-        l^.destroy;
-        stringDat[stringFill]:=P_stringLiteral(l);
-        inc(stringFill);
-      end;
-      lt_list..lt_listWithError : begin
-        P_listLiteral(l)^.destroyChildren;
-        if listFill<length(listDat) then begin
-          l^.destroy;
-          listDat[listFill]:=P_listLiteral(l);
-          inc(listFill);
-        end;
-      end
-      else dispose(l,destroy);
-    end;
-    l:=nil;
-  end;
-{$endif}
 
 PROCEDURE disposeLiteral(VAR l:P_literal);
   begin
@@ -266,11 +200,7 @@ PROCEDURE disposeLiteral(VAR l:P_literal);
       writeln(stderr,'disposing NIL literal ?!?');
     end;
     if l^.unreference<=0 then
-      {$ifdef literalRecycling}
-        put_to_bin(l);
-      {$else}
         dispose(l,destroy);
-      {$endif}
     l:=nil;
   end;
 
@@ -287,13 +217,6 @@ FUNCTION newIntLiteral(CONST value:int64     ):P_intLiteral;
       result:=intLit[value];
       result^.rereference;
     end else begin
-      {$ifdef literalRecycling}
-      with recycle_bin do if intFill>0 then begin
-        dec(intFill);
-        result:=intDat[intFill];
-        result^.create(value);
-      end else
-      {$endif}
       new(result,create(value));
       isMemoryFree('allocating new integer literal');
     end;
@@ -301,26 +224,12 @@ FUNCTION newIntLiteral(CONST value:int64     ):P_intLiteral;
 
 FUNCTION newRealLiteral(CONST value:extended  ):P_realLiteral; 
   begin
-    {$ifdef literalRecycling}
-    with recycle_bin do if realFill>0 then begin
-      dec(realFill);
-      result:=realDat[realFill];
-      result^.create(value);
-    end else
-    {$endif}
     new(result,create(value));
     isMemoryFree('allocating new real literal');
   end;
 
 FUNCTION newStringLiteral    (CONST value:ansistring):P_stringLiteral; 
   begin
-    {$ifdef literalRecycling}
-    with recycle_bin do if stringFill>0 then begin
-      dec(stringFill);
-      result:=stringDat[stringFill];
-      result^.create(value);
-    end else
-    {$endif}
     new(result,create(value));
     isMemoryFree('allocating new string literal');
   end;
@@ -333,13 +242,6 @@ FUNCTION newExpressionLiteral(CONST value:pointer   ):P_expressionLiteral;
 
 FUNCTION newListLiteral:P_listLiteral; 
   begin
-    {$ifdef literalRecycling}
-    with recycle_bin do if listFill>0 then begin
-      dec(listFill);
-      result:=listDat[listFill];
-      result^.create;
-    end else
-    {$endif}
     new(result,create);
     isMemoryFree('allocating new list literal');
   end;
@@ -1209,6 +1111,9 @@ FUNCTION resolveOperator(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_
             then P_listLiteral(result)^.append(P_listLiteral(LHS)^.element[i],true);
           exit(result);
         end;
+        lt_list,lt_flatList:
+          if P_listLiteral(RHS)^.size=0 then exit(newListLiteral)
+                                        else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
         else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       end else exit(newErrorLiteralRaising(LHS^.literalType,RHS^.literalType,op,tokenLocation));
       tt_operatorExtractL1: if LHS^.literalType in [lt_list..lt_flatList] then begin
@@ -1281,7 +1186,6 @@ FUNCTION T_listLiteral.equals(const other:P_literal):Boolean;
   
 VAR i:longint;
 INITIALIZATION
-  {$ifdef literalRecycling} initialize_recycle_bin; {$endif}
   boolLit[false].create(false);
   boolLit[true] .create(true );
   errLit.init;
@@ -1295,5 +1199,4 @@ FINALIZATION
   boolLit[true] .destroy;
   errLit.destroy;
   for i:=0 to length(intLit)-1 do if intLit[i]<>nil then dispose(intLit[i],destroy);
-  {$ifdef literalRecycling} finalize_recycle_bin; {$endif}
 end.
