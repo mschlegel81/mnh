@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_tokens;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread;
 
 CONST C_DeclEchoHead=#10+' in>';
       C_ExprEchoHead=#10+'_in>';
@@ -74,10 +74,6 @@ type
   end;
 
 implementation
-
-uses
-  SynEditStrConst;
-
 constructor TSynMnhSyn.Create(AOwner: TComponent);
 CONST identifierForeground:TColor=$00FF0000;
 begin
@@ -154,6 +150,7 @@ end; { SetLine }
 procedure TSynMnhSyn.Next;
 VAR localId:shortString;
     i:longint;
+    idInfo:T_idInfo;
 begin
   fTokenID:=tkUnknown;
   fTokenPos := Run;
@@ -199,14 +196,13 @@ begin
       if (localId='xor') or (localId='or') or (localId='mod') or (localId='in') or (localId='div') or (localId='and') then fTokenId:=tkOperator
       else if (localId='true') or (localId='false') then fTokenId:=tkBoolean
       else if (localId='Nan') or (localId='Inf') then fTokenId:=tkNumber
-      else if (localId='set') or (localId='each') then fTokenId:=tkIntrinsicRuleOrKeyword
+      else if (localId='set') or (localId='each')
+           or (localId='CACHE') or (localId='USE') then fTokenId:=tkIntrinsicRuleOrKeyword
       else begin
-        case canResolveInMainPackage(localId) of
-          0: fTokenId:=tkIdentifier;
-          1: fTokenId:=tkUserRule;
-          2: fTokenId:=tkUserRule;
-          3: fTokenID:=tkIntrinsicRuleOrKeyword;
-        end;
+        idInfo:=ad_getIdInfo(localId);
+        if      idInfo.isBuiltIn     then fTokenID:=tkIntrinsicRuleOrKeyword
+        else if idInfo.isUserDefined then fTokenID:=tkUserRule
+        else                              fTokenID:=tkIdentifier;
       end;
     end;
     '|','^','?','+','&','%','*','=','<','>': begin

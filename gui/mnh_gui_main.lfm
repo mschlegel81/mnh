@@ -1067,14 +1067,9 @@ object MnhForm: TMnhForm
         OnClick = miClearClick
       end
       object miOpen: TMenuItem
-        Caption = 'Open (to Edit)'
+        Caption = 'Open'
         ShortCut = 16463
         OnClick = miOpenClick
-      end
-      object miOpenToWatch: TMenuItem
-        Caption = 'Open (watching)'
-        ShortCut = 49231
-        OnClick = miOpenToWatchClick
       end
       object miSave: TMenuItem
         Caption = 'Save'
@@ -1110,11 +1105,6 @@ object MnhForm: TMnhForm
         Caption = 'Evaluate input on request'
         RadioItem = True
         OnClick = miEvalModeDirectClick
-      end
-      object miEvalModeWatch: TMenuItem
-        Caption = 'Watch file...'
-        RadioItem = True
-        OnClick = miEvalModeWatchClick
       end
     end
     object MenuItem4: TMenuItem
@@ -1156,10 +1146,6 @@ object MnhForm: TMnhForm
     object popMiOpenDeclaration: TMenuItem
       Caption = 'Open declaration of "..." ()'
       OnClick = popMiOpenDeclarationClick
-    end
-    object popMiOpenPackage: TMenuItem
-      Caption = 'Open package "..." ()'
-      OnClick = popMiOpenPackageClick
     end
   end
   object OpenDialog: TOpenDialog

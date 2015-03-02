@@ -82,10 +82,22 @@ TYPE
       FUNCTION dropAny:VALUE_TYPE;
   end;
 
-  T_listOfString=specialize G_list<ansistring>;  
-  
+  T_listOfString=specialize G_list<ansistring>;
 
-  
+  { G_safeVar }
+
+  GENERIC G_safeVar<ENTRY_TYPE>=object
+    private
+      cs:TRTLCriticalSection;
+      v :ENTRY_TYPE;
+      FUNCTION getValue:ENTRY_TYPE;
+      PROCEDURE setValue(newValue:ENTRY_TYPE);
+    public
+    CONSTRUCTOR create(CONST intialValue:ENTRY_TYPE);
+    DESTRUCTOR destroy;
+    PROPERTY value:ENTRY_TYPE read getValue write setValue;
+  end;
+
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 implementation
@@ -98,6 +110,33 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
     for i:=1 to length(x) do result:=result*31+ord(x[i]);
     {$Q+}
   end;
+
+{ G_safeVar }
+
+function G_safeVar.getValue: ENTRY_TYPE;
+begin
+  EnterCriticalsection(cs);
+  result:=v;
+  LeaveCriticalsection(cs);
+end;
+
+procedure G_safeVar.setValue(newValue: ENTRY_TYPE);
+begin
+  EnterCriticalsection(cs);
+  v:=newValue;
+  LeaveCriticalsection(cs);
+end;
+
+constructor G_safeVar.create(const intialValue: ENTRY_TYPE);
+begin
+  InitCriticalSection(cs);
+  v:=intialValue;
+end;
+
+destructor G_safeVar.destroy;
+begin
+  DoneCriticalsection(cs);
+end;
 
 CONSTRUCTOR G_list.create;
   begin clear; end;
@@ -705,6 +744,6 @@ FUNCTION G_stringKeyMap.size: longint;
   begin
     result:=entryCount;
   end;
-      
+
 end.
 
