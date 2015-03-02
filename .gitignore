@@ -12,3 +12,5 @@ Thumbs.db
 *.png
 *.7z
 *.bak
+#ignore Lazarus Project state
+*.lps
