@@ -17,6 +17,7 @@ TYPE
     filepath: ansistring;
     lineData: T_stringList;
     syncedFileAge: double;
+    fileVersion: longint;
     version: longint;
 
   public
@@ -35,6 +36,7 @@ TYPE
     PROCEDURE save;
     FUNCTION filename: ansistring;
     FUNCTION fileHasChanged: boolean;
+    FUNCTION fileIsOutOfSync: boolean;
     FUNCTION getVersion(CONST reloadIfNecessary: boolean): longint;
     FUNCTION id: ansistring;
     PROCEDURE Clear;
@@ -100,6 +102,7 @@ FUNCTION locateSource(CONST rootPath,id: ansistring): ansistring;
   begin
     result := '';
     recursePath(expandFileName(extractFilePath(rootPath)));
+    if result='' then recursePath(expandFileName(''));
   end;
 
 FUNCTION locateSources:T_stringList;
@@ -116,7 +119,7 @@ FUNCTION locateSources:T_stringList;
             end
           else if uppercase(extractFileExt(info.name)) = sourceExt then begin
             setLength(result,length(result)+1);
-            result[length(result)-1]:= path + info.Name;
+            result[length(result)-1]:=path + info.Name;
           end;
         until (findNext(info) <> 0);
       SysUtils.findClose(info);
@@ -124,8 +127,8 @@ FUNCTION locateSources:T_stringList;
 
   begin
     setLength(result, 0);    recursePath('');
-    if length(result)=0 then recursePath('..\');
-    if length(result)=0 then recursePath('..\..\');
+    if length(result)=0 then recursePath('..'+DirectorySeparator);
+    if length(result)=0 then recursePath('..'+DirectorySeparator+'..'+DirectorySeparator);
   end;
 
 
@@ -320,13 +323,15 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
 { T_codeProvider }
 
 FUNCTION T_codeProvider.getLines: T_stringList;
+  VAR i:longint;
   begin
     while (lock <> 0) and (lock <> ThreadID) do
       sleep(1);
     repeat
       lock := ThreadID
     until lock = ThreadID;
-    result := lineData;
+    setLength(result,length(lineData));
+    for i:=0 to length(lineData)-1 do result[i]:=lineData[i];
     repeat
       lock := 0
     until lock = 0;
@@ -351,21 +356,25 @@ PROCEDURE T_codeProvider.setLines(CONST Value: T_stringList);
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST Value: TStrings);
-  VAR
-    i: longint;
+  VAR i: longint;
+      changed:boolean=false;
+      cleanCount:longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
-    setLength(lineData, Value.Count);
-    for i := 0 to Value.Count - 1 do
+    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    repeat lock := ThreadID until lock = ThreadID;
+    cleanCount:=Value.Count;
+    while (cleanCount>0) and (trim(Value[cleanCount-1])='') do dec(cleanCount);
+    if length(lineData)<>cleanCount then begin
+      setLength(lineData, cleanCount);
+      changed:=true;
+    end;
+    for i := 0 to cleanCount - 1 do begin
+      changed:=changed or (trim(lineData[i])<>trim(Value[i]));
       lineData[i] := Value[i];
-    Inc(version);
-    repeat
-      lock := 0
-    until lock = 0;
+
+    end;
+    if changed then inc(version);
+    repeat lock := 0 until lock = 0;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST Value: ansistring);
@@ -434,37 +443,33 @@ PROCEDURE T_codeProvider.load;
     L: T_stringList;
     i: longint;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
+    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    repeat lock := ThreadID until lock = ThreadID;
     L := fileLines(filepath, accessed);
-    if accessed then
-      begin
+    if accessed then begin
       setLength(lineData, length(L));
-      for i := 0 to length(L) - 1 do
-        lineData[i] := L[i];
+      for i := 0 to length(L) - 1 do lineData[i] := L[i];
       FileAge(filepath, syncedFileAge);
       Inc(version);
+      fileVersion:=version;
+      i:=length(lineData);
+      while (i>0) and (trim(lineData[i-1])='') do begin
+        setLength(lineData,i-1);
+        dec(i);
       end;
-    repeat
-      lock := 0
-    until lock = 0;
+    end;
+    repeat lock := 0 until lock = 0;
   end;
 
 PROCEDURE T_codeProvider.save;
   begin
-    while (lock <> 0) and (lock <> ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
-    if (filepath <> '') and writeFileLines(filepath, lineData) then
+    while (lock <> 0) and (lock <> ThreadID) do sleep(1);
+    repeat lock := ThreadID until lock = ThreadID;
+    if (filepath <> '') and writeFileLines(filepath, lineData) then begin
       FileAge(filepath, syncedFileAge);
-    repeat
-      lock := 0
-    until lock = 0;
+      fileVersion:=version;
+    end;
+    repeat lock := 0 until lock = 0;
   end;
 
 FUNCTION T_codeProvider.filename: ansistring;
@@ -483,6 +488,11 @@ FUNCTION T_codeProvider.fileHasChanged: boolean;
       end
     else
       result := False;
+  end;
+
+FUNCTION T_codeProvider.fileIsOutOfSync:boolean;
+  begin
+    result:=fileHasChanged or (filepath<>'') and (version<>fileVersion);
   end;
 
 FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
@@ -516,6 +526,7 @@ PROCEDURE T_codeProvider.Clear;
     filepath := '';
     SetLength(lineData, 0);
     version := 0;
+    fileVersion:=0;
     syncedFileAge := 0;
   end;
 

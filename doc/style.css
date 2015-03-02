@@ -7,7 +7,7 @@ body {
 h1 {
   font-family: Helvetica, Geneva, Arial,
         SunSans-Regular, sans-serif }
-code { font-family: Courier; white-space: pre }
+code { font-family: Courier-New, Courier; white-space: pre }
 a:link {
   color: #0000FF }
 a:visited {

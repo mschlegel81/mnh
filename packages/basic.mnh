@@ -3,55 +3,67 @@
 //This package contains general purpose/convenience methods
 
 //Aggregations:--------------------------------------------
+//*The sum of the empty list is <code>0</code>
 sum([]):=0;
-sum(L)->each(n,L,+);
+//*Returns the sum of all elements in <code>L</code>
+sum(L:numericList)->each(n,L,+);
 
+//*The product of the empty list is <code>1</code>
 prod([]):=1;
+//*Returns the product of all elements in <code>L</code>
 prod(L)->each(n,L,*);
 
+//*The conjuction of the empty list is <code>true</code>
 And([]):=true;
+//*Returns the conjuction of of all elements in <code>L</code>
 And(L:booleanList)->each(n,L,and);
 
+//*The disjuction of the empty list is <code>true</code>
 Or([]):=false;
+//*Returns the disjuction of of all elements in <code>L</code>
 Or(L:booleanList)->each(n,L,or);
 
+//*Gives the empty string
 join([])->"";
+//*Returns a string concatenation of all elements in <code>L</code>
 join(L<>[])->each(n,L,&,string(n));
-
+//*Gives the empty string
 join([],joiner:string)->"";
+//*Returns a concatenation of flat list <code>L</code> using <code>joiner</code> as joiner.
 join(L<>[],joiner:string)->each(n,L,&joiner&,string(n));
-
+//*Gives the empty string
 join([],joiner1:string,joiner2:string)->"";
+//*Returns a concatenation of nested list <code>L</code> using <code>joiner1</code>
+//*as joiner on the higher level and <code>joiner2</code> as joiner on the deeper level.
 join(L<>[],joiner1:string,joiner2:string)->each(inner,L,&joiner1&,each(n,inner,&joiner2&,string(n)));
 //--------------------------------------------:Aggregations
 //Statistics:----------------------------------------------
-mean    (X)->sum(X)/size(X);
-
-variance(X)->mean(X^2)-mean(X)^2;
+//*Returns the mean of all values in <code>X</code>
+mean    (X:numericList)->sum(X)/size(X);
+//*Returns the (statistical) variance of all values in <code>X</code>
+variance(X:numericList)->mean(X^2)-mean(X)^2;
 //----------------------------------------------:Statistics
 //Pretty printing
+//*Pretty-prints a nested list
 tabPrint(L)->print(join(L,"\n","\t"));
 //---------------------------------------------------------
 //Set operations:------------------------------------------
+//*Set union of <code>A</code> and <code>B</code> 
 union    (A:list,B:list)->unique(A|B);
+//*Set intersection of <code>A</code> and <code>B</code> 
 intersect(A:list,B:list)->A%    each(a,A,a in B);
+//*Set difference; returns <code>A</code> without <code>B</code> 
 minus    (A:list,B:list)->A%not(each(a,A,a in B));
 //------------------------------------------:Set operations
 //List operations:-----------------------------------------
+//*Returns indexes in list <code>A</code>
 indexes(A:list)->[0..size(A)-1];
+//*Returns <code>A</code> with reversed order of elements
 reverse(A:list)->A%[size(A)-1..0];
 //-----------------------------------------:List operations
-
+//*Returns a histogram of <code>L</code> with default bin size of <code>1</code>
 histogram(L<>[])          ->histogram(L,1);
+//*Returns a histogram of <code>L</code> with bin size of <code>h</code>
 histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
 private histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,flag?1:0)/size(L)/h]);
-
-//general helper routines:---------------------------------
-printTime([])->false;
-private printTime(L)->printTime(L,each(e,L,time(e)));
-private printTime(L,T)->print(
-  each(h,T%0,&"\t"&,h%0)&"\n"&
-  each(t,T,&"\n"&,each(h,t%%1,&"\t"&,string(h))));
-//---------------------------------:general helper routines
-
 

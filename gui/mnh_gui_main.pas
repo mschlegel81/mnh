@@ -8,7 +8,7 @@ uses
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
   mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens;
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog;
 
 type
 
@@ -368,8 +368,14 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  VAR mr:integer;
   begin
-    SettingsForm.setFileContents(InputEdit.Lines);
+    if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+      mr:=closeDialogForm.ShowModal;
+      if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      if mr=mrCancel then CloseAction:=caNone;
+    end;
+    if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -818,13 +824,18 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
-        MAX_INTERVALL=1000;
+        MAX_INTERVALL=5000;
         REPAINT_INTERVAL_IN_SECONDS=1;
   VAR aid:string;
       flag:boolean;
       L:array of ansistring;
       i:longint;
+      updateStart:double;
   begin
+    //Show ask form?
+    if askForm.displayPending then askForm.ShowModal;
+
+    updateStart:=now;
     //Form caption:-------------------------------------------------------------
     aid:='MNH5 '+ad_currentFile;
     if aid<>Caption then begin Caption:=aid; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
@@ -865,7 +876,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if ((now-lastFormRepaint)*24*60*60>REPAINT_INTERVAL_IN_SECONDS) and repaintNecessary then begin
       lastFormRepaint:=now;
       flushThroughput;
-      repaint;
       if ((plotSubsystem.state=pss_plotAfterCalculation) or
           (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
          not(ad_evaluationRunning) and
@@ -873,6 +883,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         doPlot();
       end;
     end;
+
+    i:=round((now-updateStart)*24*60*60*1000);
+    if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
+
   end;
 
 PROCEDURE TMnhForm.processSettings;

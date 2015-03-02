@@ -43,7 +43,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="5">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -66,28 +66,21 @@
         <UnitName Value="mnh_gui_settings"/>
       </Unit2>
       <Unit3>
-        <Filename Value="mnh_askform.pas"/>
+        <Filename Value="closedialog.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="AskForm"/>
+        <ComponentName Value="closeDialogForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="mnh_askForm"/>
+        <UnitName Value="closeDialog"/>
       </Unit3>
       <Unit4>
-        <Filename Value="mnh_chartform.pas"/>
+        <Filename Value="askdialog.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="ChartForm"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="mnh_chartForm"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="mnh_plots.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="plotForm"/>
+        <ComponentName Value="askForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="mnh_plots"/>
-      </Unit5>
+        <UnitName Value="askDialog"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

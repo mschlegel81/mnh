@@ -7,6 +7,7 @@ permutations(L:list)->myUnique(permutations([],L));
 private permutations(Head:list,[])->[Head];
 private permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
 
+subsets(S:scalar)->[[],[S]];
 subsets(L:list)->myUnique(subsets([],L));
 private subsets(Head:list,[])->[Head];
 private subsets(Head:list,L)->subsets(Head,tail(L))|subsets(Head|head(L),tail(L));

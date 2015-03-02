@@ -374,14 +374,24 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
     VAR
       p0, p1, p2: T_point;
     begin
-      with computed do
-        begin
-        if (i <= 0) or (i >= length(temp) - 1) then
-          exit(0);
-        p0 := activePlot.realToScreen(temp[i - 1].x, temp[i - 1].y);
-        p1 := activePlot.realToScreen(temp[i].x, temp[i].y);
-        p2 := activePlot.realToScreen(temp[i + 1].x, temp[i + 1].y);
-        end;
+      with computed do begin
+        if (i <= 0) or (i >= length(temp) - 1) then exit(0);
+        p0 := activePlot.realToScreen(temp[i-1].x, temp[i-1].y);
+        p1 := activePlot.realToScreen(temp[i  ].x, temp[i  ].y);
+        p2 := activePlot.realToScreen(temp[i+1].x, temp[i+1].y);
+        if (p0[0]<0) and
+           (p1[0]<0) and
+           (p2[0]<0) or
+           (p0[0]>activePlot.screenWidth) and
+           (p1[0]>activePlot.screenWidth) and
+           (p2[0]>activePlot.screenWidth) or
+           (p0[1]<0) and
+           (p1[1]<0) and
+           (p2[1]<0) or
+           (p0[1]>activePlot.screenHeight) and
+           (p1[1]>activePlot.screenHeight) and
+           (p2[1]>activePlot.screenHeight) then exit(0);
+      end;
       result := sqr(p0[0] - 2 * p1[0] + p2[0]) + sqr(p0[1] - 2 * p1[1] + p2[1]);
       if IsNan(result) or IsInfinite(result) then
         result := 0;

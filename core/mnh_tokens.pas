@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
+USES LCLIntf, myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
 
@@ -14,7 +14,7 @@ TYPE
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
 
-  T_packageLoadUsecase=(lu_forImport,lu_forDirectExecution,lu_forDocGeneration);
+  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
   
   { T_package }
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
@@ -37,7 +37,6 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
-      PROCEDURE ensureDocumentation;
   end;
 
 CONST C_id_qualify_character='.';
@@ -335,12 +334,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
         end;
 
         if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,0);
+
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           subRule^.publish:=not(ruleIsPrivate);
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
           if ruleIsPure then ensureRuleId(ruleId)^.setPure;
           first:=nil;
+          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsPure,ruleIsPrivate);
         end else if errorLevel<el5_systemError then
           cascadeDisposeToken(first)
         else
@@ -377,23 +378,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
       if first<>nil then cascadeDisposeToken(first);
     end;
 
-  PROCEDURE documentRules;
-    VAR r:T_ruleMap.VALUE_TYPE_ARRAY;
-        i,j:longint;
-        ruleDoc:P_userFunctionDocumentation;
-    begin
-      r:=rules.valueSet;
-      for i:=0 to length(r)-1 do begin
-        ruleDoc:=nil;
-        new(ruleDoc,create(r[i]^.id));
-        ruleDoc^.isPure:=r[i]^.isCached;
-        for j:=0 to length(r[i]^.subRules)-1 do
-          ruleDoc^.addSubRule(not(r[i]^.subRules[j]^.publish),r[i]^.subRules[j]^.pattern.toString);
-        doc^.addRule(ruleDoc);
-      end;
-      setLength(r,0);
-    end;
-
   VAR codeLines:T_stringList;
       i:longint;
       next:T_token;
@@ -402,10 +386,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
   begin
     if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
-    loadedVersion:=codeProvider^.getVersion(true);
+    loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
     codeLines:=codeProvider^.getLines;
-
-
 
     first:=nil;
     last :=nil;
@@ -428,14 +410,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
             last      :=last^.next;
           end;
           last^.next:=nil;
-        end;
+        end else if (usecase=lu_forDocGeneration) and (next.txt<>'') then doc^.addComment(next.txt);
       end;
     end;
     if (errorLevel<el3_evalError) then begin
       if first<>nil then interpret(first);
     end else cascadeDisposeToken(first);
     ready:=true;
-    if usecase=lu_forDocGeneration then documentRules;
     raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
   end;
 
@@ -543,12 +524,6 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinesImportedRules.unique;
   end;
 
-PROCEDURE T_package.ensureDocumentation;
-  begin
-
-
-  end;
-
 FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
   VAR next:T_token;
       first,last,temp:P_token;
@@ -594,6 +569,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
   VAR t:P_token;
       parLit:P_listLiteral;
       i:longint;
+      mainRule:P_rule;
   begin
     if not(mainPackage.ready) or (errorLevel>el1_note) then begin
       raiseError(el5_systemError,'Call of main has been rejected due to a previous error or note.',fileTokenLocation(@mainPackageProvider));
@@ -603,9 +579,13 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     finalizeTokens;
     {$endif}
     t:=newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
-    mainPackage.resolveRuleId(t^,false);
-    if t^.tokType=tt_identifier then raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
+    mainPackage.load(lu_forCallingMain);
+    if not(mainPackage.rules.containsKey('main',mainRule)) then
+      raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
     else begin
+      t^.tokType:=tt_localUserRulePointer;
+      t^.data:=mainRule;
+
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
       t^.next:=newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);

@@ -17,6 +17,7 @@
 FUNCTION futureTaskEvalThread(p:pointer):ptrint;
   begin
     P_futureTask(p)^.evaluate(STACK_DEPTH_LIMIT);
+    result:=0;
   end;
 
 CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal);

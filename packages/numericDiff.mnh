@@ -4,19 +4,19 @@ D(f:expression,n   ,x:numeric          )->D(f,n,x,0.1);
 D(f:expression,n<=0,x:numeric,h:numeric)->f(x);
 D(f:expression,n >0,x:numeric,h:numeric)->(D(f,n-1,x+h,h)-D(f,n-1,x-h,h))/(2*h);
 
-fak(n<1)->1;
-fak(n:int)->each(i,[1..n],*);
+fak(n<1)->1.0;
+fak(n)->n*fak(n-1);
 
 TaylorSeries  (f:expression,nMax>=0,x0:numeric,h:numeric)->TaylorSeries  (x0,each(n,[0..nMax],D(f,n,x0,h)/fak(n)));
 McLaurinSeries(f:expression,nMax>=0,           h:numeric)->McLaurinSeries(   each(n,[0..nMax],D(f,n, 0,h)/fak(n)));
 TaylorSeries(x0=0,coefficients)->McLaurinSeries(coefficients);
-TaylorSeries(x0  ,coefficients)->expression(each(i,[0..size(coefficients)-1],&"+"&,coefficients%i&(i=0?"":"*($x-"&x0&")^"&i)));
-McLaurinSeries(   coefficients)->expression(each(i,[0..size(coefficients)-1],&"+"&,coefficients%i&(i=0?"":"* $x        ^"&i)));
+TaylorSeries(x0  ,coefficients)->each(i,[0..size(coefficients)-1],+,coefficients%i*(({$x}-x0)^i));
+McLaurinSeries(   coefficients)->each(i,[0..size(coefficients)-1],+,coefficients%i*  {$x}    ^i );
 
 main->plot (McLaurinSeries({sin($x)},10,  0.1),-5,5,100) and
       addPlot(TaylorSeries({sin($x)},10,2,0.1),-5,5,100) and
       addPlot({sin($x)},-5,5,100);
 
+McLaurinSeries({sin($x)},10,  0.1);
 
-main;
 

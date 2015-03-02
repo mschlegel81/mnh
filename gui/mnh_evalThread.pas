@@ -19,6 +19,7 @@ FUNCTION ad_evaluationRunning:Boolean;
 PROCEDURE ad_killEvaluationLoopSoftly;
 FUNCTION ad_getTokenInfo(CONST line:ansistring; CONST column:longint):T_tokenInfo;
 FUNCTION ad_needReload:boolean;
+FUNCTION ad_needSave(CONST L: TStrings):boolean;
 PROCEDURE ad_doReload(CONST L:TStrings);
 
 VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
@@ -182,6 +183,12 @@ end;
 FUNCTION ad_needReload: boolean;
   begin
     result:=mainPackageProvider.fileHasChanged;
+  end;
+
+FUNCTION ad_needSave(CONST L: TStrings):boolean;
+  begin
+    mainPackageProvider.setLines(L);
+    result:=mainPackageProvider.fileIsOutOfSync;
   end;
 
 PROCEDURE ad_doReload(CONST L: TStrings);

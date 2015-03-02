@@ -8,7 +8,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mnh_gui_settings,
-  mnh_gui_main;
+  mnh_gui_main, closeDialog, askDialog;
 
 {$R *.res}
 
@@ -18,5 +18,7 @@ BEGIN
 
   Application.CreateForm(TMnhForm, MnhForm);
   Application.CreateForm(TSettingsForm, SettingsForm);
+  Application.CreateForm(TcloseDialogForm, closeDialogForm);
+  Application.CreateForm(TaskForm, askForm);
   Application.Run;
 END.

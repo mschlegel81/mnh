@@ -1,7 +1,0 @@
-recFolders(path)->flatten(each(f,folders(path),f,recFolders(f&"\\*")));
-allSourceFiles:=files(recFolders("*")&"\\*.mnh");
-id(f:stringList)->f%(size(f)-3);
-
-useClause:='USE '&each(f,allSourceFiles,&", "&,id(tokenSplit(f)))&';';
-writeFileLines('all.mnh',[useClause]);
-

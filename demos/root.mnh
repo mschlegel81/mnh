@@ -15,6 +15,7 @@ private roots(F,xList)->each(i,[0..size(xList)-2],|,regulaFalsi(F,xList%i,xList%
 main(F:expression)->print("Analyzing ",F) and
                     each(r,roots(F,-6,6),print("Root found ",F(r)=0?"at   ":"near ",r));
 main(F:string)->main(expression(F));
+//*Solves the "Roots of a function" task from <a href="http://rosettacode.org/wiki/Roots_of_a_function">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
       main({$x^3-3*$x^2+2*$x});
 

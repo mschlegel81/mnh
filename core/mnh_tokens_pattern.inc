@@ -180,6 +180,11 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
   end;
 
 FUNCTION T_pattern.toString:ansistring;
+  FUNCTION trimLeadingEquals(CONST s:ansistring):ansistring;
+    begin
+      if (length(s)>1) and (s[1]='=') then result:=copy(s,2,length(s)-1) else result:=s;
+    end;
+
   VAR i:longint;
   begin
     if length(sig)=0 then exit('');
@@ -202,7 +207,7 @@ FUNCTION T_pattern.toString:ansistring;
         tt_typeCheckNumList   ,
         tt_typeCheckExpression  ,
         tt_typeCheckNonemptyList,
-        tt_typeCheckEmptyList   : result:=result+id+C_tokenString[restrictionType];
+        tt_typeCheckEmptyList   : result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]);
         tt_comparatorEq,
         tt_comparatorNeq,
         tt_comparatorLeq,

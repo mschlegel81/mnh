@@ -1334,8 +1334,8 @@ INITIALIZATION
   registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
-  registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none#Note: Character indexes start with 1!');
-  registerRule('copy'          ,@copy_imp      ,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length#Note: Character indexes start with 1!');
+  registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none');
+  registerRule('copy'          ,@copy_imp      ,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
   registerRule('time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('split'         ,@split_imp     ,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
   registerRule('softCast'      ,@softCast_imp  ,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');

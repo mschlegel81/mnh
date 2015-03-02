@@ -1,6 +1,6 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif}, mnh_doc;
+USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs{$ifdef plots}, mnh_plotData{$endif}, consoleAsk;
 
 //by command line parameters:---------------
 VAR minErrorLevel:T_errorLevel=el2_warning;
@@ -129,8 +129,6 @@ PROCEDURE fileMode;
 begin  
   mnh_funcs.mnh_console_executable:=paramstr(0);
   parseCmdLine;
-  mnh_doc.documentBuiltIns;
-  findAndDocumentAllPackages;
   if fileToInterpret='' then interactiveMode
                         else fileMode;
 end.

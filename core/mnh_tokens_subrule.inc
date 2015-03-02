@@ -13,6 +13,7 @@
       PROCEDURE updatePatternForInline;
       PROCEDURE embrace;
       FUNCTION needEmbrace:boolean;
+      FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
     public
       CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation);
       CONSTRUCTOR createConstant  (CONST value:P_literal);
@@ -136,6 +137,30 @@ FUNCTION T_subrule.needEmbrace:boolean;
     result:=false;
   end;
 
+FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
+  VAR bracketLevel,i:longint;
+  begin
+    if length(expression)<=1 then exit(false);
+    bracketLevel:=0;
+    i:=length(expression)-1;
+    if (expression[0].token.tokType<>tt_braceOpen) or
+       (expression[i].token.tokType<>tt_braceClose) then exit(false);
+    for i:=1 to length(expression)-2 do begin
+      case expression[i].token.tokType of
+        tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
+        tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
+        tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
+        tt_operatorAnd, tt_operatorOr, tt_operatorXor,
+        tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
+        tt_operatorStrConcat,
+        tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
+        tt_operatorConcat, tt_operatorIn: if C_opPrecedence[expression[i].token.tokType]>C_opPrecedence[outerOp] then exit(false);
+      end;
+      if bracketLevel<0 then exit(false);
+    end;
+    result:=true;
+  end;
+
 PROCEDURE T_subrule.updatePatternForInline;
   VAR i:longint;
   begin
@@ -227,52 +252,56 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
   end;
 
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
-  VAR i,i0:longint;
+  VAR i:longint;
       r:P_subrule;
+  PROCEDURE appendToExpression(VAR T:T_token);
+    begin
+      setLength(expression,length(expression)+1);
+      with expression[length(expression)-1] do begin
+        token.create;
+        token.define(T);
+        parIdx:=-1;
+      end;
+    end;
+
+  PROCEDURE appendToExpression(CONST L:P_literal);
+    begin
+      setLength(expression,length(expression)+1);
+      L^.rereference;
+      with expression[length(expression)-1] do begin
+        token.create;
+        token.define(opLocation,'',tt_literal,L);
+        parIdx:=-1;
+      end;
+    end;
+
+  PROCEDURE appendToExpression(CONST op:T_tokenType);
+    begin
+      setLength(expression,length(expression)+1);
+      with expression[length(expression)-1] do begin
+        token.create;
+        token.define(opLocation,'',op);
+        parIdx:=-1;
+      end;
+    end;
+
   begin
     declaredAt:=opLocation;
     pattern.create;
     isDeclaredInline:=true;
+    setLength(expression,0);
 
     if LHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(LHS)^.value;
-      setLength(expression,length(r^.expression));
-      for i:=0 to length(expression)-1 do with expression[i] do begin
-        token.create; token.define(r^.expression[i].token);
-        parIdx:=-1;
-      end;
-    end else begin
-      setLength(expression,1);
-      with expression[0] do begin
-        LHS^.rereference;
-        token.create; token.define(opLocation,'',tt_literal,LHS);
-        parIdx:=-1;
-      end;
-    end;
-
-    i0:=length(expression);
-    setLength(expression,i0+1);
-    with expression[i0] do begin
-      token.create; token.define(opLocation,'',op);
-      parIdx:=-1;
-    end;
-
-    i0:=length(expression);
+      if r^.canUnbrace(op) then for i:=1 to length(r^.expression)-2 do appendToExpression(r^.expression[i].token)
+                           else for i:=0 to length(r^.expression)-1 do appendToExpression(r^.expression[i].token);
+    end else appendToExpression(LHS);
+    appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(RHS)^.value;
-      setLength(expression,i0+length(r^.expression));
-      for i:=0 to length(r^.expression)-1 do with expression[i0+i] do begin
-        token.create; token.define(r^.expression[i].token);
-        parIdx:=-1;
-      end;
-    end else begin
-      setLength(expression,i0+1);
-      with expression[i0] do begin
-        RHS^.rereference;
-        token.create; token.define(opLocation,'',tt_literal,RHS);
-        parIdx:=-1;
-      end;
-    end;
+      if r^.canUnbrace(op) then for i:=1 to length(r^.expression)-2 do appendToExpression(r^.expression[i].token)
+                           else for i:=0 to length(r^.expression)-1 do appendToExpression(r^.expression[i].token);
+    end else appendToExpression(RHS);
     embrace;
     updatePatternForInline;
   end;
@@ -287,21 +316,37 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
 CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
   VAR origRule:P_subrule;
       i:longint;
+  PROCEDURE appendToExpression(VAR T:T_token);
+    begin
+      setLength(expression,length(expression)+1);
+      with expression[length(expression)-1] do begin
+        token.create;
+        token.define(T);
+        parIdx:=-1;
+      end;
+    end;
+
+  PROCEDURE appendToExpression(CONST op:T_tokenType);
+    begin
+      setLength(expression,length(expression)+1);
+      with expression[length(expression)-1] do begin
+        token.create;
+        token.define(funcLocation,'',op);
+        parIdx:=-1;
+      end;
+    end;
+
   begin
     origRule:=original^.value;
     declaredAt:=funcLocation;
     pattern.create;
     isDeclaredInline:=true;
 
-    setLength(expression,length(origRule^.expression)+3);
+    setLength(expression,1);
     with expression[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRulePointer,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
-    with expression[1] do begin token.create; token.define(declaredAt,'',tt_braceOpen); parIdx:=-1; end;
-    for i:=0 to length(origRule^.expression)-1 do with expression[i+2] do begin
-      token.create;
-      token.define(origRule^.expression[i].token);
-      parIdx:=-1;
-    end;
-    with expression[length(expression)-1] do begin token.create; token.define(declaredAt,'',tt_braceClose); parIdx:=-1; end;
+    if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceOpen);
+    for i:=0 to length(origRule^.expression)-1 do appendToExpression(origRule^.expression[i].token);
+    if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceClose);
     updatePatternForInline;
   end;
 

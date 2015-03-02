@@ -43,6 +43,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
+      evalCost:longint;
   begin
     if isCached and (ThreadID=mainThread) then begin
       if param=nil then useParam:=newListLiteral
@@ -56,11 +57,12 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         exit(true);
       end else for i:=0 to length(subrules)-1 do if (includePrivateRules or subrules[i]^.publish) and subrules[i]^.replaces(useParam,firstRep,lastRep) then begin
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
-        
+        evalCost:=GetTickCount;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1);
+        evalCost:=getTickCount-evalCost;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
-          cache.put(useParam,lit);
+          cache.put(useParam,lit,evalCost);
         end;  
         lastRep:=firstRep^.last;
         if param=nil then disposeLiteral(useParam);

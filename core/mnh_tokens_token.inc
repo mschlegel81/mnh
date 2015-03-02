@@ -273,7 +273,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     VAR i:longint;
     begin
       i:=1;
-      while (i<=length(line)) and (line[i] in [' ',C_lineBreakChar,C_tabChar]) do inc(i);
+      while (i<=length(line)) and (line[i] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(i);
       if i>1 then line:=copy(line,i,length(line)+1-i);
       inc(lineLocation.column,i-1);
     end;
@@ -398,6 +398,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '/': if startsWith(line,'//') then begin //comments
              parsedLength:=length(line);
              result.tokType:=tt_eol;
+             if startsWith(line,'//*') then result.txt:=trim(copy(line,4,length(line)-3));
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorDivReal;

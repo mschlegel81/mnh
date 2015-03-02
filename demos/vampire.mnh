@@ -24,6 +24,7 @@ private printFirstVampires(n   ,k>0)->printFirstVampires(n-(isVampire(k)?1:0),bi
 
 private verboseCheckIfVampire(n)->isVampire(n) ? true : print(n,' is not a vampire.');
 
+//*Solves the "Vampire-Number" task from <a href="http://rosettacode.org/wiki/Vampire_number">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Vampire_number') and
       printFirstVampires(25,1) and
       print('-----------------------------------------------') and

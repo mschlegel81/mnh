@@ -14,17 +14,16 @@ TYPE
   end;
 
   { T_userFunctionDocumentation }
-  P_userFunctionDocumentation=^T_userFunctionDocumentation;
   T_userFunctionDocumentation=object
     isPure:boolean;
     id:ansistring;
     subrules:array of record
       isPrivate:boolean;
-      pattern:ansistring;
+      pattern,comment:ansistring;
     end;
     CONSTRUCTOR create(ruleId:ansistring);
     DESTRUCTOR destroy;
-    PROCEDURE addSubRule(privateSubrule:boolean; pat:ansistring);
+    PROCEDURE addSubRule(privateSubrule:boolean; pat,comment:ansistring);
     FUNCTION toHtml:ansistring;    
   end;
 
@@ -33,19 +32,22 @@ TYPE
   { T_userPackageDocumentation }
 
   T_userPackageDocumentation=object
+    lastComment:ansistring;
+
     uid:ansistring;
     id:ansistring;
     docFileName:ansistring;
     rawUses:array of ansistring;
     usesPackage,usedByPackage:array of P_userPackageDocumentation;
-    rules:array of P_userFunctionDocumentation;
+    rules:array of T_userFunctionDocumentation;
     CONSTRUCTOR create(path,name:ansistring);
     DESTRUCTOR destroy;
     PROCEDURE addUses(OtherUid:ansistring);
     PROCEDURE addUsed(other:P_userPackageDocumentation);
     PROCEDURE resolveUses;
     FUNCTION toHtml:ansistring;
-    PROCEDURE addRule(ruleDoc:P_userFunctionDocumentation);
+    PROCEDURE addComment(CONST s:ansistring);
+    PROCEDURE addSubRule(CONST subruleId,pattern:ansistring; CONST isPure,isPrivate:boolean);
     FUNCTION getHref:ansistring;
     FUNCTION isExecutable:boolean;
   end;
@@ -57,7 +59,7 @@ VAR packages:array of P_userPackageDocumentation;
 
 PROCEDURE locateHtml;
   CONST primary='doc';
-        secondary='..\doc';
+        secondary='..'+DirectorySeparator+'doc';
   begin
     if DirectoryExists(primary) then htmlRoot:=primary
     else if DirectoryExists(secondary) then htmlRoot:=secondary
@@ -89,6 +91,7 @@ FUNCTION prettyHtml(s:ansistring):ansistring;
 
 constructor T_userPackageDocumentation.create(path, name: ansistring);
 begin
+  lastComment:='';
   id:=name;
   uid:=ExpandFileName(path);
   docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(uid,':','_'),'\','_'),'/','_'),'.','_');
@@ -106,7 +109,7 @@ begin
   setLength(rawUses,0);
   setLength(usedByPackage,0);
   SetLength(usedByPackage,0);
-  for i:=0 to length(rules)-1 do dispose(rules[i],destroy);
+  for i:=0 to length(rules)-1 do rules[i].destroy;
   setLength(rules,0);
 end;
 
@@ -175,15 +178,34 @@ function T_userPackageDocumentation.toHtml: ansistring;
     '<tr class="oben"><td>Path: </td><td><code>'+uid+'</code></td></tr>'+
     '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
     '<tr class="oben"><td>Publishes: </td><td>';
-    for i:=0 to length(rules)-1 do result:=result+rules[i]^.toHtml;
+    for i:=0 to length(rules)-1 do result:=result+rules[i].toHtml;
     result:=result+'</td></tr>'+
       '<tr class="oben"><td></ul>Used by: </td><td>'+getUsed+'</td></tr></table>';
   end;
 
-procedure T_userPackageDocumentation.addRule(ruleDoc: P_userFunctionDocumentation);
+procedure T_userPackageDocumentation.addComment(const s: ansistring);
+begin
+  if lastComment=''
+  then lastComment:=s
+  else lastComment:=lastComment+' '+s;
+end;
+
+procedure T_userPackageDocumentation.addSubRule(const subruleId, pattern: ansistring; const isPure, isPrivate: boolean);
+  VAR ruleIdx:longint;
   begin
-    setLength(rules,length(rules)+1);
-    rules[length(rules)-1]:=ruleDoc;
+    if isPrivate then begin
+      lastComment:='';
+      exit;
+    end;
+    ruleIdx:=0;
+    while (ruleIdx<length(rules)) and (rules[ruleIdx].id<>subruleId) do inc(ruleIdx);
+    if ruleIdx>=length(rules) then begin
+      setLength(rules,ruleIdx+1);
+      rules[ruleIdx].create(subruleId);
+    end;
+    if isPure then rules[ruleIdx].isPure:=true;
+    rules[ruleIdx].addSubRule(isPrivate,pattern,lastComment);
+    lastComment:='';
   end;
 
 function T_userPackageDocumentation.getHref: ansistring;
@@ -195,7 +217,7 @@ function T_userPackageDocumentation.isExecutable: boolean;
 VAR i:longint;
 begin
   result:=false;
-  for i:=0 to length(rules)-1 do if rules[i]^.id='main' then exit(true);
+  for i:=0 to length(rules)-1 do if rules[i].id='main' then exit(true);
 end;
 
 { T_userFunctionDocumentation }
@@ -211,12 +233,12 @@ begin
   setLength(subrules,0);
 end;
 
-procedure T_userFunctionDocumentation.addSubRule(privateSubrule: boolean; pat: ansistring);
+procedure T_userFunctionDocumentation.addSubRule(privateSubrule: boolean; pat,comment: ansistring);
 begin
   setLength(subrules,length(subrules)+1);
   subrules[length(subrules)-1].isPrivate:=privateSubrule;
   subrules[length(subrules)-1].pattern:=pat;
-
+  subrules[length(subrules)-1].comment:=comment;
 end;
 
 function T_userFunctionDocumentation.toHtml: ansistring;
@@ -226,16 +248,20 @@ begin
 
 
   result:='<table><tr class="ruleHead"><td>';
-  if isPure then result:=result+'<div class="red">'+id+' (pure)</div>'
-            else result:=result+id;
+  if isPure then result:=result+'<div class="red">';
+  if id='main' then result:=result+'<b>'+id+'</b>'
+               else result:=result+      id;
+  if isPure then result:=result+' (pure)</div>';
+
   result:=result+'</td></tr>';
   for i:=0 to length(subrules)-1 do with subrules[i] do if not(isPrivate) then begin
-    result:=result+'<tr><td><code>'+id+pattern+'</code></td></tr>';
+    result:=result+'<tr><td>';
+    if comment<>'' then result:=result+'<i>'+ comment+'</i><br>';
+    result:=result+'<code>'+id+pattern+'</code></td></tr>';
     anyPublic:=true;
   end;
   result:=result+'</table>';
-  if id='main' then result:='<b>'+result+'</b>';
-  if not(anyPublic) then result:='';
+
 end;
 
 constructor T_intrinsicFunctionDocumentation.create(const funcName: ansistring);

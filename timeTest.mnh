@@ -1,0 +1,15 @@
+USE primes,combinatorics,basic;
+extract(L,key)->L%(L%%0=key)%0%1;
+
+version_A(n)->{dividers(n)};
+version_B(n)->{each(s,subsets(factorize(n)),prod(s))};
+
+timeA(n:int)->extract(time(version_A(n)),"time");
+timeB(n:int)->extract(time(version_B(n)),"time");
+
+//   plot(each(n,round(10**(8*random(100))),[n,timeA(n)]),".") and
+//addPlot(each(n,round(10**(8*random(100))),[n,timeB(n)]),"+ x");
+main->print('[') and
+each(n,round(10**(8*random(1000))),print([n,timeA(n),timeB(n)],',')) and
+print(']');
+
