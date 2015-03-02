@@ -49,7 +49,7 @@ VAR mainPackageProvider:T_codeProvider;
 
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT=45000;
+CONST STACK_DEPTH_LIMIT={$ifdef version64bit} 14750 {$else} 37000 {$endif};
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
@@ -341,12 +341,12 @@ PROCEDURE T_package.load;
       end;
       predigestBeforeDeclarationParsing(first);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
-      if assignmentToken=nil then predigest(first,@self)
-                             else predigest(assignmentToken,@self);
       if assignmentToken<>nil then begin
+        predigest(assignmentToken,@self);
         writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
+        predigest(first,@self);
         writeExprEcho(tokensToString(first));
         reduceExpression(first,0);
         if first<>nil then writeExprOut(tokensToString(first));
@@ -384,6 +384,7 @@ PROCEDURE T_package.load;
             last^.next:=newToken(next); next.undefine;
             last      :=last^.next;
           end;
+          last^.next:=nil;
         end;
       end;
     end;
@@ -545,7 +546,9 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       i:longint;
   begin
     if not(mainPackage.ready) or (errorLevel>el0_allOkay) then exit;
+    {$ifdef doTokenRecycling}
     finalizeTokens;
+    {$endif}
     t:=newToken(C_nilTokenLocation,'main',tt_identifier);
     mainPackage.resolveRuleId(t^,false);
     if t^.tokType=tt_identifier then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)

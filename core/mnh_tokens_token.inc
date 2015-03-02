@@ -170,9 +170,9 @@ PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; tokenText:ansistri
 PROCEDURE T_token.define(CONST original:T_token);
   begin
     location:=original.location;
-    txt    :=original.txt;
-    tokType:=original.tokType;
-    data   :=original.data;
+    txt     :=original.txt;
+    tokType :=original.tokType;
+    data    :=original.data;
     if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType = tt_each) and (data<>nil) then P_literal(data)^.rereference;
   end;
 
@@ -313,19 +313,19 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       'a'..'z','A'..'Z': begin
         id:=leadingId(true);
         parsedLength:=length(id);
-        if      id='xor'   then result.tokType:=tt_operatorXor
-        else if id='or'    then result.tokType:=tt_operatorOr
-        else if id='mod'   then result.tokType:=tt_operatorMod
-        else if id='in'    then result.tokType:=tt_operatorIn
-        else if id='each'  then begin result.tokType:=tt_each; result.txt:=''; end
-        else if id='div'   then result.tokType:=tt_operatorDivInt
-        else if id='and'   then result.tokType:=tt_operatorAnd
-        else if id='true'  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
-        else if id='false' then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
-        else if id='Nan'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
-        else if id='Inf'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
+        if      id='xor'     then result.tokType:=tt_operatorXor
+        else if id='or'      then result.tokType:=tt_operatorOr
+        else if id='mod'     then result.tokType:=tt_operatorMod
+        else if id='in'      then result.tokType:=tt_operatorIn
+        else if id='each'    then begin result.tokType:=tt_each; result.data:=nil; result.txt:=''; end
+        else if id='div'     then result.tokType:=tt_operatorDivInt
+        else if id='and'     then result.tokType:=tt_operatorAnd
+        else if id='true'    then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
+        else if id='false'   then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
+        else if id='Nan'     then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
+        else if id='Inf'     then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
         else if id='private' then result.tokType:=tt_modifier_private
-        else if id='pure' then result.tokType:=tt_modifier_pure
+        else if id='pure'    then result.tokType:=tt_modifier_pure
         else begin
           result.txt:=id;
           result.tokType:=tt_identifier;
@@ -493,19 +493,20 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-      tt_identifier: t^.data:=inPackage;
-      tt_each:
-        if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-        and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-        and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-          t^.txt:=t^.next^.next^.txt;
-          t^.data:=nil;
-          t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
-        end else if t^.txt='' then begin
-          raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
-          exit;
+        tt_identifier: if t^.data=nil then t^.data:=inPackage;
+        tt_each:
+          if  (t^.data=nil)
+          and (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+          and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+          and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+            t^.txt:=t^.next^.next^.txt;
+            t^.data:=nil;
+            t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
+          end else if t^.txt='' then begin
+            raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
+            exit;
+          end;
         end;
-      end;
       t:=t^.next;
     end;
   end;
@@ -675,7 +676,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
 
           first^.tokType:=tt_listBraceOpen;
           bracketClosingEach^.tokType:=tt_listBraceClose;
-          aggregatorPresent:=false;
+          aggregatorPresent    :=false;
           aggregatorIsPrimitive:=false;
         end;
         //----------------------------------------------process aggregator part (if any)
@@ -691,9 +692,55 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end;
 
     VAR itList:P_listLiteral;
-        i,j,k:longint;
+        i,j:longint;
         eachLocation:T_tokenLocation;
-        resultLiteral,newLit,bodyRuleResult:P_literal;
+        resultLiteral:P_literal;
+
+    PROCEDURE inlineTokensBetween; inline;
+      VAR k:longint;
+      begin
+        for k:=0 to length(tokensBetween)-1 do begin
+          t^.next:=newToken(tokensBetween[k]);
+          t:=t^.next;
+        end;
+      end;
+
+    PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
+      VAR newLit:P_literal;
+      begin
+        if L=nil then begin
+          if resultLiteral=nil then resultLiteral:=newErrorLiteral;
+          raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
+          exit;
+        end;
+        if aggregatorPresent then begin
+          if resultLiteral=nil then begin
+            resultLiteral:=L; L^.rereference;
+          end else begin
+            newLit:=resolveOperator(resultLiteral,
+                                    tokensBetween[0]^.tokType,
+                                    L,
+                                    eachLocation);
+            if newLit<>nil then begin
+              disposeLiteral(resultLiteral);
+              resultLiteral:=newLit;
+            end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.toString+')',eachLocation);
+          end;
+        end else begin
+          if resultLiteral=nil then resultLiteral:=newListLiteral;
+          P_listLiteral(resultLiteral)^.append(L,true);
+        end;
+        if doDispose then disposeLiteral(L);
+      end;
+
+    PROCEDURE finalizeAggregation; inline;
+      begin
+        first^.tokType:=tt_literal;
+        if resultLiteral=nil then first^.data:=newErrorLiteral
+                             else first^.data:=resultLiteral;
+        first^.txt:='';
+        first^.next:=disposeToken(bracketClosingEach);
+      end;
 
     begin
       eachLocation:=first^.location;
@@ -703,6 +750,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       then itList:=newOneElementListLiteral(first^.data,false)
       else itList:=first^.data;
 
+      resultLiteral:=nil;
+
       first^.data:=nil;
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
@@ -710,68 +759,42 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       if aggregatorPresent and (itList^.size=0) then
         raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
       else if length(bodyRule)>0 then begin
-        if aggregatorIsPrimitive and (callDepth<STACK_DEPTH_LIMIT) then begin
-          resultLiteral:=nil;
-          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then begin
-            bodyRuleResult:=bodyRule[j]^.directEvaluateUnary(itList^.Value(i),callDepth+1);
-            if bodyRuleResult<>nil then begin
-              if resultLiteral=nil then resultLiteral:=bodyRuleResult else begin
-                newLit:=resolveOperator(resultLiteral,
-                                        tokensBetween[0]^.tokType,
-                                        bodyRuleResult,
-                                        eachLocation);
-                disposeLiteral(bodyRuleResult);
-                if newLit<>nil then begin
-                  disposeLiteral(resultLiteral);
-                  resultLiteral:=newLit;
-                end;
-              end;
-            end else if resultLiteral=nil then resultLiteral:=newErrorLiteral;
-          end;
-          t^.next:=newToken(eachLocation,'',tt_literal,resultLiteral);
-          t:=t^.next;
+        if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
+          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
+            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.Value(i),callDepth+1),true);
+          finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
           for j:=0 to length(bodyRule)-1 do begin
-            if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
-              t^.next:=newToken(tokensBetween[k]);
-              t:=t^.next;
-            end;
+            if (i<>0) or (j<>0) then inlineTokensBetween;
             t^.next:=newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
             bodyRuleLiteral[j]^.rereference;
             t:=t^.next;
             t^.next:=newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
             t:=t^.next;
           end;
+          t^.next:=bracketClosingEach;
         end;
       end else begin
-        if aggregatorIsPrimitive then begin
-          resultLiteral:=itList^.Value(0);
+        if not(aggregatorPresent) then begin
+          resultLiteral:=itList;
           resultLiteral^.rereference;
-          for i:=1 to itList^.size-1 do if errorLevel<=el2_warning then begin
-            newLit:=resolveOperator(resultLiteral,
-                                    tokensBetween[0]^.tokType,
-                                    itList^.Value(i),
-                                    eachLocation);
-            disposeLiteral(resultLiteral);
-            resultLiteral:=newLit;
-          end;
-          t^.next:=newToken(eachLocation,'',tt_literal,resultLiteral);
-          t:=t^.next;
+          finalizeAggregation;
+        end else if aggregatorIsPrimitive then begin
+          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
+            addToAggregation(itList^.Value(i),false);
+          finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
-            if (i<>0) then for k:=0 to length(tokensBetween)-1 do begin
-              t^.next:=newToken(tokensBetween[k]);
-              t:=t^.next;
-            end;
+            if (i<>0) then inlineTokensBetween;
             t^.next:=newToken(eachLocation,'',tt_literal,itList^.value(i));
             itList^.value(i)^.rereference;
             t:=t^.next;
           end;
+          t^.next:=bracketClosingEach;
         end;
       end;
       //----------------------------------------------------------iterate over itList
-      t^.next:=bracketClosingEach;
       //cleanup----------------------------------------------------------------------
       for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRuleLiteral[i]);
       for i:=0 to length(tokensBetween)-1 do disposeToken(tokensBetween[i]);
