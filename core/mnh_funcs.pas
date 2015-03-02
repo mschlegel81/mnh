@@ -12,7 +12,7 @@ PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST exp
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 
 //Callbacks:--------------------------------
-TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
+TYPE T_resolveNullaryCallback=FUNCTION (CONST selfPointer:P_expressionLiteral; CONST callDepth:word):P_literal;
 VAR resolveNullaryCallback:T_resolveNullaryCallback;
 
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
@@ -370,6 +370,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
           lt_int: begin
             result:=newListLiteral;
             i0:=P_intLiteral(y)^.value;
+            if i0<0 then i0:=0;
             if i0>P_listLiteral(x)^.size then i0:=P_listLiteral(x)^.size;
             for i:=i0 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
           end;
@@ -654,12 +655,12 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
       startTick:=GetTickCount;
-      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
+      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
       ticks:=GetTickCount-startTick;
       if res<>nil then begin
         while (ticks<200) and (res<>nil) do begin //measure at least half a second
           disposeLiteral(res);
-          res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
+          res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)),callDepth+1);
           if res=nil then exit(nil);
           ticks:=GetTickCount-startTick;
           inc(runCount);
@@ -1116,6 +1117,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       curlyBracketsDelimitOneToken:boolean=false;
       cStyleComments:boolean=false;
       dollarVariables:boolean=false;
+      t:T_tokenType;
 
   PROCEDURE setLanguage(name:string);
     begin
@@ -1154,8 +1156,13 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params<>nil) and (params^.size>=1) and
        (params^.value(0)^.literalType=lt_string) then begin
       stringToSplit:=P_stringLiteral(params^.value(0))^.value;
+
       result:=newListLiteral;
       i0:=1;
+      if curlyBracketsDelimitOneToken and (copy(trim(stringToSplit),1,1)='{') then  begin
+        i1:=2;
+        stepToken;
+      end;
       while i0<=length(stringToSplit) do begin
         if stringToSplit[i0] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar] then begin //whitespace
           i1:=i0;
@@ -1185,7 +1192,18 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
           if i1<=0 then i1:=i0
                    else i1:=i0+i1;
-        end else i1:=i0+1; //symbols, etc.
+        end else begin
+          //symbols, etc.
+          t:=tt_literal;
+          i1:=i0;
+          for t:=tt_literal to tt_eol do begin
+            if (C_tokenString[t]<>'') and
+               (copy(stringToSplit,i0,length(C_tokenString[t]))=C_tokenString[t]) and
+               (i0+length(C_tokenString[t])>i1)
+            then i1:=i0+length(C_tokenString[t]);
+          end;
+          if i1=i0 then i1:=i0+1;
+        end;
         stepToken;
       end;
 

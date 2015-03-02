@@ -1,14 +1,13 @@
 USE polynomials, basic;
-//*Returns the <code>n</code>-th numerical derivative at point <code>x</code> with a stepsize <code>h=0.1</code>
-D(f:expression,n   ,x:numeric          )->D(f,n,x,0.1);
-//*Returns the function itself
-D(f:expression,n<=0,x:numeric,h:numeric)->f(x);
-//*Returns the <code>n</code>-th numerical derivative at point <code>x</code>
-D(f:expression,n >0,x:numeric,h:numeric)->(D(f,n-1,x+h,h)-D(f,n-1,x-h,h))/(2*h);
 
-TaylorSeries  (f:expression,nMax>=0,x0:numeric,h:numeric)->polyExpression(-x0,each(n,[0..nMax],D(f,n,x0,h)/fak(n)));
-McLaurinSeries(f:expression,nMax>=0,           h:numeric)->polyExpression(    each(n,[0..nMax],D(f,n, 0,h)/fak(n)));
+private bin(n<=0)->[1];
+private bin(n>0)->((bin(n-1))|0+0|(-bin(n-1)));
+//*Returns the n-th numeric differential of f determined with step size of h
+D(f:expression,n:int,h>0  )->each(i,[0..n],+,f({$x}+(n/2-i)*h)*bin(n)%i/h^n);
+//*Returns the n-th numeric differential of f determined with step size of h; evaluated at x
+D(f:expression,n:int,h>0,x)->each(i,[0..n],+,f(  x +(n/2-i)*h)*bin(n)%i/h^n);
+//*Returns the Taylor Series expansion of f around x0 with nMax summands
+TaylorSeries  (f:expression,nMax>=0,x0:numeric,h:numeric)->polyExpression(-x0,each(n,[0..nMax],D(f,n,h,x0)/fak(n)));
+//*Returns the McLaurin Series expansion of f around x0 with nMax summands
+McLaurinSeries(f:expression,nMax>=0,           h:numeric)->polyExpression(    each(n,[0..nMax],D(f,n,h, 0)/fak(n)));
 
-main->plot (McLaurinSeries({sin($x)},10,  0.1),-5,5,100) and
-      addPlot(TaylorSeries({sin($x)},10,2,0.1),-5,5,100) and
-      addPlot({sin($x)},-5,5,100);

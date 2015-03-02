@@ -1,6 +1,7 @@
 {$ifdef include_interface}
   P_pattern=^T_pattern;
   T_pattern=object
+    containsSelfPointer:boolean;
     sig:array of record
           id               :ansistring;
           restrictionType  :T_tokenType;
@@ -29,7 +30,10 @@ CONSTRUCTOR T_pattern.create;
   begin clear; end;
 
 PROCEDURE T_pattern.clear;
-  begin setLength(sig,0); end;
+  begin
+    setLength(sig,0);
+    containsSelfPointer:=false;
+  end;
 
 DESTRUCTOR T_pattern.destroy;
   begin clear; end;

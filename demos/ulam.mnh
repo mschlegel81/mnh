@@ -1,0 +1,23 @@
+USE primes;
+
+memoized
+private Ulam(1)->[[1]];
+private Ulam(n)->(n and 1)=0 ? [[n*n..n*(n-1)+1]] | each(j,[0..n-2],(Ulam(n-1)%j)|(n*(n-1)-j))
+                             : each(j,[0..n-2],((sqr(n-1)+1+j)| Ulam(n-1)%j)) | [[n*(n-1)+1..n*n]];
+
+private UlamSpiral(n:int)->UlamSpiral(Ulam(n),primes(n*n));
+private UlamSpiral(Lines,Primes)->print(each(l,Lines,&"\n"&,each(n,l,&,n in Primes ? "XX"  : "  ")));
+
+
+private UlamPlot(n)->plotCategorized(each(i,[0..n-1],|,each(j,[0..n-1],|,size(factorize(Ulam(n)%i%j))=1?[i,j,i+1,j+1]:[] )));
+private plotCategorized(L)->setPlotAxisStyle([0,0]) and setPlotLogscale([false,false]) and setPlotAutoscale([true,true]) and setPlotPreserveAspect(true) and
+                            plot(L%([0..size(L) div 2-1]*2  ),
+                                 L%([0..size(L) div 2-1]*2+1),"box");
+
+private info->print('Run as a script in GUI-mode for a graphical output.');
+//*Displays a 40x40 Ulam-Spiral
+main->info and UlamSpiral(40);
+//*Displays a n x n Ulam-Spiral
+main(n:string)->info and UlamSpiral(softCast(n));
+
+UlamPlot(500);

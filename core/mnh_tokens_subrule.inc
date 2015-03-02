@@ -25,14 +25,15 @@
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token):boolean;
       FUNCTION toString:ansistring;
-      FUNCTION directEvaluateNullary(CONST callDepth:word):P_literal;
-      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
   end;
 
 {$endif}
 {$ifdef include_implementation}
+
 CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean);
   VAR t:P_token;
   begin
@@ -151,14 +152,20 @@ FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
     result:=true;
   end;
 
+CONST SELF_TOKEN_TEXT='$self';
 PROCEDURE T_subrule.updatePatternForInline;
   VAR i:longint;
   begin
     pattern.clear;
     for i:=0 to length(expression)-1 do with expression[i] do
     if token.tokType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfId(token.txt); //reuse ID
-      if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt); //new parameter
+      if token.txt=SELF_TOKEN_TEXT then begin
+        parIdx:=maxLongint;
+        pattern.containsSelfPointer:=true;
+      end else begin
+        parIdx:=pattern.indexOfId(token.txt); //reuse ID
+        if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt); //new parameter
+      end;
     end;
   end;
 
@@ -203,12 +210,13 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token):boolean;
   VAR t:P_token;
       i:longint;
   begin
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^) then begin
+       (param<>nil) and pattern.matches(param^) and
+       (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
       with expression[0] do if parIdx>=0 then begin
         firstRep:=newToken(token.location,'',tt_literal,param^.value(parIdx));
         param^.value(parIdx)^.rereference;
@@ -216,8 +224,13 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
         if parIdx>=0 then begin
-          t^.next:=newToken(token.location,'',tt_literal,param^.value(parIdx));
-          param^.value(parIdx)^.rereference;
+          if parIdx<maxLongint then begin
+            t^.next:=newToken(token.location,'',tt_literal,param^.value(parIdx));
+            param^.value(parIdx)^.rereference;
+          end else begin
+            t^.next:=newToken(token.location,SELF_TOKEN_TEXT,tt_literal,selfLiteral);
+            selfLiteral^.rereference;
+          end;
         end else begin
           if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
           t^.next:=newToken(@token);
@@ -231,7 +244,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
             and (expression[0].token.tokType=tt_literal)
             and (P_literal(expression[0].token.data)^.literalType = lt_expression)
             and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^))
-    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,firstRep,lastRep)
+    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep)
     else begin
       result:=false;
       case typ of
@@ -369,10 +382,10 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(nil,firstRep,lastRep) then begin
+    if replaces(nil,selfLiteral,firstRep,lastRep) then begin
       reduceExpression(firstRep,callDepth+1);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -386,18 +399,18 @@ FUNCTION T_subrule.directEvaluateNullary(CONST callDepth:word):P_literal;
     end else result:=nil;
   end;
 
-FUNCTION evaluateNullary(CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
+FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
   begin
-    result:=P_subrule(subrulePointer)^.directEvaluateNullary(callDepth);
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,callDepth);
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
   begin
     param.create;
     param.append(x,true);
-    if replaces(@param,firstRep,lastRep) then begin
+    if replaces(@param,selfLiteral,firstRep,lastRep) then begin
       reduceExpression(firstRep,callDepth+1);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin

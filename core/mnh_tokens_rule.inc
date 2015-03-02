@@ -54,7 +54,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         lastRep:=firstRep;
         if param=nil then disposeLiteral(useParam);
         exit(true);
-      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,firstRep,lastRep) then begin
+      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep) then begin
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
         evalCost:=GetTickCount;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1);
@@ -75,7 +75,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       end;
       result:=false;
     end else begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
+      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep) then exit(true);
       result:=false;
     end;
   end;

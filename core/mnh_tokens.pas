@@ -592,7 +592,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       //special handling if main returns an expression:
       if (t^.tokType=tt_literal) and (t^.next=nil) and
          (P_literal(t^.data)^.literalType=lt_expression) then begin
-        P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(0);
+        P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0);
       end;
       //:special handling if main returns an expression
     end;

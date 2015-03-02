@@ -796,7 +796,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           aggregateFutures;
         end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
-            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),callDepth+1),true);
+            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1),true);
           finalizeAggregation;
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
@@ -867,7 +867,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,firstReplace,lastReplace)) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace)) then exit;
       end else begin
         raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
         exit;

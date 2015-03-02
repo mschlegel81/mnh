@@ -29,7 +29,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST x:P_literal; CON
   begin
     param.create;
     param.append(x,true);
-    if expr^.replaces(@param,task,dummy) 
+    if expr^.replaces(@param,nil,task,dummy)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;

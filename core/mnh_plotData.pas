@@ -278,7 +278,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
     initialSampleCount = 100;
 
   VAR
-    xRule, yRule: P_subrule;
+    xRule, yRule: P_expressionLiteral;
 
   FUNCTION getSampleWithTime(CONST atTime: double): T_sampleWithTime; inline;
     VAR
@@ -291,12 +291,12 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
         result.x := atTime
       else
         begin
-        L := xRule^.directEvaluateUnary(@pt, 0);
+        L := P_subrule(xRule^.value)^.directEvaluateUnary(@pt,xRule, 0);
         result.x := fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
         begin
-        L := yRule^.directEvaluateUnary(@pt, 0);
+        L := P_subrule(yRule^.value)^.directEvaluateUnary(@pt,yRule, 0);
         result.y := fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
@@ -1941,7 +1941,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
       if p^.literalType<>lt_expression then exit(false);
       s:=P_expressionLiteral(p)^.value;
       par.Create(random);
-      res:=s^.directEvaluateUnary(@par,callDepth+1);
+      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),callDepth+1);
       if res=nil then begin
         raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;

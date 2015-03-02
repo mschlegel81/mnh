@@ -1,5 +1,5 @@
 memoized private expandPrimes(P:intList,pMax:int)->expandPrimes(P,pMax,[max(P)+1..pMax]);
-     private expandPrimes(P:intList,pMax:int,C:intList)-> P|C%each(c,C,each(p,c mod P<>0,and));
+         private expandPrimes(P:intList,pMax:int,C:intList)-> P|C%each(c,C,each(p,c mod P<>0,and));
 
 //*Special case 1: Prime numbers lesser than 3
 memoized
@@ -10,6 +10,8 @@ primes(nMax<5)->[2,3];
 primes(nMax<7)->[2,3,5];
 //*General case: Generate list of primes from preceding primes
 primes(nMax)->expandPrimes(primes(round(sqrt(nMax))),floor(nMax));
+
+isPrime(n)->trueCount(n mod primes(sqrt(n))=0) = 0;
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
 memoized factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));
@@ -71,4 +73,3 @@ time({each(i,1+10*[1..100000],fac2     (i))})%2;
 
 time({each(i,1+10*[1..100000],factors  (i))})%2;
 time({each(i,1+10*[1..100000],factorize(i))})%2;
-
