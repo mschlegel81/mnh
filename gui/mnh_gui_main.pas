@@ -14,8 +14,8 @@ type
   { TMnhForm }
 
   TMnhForm = class(TForm)
-    haltEvaluationButton: TButton;
     MenuItem2: TMenuItem;
+    miHaltEvalutaion: TMenuItem;
     miEvalModeWatch: TMenuItem;
     miEvalModeDirect: TMenuItem;
     miEvaluateNow: TMenuItem;
@@ -25,6 +25,7 @@ type
     miOpenToWatch: TMenuItem;
     miSave: TMenuItem;
     miSaveAs: TMenuItem;
+    OpenDialog: TOpenDialog;
     popMiOpenPackage: TMenuItem;
     popMiOpenDeclaration: TMenuItem;
     myhl:TSynMnhSyn;
@@ -39,6 +40,7 @@ type
     miIncFontSize: TMenuItem;
     mi_settings: TMenuItem;
     EditorPopup: TPopupMenu;
+    SaveDialog: TSaveDialog;
     Splitter1: TSplitter;
     StatusBar: TStatusBar;
     ErrorStringGrid: TStringGrid;
@@ -50,7 +52,6 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure haltEvaluationButtonClick(Sender: TObject);
     procedure InputEditChange(Sender: TObject);
     procedure InputEditKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
@@ -65,6 +66,7 @@ type
     procedure miEvaluateNowClick(Sender: TObject);
     procedure miExpressionEchoClick(Sender: TObject);
     procedure miExpressionResultClick(Sender: TObject);
+    procedure miHaltEvalutaionClick(Sender: TObject);
     procedure miIncFontSizeClick(Sender: TObject);
     procedure miOpenClick(Sender: TObject);
     procedure miOpenToWatchClick(Sender: TObject);
@@ -96,16 +98,24 @@ type
 
 var
   MnhForm: TMnhForm;
-  inputWrapper: P_directInputWrapper;
-  haltEvaluationPosted : boolean=false;
-  evaluationRunning    : boolean=false;
-  evaluationLoopRunning: boolean=false;
 
-FUNCTION evaluationThread(p:pointer):ptrint;
-PROCEDURE killEvaluationSoftly;
-PROCEDURE initEvaluation(CONST filename:ansistring);
+FUNCTION evaluationThread(p: pointer): ptrint;
+procedure ad_initEvaluation;
 implementation
+var adapter:record
+      state:(as_directNoFile,
+             as_directFile,
+             as_watching);
+      currentlyEditingFile:string;
+      fileWasEdited:boolean;
 
+      directInputWrapper: P_directInputWrapper;
+      fileWrapper:        P_fileWrapper;
+
+      haltEvaluationPosted : boolean;
+      evaluationRunning    : boolean;
+      evaluationLoopRunning: boolean;
+    end;
 {$R *.lfm}
 
 PROCEDURE writeDeclEcho(CONST s:ansistring);
@@ -140,7 +150,7 @@ procedure TMnhForm.FormCreate(Sender: TObject);
       ' at: '+{$I %TIME%}+
       ' with FPC'+{$I %FPCVERSION%}+
       ' for '+{$I %FPCTARGET%};
-    BeginThread(@evaluationThread);
+    ad_initEvaluation;
   end;
 
 procedure TMnhForm.EditorPopupPopup(Sender: TObject);
@@ -166,30 +176,46 @@ procedure TMnhForm.EditorPopupPopup(Sender: TObject);
     popMiOpenPackage.Enabled:=packageUnderCursorIsFile<>'';
   end;
 
-procedure killEvaluationSoftly;
-  begin
-    inputWrapper:=nil;
+procedure ad_killEvaluationSoftly;
+  begin with adapter do begin
+    directInputWrapper:=nil;
+    fileWrapper:=nil;
     haltEvaluation;
     repeat
       haltEvaluationPosted:=true;
       sleep(1);
     until not(evaluationLoopRunning) and not(evaluationRunning);
-  end;
+  end; end;
 
-procedure initEvaluation(CONST filename:ansistring);
-  begin
-    if trim(filename)='' then begin
-      new(P_directInputWrapper(inputWrapper),create);
-      inputWrapper^.logCheck;
+procedure ad_initEvaluation;
+  begin with adapter do if not(evaluationLoopRunning) then begin
+    fileWrapper:=nil;
+    directInputWrapper:=nil;
+    if state=as_watching then begin
+      new(fileWrapper,create(currentlyEditingFile));
+      initMainPackage(fileWrapper);
     end else begin
-      new(P_fileWrapper(inputWrapper),create(filename));
+      new(directInputWrapper,create);
+      directInputWrapper^.logCheck;
+      if state=as_directFile then addSourceScanPath(ExtractFilePath(currentlyEditingFile));
+      initMainPackage(directInputWrapper);
     end;
-    initMainPackage(inputWrapper);
-  end;
+    BeginThread(@evaluationThread);
+  end; end;
+
+procedure ad_loadInputToWrapper;
+  VAR i:longint;
+      L:T_stringList;
+  begin with adapter do if (state<>as_watching) and (directInputWrapper<>nil) and (evaluationLoopRunning) then begin
+    if state=as_directFile then fileWasEdited:=true;
+    setLength(L,MnhForm.InputEdit.Lines.Count);
+    for i:=0 to MnhForm.InputEdit.Lines.Count-1 do L[i]:=MnhForm.InputEdit.Lines[i];
+    directInputWrapper^.setInput(L);
+  end; end;
 
 procedure TMnhForm.FormDestroy(Sender: TObject);
   begin
-    killEvaluationSoftly;
+    ad_killEvaluationSoftly;
   end;
 
 procedure TMnhForm.FormResize(Sender: TObject);
@@ -207,20 +233,9 @@ procedure TMnhForm.FormShow(Sender: TObject);
     processSettings;
   end;
 
-procedure TMnhForm.haltEvaluationButtonClick(Sender: TObject);
-  begin
-    mnh_out_adapters.haltEvaluation;
-  end;
-
 procedure TMnhForm.InputEditChange(Sender: TObject);
-  VAR L:T_stringList;
-      i:longint;
   begin
-    if inputWrapper<>nil then begin
-      setLength(L,InputEdit.Lines.Count);
-      for i:=0 to InputEdit.Lines.Count-1 do L[i]:=InputEdit.Lines[i];
-      inputWrapper^.setInput(L);
-    end;
+    if (miEvalModeDirectOnKeypress.Checked) then ad_loadInputToWrapper;
   end;
 
 procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -244,9 +259,9 @@ procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   end;
 
 procedure TMnhForm.miClearClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING Unimplemented!}
+  end;
 
 procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
@@ -269,23 +284,23 @@ procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
   end;
 
 procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    miEvalModeDirect.Checked:=true;
+  end;
 
 procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    miEvalModeDirectOnKeypress.Checked:=true;
+  end;
 
 procedure TMnhForm.miEvalModeWatchClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING Unimplemented!}
+  end;
 
 procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
-    inputWrapper^.markAsDirty;
+    {$WARNING Unimplemented!}
   end;
 
 procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
@@ -312,6 +327,11 @@ procedure TMnhForm.miExpressionResultClick(Sender: TObject);
     end;
   end;
 
+procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+  begin
+    mnh_out_adapters.haltEvaluation;
+  end;
+
 procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -321,24 +341,24 @@ procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
   end;
 
 procedure TMnhForm.miOpenClick(Sender: TObject);
-begin
-   {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING TODO unimplemented}
+  end;
 
 procedure TMnhForm.miOpenToWatchClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING TODO unimplemented}
+  end;
 
 procedure TMnhForm.miSaveAsClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING TODO unimplemented}
+  end;
 
 procedure TMnhForm.miSaveClick(Sender: TObject);
-begin
-  {$WARNING TODO unimplemented}
-end;
+  begin
+    {$WARNING TODO unimplemented}
+  end;
 
 procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
@@ -384,9 +404,10 @@ VAR evaluationStarted:double=-1;
 
 procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   begin
-    if (evaluationStarted>0) and (evaluationRunning) then
+    if (evaluationStarted>0) and (adapter.evaluationRunning) then begin
+      miHaltEvalutaion.Enabled:=true;
       StatusBar.SimpleText:='Evaluating '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.'
-    else if haltEvaluationButton.Visible then haltEvaluationButton.Visible:=false;
+    end else miHaltEvalutaion.Enabled:=false;
   end;
 
 procedure TMnhForm.processSettings;
@@ -425,42 +446,28 @@ FUNCTION evaluationThread(p: pointer): ptrint;
   PROCEDURE enterEval;
     begin
       try
+        mnhForm.miHaltEvalutaion.Enabled:=true;
         MnhForm.OutputEdit.ClearAll;
         MnhForm.OutputEdit.Lines.Clear;
-        mnhForm.haltEvaluationButton.Visible:=true;
+        MnhForm.ErrorStringGrid.RowCount:=0;
+        MnhForm.ErrorGroupBox.Visible:=false;
       except end;
-      repeat evaluationRunning:=true until evaluationRunning;
+      repeat adapter.evaluationRunning:=true until adapter.evaluationRunning;
       evaluationStarted:=now;
     end;
 
   PROCEDURE doneEval;
-    VAR i,totalHeight:longint;
+    VAR totalHeight:longint;
     begin
-      mnhForm.haltEvaluationButton.Visible:=false;
+      mnhForm.miHaltEvalutaion.Enabled:=false;
       MnhForm.StatusBar.SimpleText:='Done in '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.';
       evaluationStarted:=-1;
-      if not(haltEvaluationPosted) then begin
-        if errorLevel>el0_allOkay then begin
-          totalHeight:=0;
-          MnhForm.ErrorStringGrid.RowCount:=length(storedErrors);
-          for i:=0 to length(storedErrors)-1 do with storedErrors[i] do begin
-            MnhForm.ErrorStringGrid.Cells[0,i]:=C_errorLevelTxt[errorLevel];
-            MnhForm.ErrorStringGrid.Cells[1,i]:=errorMessage;
-            MnhForm.ErrorStringGrid.Cells[2,i]:=errorLocation;
-            inc(totalHeight,MnhForm.ErrorStringGrid.RowHeights[i]);
-          end;
-          inc(totalHeight,MnhForm.ErrorStringGrid.RowHeights[0]);
-          MnhForm.ErrorStringGrid.AutoSizeColumns;
-          MnhForm.ErrorGroupBox.Visible:=true;
-        end else MnhForm.ErrorGroupBox.Visible:=false;
-        sleepTime:=1;
-      end;
-      repeat evaluationRunning:=false until not(evaluationRunning);
+      repeat adapter.evaluationRunning:=false until not(adapter.evaluationRunning);
     end;
 
   begin
     repeat
-      repeat evaluationLoopRunning:=true until evaluationLoopRunning;
+      repeat adapter.evaluationLoopRunning:=true until adapter.evaluationLoopRunning;
       if isReloadOfAllPackagesIndicated then begin
         enterEval;
         reloadAllPackages;
@@ -469,23 +476,48 @@ FUNCTION evaluationThread(p: pointer): ptrint;
         enterEval;
         reloadMainPackage;
         doneEval;
-      end else if not(haltEvaluationPosted) then begin
+      end else if not(adapter.haltEvaluationPosted) then begin
         Sleep(sleepTime);
         if (sleepTime<500) then inc(sleepTime);
       end;
-    until haltEvaluationPosted;
-    inputWrapper:=nil;
+    until adapter.haltEvaluationPosted;
+    adapter.directInputWrapper:=nil;
+    adapter.fileWrapper:=nil;
     clearAllPackages;
-    repeat evaluationLoopRunning:=false until not(evaluationLoopRunning);
+    repeat adapter.evaluationLoopRunning:=false until not(adapter.evaluationLoopRunning);
+  end;
+
+PROCEDURE logError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+  VAR row:longint;
+  begin
+    MnhForm.ErrorGroupBox.Visible:=true;
+    row:=MnhForm.ErrorStringGrid.RowCount;
+    MnhForm.ErrorStringGrid.RowCount:=row+1;
+    MnhForm.ErrorStringGrid.Cells[0,row]:=C_errorLevelTxt[errorLevel];
+    MnhForm.ErrorStringGrid.Cells[1,row]:=errorMessage;
+    MnhForm.ErrorStringGrid.Cells[2,row]:=errorLocation;
+    {$WARNING TODO Improve error logging (filename / fileline)!}
+    MnhForm.ErrorStringGrid.AutoSizeColumns;
   end;
 
 INITIALIZATION
+  with adapter do begin
+    state:=as_directNoFile;
+    currentlyEditingFile:='';
+    fileWasEdited:=false;
+
+    directInputWrapper:=nil;
+    fileWrapper:=nil;
+
+    haltEvaluationPosted :=false;
+    evaluationRunning    :=false;
+    evaluationLoopRunning:=false;
+  end;
   mnh_out_adapters.inputDeclEcho:=@writeDeclEcho;
   mnh_out_adapters.inputExprEcho:=@writeExprEcho;
-  mnh_out_adapters.exprOut:=@writeExprOut;
-  mnh_out_adapters.printOut:=@writePrint;
-  errorOut:=nil;
-  initEvaluation('');
+  mnh_out_adapters.exprOut      :=@writeExprOut;
+  mnh_out_adapters.printOut     :=@writePrint;
+  mnh_out_adapters.errorOut     :=@logError;
 
 end.
 

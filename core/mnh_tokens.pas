@@ -44,7 +44,7 @@ PROCEDURE reloadAllPackages;
 PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
 PROCEDURE initMainPackage(CONST filename:ansistring);
-PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
+PROCEDURE initMainPackage(CONST directInputWrapper:P_codeProvider);
 FUNCTION canResolveInMainPackage(CONST id:ansistring):byte;
 FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
 FUNCTION getPackageLocation(CONST id:ansistring):T_tokenLocation;
@@ -109,10 +109,11 @@ PROCEDURE initMainPackage(CONST filename:ansistring);
     end else dispose(fileWrapper,destroy);
   end;
 
-PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
+PROCEDURE initMainPackage(CONST directInputWrapper:P_codeProvider);
   begin
     if length(packages)>0 then exit;
-      clearErrors;
+    addSourceScanPath(ExtractFilePath(directInputWrapper^.filePath));
+    clearErrors;
     setLength(packages,1);
     new(packages[0],create(directInputWrapper));
   end;
@@ -716,7 +717,6 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     packages[0]^.resolveRuleId(t^,false);
     if t^.tokType=tt_literal then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
     else begin
-      {$WARNING TODO for more tolerance, maybe try a soft cast}
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
       t^.next:=newToken(C_nilTokenLocation,'',tt_parList,parLit);

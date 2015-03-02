@@ -20,9 +20,16 @@ IMPLEMENTATION
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Function '+functionName+' cannot be applied to parameters ';
+    complaintText:='Built in function ['+functionName+'] cannot be applied to parameters ';
     if params=nil then complaintText:=complaintText+'()'
                   else complaintText:=complaintText+params^.toParameterListString(true);
+    raiseError(el3_evalError,complaintText,tokenLocation);
+  end;
+
+PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literalType; CONST messageTail:string; CONST tokenLocation:T_tokenLocation);
+  VAR complaintText:ansistring;
+  begin
+    complaintText:='Built in function ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
@@ -62,7 +69,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqr_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function SQR cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('sqr',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -70,7 +77,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=sqr_rec(params^.value(0))
-    else raiseNotApplicableError('SQR',params,tokenLocation);
+    else raiseNotApplicableError('sqr',params,tokenLocation);
   end;
 
 FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -85,7 +92,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sqrt_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function SQRT cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('sqrt',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -93,7 +100,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=sqrt_rec(params^.value(0))
-    else raiseNotApplicableError('SQRT',params,tokenLocation);
+    else raiseNotApplicableError('sqrt',params,tokenLocation);
   end;
 
 FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -108,7 +115,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sin_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function SIN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('sin',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -116,7 +123,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=sin_rec(params^.value(0))
-    else raiseNotApplicableError('SIN',params,tokenLocation);
+    else raiseNotApplicableError('sin',params,tokenLocation);
   end;
 
 FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -131,7 +138,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arcsin_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ARCSIN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('arcsin',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -139,7 +146,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=arcsin_rec(params^.value(0))
-    else raiseNotApplicableError('ARCSIN',params,tokenLocation);
+    else raiseNotApplicableError('arcsin',params,tokenLocation);
   end;
 
 FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -154,7 +161,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(cos_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function COS cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('cos',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -162,7 +169,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=cos_rec(params^.value(0))
-    else raiseNotApplicableError('COS',params,tokenLocation);
+    else raiseNotApplicableError('cos',params,tokenLocation);
   end;
 
 FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -177,7 +184,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arccos_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ARCCOS cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('arccos',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -185,7 +192,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=arccos_rec(params^.value(0))
-    else raiseNotApplicableError('ARCCOS',params,tokenLocation);
+    else raiseNotApplicableError('arccos',params,tokenLocation);
   end;
 
 FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -200,7 +207,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(tan_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function TAN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('tan',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -208,7 +215,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=tan_rec(params^.value(0))
-    else raiseNotApplicableError('TAN',params,tokenLocation);
+    else raiseNotApplicableError('tan',params,tokenLocation);
   end;
 
 FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -223,7 +230,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(arctan_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ARCTAN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('arctan',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -231,7 +238,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=arctan_rec(params^.value(0))
-    else raiseNotApplicableError('ARCTAN',params,tokenLocation);
+    else raiseNotApplicableError('arctan',params,tokenLocation);
   end;
 
 FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -246,7 +253,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(exp_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function EXP cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('exp',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -254,7 +261,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=exp_rec(params^.value(0))
-    else raiseNotApplicableError('EXP',params,tokenLocation);
+    else raiseNotApplicableError('exp',params,tokenLocation);
   end;
 
 FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -269,7 +276,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ln_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function LN cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('ln',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -277,7 +284,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=ln_rec(params^.value(0))
-    else raiseNotApplicableError('LN',params,tokenLocation);
+    else raiseNotApplicableError('ln',params,tokenLocation);
   end;
 
 FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -292,7 +299,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('round',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -319,7 +326,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(round_rec2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseNotApplicableError('round',y^.literalType,' (second parameter)',tokenLocation);
         end;
         lt_list,lt_intList,lt_realList,lt_numList: case y^.literalType of
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
@@ -330,10 +337,10 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for function ROUND',tokenLocation);
-          else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          end else raiseError(el3_evalError,'Incompatible list lengths given for built in function [round]',tokenLocation);
+          else raiseNotApplicableError('round',y^.literalType,' (second parameter)',tokenLocation);
         end;
-        else raiseError(el3_evalError,'Function ROUND cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+        else raiseNotApplicableError('round',x^.literalType,' (first parameter)',tokenLocation);
       end;
     end;
 
@@ -341,7 +348,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=round_rec(params^.value(0)) else
     if (params<>nil) and (params^.size=2) then result:=round_rec2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('ROUND',params,tokenLocation);
+    else raiseNotApplicableError('round',params,tokenLocation);
   end;
 
 FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -356,7 +363,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(ceil_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function CEIL cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('ceil',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -364,7 +371,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=ceil_rec(params^.value(0))
-    else raiseNotApplicableError('CEIL',params,tokenLocation);
+    else raiseNotApplicableError('ceil',params,tokenLocation);
   end;
 
 FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -379,7 +386,7 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(floor_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else raiseError(el3_evalError,'Function FLOOR cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+        else raiseNotApplicableError('floor',x^.literalType,'',tokenLocation);
       end;
     end;
 
@@ -387,7 +394,7 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=floor_rec(params^.value(0))
-    else raiseNotApplicableError('FLOOR',params,tokenLocation);
+    else raiseNotApplicableError('floor',params,tokenLocation);
   end;
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -397,7 +404,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         result:=P_listLiteral(x)^.value(0);
         result^.rereference;
-      end else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+      end else raiseNotApplicableError('head',x^.literalType,'',tokenLocation);
     end;
 
   FUNCTION headOf2(CONST x,y:P_literal):P_listLiteral;
@@ -415,16 +422,16 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do result^.append(headOf2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseNotApplicableError('head',y^.literalType,' (second parameter)',tokenLocation);
         end;
-      end else raiseError(el3_evalError,'Function HEAD cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+      end else raiseNotApplicableError('head',x^.literalType,' (first parameter)',tokenLocation);
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=headOf(params^.value(0)) else
     if (params<>nil) and (params^.size=2) then result:=headOf2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('HEAD',params,tokenLocation);
+    else raiseNotApplicableError('head',params,tokenLocation);
   end;
 
 FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -723,14 +730,14 @@ FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(upper_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply UPPER to literal of type '+C_typeString[x^.literalType],tokenLocation);
+        else result:=newErrorLiteralRaising('Cannot apply "upper" to literal of type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=upper_rec(params^.value(0))
-    else raiseNotApplicableError('UPPER',params,tokenLocation);
+    else raiseNotApplicableError('upper',params,tokenLocation);
   end;
 
 FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -744,14 +751,14 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(lower_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply LOWER to literal of type '+C_typeString[x^.literalType],tokenLocation);
+        else result:=newErrorLiteralRaising('Cannot apply "lower" to literal of type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=lower_rec(params^.value(0))
-    else raiseNotApplicableError('LOWER',params,tokenLocation);
+    else raiseNotApplicableError('lower',params,tokenLocation);
   end;
 
 FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -762,7 +769,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         result:=params^.value(0);
         result^.rereference;
       end else result:=newStringLiteral(params^.value(0)^.toString);
-    end else raiseNotApplicableError('STRING',params,tokenLocation);
+    end else raiseNotApplicableError('string',params,tokenLocation);
   end;
 
 FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -776,14 +783,14 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
           for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply EXPRESSION to literal of type '+C_typeString[x^.literalType],tokenLocation);
+        else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=expression_rec(params^.value(0))
-    else raiseNotApplicableError('EXPRESSION',params,tokenLocation);
+    else raiseNotApplicableError('expression',params,tokenLocation);
   end;
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
@@ -808,7 +815,7 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
       result:=filesOrDirs_impl(params^.value(0),true);
-    end else raiseNotApplicableError('FILES',params,tokenLocation);
+    end else raiseNotApplicableError('files',params,tokenLocation);
   end;
 
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -816,130 +823,18 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
       result:=filesOrDirs_impl(params^.value(0),false);
-    end else raiseNotApplicableError('FOLDERS',params,tokenLocation);
+    end else raiseNotApplicableError('folders',params,tokenLocation);
   end;
 
-//CONST CACHE_MASK=1023; //must be 2^n-1 for some integer n
-//      CACHE_FILL_LIMIT=CACHE_MASK*50;
-//VAR valueCache: record
-//      bin:array[0..CACHE_MASK] of array of record
-//        key:record
-//              ruleKey:ansistring;
-//              param:P_listLiteral;
-//            end;
-//        value:P_literal;
-//        use:longint;
-//      end;
-//      fill:longint;
-//    end;
-//
-//PROCEDURE initValueCache;
-//  VAR i:longint;
-//  begin with valueCache do begin
-//    for i:=0 to CACHE_MASK do setLength(bin[i],0);
-//    fill:=0;
-//  end; end;
-//  
-//PROCEDURE clearValueCache;
-//  VAR i,j:longint;
-//  begin with valueCache do begin
-//    for i:=0 to CACHE_MASK do begin
-//      for j:=0 to length(bin[i])-1 do begin
-//        disposeLiteral(bin[i,j].key);
-//        disposeLiteral(bin[i,j].value);
-//      end;
-//      setLength(bin[i],0);
-//    end;
-//    fill:=0;
-//  end; end;
-//  
-//PROCEDURE polishValueCache;
-//  VAR i,j,k:longint;
-//      avgUse:double;
-//  begin with valueCache do begin
-//    fill:=0;
-//    avgUse:=0;
-//    for i:=0 to CACHE_MASK do for j:=0 to length(bin[i])-1 do begin
-//      inc(fill);
-//      avgUse:=avgUse+bin[i,j].use;
-//    end;
-//    if fill=0 then exit;
-//    avgUse:=avgUse/fill;
-//    for i:=0 to CACHE_MASK do begin
-//      k:=0;
-//      for j:=0 to length(bin[i])-1 do 
-//      if bin[i,j].use>avgUse then begin
-//        bin[i,k]:=bin[i,j]; inc(k);
-//      end else begin
-//        dec(fill);
-//        disposeLiteral(bin[i,j].key);
-//        disposeLiteral(bin[i,j].value);
-//      end;
-//      setLength(bin[i],k);
-//    end;
-//  end; end;
-//  
-//PROCEDURE putToCache(CONST key,value:P_literal);
-//  VAR i,j:longint;
-//  begin with valueCache do begin
-//    i:=key^.hash and CACHE_MASK;
-//    j:=0;
-//    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
-//    if j<length(bin[i]) then begin
-//      disposeLiteral(bin[i,j].key);
-//      disposeLiteral(bin[i,j].value);
-//      dec(fill);
-//    end else setLength(bin[i],j+1);
-//    bin[i,j].key  :=key;
-//    bin[i,j].value:=value;
-//    bin[i,j].use  :=0;
-//    key^.rereference;
-//    value^.rereference;
-//    inc(fill);
-//    //if fill>CACHE_FILL_LIMIT then polishValueCache;
-//  end; end;
-//
-//FUNCTION getFromCache(CONST key:P_literal):P_literal;
-//  VAR i,j:longint;
-//  begin with valueCache do begin
-//    i:=key^.hash and CACHE_MASK;
-//    j:=0;
-//    while (j<length(bin[i])) and not(bin[i,j].key^.equals(key)) do inc(j);
-//    if j<length(bin[i]) then begin
-//      result:=bin[i,j].value;
-//      inc(bin[i,j].use);
-//    end else result:=nil;
-//  end; end;
-//  
-//FUNCTION cachePut_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=2) then begin
-//      putToCache(params^.value(0),params^.value(1));
-//      result:=params^.value(1);
-//      result^.rereference;
-//    end else raiseNotApplicableError('cachePut',params,tokenLocation);
-//  end;
-//  
-//FUNCTION isCached_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) then begin
-//      result:=newBoolLiteral(getFromCache(params^.value(0))<>nil);
-//    end else raiseNotApplicableError('isCached',params,tokenLocation);
-//  end;
-//  
-//FUNCTION cacheGet_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size=1) then begin
-//      result:=getFromCache(params^.value(0));
-//      if result<>nil then result^.rereference
-//      else result:=newErrorLiteralRaising('Invalid cache access.',tokenLocation);
-//    end else raiseNotApplicableError('cacheGet',params,tokenLocation);
-//  end;
-  
-{$WARNING TODO: fileExists(filename)}
+FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=newBoolLiteral(FileExists(P_stringLiteral(params^.value(0))^.value));
+    end else raiseNotApplicableError('fileExists',params,tokenLocation);
+  end;
+
+
 {$WARNING TODO: readFile(filename)}
 {$WARNING TODO: writeFile(filename,string)}
 {$WARNING TODO: replace(full,original,subst)}
@@ -982,10 +877,8 @@ INITIALIZATION
   registerRule('expression',@expression_imp);
   registerRule('files'     ,@files_impl    );
   registerRule('folders'   ,@folders_impl  );
-  //registerRule('cachePut'  ,@cachePut_impl );
-  //registerRule('isCached'  ,@isCached_impl );
-  //registerRule('cacheGet'  ,@cacheGet_impl );
-  
+  registerRule('fileExists',@fileExists_impl);
+
 FINALIZATION
   intrinsicRuleMap.destroy;
 
