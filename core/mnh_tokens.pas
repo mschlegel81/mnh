@@ -235,13 +235,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
 
         //plausis:
         if (ruleBody=nil) then begin
-          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
+          raiseError(el4_parsingError,'Missing FUNCTION body after assignment/declaration token.',assignmentToken^.location);
           cascadeDisposeToken(first);
           exit;
         end;
         p:=ruleBody^.getDeclarationOrAssignmentToken;
         if (p<>nil) then begin
-          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);
+          raiseError(el4_parsingError,'FUNCTION body contains unplausible assignment/declaration token.',p^.location);
           cascadeDisposeToken(first);
           exit;
         end;
@@ -336,8 +336,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase);
         if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,0);
 
         if   errorLevel<el3_evalError then begin
-          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
-          subRule^.publish:=not(ruleIsPrivate);
+          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate));
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
           if ruleIsPure then ensureRuleId(ruleId)^.setPure;
           first:=nil;

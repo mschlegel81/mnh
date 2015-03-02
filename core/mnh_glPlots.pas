@@ -680,7 +680,7 @@ PROCEDURE keyboard(key:byte; x,y:longint); cdecl;
 
 PROCEDURE draw; cdecl;
   CONST helpLines:array [0..7] of string=
-   ('[+/-] Zoom in/out',
+   ('[+/-] Zoom in/OUT',
     '[x/y] Toggle logscale x/y',
     '[A] Toggle anti-aliasing',
     '[L] Toggle aspect-ratio lock',

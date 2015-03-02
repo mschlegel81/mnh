@@ -1,11 +1,10 @@
-USE polynomials;
-//*Returns the <code>n</code>-th numerical derivative at point <code>x</code>
+USE polynomials, basic;
+//*Returns the <code>n</code>-th numerical derivative at point <code>x</code> with a stepsize <code>h=0.1</code>
 D(f:expression,n   ,x:numeric          )->D(f,n,x,0.1);
+//*Returns the function itself
 D(f:expression,n<=0,x:numeric,h:numeric)->f(x);
+//*Returns the <code>n</code>-th numerical derivative at point <code>x</code>
 D(f:expression,n >0,x:numeric,h:numeric)->(D(f,n-1,x+h,h)-D(f,n-1,x-h,h))/(2*h);
-
-fak(n<1)->1.0;
-fak(n)->n*fak(n-1);
 
 TaylorSeries  (f:expression,nMax>=0,x0:numeric,h:numeric)->polyExpression(-x0,each(n,[0..nMax],D(f,n,x0,h)/fak(n)));
 McLaurinSeries(f:expression,nMax>=0,           h:numeric)->polyExpression(    each(n,[0..nMax],D(f,n, 0,h)/fak(n)));

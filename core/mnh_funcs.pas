@@ -26,7 +26,7 @@ IMPLEMENTATION
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in function ['+functionName+'] cannot be applied to parameters ';
+    complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to parameters ';
     if params=nil then complaintText:=complaintText+'()'
                   else complaintText:=complaintText+params^.toParameterListString(true);
     raiseError(el3_evalError,complaintText,tokenLocation);
@@ -35,7 +35,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_list
 PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literalType; CONST messageTail:string; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in function ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
+    complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
@@ -331,7 +331,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
           lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(round_rec2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for built in function [round]',tokenLocation);
+          end else raiseError(el3_evalError,'Incompatible list lengths given for built in FUNCTION [round]',tokenLocation);
           else raiseNotApplicableError('round',y^.literalType,' (second parameter)',tokenLocation);
         end;
         else raiseNotApplicableError('round',x^.literalType,' (first parameter)',tokenLocation);
@@ -393,7 +393,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         result:=newListLiteral;
         for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
-      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
+      end else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
     end;
 
   FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
@@ -411,9 +411,9 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do result^.append(tailOf2(x,P_listLiteral(y)^.value(i)),false);
           end;
-          else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
+          else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
         end;
-      end else raiseError(el3_evalError,'Function tail cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
+      end else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
     end;
 
   begin
@@ -1149,6 +1149,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       escapeStringDelimiter:boolean=false;
       curlyBracketsDelimitOneToken:boolean=false;
       cStyleComments:boolean=false;
+      dollarVariables:boolean=false;
 
   PROCEDURE setLanguage(name:string);
     begin
@@ -1158,6 +1159,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         escapeStringDelimiter:=true;
         curlyBracketsDelimitOneToken:=true;
         cStyleComments:=true;
+        dollarVariables:=true;
       end else if trim(UpperCase(name))='JAVA' then begin
         doubleQuoteString:=true;
         singleQuoteString:=true;
@@ -1174,10 +1176,17 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and
-       (params^.value(0)^.literalType=lt_string) and
-       (params^.value(1)^.literalType=lt_string) then begin
-      setLanguage(P_stringLiteral(params^.value(1))^.value);
+    if (params<>nil) and (params^.size=2) then begin
+      if (params^.value(1)^.literalType=lt_string)
+      then setLanguage(P_stringLiteral(params^.value(1))^.value)
+      else begin
+        raiseNotApplicableError('tokenSplit',params,tokenLocation);
+        exit(nil);
+      end;
+    end;
+
+    if (params<>nil) and (params^.size>=1) and
+       (params^.value(0)^.literalType=lt_string) then begin
       stringToSplit:=P_stringLiteral(params^.value(0))^.value;
       result:=newListLiteral;
       i0:=1;
@@ -1203,8 +1212,8 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         end else if (copy(stringToSplit,i0,2)='//') and cStyleComments then begin
           i1:=i0+1;
           while (i1<=length(stringToSplit)) and not(stringToSplit[i1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(i1);
-        end else if stringToSplit[i0] in ['a'..'z','A'..'Z'] then begin
-          i1:=i0;
+        end else if (stringToSplit[i0] in ['a'..'z','A'..'Z']) or (stringToSplit[i0]='$') and dollarVariables then begin
+          i1:=i0+1;
           while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
         end else if stringToSplit[i0] in ['0'..'9'] then begin //numbers
           parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
@@ -1392,7 +1401,7 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
-  registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('print'         ,@print_imp     ,'print(...);#Prints OUT the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
   //Unary Numeric -> real
   registerRule('sqrt'          ,@sqrt_imp      ,'sqrt(n);#Returns the square root of numeric parameter n');
   registerRule('sin'           ,@sin_imp       ,'sin(n);#Returns the sine of numeric parameter n');
@@ -1422,10 +1431,10 @@ INITIALIZATION
   registerRule('unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule('flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule('random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
-  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
-  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
-  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
-  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
+  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element OUT of list L#max(x,y,...);#Returns the greatest element OUT of the given parameters');
+  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element OUT of list L (or the first index if ambiguous)');
+  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element OUT of list L#min(x,y,...);#Returns the smallest element OUT of the given parameters');
+  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element OUT of list L (or the first index if ambiguous)');
   registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
   //Functions on Strings:
   registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
@@ -1449,9 +1458,9 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
-  registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
-  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>Mnh, Pascal, Java<code>');
+  registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified PROGRAM and returns the text output');
+  registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified PROGRAM and returns true');
+  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule('myPath'        ,@myPath_impl,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
   registerRule('isNan'         ,@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');

@@ -11,7 +11,7 @@ VAR minErrorLevel:T_errorLevel=el2_warning;
 
 PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('in_>',s); end;
 PROCEDURE inputExprEcho(CONST s:ansistring); begin writeln('in >',s); end;
-PROCEDURE exprOut      (CONST s:ansistring); begin writeln('out>',s); end;
+PROCEDURE exprOut      (CONST s:ansistring); begin writeln('OUT>',s); end;
 PROCEDURE filteredStdErrOut(CONST error:T_storedError);
   begin
     with error do if errorLevel>=minErrorLevel then writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
@@ -114,7 +114,7 @@ PROCEDURE interactiveMode;
     writeln;    
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
-    writeln('End a line with a \ to continue the input.');
+    writeln('end a line with a \ to continue the input.');
     
     readInputFromConsole;
     while not(hasExitSignal) do begin      

@@ -8,7 +8,7 @@ USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs;
 CONST
-  default_notepad_path = 'c:\Program Files (x86)\Notepad++\notepad++.exe';
+  default_notepad_path = 'c:\PROGRAM Files (x86)\Notepad++\notepad++.exe';
 
 TYPE
 

@@ -16,8 +16,6 @@ private safePlus(summand:list,list<>[])->each(l,list,l+summand);
 private safePlus(summand     ,list<>[])->summand+list;
 private runningSum_merge(L1,L2)->L1|safePlus(L1%(size(L1)-1),L2);
 
-
-
 //*The product of the empty list is <code>1</code>
 prod([]):=1;
 //*Returns the product of all elements in <code>L</code>
@@ -76,3 +74,13 @@ histogram(L<>[])          ->histogram(L,1);
 //*Returns a histogram of <code>L</code> with bin size of <code>h</code>
 histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
 private histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,flag?1:0)/size(L)/h]);
+
+//*Ludolf's Number (commonly known as pi)
+pi:=4*arctan(1);
+
+//*Factorial
+pure
+fak(n<1)->1.0;
+fak(n:int)->n*fak(n-1);
+fak(N:list)->each(n,N,fak(n));
+

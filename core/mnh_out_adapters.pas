@@ -147,7 +147,7 @@ FUNCTION isMemoryFree(CONST usage: string): boolean;
   begin
     result := (MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed < MAX_MEMORY_THRESHOLD);
     if not (result) and (maxErrorLevel < el5_systemError) then
-      raiseError(el5_systemError, 'Out of memory! (' + usage + ')', C_nilTokenLocation);
+      raiseError(el5_systemError, 'OUT of memory! (' + usage + ')', C_nilTokenLocation);
   end;  
   {$endif}
 

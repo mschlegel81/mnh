@@ -89,14 +89,14 @@
 <h4><a name="arccos">arccos</a></h4><code>arccos(n);</code><br>Returns the arccosine of numeric parameter n
 <h4><a name="arcsin">arcsin</a></h4><code>arcsin(n);</code><br>Returns the arcsine of numeric parameter n
 <h4><a name="arctan">arctan</a></h4><code>tan(n);</code><br>Returns the arctangent of numeric parameter n
-<h4><a name="argMax">argMax</a></h4><code>argMax(L);</code><br>Returns the index of the greatest element out of list L (or the first index if ambiguous)
-<h4><a name="argMin">argMin</a></h4><code>argMin(L);</code><br>Returns the index of the smallest element out of list L (or the first index if ambiguous)
+<h4><a name="argMax">argMax</a></h4><code>argMax(L);</code><br>Returns the index of the greatest element OUT of list L (or the first index if ambiguous)
+<h4><a name="argMin">argMin</a></h4><code>argMin(L);</code><br>Returns the index of the smallest element OUT of list L (or the first index if ambiguous)
 <h4><a name="ask">ask</a></h4><code>ask(q:string);</code><br>Asks the user question q and returns the user input<br><code>ask(q:string,options:stringList);</code><br>Asks the user question q, giving the passed options and returns the chosen option
 <h4><a name="ceil">ceil</a></h4><code>ceil(x);</code><br>Returns the smallest integer >=x
 <h4><a name="copy">copy</a></h4>copy(S,start,length):<br>Returns the substring of S starting at index start and having specified length
 <h4><a name="cos">cos</a></h4><code>cos(n);</code><br>Returns the cosine of numeric parameter n
-<h4><a name="execAsync">execAsync</a></h4><code>execAsync(programPath:string,parameters ...);</code><br>Starts the specified program and returns true
-<h4><a name="execSync">execSync</a></h4><code>execSync(programPath:string,parameters ...);</code><br>Executes the specified program and returns the text output
+<h4><a name="execAsync">execAsync</a></h4><code>execAsync(programPath:string,parameters ...);</code><br>Starts the specified PROGRAM and returns true
+<h4><a name="execSync">execSync</a></h4><code>execSync(programPath:string,parameters ...);</code><br>Executes the specified PROGRAM and returns the text output
 <h4><a name="exp">exp</a></h4><code>exp(n);</code><br>Returns the exponential of numeric parameter n
 <h4><a name="expression">expression</a></h4><code>expression(S:string);</code><br>Returns an expression parsed from S
 <h4><a name="fileContents">fileContents</a></h4><code>fileContents(filename:string);</code><br>Returns the contents of the specified file as one string
@@ -118,13 +118,13 @@
 <h4><a name="length">length</a></h4><code>length(S:string);</code><br>Returns the number of characters in string S
 <h4><a name="ln">ln</a></h4><code>ln(n);</code><br>Returns the natural logarithm of numeric parameter n
 <h4><a name="lower">lower</a></h4><code>lower(S:string);</code><br>Returns an lowercase representation of S
-<h4><a name="max">max</a></h4><code>max(L);</code><br>Returns the greatest element out of list L<br><code>max(x,y,...);</code><br>Returns the greatest element out of the given parameters
-<h4><a name="min">min</a></h4><code>min(L);</code><br>Returns the smallest element out of list L<br><code>min(x,y,...);</code><br>Returns the smallest element out of the given parameters
+<h4><a name="max">max</a></h4><code>max(L);</code><br>Returns the greatest element OUT of list L<br><code>max(x,y,...);</code><br>Returns the greatest element OUT of the given parameters
+<h4><a name="min">min</a></h4><code>min(L);</code><br>Returns the smallest element OUT of list L<br><code>min(x,y,...);</code><br>Returns the smallest element OUT of the given parameters
 <h4><a name="myPath">myPath</a></h4>returns the path to the current package
 <h4><a name="not">not</a></h4><code>not(b:boolean);</code><br><code>not(b:booleanList);</code><br>Returns the negated value of b<br><code>not(i:int);</code><br><code>not(i:intList);</code><br>Returns the bitwise negated value of i
 <h4><a name="plot">plot</a></h4><code>plot(list,[options]); //plots flat numeric list or xy-list</code><br><code>plot(xList,yList,[options]); //plots flat numeric list or xy-list</code><br><code>plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]</code><br><code>plot(xExpression,yExpression,t0,t1,samples,[options]); //plots yExpression versus xExpression for t in [t0,t1]</code><br>options are optional and given in the form of a string, the individual option items being delimited by spaces<br>valid options are:<br>Style/size modifier: any real number<br>Styles:<br><code>  line; l;</code><br><code>  stepLeft;</code><br><code>  stepRight;</code><br><code>  fill;</code><br><code>  bar;</code><br><code>  box;</code><br><code>  dot; .;</code><br><code>  plus; +;</code><br><code>  cross; x;</code><br><code>  impulse; i;</code><br>Colors:<br><code>  black;</code><br><code>  red;</code><br><code>  blue;</code><br><code>  green;</code><br><code>  purple;</code><br><code>  orange;</code><br><code>  RGB$,$,$; //With three real numbers in range [0,1]</code><br><code>  HSV$,$,$; //With three real numbers in range [0,1]</code><br><code>  HUE$; //With one real number </code><br><code>  GREY$; //With one real number in range [0,1]</code>
 <h4><a name="pos">pos</a></h4><code>pos(subString,searchInString);</code><br>Returns the index of the first occurence of subString in searchInString or -1 if there is none
-<h4><a name="print">print</a></h4><code>print(...);</code><br>Prints out the given parameters and returns true<br>if tabs and line breaks are part of the output, a default pretty-printing is used
+<h4><a name="print">print</a></h4><code>print(...);</code><br>Prints OUT the given parameters and returns true<br>if tabs and line breaks are part of the output, a default pretty-printing is used
 <h4><a name="random">random</a></h4><code>random;</code><br>Returns a random value in range [0,1]<br><code>random(n);Returns a list of n random values in range [0,1]</code>
 <h4><a name="renderToFile">renderToFile</a></h4><code>renderToFile(filename,width,height,[supersampling]);</code><br>Renders the current plot to a file.
 <h4><a name="replace">replace</a></h4><code>replace(source:string,lookFor,replaceBy);</code><br>Recursively replaces all occurences of lookFor in source by replaceBy<br>lookFor and replaceBy may be of type string or stringList
@@ -150,7 +150,7 @@
 <h4><a name="tail">tail</a></h4><code>tail(L);</code><br>Returns list L without the first element<br><code>tail(L,k);</code><br>Returns L without the first k elements
 <h4><a name="tan">tan</a></h4><code>tan(n);</code><br>Returns the tangent of numeric parameter n
 <h4><a name="time">time</a></h4><code>time(E:expression);</code><br>Evaluates E (without parameters) and returns a nested List with evaluation details.
-<h4><a name="tokenSplit">tokenSplit</a></h4><code>tokenSplit(S:string,language:string);</code><br>Returns a list of strings from S for a given language<br>Languages: <code>Mnh, Pascal, Java<code>
+<h4><a name="tokenSplit">tokenSplit</a></h4><code>tokenSplit(S:string);</code><br><code>tokenSplit(S:string,language:string);</code><br>Returns a list of strings from S for a given language<br>Languages: <code>MNH, Pascal, Java</code>
 <h4><a name="trim">trim</a></h4><code>trim(S:string);</code><br>Returns string S without leading or trailing spaces
 <h4><a name="trueCount">trueCount</a></h4><code>trueCount(B:booleanList);</code><br>Returns the number of true values in B
 <h4><a name="unique">unique</a></h4><code>unique(L);</code><br>Returns list L sorted ascending and without duplicates

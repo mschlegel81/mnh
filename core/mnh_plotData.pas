@@ -1943,7 +1943,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
       par.Create(random);
       res:=s^.directEvaluateUnary(@par,callDepth+1);
       if res=nil then begin
-        raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary function.',tokenLocation);
+        raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;
       end else if not(res^.literalType in [lt_int,lt_real]) then begin
         raiseError(el3_evalError,'Expression to plot '+p^.toString+' returns '+C_typeString[res^.literalType]+'; should be int or real.',tokenLocation);
@@ -1954,6 +1954,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
     end;
 
   begin
+    result:=nil;
     if threadId<>MainThread then
       begin
       raiseError(el3_evalError,
@@ -2029,10 +2030,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           fReal(params^.value(3)),
           round(fReal(params^.value(4))));
         result := newBoolLiteral(true);
-      end else result := newErrorLiteralRaising('Functions plot and addPlot cannot be applied to parameter list'+
+      end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
                                                 tokenLocation);
-    end else result := newErrorLiteralRaising('Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
+    end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
   end;
 
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST callDepth: word): P_literal;
@@ -2061,7 +2062,7 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       result := newBoolLiteral(true);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function setPlotAutoscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
@@ -2084,7 +2085,7 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
       result := newBoolLiteral(true);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function setPlotLogscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
@@ -2120,17 +2121,17 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
           result := newBoolLiteral(true);
           end
         else
-          result := newErrorLiteralRaising(
+          raiseError(el3_evalError,
             'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',
             tokenLocation);
         end
       else
-        result := newErrorLiteralRaising(
+        raiseError(el3_evalError,
           'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',
           tokenLocation);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',
         tokenLocation);
   end;
@@ -2153,7 +2154,7 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       result := newBoolLiteral(true);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function setPlotAxisStyle expects a list of 2 integers as parameter.',
         tokenLocation);
   end;
@@ -2173,7 +2174,7 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
       result := newBoolLiteral(true);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
 
@@ -2211,10 +2212,12 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
         supersampling := P_intLiteral(params^.value(3))^.value
       else
         supersampling := 1;
-      if (filename = '') or (Width<1) or (Height<1) or (supersampling<1) then
-        exit(newErrorLiteralRaising(
+      if (filename = '') or (Width<1) or (Height<1) or (supersampling<1) then begin
+        raiseError(el3_evalError,
           'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
-          tokenLocation));
+          tokenLocation);
+        exit(nil);
+      end;
 
       plotImage := TImage.Create(nil);
       plotImage.SetInitialBounds(0, 0, Width, Height);
@@ -2235,7 +2238,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       result := newBoolLiteral(true);
       end
     else
-      result := newErrorLiteralRaising(
+      raiseError(el3_evalError,
         'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
         tokenLocation);
   end;

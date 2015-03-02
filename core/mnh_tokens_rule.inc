@@ -15,7 +15,6 @@
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
-      PROCEDURE performSet(CONST value:P_literal);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       PROCEDURE setPure;
       FUNCTION hasPublicSubrule:boolean;
@@ -55,7 +54,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         lastRep:=firstRep;
         if param=nil then disposeLiteral(useParam);
         exit(true);
-      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or subrules[i]^.publish) and subrules[i]^.replaces(useParam,firstRep,lastRep) then begin
+      end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,firstRep,lastRep) then begin
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
         evalCost:=GetTickCount;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1);
@@ -76,7 +75,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       end;
       result:=false;
     end else begin
-      for i:=0 to length(subrules)-1 do if (includePrivateRules or subrules[i]^.publish) and subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
+      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
       result:=false;
     end;
   end;
@@ -101,20 +100,6 @@ PROCEDURE T_rule.addOrSetSubRule(CONST rule: P_subrule);
     subrules[i]:=rule;
   end;
 
-PROCEDURE T_rule.performSet(CONST value: P_literal);
-  VAR i:longint;
-  begin
-    i:=0;
-    while (i<length(subrules)) and (length(subrules[i]^.pattern.sig)>0) do inc(i);
-    if i<length(subrules) then begin
-      subrules[i]^.performSet(value);
-    end else begin
-      setLength(subrules,i+1);
-      new(subRules[i],createConstant(value));
-    end;
-    value^.rereference;
-  end;
-  
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
     result:=subrules[0]^.declaredAt;
@@ -131,7 +116,7 @@ PROCEDURE T_rule.setPure;
 FUNCTION T_rule.hasPublicSubrule: boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(subrules)-1 do if subrules[i]^.publish then exit(true);
+    for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then exit(true);
     result:=false;
   end;
 
