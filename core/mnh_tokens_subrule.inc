@@ -306,8 +306,8 @@ FUNCTION T_subrule.directEvaluateNullary(CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,firstRep,lastRep) then begin
-      predigestBeforeDeclarationParsing(firstRep);
-      predigest(firstRep,nil);
+      //predigestBeforeDeclarationParsing(firstRep);
+      //predigest(firstRep,nil);
       reduceExpression(firstRep,callDepth+1);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -333,8 +333,8 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callDepth:word):
     param.create;
     param.append(x,true);
     if replaces(@param,firstRep,lastRep) then begin
-      predigestBeforeDeclarationParsing(firstRep);
-      predigest(firstRep,nil);
+      //predigestBeforeDeclarationParsing(firstRep);
+      //predigest(firstRep,nil);
       reduceExpression(firstRep,callDepth+1);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin

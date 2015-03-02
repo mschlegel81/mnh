@@ -52,6 +52,7 @@ VAR mainPackageProvider:T_codeProvider;
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=45000;
 VAR workerThread:array[0..2] of T_workerThread;
+    evaluationTask:array[0..127] of P_evaluationTask;
     secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
@@ -636,10 +637,10 @@ INITIALIZATION
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
-  initWorkerThreads;
+  initWorkerThreadsAndTasks;
 
 FINALIZATION
-  finalizeWorkerThreads;
+  finalizeWorkerThreadsAndTasks;
   finalizePackages;
   {$ifdef doTokenRecycling}
   finalizeTokens;

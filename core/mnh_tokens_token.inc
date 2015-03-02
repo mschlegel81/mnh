@@ -615,7 +615,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
   PROCEDURE resolveEach(CONST isPeach:boolean);
     VAR t,bracketClosingEach:P_token;
         tokensBetween:array of P_token;
-        bodyRule:T_subruleList;
+        bodyRule:array of P_subrule;
         bodyRuleLiteral:array of P_expressionLiteral;
         aggregatorPresent:boolean;
 
@@ -693,32 +693,22 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       end;
 
     VAR itList:P_listLiteral;
-        pEachResult:T_literalList;
+        pEachTask:array of T_evaluationTask;
 
     PROCEDURE makePEachResult;
-      VAR myWorkers:array of P_workerThread;
 
-      FUNCTION canDelegate(CONST filterByte:byte):boolean; inline;
-        VAR workerIdx:longint;
-        begin
-          for workerIdx:=0 to length(workerThread)-1 do
-          if workerThread[workerIdx].putRequest(bodyRule,itList,filterByte,@pEachResult) then begin
-            setLength(myWorkers,length(myWorkers)+1);
-            myWorkers[length(myWorkers)-1]:=@workerThread[workerIdx];
-            exit(true);
-          end;
-          result:=false;
-        end;
-
-      VAR chunk:byte;
-          i:longint;
+      VAR itIdx,ruleIdx,taskIdx:longint;
       begin
-        setLength(pEachResult,itList^.size*length(bodyRule));
-        for i:=0 to length(pEachResult)-1 do pEachResult[i]:=nil;
-        setLength(myWorkers,0);
-        for chunk:=0 to 7 do if not(canDelegate(chunk)) then
-          evaluatePEachChunk(bodyRule,itList,chunk,pEachResult,callDepth+1);
-        for i:=0 to length(myWorkers)-1 do myWorkers[i]^.waitForEvaluationThenFree;
+        setLength(pEachTask,itList^.size*length(bodyRule));
+        taskIdx:=0;
+        for itIdx:=0 to itList^.size-1 do
+        for ruleIdx:=0 to length(bodyRule)-1 do begin
+           pEachTask[taskIdx].create(bodyRule[ruleIdx],itList^.Value(itIdx));
+           if not(pEachTask[taskIdx].canAssignIndexInTaskList) then
+             pEachTask[taskIdx].evaluate(callDepth+1);
+           inc(taskIdx);
+        end;
+        for taskIdx:=0 to length(pEachTask)-1 do pEachTask[taskIdx].evaluate(callDepth+1);
       end;
 
     VAR i,j,k:longint;
@@ -742,19 +732,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         if isPeach and (callDepth<STACK_DEPTH_LIMIT) then begin
           makePEachResult;
           if errorLevel<el3_evalError then begin
-            for i:=0 to length(pEachResult)-1 do begin
+            for i:=0 to length(pEachTask)-1 do begin
               if i>0 then for k:=0 to length(tokensBetween)-1 do begin
                 t^.next:=newToken(tokensBetween[k]);
                 t:=t^.next;
               end;
-              t^.next:=newToken(eachLocation,'',tt_literal,pEachResult[i]);
+              t^.next:=newToken(eachLocation,'',tt_literal,pEachTask[i].freeReturningResult(callDepth+1));
+              pEachTask[i].destroy;
               t:=t^.next;
             end;
           end else begin
-            for i:=0 to length(pEachResult)-1 do
-              if pEachResult[i]<>nil then disposeLiteral(pEachResult[i]);
+            for i:=0 to length(pEachTask)-1 do pEachTask[i].destroy;
           end;
-          setLength(pEachResult,0);
+          setLength(pEachTask,0);
         end else begin
           for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
           for j:=0 to length(bodyRule)-1 do begin
