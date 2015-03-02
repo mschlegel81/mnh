@@ -1,6 +1,7 @@
 UNIT mnh_stringutil;
 
 INTERFACE
+USES sysutils;
 
 CONST
   C_lineBreakChar = chr(13);

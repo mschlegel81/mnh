@@ -26,50 +26,8 @@ private dividers_B(n,D)->1|unique(D|(n div D));
 //*Return the divider-sum of integer <code>n</code>
 memoized dividerSum(n:int)->each(d,dividers(n),+);
 
-
-P(n)->2^(n-1)*(2^n-1);
-main->each(n,[1..32],print(n,' ',P(n),' ',P(n)=dividerSum(P(n))?'PERFECT':'!='&dividerSum(P(n)), ' ',factorize(2^n-1)));
-//main->each(n,[1..63],print(n,' ',2^n-1,' ',factorize(2^n-1)));
-
-
-//main->each(i,[2..1000000],and,
-//  i=dividerSum(i)             ? print('PERFECT ',i,' ',string(factorize(i))) :
-//  i=dividerSum(dividerSum(i)) ? print(i,' ',dividerSum(i),' ',string(factorize(i))) : 
-//  false);
-
-
-
-
 memoized factors(n:int)->factors(n,primes(sqrt(sqrt(n)))%(n mod primes(sqrt(sqrt(n)))=0));
 private factors(1,[])->[];
 private factors(n:int,[])->factorize(n);
 private factors(n:int,dividers:intList)->dividers|factors(n div each(d,dividers,*));
 
-
-time({each(i,1+10*[1..100000],factors  (i))})%2;
-time({each(i,1+10*[1..100000],factorize(i))})%2;
-
-facLow(n:int)->n mod 2 = 0 ? 2 | facLow(n div 2) : factorize(n);
-time({each(i,1+10*[1..100000],facLow   (i))})%2;
-
-facLow(n:int)->n mod 2 = 0 ? 2 | facLow(n div 2) :
-               n mod 3 = 0 ? 3 | facLow(n div 3) : factorize(n);
-time({each(i,1+10*[1..100000],facLow   (i))})%2;
-
-facLow(n:int)->n mod 2 = 0 ? 2 | facLow(n div 2) :
-               n mod 3 = 0 ? 3 | facLow(n div 3) :
-               n mod 5 = 0 ? 5 | facLow(n div 5) :  factorize(n);
-time({each(i,1+10*[1..100000],facLow   (i))})%2;
-
-facLow(n:int)->n mod 2 = 0 ? 2 | facLow(n div 2) :
-               n mod 3 = 0 ? 3 | facLow(n div 3) :
-               n mod 5 = 0 ? 5 | facLow(n div 5) :
-               n mod 7 = 0 ? 7 | facLow(n div 7) :  factorize(n);
-time({each(i,1+10*[1..100000],facLow   (i))})%2;
-
-fac2(n)->n mod 2 = 0 ? 2 | fac2(n div 2) : fac3(n);
-fac3(n)->n mod 3 = 0 ? 3 | fac3(n div 3) : factorize(n);
-time({each(i,1+10*[1..100000],fac2     (i))})%2;
-
-time({each(i,1+10*[1..100000],factors  (i))})%2;
-time({each(i,1+10*[1..100000],factorize(i))})%2;

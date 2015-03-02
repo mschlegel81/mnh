@@ -1,0 +1,21 @@
+memoized fib(i> 0)->fib(i-1)+fib(i-2);
+         fib(i<=0):=1;
+inv(F:expression,n  )->inv(F,n,0);
+inv(F:expression,n,i)->(F(i))>=n ? i : inv(F,n,i+1);
+
+encode(F,n     )->replace('#'&encode(F,n,inv(F,n)),["#0","#"],["#",""]);
+encode(F,n,i>=0)->(F(i))<=n ? 1 & encode(F,n-(F(i)),i-1)
+                            : 0 & encode(F,n       ,i-1);
+encode(F,n,i)->"";
+
+decode(F,s:string)->decode(F,[length(s)-1..0]%(copy(s,[0..length(s)-1],1)="1"));
+decode(F,K:intList)->each(k,K,+,F(k));
+decode(F,[])->0;
+
+FIB:={fib($i)};
+POT:={2^$i};
+
+print(each(i,[0..100],&"\n"&,encode(POT,i)&"\t"&
+                             encode(FIB,i)&"\t"&
+                             decode(POT,encode(FIB,i))&"\t"&
+                             decode(FIB,encode(POT,i))));

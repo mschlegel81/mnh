@@ -349,37 +349,37 @@ CONSTRUCTOR T_literal.init;
 
 CONSTRUCTOR T_boolLiteral.create(CONST value: boolean);
   begin
-    INHERITED init;
+    inherited init;
     val := value;
   end;
 
 CONSTRUCTOR T_intLiteral.create(CONST value: int64);
   begin
-    INHERITED init;
+    inherited init;
     val := value;
   end;
 
 CONSTRUCTOR T_realLiteral.create(CONST value: extended);
   begin
-    INHERITED init;
+    inherited init;
     val := value;
   end;
 
 CONSTRUCTOR T_stringLiteral.create(CONST value: ansistring);
   begin
-    INHERITED init;
+    inherited init;
     val := value;
   end;
 
 CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);
   begin
-    INHERITED init;
+    inherited init;
     val := value;
   end;
 
 CONSTRUCTOR T_listLiteral.create;
   begin
-    INHERITED init;
+    inherited init;
     setLength(element, 0);
     strictType := lt_uncheckedList;
     nextAppendIsRange := false;
@@ -1112,25 +1112,21 @@ FUNCTION T_expressionLiteral.operate(CONST op: T_tokenType; CONST other: P_scala
 
 PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
   begin
-    if L = nil then
-      begin
+    if L = nil then begin
       raiseError(el3_evalError, 'Trying to append NIL literal to list',
         C_nilTokenLocation);
       exit;
-      end;
+    end;
     setLength(element, length(element)+1);
     element[length(element)-1] := L;
-    if incRefs then
-      L^.rereference;
+    if incRefs then L^.rereference;
     strictType := lt_uncheckedList;
   end;
 
 PROCEDURE T_listLiteral.appendAll(CONST L: P_listLiteral);
-  VAR
-    i: longint;
+  VAR i: longint;
   begin
-    for i := 0 to length(L^.element)-1 do
-      append(L^.element [i], true);
+    for i := 0 to length(L^.element)-1 do append(L^.element [i], true);
   end;
 
 PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation);
@@ -1647,18 +1643,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     case op of
       tt_operatorConcat: begin
         result := newListLiteral;
-        if (LHS^.literalType in [lt_error, lt_boolean, lt_int, lt_real,
-          lt_string, lt_expression]) then
-          P_listLiteral(result)^.append(LHS, true)
-        else
-          P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
-        if (RHS^.literalType in [lt_error, lt_boolean, lt_int, lt_real,
-          lt_string, lt_expression]) then
-          P_listLiteral(result)^.append(RHS, true)
-        else
-          P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
+        if (LHS^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
+        then P_listLiteral(result)^.append(LHS, true)
+        else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
+        if (RHS^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
+        then P_listLiteral(result)^.append(RHS, true)
+        else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         exit(result);
-        end;
+      end;
       tt_comparatorListEq: exit(newBoolLiteral(equals(LHS, RHS)));
       tt_operatorIn: exit(newBoolLiteral(isContained(LHS, RHS)));
       tt_operatorExtractL0: if LHS^.literalType in [lt_list..lt_flatList] then

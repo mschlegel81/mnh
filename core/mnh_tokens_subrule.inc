@@ -359,7 +359,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     updatePatternForInline;
   end;
 
-FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
+FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
   VAR newRule:P_subrule;
   begin
     new(newRule,createFromInlineWithOp(original,intrinsicRuleId,funcLocation));

@@ -379,6 +379,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
       end;
       if first<>nil then recycler.cascadeDisposeToken(first);
+      first:=nil;
     end;
 
   VAR codeLines:T_stringList;

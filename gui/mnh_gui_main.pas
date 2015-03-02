@@ -10,6 +10,8 @@ uses
     mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
+CONST ONE_SECOND=1/(24*60*60);
+
 type
 
   { TMnhForm }
@@ -168,6 +170,8 @@ type
   private
     underCursor:T_tokenInfo;
     settingsHaveBeenProcessed:boolean;
+    needEvaluation:boolean;
+    doNotEvaluateBefore:double;
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     PROCEDURE flushThroughput;
@@ -355,6 +359,8 @@ PROCEDURE startOfEvaluationCallback;
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
+    needEvaluation:=False;
+    doNotEvaluateBefore:=now;
     OpenDialog.FileName:=paramstr(0);
     SaveDialog.FileName:=paramstr(0);
     myhl:=TSynMnhSyn.create(nil);
@@ -451,7 +457,11 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
-      ad_evaluate(InputEdit.Lines);
+      if now>doNotEvaluateBefore then begin
+        ad_evaluate(InputEdit.Lines);
+        needEvaluation:=false;
+        doNotEvaluateBefore:=now+ONE_SECOND;
+      end else needEvaluation:=true;
     end;
   end;
 
@@ -519,7 +529,11 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
-    ad_evaluate(InputEdit.Lines);
+    if now>doNotEvaluateBefore then begin
+      ad_evaluate(InputEdit.Lines);
+      needEvaluation:=false;
+      doNotEvaluateBefore:=now+ONE_SECOND;
+    end else needEvaluation:=true;
   end;
 
 PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
@@ -828,6 +842,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
       OutputEdit.EndUpdate;
+      flag:=true;
     end;
     flushThroughput;
 
@@ -836,6 +851,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
        not(ad_evaluationRunning) and
        not(plotSubsystem.rendering) and
        not(now<plotSubsystem.renderNotBefore) then doPlot();
+
+    if flag then doNotEvaluateBefore:=now+ONE_SECOND else
+    if needEvaluation and (now>doNotEvaluateBefore) then begin
+      ad_evaluate(InputEdit.Lines);
+      needEvaluation:=false;
+    end;
 
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
     i:=round((now-updateStart)*24*60*60*1000);

@@ -16,8 +16,9 @@ findInFiles([]       ,F:expression)->print('No files matching the pattern were f
 findInFiles(fileNames,F:expression)->pEach(fname,fileNames,findInLines(fname,fileLines(fname),F));
 
 findInLines(filename:string,lines:stringList,F)->pEach(i,[0..size(lines)-1],and,F(lines%i) ?  print(filename,'@',i+1,': ',trim(lines%i)) : true);
+findInLines(filename:string,[],F)->print('Empty file ',filename,' ?');
 
 printAll([])->false;
 printAll(L)->each(l,L,and,print(l));
 
-find('../..','*.pas,*.inc','SystemInfo',false);
+find('../art','*.pas,*.inc','SystemInfo',false);

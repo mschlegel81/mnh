@@ -79,7 +79,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent);
   CONST
     identifierForeground: TColor = $00FF0000;
   begin
-    INHERITED create(AOwner);
+    inherited create(AOwner);
     styleTable[tkComment] := TSynHighlighterAttributes.create('comment');
     styleTable[tkComment].Style := [fsItalic];
     styleTable[tkComment].Foreground := $00999999;
@@ -136,7 +136,7 @@ DESTRUCTOR TSynMnhSyn.destroy;
   begin
     for tk := tkComment to tkNull do
       styleTable[tk].destroy;
-    INHERITED destroy;
+    inherited destroy;
   end; { Destroy }
 
 FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
@@ -146,7 +146,7 @@ FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttribut
 
 PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
   begin
-    INHERITED;
+    inherited;
     isDeclInput := false;
     isExprInput := false;
     isOutput := false;

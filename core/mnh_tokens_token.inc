@@ -49,7 +49,11 @@ DESTRUCTOR T_tokenRecycler.destroy;
   begin
     while fill>0 do begin
       dec(fill);
-      dispose(dat[fill],destroy);
+      try
+        dispose(dat[fill],destroy);
+      except
+        dat[fill]:=nil;
+      end;
     end;
   end;
 
@@ -706,17 +710,24 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           exit;
         end;
         if aggregatorPresent then begin
-          if resultLiteral=nil then begin
-            resultLiteral:=L; L^.rereference;
+          if (tokensBetween[0]^.tokType=tt_operatorConcat) then begin
+            if resultLiteral=nil then resultLiteral:=newListLiteral;
+            if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
+            then P_listLiteral(resultLiteral)^.append   (L, true)
+            else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
           end else begin
-            newLit:=resolveOperator(resultLiteral,
-                                    tokensBetween[0]^.tokType,
-                                    L,
-                                    eachLocation);
-            if newLit<>nil then begin
-              disposeLiteral(resultLiteral);
-              resultLiteral:=newLit;
-            end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.toString+')',eachLocation);
+            if resultLiteral=nil then begin
+              resultLiteral:=L; L^.rereference;
+            end else begin
+              newLit:=resolveOperator(resultLiteral,
+                                      tokensBetween[0]^.tokType,
+                                      L,
+                                      eachLocation);
+              if newLit<>nil then begin
+                disposeLiteral(resultLiteral);
+                resultLiteral:=newLit;
+              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.toString+')',eachLocation);
+            end;
           end;
         end else begin
           if resultLiteral=nil then resultLiteral:=newListLiteral;

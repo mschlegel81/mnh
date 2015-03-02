@@ -1,6 +1,7 @@
 UNIT mnh_constants;
 
 INTERFACE
+USES sysutils;
 
 TYPE
   T_tokenType = (tt_literal,
@@ -72,11 +73,11 @@ CONST
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
     (6, 6, 6, 6, 6, 6, 6, //comparators
-    8, 7, 7,             //logical operators
+    9, 8, 8,             //logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
     5,                   //special: string concatenation
-    0, 0, 0, 0, 1, 1);   //list operators
+    0, 0, 0, 0, 1, 7);   //list operators
 
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckEmptyList] of
     SET of T_literalType =

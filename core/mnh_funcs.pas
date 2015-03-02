@@ -8,8 +8,8 @@ VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
 
-PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
-PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
+PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 
 //Callbacks:--------------------------------
 TYPE T_resolveNullaryCallback=FUNCTION (CONST selfPointer:P_expressionLiteral; CONST callDepth:word):P_literal;
@@ -18,7 +18,7 @@ VAR resolveNullaryCallback:T_resolveNullaryCallback;
 TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
 VAR stringToExprCallback:T_stringToExprCallback;
 
-TYPE T_applyUnaryOnExpressionCallback=FUNCTION (CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
+TYPE T_applyUnaryOnExpressionCallback=FUNCTION (CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
 VAR applyUnaryOnExpressionCallback:T_applyUnaryOnExpressionCallback;
 //--------------------------------:Callbacks
 
@@ -27,7 +27,7 @@ IMPLEMENTATION
 VAR print_cs:system.TRTLCriticalSection;
     file_cs :system.TRTLCriticalSection;
 //------------------------------------------------------------:Critical sections
-PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to parameters ';
@@ -36,7 +36,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST params:P_list
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:string; CONST typ:T_literalType; CONST messageTail:string; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
@@ -78,8 +78,8 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
     case x^.literalType of
       lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
       lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-      lt_int : result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value));
-      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
+      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
+      lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList: begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
@@ -458,7 +458,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     raiseNotApplicableError('random',params,tokenLocation);
   end;
 
-PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
   VAR oldExplanation:ansistring;
   begin
     intrinsicRuleMap.put(name,ptr);
@@ -1356,7 +1356,7 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
 
   VAR t:double;
-      x:string;
+      x:ansistring;
 
   begin
     result:=nil;
