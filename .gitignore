@@ -7,6 +7,7 @@ Thumbs.db
 *.res
 *.settings
 *.dll
+*.or
 #ignore images and backups
 *.png
 *.7z
