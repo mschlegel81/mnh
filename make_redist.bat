@@ -1,8 +1,9 @@
 @set delp=C:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin gui\lib\i386-win32
-@set fpc=C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc -Scghi2 -Si -Fucore -Fuutil -Ficore
-@set optimize=-O2 -CX -XX
-@set debug=-g -gl
-@set guiOpt=-dLCL -dLCLwin32 -FuC:\lazarus\packager\units\i386-win32 -Filib\i386-win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\components\synedit\units\i386-win32\win32 -FiC:\lazarus\components\synedit
+@set fpc=C:\lazarus\fpc\2.6.4\bin\i386-win32\fpc -Fucore -Fuutil -Ficore 
+@rem -vewnhi 
+@set optimize=-O2 -CX -XX -Scghi2 
+@set debug=-g -gl -Scgh2 
+@set guiOpt= -MObjFPC -Scghi -Filib\i386-win32 -Ficore -Fucore -Fuutil -FuC:\lazarus\components\synedit\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\packager\units\i386-win32 -Fugui -l -dLCL -dLCLwin32
 @%delp%
 mkdir bin
 
@@ -20,3 +21,6 @@ mkdir bin
 @%delp%
 @del bin\*.lfm bin\*.res
 
+@rem -FuC:\lazarus\packager\units\i386-win32 -Fu. -FUlib\i386-win32 -l -dLCL -dLCLwin32
+
+ 

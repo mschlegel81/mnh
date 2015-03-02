@@ -1,7 +1,7 @@
 UNIT mnh_litvar;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,sysutils,math,mnh_stringUtil, mnh_tokloc;
-{$define literalRecycling}
+{define literalRecycling}
 CONST
   C_boolText:array[false..true] of string=('false','true');
 

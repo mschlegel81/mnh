@@ -26,7 +26,9 @@ object MnhForm: TMnhForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = EditorPopup
     TabOrder = 0
+    OnMouseMove = InputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
     RightGutter.Width = 0
@@ -456,7 +458,7 @@ object MnhForm: TMnhForm
     MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
-      'InputEdit'
+      ''
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ScrollBars = ssAutoBoth
@@ -525,7 +527,6 @@ object MnhForm: TMnhForm
       Width = 316
       Align = alClient
       AutoEdit = False
-      ColCount = 3
       FixedCols = 0
       FixedRows = 0
       Font.Color = clRed
@@ -557,7 +558,9 @@ object MnhForm: TMnhForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = EditorPopup
     TabOrder = 3
+    OnMouseMove = OutputEditMouseMove
     Gutter.Width = 19
     Gutter.MouseActions = <>
     RightGutter.Width = 0
@@ -987,7 +990,7 @@ object MnhForm: TMnhForm
     MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
-      'OutputEdit'
+      ''
     )
     VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
@@ -1055,7 +1058,6 @@ object MnhForm: TMnhForm
     Caption = 'halt evaluation'
     OnClick = haltEvaluationButtonClick
     TabOrder = 5
-    Visible = False
   end
   object MainMenu1: TMainMenu
     left = 82
@@ -1074,23 +1076,48 @@ object MnhForm: TMnhForm
       end
     end
     object MenuItem4: TMenuItem
-      Caption = 'Output'
-      object MenuItem8: TMenuItem
-        Caption = 'Clear'
-      end
-      object MenuItem5: TMenuItem
+      Caption = 'Appearance'
+      object miExpressionEcho: TMenuItem
         Caption = 'Expression echo'
-        RadioItem = True
+        OnClick = miExpressionEchoClick
       end
-      object MenuItem6: TMenuItem
+      object miExpressionResult: TMenuItem
         Caption = 'Expression result'
-        RadioItem = True
+        OnClick = miExpressionResultClick
       end
-      object MenuItem7: TMenuItem
+      object miDeclarationEcho: TMenuItem
         Caption = 'Declaration echo'
         Checked = True
-        RadioItem = True
+        OnClick = miDeclarationEchoClick
       end
+      object miIncFontSize: TMenuItem
+        Caption = 'Increase Font Size'
+        ShortCut = 16571
+        OnClick = miIncFontSizeClick
+      end
+      object miDecFontSize: TMenuItem
+        Caption = 'Decrease Font Size'
+        ShortCut = 16573
+        OnClick = miDecFontSizeClick
+      end
+    end
+  end
+  object UpdateTimeTimer: TTimer
+    OnTimer = UpdateTimeTimerTimer
+    left = 88
+    top = 19
+  end
+  object EditorPopup: TPopupMenu
+    OnPopup = EditorPopupPopup
+    left = 191
+    top = 72
+    object popMiOpenDeclaration: TMenuItem
+      Caption = 'Open declaration of "..." ()'
+      OnClick = popMiOpenDeclarationClick
+    end
+    object popMiOpenPackage: TMenuItem
+      Caption = 'Open package "..." ()'
+      OnClick = popMiOpenPackageClick
     end
   end
 end

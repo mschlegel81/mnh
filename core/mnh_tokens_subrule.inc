@@ -24,7 +24,6 @@
       PROCEDURE performSet(CONST newValue:P_literal);
       FUNCTION directEvaluateNullary():P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal):P_literal;
-      PROCEDURE getLineNumbers(VAR collector:T_listOfIntegers);
   end;
 
 {$endif}
@@ -341,14 +340,5 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal):P_literal;
       cascadeDisposeToken(firstRep);
     end else result:=nil;
     disposeLiteral(param);
-  end;
-  
-PROCEDURE T_subrule.getLineNumbers(VAR collector:T_listOfIntegers);
-  VAR i:longint;
-  begin
-    collector.add(declaredAt.line);
-    for i:=0 to length(expression)-1 do with expression[i].token^.location do 
-      if provider<>nil then collector.add(line);
-    collector .unique;
   end;
 {$endif}

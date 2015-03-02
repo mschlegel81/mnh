@@ -29,6 +29,8 @@ TYPE
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
+      FUNCTION canResolveId(CONST identifier:ansistring):byte;
+      FUNCTION ruleLocation(CONST identifier:ansistring):T_tokenLocation;
       
       FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
@@ -43,6 +45,9 @@ PROCEDURE reloadMainPackage;
 PROCEDURE clearAllPackages;
 PROCEDURE initMainPackage(CONST filename:ansistring);
 PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
+FUNCTION canResolveInMainPackage(CONST id:ansistring):byte;
+FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
+FUNCTION getPackageLocation(CONST id:ansistring):T_tokenLocation;
 {$undef include_interface}
 IMPLEMENTATION
 {$define include_implementation}
@@ -106,6 +111,36 @@ PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
       clearErrors;
     setLength(packages,1);
     new(packages[0],create(directInputWrapper));
+  end;
+
+FUNCTION canResolveInMainPackage(const id: ansistring): byte;
+  begin
+    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
+    then result:=0
+    else result:=packages[0]^.canResolveId(id);
+  end;
+
+FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
+  begin
+    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
+    then result:=C_nilTokenLocation
+    else result:=packages[0]^.ruleLocation(id);
+  end;
+
+function getPackageLocation(const id: ansistring): T_tokenLocation;
+  VAR i:longint;
+  begin
+    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
+    then result:=C_nilTokenLocation
+    else with packages[0]^ do begin
+      for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then begin
+        result.provider:=packageUses[i].pack^.codeProvider;
+        result.line:=1;
+        result.column:=1;
+        exit(result);
+      end;
+    end;
+    result:=C_nilTokenLocation;
   end;
 
 FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
@@ -483,7 +518,6 @@ DESTRUCTOR T_package.destroy;
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
-    
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
@@ -521,6 +555,62 @@ PROCEDURE T_package.resolveRuleId(VAR token:T_token; CONST failSilently:boolean)
     end;
 
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
+  end;
+
+FUNCTION T_package.canResolveId(CONST identifier:ansistring):byte;
+  VAR i:longint;
+      userRule:P_rule;
+      intrinsicFuncPtr:T_intFuncCallback;
+      packageId,ruleId:ansistring;
+  begin
+    i:=pos(C_id_qualify_character,identifier);
+    if i>0 then begin
+      packageId:=copy(identifier,1,i-1);
+      ruleId   :=copy(identifier,i+1,length(identifier));
+    end else begin
+      packageId:='';
+      ruleId   :=identifier;
+    end;
+
+    result:=0;
+
+    if ((packageId=codeProvider^.fileIdentifier) or (packageId=''))
+    and localRules.containsKey(ruleId,userRule) then exit(1);
+
+    for i:=length(packageUses)-1 downto 0 do
+    if ((packageId=packageUses[i].id) or (packageId=''))
+    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then exit(2);
+
+    if ((packageId='mnh') or (packageId=''))
+    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then exit(3);
+  end;
+
+FUNCTION T_package.ruleLocation(CONST identifier:ansistring):T_tokenLocation;
+  VAR i:longint;
+      userRule:P_rule;
+      intrinsicFuncPtr:T_intFuncCallback;
+      packageId,ruleId:ansistring;
+  begin
+    i:=pos(C_id_qualify_character,identifier);
+    if i>0 then begin
+      packageId:=copy(identifier,1,i-1);
+      ruleId   :=copy(identifier,i+1,length(identifier));
+    end else begin
+      packageId:='';
+      ruleId   :=identifier;
+    end;
+
+    result:=C_nilTokenLocation;
+
+    if ((packageId=codeProvider^.fileIdentifier) or (packageId=''))
+    and localRules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
+
+    for i:=length(packageUses)-1 downto 0 do
+    if ((packageId=packageUses[i].id) or (packageId=''))
+    and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
+
+    if ((packageId='mnh') or (packageId=''))
+    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then result.column:=-111;
   end;
 
 FUNCTION T_package.ensureLocalRuleId(CONST ruleId:ansistring):P_rule;

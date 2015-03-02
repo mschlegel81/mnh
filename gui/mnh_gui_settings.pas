@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles;
+  StdCtrls, EditBtn, myFiles, process;
 
 CONST default_notepad_path='c:\Program Files (x86)\Notepad++\notepad++.exe';
 
@@ -39,8 +39,14 @@ type
     mainForm:record
       top,left,width,height:longint;
     end;
+    outputBehaviour:record
+      doEchoInput:boolean;
+      doEchoDeclaration:boolean;
+      doShowExpressionOut:boolean;
+    end;
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName:string;
+    FUNCTION canOpenFile(CONST filename:ansistring; CONST lineNumber:longint):boolean;
   end;
 
 var
@@ -76,6 +82,11 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         width :=ff.readLongint;
         height:=ff.readLongint;
       end;
+      with outputBehaviour do begin
+        doEchoInput:=ff.readBoolean;
+        doEchoDeclaration:=ff.readBoolean;
+        doShowExpressionOut:=ff.readBoolean;
+      end;
       ff.destroy;
     end else begin
       if FileExists(default_notepad_path) then NotepadFileNameEdit.Filename:=default_notepad_path;
@@ -86,6 +97,11 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         left  :=0;
         width :=480;
         height:=480;
+      end;
+      with outputBehaviour do begin
+        doEchoInput:=true;
+        doEchoDeclaration:=true;
+        doShowExpressionOut:=true;
       end;
     end;
     FontButton.Font.Name:=editorFontname;
@@ -135,8 +151,12 @@ procedure TSettingsForm.FormDestroy(Sender: TObject);
       ff.writeLongint(width);
       ff.writeLongint(height);
     end;
+    with outputBehaviour do begin
+      ff.writeBoolean(doEchoInput);
+      ff.writeBoolean(doEchoDeclaration);
+      ff.writeBoolean(doShowExpressionOut);
+    end;
     ff.destroy;
-    writeln('TSettingsForm.FormDestroy done');
   end;
 
 function TSettingsForm.getFontSize: longint;
@@ -153,6 +173,25 @@ procedure TSettingsForm.setFontSize(value: longint);
 function TSettingsForm.getEditorFontName: string;
   begin
     result:=editorFontname;
+  end;
+
+function TSettingsForm.canOpenFile(const filename: ansistring; const lineNumber: longint): boolean;
+  //FUNCTION safeFilename(CONST naiveName:ansistring):ansistring;
+  //  begin
+  //    if (Pos(' ',naiveName)>0) and (naiveName[1]<>'"') then result:='"'+UTF8ToSys(naiveName)+'"' else result:=UTF8ToSys(naiveName);
+  //  end;
+  VAR tempProcess:TProcess;
+  begin
+    if (trim(NotepadFileNameEdit.Filename)<>'') and not(FileExistsUTF8(NotepadFileNameEdit.Filename)) then NotepadFileNameEdit.Filename:='';
+    if (trim(NotepadFileNameEdit.Filename)<>'') then begin
+      tempProcess :=TProcess.Create(nil);
+      tempProcess.Executable:=NotepadFileNameEdit.FileName;
+      tempProcess.Parameters.Add(filename);
+      if (lineNumber>0) then tempProcess.Parameters.Add('-n'+IntToStr(lineNumber));
+      tempProcess.execute;
+      tempProcess.Free;
+      result:=true;
+    end else result:=false;
   end;
 
 end.

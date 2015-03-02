@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, Menus, StdCtrls, ComCtrls, ColorBox, ButtonPanel, CheckLst, Grids,
-  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc, mnh_out_adapters,mnh_constants;
+  ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, SynHighlighterMnh,
+  mnh_fileWrappers, mnh_tokens, mnh_gui_settings, mnh_tokloc, mnh_out_adapters, mnh_constants;
 
 type
 
@@ -15,31 +15,57 @@ type
 
   TMnhForm = class(TForm)
     haltEvaluationButton: TButton;
+    popMiOpenPackage: TMenuItem;
+    popMiOpenDeclaration: TMenuItem;
+    myhl:TSynMnhSyn;
     ErrorGroupBox: TGroupBox;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
-    MenuItem6: TMenuItem;
-    MenuItem7: TMenuItem;
-    MenuItem8: TMenuItem;
+    miExpressionEcho: TMenuItem;
+    miExpressionResult: TMenuItem;
+    miDeclarationEcho: TMenuItem;
+    miDecFontSize: TMenuItem;
+    miIncFontSize: TMenuItem;
     mi_settings: TMenuItem;
+    EditorPopup: TPopupMenu;
     Splitter1: TSplitter;
     StatusBar: TStatusBar;
     ErrorStringGrid: TStringGrid;
     InputEdit: TSynEdit;
     OutputEdit: TSynEdit;
+    UpdateTimeTimer: TTimer;
+    procedure EditorPopupPopup(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure haltEvaluationButtonClick(Sender: TObject);
     procedure InputEditChange(Sender: TObject);
+    procedure InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure miDecFontSizeClick(Sender: TObject);
+    procedure miDeclarationEchoClick(Sender: TObject);
+    procedure miExpressionEchoClick(Sender: TObject);
+    procedure miExpressionResultClick(Sender: TObject);
+    procedure miIncFontSizeClick(Sender: TObject);
     procedure mi_settingsClick(Sender: TObject);
+    procedure OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure popMiOpenDeclarationClick(Sender: TObject);
+    procedure popMiOpenPackageClick(Sender: TObject);
+    procedure UpdateTimeTimerTimer(Sender: TObject);
 
   private
+    lastWordUnderCursor:string;
+    ruleUnderCursorDeclared:record
+      filename:string;
+      fileline:longint;
+    end;
+    packageUnderCursorIsFile:string;
+
     settingsHaveBeenProcessed:boolean;
     procedure processSettings;
     { private declarations }
@@ -50,7 +76,6 @@ type
 var
   MnhForm: TMnhForm;
   inputWrapper: P_directInputWrapper;
-
   haltEvaluationPosted : boolean=false;
   evaluationRunning    : boolean=false;
   evaluationLoopRunning: boolean=false;
@@ -62,9 +87,32 @@ implementation
 
 {$R *.lfm}
 
+PROCEDURE writeDeclEcho(CONST s:ansistring);
+  begin
+    MnhForm.OutputEdit.Lines.Append(C_DeclEchoHead+' '+s);
+  end;
+
+PROCEDURE writeExprEcho(CONST s:ansistring);
+  begin
+    MnhForm.OutputEdit.Lines.Append(C_ExprEchoHead+' '+s);
+  end;
+
+PROCEDURE writeExprOut (CONST s:ansistring);
+  begin
+    MnhForm.OutputEdit.Lines.Append(C_ExprOutHead+' '+s);
+  end;
+
+PROCEDURE writePrint   (CONST s:ansistring);
+  begin
+    MnhForm.OutputEdit.Lines.Append(s);
+  end;
+
 { TMnhForm }
 procedure TMnhForm.FormCreate(Sender: TObject);
   begin
+    myhl:=TSynMnhSyn.Create(nil);
+    InputEdit.Highlighter:=myhl;
+    OutputEdit.Highlighter:=myhl;
     settingsHaveBeenProcessed:=false;
     StatusBar.SimpleText:=
       'compiled on: '+{$I %DATE%}+
@@ -72,6 +120,29 @@ procedure TMnhForm.FormCreate(Sender: TObject);
       ' with FPC'+{$I %FPCVERSION%}+
       ' for '+{$I %FPCTARGET%};
     BeginThread(@evaluationThread);
+  end;
+
+procedure TMnhForm.EditorPopupPopup(Sender: TObject);
+  VAR location:T_tokenLocation;
+  begin
+    location:=getRuleLocation(lastWordUnderCursor);
+    if (location.provider<>nil) and (location.provider^.filePath<>'') then
+    with ruleUnderCursorDeclared do begin
+      filename:=location.provider^.filePath;
+      fileline:=location.line;
+    end else ruleUnderCursorDeclared.filename:='';
+    if location.column=-111
+    then popMiOpenDeclaration.Caption:='"'+lastWordUnderCursor+'" is a built in function'
+    else popMiOpenDeclaration.Caption:='Open declaration of "'+lastWordUnderCursor+'" ('+ruleUnderCursorDeclared.filename+')';
+    popMiOpenDeclaration.Enabled:=ruleUnderCursorDeclared.filename<>'';
+
+    location:=getPackageLocation(lastWordUnderCursor);
+    if (location.provider<>nil) and (location.provider^.filePath<>'')
+    then packageUnderCursorIsFile:=location.provider^.filePath
+    else packageUnderCursorIsFile:='';
+
+    popMiOpenPackage.Caption:='Open package "'+lastWordUnderCursor+'" ('+packageUnderCursorIsFile+')';
+    popMiOpenPackage.Enabled:=packageUnderCursorIsFile<>'';
   end;
 
 procedure killEvaluationSoftly;
@@ -127,10 +198,107 @@ procedure TMnhForm.InputEditChange(Sender: TObject);
     end;
   end;
 
+procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+  VAR point:TPoint;
+      wordUnderCursor:string;
+  begin
+    point.x:=x;
+    point.y:=y;
+    wordUnderCursor:=InputEdit.GetWordAtRowCol(InputEdit.PixelsToRowColumn(point));
+    if wordUnderCursor<>'' then lastWordUnderCursor:=wordUnderCursor;
+  end;
+
+procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
+  begin
+    if settingsHaveBeenProcessed then begin
+      SettingsForm.fontSize:=SettingsForm.fontSize-1;
+      processSettings;
+    end;
+  end;
+
+procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
+  begin
+    if settingsHaveBeenProcessed then begin
+      miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
+      with SettingsForm.outputBehaviour do begin
+        doEchoDeclaration:=miDeclarationEcho.Checked;
+        if doEchoDeclaration then mnh_out_adapters.inputDeclEcho:=@writeDeclEcho
+                             else mnh_out_adapters.inputDeclEcho:=nil;
+      end;
+    end;
+  end;
+
+procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
+  begin
+    if settingsHaveBeenProcessed then begin
+      miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
+      with SettingsForm.outputBehaviour do begin
+        doEchoInput:=miExpressionEcho.Checked;
+        if doEchoInput then mnh_out_adapters.inputExprEcho:=@writeExprEcho
+                       else mnh_out_adapters.inputExprEcho:=nil;
+      end;
+    end;
+  end;
+
+procedure TMnhForm.miExpressionResultClick(Sender: TObject);
+  begin
+    if settingsHaveBeenProcessed then begin
+      miExpressionResult.Checked:=not(miExpressionResult.Checked);
+      with SettingsForm.outputBehaviour do begin
+        doShowExpressionOut:=miExpressionResult.Checked;
+        if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
+                               else mnh_out_adapters.exprOut:=nil;
+      end;
+    end;
+  end;
+
+procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
+  begin
+    if settingsHaveBeenProcessed then begin
+      SettingsForm.fontSize:=SettingsForm.fontSize+1;
+      processSettings;
+    end;
+  end;
+
 procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
     processSettings;
+  end;
+
+procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+  VAR point:TPoint;
+      wordUnderCursor:string;
+  begin
+    point.x:=x;
+    point.y:=y;
+    wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.PixelsToRowColumn(point));
+    if wordUnderCursor<>'' then lastWordUnderCursor:=wordUnderCursor;
+  end;
+
+procedure TMnhForm.popMiOpenDeclarationClick(Sender: TObject);
+  begin
+    with ruleUnderCursorDeclared do
+    if filename<>''
+    then SettingsForm.canOpenFile(filename,fileline);
+  end;
+
+procedure TMnhForm.popMiOpenPackageClick(Sender: TObject);
+  begin
+    if packageUnderCursorIsFile<>''
+    then SettingsForm.canOpenFile(packageUnderCursorIsFile,-1);
+
+  end;
+
+VAR evaluationStarted:double=-1;
+
+procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+  begin
+    if (evaluationStarted>0) and (evaluationRunning) then
+      StatusBar.SimpleText:='Evaluating '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.'
+    else if haltEvaluationButton.Visible then haltEvaluationButton.Visible:=false;
   end;
 
 procedure TMnhForm.processSettings;
@@ -148,28 +316,41 @@ procedure TMnhForm.processSettings;
     left  :=SettingsForm.mainForm.left;
     width :=SettingsForm.mainForm.width;
     height:=SettingsForm.mainForm.height;
+
+    with SettingsForm.outputBehaviour do begin
+      miDeclarationEcho.Checked:=doEchoDeclaration;
+      if doEchoDeclaration   then mnh_out_adapters.inputDeclEcho:=@writeDeclEcho
+                             else mnh_out_adapters.inputDeclEcho:=nil;
+      miExpressionEcho.Checked:=doEchoInput;
+      if doEchoInput         then mnh_out_adapters.inputExprEcho:=@writeExprEcho
+                             else mnh_out_adapters.inputExprEcho:=nil;
+      miExpressionResult.Checked:=doShowExpressionOut;
+      if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
+                             else mnh_out_adapters.exprOut:=nil;
+    end;
     settingsHaveBeenProcessed:=true;
   end;
 
-
 function evaluationThread(p: pointer): ptrint;
   VAR sleepTime:longint=1;
-      time:double;
+
   PROCEDURE enterEval;
     begin
       try
         MnhForm.OutputEdit.ClearAll;
+        MnhForm.OutputEdit.Lines.Clear;
         mnhForm.haltEvaluationButton.Visible:=true;
       except end;
       repeat evaluationRunning:=true until evaluationRunning;
-      time:=now;
+      evaluationStarted:=now;
     end;
 
   PROCEDURE doneEval;
     VAR i,totalHeight:longint;
     begin
       mnhForm.haltEvaluationButton.Visible:=false;
-      MnhForm.StatusBar.SimpleText:='Done in '+FloatToStr((now-time)*24*60*60)+' sec.';
+      MnhForm.StatusBar.SimpleText:='Done in '+FloatToStr((now-evaluationStarted)*24*60*60)+' sec.';
+      evaluationStarted:=-1;
       if not(haltEvaluationPosted) then begin
         if errorLevel>el0_allOkay then begin
           totalHeight:=0;
@@ -184,8 +365,6 @@ function evaluationThread(p: pointer): ptrint;
           MnhForm.ErrorStringGrid.AutoSizeColumns;
           MnhForm.ErrorGroupBox.Visible:=true;
         end else MnhForm.ErrorGroupBox.Visible:=false;
-        sleep(1);
-        MnhForm.OutputEdit.Repaint;
         sleepTime:=1;
       end;
       repeat evaluationRunning:=false until not(evaluationRunning);
@@ -211,27 +390,6 @@ function evaluationThread(p: pointer): ptrint;
     clearAllPackages;
     repeat evaluationLoopRunning:=false until not(evaluationLoopRunning);
   end;
-
-PROCEDURE writeDeclEcho(CONST s:ansistring);
-  begin
-    MnhForm.OutputEdit.Lines.Append('in> '+s);
-  end;
-
-PROCEDURE writeExprEcho(CONST s:ansistring);
-  begin
-    MnhForm.OutputEdit.Lines.Append('in> '+s);
-  end;
-
-PROCEDURE writeExprOut (CONST s:ansistring);
-  begin
-    MnhForm.OutputEdit.Lines.Append('out> '+s);
-  end;
-
-PROCEDURE writePrint   (CONST s:ansistring);
-  begin
-    MnhForm.OutputEdit.Lines.Append(s);
-  end;
-
 
 INITIALIZATION
   mnh_out_adapters.inputDeclEcho:=@writeDeclEcho;

@@ -11,7 +11,7 @@
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       PROCEDURE performSet(CONST value:P_literal);
-      FUNCTION getLineNumbers:T_listOfIntegers;
+      FUNCTION getLocationOfDeclaration:T_tokenLocation;
   end;
 {$endif}
 {$ifdef include_implementation}
@@ -69,10 +69,8 @@ PROCEDURE T_rule.performSet(CONST value:P_literal);
     value^.rereference;
   end;
   
-FUNCTION T_rule.getLineNumbers:T_listOfIntegers;
-  VAR i:longint;
+FUNCTION T_rule.getLocationOfDeclaration:T_tokenLocation;
   begin
-    result.create;
-    for i:=0 to length(subrules)-1 do subRules[i]^.getLineNumbers(result);
+    result:=subrules[0]^.declaredAt;
   end;
 {$endif}
