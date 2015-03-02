@@ -200,7 +200,7 @@ PROCEDURE T_package.load;
       t:=first; 
       while t<>nil do begin
         case t^.tokType of
-          tt_expBraceOpen: digestInlineExpression(t);
+         // tt_expBraceOpen: digestInlineExpression(t);
           tt_identifier: t^.data:=@self;
           tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
                   and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
