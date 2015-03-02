@@ -1,0 +1,8 @@
+f(x<1)->sin(x);
+f(x)->f(sin(x)+sin(2*x));
+
+F:={$x<1?sin($x):$self(sin($x)+sin(2*$x))};
+
+plot(F,0,2,100);
+
+

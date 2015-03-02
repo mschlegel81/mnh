@@ -1179,9 +1179,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       ON EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
         while (length(stack)>0) do stack_popDestroy;
-      end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-        while (length(stack)>0) do stack_popDestroy;
+      //end else begin
+      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+      //  while (length(stack)>0) do stack_popDestroy;
       end;
     end;
     if callDepth=0 then begin

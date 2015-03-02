@@ -410,8 +410,8 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
       if computed.xRule = nil then
         xRule := nil
       else
-        xRule := computed.xRule^.value;
-      yRule := computed.yRule^.value;
+        xRule := computed.xRule;
+      yRule := computed.yRule;
 
       setLength(computed.temp, initialSampleCount+1);
       with computed do
@@ -427,8 +427,8 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
       if computed.xRule = nil then
         xRule := nil
       else
-        xRule := computed.xRule^.value;
-      yRule := computed.yRule^.value;
+        xRule := computed.xRule;
+      yRule := computed.yRule;
 
       curvatureThreshold := 0;
       for i := 1 to length(computed.temp)-1 do
