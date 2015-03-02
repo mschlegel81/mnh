@@ -23,23 +23,23 @@ piBError(n)->abs(piB(n)-pi);
 piATime(n)->abs(time({piA(n)})%[2,1]%%1-[0,pi]);
 piBTime(n)->abs(time({piB(n)})%[2,1]%%1-[0,pi]);
 
-L:=fileExists('piPlots.data')
-   ? expression(fileContents('piPlots.data'))()
+dataFileName:=replace(myPath&"#",".mnh#",".data");
+L:=fileExists(dataFileName)
+   ? expression(fileContents(dataFileName))()
    : [each(i,[1..100]*10,[i,piAError(i)]),
       each(i,[1.. 60]   ,[i,piBError(i)]),
       each(i,[1..100]*10,   piATime (i) ),
       each(i,[1.. 60]   ,   piBTime (i) )];
 
-print(fileExists('piPlots.data')          ? "Data was read." :
-      writeFile('piPlots.data',string(L)) ? "Data was computed and written." :
-                                            "Data was computed; writing failed!");
+print(fileExists(dataFileName)          ? "Data was read." :
+      writeFile(dataFileName,string(L)) ? "Data was computed and written." :
+                                          "Data was computed; writing failed!");
 
 doPlot->setPlotLogscale([false,true]) and
         setPlotAutoscale([true,true]) and
         plot   (L%2,". l") and
         addPlot(L%3,". l");
 
-L%2;
 doPlot;
 //piBTime(60);
 

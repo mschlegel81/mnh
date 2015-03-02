@@ -1,4 +1,4 @@
-
+USE basics;
 //firstHand->firstHand([1..10,1..10,1..10]%sortPerm(random(30)));
 firstHand->firstHand([1..6,1..6,1..6,1..6]%sortPerm(random(24)));
 firstHand(all)->[all%[0..7],all%[8..15],all%[16..23]];
@@ -29,5 +29,13 @@ gameOver(L)->each(l,L,+,size(l)=0?1:0)=2;
 play(Hands,rounds>0)->[each(h,Hands,size(h))]|(gameOver(Hands)?[]:play(draw(Hands),rounds-1));
 play(Hands,rounds  )->[each(h,Hands,size(h))];
 
-each(n,[1..100],size(play(firstHand,1000)));
+plot(histogram(
+       each(n,
+            [1..1],
+            size(play(firstHand,200))),
+       10),
+     "bar");
+
+scramble(hand)->each(h,hand,h==[]?[]:h%sortPerm(random(size(h))));
+
 

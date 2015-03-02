@@ -1301,6 +1301,14 @@ FUNCTION false_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=newBoolLiteral(false);
   end;
 
+FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    if (tokenLocation.provider=nil) or
+       (tokenLocation.provider^.getPath='') then result:=newStringLiteral('<Unknown>')
+                                            else result:=newStringLiteral(tokenLocation.provider^.getPath);
+  end;
+
+
 INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
@@ -1358,6 +1366,7 @@ INITIALIZATION
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
   registerRule('plotAvailable' ,@false_impl,'returns false (because plotting is not available)');
+  registerRule('myPath',@myPath_impl,'returns the path to the current package');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

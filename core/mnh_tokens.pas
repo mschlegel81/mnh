@@ -512,7 +512,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinedLocalRules.addArr(rules.keySet);
     userDefinedLocalRules.unique;
     userDefinesImportedRules.clear;
-    for i:=0 to length(packageUses)-1 do begin
+    for i:=0 to length(packageUses)-1 do if (packageUses[i].pack<>nil) and packageUses[i].pack^.ready then begin
       packageId:=packageUses[i].id;
       ids:=packageUses[i].pack^.rules.keySet;
       for j:=0 to length(ids)-1 do begin

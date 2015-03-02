@@ -44,6 +44,6 @@ reverse(A:list)->A%[size(A)-1..0];
 
 histogram(L<>[])          ->histogram(L,1);
 histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
-histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<L<(i+1)*h,+,flag?1:0)/size(L)/h]);
+histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,flag?1:0)/size(L)/h]);
 
 
