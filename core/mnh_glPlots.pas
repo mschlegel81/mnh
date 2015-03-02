@@ -837,13 +837,10 @@ FUNCTION int_addplot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
         setLength(point,L^.size);
         for i:=0 to L^.size-1 do begin
           point[i,0]:=i;
-          if L^.value(i)^.literalType=lt_int then begin
-          end else begin
-          end;
-          point[i,1]
+          if L^.value(i)^.literalType=lt_int
+          then point[i,1]:=P_intLiteral(L^.value(i))^.value
+          else point[i,1]:=P_realLiteral(L^.value(i))^.value;
         end;
-
-
       end else begin
 
 
