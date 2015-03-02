@@ -119,7 +119,6 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         height:=480;
       end;
     end;
-
   end;
 
 procedure TSettingsForm.FontButtonClick(Sender: TObject);

@@ -1,6 +1,6 @@
 UNIT mnh_caches;
 INTERFACE
-USES mnh_litvar;
+USES mnh_litvar,mnh_out_adapters,sysutils,mnh_constants,mnh_tokloc;
 TYPE
   T_cacheEntry=record
     key:P_listLiteral;
@@ -51,7 +51,8 @@ DESTRUCTOR T_cache.destroy;
   VAR i:longint;
   begin
     clear;
-    
+    setLength(cached,0);
+
     i:=0;
     while (i<length(allCaches)) and (allCaches[i]<>@self) do inc(i);
     if (i<length(allCaches)) then begin
@@ -62,6 +63,7 @@ DESTRUCTOR T_cache.destroy;
 
 PROCEDURE T_cache.put(CONST key:P_listLiteral; CONST value:P_literal);
   VAR binIdx,i,j,tallyLimit:longint;
+      message:ansistring;
   begin
     binIdx:=key^.hash and CACHE_MOD;
     i:=0;
@@ -78,6 +80,7 @@ PROCEDURE T_cache.put(CONST key:P_listLiteral; CONST value:P_literal);
     
     if fill>cache_mod*4 then begin      
       tallyLimit:=useTally-2*cache_mod;
+      message:='Polishing cache '+IntToStr(fill);
       fill:=0;
       for binIdx:=0 to length(cached)-1 do begin
         j:=0;
@@ -91,6 +94,7 @@ PROCEDURE T_cache.put(CONST key:P_listLiteral; CONST value:P_literal);
         setLength(cached[binIdx],j);        
         inc(fill,j);
       end;
+      raiseError(el0_allOkay,message+' -> '+IntToStr(fill),C_nilTokenLocation);
     end;
   end;
 
@@ -123,7 +127,6 @@ PROCEDURE T_cache.clear;
       end;
       setLength(cached[i],0);
     end;
-    setLength(cached,0);
     useTally:=0;
   end;
 

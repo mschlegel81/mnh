@@ -7,6 +7,20 @@ TYPE
     line,column:longint;
   end;
 
+  T_idInfo=record
+    isUserDefined:boolean;
+    isBuiltIn:boolean;
+    filename:ansistring;
+    fileLine:longint;
+  end;
+
+  T_idInfoKeyValuePair=record
+    key:ansistring;
+    value:T_idInfo;
+  end;
+
+  T_idInfoKeyValueList=array of T_idInfoKeyValuePair;
+
 CONST
   C_nilTokenLocation:T_tokenLocation=(provider:nil; line:0; column:0);
 

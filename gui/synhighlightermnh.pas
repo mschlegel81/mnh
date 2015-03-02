@@ -118,8 +118,12 @@ begin
   styleTable[tkDeclarationOp].Style:=[fsBold];
 
   styleTable[tkUnknown]:=TSynHighlighterAttributes.Create('unknown');
+  styleTable[tkUnknown].Foreground:=clBlack;
+  styleTable[tkUnknown].Background:=$000088FF;
 
   styleTable[tkNull]:=TSynHighlighterAttributes.Create('null');
+  styleTable[tkNull].Foreground:=clBlack;
+  styleTable[tkNull].Background:=clYellow;
 end; { Create }
 
 destructor TSynMnhSyn.Destroy;

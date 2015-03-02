@@ -196,8 +196,7 @@ VAR boolLit:array[false..true] of T_boolLiteral;
 PROCEDURE disposeLiteral(VAR l:P_literal); 
   begin
     if l=nil then begin
-      writeln('disposing NIL literal ?!?');
-      readln;
+      writeln(stderr,'disposing NIL literal ?!?');
     end;
     if l^.unreference<=0 then dispose(l,destroy);
     l:=nil;

@@ -29,7 +29,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <WorkingDirectory Value=".."/>
+        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5"/>
       </local>
     </RunParams>
     <RequiredPackages Count="2">
@@ -82,10 +82,16 @@
       <OtherUnitFiles Value="..\core;..\util"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Linking>
+      <Debugging>
+        <UseExternalDbgSyms Value="True"/>
+      </Debugging>
+    </Linking>
     <Other>
       <CompilerMessages>
         <MsgFileName Value=""/>
       </CompilerMessages>
+      <CustomOptions Value="-ddebugMode"/>
       <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>

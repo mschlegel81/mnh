@@ -34,7 +34,7 @@ DESTRUCTOR T_rule.destroy;
     if isCached then cache.destroy;
   end;
 
-CONST STACK_DEPTH_LIMIT=50000;
+CONST STACK_DEPTH_LIMIT=45000;
   
 FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word):boolean;
   VAR i:longint;
@@ -54,16 +54,23 @@ FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token
       end else for i:=0 to length(subrules)-1 do if subrules[i]^.replaces(useParam,firstRep,lastRep) then begin
         if callDepth>=STACK_DEPTH_LIMIT then exit(true);
         
-        reduceExpression(firstRep,callDepth+1);
+        if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1);
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
           cache.put(useParam,lit);
         end;  
         lastRep:=firstRep^.last;
         if param=nil then disposeLiteral(useParam);
+        if (errorLevel>=el3_evalError) then begin
+          if (callDepth mod 1000)=0 then raiseError(el0_allOkay,'Quitting evaluation of cached rule on level '+IntToStr(callDepth),C_nilTokenLocation);
+          cascadeDisposeToken(firstRep);
+          firstRep:=newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
+          lastRep:=firstRep;
+        end;
         exit(true);
       end;
       result:=false;
+
     end else begin
       for i:=0 to length(subrules)-1 do if subrules[i]^.replaces(param,firstRep,lastRep) then exit(true);
       result:=false;

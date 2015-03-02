@@ -4,53 +4,48 @@ USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mn
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
-TYPE T_idInfo=record
-       isUserDefined:boolean;
-       isBuiltIn:boolean;
-       filename:ansistring;
-       fileLine:longint;
-     end;
 
-PROCEDURE ad_copyLinesToWrapper(CONST L:TStrings);
 PROCEDURE ad_clearFile;
-PROCEDURE ad_evaluate;
+PROCEDURE ad_evaluate(CONST L:TStrings);
 PROCEDURE ad_haltEvaluation;
 PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
 FUNCTION ad_currentFile:string;
 FUNCTION ad_evaluationRunning:Boolean;
 FUNCTION ad_getIdInfo(CONST id:string):T_idInfo;
-
 PROCEDURE ad_killEvaluationLoopSoftly;
+VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
+    startOfEvaluation  :specialize G_safeVar<double>;
+    endOfEvaluationText:specialize G_safeVar<AnsiString>;
+    startOfEvaluationCallback:PROCEDURE;
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
-    evaluationState  :specialize G_safeVar<T_evaluationState>;
-    startOfEvaluation:specialize G_safeVar<double>;
-VAR infoMap:specialize G_stringKeyMap<T_idInfo>;
-    infoMapCS:TRTLCriticalSection;
+    infoMapCs:TRTLCriticalSection;
+    infoMap:specialize G_stringKeyMap<T_idInfo>;
 
 FUNCTION main(p:pointer):ptrint;
+  VAR idleCount:longint=0;
   begin
     evaluationState.value:=es_idle;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
-        writeln('EVALUATION TRIGGERED');
+        idleCount:=0;
         pendingRequest.value:=er_none;
         evaluationState.value:=es_running;
         startOfEvaluation.value:=now;
+        startOfEvaluationCallback();
         reloadMainPackage;
-        //EnterCriticalsection(infoMapCS);
-        //infoMap.clear;
-        //LeaveCriticalsection(infoMapCS);
+        raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
+        EnterCriticalsection(infoMapCS);
+        infoMap.clear;
+        LeaveCriticalsection(infoMapCS);
         evaluationState.value:=es_idle;
-      end;
+        if hasMessage(el5_systemError,HALT_MESSAGE)
+        then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
+        else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
+      end else inc(idleCount);
       sleep(10);
-    until pendingRequest.value<>er_evaluate;
+    until (pendingRequest.value<>er_evaluate) and (idleCount>100) or (pendingRequest.value=er_die);
     evaluationState.value:=es_dead;
-  end;
-
-procedure ad_copyLinesToWrapper(const L: TStrings);
-  begin
-    mainPackageProvider.setLines(L);
   end;
 
 procedure ad_clearFile;
@@ -60,8 +55,10 @@ procedure ad_clearFile;
     mainPackageProvider.clear;
   end;
 
-procedure ad_evaluate;
+procedure ad_evaluate(const L: TStrings);
   begin
+    while evaluationState.value=es_running do sleep(1);
+    mainPackageProvider.setLines(L);
     pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -73,6 +70,7 @@ procedure ad_haltEvaluation;
   begin
     if evaluationState.value=es_running then haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
+    raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
 
 procedure ad_setFile(const path: string; const L: TStrings);
@@ -130,12 +128,17 @@ function ad_getIdInfo(const id: string): T_idInfo;
           end else begin
             isBuiltIn:=false;
             isUserDefined:=false;
-            filename:=locateSource(id);
+            filename:=p^.locationOfUsedPackage(id);
             fileLine:=-1;
           end;
         end;
         infoMap.put(id,result);
         t.destroy;
+      end else with result do begin
+        isBuiltIn:=false;
+        isUserDefined:=false;
+        filename:='';
+        fileLine:=-1;
       end;
     end;
     LeaveCriticalsection(infoMapCS);
@@ -153,14 +156,16 @@ INITIALIZATION
   pendingRequest.create(er_none);
   evaluationState.create(es_dead);
   startOfEvaluation.create(now);
+  endOfEvaluationText.create('');
   beginThread(@main);
 
 FINALIZATION
   ad_killEvaluationLoopSoftly;
-  infoMap.destroy;
   pendingRequest.destroy;
   evaluationState.destroy;
   startOfEvaluation.destroy;
+  endOfEvaluationText.destroy;
+  infoMap.destroy;
   DoneCriticalsection(infoMapCS);
   
 end.

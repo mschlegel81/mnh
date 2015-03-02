@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
@@ -834,50 +834,185 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
+FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR accessed:boolean;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
+      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+    end else raiseNotApplicableError('fileContents',params,tokenLocation);
+  end;
 
-{$WARNING TODO: readFile(filename)}
-{$WARNING TODO: writeFile(filename,string)}
-{$WARNING TODO: replace(full,original,subst)}
-{$WARNING TODO: replaceAll(full,original,subst)}
+FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR accessed:boolean;
+      L:T_stringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
+      result:=newListLiteral;
+      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
+      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+    end else raiseNotApplicableError('fileLines',params,tokenLocation);
+  end;
+
+FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR ok:boolean;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
+                                          and (params^.value(1)^.literalType=lt_string) then begin
+      ok:=writeFile(P_stringLiteral(params^.value(0))^.value,
+                    P_stringLiteral(params^.value(1))^.value);
+      result:=newBoolLiteral(ok);
+      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+    end else raiseNotApplicableError('writeFile',params,tokenLocation);
+  end;
+
+FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR ok:boolean;
+      L:T_stringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
+                                          and (params^.value(1)^.literalType=lt_stringList) then begin
+      setLength(L,P_listLiteral(params^.value(1))^.size);
+      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+      ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L);
+      result:=newBoolLiteral(ok);
+      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+    end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
+  end;
+
+FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR originalAndResult:ansistring;
+      lookFor,replaceBy:P_literal;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) then begin
+      originalAndResult :=P_stringLiteral(params^.value(0))^.value;
+      lookFor  :=params^.value(1);
+      replaceBy:=params^.value(2);
+      if lookFor^.literalType=lt_string then begin
+        if replaceBy^.literalType=lt_string then begin
+          originalAndResult:=replaceOne(originalAndResult,
+                                        P_stringLiteral(lookFor)^.value,
+                                        P_stringLiteral(replaceBy)^.value);
+        end else if replaceBy^.literalType=lt_stringList then begin
+          for i:=0 to P_listLiteral(replaceBy)^.size-1 do
+          originalAndResult:=replaceOne(originalAndResult,
+                                        P_stringLiteral(lookFor)^.value,
+                                        P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value);
+        end else raiseNotApplicableError('replaceOne',params,tokenLocation);
+      end else if lookFor^.literalType=lt_stringList then begin
+        if replaceBy^.literalType=lt_string then begin
+          for i:=0 to P_listLiteral(lookFor)^.size-1 do
+          originalAndResult:=replaceOne(originalAndResult,
+                                        P_stringLiteral(P_listLiteral(lookFor)^.value(i))^.value,
+                                        P_stringLiteral(replaceBy)^.value);
+        end else if (replaceBy^.literalType=lt_stringList) and (P_listLiteral(lookFor)^.size=P_listLiteral(replaceBy)^.size) then begin
+          for i:=0 to P_listLiteral(lookFor)^.size-1 do
+          originalAndResult:=replaceOne(originalAndResult,
+                                        P_stringLiteral(P_listLiteral(lookFor  )^.value(i))^.value,
+                                        P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value);
+        end else raiseNotApplicableError('replaceOne',params,tokenLocation);
+      end else raiseNotApplicableError('replaceOne',params,tokenLocation);
+      result:=newStringLiteral(originalAndResult);
+    end else raiseNotApplicableError('replaceOne',params,tokenLocation);
+  end;
+
+FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR originalAndResult:ansistring;
+      lookFor,replaceBy:P_literal;
+      i:longint;
+      ok:boolean=true;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) then begin
+      originalAndResult :=P_stringLiteral(params^.value(0))^.value;
+      lookFor  :=params^.value(1);
+      replaceBy:=params^.value(2);
+      if lookFor^.literalType=lt_string then begin
+        if replaceBy^.literalType=lt_string then begin
+          originalAndResult:=replaceRecursively(originalAndResult,
+                                                P_stringLiteral(lookFor)^.value,
+                                                P_stringLiteral(replaceBy)^.value,
+                                                ok);
+        end else if replaceBy^.literalType=lt_stringList then begin
+          for i:=0 to P_listLiteral(replaceBy)^.size-1 do
+          originalAndResult:=replaceRecursively(originalAndResult,
+                                                P_stringLiteral(lookFor)^.value,
+                                                P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value,
+                                                ok);
+        end else raiseNotApplicableError('replace',params,tokenLocation);
+      end else if lookFor^.literalType=lt_stringList then begin
+        if replaceBy^.literalType=lt_string then begin
+          for i:=0 to P_listLiteral(lookFor)^.size-1 do
+          originalAndResult:=replaceRecursively(originalAndResult,
+                                                P_stringLiteral(P_listLiteral(lookFor)^.value(i))^.value,
+                                                P_stringLiteral(replaceBy)^.value,
+                                                ok);
+        end else if (replaceBy^.literalType=lt_stringList) and (P_listLiteral(lookFor)^.size=P_listLiteral(replaceBy)^.size) then begin
+          for i:=0 to P_listLiteral(lookFor)^.size-1 do
+          originalAndResult:=replaceRecursively(originalAndResult,
+                                                P_stringLiteral(P_listLiteral(lookFor  )^.value(i))^.value,
+                                                P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value,
+                                                ok);
+        end else raiseNotApplicableError('replace',params,tokenLocation);
+      end else raiseNotApplicableError('replace',params,tokenLocation);
+      result:=newStringLiteral(originalAndResult);
+    end else raiseNotApplicableError('replace',params,tokenLocation);
+  end;
+
 {$WARNING TODO: callSync(executablepath)}
 {$WARNING TODO: callAsync(executablepath)}
 
 INITIALIZATION
   intrinsicRuleMap.create;
-  registerRule('print'     ,@print_imp     );
-  registerRule('sqr'       ,@sqr_imp       );
-  registerRule('sqrt'      ,@sqrt_imp      );
-  registerRule('sin'       ,@sin_imp       );
-  registerRule('arcsin'    ,@arcsin_imp    );
-  registerRule('cos'       ,@cos_imp       );
-  registerRule('arccos'    ,@arccos_imp    );
-  registerRule('tan'       ,@tan_imp       );
-  registerRule('arctan'    ,@arctan_imp    );
-  registerRule('exp'       ,@exp_imp       );
-  registerRule('ln'        ,@ln_imp        );
-  registerRule('round'     ,@round_imp     );
-  registerRule('ceil'      ,@ceil_imp      );
-  registerRule('floor'     ,@floor_imp     );
-  registerRule('head'      ,@head_imp      );
-  registerRule('tail'      ,@tail_imp      );
-  registerRule('sort'      ,@sort_imp      );
-  registerRule('sortPerm'  ,@sortPerm_imp  );
-  registerRule('flatten'   ,@flatten_imp   );
-  registerRule('random'    ,@random_imp    );
-  registerRule('max'       ,@max_imp       );
-  registerRule('min'       ,@min_imp       );
-  registerRule('size'      ,@size_imp      );
-  registerRule('time'      ,@time_imp      );
-  registerRule('split'     ,@split_imp     );
-  registerRule('softCast'  ,@softCast_imp  );
-  registerRule('trim'      ,@trim_imp      );
-  registerRule('upper'     ,@upper_imp     );
-  registerRule('lower'     ,@lower_imp     );
-  registerRule('string'    ,@string_imp    );
-  registerRule('expression',@expression_imp);
-  registerRule('files'     ,@files_impl    );
-  registerRule('folders'   ,@folders_impl  );
-  registerRule('fileExists',@fileExists_impl);
+  registerRule('print'         ,@print_imp     );
+  registerRule('sqr'           ,@sqr_imp       );
+  registerRule('sqrt'          ,@sqrt_imp      );
+  registerRule('sin'           ,@sin_imp       );
+  registerRule('arcsin'        ,@arcsin_imp    );
+  registerRule('cos'           ,@cos_imp       );
+  registerRule('arccos'        ,@arccos_imp    );
+  registerRule('tan'           ,@tan_imp       );
+  registerRule('arctan'        ,@arctan_imp    );
+  registerRule('exp'           ,@exp_imp       );
+  registerRule('ln'            ,@ln_imp        );
+  registerRule('round'         ,@round_imp     );
+  registerRule('ceil'          ,@ceil_imp      );
+  registerRule('floor'         ,@floor_imp     );
+  registerRule('head'          ,@head_imp      );
+  registerRule('tail'          ,@tail_imp      );
+  registerRule('sort'          ,@sort_imp      );
+  registerRule('sortPerm'      ,@sortPerm_imp  );
+  registerRule('flatten'       ,@flatten_imp   );
+  registerRule('random'        ,@random_imp    );
+  registerRule('max'           ,@max_imp       );
+  registerRule('min'           ,@min_imp       );
+  registerRule('size'          ,@size_imp      );
+  registerRule('time'          ,@time_imp      );
+  registerRule('split'         ,@split_imp     );
+  registerRule('softCast'      ,@softCast_imp  );
+  registerRule('trim'          ,@trim_imp      );
+  registerRule('upper'         ,@upper_imp     );
+  registerRule('lower'         ,@lower_imp     );
+  registerRule('string'        ,@string_imp    );
+  registerRule('expression'    ,@expression_imp);
+  registerRule('files'         ,@files_impl    );
+  registerRule('folders'       ,@folders_impl  );
+  registerRule('fileExists'    ,@fileExists_impl);
+  registerRule('fileContents'  ,@fileContents_impl);
+  registerRule('fileLines'     ,@fileLines_impl);
+  registerRule('writeFile'     ,@writeFile_impl);
+  registerRule('writeFileLines',@writeFileLines_impl);
+  registerRule('replaceOne'    ,@replaceOne_impl);
+  registerRule('replace'       ,@replace_impl);
 
 FINALIZATION
   intrinsicRuleMap.destroy;

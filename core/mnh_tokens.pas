@@ -40,6 +40,7 @@ TYPE
       FUNCTION ruleLocation(CONST identifier:ansistring):T_tokenLocation;
       FUNCTION ensureLocalRuleId(CONST ruleId:ansistring):P_rule;
       FUNCTION ensurePublicRuleId(CONST ruleId:ansistring):P_rule;
+      FUNCTION getIdInfoList:T_idInfoKeyValueList;
   end;
 
 CONST C_id_qualify_character='.';
@@ -56,14 +57,14 @@ IMPLEMENTATION
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
-VAR packages:array of P_package;
-
+VAR secondaryPackages:array of P_package;
+    mainPackage      :T_package;
+    packagesAreFinalized:boolean=false;
+    
 FUNCTION isReloadOfMainPackageIndicated:boolean;
   begin
     EnterCriticalsection(poolCs);
-    result:=(length(packages)>0) and
-            (packages[0]<>nil) and
-            (packages[0]^.needReload);
+    result:=not(packagesAreFinalized) and mainPackage.needReload;
     DoneCriticalsection(poolCs);
   end;
 
@@ -73,87 +74,56 @@ PROCEDURE reloadMainPackage;
   begin
     clearAllCaches;
     clearErrors;
-    if length(packages)>0 then packages[0]^.load;
+    mainPackage.load;
 
     //housekeeping:-------------------------------------------------------------
     used.create;
-    for i:=1 to length(packages)-1 do
-    for j:=0 to length(packages[i]^.packageUses)-1 do used.add(packages[i]^.packageUses[j].id);
+    for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
+    for i:=0 to length(secondaryPackages)-1 do
+    for j:=0 to length(secondaryPackages[i]^.packageUses)-1 do used.add(secondaryPackages[i]^.packageUses[j].id);
     used.unique;
-    j:=1;
-    for i:=1 to length(packages)-1 do begin
-      if used.contains(packages[i]^.codeProvider^.id) then begin
-        if j<>i then packages[j]:=packages[i]; inc(j);
+    j:=0;
+    for i:=0 to length(secondaryPackages)-1 do begin
+      if used.contains(secondaryPackages[i]^.codeProvider^.id) then begin
+        if j<>i then secondaryPackages[j]:=secondaryPackages[i]; inc(j);
       end else begin
-        dispose(packages[j],destroy);
+        dispose(secondaryPackages[j],destroy);
       end;
     end;
-    setLength(packages,j);
+    setLength(secondaryPackages,j);
     used.destroy;
     //-------------------------------------------------------------:housekeeping
   end;
-
+  
 PROCEDURE finalizePackages;
   VAR i:longint;
   begin
+    if packagesAreFinalized then exit;
     EnterCriticalsection(poolCs);
+    mainPackage.destroy;
+    mainPackageProvider.destroy;  
     clearAllCaches;
     clearErrors;
     clearSourceScanPaths;
-    for i:=length(packages)-1 downto 1 do dispose(packages[i],destroy);
-    setLength(packages,1);
+    for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
+    setLength(secondaryPackages,0);
+    packagesAreFinalized:=true;
     LeaveCriticalsection(poolCs);
   end;
-
-//FUNCTION canResolveInMainPackage(const id: ansistring): byte;
-//  begin
-//    EnterCriticalsection(poolCs);
-//    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
-//    then result:=0
-//    else result:=packages[0]^.canResolveId(id);
-//    LeaveCriticalsection(poolCs);
-//  end;
-//
-//FUNCTION getRuleLocation(CONST id:ansistring):T_tokenLocation;
-//  begin
-//    EnterCriticalsection(poolCs);
-//    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
-//    then result:=C_nilTokenLocation
-//    else result:=packages[0]^.ruleLocation(id);
-//    LeaveCriticalsection(poolCs);
-//  end;
-//
-//FUNCTION getPackageLocation(const id: ansistring): T_tokenLocation;
-//  VAR i:longint;
-//  begin
-//    EnterCriticalsection(poolCs);
-//    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready)
-//    then result:=C_nilTokenLocation
-//    else with packages[0]^ do begin
-//      for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then begin
-//        result.provider:=packageUses[i].pack^.codeProvider;
-//        result.line:=1;
-//        result.column:=1;
-//        exit(result);
-//      end;
-//    end;
-//    result:=C_nilTokenLocation;
-//    LeaveCriticalsection(poolCs);
-//  end;
 
 FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation):P_package;
   VAR i:longint;
       newSourceName:ansistring;
       newSource:P_codeProvider=nil;
   begin
-    for i:=0 to length(packages)-1 do 
-      if packages[i]^.codeProvider^.id = packageId then begin
-        if packages[i]^.ready then begin
-          if packages[i]^.needReload then begin
-            packages[i]^.clear;
-            packages[i]^.load;
+    for i:=0 to length(secondaryPackages)-1 do 
+      if secondaryPackages[i]^.codeProvider^.id = packageId then begin
+        if secondaryPackages[i]^.ready then begin
+          if secondaryPackages[i]^.needReload then begin
+            secondaryPackages[i]^.clear;
+            secondaryPackages[i]^.load;
           end;
-          exit(packages[i]);
+          exit(secondaryPackages[i]);
         end else begin
           raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+packageId+'"',tokenLocation);
           exit(nil);
@@ -164,8 +134,8 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
     if newSourceName<>'' then begin
       new(newSource,create(newSourceName));
       new(result,create(newSource));
-      setLength(packages,length(packages)+1);
-      packages[length(packages)-1]:=result;
+      setLength(secondaryPackages,length(secondaryPackages)+1);
+      secondaryPackages[length(secondaryPackages)-1]:=result;
       result^.load;
     end else begin
       raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
@@ -477,8 +447,8 @@ procedure T_package.load;
       location:T_TokenLocation;
   begin
     clear;
-    codeLines:=codeProvider^.getLines;
     loadedVersion:=codeProvider^.getVersion(true);
+    codeLines:=codeProvider^.getLines;
 
     first:=nil;
     next :=nil;
@@ -513,7 +483,7 @@ procedure T_package.load;
       if first<>nil then interpret(first);
     end else cascadeDisposeToken(first);
     ready:=true;
-    raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokenLocation(codeProvider));
+    raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
   end;
 
 constructor T_package.create(const provider: P_codeProvider);
@@ -565,7 +535,7 @@ procedure T_package.resolveRuleId(var token: T_token;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
       packageId,ruleId:ansistring;
-  begin
+  begin    
     i:=pos(C_id_qualify_character,token.txt);
     if i>0 then begin
       packageId:=copy(token.txt,1,i-1);
@@ -574,7 +544,6 @@ procedure T_package.resolveRuleId(var token: T_token;
       packageId:='';
       ruleId   :=token.txt;
     end;
-
     if ((packageId=codeProvider^.id) or (packageId=''))
     and localRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_userRulePointer;
@@ -583,7 +552,8 @@ procedure T_package.resolveRuleId(var token: T_token;
     end;
 
     for i:=length(packageUses)-1 downto 0 do
-    if ((packageId=packageUses[i].id) or (packageId='')) 
+    if ((packageId=packageUses[i].id) or (packageId=''))
+    and (packageUses[i].pack<>nil)
     and packageUses[i].pack^.publicRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_userRulePointer;
       token.data:=userRule;
@@ -661,6 +631,7 @@ function T_package.ensureLocalRuleId(const ruleId: ansistring): P_rule;
     if not(localRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
       localRules.put(ruleId,result);
+      raiseError(el0_allOkay,'New private rule '+ruleId,C_nilTokenLocation);
     end;
   end;
 
@@ -669,7 +640,48 @@ function T_package.ensurePublicRuleId(const ruleId: ansistring): P_rule;
     if not(publicRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
       publicRules.put(ruleId,result);
+      raiseError(el0_allOkay,'New public rule '+ruleId,C_nilTokenLocation);
     end;
+  end;
+
+function T_package.getIdInfoList: T_idInfoKeyValueList;
+  VAR i,j:longint;
+      e:T_idInfoKeyValuePair;
+      list:T_arrayOfString;
+  begin
+    setLength(result,0);
+    for i:=0 to length(packageUses)-1 do begin
+      e.key:=packageUses[i].id;
+      e.value.fileLine:=0;
+      e.value.filename:=packageUses[i].pack^.codeProvider^.getPath;
+      e.value.isBuiltIn:=false;
+      e.value.isUserDefined:=false;
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=e;
+    end;
+    list:=intrinsicRuleMap.keySet;
+    for i:=0 to length(list)-1 do begin
+      e.key:=list[i];
+      e.value.fileLine:=-1;
+      e.value.filename:='';
+      e.value.isBuiltIn:=true;
+      e.value.isUserDefined:=false;
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=e;
+    end;
+    for j:=0 to length(packageUses)-1 do begin
+      e.key:=list[i];
+      e.value.fileLine:=-1;
+      e.value.filename:='';
+      e.value.isBuiltIn:=true;
+      e.value.isUserDefined:=false;
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=e;
+    end;
+
+
+
+    result:='';
   end;
 
 //FUNCTION packagePointerToSource(CONST package:pointer):P_codeProvider;
@@ -721,10 +733,10 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       parLit:P_listLiteral;
       i:longint;
   begin
-    if (length(packages)<=0) or (packages[0]=nil) or not(packages[0]^.ready) or (errorLevel>el0_allOkay) then exit;
+    if not(mainPackage.ready) or (errorLevel>el0_allOkay) then exit;
     finalizeTokens;
     t:=newToken(C_nilTokenLocation,'main',tt_identifier);
-    packages[0]^.resolveRuleId(t^,false);
+    mainPackage.resolveRuleId(t^,false);
     if t^.tokType=tt_literal then raiseError(el3_evalError,'The specified package contains no main rule.',C_nilTokenLocation)
     else begin
       parLit:=newListLiteral;
@@ -737,14 +749,14 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 
 function getMainPackage: P_package;
   begin
-    if length(packages)>0 then result:=packages[0] else result:=nil;
+    result:=@mainPackage;
   end;
 
 INITIALIZATION
-  mainPackageProvider.create;
   InitCriticalSection(poolCs);
-  setLength(packages,1);
-  new(packages[0],create(@mainPackageProvider));
+  mainPackageProvider.create;
+  mainPackage.create(@mainPackageProvider);
+  setLength(secondaryPackages,0);
   {$ifdef doTokenRecycling}
   tokenRecycling.fill:=0;
   {$endif}
@@ -756,7 +768,6 @@ INITIALIZATION
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
 FINALIZATION
-  mainPackageProvider.destroy;
   finalizePackages;
   finalizeTokens;
   DoneCriticalsection(poolCs);

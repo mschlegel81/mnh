@@ -11,8 +11,8 @@ FUNCTION formatTabs(s:ansistring):ansistring;
 FUNCTION isBlank(CONST s:ansistring):boolean;
 //FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
 FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
-//FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
-//FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
+FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
+FUNCTION replaceOne(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
 FUNCTION escapeString(CONST s:ansistring):ansistring;
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
 FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
@@ -56,7 +56,7 @@ FUNCTION formatTabs(s:ansistring):ansistring;
       //s contains no tabs -> no processing needed
       result:=s;
     end else if pb<=0 then begin
-      //s contains no line break but tabs -> replace all tabs by spaces;
+      //s contains no line break but tabs -> replaceOne all tabs by spaces;
       while pt>0 do begin
         s[pt]:=' ';
         pt:=pos(C_tabChar,s);
@@ -146,7 +146,7 @@ FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLen
     inputAndRest:=copy(inputAndRest,i+1,length(inputAndRest)-1);
   end;
 
-FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
+FUNCTION replaceOne(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
   VAR p:longint;
   begin
     p:=pos(lookFor,original);
@@ -160,7 +160,7 @@ FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isV
   begin
     if pos(lookFor,replaceBy)>0 then begin
       isValid:=false;
-      exit('');
+      exit(replaceAll(original,lookFor,replaceBy));
     end else isValid:=true;
     p:=pos(lookFor,original);
     if p>0 then begin
@@ -168,7 +168,6 @@ FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isV
       p:=pos(lookFor,original);
     end else result:=original;
   end;
-
 
 FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
     VAR p:longint;

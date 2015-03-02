@@ -4,8 +4,13 @@ USES mnh_stringutil, mnh_constants, mnh_tokLoc;
 CONST HALT_MESSAGE='Evaluation haltet (most probably by user).';
 
 TYPE
+  T_storedError=record
+                  errorLevel:T_errorLevel;
+                  errorMessage:ansistring;
+                  errorLocation:T_tokenLocation
+                end;
   T_writeCallback=PROCEDURE(CONST s:ansistring);
-  T_writeErrorCallback=PROCEDURE(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+  T_writeErrorCallback=PROCEDURE(CONST error:T_storedError);
 
 VAR inputDeclEcho,
     inputExprEcho,
@@ -20,21 +25,17 @@ PROCEDURE writeExprEcho(CONST s:ansistring);
 PROCEDURE writeExprOut (CONST s:ansistring);
 PROCEDURE writePrint   (CONST s:ansistring);
 PROCEDURE clearErrors;
-PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+PROCEDURE raiseError(CONST thisErrorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
 FUNCTION errorLevel:T_errorLevel;
 
 PROCEDURE plainConsoleOut(CONST s:ansistring);
-PROCEDURE plainStdErrOut(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+PROCEDURE plainStdErrOut(CONST error:T_storedError);
 
 FUNCTION isMemoryFree(CONST usage:string):boolean;
 
 PROCEDURE haltEvaluation;
 
-VAR storedErrors:array of record
-                   errorLevel:T_errorLevel;
-                   errorMessage:ansistring;
-                   errorLocation:T_tokenLocation
-                 end;
+VAR storedErrors:array of T_storedError;
 FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
 IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;
@@ -67,16 +68,18 @@ PROCEDURE clearErrors;
     setLength(storedErrors,0);
   end;
 
-PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+PROCEDURE raiseError(CONST thisErrorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
   VAR i:longint;
+      newError:T_storedError;
   begin
-    if errorLevel>maxErrorLevel then maxErrorLevel:=errorLevel;
-    if errorOut<>nil then errorOut(errorLevel,errorMessage,errorLocation);
+    newError.errorLevel   :=thisErrorLevel;
+    newError.errorMessage :=errorMessage;
+    newError.errorLocation:=errorLocation;
+    if thisErrorLevel>maxErrorLevel then maxErrorLevel:=thisErrorLevel;
     i:=length(storedErrors);
     setLength(storedErrors,i+1);
-    storedErrors[i].errorLevel   :=errorLevel;
-    storedErrors[i].errorMessage :=errorMessage;
-    storedErrors[i].errorLocation:=errorLocation;
+    storedErrors[i]:=newError;
+    if errorOut<>nil then errorOut(newError);
   end;
 
 FUNCTION hasMessage(CONST level:T_errorLevel; CONST message:AnsiString):boolean;
@@ -98,9 +101,9 @@ PROCEDURE plainConsoleOut(CONST s:ansistring);
     writeln(s);
   end;
 
-PROCEDURE plainStdErrOut(CONST errorLevel:T_errorLevel; CONST errorMessage:ansistring; CONST errorLocation:T_tokenLocation);
+PROCEDURE plainStdErrOut(CONST error:T_storedError);
   begin
-    writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
+    with error do writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
   end;
 
 VAR MEMORY_MANAGER:TMemoryManager;

@@ -1,5 +1,4 @@
 UNIT mnh_fileWrappers;
-{$WARNING TODO: Cleanup unit.}
 INTERFACE
 USES sysutils,classes;
 TYPE
@@ -23,6 +22,7 @@ TYPE
       FUNCTION getLines:T_stringList;
       PROCEDURE setLines(CONST value:T_stringList);
       PROCEDURE setLines(CONST value:TStrings);
+      PROCEDURE setLines(CONST value:ansistring);
 
       PROCEDURE setPath(CONST path:ansistring);
       FUNCTION getPath:ansistring;
@@ -98,7 +98,7 @@ FUNCTION fileContent(CONST name:ansistring; OUT accessed:boolean):ansistring;
   VAR handle:file of char;
       block:array[0..1023] of char;
       actuallyRead,i:longint;
-  begin
+  begin    
     if trim(name)='' then begin
       accessed:=false;
       exit;
@@ -147,6 +147,7 @@ FUNCTION writeFile(CONST name,textToWrite:ansistring):boolean;
       block:array[0..1023] of char;
       i,j:longint;
   begin
+    if trim(name)='' then exit(false);
     try
       result:=true;
       assign(handle,name);
@@ -171,6 +172,7 @@ FUNCTION writeFileLines(CONST name:ansistring; CONST textToWrite:T_stringList):b
   VAR handle:TextFile;
       i:longint;
   begin
+    if trim(name)='' then exit(false);
     try
       assign(handle,name);
       rewrite(handle);
@@ -221,7 +223,14 @@ procedure T_codeProvider.setLines(const value: TStrings);
     for i:=0 to value.Count-1 do lineData[i]:=value[i];
     inc(version);
   end;
-
+  
+PROCEDURE T_codeProvider.setLines(CONST value:ansistring);
+  begin
+    setLength(lineData,1);
+    lineData[0]:=value;
+    inc(version);
+  end;
+  
 constructor T_codeProvider.create;
   begin
     clear;
@@ -292,10 +301,10 @@ function T_codeProvider.getVersion(const reloadIfNecessary: boolean): longint;
 function T_codeProvider.id: ansistring;
   VAR i:longint;
   begin
-    result:=filename;
+    result:=filename;    
     i:=1;
     while (i<=length(result)) and (result[i] in ['a'..'z','A'..'Z','0'..'9','_']) do inc(i);
-    result:=copy(result,1,i);
+    result:=copy(result,1,i-1);
   end;
 
 procedure T_codeProvider.clear;

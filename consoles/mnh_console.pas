@@ -1,7 +1,6 @@
 PROGRAM mnh_console;
 USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils;
-VAR input_adapter:P_directInputWrapper;
-    nextInput:ansistring;
+VAR nextInput:ansistring;
 
 PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('dec>',s); end;
 PROCEDURE inputExprEcho(CONST s:ansistring); begin writeln('in >',s); end;
@@ -21,14 +20,12 @@ PROCEDURE interactiveMode;
     writeln;    
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
-    new(input_adapter,create);
-    initMainPackage(input_adapter);
+    
     write('>'); readln(nextInput);
     while (uppercase(trim(nextInput))<>'EXIT') do begin
-      input_adapter^.setInput(nextInput);
+      mainPackageProvider.setLines(nextInput);
       time:=now;
-      if isReloadOfAllPackagesIndicated then reloadAllPackages
-                                        else reloadMainPackage;
+      reloadMainPackage;
       writeln('time: ',(now-time)*24*60*60:0:3,'sec');
       write('>'); readln(nextInput);
     end;
@@ -45,10 +42,9 @@ PROCEDURE fileMode;
     setLength(par,paramCount-1);
     for i:=2 to paramCount do par[i-2]:=paramStr(i);
 
-    initMainPackage(paramstr(1));
+    mainPackageProvider.setPath(paramstr(1));
     reloadMainPackage;
     callMainInMain(par);
-    clearAllPackages;    
   end;
   
 begin

@@ -1,4 +1,5 @@
 fib(i>1)->fib(i-1)+fib(i-2);
 fib(i)->1;
+CACHE fib;
 
-//fibTime(i)->each(L,flatten("par=",i,time({fib(i)})),&"\t"&);
+fibTime(i)->each(L,flatten("par=",i,time({fib(i)})),&"\t"&);
