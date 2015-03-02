@@ -1,0 +1,167 @@
+
+C:\Users\schlegel\Documents\mnh5>c:\lazarus\fpc\2.6.4\bin\i386-win32\fpc consoles\mnh_console.pas -S2 -glch -CirRt -Fucore -Fuutil -Fu..\core -Fu..\util 
+Free Pascal Compiler version 2.6.4 [2014/04/18] for i386
+Copyright (c) 1993-2014 by Florian Klaempfl and others
+Target OS: Win32 for i386
+Compiling consoles\mnh_console.pas
+Compiling .\core\mnh_tokens.pas
+Compiling .\util\myGenerics.pas
+Compiling .\core\mnh_constants.pas
+Compiling .\core\mnh_stringutil.pas
+mnh_stringutil.pas(2,2) Warning: User defined: TODO: Cleanup unit.
+Compiling .\core\mnh_litvar.pas
+Compiling .\core\mnh_out_adapters.pas
+Compiling .\core\mnh_tokloc.pas
+Compiling .\core\mnh_fileWrappers.pas
+mnh_fileWrappers.pas(2,2) Warning: User defined: TODO: Cleanup unit.
+mnh_fileWrappers.pas(71,2) Warning: User defined: TODO: FUNCTION writeFileLines(CONST name:ansistring; CONST textToWrite:T_stringList):boolean;
+mnh_litvar.pas(1149,36) Warning: Converting pointers to signed integers may result in wrong comparison results and range errors, use an unsigned type instead.
+mnh_litvar.pas(1163,169) Warning: User defined: TODO Does this cover Nan and Inf?
+Compiling .\core\mnh_funcs.pas
+mnh_funcs.pas(940,2) Warning: User defined: TODO: fileExists(filename)
+mnh_funcs.pas(941,2) Warning: User defined: TODO: readFile(filename)
+mnh_funcs.pas(942,2) Warning: User defined: TODO: writeFile(filename,string)
+mnh_funcs.pas(943,2) Warning: User defined: TODO: replace(full,original,subst)
+mnh_funcs.pas(944,2) Warning: User defined: TODO: replaceAll(full,original,subst)
+mnh_funcs.pas(945,2) Warning: User defined: TODO: callSync(executablepath)
+mnh_funcs.pas(946,2) Warning: User defined: TODO: callAsync(executablepath)
+mnh_tokens.pas(692,8) Warning: User defined: TODO for more tolerance, maybe try a soft cast
+Linking consoles\mnh_console.exe
+7789 lines compiled, 0.5 sec , 234304 bytes code, 31596 bytes data
+13 warning(s) issued
+
+C:\Users\schlegel\Documents\mnh5>consoles\mnh_console.exe packages\ackermann.mnh        
+@0031DD78 : 00317148 : ackermann
+@0031DDE8 : 00316F68 : (
+@0031DE58 : 00317208 : m
+@0031DEC8 : 003170E8 : =
+@0031DF38 : 003171A8 : 0
+@0031DFA8 : 003171A8 : ,
+@0031E018 : 00317388 : n
+@0031E088 : 003172C8 : )
+@0031E0F8 : 00317328 : ->
+@0031E168 : 003174A8 : n
+@0031E248 : 003173E8 : +
+@0031E1D8 : 00317448 : 1
+@0031E328 : 00317568 : ;
+@0031E1D8 : 003175C8 : ackermann
+@0031E248 : 00317148 : (
+@0031E168 : 00317688 : m
+@0031E0F8 : 00317448 : ,
+@0031E088 : 00317748 : n
+@0031E018 : 00317628 : =
+@0031DFA8 : 003176E8 : 0
+@0031DF38 : 003176E8 : )
+@0031DEC8 : 003177A8 : ->
+@0031DE58 : 003178C8 : ackermann
+@0031DDE8 : 00317808 : (
+@0031DD78 : 00317988 : m
+@0031E328 : 00317868 : -
+@0031E2B8 : 00317928 : 1
+@0031E408 : 00317928 : ,
+@0031E478 : 003179E8 : 1
+@0031E4E8 : 003179E8 : )
+@0031E5C8 : 00317AA8 : ;
+@0031E4E8 : 003176E8 : ackermann
+@0031E478 : 00317AA8 : (
+@0031E408 : 00317448 : m
+@0031E2B8 : 003177A8 : >
+@0031E328 : 00317628 : 0
+@0031DD78 : 00317628 : ,
+@0031DDE8 : 00317A48 : n
+@0031DE58 : 00317148 : >
+@0031DEC8 : 003175C8 : 0
+@0031DF38 : 003175C8 : )
+@0031DFA8 : 00317B08 : ->
+@0031E018 : 00317C28 : ackermann
+@0031E088 : 00317B68 : (
+@0031E0F8 : 00317CE8 : m
+@0031E168 : 00317BC8 : -
+@0031E248 : 00317C88 : 1
+@0031E1D8 : 00317C88 : ,
+@0031E5C8 : 00317E08 : ackermann
+@0031E6A8 : 00317D48 : (
+@0031E638 : 00317F28 : m
+@0031E718 : 00317E68 : ,
+@0031E788 : 00317FE8 : n
+@0031E7F8 : 00317F88 : -
+@0031E868 : 00318048 : 1
+@0031E8D8 : 00317DA8 : )
+@0031E948 : 00318048 : )
+@0031E9B8 : 00317EC8 : ;
+@0031E948 : 003175C8 : ackertime
+@0031E8D8 : 00317EC8 : (
+@0031E868 : 00317628 : m
+@0031E7F8 : 00317B08 : ,
+@0031E788 : 00317AA8 : n
+@0031E718 : 00317148 : )
+@0031E638 : 003177A8 : ->
+@0031E6A8 : 0031EAA0 : "parameters: \t"
+@0031E5C8 : 00318108 : &
+@0031E1D8 : 00318228 : m
+@0031E248 : 00318168 : &
+@0031E168 : 003181C8 : ",\t"
+@0031E0F8 : 003182E8 : &
+@0031E088 : 00318408 : n
+@0031E018 : 00318348 : &
+@0031DFA8 : 003183A8 : " \t"
+@0031DF38 : 003184C8 : &
+@0031DEC8 : 00318588 : each
+@0031DE58 : 00318528 : (
+@0031DDE8 : 00318648 : i
+@0031DD78 : 00318588 : ,
+@0031E328 : 00318708 : flatten
+@0031E2B8 : 003185E8 : (
+@0031E408 : 003187C8 : time
+@0031E478 : 003186A8 : (
+@0031E4E8 : 00318768 : {
+@0031E9B8 : 003188E8 : ackermann
+@0031EA98 : 00318828 : (
+@0031EB08 : 003189A8 : m
+@0031EB78 : 00318888 : ,
+@0031EBE8 : 00318AC8 : n
+@0031EC58 : 00318A08 : )
+@0031ECC8 : 00318B28 : }
+@0031ED38 : 00318A68 : )
+@0031EDA8 : 00318948 : )
+@0031EE18 : 00318B88 : ,
+@0031EE88 : 00318BE8 : &
+@0031EEF8 : 00318C48 : "\t"
+@0031EF68 : 00318CA8 : &
+@0031EFD8 : 00318D08 : )
+@0031F048 : 00318D68 : ;
+@0031EFD8 : 00317EC8 : main
+@0031EF68 : 00317148 : ->
+@0031EEF8 : 003175C8 : each
+@0031EE88 : 00317B08 : (
+@0031EE18 : 00318D68 : m
+@0031EDA8 : 003175C8 : ,
+@0031ED38 : 00318528 : [
+@0031ECC8 : 00318DC8 : 1
+@0031EC58 : 00318DC8 : ..
+@0031EBE8 : 00318E28 : 1
+@0031EB78 : 00318E28 : ]
+@0031EB08 : 00318E88 : ,
+@0031EA98 : 00318F48 : each
+@0031E9B8 : 00318EE8 : (
+@0031E4E8 : 00319008 : n
+@0031E478 : 00318F48 : ,
+@0031E408 : 00318FA8 : [
+@0031E2B8 : 00319068 : 1
+@0031E328 : 00319068 : ..
+@0031DEC8 : 003190C8 : 1
+@0031DF38 : 003190C8 : ]
+@0031DFA8 : 00319128 : ,
+@0031E018 : 00319248 : print
+@0031E088 : 00319188 : (
+@0031E0F8 : 00319308 : ackertime
+@0031E168 : 003191E8 : (
+@0031E248 : 00319428 : m
+@0031E1D8 : 00319368 : ,
+@0031E5C8 : 003194E8 : n
+@0031E6A8 : 00319488 : )
+@0031E638 : 00319548 : )
+@0031E718 : 003192A8 : )
+@0031E788 : 003193C8 : )
+@0031E7F8 : 003195A8 : ;
+parameters:  1, 1  result 3 time 0.0

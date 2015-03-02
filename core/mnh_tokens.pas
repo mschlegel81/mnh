@@ -481,8 +481,8 @@ PROCEDURE T_package.load;
         end;
       end;
     end;
-    if first<>nil then interpret(first);
-    ready:=true;
+    if first<>nil then interpret(first);    
+    ready:=true;    
   end;
 
 CONSTRUCTOR T_package.create(CONST provider:P_codeProvider);

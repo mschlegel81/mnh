@@ -1,0 +1,97 @@
+C:\Users\schlegel\Documents\mnh5\consoles.exe konnte nicht gefunden werden
+
+C:\Users\schlegel\Documents\mnh5>c:\lazarus\fpc\2.6.4\bin\i386-win32\fpc consoles\mnh_console.pas -Sh2 -glch -CirRt -Fucore -Fuutil -Fu..\core -Fu..\util 
+Free Pascal Compiler version 2.6.4 [2014/04/18] for i386
+Copyright (c) 1993-2014 by Florian Klaempfl and others
+Target OS: Win32 for i386
+Compiling consoles\mnh_console.pas
+Compiling .\core\mnh_tokens.pas
+Compiling .\util\myGenerics.pas
+Compiling .\core\mnh_constants.pas
+Compiling .\core\mnh_stringutil.pas
+mnh_stringutil.pas(2,2) Warning: User defined: TODO: Cleanup unit.
+Compiling .\core\mnh_litvar.pas
+Compiling .\core\mnh_out_adapters.pas
+Compiling .\core\mnh_tokloc.pas
+Compiling .\core\mnh_fileWrappers.pas
+mnh_fileWrappers.pas(2,2) Warning: User defined: TODO: Cleanup unit.
+mnh_fileWrappers.pas(71,2) Warning: User defined: TODO: FUNCTION writeFileLines(CONST name:ansistring; CONST textToWrite:T_stringList):boolean;
+mnh_litvar.pas(1149,36) Warning: Converting pointers to signed integers may result in wrong comparison results and range errors, use an unsigned type instead.
+mnh_litvar.pas(1163,169) Warning: User defined: TODO Does this cover Nan and Inf?
+Compiling .\core\mnh_funcs.pas
+mnh_funcs.pas(940,2) Warning: User defined: TODO: fileExists(filename)
+mnh_funcs.pas(941,2) Warning: User defined: TODO: readFile(filename)
+mnh_funcs.pas(942,2) Warning: User defined: TODO: writeFile(filename,string)
+mnh_funcs.pas(943,2) Warning: User defined: TODO: replace(full,original,subst)
+mnh_funcs.pas(944,2) Warning: User defined: TODO: replaceAll(full,original,subst)
+mnh_funcs.pas(945,2) Warning: User defined: TODO: callSync(executablepath)
+mnh_funcs.pas(946,2) Warning: User defined: TODO: callAsync(executablepath)
+mnh_tokens.pas(692,8) Warning: User defined: TODO for more tolerance, maybe try a soft cast
+Linking consoles\mnh_console.exe
+7792 lines compiled, 1.5 sec , 233792 bytes code, 31580 bytes data
+13 warning(s) issued
+
+C:\Users\schlegel\Documents\mnh5>consoles\mnh_console.exe packages\sanityCheck.txt        
+2 + 3   =  5                 
+2 - 3   = -1                 
+2 * 3   =  6                 
+2 / 3   =  0.666666666666667 
+2 ** 3  =  8                 
+2 div 3 =  0                 
+2 mod 3 =  2                 
+2 and 3 =  2                 
+2 or 3  =  3                 
+2 xor 3 =  1                 
+[1,2,3] + 4   = [5,6,7]         
+[1,2,3] - 4   = [-3,-2,-1]      
+[1,2,3] * 4   = [4,8,12]        
+[1,2,3] / 4   = [0.25,0.5,0.75] 
+[1,2,3] ** 4  = [1,16,81]       
+[1,2,3] div 4 = [0,0,0]         
+[1,2,3] mod 4 = [1,2,3]         
+[1,2,3] and 4 = [0,0,0]         
+[1,2,3] or 4  = [5,6,7]         
+[1,2,3] xor 4 = [5,6,7]         
+1 + [4,5,6]   = [5,6,7]                      
+1 - [4,5,6]   = [-3,-4,-5]                   
+1 * [4,5,6]   = [4,5,6]                      
+1 / [4,5,6]   = [0.25,0.2,0.166666666666667] 
+1 ** [4,5,6]  = [1,1,1]                      
+1 div [4,5,6] = [0,0,0]                      
+1 mod [4,5,6] = [1,1,1]                      
+1 and [4,5,6] = [0,1,0]                      
+1 or [4,5,6]  = [5,5,7]                      
+1 xor [4,5,6] = [5,4,7]                      
+[1,2,3] + [4,5,6]   = [5,7,9]        
+[1,2,3] - [4,5,6]   = [-3,-3,-3]     
+[1,2,3] * [4,5,6]   = [4,10,18]      
+[1,2,3] / [4,5,6]   = [0.25,0.4,0.5] 
+[1,2,3] ** [4,5,6]  = [1,32,729]     
+[1,2,3] div [4,5,6] = [0,0,0]        
+[1,2,3] mod [4,5,6] = [1,2,3]        
+[1,2,3] and [4,5,6] = [0,0,2]        
+[1,2,3] or [4,5,6]  = [5,7,7]        
+[1,2,3] xor [4,5,6] = [5,7,5]        
+Heap dump by heaptrc unit
+3698 memory blocks allocated : 480189/500736
+3696 memory blocks freed     : 480165/500704
+2 unfreed memory blocks : 24
+True heap size : 327680 (144 used in System startup)
+True free heap : 327344
+Should be : 327376
+Call trace for block $001D7F98 size 14
+  $00413C08  LEADINGID,  line 252 of ./core/mnh_tokens_token.inc
+  $00412C8D  FIRSTTOKEN,  line 293 of ./core/mnh_tokens_token.inc
+  $0041C601  T_PACKAGE__LOAD,  line 463 of ./core/mnh_tokens.pas
+  $0041BE79  RELOADMAINPACKAGE,  line 86 of ./core/mnh_tokens.pas
+  $00401D02  FILEMODE,  line 49 of consoles/mnh_console.pas
+  $00401D6F  main,  line 56 of consoles/mnh_console.pas
+  $0040D421
+Call trace for block $001D7BD8 size 10
+  $00413C08  LEADINGID,  line 252 of ./core/mnh_tokens_token.inc
+  $00412C8D  FIRSTTOKEN,  line 293 of ./core/mnh_tokens_token.inc
+  $0041C601  T_PACKAGE__LOAD,  line 463 of ./core/mnh_tokens.pas
+  $0041BE79  RELOADMAINPACKAGE,  line 86 of ./core/mnh_tokens.pas
+  $00401D02  FILEMODE,  line 49 of consoles/mnh_console.pas
+  $00401D6F  main,  line 56 of consoles/mnh_console.pas
+  $0040D421

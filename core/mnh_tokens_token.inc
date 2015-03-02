@@ -159,7 +159,7 @@ PROCEDURE T_Token.undefine;
       else data:=nil;
     end;
     tokType:=tt_eol;
-    txt:='';
+    location:=C_nilTokenLocation;
   end;
 
 FUNCTION T_token.last:P_token;
@@ -218,10 +218,14 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
   VAR parsedLength:longint=0;
   FUNCTION resultFrom(CONST len:longint; CONST tt:T_tokenType):P_token;
     begin
-      if tt in [tt_each,tt_literal,tt_set]
-      then result:=newToken(lineLocation,''              ,tt)
-      else result:=newToken(lineLocation,copy(line,1,len),tt);
+      result:=newToken(lineLocation,'',tt);
       parsedLength:=len;
+    end;
+    
+  FUNCTION resultFrom(CONST id:ansistring; CONST tt:T_tokenType):P_token;
+    begin
+      result:=newToken(lineLocation,id,tt);
+      parsedLength:=length(id);
     end;
 
   FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
@@ -283,7 +287,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       end;
       '$': begin
         id:=leadingId(false);
-        result:=resultFrom(length(id),tt_parameterIdentifier);
+        result:=resultFrom(id,tt_parameterIdentifier);
       end;
       'a'..'z','A'..'Z': begin
         id:=leadingId(true);
@@ -300,10 +304,10 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id='Nan'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Nan); end
         else if id='Inf'   then begin result:=resultFrom(3,tt_literal); result^.data:=newRealLiteral(Infinity); end
         else if intrinsicRuleMap.containsKey('mnh.'+id,intrinsicFuncPtr) then begin
-          result:=resultFrom(length(id),tt_intrinsicRulePointer);
+          result:=resultFrom(id,tt_intrinsicRulePointer);
           result^.data:=intrinsicFuncPtr;
         end else begin
-          result:=resultFrom(length(id),tt_identifier);
+          result:=resultFrom(id,tt_identifier);
           result^.data:=inPackage;
         end;
       end;

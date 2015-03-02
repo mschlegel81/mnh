@@ -6,7 +6,7 @@
       pattern:T_pattern;
       expression:array of record
                    parIdx:longint;
-                   token:P_token;
+                   token:T_token;
                  end;
       isDeclaredInline:boolean;
       PROCEDURE updatePatternForInline;
@@ -40,12 +40,12 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
     while t<>nil do begin
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
-        token:=t;
-        t:=t^.next;
-        token^.next:=nil;
-        if token^.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
-          parIdx:=pattern.indexOfId(token^.txt);
-          if parIdx>=0 then token^.tokType:=tt_identifier;
+        token:=t^; 
+        t^.tokType:=tt_eol; t:=disposeToken(t);
+        token.next:=nil;
+        if token.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
+          parIdx:=pattern.indexOfId(token.txt);
+          if parIdx>=0 then token.tokType:=tt_identifier;
         end else parIdx:=-1;
       end;
     end;
@@ -59,7 +59,8 @@ CONSTRUCTOR T_subrule.createConstant  (CONST value:P_literal);
     isDeclaredInline:=true;
     setLength(expression,1);
     with expression[0] do begin
-      token:=newToken(declaredAt,'',tt_literal,value);
+      token.create;
+      token.define(declaredAt,'',tt_literal,value);
       parIdx:=-1;
     end;
   end;
@@ -76,12 +77,12 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
     while t<>nil do begin
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
-        token:=t;
-        t:=t^.next;
-        token^.next:=nil;
-        if token^.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier] then begin
-          parIdx:=pattern.indexOfId(token^.txt);
-          if parIdx>=0 then token^.tokType:=tt_identifier;
+        token:=t^; 
+        t^.tokType:=tt_eol; t:=disposeToken(t);
+        token.next:=nil;
+        if token.tokType in [tt_identifier, tt_userRulePointer, tt_parameterIdentifier] then begin
+          parIdx:=pattern.indexOfId(token.txt);
+          if parIdx>=0 then token.tokType:=tt_identifier;
         end else parIdx:=-1;
       end;
     end;
@@ -95,11 +96,11 @@ PROCEDURE T_subrule.embrace;
     setLength(expression,length(expression)+2);
     for i:=length(expression)-2 downto 1 do expression[i]:=expression[i-1];
     with expression[0] do begin
-      token:=newToken(declaredAt,'',tt_braceOpen);
+      token.create; token.define(declaredAt,'',tt_braceOpen);
       parIdx:=-1;
     end;
     with expression[length(expression)-1] do begin
-      token:=newToken(declaredAt,'',tt_braceClose);
+      token.create; token.define(declaredAt,'',tt_braceClose);
       parIdx:=-1;
     end;
   end;
@@ -107,10 +108,9 @@ PROCEDURE T_subrule.embrace;
 FUNCTION T_subrule.needEmbrace:boolean;
   VAR bracketLevel,i:longint;
   begin
-    exit(true);
     if length(expression)<=1 then exit(false);
     bracketLevel:=0;
-    for i:=0 to length(expression)-1 do case expression[i].token^.tokType of
+    for i:=0 to length(expression)-1 do case expression[i].token.tokType of
       tt_set, tt_each, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
       tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
       tt_separatorComma, tt_separatorCnt,
@@ -139,9 +139,9 @@ PROCEDURE T_subrule.updatePatternForInline;
   begin
     pattern.clear;
     for i:=0 to length(expression)-1 do with expression[i] do
-    if token^.tokType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfId(token^.txt); //reuse ID
-      if parIdx<0 then parIdx:=pattern.appendFreeId(token^.txt); //new parameter
+    if token.tokType=tt_parameterIdentifier then begin
+      parIdx:=pattern.indexOfId(token.txt); //reuse ID
+      if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt); //new parameter
     end;
   end;
 
@@ -157,13 +157,13 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
     while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
-        token:=t;
-        case token^.tokType of
+        token:=t^; 
+        case token.tokType of
           tt_expBraceOpen: inc(bracketLevel);
           tt_expBraceClose: dec(bracketLevel);
         end;
-        t:=t^.next;
-        token^.next:=nil;
+        t^.tokType:=tt_eol; t:=disposeToken(t);
+        token.next:=nil;
         parIdx:=-1;
       end;
     end;
@@ -176,7 +176,7 @@ DESTRUCTOR T_subrule.destroy;
   begin
     declaredAt:=C_nilTokenLocation;
     pattern.destroy;
-    for i:=0 to length(expression)-1 do disposeToken(expression[i].token);
+    for i:=0 to length(expression)-1 do expression[i].token.destroy;
     setLength(expression,0);
   end;
 
@@ -193,17 +193,17 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^) then begin
       with expression[0] do if parIdx>=0 then begin
-        firstRep:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
+        firstRep:=newToken(token.location,'',tt_literal,param^.value(parIdx));
         param^.value(parIdx)^.rereference;
-      end else firstRep:=newToken(token);
+      end else firstRep:=newToken(@token);
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
         if parIdx>=0 then begin
-          t^.next:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
+          t^.next:=newToken(token.location,'',tt_literal,param^.value(parIdx));
           param^.value(parIdx)^.rereference;
         end else begin
-          if (token^.tokType = tt_identifier) and (token^.data<>nil) then P_package(token^.data)^.resolveRuleId(token^,true);
-          t^.next:=newToken(token);
+          if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
+          t^.next:=newToken(@token);
         end;
         t:=t^.next;
       end;
@@ -211,10 +211,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
       result:=true;
     end else if (param<>nil)
             and (length(expression)=1)
-            and (expression[0].token^.tokType=tt_literal)
-            and (P_literal(expression[0].token^.data)^.literalType = lt_expression)
-            and (P_subrule(P_expressionLiteral(expression[0].token^.data)^.value)^.pattern.matches(param^))
-    then result:=P_subrule(P_expressionLiteral(expression[0].token^.data)^.value)^.replaces(param,firstRep,lastRep)
+            and (expression[0].token.tokType=tt_literal)
+            and (P_literal(expression[0].token.data)^.literalType = lt_expression)
+            and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^))
+    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,firstRep,lastRep)
     else begin
       result:=false;
       if isDeclaredInline then raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
@@ -233,13 +233,13 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       r:=P_expressionLiteral(LHS)^.value;
       setLength(expression,length(r^.expression));
       for i:=0 to length(expression)-1 do with expression[i] do begin
-        token:=newToken(r^.expression[i].token);
+        token.create; token.define(@(r^.expression[i].token));
         parIdx:=-1;
       end;
     end else begin
       setLength(expression,1);
       with expression[0] do begin
-        token:=newToken(opLocation,'',tt_literal,LHS);
+        token.create; token.define(opLocation,'',tt_literal,LHS);
         parIdx:=-1;
       end;
     end;
@@ -247,7 +247,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     i0:=length(expression);
     setLength(expression,i0+1);
     with expression[i0] do begin
-      token:=newToken(opLocation,'',op);
+      token.create; token.define(opLocation,'',op);
       parIdx:=-1;
     end;
 
@@ -256,13 +256,13 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       r:=P_expressionLiteral(RHS)^.value;
       setLength(expression,i0+length(r^.expression));
       for i:=0 to length(r^.expression)-1 do with expression[i0+i] do begin
-        token:=newToken(r^.expression[i].token);
+        token.create; token.define(@(r^.expression[i].token));
         parIdx:=-1;
       end;
     end else begin
       setLength(expression,i0+1);
       with expression[i0] do begin
-        token:=newToken(opLocation,'',tt_literal,RHS);
+        token.create; token.define(opLocation,'',tt_literal,RHS);
         parIdx:=-1;
       end;
     end;
@@ -281,7 +281,7 @@ FUNCTION T_subrule.toString:ansistring;
   VAR i:longint;
   begin
     result:='';
-    for i:=0 to length(expression)-1 do result:=result+expression[i].token^.toString;
+    for i:=0 to length(expression)-1 do result:=result+expression[i].token.toString;
     if isDeclaredInline then result:='{'+result+'}'
     else begin
       result:=pattern.toString+result;
@@ -295,9 +295,9 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
 
 PROCEDURE T_subrule.performSet(CONST newValue:P_literal);
   begin
-    if (length(expression)=1) and (expression[0].token^.tokType=tt_literal) then begin
-      disposeLiteral(expression[0].token^.data);
-      expression[0].token^.data:=newValue;
+    if (length(expression)=1) and (expression[0].token.tokType=tt_literal) then begin
+      disposeLiteral(expression[0].token.data);
+      expression[0].token.data:=newValue;
     end else raiseError(el3_evalError,'Cannot process set-operation',declaredAt);
   end;
 

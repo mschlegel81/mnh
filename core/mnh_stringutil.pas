@@ -5,6 +5,7 @@ CONST
   C_lineBreakChar     =chr(13);
   C_carriageReturnChar=chr(10);
   C_tabChar           =chr(9);
+  BLANK_TEXT='';
 
 FUNCTION formatTabs(s:ansistring):ansistring;
 FUNCTION isBlank(CONST s:ansistring):boolean;
