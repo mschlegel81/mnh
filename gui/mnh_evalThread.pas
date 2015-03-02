@@ -148,7 +148,11 @@ begin
     token:=getTokenAt(line,column);
     result.tokenText:=token.txt;
     result.tokenExplanation:=C_tokenInfoString[token.tokType];
-    if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
+    if (token.tokType=tt_intrinsicRulePointer) then begin
+      if copy(token.txt,1,4)='mnh.' then result.tokenExplanation:=result.tokenExplanation+'#'+intrinsicRuleExplanationMap.get(copy(token.txt,5,length(token.txt)-4))
+                                    else result.tokenExplanation:=result.tokenExplanation+'#'+intrinsicRuleExplanationMap.get(token.txt);
+
+    end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
       loc:=P_rule(token.data)^.getLocationOfDeclaration;
       result.declaredInLine:=loc.line;
       result.declaredInFile:=loc.provider^.getPath;

@@ -35,6 +35,7 @@ type
   private
     { private declarations }
     editorFontname:string;
+    fileInEditor:ansistring;
     FUNCTION getFontSize:longint;
     PROCEDURE setFontSize(value:longint);
   public
@@ -47,11 +48,18 @@ type
       doEchoDeclaration:boolean;
       doShowExpressionOut:boolean;
     end;
-    fileInEditor:ansistring;
+
+    fileContents:array of ansistring;
+    fileHistory:array[0..9] of ansistring;
+
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName:string;
     FUNCTION canOpenFile(CONST filename:ansistring; CONST lineNumber:longint):boolean;
     PROCEDURE saveSettings;
+    PROCEDURE setFileContents(CONST data:TStrings);
+    PROCEDURE getFileContents(CONST data:TStrings);
+    FUNCTION  setFileInEditor(CONST filename:ansistring):boolean;
+    FUNCTION  getFileInEditor:ansistring;
   end;
 
 var
@@ -75,6 +83,8 @@ FUNCTION defaultConsoleName:string;
 
 procedure TSettingsForm.FormCreate(Sender: TObject);
   VAR ff:T_file;
+      iMax,i:longint;
+
   begin
     if fileExists(settingsFileName) then begin
       ff.createToRead(settingsFileName);
@@ -99,7 +109,16 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         doEchoDeclaration:=ff.readBoolean;
         doShowExpressionOut:=ff.readBoolean;
       end;
+      for i:=0 to 9 do fileHistory[i]:=ff.readAnsiString;
+
       fileInEditor:=ff.readAnsiString;
+      if fileInEditor='' then begin
+        iMax:=ff.readLongint;
+        if iMax>=0 then begin
+          setLength(fileContents,iMax);
+          for i:=0 to iMax-1 do fileContents[i]:=ff.readAnsiString;
+        end else setLength(fileContents,0);
+      end;
       ff.destroy;
       if not(FileExists(fileInEditor)) then fileInEditor:='';
     end else begin
@@ -111,6 +130,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
         mnh_console_executable:='';
         MnhConsoleFileNameEdit.FileName:='';
       end;
+      for i:=0 to 9 do fileHistory[i]:='';
       editorFontname:='Courier New';
       fontSize:=11;
       with mainForm do begin
@@ -143,7 +163,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
     end;
   end;
 
-PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
+procedure TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.Execute then begin
       setFontSize(EditorFontDialog.Font.Size);
@@ -155,33 +175,34 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
+procedure TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
   end;
 
-PROCEDURE TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
+procedure TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
   begin
     mnh_console_executable:=MnhConsoleFileNameEdit.FileName;
   end;
 
-FUNCTION TSettingsForm.getFontSize: longint;
+function TSettingsForm.getFontSize: longint;
   begin
     result:=StrToInt64Def(Trim(FontSizeEdit.Text),12);
   end;
 
-PROCEDURE TSettingsForm.setFontSize(value: longint);
+procedure TSettingsForm.setFontSize(value: longint);
   begin
     FontSizeEdit.Text:=IntToStr(value);
     EditorFontDialog.Font.Size:=value;
   end;
 
-FUNCTION TSettingsForm.getEditorFontName: string;
+function TSettingsForm.getEditorFontName: string;
   begin
     result:=editorFontname;
   end;
 
-FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
+function TSettingsForm.canOpenFile(const filename: ansistring;
+  const lineNumber: longint): boolean;
   VAR par:T_stringList;
   begin
     if (trim(NotepadFileNameEdit.Filename)<>'') and not(FileExistsUTF8(NotepadFileNameEdit.Filename)) then NotepadFileNameEdit.Filename:='';
@@ -194,8 +215,9 @@ FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber:
     end else result:=false;
   end;
 
-PROCEDURE TSettingsForm.saveSettings;
+procedure TSettingsForm.saveSettings;
   VAR ff:T_file;
+      i:longint;
   begin
     ff.createToWrite(settingsFileName);
 
@@ -217,8 +239,60 @@ PROCEDURE TSettingsForm.saveSettings;
       ff.writeBoolean(doEchoDeclaration);
       ff.writeBoolean(doShowExpressionOut);
     end;
+    for i:=0 to 9 do ff.writeAnsiString(fileHistory[i]);
     ff.writeAnsiString(fileInEditor);
+    if fileInEditor='' then begin
+      ff.writeLongint(length(fileContents));
+      for i:=0 to length(fileContents)-1 do
+        ff.writeAnsiString(fileContents[i]);
+    end;
     ff.destroy;
+  end;
+
+procedure TSettingsForm.setFileContents(const data: TStrings);
+  VAR i:longint;
+  begin
+    if fileInEditor<>'' then begin
+      setLength(fileContents,0);
+      exit;
+    end;
+    setLength(fileContents,data.Count);
+    for i:=0 to data.Count-1 do fileContents[i]:=data[i];
+  end;
+
+procedure TSettingsForm.getFileContents(const data: TStrings);
+  VAR i:longint;
+  begin
+    if fileInEditor<>'' then exit;
+    data.Clear;
+    for i:=0 to length(fileContents)-1 do data.Append(fileContents[i]);
+  end;
+
+function TSettingsForm.setFileInEditor(const filename: ansistring): boolean;
+  VAR i:longint;
+      tmp:ansistring;
+  begin
+    if fileInEditor<>'' then begin
+      i:=0;
+      while (i<length(fileHistory)) and (fileHistory[i]<>fileInEditor) do inc(i);
+      if (i>=length(fileHistory)) then begin
+        i:=length(fileHistory)-1;
+        fileHistory[i]:=fileInEditor;
+      end;
+      while (i>0) do begin
+        tmp:=fileHistory[i];
+        fileHistory[i]:=fileHistory[i-1];
+        fileHistory[i-1]:=tmp;
+        dec(i);
+      end;
+      result:=true;
+    end else result:=false;
+    fileInEditor:=filename;
+  end;
+
+function TSettingsForm.getFileInEditor: ansistring;
+  begin
+    result:=fileInEditor;
   end;
 
 end.

@@ -16,7 +16,17 @@ type
 
   TMnhForm = class(TForm)
     ErrorMemo: TMemo;
+    miFileHistory6: TMenuItem;
+    miFileHistory7: TMenuItem;
+    miFileHistory8: TMenuItem;
+    miFileHistory9: TMenuItem;
     MenuItem2: TMenuItem;
+    miFileHistory0: TMenuItem;
+    miFileHistory1: TMenuItem;
+    miFileHistory2: TMenuItem;
+    miFileHistory3: TMenuItem;
+    miFileHistory4: TMenuItem;
+    miFileHistory5: TMenuItem;
     miOpenNpp: TMenuItem;
     miHelp: TMenuItem;
     miHaltEvalutaion: TMenuItem;
@@ -48,6 +58,7 @@ type
     OutputEdit: TSynEdit;
     SynCompletion: TSynCompletion;
     UpdateTimeTimer: TTimer;
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormResize(Sender: TObject);
@@ -65,6 +76,16 @@ type
     PROCEDURE miEvaluateNowClick(Sender: TObject);
     PROCEDURE miExpressionEchoClick(Sender: TObject);
     PROCEDURE miExpressionResultClick(Sender: TObject);
+    procedure miFileHistory0Click(Sender: TObject);
+    procedure miFileHistory1Click(Sender: TObject);
+    procedure miFileHistory2Click(Sender: TObject);
+    procedure miFileHistory3Click(Sender: TObject);
+    procedure miFileHistory4Click(Sender: TObject);
+    procedure miFileHistory5Click(Sender: TObject);
+    procedure miFileHistory6Click(Sender: TObject);
+    procedure miFileHistory7Click(Sender: TObject);
+    procedure miFileHistory8Click(Sender: TObject);
+    procedure miFileHistory9Click(Sender: TObject);
     PROCEDURE miHaltEvalutaionClick(Sender: TObject);
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
@@ -89,6 +110,7 @@ type
     underCursor:T_tokenInfo;
     settingsHaveBeenProcessed:boolean;
     PROCEDURE processSettings;
+    PROCEDURE processFileHistory;
     PROCEDURE flushThroughput;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
@@ -145,7 +167,7 @@ PROCEDURE logError(CONST error:T_storedError);
     //MnhForm.ErrorGroupBox.Visible:=true;
   end;
 
-PROCEDURE TMnhForm.flushThroughput;
+procedure TMnhForm.flushThroughput;
   VAR i:longint;
   begin
     OutputEdit.BeginUpdate();
@@ -157,14 +179,14 @@ PROCEDURE TMnhForm.flushThroughput;
     OutputEdit.EndUpdate;
   end;
 
-PROCEDURE TMnhForm.positionHelpNotifier;
+procedure TMnhForm.positionHelpNotifier;
   begin
     PopupNotifier1.ShowAtPos(left+Width-PopupNotifier1.vNotifierForm.Width,
                              ClientToScreen(Point(left,OutputEdit.Top)).y);
     InputEdit.SetFocus;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
+procedure TMnhForm.setUnderCursor(const lines: TStrings; const caret: TPoint);
   begin
     if (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
@@ -189,7 +211,7 @@ PROCEDURE startOfEvaluationCallback;
   end;
 
 { TMnhForm }
-PROCEDURE TMnhForm.FormCreate(Sender: TObject);
+procedure TMnhForm.FormCreate(Sender: TObject);
   begin
     myhl:=TSynMnhSyn.Create(nil);
     InputEdit.Highlighter:=myhl;
@@ -212,14 +234,19 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     mnh_out_adapters.printOut     :=@writePrint;
   end;
 
-PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
+procedure TMnhForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+  begin
+    SettingsForm.setFileContents(InputEdit.Lines);
+  end;
+
+procedure TMnhForm.FormDestroy(Sender: TObject);
   begin
     mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
     myhl.Destroy;
     ad_killEvaluationLoopSoftly;
   end;
 
-PROCEDURE TMnhForm.FormResize(Sender: TObject);
+procedure TMnhForm.FormResize(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.mainForm.top   :=top;
@@ -230,26 +257,28 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-PROCEDURE TMnhForm.FormShow(Sender: TObject);
+procedure TMnhForm.FormShow(Sender: TObject);
   begin
     DoubleBuffered:=true;
     if not(settingsHaveBeenProcessed) then processSettings;
     UpdateTimeTimer.Enabled:=true;
   end;
 
-PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
+procedure TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       ad_evaluate(InputEdit.Lines);
     end;
   end;
 
-PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR Key: Word; Shift: TShiftState);
+procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
   begin
     setUnderCursor(InputEdit.Lines,InputEdit.CaretXY);
   end;
 
-PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
+procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -257,14 +286,14 @@ PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: 
     setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
-PROCEDURE TMnhForm.miClearClick(Sender: TObject);
+procedure TMnhForm.miClearClick(Sender: TObject);
   begin
     ad_clearFile;
     InputEdit.ClearAll;
-    SettingsForm.fileInEditor:='';
+    if SettingsForm.setFileInEditor('') then processFileHistory;
   end;
 
-PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
+procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize-1;
@@ -272,7 +301,7 @@ PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
+procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
@@ -284,24 +313,24 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
+procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
   end;
 
-PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
+procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
     miEvalModeDirectOnKeypress.Checked:=true;
   end;
 
-PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
+procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     ad_evaluate(InputEdit.Lines);
   end;
 
-PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
+procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
@@ -313,7 +342,7 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
+procedure TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
@@ -325,19 +354,109 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+procedure TMnhForm.miFileHistory0Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[0])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[0],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[0]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory1Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[1])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[1],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[1]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory2Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[2])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[2],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[2]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory3Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[3])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[3],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[3]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory4Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[4])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[4],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[4]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory5Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[5])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[5],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[5]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory6Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[6])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[6],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[6]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory7Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[7])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[7],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[7]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory8Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[8])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[8],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[8]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miFileHistory9Click(Sender: TObject);
+  begin
+    if FileExists(SettingsForm.fileHistory[9])
+      then begin
+        ad_setFile(SettingsForm.fileHistory[9],InputEdit.Lines);
+        if SettingsForm.setFileInEditor(SettingsForm.fileHistory[9]) then processFileHistory;
+      end;
+  end;
+
+procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
     ad_haltEvaluation;
   end;
 
-PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
+procedure TMnhForm.miHelpClick(Sender: TObject);
 begin
   miHelp.Checked:=not(miHelp.Checked);
   if not(miHelp.Checked) then PopupNotifier1.Visible:=false
                          else if underCursor.tokenText<>'' then positionHelpNotifier;
 end;
 
-PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
+procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
@@ -345,55 +464,57 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
+procedure TMnhForm.miOpenClick(Sender: TObject);
   begin
     OpenDialog.Title:='Open file';
     if OpenDialog.Execute and FileExists(OpenDialog.FileName)
     then begin
       ad_setFile(OpenDialog.FileName,InputEdit.Lines);
-      SettingsForm.fileInEditor:=OpenDialog.FileName;
+      if SettingsForm.setFileInEditor(OpenDialog.FileName) then processFileHistory;
     end;
   end;
 
-PROCEDURE TMnhForm.miOpenNppClick(Sender: TObject);
+procedure TMnhForm.miOpenNppClick(Sender: TObject);
 begin
   if underCursor.declaredInFile<>'' then
     SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
 end;
 
-PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
+procedure TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
       MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
       ad_setFile(SaveDialog.FileName,InputEdit.Lines);
-      SettingsForm.fileInEditor:=SaveDialog.FileName;
+      if SettingsForm.setFileInEditor(SaveDialog.FileName) then processFileHistory;
       SettingsForm.saveSettings;
     end;
   end;
 
-PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
+procedure TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile='' then miSaveAsClick(Sender)
     else begin
       MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
-      SettingsForm.fileInEditor:=ad_currentFile;
+      if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
       SettingsForm.saveSettings;
     end;
   end;
 
-PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
+procedure TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
     processSettings;
   end;
 
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR Key: Word; Shift: TShiftState);
+procedure TMnhForm.OutputEditKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
   begin
     setUnderCursor(OutputEdit.Lines,OutputEdit.CaretXY);
   end;
 
 
-PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
+procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -401,13 +522,13 @@ PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y:
     setUnderCursor(OutputEdit.Lines,OutputEdit.PixelsToRowColumn(point));
   end;
 
-PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
+procedure TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR Value: string;
-  SourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+procedure TMnhForm.SynCompletionCodeCompletion(var Value: string;
+  SourceValue: string; var SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
   Shift: TShiftState);
   begin
     if (pos('.',value)>0) then begin
@@ -417,7 +538,7 @@ PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR Value: string;
     end;
   end;
 
-PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
+procedure TMnhForm.SynCompletionExecute(Sender: TObject);
   VAR i:longint;
       s:string;
   begin
@@ -427,7 +548,7 @@ PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
       if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.Add(completionList[i]);
   end;
 
-PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
+procedure TMnhForm.SynCompletionSearchPosition(var APosition: integer);
   VAR i:longint;
       s:string;
   begin
@@ -438,7 +559,7 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
     if SynCompletion.ItemList.Count>0 then APosition:=0 else APosition:=-1;
   end;
 
-PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
         MAX_INTERVALL=1000;
         REPAINT_INTERVAL_IN_SECONDS=1;
@@ -495,8 +616,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.processSettings;
+procedure TMnhForm.processSettings;
   begin
+    if not(settingsHaveBeenProcessed) then begin
+      InputEdit.BeginUpdate();
+      SettingsForm.getFileContents(InputEdit.Lines);
+      InputEdit.EndUpdate();
+    end;
+
     InputEdit.Font.name:=SettingsForm.getEditorFontName;
     InputEdit.Font.Size:=SettingsForm.fontSize;
     if SettingsForm.AntialiasCheckbox.Checked
@@ -522,12 +649,41 @@ PROCEDURE TMnhForm.processSettings;
       if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
                              else mnh_out_adapters.exprOut:=nil;
     end;
-    if ad_currentFile<>SettingsForm.fileInEditor then begin
-      if SettingsForm.fileInEditor=''
+    if ad_currentFile<>SettingsForm.getFileInEditor then begin
+      if SettingsForm.getFileInEditor=''
       then ad_clearFile
-      else ad_setFile(SettingsForm.fileInEditor,InputEdit.Lines);
+      else ad_setFile(SettingsForm.getFileInEditor,InputEdit.Lines);
     end;
+    if not(settingsHaveBeenProcessed) then processFileHistory;
+
     settingsHaveBeenProcessed:=true;
+  end;
+
+PROCEDURE TMnhForm.processFileHistory;
+  FUNCTION historyMenuItem(index:byte):TMenuItem;
+    begin
+      case index of
+        0: result:=miFileHistory0;
+        1: result:=miFileHistory1;
+        2: result:=miFileHistory2;
+        3: result:=miFileHistory3;
+        4: result:=miFileHistory4;
+        5: result:=miFileHistory5;
+        6: result:=miFileHistory6;
+        7: result:=miFileHistory7;
+        8: result:=miFileHistory8;
+        9: result:=miFileHistory9;
+      end;
+    end;
+  VAR i:longint;
+  begin
+    for i:=0 to 9 do if SettingsForm.fileHistory[i]='' then begin
+      historyMenuItem(i).Enabled:=false;
+      historyMenuItem(i).Caption:=IntToStr(i)+': <no file>';
+    end else begin
+      historyMenuItem(i).Enabled:=true;
+      historyMenuItem(i).Caption:=IntToStr(i)+': '+SettingsForm.fileHistory[i];
+    end;
   end;
 
 initialization

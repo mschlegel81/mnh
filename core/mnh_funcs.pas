@@ -5,9 +5,10 @@ TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
 
 VAR
-  intrinsicRuleMap    :specialize G_stringKeyMap<T_intFuncCallback>;
+  intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
+  intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
   mnh_console_executable:ansistring;
-PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
+PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
 
 //Callbacks:--------------------------------
 TYPE T_resolveNullaryCallback=FUNCTION (CONST subrulePointer:pointer; CONST callDepth:word):P_literal;
@@ -37,9 +38,11 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-        lt_list,lt_booleanList: begin
+        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
+        lt_list,lt_booleanList, lt_intList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
             P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
@@ -83,6 +86,7 @@ FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION abs_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newIntLiteral (abs(P_intLiteral (x)^.value));
@@ -106,6 +110,7 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
@@ -129,6 +134,7 @@ FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION sqr_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newIntLiteral (sqr(P_intLiteral (x)^.value));
@@ -152,6 +158,7 @@ FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION sqrt_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(sqrt(P_intLiteral (x)^.value));
@@ -175,6 +182,7 @@ FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION sin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(sin(P_intLiteral (x)^.value));
@@ -198,6 +206,7 @@ FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   FUNCTION arcsin_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(arcsin(P_intLiteral (x)^.value));
@@ -221,6 +230,7 @@ FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION cos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(cos(P_intLiteral (x)^.value));
@@ -244,6 +254,7 @@ FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   FUNCTION arccos_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(arccos(P_intLiteral (x)^.value));
@@ -267,6 +278,7 @@ FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION tan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(tan(P_intLiteral (x)^.value));
@@ -290,6 +302,7 @@ FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   FUNCTION arctan_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(arctan(P_intLiteral (x)^.value));
@@ -313,6 +326,7 @@ FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   FUNCTION exp_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(exp(P_intLiteral (x)^.value));
@@ -336,6 +350,7 @@ FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
   FUNCTION ln_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newRealLiteral(ln(P_intLiteral (x)^.value));
@@ -359,6 +374,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   FUNCTION round_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
@@ -384,6 +400,7 @@ FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       end;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
@@ -423,6 +440,7 @@ FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION ceil_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
@@ -446,6 +464,7 @@ FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   FUNCTION floor_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
@@ -622,9 +641,10 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     raiseNotApplicableError('random',params,tokenLocation);
   end;
 
-PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback);
+PROCEDURE registerRule(CONST name:string; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
   begin
     intrinsicRuleMap.put(name,ptr);
+    intrinsicRuleExplanationMap.put(name,explanation);
   end;
 
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -750,26 +770,38 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR res:P_literal;
-      time:double;
-      aid:P_listLiteral;
+      startTime,time:double;
+      runCount:longint=1;
+
+  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
+    VAR aid:P_listLiteral;
+    begin
+      aid:=newListLiteral;
+      aid^.append(newStringLiteral(el0),false);
+      aid^.append(el1,false);
+      P_listLiteral(result)^.append(aid,false);
+    end;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      time:=now;
-      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth);
-      time:=now-time;
+      startTime:=now;
+      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
+      time:=now-startTime;
       if res<>nil then begin
+        while (time*24*60*60<0.5) do begin //measure at least half a second
+          disposeLiteral(res);
+          res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0))^.value,callDepth+1);
+          time:=now-startTime;
+          inc(runCount);
+        end;
         result:=newListLiteral;
-        aid:=newListLiteral;
-        aid^.append(newStringLiteral('result'),false);
-        aid^.append(res,false);
-        P_listLiteral(result)^.append(aid,false);
-        aid:=newListLiteral;
-        aid^.append(newStringLiteral('time'),false);
-        aid^.append(newRealLiteral(round(time*(24*60*60*1000))*1E-3),false);
-        P_listLiteral(result)^.append(aid,false);
+        appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
+        appendPair(result,'result'    ,res);
+        appendPair(result,'time'      ,newRealLiteral(round(time/runCount*(24*60*60*100000))*1E-5));
+        appendPair(result,'samples'   ,newIntLiteral(runCount));
       end;
-    end else raiseNotApplicableError('TIME',params,tokenLocation);
+    end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
 FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
@@ -868,6 +900,7 @@ FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION trim_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_string: result:=P_stringLiteral(x)^.trim;
         lt_list,lt_stringList:  begin
@@ -889,6 +922,7 @@ FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   FUNCTION upper_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_string: result:=P_stringLiteral(x)^.upper;
         lt_list,lt_stringList:  begin
@@ -910,6 +944,7 @@ FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   FUNCTION lower_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_string: result:=P_stringLiteral(x)^.lower;
         lt_list,lt_stringList:  begin
@@ -942,6 +977,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
+      result:=nil;
       case x^.literalType of
         lt_string: result:=stringToExprCallback(P_stringLiteral(x)^.value,tokenLocation);
         lt_list,lt_stringList:  begin
@@ -1260,61 +1296,63 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 INITIALIZATION
   intrinsicRuleMap.create;
-  registerRule('not'           ,@not_imp       );
-  registerRule('print'         ,@print_imp     );
-  registerRule('abs'           ,@abs_imp       );
-  registerRule('sign'          ,@sign_imp      );
-  registerRule('sqr'           ,@sqr_imp       );
-  registerRule('sqrt'          ,@sqrt_imp      );
-  registerRule('sin'           ,@sin_imp       );
-  registerRule('arcsin'        ,@arcsin_imp    );
-  registerRule('cos'           ,@cos_imp       );
-  registerRule('arccos'        ,@arccos_imp    );
-  registerRule('tan'           ,@tan_imp       );
-  registerRule('arctan'        ,@arctan_imp    );
-  registerRule('exp'           ,@exp_imp       );
-  registerRule('ln'            ,@ln_imp        );
-  registerRule('round'         ,@round_imp     );
-  registerRule('ceil'          ,@ceil_imp      );
-  registerRule('floor'         ,@floor_imp     );
-  registerRule('head'          ,@head_imp      );
-  registerRule('tail'          ,@tail_imp      );
-  registerRule('sort'          ,@sort_imp      );
-  registerRule('sortPerm'      ,@sortPerm_imp  );
-  registerRule('unique'        ,@unique_imp    );
-  registerRule('flatten'       ,@flatten_imp   );
-  registerRule('random'        ,@random_imp    );
-  registerRule('max'           ,@max_imp       );
-  registerRule('argMax'        ,@argMax_imp    );
-  registerRule('min'           ,@min_imp       );
-  registerRule('argMin'        ,@argMin_imp    );
-  registerRule('size'          ,@size_imp      );
-  registerRule('length'        ,@length_imp    );
-  registerRule('pos'           ,@pos_imp       );
-  registerRule('copy'          ,@copy_imp      );
-  registerRule('time'          ,@time_imp      );
-  registerRule('split'         ,@split_imp     );
-  registerRule('softCast'      ,@softCast_imp  );
-  registerRule('trim'          ,@trim_imp      );
-  registerRule('upper'         ,@upper_imp     );
-  registerRule('lower'         ,@lower_imp     );
-  registerRule('string'        ,@string_imp    );
-  registerRule('expression'    ,@expression_imp);
-  registerRule('files'         ,@files_impl    );
-  registerRule('folders'       ,@folders_impl  );
-  registerRule('fileExists'    ,@fileExists_impl);
-  registerRule('fileContents'  ,@fileContents_impl);
-  registerRule('fileLines'     ,@fileLines_impl);
-  registerRule('writeFile'     ,@writeFile_impl);
-  registerRule('writeFileLines',@writeFileLines_impl);
-  registerRule('replaceOne'    ,@replaceOne_impl);
-  registerRule('replace'       ,@replace_impl);
-  registerRule('interpret'     ,@interpret_impl);
-  registerRule('execSync'      ,@execSync_impl);
-  registerRule('execAsync'     ,@execAsync_impl);
-  registerRule('tokenSplit'    ,@tokenSplit_impl);
+  intrinsicRuleExplanationMap.create;
+  registerRule('not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
+  registerRule('print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns true#If tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric parameter n');
+  registerRule('sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric parameter n');
+  registerRule('sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric parameter n');
+  registerRule('sqrt'          ,@sqrt_imp      ,'sqrt(n);#Returns the square root of numeric parameter n');
+  registerRule('sin'           ,@sin_imp       ,'sin(n);#Returns the sine of numeric parameter n');
+  registerRule('arcsin'        ,@arcsin_imp    ,'arcsin(n);#Returns the arcsine of numeric parameter n');
+  registerRule('cos'           ,@cos_imp       ,'cos(n);#Returns the cosine of numeric parameter n');
+  registerRule('arccos'        ,@arccos_imp    ,'arccos(n);#Returns the arccosine of numeric parameter n');
+  registerRule('tan'           ,@tan_imp       ,'tan(n);#Returns the tangent of numeric parameter n');
+  registerRule('arctan'        ,@arctan_imp    ,'tan(n);#Returns the arctangent of numeric parameter n');
+  registerRule('exp'           ,@exp_imp       ,'exp(n);#Returns the exponential of numeric parameter n');
+  registerRule('ln'            ,@ln_imp        ,'ln(n);#Returns the natural logarithm of numeric parameter n');
+  registerRule('round'         ,@round_imp     ,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  registerRule('ceil'          ,@ceil_imp      ,'ceil(x);#Returns the smallest integer >=x');
+  registerRule('floor'         ,@floor_imp     ,'floor(x);#Returns the largest integer <=x');
+  registerRule('head'          ,@head_imp      ,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
+  registerRule('tail'          ,@tail_imp      ,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
+  registerRule('sort'          ,@sort_imp      ,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)');
+  registerRule('sortPerm'      ,@sortPerm_imp  ,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
+  registerRule('unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
+  registerRule('flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
+  registerRule('random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
+  registerRule('max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
+  registerRule('argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
+  registerRule('min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
+  registerRule('argMin'        ,@argMin_imp    ,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
+  registerRule('size'          ,@size_imp      ,'size(L);#Returns the number of elements in list L');
+  registerRule('length'        ,@length_imp    ,'length(S:string);#Returns the number of characters in string S');
+  registerRule('pos'           ,@pos_imp       ,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or 0 if there is none#Note: Character indexes start with 1!');
+  registerRule('copy'          ,@copy_imp      ,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length#Note: Character indexes start with 1!');
+  registerRule('time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
+  registerRule('split'         ,@split_imp     ,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
+  registerRule('softCast'      ,@softCast_imp  ,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
+  registerRule('trim'          ,@trim_imp      ,'trim(S:string);#Returns string S without leading or trailing spaces');
+  registerRule('upper'         ,@upper_imp     ,'upper(S:string);#Returns an uppercase representation of S');
+  registerRule('lower'         ,@lower_imp     ,'lower(S:string);#Returns an lowercase representation of S');
+  registerRule('string'        ,@string_imp    ,'string(X);#Returns a string-representation of X');
+  registerRule('expression'    ,@expression_imp   ,'expression(S:string);#Returns an expression parsed from S');
+  registerRule('files'         ,@files_impl       ,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
+  registerRule('folders'       ,@folders_impl     ,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
+  registerRule('fileExists'    ,@fileExists_impl  ,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
+  registerRule('fileContents'  ,@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
+  registerRule('fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost');
+  registerRule('writeFile'     ,@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
+  registerRule('writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
+  registerRule('replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
+  registerRule('replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
+  registerRule('interpret'     ,@interpret_impl,'interpret(filenameOrPackageId:string);#Evaluates the specified file and returns the text output');
+  registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified program and returns the text output');
+  registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
+  registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
 
 FINALIZATION
   intrinsicRuleMap.destroy;
+  intrinsicRuleExplanationMap.destroy;
 
 end.

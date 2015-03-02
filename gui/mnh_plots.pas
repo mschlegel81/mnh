@@ -232,8 +232,7 @@ PROCEDURE TplotForm.doPlot();
       for j:=0 to plotImage.Height-1 do
       for i:=0 to plotImage.Width-1 do begin
         k:=(j*plotImage.Width+i)*3;
-//        abgr:=plotImage.Canvas.Pixels[i,j];
-        abgr:=WidgetSet.DCGetPixel(plotImage.Canvas.Handle, i, j);
+        abgr:=plotImage.Canvas.Pixels[i,j];
         inc(wcol[k  ], abgr         and 255);
         inc(wcol[k+1],(abgr shr  8) and 255);
         inc(wcol[k+2],(abgr shr 16) and 255);
@@ -852,18 +851,18 @@ FUNCTION getPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   end;
 
 INITIALIZATION
-  mnh_funcs.registerRule('plot',@plot);
-  mnh_funcs.registerRule('addPlot',@addPlot);
-  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale);
-  mnh_funcs.registerRule('getPlotAutoscale',@getAutoscale);
-  mnh_funcs.registerRule('setPlotLogscale',@setLogscale);
-  mnh_funcs.registerRule('getPlotLogscale',@getLogscale);
-  mnh_funcs.registerRule('setPlotRange',@setPlotRange);
-  mnh_funcs.registerRule('getPlotRange',@getPlotRange);
-  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle);
-  mnh_funcs.registerRule('getPlotAxisStyle',@getAxisStyle);
-  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect);
-  mnh_funcs.registerRule('getPlotPreserveAspect',@getPreserveAspect);
+  mnh_funcs.registerRule('plot',@plot,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('addPlot',@addPlot,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('getPlotAutoscale',@getAutoscale,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('getPlotLogscale',@getLogscale,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('setPlotRange',@setPlotRange,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('getPlotRange',@getPlotRange,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('getPlotAxisStyle',@getAxisStyle,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,''{$WARNING uncommented!});
+  mnh_funcs.registerRule('getPlotPreserveAspect',@getPreserveAspect,''{$WARNING uncommented!});
   mnh_evalThread.initIntrinsicRuleList;
 end.
 

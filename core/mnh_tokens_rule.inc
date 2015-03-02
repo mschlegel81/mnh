@@ -38,8 +38,6 @@ DESTRUCTOR T_rule.destroy;
     if isCached then cache.destroy;
   end;
 
-CONST STACK_DEPTH_LIMIT=45000;
-  
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,
   lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean
   ): boolean;

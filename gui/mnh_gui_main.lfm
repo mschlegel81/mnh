@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
   Left = 408
   Height = 373
-  Top = 120
+  Top = 126
   Width = 320
   Caption = 'MNH5'
   ClientHeight = 353
@@ -9,6 +9,7 @@ object MnhForm: TMnhForm
   Color = clWhite
   Menu = MainMenu1
   OnChangeBounds = FormResize
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnResize = FormResize
@@ -1082,6 +1083,46 @@ object MnhForm: TMnhForm
         Enabled = False
         ShortCut = 113
         OnClick = miOpenNppClick
+      end
+      object miFileHistory0: TMenuItem
+        Caption = 'New Item30'
+        OnClick = miFileHistory0Click
+      end
+      object miFileHistory1: TMenuItem
+        Caption = 'New Item31'
+        OnClick = miFileHistory1Click
+      end
+      object miFileHistory2: TMenuItem
+        Caption = 'New Item32'
+        OnClick = miFileHistory2Click
+      end
+      object miFileHistory3: TMenuItem
+        Caption = 'New Item33'
+        OnClick = miFileHistory3Click
+      end
+      object miFileHistory4: TMenuItem
+        Caption = 'New Item34'
+        OnClick = miFileHistory4Click
+      end
+      object miFileHistory5: TMenuItem
+        Caption = 'New Item35'
+        OnClick = miFileHistory5Click
+      end
+      object miFileHistory6: TMenuItem
+        Caption = 'New Item36'
+        OnClick = miFileHistory6Click
+      end
+      object miFileHistory7: TMenuItem
+        Caption = 'New Item37'
+        OnClick = miFileHistory7Click
+      end
+      object miFileHistory8: TMenuItem
+        Caption = 'New Item38'
+        OnClick = miFileHistory8Click
+      end
+      object miFileHistory9: TMenuItem
+        Caption = 'New Item39'
+        OnClick = miFileHistory9Click
       end
     end
     object MenuItem2: TMenuItem

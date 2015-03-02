@@ -460,11 +460,82 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
   end;
 
+PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
+  VAR this,next,prev:P_token;
+  begin
+    this:=first; prev:=nil;
+    while this<>nil do begin
+      next:=this^.next;
+      if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
+         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
+         and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
+        if this^.tokType=tt_operatorMinus then begin
+          if (next<>nil) and (next^.tokType = tt_literal) then begin
+            this^.tokType:=tt_literal;
+            this^.data:=P_literal(next^.data)^.negate(this^.location);
+            this^.next:=disposeToken(next);
+          end else this^.tokType:=tt_unaryOpMinus;
+        end else begin
+          if prev=nil then begin
+            first:=disposeToken(this);
+            this:=first;
+          end else begin
+            prev^.next:=disposeToken(this);
+            this:=next;
+          end;
+        end;
+      end else if (this^.tokType=tt_listBraceOpen) and (this^.next<>nil) and (this^.next^.tokType=tt_listBraceClose) then begin
+        this^.tokType:=tt_literal;
+        this^.data:=newListLiteral;
+        this^.next:=disposeToken(this^.next);
+      end;
+      prev:=this;
+      this:=this^.next;
+    end;
+  end;
+
+PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
+  VAR t:P_token;
+  begin
+    t:=first;
+    while t<>nil do begin
+      case t^.tokType of
+      tt_identifier: t^.data:=inPackage;
+      tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+              and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+              and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+        t^.data:=inPackage^.ensureRuleId(t^.next^.next^.txt);
+        t^.next:=disposeToken(t^.next); //dispose (
+        t^.next:=disposeToken(t^.next); //dispose <id>
+        t^.next:=disposeToken(t^.next); //dispose ,
+      end else begin
+        raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
+        exit;
+      end;
+      tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
+              and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
+              and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
+        t^.txt:=t^.next^.next^.txt;
+        t^.data:=nil;
+        t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
+      end else begin
+        raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
+        exit;
+      end;
+
+      end;
+      t:=t^.next;
+    end;
+  end;
+
 PROCEDURE digestInlineExpression(VAR rep:P_token);
   VAR t,prev,inlineRule:P_token;
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
+      inPackage:P_package;
   begin
+    predigestBeforeDeclarationParsing(rep);
+    predigest(rep,nil);
     if (rep^.tokType<>tt_expBraceOpen) then begin
       raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -1003,6 +1074,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           stack_push;
         end;
         tt_identifier: begin
+          if first^.data=nil then begin
+            raiseError(el2_warning,'Encountered an identifier without associated package!',first^.location);
+            first^.data:=guessPackageForToken(first^);
+          end;
           P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;

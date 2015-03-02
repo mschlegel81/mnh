@@ -1,7 +1,7 @@
 ackermann(m=0,n)  ->n+1;
 ackermann(m,n=0)  ->ackermann(m-1,1);
 ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
-//CACHE ackermann 10;
+CACHE ackermann 10;
 ackertime(m,n) -> "parameters: \t"&m&",\t"&n&" \t" & each(i,flatten(time({ackermann(m,n)})),&"\t"&);
 
 main(m:int,n:int)->print(print(ackertime(m,n)));

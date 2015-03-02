@@ -7,11 +7,12 @@ pi2(N:intList)->each(n,N,pi2(n));
 pi3(n:int)->pi1(n)+0.875*4/(4*n+1)-0.5*4/(4*n+3)+0.125*4/(4*n+5);
 pi3(N:intList)->each(n,N,pi3(n));
 N:=round(sqrt(2)**[1..36]);
-setPlotLogscale([true,true]);
-setPlotAutoscale([true,true]);
-setPlotPreserveAspect(false);
-plot(N,abs(pi-pi1(N)),"l .");
-addPlot(N,abs(pi-pi2(N)),"l +");
-addPlot(N,abs(pi-pi3(N)),"l x");
+doPlot->setPlotLogscale([true,true]) and
+        setPlotAutoscale([true,true]) and
+        setPlotPreserveAspect(false) and
+        plot   (N,abs(pi-pi1(N)),"l .") and
+        addPlot(N,abs(pi-pi2(N)),"l +") and
+        addPlot(N,abs(pi-pi3(N)),"l x");
 
+main->doPlot;
 

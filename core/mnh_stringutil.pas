@@ -144,25 +144,26 @@ FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isV
       isValid:=false;
       exit(replaceAll(original,lookFor,replaceBy));
     end else isValid:=true;
-    p:=pos(lookFor,original);
-    if p>0 then begin
-      result:=copy(original,1,p-1)+replaceBy+copy(original,p+length(lookFor),length(original));
-      p:=pos(lookFor,original);
-    end else result:=original;
+    result:=original;
+    p:=pos(lookFor,result);
+    while p>0 do begin
+      result:=copy(result,1,p-1)+replaceBy+copy(result,p+length(lookFor),length(result));
+      p:=pos(lookFor,result);
+    end;
   end;
 
 FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
-    VAR p:longint;
-    begin
-      result:='';
+  VAR p:longint;
+  begin
+    result:='';
+    p:=pos(lookFor,original);
+    while p>0 do begin
+      result:=result+copy(original,1,p-1)+replaceBy;
+      original:=copy(original,p+length(lookFor),length(original));
       p:=pos(lookFor,original);
-      while p>0 do begin
-        result:=result+copy(original,1,p-1)+replaceBy;
-        original:=copy(original,p+length(lookFor),length(original));
-        p:=pos(lookFor,original);
-      end;
-      result:=result+original;
     end;
+    result:=result+original;
+  end;
 
 FUNCTION escapeString(CONST s:ansistring):ansistring;
   begin

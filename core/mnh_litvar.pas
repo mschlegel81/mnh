@@ -538,6 +538,7 @@ FUNCTION T_stringLiteral.leqForSorting(CONST other:P_scalarLiteral):boolean;
 
 FUNCTION T_stringLiteral.softCast:P_scalarLiteral;
   VAR len:longint;
+      otherVal:ansistring;
   begin
     if lowercase(val)=C_boolText[false] then exit(newBoolLiteral(false));
     if lowercase(val)=C_boolText[true ] then exit(newBoolLiteral(true ));
@@ -547,12 +548,14 @@ FUNCTION T_stringLiteral.softCast:P_scalarLiteral;
       then exit(result)
       else disposeLiteral(result);
     end;
+    otherVal:=unescapeString(sysutils.trim(value),len);
+    if len=length(sysutils.trim(value)) then exit(newStringLiteral(otherVal));
     result:=@self;
     rereference;
   end;
 
 FUNCTION T_stringLiteral.trim:P_stringLiteral;
-  VAR rs:string;
+  VAR rs:ansistring;
   begin
     rs:=sysutils.trim(val);
     if rs=val then begin
@@ -777,6 +780,10 @@ FUNCTION T_expressionLiteral.operate(CONST op:T_tokenType; CONST other:P_scalarL
 
 PROCEDURE T_listLiteral.append(CONST L:P_literal; CONST incRefs:boolean);
   begin
+    if L=nil then begin
+      raiseError(el3_evalError,'Trying to append NIL literal to list',C_nilTokenLocation);
+      exit;
+    end;
     setLength(element,length(element)+1);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;

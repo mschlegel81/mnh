@@ -46,15 +46,37 @@ FUNCTION getTokenAt(CONST line:AnsiString; CONST charIndex:longint):T_token;
 VAR mainPackageProvider:T_codeProvider;
 {$undef include_interface}
 IMPLEMENTATION
+CONST STACK_DEPTH_LIMIT=45000;
+VAR secondaryPackages:array of P_package;
+    mainPackage      :T_package;
+    packagesAreFinalized:boolean=false;
+
+FUNCTION guessPackageForToken(CONST token:T_token):P_package;
+  VAR provider:P_codeProvider;
+      packId:string;
+      i:longint;
+  begin
+    provider:=token.location.provider;
+    if provider=mainPackage.codeProvider then exit(@mainPackage);
+    for i:=0 to length(secondaryPackages)-1 do
+      if provider=secondaryPackages[i]^.codeProvider then exit(secondaryPackages[i]);
+    if provider=nil then exit(@mainPackage);
+    packId:=provider^.id;
+    if packId=mainPackageProvider.id then exit(@mainPackage);
+    if packId=mainPackage.codeProvider^.id then exit(@mainPackage);
+    for i:=0 to length(mainPackage.packageUses)-1 do
+      if packId=mainPackage.packageUses[i].id then exit(mainPackage.packageUses[i].pack);
+    for i:=0 to length(secondaryPackages)-1 do
+      if packId=secondaryPackages[i]^.codeProvider^.id then exit(secondaryPackages[i]);
+    result:=@mainPackage;
+  end;
+
 {$define include_implementation}
 {$include mnh_tokens_token.inc}
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
-VAR secondaryPackages:array of P_package;
-    mainPackage      :T_package;
-    packagesAreFinalized:boolean=false;
-    
+
 PROCEDURE reloadMainPackage;
   VAR i,j:longint;
       used:T_listOfString;
@@ -129,74 +151,6 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
   end;
 
 PROCEDURE T_package.load;
-  PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
-    VAR this,next,prev:P_token;
-    begin
-      this:=first; prev:=nil;
-      while this<>nil do begin
-        next:=this^.next;
-        if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
-           ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_set,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
-           and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
-          if this^.tokType=tt_operatorMinus then begin
-            if (next<>nil) and (next^.tokType = tt_literal) then begin
-              this^.tokType:=tt_literal;
-              this^.data:=P_literal(next^.data)^.negate(this^.location);
-              this^.next:=disposeToken(next);
-            end else this^.tokType:=tt_unaryOpMinus;
-          end else begin
-            if prev=nil then begin
-              first:=disposeToken(this);
-              this:=first;
-            end else begin
-              prev^.next:=disposeToken(this);
-              this:=next;
-            end;
-          end;
-        end else if (this^.tokType=tt_listBraceOpen) and (this^.next<>nil) and (this^.next^.tokType=tt_listBraceClose) then begin
-          this^.tokType:=tt_literal;
-          this^.data:=newListLiteral;
-          this^.next:=disposeToken(this^.next);
-        end;
-        prev:=this;
-        this:=this^.next;
-      end;
-    end;
-
-  PROCEDURE predigest(VAR first:P_token);
-    VAR t:P_token;
-    begin
-      t:=first;
-      while t<>nil do begin
-        case t^.tokType of
-        tt_identifier: t^.data:=@self;
-        tt_set: if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-                and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-                and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-          t^.data:=ensureRuleId(t^.next^.next^.txt);
-          t^.next:=disposeToken(t^.next); //dispose (
-          t^.next:=disposeToken(t^.next); //dispose <id>
-          t^.next:=disposeToken(t^.next); //dispose ,
-        end else begin
-          raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
-          exit;
-        end;
-        tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-                and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-                and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-          t^.txt:=t^.next^.next^.txt;
-          t^.data:=nil;
-          t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
-        end else begin
-          raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
-          exit;
-        end;
-
-        end;
-        t:=t^.next;
-      end;
-    end;
-
   VAR isFirstLine:boolean=true;
   PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
@@ -412,8 +366,8 @@ PROCEDURE T_package.load;
       if parseCache then exit;
       predigestBeforeDeclarationParsing(first);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
-      if assignmentToken=nil then predigest(first)
-                             else predigest(assignmentToken);
+      if assignmentToken=nil then predigest(first,@self)
+                             else predigest(assignmentToken,@self);
       if assignmentToken<>nil then begin
         writeDeclEcho(tokensToString(first));
         parseRule;

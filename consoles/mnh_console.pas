@@ -2,7 +2,7 @@ PROGRAM mnh_console;
 USES mnh_tokens, mnh_out_adapters, mnh_constants, mnh_fileWrappers,sysutils, mnh_stringutil, mnh_tokLoc, mnh_funcs;
 VAR nextInput:ansistring;
 //by command line parameters:---------------
-    minErrorLevel:T_errorLevel=el0_allOkay;
+    minErrorLevel:T_errorLevel=el2_warning;
     fileToInterpret:ansistring='';
     parameters:array of ansistring;
 //---------------:by command line parameters
@@ -34,7 +34,7 @@ PROCEDURE parseCmdLine;
       writeln('            if not present, interactive mode is entered');
       writeln('  +echo: force echo on (default for interactive mode)');
       writeln('  -echo: force echo off (default for interpretation mode)');
-      writeln('  -el# : set minimum error level for output; valid values: [0..5], default=0');
+      writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
       writeln('  -h   : display this help and quit');
       halt;
     end;
@@ -77,8 +77,6 @@ PROCEDURE parseCmdLine;
       mnh_out_adapters.exprOut      :=nil;      
     end;
     mnh_out_adapters.errorOut:=@filteredStdErrOut;
-    
-  
   end;
 
 PROCEDURE interactiveMode;  
