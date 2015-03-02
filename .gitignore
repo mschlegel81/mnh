@@ -5,6 +5,8 @@ Thumbs.db
 *.ppu
 *.o
 *.res
-#ignore images and zips
+*.settings
+#ignore images and backups
 *.png
 *.7z
+*.bak
