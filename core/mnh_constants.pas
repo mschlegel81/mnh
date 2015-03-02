@@ -57,9 +57,7 @@ TYPE
                  lt_stringList,
                  lt_uncheckedList,
                  lt_listWithError);
-
-CONST 
-
+CONST
   C_bracketPrecedence:byte=8; //must be one higher than highest operator precedence
   C_opPrecedence:array[tt_comparatorEq..tt_operatorIn] of byte=
     (6, 6, 6, 6, 6, 6, 6, //comparators
@@ -108,7 +106,7 @@ CONST
     //special: string concatenation
     '&',
     //list operators:
-    '%','%%','%%%','%%%%','|','in',
+    '%','%%','%%%','%%%%','|',' in ',
     //inline if: (<condition>?<then>:<else>)
     '?',':',
     //assignment operators:

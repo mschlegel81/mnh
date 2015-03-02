@@ -25,6 +25,7 @@ VAR tokenRecycling:record
     
 FUNCTION disposeToken(p:P_token):P_token;
   begin
+    if p=nil then exit(nil);
     result:=p^.next;
     p^.undefine;
     with tokenRecycling do 
@@ -55,7 +56,7 @@ FUNCTION newToken(CONST tokenLocation,tokenText:ansistring; CONST tokenType:T_to
     with tokenRecycling do if fill>0 then begin
       dec(fill);
       result:=dat[fill];
-    end else new(result,create);
+    end else new(result,create);    
     result^.define(tokenLocation,tokenText,tokenType);
     result^.next:=nil;
   end;
@@ -176,8 +177,8 @@ FUNCTION T_token.toString:ansistring;
       tt_typeCheckExpression,tt_typeCheckNonemptyList,tt_typeCheckEmptyList: result:=C_tokenString[tokType];
       tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer, tt_parameterIdentifier:result:=txt;
       tt_literal            : result:=P_literal(data)^.toString;
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString;
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString;
+      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
+      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
     end;    
   end;

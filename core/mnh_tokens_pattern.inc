@@ -107,15 +107,18 @@ PROCEDURE T_pattern.finalizeRefs;
          (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt])
       then for j:=length(sig)-1 downto 0 do 
         if (j<>i) and (sig[i].restrictionId=sig[j].id) 
-        then sig[i].restrictionIdx:=j;             
+        then sig[i].restrictionIdx:=j;                 
   end;
   
 FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;  
   VAR i:longint;
       L:P_literal;
   begin
+    //writeln('trying to match ',toString,' with ',par.toParameterListString(true));
+  
     if (par.size<>length(sig)) then exit(false);
     for i:=0 to length(sig)-1 do begin
+      //writeln('trying to match parameter #',i,' index=',sig[i].restrictionIdx); 
       L:=par.value(i);
       with sig[i] do case restrictionType of
         tt_typeCheckScalar    ,
@@ -184,6 +187,7 @@ FUNCTION T_pattern.toString:ansistring;
         else result:=result+id;
       end;      
     end;
+    result:=result+')';
   end;
 
 FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;

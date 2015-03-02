@@ -67,14 +67,14 @@ PROCEDURE reloadAllPackages;
   
 PROCEDURE reloadMainPackage;
   begin
-    outAdapter.clearErrors;    
+      clearErrors;    
     if length(packages)>0 then packages[0]^.load;
   end;
 
 PROCEDURE clearAllPackages;
   VAR i:longint;
   begin
-    outAdapter.clearErrors;
+      clearErrors;
     clearSourceScanPaths;
     for i:=length(packages)-1 downto 0 do dispose(packages[i],destroy);      
     setLength(packages,0);  
@@ -84,7 +84,7 @@ PROCEDURE initMainPackage(CONST filename:ansistring);
   VAR fileWrapper:P_fileWrapper;
   begin
     if length(packages)>0 then exit;
-    outAdapter.clearErrors;    
+      clearErrors;    
     new(fileWrapper,create(filename));
     if fileWrapper^.exists then begin
       addSourceScanPath(extractFilePath(filename));
@@ -96,7 +96,7 @@ PROCEDURE initMainPackage(CONST filename:ansistring);
 PROCEDURE initMainPackage(CONST directInputWrapper:P_directInputWrapper);
   begin
     if length(packages)>0 then exit;
-    outAdapter.clearErrors;    
+      clearErrors;    
     setLength(packages,1);
     new(packages[0],create(directInputWrapper));    
   end;
@@ -108,7 +108,7 @@ FUNCTION loadPackage(CONST packageId,tokenLocation:ansistring):P_package;
     for i:=0 to length(packages)-1 do if packages[i]^.codeProvider^.fileIdentifier = packageId then begin
       if packages[i]^.ready then exit(packages[i])
                             else begin
-                              outAdapter.raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+packageId+'"',tokenLocation);
+                              raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+packageId+'"',tokenLocation);
                               exit(nil);
                             end;
     end;
@@ -117,7 +117,7 @@ FUNCTION loadPackage(CONST packageId,tokenLocation:ansistring):P_package;
       setLength(packages,length(packages)+1);
       new(packages[length(packages)-1],create(newSource));
     end else begin
-      outAdapter.raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
+      raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
       result:=nil;
     end;
   end;
@@ -157,11 +157,12 @@ PROCEDURE T_package.load;
         literal:P_literal;
     begin
       removeLeadingBlanks;
+      if length(line)<1 then exit(nil);
       result:=nil;
       case line[1] of
         '0'..'9': begin
           literal:=parseNumber(line,parsedLength);
-          if literal=nil then outAdapter.raiseError(el4_parsingError,'Cannot parse numeric literal '+line,lineLocation)
+          if literal=nil then raiseError(el4_parsingError,'Cannot parse numeric literal '+line,lineLocation)
           else begin
             result:=resultFrom(parsedLength,tt_literal);
             result^.data:=literal;
@@ -169,7 +170,7 @@ PROCEDURE T_package.load;
         end;
         '"': begin
           id:=unescapeString(line,parsedLength);
-          if parsedLength=0 then outAdapter.raiseError(el4_parsingError,'Cannot parse string literal '+line,lineLocation)
+          if parsedLength=0 then raiseError(el4_parsingError,'Cannot parse string literal '+line,lineLocation)
           else begin
             result:=resultFrom(parsedLength,tt_literal);
             result^.data:=newStringLiteral(id);
@@ -198,6 +199,7 @@ PROCEDURE T_package.load;
             result^.data:=intrinsicFuncPtr;
           end else begin
             result:=resultFrom(length(id),tt_identifier);
+            result^.data:=@self;
           end;
         end;
         ';': result:=resultFrom(1,tt_eol);
@@ -233,9 +235,9 @@ PROCEDURE T_package.load;
              else if startsWith(line,'%%')   then result:=resultFrom(2,tt_operatorExtractL1)
              else                                 result:=resultFrom(1,tt_operatorExtractL0);
         '.': if startsWith(line,'..')        then result:=resultFrom(2,tt_separatorCnt)
-                                             else outAdapter.raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
+                                             else raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
         ':': if startsWith(line,':=') then result:=resultFrom(2,tt_assign)
-             else if (length(line)>4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
+             else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
                id:=leadingId;
                if      id=':booleanList' then result:=newToken(lineLocation,'',tt_typeCheckBoolList  )
                else if id=':boolean'     then result:=newToken(lineLocation,'',tt_typeCheckBoolean   )
@@ -250,10 +252,10 @@ PROCEDURE T_package.load;
                else if id=':string'      then result:=newToken(lineLocation,'',tt_typeCheckString    )
                else if id=':realList'    then result:=newToken(lineLocation,'',tt_typeCheckRealList  )
                else if id=':real'        then result:=newToken(lineLocation,'',tt_typeCheckReal      )
-               else outAdapter.raiseError(el4_parsingError,'Cannot parse: '+line+C_lineBreakChar+'expected type check token (one of :scalar, :list, :boolean, :booleanList, :int, :intList, :real, :realList, :string, :stringList, :numeric, :numericList, :expression)',lineLocation);
+               else raiseError(el4_parsingError,'Cannot parse: '+line+C_lineBreakChar+'expected type check token (one of :scalar, :list, :boolean, :booleanList, :int, :intList, :real, :realList, :string, :stringList, :numeric, :numericList, :expression)',lineLocation);
              end else result:=resultFrom(1,tt_iifElse);
         else begin
-          outAdapter.raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
+          raiseError(el4_parsingError,'Cannot parse: '+line,lineLocation);
           line:='';
         end;
       end;
@@ -304,7 +306,7 @@ PROCEDURE T_package.load;
           inlineSubRule:P_subrule;
       begin
         if (rep^.tokType<>tt_expBraceOpen) then begin      
-          outAdapter.raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
+          raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
           exit;
         end;          
         t:=rep^.next; prev:=rep;  
@@ -318,16 +320,16 @@ PROCEDURE T_package.load;
           t:=t^.next;
         end;        
         if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-          outAdapter.raiseError(el4_parsingError,'Error creating subrule from inline; expression does not end with an }',rep^.location); 
+          raiseError(el4_parsingError,'Error creating subrule from inline; expression does not end with an }',rep^.location); 
           exit;
         end;     
         rep^.next:=t^.next; //remove expression from parent expression
         prev^.next:=nil; //unlink closing curly bracket
         disposeToken(t); //dispose closing curly bracket
         predigest(inlineRule,forceResolveIds);
-        if outAdapter.errorLevel<=el2_warning then begin
-          new(inlineSubRule,createFromInline(inlineRule,@self));
-          if outAdapter.errorLevel<=el2_warning then begin
+        if   errorLevel<=el2_warning then begin
+          new(inlineSubRule,createFromInline(inlineRule));
+          if   errorLevel<=el2_warning then begin
             rep^.tokType:=tt_literal;
             rep^.data:=newExpressionLiteral(inlineSubRule);
           end else dispose(inlineSubRule,destroy);
@@ -349,7 +351,7 @@ PROCEDURE T_package.load;
             t^.next:=disposeToken(t^.next); //dispose <id>
             t^.next:=disposeToken(t^.next); //dispose ,
           end else begin
-            outAdapter.raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
+            raiseError(el4_parsingError,'Invalid set-expression; expected to start with "set(<id>,"',t^.location);
             exit;
           end;
           tt_each:if  (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
@@ -359,7 +361,7 @@ PROCEDURE T_package.load;
             t^.data:=nil;
             t^.next:=disposeToken(disposeToken(disposeToken(t^.next))); //dispose ( , <id> and ","
           end else begin
-            outAdapter.raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
+            raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,"',t^.location);
             exit;
           end;
         end;
@@ -390,7 +392,7 @@ PROCEDURE T_package.load;
               pack:=nil;
             end;            
           end else if first^.tokType<>tt_separatorComma then begin
-            outAdapter.raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.toString,first^.location);
+            raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.toString,first^.location);
             exit;
           end;
           temp:=first; first:=disposeToken(temp);
@@ -461,7 +463,7 @@ PROCEDURE T_package.load;
             setLength(bodyPart,1);
             bodyPart[0,0]:=first^.next;
           end else begin
-            outAdapter.raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+            raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
             exit;          
           end;          
           while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin            
@@ -476,7 +478,7 @@ PROCEDURE T_package.load;
           end;
           bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma          
           if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-            outAdapter.raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+            raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
             exit;
           end;
           bracketClosingEach:=t;
@@ -526,7 +528,7 @@ PROCEDURE T_package.load;
           //iterate over itList----------------------------------------------------------
           t:=first;
           if aggregatorPresent and (itList^.size=0) then 
-            outAdapter.raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
+            raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
           else if length(bodyRule)>0 then for i:=0 to itList^.size-1 do
           for j:=0 to length(bodyRule)-1 do begin
             if (i<>0) or (j<>0) then for k:=0 to length(tokensBetween)-1 do begin
@@ -567,8 +569,8 @@ PROCEDURE T_package.load;
                                     else parameterListLiteral:=parameterListToken^.data;
           if first^.tokType=tt_userRulePointer then begin
             if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace)) then begin
-              if parameterListLiteral=nil then outAdapter.raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
-                                          else outAdapter.raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toString,first^.location);
+              if parameterListLiteral=nil then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
+                                          else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toString,first^.location);
               exit;
             end;
           end else if first^.tokType=tt_intrinsicRulePointer then begin
@@ -577,8 +579,8 @@ PROCEDURE T_package.load;
               firstReplace:=newToken('','',tt_literal,newLiteral);
               lastReplace:=firstReplace;
             end else begin
-              if parameterListLiteral=nil then outAdapter.raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
-                                   else outAdapter.raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toString,first^.location);
+              if parameterListLiteral=nil then raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
+                                   else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toString,first^.location);
               exit;
             end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
@@ -586,7 +588,7 @@ PROCEDURE T_package.load;
             //failing "replaces" for inline rules will raise evaluation error.
             if not(inlineRule^.replaces(parameterListLiteral,firstReplace,lastReplace)) then exit;
           end else begin
-            outAdapter.raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
+            raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
             exit;
           end;
           disposeToken(first);
@@ -597,92 +599,73 @@ PROCEDURE T_package.load;
         end;
         
       PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
-        VAR p,prev,tokenBeforeThen,lastThen:P_token;
+        VAR p,prev,tokenBeforeElse,lastThen:P_token;
+            bracketLevel:longint=0;
         begin
-          p:=first; prev:=nil;
-          //while p<>nil and 
-          {$WARNING unimplemented}
-//          tt_questionMark: if (c[-1].tt=tt_literal) and (P_literal(c[-1].tok^.data)^.typeByte=type_boolScalar) then begin
-//            {$ifdef verbose}
-//            logSubst('Resolve inline-if');
-//            {$endif}
-//            stack.pushUnlink(first); //push question mark
-//            first:=c[1].tok; iterator:=first;
-//            if iterator<>nil then begin
-//              //locate subexpressions===============================================
-//              while (iterator<>nil) and not((iterator^.ttype=tt_thenMarker) and (stack.top=c[0].tok))  do begin
-//                case iterator^.ttype of
-//                  tt_braceOpen,tt_listBraceOpen: stack.push(iterator);
-//                  tt_braceClose: if stack.top^.ttype=tt_braceOpen
-//                                 then stack.pop
-//                                 else evaluationEnvironment.raiseError('Unbalanced paranthesis!');
-//                  tt_listBraceClose: if stack.top^.ttype=tt_listBraceOpen
-//                                 then stack.pop
-//                                 else evaluationEnvironment.raiseError('Unbalanced paranthesis!');
-//                end;
-//                c[2].tok:=iterator;
-//                iterator:=iterator^.next;
-//              end;
-//              //===============================================locate subexpressions
-//              if (iterator<>nil) and (iterator^.ttype=tt_thenMarker) then begin
-//                iterator:=iterator^.next;
-//                c[3].tok:=nil;
-//                while (iterator<>nil) and not((iterator^.ttype in [tt_braceClose,tt_listBraceClose,tt_separator]) and (stack.top=c[0].tok)) do begin
-//                  case iterator^.ttype of
-//                    tt_braceOpen,tt_listBraceOpen: stack.push(iterator);
-//                    tt_braceClose: if stack.top^.ttype=tt_braceOpen
-//                                   then stack.pop
-//                                   else evaluationEnvironment.raiseError('Unbalanced paranthesis!');
-//                    tt_listBraceClose: if stack.top^.ttype=tt_listBraceOpen
-//                                   then stack.pop
-//                                   else evaluationEnvironment.raiseError('Unbalanced paranthesis!');
-//                  end;
-//                  c[3].tok:=iterator;
-//                  iterator:=iterator^.next;
-//                end;
-//                if (stack.top^.ttype=tt_questionMark) and (c[3].tok<>nil) and ((iterator=nil) or (iterator^.ttype in [tt_braceClose,tt_listBraceClose,tt_separator,tt_questionMark])) then begin
-//                  //if iterator<>nil then begin
-//                  if P_literal(c[-1].tok^.data)^.bVal[0] then begin
-//                    //THEN-case -> drop else-subexpression
-//                    c[3].tok^.next:=nil;
-//                    c[2].tok^.destroySuccessors();
-//                    c[2].tok^.next:=iterator;
-//                  end else begin
-//                    //ELSE-case -> drop then-subexpression
-//                    iterator:=c[2].tok^.next^.next;
-//                    c[2].tok^.next^.next:=nil;
-//                    first^.destroySuccessors();
-//                    recycler.disposeOrPutToHeap(first);
-//                    first:=iterator;
-//                  end;
-//                  stack.popDestroy();
-//                  stack.popDestroy();
-//                  didSubstitution:=true; reloadForwardChunk; reloadStackChunk;
-//                end else begin
-//                  evaluationEnvironment.raiseError('Invalid syntax for inline if!');
-//                  while stack.top^.ttype<>tt_questionMark do stack.pop;
-//                  stack.pop; //pop question mark
-//                end;
-//              end else begin
-//                evaluationEnvironment.raiseError('Invalid syntax for inline if!');
-//                while stack.top^.ttype<>tt_questionMark do stack.pop;
-//                stack.pop; //pop question mark
-//              end;
-//              with evaluationEnvironment.debug do if Level=C_debugLevel_functionCallsAndOperators then
-//                evaluationEnvironment.addStep(stack.toString+first^.toString(true,literalLengthLimit,expressionLengthLimit));
-//            end;
-//  
-//          end else evaluationEnvironment.raiseError('Invalid syntax for inline-if!');
-          
+          prev:=first;
+          stack_push; //push "?"
+          p:=first;
+          while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+            case p^.tokType of
+              tt_braceOpen ,tt_each,tt_set,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+              tt_braceClose,               tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+            end;
+            prev:=p; p:=p^.next;
+          end;
+          if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
+            stack_popLink;
+            raiseError(el3_evalError,'Cannot evaluate inline-if; cannot locate then-marker',first^.location);
+            exit;
+          end;
+          tokenBeforeElse:=prev;          
+          while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma]) and (bracketLevel=-1)) do begin
+            case p^.tokType of
+              tt_braceOpen ,tt_each,tt_set,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+              tt_braceClose,               tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+            end;
+            prev:=p; p:=p^.next;
+          end;
+          if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma]) and (bracketLevel=-1)) then begin
+            stack_popLink;
+            raiseError(el3_evalError,'Cannot evaluate inline-if; cannot locate end of then-expression',first^.location);
+            exit;
+          end;
+          lastThen:=prev;
+          if conditionLit then begin
+            //take then-subexpression -> drop else-subexpression
+            p:=tokenBeforeElse^.next;              //store tt_iifElse-token
+            tokenBeforeElse^.next:=lastThen^.next; //unlink else-expression (head) 
+            lastThen^.next:=nil;                   //unlink else-expression (tail);
+            cascadeDisposeToken(p);                //dispose else-expression
+          end else begin
+            //take else-subexpression -> drop then-subexpression
+            p:=first;
+            first:=tokenBeforeElse^.next^.next; 
+            tokenBeforeElse^.next^.next:=nil;
+            cascadeDisposeToken(p);
+          end;
+          stack_popDestroy; //pop "?"
+          stack_popDestroy; //pop condition literal
+        end;
         
+      PROCEDURE applyCheck;
+        VAR checkResult:boolean;
+        begin
+          checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
+          first^.next:=disposeToken(first^.next);
+          disposeLiteral(first^.data);
+          first^.data:=newBoolLiteral(checkResult);
+          didSubstitution:=true;
         end;
         
       begin
         setLength(stack,0);
         repeat
           didSubstitution:=false;
+          //writeln(cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
           case cTokType(0) of
             tt_literal: case cTokType(-1) of
+              tt_set: stack_popLink;
               tt_unaryOpPlus: stack_popDestroy;
               tt_unaryOpMinus: begin
                 newLit:=P_literal(first^.data)^.negate(stack[length(stack)-1]^.location);
@@ -715,6 +698,7 @@ PROCEDURE T_package.load;
                   stack_popDestroy; //pop operator from stack
                   stack_popDestroy; //pop LHS-Literal from stack
                 end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
+                else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
                 else begin
                   stack_push;
                   stack_push;
@@ -736,6 +720,7 @@ PROCEDURE T_package.load;
                   stack_popDestroy; //pop operator from stack
                   stack_popDestroy; //pop LHS-Literal from stack
                 end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
+                else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
                 else begin
                   stack_push;
                   stack_push;
@@ -747,20 +732,19 @@ PROCEDURE T_package.load;
                   first^.next:=disposeToken(first^.next);
                   didSubstitution:=true;
                 end;
-                tt_comparatorEq..tt_operatorIn: begin // ( | <Lit> op
+                tt_braceOpen: begin
                   stack_push;
+                  first^.tokType:=tt_parList_constructor;
+                  first^.data:=newListLiteral;
                   stack_push;
                 end;
+                tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
                 tt_iifCheck: stack_push;
                 tt_parList:  applyRule(first^.next,first^.next^.next);
-                //tt_braceOpen: begin
-                //  stack_push;
-                //  first^.tokType:=tt_parList_constructor;
-                //end;
-                else outAdapter.raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
+                tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+                else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
               end;
               tt_list_constructor: case cTokType(1) of
-                tt_iifCheck: stack_push;  // [ | <Lit> ?
                 tt_separatorComma: begin // [ | <Lit> ,                  
                   P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
                   first:=disposeToken(first);
@@ -782,14 +766,18 @@ PROCEDURE T_package.load;
                   first^.tokType:=tt_literal;
                   didSubstitution:=true;
                 end;
-                tt_comparatorEq..tt_operatorIn: begin // [ | <Lit> <op>
+                tt_braceOpen: begin
                   stack_push;
+                  first^.tokType:=tt_parList_constructor;
+                  first^.data:=newListLiteral;
                   stack_push;
                 end;
-                tt_parList: applyRule(first^.next,first^.next^.next);
+                tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+                tt_iifCheck: stack_push;
+                tt_parList:  applyRule(first^.next,first^.next^.next);
+                tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
               end;
               tt_parList_constructor: case cTokType(1) of
-                tt_iifCheck: stack_push; // ( | <Lit> ? -> ( <Lit> | ?
                 tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
                   P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
                   stack[length(stack)-1]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
@@ -802,21 +790,39 @@ PROCEDURE T_package.load;
                   P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
                   first:=disposeToken(first);
                   first:=disposeToken(first);
+                  didSubstitution:=true;
+                end;
+                tt_braceOpen: begin
+                  stack_push;
+                  first^.tokType:=tt_parList_constructor;
+                  first^.data:=newListLiteral;
+                  stack_push;
                 end;
                 tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+                tt_iifCheck: stack_push;
+                tt_parList:  applyRule(first^.next,first^.next^.next);
+                tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;                
               end;
               tt_each: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
-                tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
-                tt_iifCheck: stack_push;
                 tt_separatorComma: if cTokType(2)<>tt_eol then begin
                   stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
                   P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
                   first:=disposeToken(first);
                   first:=disposeToken(first);                
                   stack_popLink;
-                end else outAdapter.raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
-                else outAdapter.raiseError(el3_evalError,'Invalid syntax for each construct - token "'+first^.next^.toString+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
-              end else outAdapter.raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
+                end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
+                tt_braceOpen: begin
+                  stack_push;
+                  first^.tokType:=tt_parList_constructor;
+                  first^.data:=newListLiteral;
+                  stack_push;
+                end;
+                tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+                tt_iifCheck: stack_push;
+                tt_parList:  applyRule(first^.next,first^.next^.next);
+                tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;                
+                else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+first^.next^.toString+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
+              end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
               else case cTokType(1) of
                 tt_braceOpen: begin
                   stack_push;
@@ -824,15 +830,17 @@ PROCEDURE T_package.load;
                   first^.data:=newListLiteral;
                   stack_push;
                 end;
-                tt_parList: applyRule(first^.next,first^.next^.next);
                 tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
-                tt_iifCheck: stack_push; 
+                tt_iifCheck: stack_push;
+                tt_parList:  applyRule(first^.next,first^.next^.next);
+                tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
               end;
             end;
             tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
             tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack_push; end;
-            tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorIn: 
-              outAdapter.raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
+            tt_unaryOpPlus, tt_unaryOpMinus: stack_push;
+            tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn: 
+              raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
             tt_braceOpen: stack_push;
             tt_listBraceOpen: if cTokType(1)=tt_listBraceClose then begin
               //empty list
@@ -873,9 +881,9 @@ PROCEDURE T_package.load;
             end;
             tt_iifCheck: if (cTokType(-1)=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
               resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
-            end else outAdapter.raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
+            end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
           end;
-        until not(didSubstitution) or (outAdapter.errorLevel>=el3_evalError);
+        until not(didSubstitution) or (  errorLevel>=el3_evalError);
         while (length(stack)>0) do stack_popLink;
       end;
       
@@ -896,18 +904,18 @@ PROCEDURE T_package.load;
         ruleBody:=assignmentToken^.next;
         //plausis:
         if (ruleBody=nil) then begin 
-          outAdapter.raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location); 
+          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location); 
           cascadeDisposeToken(first);
           exit; 
         end;        
         p:=ruleBody^.getDeclarationOrAssignmentToken;
         if (p<>nil) then begin
-          outAdapter.raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);  
+          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);  
           cascadeDisposeToken(first);
           exit;
         end;
         if not(first^.tokType in [tt_identifier, tt_userRulePointer, tt_intrinsicRulePointer]) then begin
-          outAdapter.raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);  
+          raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);  
           cascadeDisposeToken(first);
           exit;
         end;        
@@ -915,7 +923,7 @@ PROCEDURE T_package.load;
         if (first^.next^.tokType=tt_identifier) and (first^.tokType=tt_identifier) then begin
           if trim(first^.txt)='private' then ruleIsPrivate:=true
           else if trim(first^.txt)<>'public' then begin
-            outAdapter.raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
+            raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
             cascadeDisposeToken(first);
             exit;
           end;
@@ -925,7 +933,7 @@ PROCEDURE T_package.load;
         p:=first;
         first:=disposeToken(p);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-          outAdapter.raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
+          raiseError(el4_parsingError,'Invalid declaration head.',first^.location);  
           cascadeDisposeToken(first);
           exit;
         end;
@@ -976,21 +984,22 @@ PROCEDURE T_package.load;
               first:=disposeToken(first);
               first:=disposeToken(first);
             end else begin
-              outAdapter.raiseError(el4_parsingError,'Invalid declaration pattern element.',first^.location);
+              raiseError(el4_parsingError,'Invalid declaration pattern element.',first^.location);
               cascadeDisposeToken(first);
               exit;
             end;
           end;
-          if first<>nil then begin
-            first:=disposeToken(first);
-          end else begin
-            outAdapter.raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
-            exit;
-          end;
         end;
+        if first<>nil then begin
+          first:=disposeToken(first);
+        end else begin
+          raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
+          exit;
+        end;
+        
         if evaluateBody then reduceExpression(ruleBody);
-        if outAdapter.errorLevel<el3_evalError then begin
-          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,@self));
+        if   errorLevel<el3_evalError then begin
+          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           ensureLocalRuleId(ruleId)^.addOrReplaceSubRule(subrule);
           if not(ruleIsPrivate) then 
           ensurePublicRuleId(ruleId)^.addOrSetSubRule(subrule);
@@ -1018,12 +1027,12 @@ PROCEDURE T_package.load;
       if assignmentToken=nil then predigest(first,true)
                              else predigest(assignmentToken,false);
       if assignmentToken<>nil then begin
-        outAdapter.writeDeclEcho(tokensToString(first));
+          writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
-        outAdapter.writeExprEcho(tokensToString(first));
+          writeExprEcho(tokensToString(first));
         reduceExpression(first);
-        outAdapter.writeExprOut(tokensToString(first));
+          writeExprOut(tokensToString(first));
       end;
       cascadeDisposeToken(first);
     end;
@@ -1041,15 +1050,13 @@ PROCEDURE T_package.load;
     last :=nil;
     for i:=0 to length(codeLines)-1 do begin
       lineColCounter:=1;
-      while codeLines[i]<>'' do begin
+      while (codeLines[i]<>'') and (errorLevel<el3_evalError) do begin
         next:=firstToken(codeLines[i],lineColCounter,codeProvider^.fileName+':'+intToStr(i+1)+','+intToStr(lineColCounter));
-          
         if (next<>nil) and (next^.tokType=tt_eol) then begin //EOL (end of input or semicolon)
           disposeToken(next);
           next:=nil;
           last:=nil;
         end;
-        
         if next=nil then begin
           if first<>nil then interpret(first);
           last:=nil;
@@ -1104,6 +1111,7 @@ PROCEDURE T_package.clear;
 DESTRUCTOR T_package.destroy;
   begin
     clear;  
+    dispose(codeProvider,destroy);
     publicRules.destroy;
     localRules.destroy;
     setLength(packageUses,0);    
@@ -1130,7 +1138,7 @@ PROCEDURE T_package.resolveRuleId(VAR token:T_token);
       token.data:=intrinsicFuncPtr;
       exit;
     end;
-    outAdapter.raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
+    raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
   
 FUNCTION T_package.ensureLocalRuleId(CONST ruleId:ansistring):P_rule;

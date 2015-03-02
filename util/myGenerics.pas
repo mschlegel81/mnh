@@ -126,11 +126,11 @@ TYPE
   
 
   
-FUNCTION hashOfAnsiString(x:ansistring):longint; inline;
+FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 implementation
 
-FUNCTION hashOfAnsiString(x:ansistring):longint; inline;
+FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
   VAR i:longint;
   begin
     {$Q-}

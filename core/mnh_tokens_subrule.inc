@@ -2,7 +2,6 @@
   P_subrule=^T_subrule;
   T_subrule=object
     private
-      package:P_package;
       declaredAt:ansistring;
       pattern:T_pattern;
       expression:array of record
@@ -13,10 +12,10 @@
       PROCEDURE updatePatternForInline;      
       PROCEDURE embrace;
     public
-      CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring; CONST declIn:P_package);
+      CONSTRUCTOR create          (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring);
       CONSTRUCTOR createConstant  (CONST value:P_literal);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token);
-      CONSTRUCTOR createFromInline(CONST rep:P_Token; CONST declIn:P_package);
+      CONSTRUCTOR createFromInline(CONST rep:P_Token);
       
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:ansistring);            
       DESTRUCTOR destroy;
@@ -27,11 +26,11 @@
 
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring; CONST declIn:P_package);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:ansistring);
   VAR t:P_token;
   begin
-    package:=declIn;
     pattern:=pat;
+    pattern.finalizeRefs;
     declaredAt:=declAt;
     isDeclaredInline:=false;
     setLength(expression,0);
@@ -55,7 +54,6 @@ CONSTRUCTOR T_subrule.createConstant  (CONST value:P_literal);
   begin
     pattern.create;
     declaredAt:='';
-    package:=nil;
     isDeclaredInline:=true;
     setLength(expression,1);
     with expression[0] do begin
@@ -115,11 +113,10 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;  
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; CONST declIn:P_package);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token);
   VAR t:P_token;
       bracketLevel:longint=0;
   begin
-    package:=declIn;
     declaredAt:=rep^.location;
     pattern.create;    
     isDeclaredInline:=true;
@@ -161,7 +158,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
   VAR t:P_token;
       i:longint;
   begin
-    if (param=nil) and (length(pattern.sig)=0) or pattern.matches(param^) then begin
+    if (param=nil) and (length(pattern.sig)=0) or  pattern.matches(param^) then begin
       with expression[0] do if parIdx>=0 then begin
         firstRep:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
         param^.value(parIdx)^.rereference;
@@ -172,16 +169,22 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_to
           t^.next:=newToken(token^.location,'',tt_literal,param^.value(parIdx));
           param^.value(parIdx)^.rereference;
         end else begin
-          if (token^.tokType = tt_identifier) and (package<>nil) then package^.resolveRuleId(token^);
+          if (token^.tokType = tt_identifier) then P_package(token^.data)^.resolveRuleId(token^);
           t^.next:=newToken(token);
         end;
         t:=t^.next;
       end;
       lastRep:=t;
       result:=true;
-    end else begin
+    end else if (param<>nil) 
+            and (length(expression)=1) 
+            and (expression[0].token^.tokType=tt_literal) 
+            and (P_literal(expression[0].token^.data)^.literalType = lt_expression)
+            and (P_subrule(P_expressionLiteral(expression[0].token^.data)^.value)^.pattern.matches(param^))
+    then result:=P_subrule(P_expressionLiteral(expression[0].token^.data)^.value)^.replaces(param,firstRep,lastRep)
+    else begin
       result:=false;
-      if isDeclaredInline then outAdapter.raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);      
+      if isDeclaredInline then raiseError(el3_evalError,'Cannot evaluate inline function with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);      
     end;
   end;
   
@@ -262,7 +265,7 @@ PROCEDURE T_subrule.performSet(CONST newValue:P_literal);
     if (length(expression)=1) and (expression[0].token^.tokType=tt_literal) then begin
       disposeLiteral(expression[0].token^.data);
       expression[0].token^.data:=newValue;
-    end else outAdapter.raiseError(el3_evalError,'Cannot process set-operation',declaredAt);
+    end else raiseError(el3_evalError,'Cannot process set-operation',declaredAt);
   end;
 
 {$endif}

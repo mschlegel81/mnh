@@ -40,73 +40,74 @@ TYPE
   T_writeCallback=PROCEDURE(CONST s:ansistring);
   T_plotCallback =PROCEDURE(VAR p:T_plot);
   
-  T_outAdapter=object
-    private
-      inputDeclEcho,
-      inputExprEcho,
-      exprOut ,
-      errorOut,
-      printOut,
-      tablePrintOut:T_writeCallback;
-      plotOut:T_plotCallback;
-      maxErrorLevel:T_errorLevel;
-    public
-      PROCEDURE writeDeclEcho(CONST s:ansistring);
-      PROCEDURE writeExprEcho(CONST s:ansistring);
-      PROCEDURE writeExprOut (CONST s:ansistring);
-      PROCEDURE writePrint   (CONST s:ansistring);
-      FUNCTION hasPlottingSupport:boolean;
-      PROCEDURE plot(VAR p:T_plot);      
-      PROCEDURE clearErrors;
-      PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
-      FUNCTION errorLevel:T_errorLevel;
-  end;
+VAR inputDeclEcho,
+    inputExprEcho,
+    exprOut ,
+    errorOut,
+    printOut,
+    tablePrintOut:T_writeCallback;
+    plotOut:T_plotCallback;
+    maxErrorLevel:T_errorLevel;
+
+PROCEDURE writeDeclEcho(CONST s:ansistring);
+PROCEDURE writeExprEcho(CONST s:ansistring);
+PROCEDURE writeExprOut (CONST s:ansistring);
+PROCEDURE writePrint   (CONST s:ansistring);
+FUNCTION hasPlottingSupport:boolean;
+PROCEDURE plot(VAR p:T_plot);      
+PROCEDURE clearErrors;
+PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
+FUNCTION errorLevel:T_errorLevel;
+
   
 PROCEDURE plainConsoleOut(CONST s:ansistring);
 PROCEDURE plainStdErrOut(CONST s:ansistring);
-  
-CONST 
-  C_default_out_adapter:T_outAdapter=(inputDeclEcho:nil; 
-                                      inputExprEcho:nil;
-                                      exprOut      :nil;
-                                      errorOut     :@plainStdErrOut;
-                                      printOut     :@plainConsoleOut;
-                                      tablePrintOut:nil;
-                                      plotOut      :nil;
-                                      maxErrorLevel:el0_allOkay);
 
-VAR outAdapter:T_outAdapter;
+PROCEDURE printMemoryStatus;
+
 IMPLEMENTATION
-PROCEDURE T_outAdapter.writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;  
-PROCEDURE T_outAdapter.writeExprEcho(CONST s:ansistring); begin if inputExprEcho<>nil then inputExprEcho(s); end;
-PROCEDURE T_outAdapter.writeExprOut (CONST s:ansistring); begin if exprOut<>nil       then exprOut(s); end;
-PROCEDURE T_outAdapter.writePrint   (CONST s:ansistring); 
+PROCEDURE writeDeclEcho(CONST s:ansistring); begin if inputDeclEcho<>nil then inputDeclEcho(s); end;  
+PROCEDURE writeExprEcho(CONST s:ansistring); begin if inputExprEcho<>nil then inputExprEcho(s); end;
+PROCEDURE writeExprOut (CONST s:ansistring); begin if exprOut<>nil       then exprOut(s); end;
+PROCEDURE writePrint   (CONST s:ansistring); 
+  VAR i:longint;
+      tmp:ansistring;
   begin 
     if pos(C_tabChar,s)>0 then begin
       if tablePrintOut<>nil then tablePrintOut(s)
-      else if printOut<>nil then printOut(formatTabs(s));
-    end else begin
-      if printOut<>nil then printOut(s);
+      else if printOut<>nil then writePrint(formatTabs(s));
+    end else if printOut<>nil then begin
+      tmp:=s;
+      i:=pos(C_lineBreakChar,tmp);
+      while i>0 do begin
+        if (i>1) and (tmp[i-1]=C_carriaceReturnChar) 
+        then printOut(copy(tmp,1,i-2))
+        else printOut(copy(tmp,1,i-1));
+        tmp:=copy(tmp,i+1,length(tmp));        
+        i:=pos(C_lineBreakChar,tmp);
+      end;
+      printOut(tmp);
+//       printOut(s);
     end;
   end;
 
-PROCEDURE T_outAdapter.clearErrors;
+PROCEDURE clearErrors;
   begin
     maxErrorLevel:=el0_allOkay;
   end;
 
-PROCEDURE T_outAdapter.raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
+PROCEDURE raiseError(CONST errorLevel:T_errorLevel; CONST errorMessage,errorLocation:ansistring);
   begin
     if errorLevel>maxErrorLevel then maxErrorLevel:=errorLevel;
     if errorOut<>nil then errorOut(C_errorLevelTxt[errorLevel]+errorMessage+'  @'+errorLocation);
   end;
   
-FUNCTION T_outAdapter.errorLevel:T_errorLevel; 
+FUNCTION errorLevel:T_errorLevel; 
   begin
     result:=maxErrorLevel;
   end;
   
-FUNCTION T_outAdapter.hasPlottingSupport:boolean;
+FUNCTION hasPlottingSupport:boolean;
   begin
     result:=(plotOut<>nil);
     if not(result) then begin
@@ -114,7 +115,7 @@ FUNCTION T_outAdapter.hasPlottingSupport:boolean;
     end;
   end;
   
-PROCEDURE T_outAdapter.plot(VAR p:T_plot);
+PROCEDURE plot(VAR p:T_plot);
   begin
     if (plotOut<>nil) then plotOut(p)
     else begin
@@ -181,6 +182,29 @@ PROCEDURE T_plot.clear;
     setLength(line,0);  
   end;
   
+PROCEDURE printMemoryStatus;
+  VAR mem:TMemoryManager;
+      hs:THeapStatus;
+      fhs:TFPCHeapStatus;
+
+  begin
+    GetMemoryManager(mem);
+    hs:=mem.GetHeapStatus();
+    fhs:=mem.GetFPCHeapStatus();
+    writeln('free: ',hs.TotalFree,'; heap free=',fhs.CurrHeapFree,'; heap used=',fhs.CurrHeapUsed);    
+  
+  end;
+  
 INITIALIZATION
-  outAdapter:=C_default_out_adapter;
+  inputDeclEcho:=nil; 
+  inputExprEcho:=nil;
+  exprOut      :=nil;
+  errorOut     :=@plainStdErrOut;
+  printOut     :=@plainConsoleOut;
+  tablePrintOut:=nil;
+  plotOut      :=nil;
+  maxErrorLevel:=el0_allOkay;
+
+
+  
 end.

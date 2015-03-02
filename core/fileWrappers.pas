@@ -11,6 +11,7 @@ TYPE
     FUNCTION fileLines:T_stringList; virtual; abstract;
     FUNCTION fileChanged:boolean; virtual; abstract;
     PROCEDURE logCheck; virtual; abstract;
+    DESTRUCTOR destroy; virtual; abstract;
   end;
   
   P_directInputWrapper=^T_directInputWrapper;
@@ -20,7 +21,7 @@ TYPE
       changedSinceCheck:boolean;
     public
      CONSTRUCTOR create;
-     DESTRUCTOR destroy;
+     DESTRUCTOR destroy; virtual;
      FUNCTION fileName:string; virtual; 
      FUNCTION fileIdentifier:string; virtual; 
      FUNCTION fileLines:T_stringList; virtual; 
@@ -37,7 +38,7 @@ TYPE
       checkedAtAge:longint;
     public
       CONSTRUCTOR create(CONST filepath:ansistring);
-      DESTRUCTOR destroy;
+      DESTRUCTOR destroy; virtual;
       FUNCTION fileName:string; virtual; 
       FUNCTION fileIdentifier:string; virtual; 
       FUNCTION getCheckedAtAge:longint;
@@ -92,7 +93,7 @@ PROCEDURE addSourceScanPath(CONST path:ansistring);
   end;
 
 FUNCTION locateSource(CONST id:ansistring):P_fileWrapper;
-  CONST sourceExt='.PAS';
+  CONST sourceExt='.MNH';
   
   FUNCTION nameToId(CONST fname:ansistring):ansistring;
     begin
