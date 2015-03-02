@@ -23,9 +23,7 @@ VAR tokenRecycling:record
       dat:array[0..1023] of P_token;
       fill:longint;
     end;
-
 {$endif}
-
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin

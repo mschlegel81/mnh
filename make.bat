@@ -66,7 +66,9 @@
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
 @mkdir distro\mnh\packages
-@copy packages\* distro\mnh\packages
+@mkdir distro\mnh\demos
+@copy packages\*.mnh distro\mnh\packages
+@copy demos\*.mnh distro\mnh\demos
 @cd distro
 @copy ..\bin64\* .
 @del ..\versions\mnh5_win??_%mydate%.7z

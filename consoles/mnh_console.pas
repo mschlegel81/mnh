@@ -61,6 +61,7 @@ PROCEDURE parseCmdLine;
           writeln('Invalid filename given!');
           writeln('Parameter: ',paramStr(i));
           writeln('File does not exist.');
+          halt;
         end;
       end else begin
         setLength(parameters,length(parameters)+1);

@@ -1,0 +1,12 @@
+odd(i)->(i and 1)=1;
+
+pure
+hailstone(1  )->1;
+hailstone(i>1)->i|(odd(i) ? hailstone(3*i+1) : hailstone(i div 2));
+
+sizes->0|each(i,[1..100000],size(hailstone(i)));
+
+main->print('Series starting @27 has ',size(hailstone(27)),' elements') and
+      print('Starting with: ',hailstone(27)%[0..3],' and') and
+      print('  ending with: ',hailstone(27)%[size(hailstone(27))-4..size(hailstone(27))-1]) and
+      print('Max length=',max(sizes),' for starting value ',argMax(sizes));
