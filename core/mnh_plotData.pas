@@ -112,6 +112,7 @@ TYPE
     row:array of T_sampleRow;
 
     CONSTRUCTOR createWithDefaults;
+    PROCEDURE setDefaults;
     DESTRUCTOR destroy;
     PROCEDURE addSampleRow(CONST sampleRow:T_sampleRow);
     PROCEDURE clear;
@@ -148,14 +149,14 @@ IMPLEMENTATION
 
 { T_sampleRow }
 
-constructor T_sampleRow.create(const index: byte);
+CONSTRUCTOR T_sampleRow.create(CONST index: byte);
   begin
     style.create(index);
     SetLength(sample,0);
   end;
 
-procedure T_sampleRow.getBoundingBox(const logX, logY: boolean;
-  var box: T_boundingBox);
+PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean;
+  VAR box: T_boundingBox);
   VAR i:longint;
       x,y:double;
   begin
@@ -169,19 +170,19 @@ procedure T_sampleRow.getBoundingBox(const logX, logY: boolean;
     end;
   end;
 
-procedure T_sampleRow.addSample(const x, y: double);
+PROCEDURE T_sampleRow.addSample(CONST x, y: double);
 begin
   setLength(sample,length(sample)+1);
   sample[length(sample)-1,0]:=x;
   sample[length(sample)-1,1]:=y;
 end;
 
-destructor T_sampleRow.destroy;
+DESTRUCTOR T_sampleRow.destroy;
   begin
     SetLength(sample,0);
   end;
 
-function T_sampleRow.loadFromFile(var F: T_File): boolean;
+FUNCTION T_sampleRow.loadFromFile(VAR F: T_File): boolean;
   VAR i1,i:longint;
   begin
     if not(style.loadFromFile(F)) then exit(false);
@@ -195,7 +196,7 @@ function T_sampleRow.loadFromFile(var F: T_File): boolean;
     result:=f.allOkay;
   end;
 
-procedure T_sampleRow.saveToFile(var F: T_File);
+PROCEDURE T_sampleRow.saveToFile(VAR F: T_File);
   VAR i:longint;
   begin
     style.saveToFile(F);
@@ -216,7 +217,7 @@ CONST C_defaultColor:array[0..5] of record name:string; color:array[T_colorChann
       (name:'purple';color:(192,  0,192)),
       (name:'orange';color:(255, 96,  0)));
 
-constructor T_style.create(const index: byte);
+CONSTRUCTOR T_style.create(CONST index: byte);
   begin
     title:='';
     style:=C_lineStyle_straight;
@@ -224,11 +225,11 @@ constructor T_style.create(const index: byte);
     styleModifier:=1;
   end;
 
-destructor T_style.destroy;
+DESTRUCTOR T_style.destroy;
   begin
   end;
 
-procedure T_style.parseStyle(const styleString: ansistring);
+PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
   FUNCTION parseColorOption(colorOption: string; OUT r,g,b:byte):boolean;
     PROCEDURE HSV2RGB(H,S,V:single; OUT r,g,b:byte);
       VAR hi,p,q,t:byte;
@@ -339,7 +340,7 @@ procedure T_style.parseStyle(const styleString: ansistring);
     if style=0 then style:=C_lineStyle_straight;
   end;
 
-function T_style.loadFromFile(var F: T_File): boolean;
+FUNCTION T_style.loadFromFile(VAR F: T_File): boolean;
   VAR cc:T_colorChannel;
   begin
     title:=f.readAnsiString;
@@ -349,7 +350,7 @@ function T_style.loadFromFile(var F: T_File): boolean;
     result:=f.allOkay;
   end;
 
-procedure T_style.saveToFile(var F: T_File);
+PROCEDURE T_style.saveToFile(VAR F: T_File);
   VAR cc:T_colorChannel;
   begin
     f.writeAnsiString(title);
@@ -358,80 +359,84 @@ procedure T_style.saveToFile(var F: T_File);
     f.writeDouble(styleModifier);
   end;
 
-function T_style.getTColor: longint;
+FUNCTION T_style.getTColor: longint;
 begin
   result:=color[cc_red] or (color[cc_green] shl 8) or (color[cc_blue] shl 16);
 end;
 
-function T_style.getIntLineWidth: longint;
+FUNCTION T_style.getIntLineWidth: longint;
   begin
     result:=trunc(styleModifier);
     if (random<frac(styleModifier)) then inc(result);
   end;
 
-function T_style.getSymbolWidth: double;
+FUNCTION T_style.getSymbolWidth: double;
   begin
     result:=3*styleModifier;
   end;
 
-function T_style.getSymbolRad: double;
+FUNCTION T_style.getSymbolRad: double;
   begin
     result:=3/sqrt(2)*styleModifier;
   end;
 
-function T_style.wantStraightLines: boolean;
+FUNCTION T_style.wantStraightLines: boolean;
 begin
   result:=(style and C_anyLineStyle)=C_lineStyle_straight;
 end;
 
-function T_style.wantLeftSteps: boolean;
+FUNCTION T_style.wantLeftSteps: boolean;
 begin
   result:=(style and C_anyLineStyle)=C_lineStyle_stepLeft;
 end;
 
-function T_style.wantRightSteps: boolean;
+FUNCTION T_style.wantRightSteps: boolean;
 begin
   result:=(style and C_anyLineStyle)=C_lineStyle_stepRight;
 end;
 
-function T_style.wantFill: boolean;
+FUNCTION T_style.wantFill: boolean;
 begin
   result:=(style and C_lineStyle_filled)=C_lineStyle_filled;
 end;
 
-function T_style.wantBars: boolean;
+FUNCTION T_style.wantBars: boolean;
 begin
   result:=style=C_lineStyle_bar;
 end;
 
-function T_style.wantBoxes: boolean;
+FUNCTION T_style.wantBoxes: boolean;
 begin
   result:=style=C_lineStyle_box;
 end;
 
-function T_style.wantDot: boolean;
+FUNCTION T_style.wantDot: boolean;
 begin
   result:=(style and C_symbolStyle_dot)=C_symbolStyle_dot;
 end;
 
-function T_style.wantPlus: boolean;
+FUNCTION T_style.wantPlus: boolean;
 begin
   result:=(style and C_symbolStyle_plus)=C_symbolStyle_plus;
 end;
 
-function T_style.wantCross: boolean;
+FUNCTION T_style.wantCross: boolean;
 begin
   result:=(style and C_symbolStyle_cross)=C_symbolStyle_cross;
 end;
 
-function T_style.wantImpulses: boolean;
+FUNCTION T_style.wantImpulses: boolean;
 begin
   result:=(style and C_symbolStyle_impulse)=C_symbolStyle_impulse;
 end;
 
-constructor T_plot.createWithDefaults;
+CONSTRUCTOR T_plot.createWithDefaults;
+  begin
+    setDefaults;
+  end;
+
+PROCEDURE T_plot.setDefaults;
   VAR axis:char;
-      i:longint;
   begin
     screenWidth:=200;
     screenHeight:=200;
@@ -446,39 +451,62 @@ constructor T_plot.createWithDefaults;
     end;
     preserveAspect:=true;
     clear;
-
-    setLength(row,1);
-    row[0].create(1);
-    for i:=-150 to 150 do row[0].addSample(i/100,sin(2*i/100));
   end;
 
-destructor T_plot.destroy;
+DESTRUCTOR T_plot.destroy;
   begin clear; end;
 
-procedure T_plot.addSampleRow(const sampleRow: T_sampleRow);
+PROCEDURE T_plot.addSampleRow(CONST sampleRow: T_sampleRow);
   begin
     setLength(row,length(row)+1);
     row[length(row)-1]:=sampleRow;
   end;
 
-procedure T_plot.clear;
+PROCEDURE T_plot.clear;
   VAR i:longint;
   begin
-    for i:=0 to length(row)-1 do with row[i] do setLength(sample,0);
+    for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row,0);
   end;
 
-function T_plot.loadFromFile(var F: T_File): boolean;
-begin
-  {$WARNING unimplemented}
-end;
+FUNCTION T_plot.loadFromFile(VAR F: T_File): boolean;
+  VAR axis:char;
+      i,iMax:longint;
+  begin
+    for axis:='x' to 'y' do begin
+      for i:=0 to 1 do range[axis,i]:=f.readDouble;
+      axisStyle[axis]:=f.readByte;
+      autoscale[axis]:=f.readBoolean;
+      logscale[axis]:=f.readBoolean;
+    end;
+    preserveAspect:=f.readBoolean;
+    iMax:=f.readLongint;
+    if not(F.allOkay) or (iMax<0) then exit(false);
+    clear;
+    setLength(row,iMax);
+    result:=true;
+    for i:=0 to iMax-1 do begin
+      row[i].create(i);
+      result:=result and row[i].loadFromFile(f);
+    end;
+  end;
 
-procedure T_plot.saveToFile(var F: T_File);
-begin
-  {$WARNING unimplemented}
-end;
+PROCEDURE T_plot.saveToFile(VAR F: T_File);
+  VAR axis:char;
+      i:longint;
+  begin
+    for axis:='x' to 'y' do begin
+      for i:=0 to 1 do f.writeDouble(range[axis,i]);
+      f.writeByte(axisStyle[axis]);
+      f.writeBoolean(autoscale[axis]);
+      f.writeBoolean(logscale[axis]);
+    end;
+    f.writeBoolean(preserveAspect);
+    f.writeLongint(length(row));
+    for i:=0 to length(row)-1 do row[i].saveToFile(f);
+  end;
 
-procedure T_plot.setScreenSize(const width, height: longint);
+PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
   PROCEDURE getRanges;
     VAR axis:char;
         i:longint;
@@ -560,7 +588,7 @@ procedure T_plot.setScreenSize(const width, height: longint);
         if value=0 then exit('0');
         if (scale >=-3) and (scale<0) then begin
           result:=IntToStr(value);
-          while length(result)<2 do result:='0'+result;
+          while length(result)<-scale do result:='0'+result;
           exit(copy(result,1,length(result)  +scale)+'.'+
                copy(result,  length(result)+1+scale,-scale));
         end else if (scale>=0) and (scale<3) then exit(IntToStr(value)+suf[scale])
@@ -613,7 +641,7 @@ procedure T_plot.setScreenSize(const width, height: longint);
     initTics('y');
   end;
 
-function T_plot.longtestYTic: ansistring;
+FUNCTION T_plot.longtestYTic: ansistring;
   VAR i:longint;
   begin
     result:='';
@@ -621,7 +649,7 @@ function T_plot.longtestYTic: ansistring;
     if result='' then result:='.0E';
   end;
 
-function T_plot.setTextSize(const xTicHeight, yTicWidth: longint): boolean;
+FUNCTION T_plot.setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
   begin
     result:=false;
     if wantTics('y') and
@@ -637,7 +665,7 @@ function T_plot.setTextSize(const xTicHeight, yTicWidth: longint): boolean;
     if result then setScreenSize(screenWidth,screenHeight);
   end;
 
-function T_plot.addRow(const styleOptions: string): longint;
+FUNCTION T_plot.addRow(CONST styleOptions: string): longint;
   begin
     result:=length(row);
     SetLength(row,result+1);
@@ -645,17 +673,17 @@ function T_plot.addRow(const styleOptions: string): longint;
     if Trim(styleOptions)<>'' then row[result].style.parseStyle(styleOptions);
   end;
 
-function T_plot.wantTics(const axis: char): boolean;
+FUNCTION T_plot.wantTics(CONST axis: char): boolean;
   begin
     result:=(axisStyle[axis] and C_tics)>0;
   end;
 
-function T_plot.realToScreen(const p: T_point): T_point;
+FUNCTION T_plot.realToScreen(CONST p: T_point): T_point;
   begin
     result:=realToScreen(p[0],p[1]);
   end;
 
-function T_plot.realToScreen(const x, y: double): T_point;
+FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
   begin
     if logscale['x']
     then result[0]:=(ln(x)/ln(10)-range['x',0])/(range['x',1]-range['x',0])*(screenWidth-xOffset)+xOffset
@@ -665,13 +693,13 @@ function T_plot.realToScreen(const x, y: double): T_point;
     else result[1]:=(   y        -range['y',0])/(range['y',1]-range['y',0])*(-yOffset)+yOffset;
   end;
 
-function T_plot.realToScreen(const axis: char; const p: double): double;
+FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
   begin
     if axis='x' then result:=realToScreen(p,1)[0]
                 else result:=realToScreen(1,p)[1];
   end;
 
-function T_plot.olx(const x: double): double;
+FUNCTION T_plot.olx(CONST x: double): double;
 begin
   if logscale['x'] then begin
     result:=ln(x)/ln(10);
@@ -679,12 +707,12 @@ begin
   end else result:=x;
 end;
 
-function T_plot.oex(const x: double): double;
+FUNCTION T_plot.oex(CONST x: double): double;
 begin
   if logscale['x'] then result:=exp(x*ln(10)) else result:=x;
 end;
 
-function T_plot.oly(const y: double): double;
+FUNCTION T_plot.oly(CONST y: double): double;
 begin
   if logscale['y'] then begin
     result:=ln(y)/ln(10);
@@ -692,25 +720,25 @@ begin
   end else result:=y;
 end;
 
-function T_plot.oey(const y: double): double;
+FUNCTION T_plot.oey(CONST y: double): double;
 begin
   if logscale['y'] then result:=exp(y*ln(10)) else result:=y;
 end;
 
-procedure T_plot.setAutoscale(const autoX, autoY: boolean);
+PROCEDURE T_plot.setAutoscale(CONST autoX, autoY: boolean);
 begin
   autoscale['x']:=autoX;
   autoscale['y']:=autoY;
 end;
 
-function T_plot.getAutoscale: P_listLiteral;
+FUNCTION T_plot.getAutoscale: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newBoolLiteral(autoscale['x']),false);
   result^.append(newBoolLiteral(autoscale['y']),false);
 end;
 
-procedure T_plot.setRange(const x0, y0, x1, y1: double);
+PROCEDURE T_plot.setRange(CONST x0, y0, x1, y1: double);
 begin
   autoscale['x']:=false;
   autoscale['y']:=false;
@@ -720,7 +748,7 @@ begin
   range['y',1]:=oly(y1);
 end;
 
-function T_plot.getRange: P_listLiteral;
+FUNCTION T_plot.getRange: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newListLiteral,false);
@@ -731,7 +759,7 @@ begin
   P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range['y',1])),false);
 end;
 
-procedure T_plot.setAxisStyle(const x, y: longint);
+PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
 begin
   if (x>=0) and (x<255) and (byte(x) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) and
      (y>=0) and (y<255) and (byte(y) in [C_tics, C_grid, C_finerGrid, C_ticsAndGrid, C_ticsAndFinerGrid]) then begin
@@ -740,14 +768,14 @@ begin
   end;
 end;
 
-function T_plot.getAxisStyle: P_listLiteral;
+FUNCTION T_plot.getAxisStyle: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newIntLiteral(axisStyle['x']),false);
   result^.append(newIntLiteral(axisStyle['y']),false);
 end;
 
-procedure T_plot.setLogscale(const logX, logY: boolean);
+PROCEDURE T_plot.setLogscale(CONST logX, logY: boolean);
 begin
   range['x',0]:=oex(range['x',0]);
   range['x',1]:=oex(range['x',1]);
@@ -762,19 +790,19 @@ begin
   if logscale['x']<>logscale['y'] then preserveAspect:=false;
 end;
 
-function T_plot.getLogscale: P_listLiteral;
+FUNCTION T_plot.getLogscale: P_listLiteral;
 begin
   result:=newListLiteral;
   result^.append(newBoolLiteral(logscale['x']),false);
   result^.append(newBoolLiteral(logscale['y']),false);
 end;
 
-procedure T_plot.setPreserveAspect(const flag: boolean);
+PROCEDURE T_plot.setPreserveAspect(CONST flag: boolean);
 begin
   preserveAspect:=(logscale['x']=logscale['y']) and flag;
 end;
 
-function T_plot.getPreserveAspect: P_boolLiteral;
+FUNCTION T_plot.getPreserveAspect: P_boolLiteral;
 begin
   result:=newBoolLiteral(preserveAspect);
 end;

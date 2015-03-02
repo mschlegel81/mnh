@@ -15,6 +15,10 @@ type
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
+    miLoadPlot: TMenuItem;
+    miSavePlot: TMenuItem;
+    miExportBmp: TMenuItem;
+    miAutoReset: TMenuItem;
     miLogscaleY: TMenuItem;
     MenuItem3: TMenuItem;
     miPreserveAspect: TMenuItem;
@@ -31,21 +35,27 @@ type
     miXFinerGrid: TMenuItem;
     miYTics: TMenuItem;
     miAntialiasing: TMenuItem;
+    OpenDialog: TOpenDialog;
     plotImage: TImage;
-    procedure FormCreate(Sender: TObject);
-    procedure FormResize(Sender: TObject);
-    procedure miAntialiasingClick(Sender: TObject);
-    procedure miAutoscaleXClick(Sender: TObject);
-    procedure miAutoscaleYClick(Sender: TObject);
-    procedure miLogscaleXClick(Sender: TObject);
-    procedure miLogscaleYClick(Sender: TObject);
-    procedure miPreserveAspectClick(Sender: TObject);
-    procedure miXFinerGridClick(Sender: TObject);
-    procedure miXGridClick(Sender: TObject);
-    procedure miXTicsClick(Sender: TObject);
-    procedure miYFinerGridClick(Sender: TObject);
-    procedure miYGridClick(Sender: TObject);
-    procedure miYTicsClick(Sender: TObject);
+    SaveDialog: TSaveDialog;
+    PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE miAntialiasingClick(Sender: TObject);
+    PROCEDURE miAutoResetClick(Sender: TObject);
+    PROCEDURE miAutoscaleXClick(Sender: TObject);
+    PROCEDURE miAutoscaleYClick(Sender: TObject);
+    PROCEDURE miExportBmpClick(Sender: TObject);
+    PROCEDURE miLoadPlotClick(Sender: TObject);
+    PROCEDURE miLogscaleXClick(Sender: TObject);
+    PROCEDURE miLogscaleYClick(Sender: TObject);
+    PROCEDURE miPreserveAspectClick(Sender: TObject);
+    PROCEDURE miSavePlotClick(Sender: TObject);
+    PROCEDURE miXFinerGridClick(Sender: TObject);
+    PROCEDURE miXGridClick(Sender: TObject);
+    PROCEDURE miXTicsClick(Sender: TObject);
+    PROCEDURE miYFinerGridClick(Sender: TObject);
+    PROCEDURE miYGridClick(Sender: TObject);
+    PROCEDURE miYTicsClick(Sender: TObject);
   private
     { private declarations }
   public
@@ -53,10 +63,11 @@ type
     PROCEDURE doPlot();
     PROCEDURE pullSettingsToGui();
     PROCEDURE pushSettingsToPlotContainer(CONST plotImmediately:boolean);
+    PROCEDURE doConditionalReset;
   end;
 
 
-var
+VAR
   plotForm: TplotForm;
   plotDisplayRequired:boolean=false;
 
@@ -66,94 +77,143 @@ implementation
 
 { TplotForm }
 
-procedure TplotForm.FormCreate(Sender: TObject);
+PROCEDURE TplotForm.FormCreate(Sender: TObject);
   begin
     pullSettingsToGui();
   end;
 
-procedure TplotForm.FormResize(Sender: TObject);
+PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
     doPlot();
   end;
 
-procedure TplotForm.miAntialiasingClick(Sender: TObject);
+PROCEDURE TplotForm.miAntialiasingClick(Sender: TObject);
   begin
     miAntialiasing.Checked:=not(miAntialiasing.Checked);
     doPlot();
   end;
 
-procedure TplotForm.miAutoscaleXClick(Sender: TObject);
+PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
+begin
+  miAutoReset.Checked:=not(miAutoReset.Checked);
+end;
+
+PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
 begin
   miAutoscaleX.Checked:=not(miAutoscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miAutoscaleYClick(Sender: TObject);
+PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
 begin
   miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miLogscaleXClick(Sender: TObject);
+PROCEDURE TplotForm.miExportBmpClick(Sender: TObject);
+VAR storeImage:TImage;
+    rect:TRect;
+begin
+  SaveDialog.Filter:='Portable network graphics (PNG)|*.png';
+  if SaveDialog.Execute then begin
+    storeImage:=TImage.Create(Self);
+    storeImage.SetInitialBounds(0,0,plotImage.Width,plotImage.Height);
+
+    rect.Top:=0;
+    rect.Left:=0;
+    rect.Right:=plotImage.Width;
+    rect.Bottom:=plotImage.Height;
+    storeImage.Canvas.CopyRect(rect,plotImage.Canvas,rect);
+
+    SaveDialog.FileName:=ChangeFileExt(SaveDialog.FileName,'.png');
+    storeImage.Picture.PNG.SaveToFile(SaveDialog.FileName);
+    storeImage.Free;
+    storeImage.Destroy;
+  end;
+end;
+
+PROCEDURE TplotForm.miLoadPlotClick(Sender: TObject);
+  begin
+    OpenDialog.Filter:='MNH-Plot|*.mnh_plot';
+    if OpenDialog.Execute then begin
+      OpenDialog.FileName:=ChangeFileExt(OpenDialog.FileName,'.mnh_plot');;
+      if FileExistsUTF8(OpenDialog.FileName) then begin
+        if not(activePlot.loadFromFile(OpenDialog.FileName))
+        then activePlot.setDefaults
+        else doPlot();
+      end;
+    end;
+  end;
+
+PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);
 begin
   miLogscaleX.Checked:=not(miLogscaleX.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miLogscaleYClick(Sender: TObject);
+PROCEDURE TplotForm.miLogscaleYClick(Sender: TObject);
 begin
   miLogscaleY.Checked:=not(miLogscaleY.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miPreserveAspectClick(Sender: TObject);
+PROCEDURE TplotForm.miPreserveAspectClick(Sender: TObject);
   begin
     miPreserveAspect.Checked:=not(miPreserveAspect.Checked);
     pushSettingsToPlotContainer(true);
   end;
 
-procedure TplotForm.miXFinerGridClick(Sender: TObject);
+PROCEDURE TplotForm.miSavePlotClick(Sender: TObject);
+  begin
+    SaveDialog.Filter:='MNH-Plot|*.mnh_plot';
+    if SaveDialog.Execute then begin
+      SaveDialog.FileName:=ChangeFileExt(SaveDialog.FileName,'.mnh_plot');
+      activePlot.saveToFile(SaveDialog.FileName);
+    end;
+  end;
+
+PROCEDURE TplotForm.miXFinerGridClick(Sender: TObject);
 begin
   miXFinerGrid.Checked:=not(miXFinerGrid.Checked);
   if miXFinerGrid.Checked then miXGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miXGridClick(Sender: TObject);
+PROCEDURE TplotForm.miXGridClick(Sender: TObject);
 begin
   miXGrid.Checked:=not(miXGrid.Checked);
   if not(miXGrid.Checked) then miXFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miXTicsClick(Sender: TObject);
+PROCEDURE TplotForm.miXTicsClick(Sender: TObject);
 begin
   miXTics.Checked:=not(miXTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYFinerGridClick(Sender: TObject);
+PROCEDURE TplotForm.miYFinerGridClick(Sender: TObject);
 begin
   miYFinerGrid.Checked:=not(miYFinerGrid.Checked);
   if miYFinerGrid.Checked then miYGrid.Checked:=true;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYGridClick(Sender: TObject);
+PROCEDURE TplotForm.miYGridClick(Sender: TObject);
 begin
   miYGrid.Checked:=not(miYGrid.Checked);
   if not(miYGrid.Checked) then miYFinerGrid.Checked:=false;
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.miYTicsClick(Sender: TObject);
+PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
 begin
   miYTics.Checked:=not(miYTics.Checked);
   pushSettingsToPlotContainer(true);
 end;
 
-procedure TplotForm.doPlot();
+PROCEDURE TplotForm.doPlot();
   VAR wcol:array of word;
   PROCEDURE readPixels;
     //VAR  ScanLineImage,                 //image with representation as in T_24BitImage
@@ -203,7 +263,7 @@ procedure TplotForm.doPlot();
         symSize:double;
         lastWasValid,currentIsValid:boolean;
         sample:T_point;
-        firstPattern:boolean;
+//        firstPattern:boolean;
         rowColor:longint;
 
     PROCEDURE drawPatternRect(x0,y0,x1,y1:longint);
@@ -216,11 +276,11 @@ procedure TplotForm.doPlot();
           locY:=round(y0+(y1-y0)*(x-x0)/(x1-x0));
           if locY>yBaseLine then begin
             for y:=yBaseLine to locY do
-            if odd(x) xor odd(y) xor firstPattern then
+            if (x and 1)+2*(y and 1)=(runIdx+rowId) and 3 then
               plotImage.Canvas.Pixels[x,y]:=rowColor;
           end else begin
             for y:=yBaseLine downto locY do
-            if odd(x) xor odd(y) xor firstPattern then
+            if (x and 1)+2*(y and 1)=(runIdx+rowId) and 3 then
               plotImage.Canvas.Pixels[x,y]:=rowColor;
           end;
         end;
@@ -231,6 +291,7 @@ procedure TplotForm.doPlot();
       plotImage.Canvas.Brush.Style:=bsSolid;
       plotImage.Canvas.Brush.Color:=clWhite;
       plotImage.Canvas.Pen.Style:=psClear;
+      plotImage.Canvas.Pen.EndCap:=pecSquare;
       plotImage.Canvas.Clear;
       //------------------------------------------------------------------:Clear
       //coordinate grid:========================================================
@@ -256,27 +317,28 @@ procedure TplotForm.doPlot();
 
       for rowId:=0 to length(activePlot.row)-1 do begin
         rowColor:=activePlot.row[rowId].style.getTColor;
-        case byte(rowId mod 15) of
-          0: firstPattern:=odd( runIdx         );
-          1: firstPattern:=odd( runIdx    shr 1);
-          2: firstPattern:=odd((runIdx+1) shr 1);
-          3: firstPattern:=odd( runIdx    shr 2);
-          4: firstPattern:=odd((runIdx+2) shr 2);
-          5: firstPattern:=odd( runIdx    shr 3);
-          6: firstPattern:=odd((runIdx+4) shr 3);
-          7: firstPattern:=odd((runIdx+1) shr 2);
-          8: firstPattern:=odd((runIdx+3) shr 2);
-          9: firstPattern:=odd((runIdx+2) shr 3);
-         10: firstPattern:=odd((runIdx+6) shr 3);
-         11: firstPattern:=odd((runIdx+1) shr 3);
-         12: firstPattern:=odd((runIdx+3) shr 3);
-         13: firstPattern:=odd((runIdx+5) shr 3);
-         14: firstPattern:=odd((runIdx+7) shr 3);
-        end;
+        //case byte(rowId mod 15) of
+        //  0: firstPattern:=odd( runIdx         );
+        //  1: firstPattern:=odd( runIdx    shr 1);
+        //  2: firstPattern:=odd((runIdx+1) shr 1);
+        //  3: firstPattern:=odd( runIdx    shr 2);
+        //  4: firstPattern:=odd((runIdx+2) shr 2);
+        //  5: firstPattern:=odd( runIdx    shr 3);
+        //  6: firstPattern:=odd((runIdx+4) shr 3);
+        //  7: firstPattern:=odd((runIdx+1) shr 2);
+        //  8: firstPattern:=odd((runIdx+3) shr 2);
+        //  9: firstPattern:=odd((runIdx+2) shr 3);
+        // 10: firstPattern:=odd((runIdx+6) shr 3);
+        // 11: firstPattern:=odd((runIdx+1) shr 3);
+        // 12: firstPattern:=odd((runIdx+3) shr 3);
+        // 13: firstPattern:=odd((runIdx+5) shr 3);
+        // 14: firstPattern:=odd((runIdx+7) shr 3);
+        //end;
         if activePlot.row[rowId].style.wantStraightLines then begin
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
@@ -298,6 +360,7 @@ procedure TplotForm.doPlot();
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
@@ -320,6 +383,7 @@ procedure TplotForm.doPlot();
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
@@ -339,11 +403,32 @@ procedure TplotForm.doPlot();
             lastWasValid:=currentIsValid;
           end;
         end else if activePlot.row[rowId].style.wantBars then begin
-          plotImage.Canvas.Pen.Style:=psClear;
-          plotImage.Canvas.Brush.Style:=bsSolid;
-          plotImage.Canvas.Brush.Color:=rowColor;
+          plotImage.Canvas.Pen.Style:=psSolid;
+          plotImage.Canvas.Pen.Color:=rowColor;
+          plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecRound;
 
-          {$WARNING unimplemented}
+          lastWasValid:=false;
+          for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
+            sample:=activePlot.row[rowId].sample[i];
+            currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
+            if currentIsValid then begin
+              sample:=activePlot.realToScreen(sample);
+              x:=round(sample[0]+dx);
+              y:=round(sample[1]+dy);
+              if lastWasValid then begin
+                drawPatternRect(round(lastX*0.95+x*0.05),lastY,
+                                round(lastX*0.05+x*0.95),lastY);
+                plotImage.Canvas.Line(round(lastX*0.95+x*0.05),yBaseLine,round(lastX*0.95+x*0.05),lastY);
+                plotImage.Canvas.Line(round(lastX*0.95+x*0.05),lastY    ,round(lastX*0.05+x*0.95),lastY);
+                plotImage.Canvas.Line(round(lastX*0.05+x*0.95),yBaseLine,round(lastX*0.05+x*0.95),lastY);
+              end;
+              lastX:=x;
+              lastY:=y;
+              lastWasValid:=currentIsValid;
+            end;
+          end;
+
         end else if activePlot.row[rowId].style.wantBoxes then begin
           plotImage.Canvas.Pen.Style:=psClear;
           plotImage.Canvas.Brush.Style:=bsSolid;
@@ -387,6 +472,7 @@ procedure TplotForm.doPlot();
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecSquare;
           symSize:=activePlot.row[rowId].style.getSymbolWidth;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
@@ -404,6 +490,7 @@ procedure TplotForm.doPlot();
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecSquare;
           symSize:=activePlot.row[rowId].style.getSymbolRad;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
@@ -421,6 +508,7 @@ procedure TplotForm.doPlot();
           plotImage.Canvas.Pen.Style:=psSolid;
           plotImage.Canvas.Pen.Color:=rowColor;
           plotImage.Canvas.Pen.Width:=activePlot.row[rowId].style.getIntLineWidth;
+          plotImage.Canvas.Pen.EndCap:=pecSquare;
           for i:=0 to length(activePlot.row[rowId].sample)-1 do begin
             sample:=activePlot.row[rowId].sample[i];
             currentIsValid:=not(IsNan(sample[0])) and not(IsNan(sample[1]));
@@ -439,6 +527,7 @@ procedure TplotForm.doPlot();
       plotImage.Canvas.Brush.Color:=clWhite;
       plotImage.Canvas.Pen.Style:=psClear;
       plotImage.Canvas.Pen.Width:=1;
+      plotImage.Canvas.Pen.EndCap:=pecSquare;
       if activePlot.wantTics('y') then
         plotImage.Canvas.FillRect(0,0,activePlot.xOffset,plotImage.Height);
       if activePlot.wantTics('x') then
@@ -491,34 +580,34 @@ procedure TplotForm.doPlot();
     //--------------------------------------------------:Prepare transformations
     if miAntialiasing.Checked then begin
       for i:=0 to 3 do for j:=0 to 3 do begin
-        plotWithOffset(cos(0.22)*(i*0.25-0.375)+sin(0.22)*(j*0.25-0.375),
-                      -sin(0.22)*(i*0.25-0.375)+cos(0.22)*(j*0.25-0.375),i*4+j);
+        plotWithOffset(cos(0.1)*(i*0.25-0.375)+sin(0.1)*(j*0.25-0.375),
+                      -sin(0.1)*(i*0.25-0.375)+cos(0.1)*(j*0.25-0.375),i*4+j);
         readPixels;
       end;
       averagePixels;
     end else plotWithOffset(0,0,0);
   end;
 
-procedure TplotForm.pullSettingsToGui;
-begin
-  miXGridOptions.Checked  :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
-  miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
-  miXFinerGrid.Checked    :=(activePlot.axisStyle['x'] and C_finerGrid)=C_finerGrid;
-  miYTics.Checked         :=(activePlot.axisStyle['y'] and C_tics)=C_tics;
-  miYGrid.Checked         :=(activePlot.axisStyle['y'] and C_grid)=C_grid;
-  miYFinerGrid.Checked    :=(activePlot.axisStyle['y'] and C_finerGrid)=C_finerGrid;
-  miPreserveAspect.Checked:=activePlot.preserveAspect;
-  miAutoscaleX.Checked    :=activePlot.autoscale['x'];
-  miAutoscaleY.Checked    :=activePlot.autoscale['y'];
-  miLogscaleX.Checked     :=activePlot.logscale['x'];
-  miLogscaleY.Checked     :=activePlot.logscale['y'];
-end;
+PROCEDURE TplotForm.pullSettingsToGui;
+  begin
+    miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
+    miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
+    miXFinerGrid.Checked    :=(activePlot.axisStyle['x'] and C_finerGrid)=C_finerGrid;
+    miYTics.Checked         :=(activePlot.axisStyle['y'] and C_tics)=C_tics;
+    miYGrid.Checked         :=(activePlot.axisStyle['y'] and C_grid)=C_grid;
+    miYFinerGrid.Checked    :=(activePlot.axisStyle['y'] and C_finerGrid)=C_finerGrid;
+    miPreserveAspect.Checked:=activePlot.preserveAspect;
+    miAutoscaleX.Checked    :=activePlot.autoscale['x'];
+    miAutoscaleY.Checked    :=activePlot.autoscale['y'];
+    miLogscaleX.Checked     :=activePlot.logscale['x'];
+    miLogscaleY.Checked     :=activePlot.logscale['y'];
+  end;
 
-procedure TplotForm.pushSettingsToPlotContainer(CONST plotImmediately:boolean);
+PROCEDURE TplotForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
   VAR aidX,aidY:longint;
   begin
     aidX:=0;
-    if miXGridOptions.Checked      then aidX:=C_tics;;
+    if miXTics.Checked      then aidX:=C_tics;;
     if miXGrid.Checked      then aidX:=aidX or C_grid;
     if miXFinerGrid.Checked then aidX:=aidX or C_finerGrid;
     aidY:=0;
@@ -532,6 +621,14 @@ procedure TplotForm.pushSettingsToPlotContainer(CONST plotImmediately:boolean);
     pullSettingsToGui();
     if plotImmediately then doPlot()
                        else plotDisplayRequired:=true;
+  end;
+
+PROCEDURE TplotForm.doConditionalReset;
+  begin
+    if miAutoReset.Checked then begin
+      activePlot.setDefaults;
+      pullSettingsToGui();
+    end;
   end;
 
 FUNCTION fReal(CONST X:P_literal):double; inline;

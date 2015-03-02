@@ -1,0 +1,24 @@
+recFolders(path)->flatten(each(f,folders(path),f,recFolders(f&"\\*")));
+allSourceFiles:=files(recFolders("*")&"\\*.inc")|files(recFolders("*")&"\\*.pas");
+
+upWords:=['PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT'];
+downWords:=['begin','end','if','case','then','else'];
+
+violations(filename:string)->
+each(item,
+  unique(
+    flatten(
+      each(token,tokenSplit(fileContents(filename)),
+        upper(token) in upWords   and not(token in upWords) or
+        lower(token) in downWords and not(token in downWords)?token:''))),
+  &' '&);
+
+fix(filename:string)->fix(filename,tokenSplit(fileContents(filename)));
+fix(filename:string,old:stringList)->fix(filename,old,
+  each(token,old,upper(token) in upWords ? upper(token) : lower(token) in downWords ? lower(token) : token));
+fix(filename:string,old:stringList,new==old)->false;
+fix(filename:string,old:stringList,new:stringList)->writeFile(filename,each(token,new,&));
+
+main->print(each(fname,allSourceFiles,&"\n"&,fname&"\t"&violations(fname)&"\t"&fix(fname)));
+
+

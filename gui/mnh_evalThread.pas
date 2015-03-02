@@ -28,7 +28,8 @@ VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
 
     intrinsicRules,
     localUserRules,
-    importedUserRules:T_listOfString;
+    importedUserRules,
+    completionList:T_listOfString;
 
 PROCEDURE initIntrinsicRuleList;
 IMPLEMENTATION
@@ -37,8 +38,23 @@ VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
+  PROCEDURE updateCompletionList;
+    begin
+      completionList.clear;
+      completionList.add('CACHE');
+      completionList.add('USE');
+      completionList.add('private');
+      completionList.add('set');
+      completionList.add('each');
+      completionList.addArr(localUserRules.elementArray);
+      completionList.addArr(importedUserRules.elementArray);
+      completionList.addArr(intrinsicRules.elementArray);
+      completionList.unique;
+    end;
+
   begin
     evaluationState.value:=es_idle;
+    updateCompletionList;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         pendingRequest.value:=er_none;
@@ -48,6 +64,7 @@ FUNCTION main(p:pointer):ptrint;
         reloadMainPackage;
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
         getMainPackage^.updateLists(localUserRules,importedUserRules);
+        updateCompletionList;
         evaluationState.value:=es_idle;
         if hasHaltMessage
         then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
@@ -61,14 +78,14 @@ FUNCTION main(p:pointer):ptrint;
     evaluationState.value:=es_dead;
   end;
 
-procedure ad_clearFile;
+PROCEDURE ad_clearFile;
   begin
     if evaluationState.value=es_running then haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.clear;
   end;
 
-procedure ad_evaluate(const L: TStrings);
+PROCEDURE ad_evaluate(CONST L: TStrings);
   begin
     mainPackageProvider.setLines(L);
     pendingRequest.value:=er_evaluate;
@@ -78,7 +95,7 @@ procedure ad_evaluate(const L: TStrings);
     end;
   end;
 
-procedure ad_haltEvaluation;
+PROCEDURE ad_haltEvaluation;
   begin
     if evaluationState.value=es_running then haltEvaluation;
     pendingRequest.value:=er_none;
@@ -86,7 +103,7 @@ procedure ad_haltEvaluation;
     raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
 
-procedure ad_setFile(const path: string; const L: TStrings);
+PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
   VAR i:longint;
       LL:T_stringList;
   begin
@@ -103,12 +120,12 @@ procedure ad_setFile(const path: string; const L: TStrings);
     end;
   end;
 
-function ad_currentFile: string;
+FUNCTION ad_currentFile: string;
   begin
     result:=mainPackageProvider.getPath;
   end;
 
-function ad_evaluationRunning: Boolean;
+FUNCTION ad_evaluationRunning: Boolean;
   begin
     result:=evaluationState.value=es_running;
   end;
@@ -119,7 +136,7 @@ PROCEDURE ad_killEvaluationLoopSoftly;
     repeat pendingRequest.value:=er_die; sleep(1); until evaluationState.value=es_dead;
   end;
 
-function ad_getTokenInfo(const line: ansistring; const column: longint): T_tokenInfo;
+FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_tokenInfo;
 VAR token:T_token;
     loc:T_tokenLocation;
 begin
@@ -199,6 +216,7 @@ INITIALIZATION
   initIntrinsicRuleList;
   localUserRules.create;
   importedUserRules.create;
+  completionList.create;
   beginThread(@main);
 
 FINALIZATION
@@ -210,5 +228,5 @@ FINALIZATION
   intrinsicRules.destroy;
   localUserRules.destroy;
   importedUserRules.destroy;
-
+  completionList.destroy;
 end.

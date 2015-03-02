@@ -922,7 +922,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
               first:=disposeToken(first); //dispose literal
               first:=disposeToken(first); //dispose closing bracket
               stack_popLink; //pop parameter list
-              stack_popLink; //pop function
+              stack_popLink; //pop FUNCTION
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
@@ -1023,7 +1023,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             stack_push; //push rule pointer
             first^.tokType:=tt_parList_constructor; //mutate ( -> tt_parList_constructor
             first^.data:=newListLiteral;
-            stack_push; //push parameter list constructor
+            stack_push; //push parameter list CONSTRUCTOR
           end;
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
           tt_parList: applyRule(first^.next,first^.next^.next);

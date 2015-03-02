@@ -262,7 +262,7 @@ FUNCTION runCommand(CONST executable:ansistring; CONST parameters:T_stringList; 
 
 { T_codeProvider }
 
-function T_codeProvider.getLines: T_stringList;
+FUNCTION T_codeProvider.getLines: T_stringList;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock:=ThreadID until lock=ThreadID;
@@ -270,7 +270,7 @@ function T_codeProvider.getLines: T_stringList;
     repeat lock:=0 until lock=0;
   end;
 
-procedure T_codeProvider.setLines(const value: T_stringList);
+PROCEDURE T_codeProvider.setLines(CONST value: T_stringList);
   VAR i:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -281,7 +281,7 @@ procedure T_codeProvider.setLines(const value: T_stringList);
     repeat lock:=0 until lock=0;
   end;
 
-procedure T_codeProvider.setLines(const value: TStrings);
+PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
   VAR i:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -302,13 +302,13 @@ PROCEDURE T_codeProvider.setLines(CONST value:ansistring);
     repeat lock:=0 until lock=0;
   end;
   
-constructor T_codeProvider.create;
+CONSTRUCTOR T_codeProvider.create;
   begin
     lock:=0;
     clear;
   end;
 
-constructor T_codeProvider.create(const path: ansistring);
+CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
   begin
     lock:=0;
     clear;
@@ -316,22 +316,22 @@ constructor T_codeProvider.create(const path: ansistring);
     if FileExists(path) then load;
   end;
 
-destructor T_codeProvider.destroy;
+DESTRUCTOR T_codeProvider.destroy;
   begin
     setLength(lineData,0);
   end;
 
-procedure T_codeProvider.setPath(const path: ansistring);
+PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
   begin
     filepath:=path;
   end;
 
-function T_codeProvider.getPath: ansistring;
+FUNCTION T_codeProvider.getPath: ansistring;
   begin
     result:=filepath;
   end;
 
-procedure T_codeProvider.load;
+PROCEDURE T_codeProvider.load;
   VAR accessed:boolean;
       L:T_stringList;
       i:longint;
@@ -348,7 +348,7 @@ procedure T_codeProvider.load;
     repeat lock:=0 until lock=0;
   end;
 
-procedure T_codeProvider.save;
+PROCEDURE T_codeProvider.save;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock:=ThreadID until lock=ThreadID;
@@ -357,12 +357,12 @@ procedure T_codeProvider.save;
     repeat lock:=0 until lock=0;
   end;
 
-function T_codeProvider.filename: ansistring;
+FUNCTION T_codeProvider.filename: ansistring;
   begin
     result:=ExtractFileName(filepath);
   end;
 
-function T_codeProvider.fileHasChanged: boolean;
+FUNCTION T_codeProvider.fileHasChanged: boolean;
   VAR currentFileAge:double;
   begin
     if (filepath<>'') and FileExists(filepath) then begin
@@ -371,7 +371,7 @@ function T_codeProvider.fileHasChanged: boolean;
     end else result:=false;
   end;
 
-function T_codeProvider.getVersion(const reloadIfNecessary: boolean): longint;
+FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock:=ThreadID until lock=ThreadID;
@@ -380,7 +380,7 @@ function T_codeProvider.getVersion(const reloadIfNecessary: boolean): longint;
     repeat lock:=0 until lock=0;
   end;
 
-function T_codeProvider.id: ansistring;
+FUNCTION T_codeProvider.id: ansistring;
   VAR i:longint;
   begin
     result:=filename;    
@@ -389,7 +389,7 @@ function T_codeProvider.id: ansistring;
     result:=copy(result,1,i-1);
   end;
 
-procedure T_codeProvider.clear;
+PROCEDURE T_codeProvider.clear;
   begin
     filepath:='';
     SetLength(lineData,0);

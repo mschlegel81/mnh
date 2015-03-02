@@ -15,7 +15,7 @@ object plotForm: TplotForm
   LCLVersion = '1.2.2.0'
   object plotImage: TImage
     Left = 0
-    Height = 4000
+    Height = 3000
     Top = 0
     Width = 4000
   end
@@ -24,12 +24,29 @@ object plotForm: TplotForm
     top = 110
     object MenuItem5: TMenuItem
       Caption = 'File'
+      object miExportBmp: TMenuItem
+        Caption = 'Export (PNG)'
+        OnClick = miExportBmpClick
+      end
+      object miSavePlot: TMenuItem
+        Caption = 'Save Plot'
+        OnClick = miSavePlotClick
+      end
+      object miLoadPlot: TMenuItem
+        Caption = 'Load Plot'
+        OnClick = miLoadPlotClick
+      end
     end
     object MenuItem1: TMenuItem
       Caption = 'Options'
       object miAntialiasing: TMenuItem
         Caption = 'Antialiasing'
         OnClick = miAntialiasingClick
+      end
+      object miAutoReset: TMenuItem
+        Caption = 'Reset plot options on re-evaluation'
+        Checked = True
+        OnClick = miAutoResetClick
       end
     end
     object MenuItem2: TMenuItem
@@ -88,5 +105,13 @@ object plotForm: TplotForm
         OnClick = miLogscaleYClick
       end
     end
+  end
+  object OpenDialog: TOpenDialog
+    left = 88
+    top = 43
+  end
+  object SaveDialog: TSaveDialog
+    left = 48
+    top = 60
   end
 end

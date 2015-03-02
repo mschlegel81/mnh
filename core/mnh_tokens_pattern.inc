@@ -65,6 +65,7 @@ FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_t
     with sig[result] do begin
       id             :=parId;
       restrictionType:=comparator;
+      if restrictionType=tt_comparatorListEq then restrictionType:=tt_comparatorEq;
       restrictionScalar:=value;
       value^.rereference;
       restrictionIdx :=-1;
@@ -98,7 +99,7 @@ PROCEDURE T_pattern.finalizeRefs;
       j:=0;
       while (j<i) and (sig[j].id<>sig[i].id) do inc(j);
       if j<i then with sig[i] do begin
-        sig[i].restrictionType:=tt_comparatorEq;
+        sig[i].restrictionType:=tt_comparatorListEq;
         sig[i].restrictionIdx:=j;
         sig[i].restrictionId:=sig[j].id;
       end;
@@ -106,7 +107,7 @@ PROCEDURE T_pattern.finalizeRefs;
     for i:=0 to length(sig)-1 do
       if (sig[i].restrictionIdx<0) and
          (sig[i].restrictionId<>'') and
-         (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt])
+         (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
       then for j:=length(sig)-1 downto 0 do
         if (j<>i) and (sig[i].restrictionId=sig[j].id)
         then sig[i].restrictionIdx:=j;
@@ -121,6 +122,7 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
   VAR i:longint;
       L:P_literal;
   begin
+
     //writeln('trying to match ',toString,' with ',par.toParameterListString(true));
     if (par.size<>length(sig)) then exit(false);
     for i:=0 to length(sig)-1 do begin
@@ -149,10 +151,28 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
         tt_comparatorLss,
         tt_comparatorGrt:
           if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
-            if restrictionIdx<0 then begin if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  )) then exit(false); end
-                                else begin if
-                                not((par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
-                                and P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx)))) then exit(false); end;
+            if restrictionIdx<0 then begin
+              if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))
+              then exit(false);
+            end else begin
+              if not((par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
+                 and P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx))))
+              then exit(false);
+            end;
+          end else exit(false);
+        tt_comparatorListEq:
+          if restrictionIdx>=0 then begin
+            if (par.value(restrictionIdx)^.literalType <> L^.literalType) then exit(false);
+            if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
+              if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))
+              then exit(false);
+            end else begin
+              L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation);
+              if not(L^.literalType=lt_boolean) or not(P_boolLiteral(L)^.value) then begin
+                disposeLiteral(L);
+                exit(false);
+              end else disposeLiteral(L);
+            end;
           end else exit(false);
       end;
     end;
@@ -188,8 +208,9 @@ FUNCTION T_pattern.toString:ansistring;
         tt_comparatorLeq,
         tt_comparatorGeq,
         tt_comparatorLss,
-        tt_comparatorGrt: if restrictionId='' then result:=result+id+C_tokenString[restrictionType]+restrictionScalar^.toString
-                                              else result:=result+id+C_tokenString[restrictionType]+restrictionId;
+        tt_comparatorGrt,
+        tt_comparatorListEq: if restrictionId='' then result:=result+id+C_tokenString[restrictionType]+restrictionScalar^.toString
+                                                 else result:=result+id+C_tokenString[restrictionType]+restrictionId;
         else result:=result+id;
       end;
     end;

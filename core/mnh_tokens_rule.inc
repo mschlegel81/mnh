@@ -22,14 +22,14 @@
   end;
 {$endif}
 {$ifdef include_implementation}
-constructor T_rule.create(const ruleId: ansistring);
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
   begin
     isCached:=false;
     id:=ruleId;
     setLength(subrules,0);
   end;
 
-destructor T_rule.destroy;
+DESTRUCTOR T_rule.destroy;
   VAR i:longint;
   begin
     id:='';
@@ -40,8 +40,8 @@ destructor T_rule.destroy;
 
 CONST STACK_DEPTH_LIMIT=45000;
   
-function T_rule.replaces(const param: P_listLiteral; out firstRep,
-  lastRep: P_Token; const callDepth: word; const includePrivateRules: boolean
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,
+  lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean
   ): boolean;
   VAR i:longint;
       lit:P_literal;
@@ -82,7 +82,7 @@ function T_rule.replaces(const param: P_listLiteral; out firstRep,
     end;
   end;
 
-procedure T_rule.addOrReplaceSubRule(const rule: P_subrule);
+PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
   VAR i:longint;
   begin
     i:=0;
@@ -92,7 +92,7 @@ procedure T_rule.addOrReplaceSubRule(const rule: P_subrule);
     subrules[i]:=rule;
   end;
 
-procedure T_rule.addOrSetSubRule(const rule: P_subrule);
+PROCEDURE T_rule.addOrSetSubRule(CONST rule: P_subrule);
   VAR i:longint;
   begin
     writeln('adding or setting subrule: ',rule^.toString);
@@ -102,7 +102,7 @@ procedure T_rule.addOrSetSubRule(const rule: P_subrule);
     subrules[i]:=rule;
   end;
 
-procedure T_rule.performSet(const value: P_literal);
+PROCEDURE T_rule.performSet(CONST value: P_literal);
   VAR i:longint;
   begin
     i:=0;
@@ -116,12 +116,12 @@ procedure T_rule.performSet(const value: P_literal);
     value^.rereference;
   end;
   
-function T_rule.getLocationOfDeclaration: T_tokenLocation;
+FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
     result:=subrules[0]^.declaredAt;
   end;
 
-procedure T_rule.setCached(const sizeLimit: longint);
+PROCEDURE T_rule.setCached(CONST sizeLimit: longint);
   begin
     isCached:=true;
     cache.create(sizeLimit);

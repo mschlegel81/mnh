@@ -143,7 +143,7 @@ procedure TSettingsForm.FormCreate(Sender: TObject);
     end;
   end;
 
-procedure TSettingsForm.FontButtonClick(Sender: TObject);
+PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
     if EditorFontDialog.Execute then begin
       setFontSize(EditorFontDialog.Font.Size);
@@ -155,33 +155,33 @@ procedure TSettingsForm.FontButtonClick(Sender: TObject);
     end;
   end;
 
-procedure TSettingsForm.FormDestroy(Sender: TObject);
+PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
   end;
 
-procedure TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
+PROCEDURE TSettingsForm.MnhConsoleFileNameEditChange(Sender: TObject);
   begin
     mnh_console_executable:=MnhConsoleFileNameEdit.FileName;
   end;
 
-function TSettingsForm.getFontSize: longint;
+FUNCTION TSettingsForm.getFontSize: longint;
   begin
     result:=StrToInt64Def(Trim(FontSizeEdit.Text),12);
   end;
 
-procedure TSettingsForm.setFontSize(value: longint);
+PROCEDURE TSettingsForm.setFontSize(value: longint);
   begin
     FontSizeEdit.Text:=IntToStr(value);
     EditorFontDialog.Font.Size:=value;
   end;
 
-function TSettingsForm.getEditorFontName: string;
+FUNCTION TSettingsForm.getEditorFontName: string;
   begin
     result:=editorFontname;
   end;
 
-function TSettingsForm.canOpenFile(const filename: ansistring; const lineNumber: longint): boolean;
+FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
   VAR par:T_stringList;
   begin
     if (trim(NotepadFileNameEdit.Filename)<>'') and not(FileExistsUTF8(NotepadFileNameEdit.Filename)) then NotepadFileNameEdit.Filename:='';
@@ -194,7 +194,7 @@ function TSettingsForm.canOpenFile(const filename: ansistring; const lineNumber:
     end else result:=false;
   end;
 
-procedure TSettingsForm.saveSettings;
+PROCEDURE TSettingsForm.saveSettings;
   VAR ff:T_file;
   begin
     ff.createToWrite(settingsFileName);

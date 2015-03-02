@@ -21,7 +21,7 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     miExport: TMenuItem;
-    procedure ChartParametricCurveSeries1Calculate(const AT: Double; out AX,
+    PROCEDURE ChartParametricCurveSeries1Calculate(CONST AT: Double; OUT AX,
       AY: Double);
   private
     series:array of TLineSeries;
@@ -32,7 +32,7 @@ type
     { public declarations }
   end;
 
-var
+VAR
   ChartForm: TChartForm;
 
 implementation
@@ -41,12 +41,12 @@ implementation
 
 { TChartForm }
 
-procedure TChartForm.ChartParametricCurveSeries1Calculate(const AT: Double; out AX, AY: Double);
+PROCEDURE TChartForm.ChartParametricCurveSeries1Calculate(CONST AT: Double; OUT AX, AY: Double);
 begin
 
 end;
 
-procedure TChartForm.testChart;
+PROCEDURE TChartForm.testChart;
 begin
 
 end;

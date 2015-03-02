@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 955
+  Left = 408
   Height = 373
-  Top = 101
+  Top = 120
   Width = 320
   Caption = 'MNH5'
   ClientHeight = 353
@@ -1171,5 +1171,21 @@ object MnhForm: TMnhForm
     Visible = False
     left = 228
     top = 46
+  end
+  object SynCompletion: TSynCompletion
+    OnExecute = SynCompletionExecute
+    Position = 0
+    LinesInWindow = 6
+    OnSearchPosition = SynCompletionSearchPosition
+    SelectedColor = clHighlight
+    CaseSensitive = False
+    Width = 262
+    ShortCut = 16416
+    EndOfTokenChr = '()[],{}+-*/&^:?<>='
+    OnCodeCompletion = SynCompletionCodeCompletion
+    ExecCommandID = ecSynCompletionExecute
+    Editor = InputEdit
+    left = 157
+    top = 49
   end
 end

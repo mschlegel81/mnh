@@ -14,7 +14,7 @@ FUNCTION fileTokenLocation(provider:P_codeProvider):T_tokenLocation;
 OPERATOR :=(x:T_tokenLocation):ansistring;
 IMPLEMENTATION
 
-function fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
+FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
 begin
   result.provider:=provider;
   result.line:=1;

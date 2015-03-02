@@ -115,23 +115,23 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 { G_safeVar }
 
-function G_safeVar.getValue: ENTRY_TYPE;
+FUNCTION G_safeVar.getValue: ENTRY_TYPE;
 begin
   result:=v;
 end;
 
-procedure G_safeVar.setValue(newValue: ENTRY_TYPE);
+PROCEDURE G_safeVar.setValue(newValue: ENTRY_TYPE);
 begin
   v:=newValue;
   while v<>newValue do begin sleep(1); v:=newValue; end;
 end;
 
-constructor G_safeVar.create(const intialValue: ENTRY_TYPE);
+CONSTRUCTOR G_safeVar.create(CONST intialValue: ENTRY_TYPE);
 begin
   v:=intialValue;
 end;
 
-destructor G_safeVar.destroy;
+DESTRUCTOR G_safeVar.destroy;
 begin
 end;
 
@@ -630,7 +630,7 @@ FUNCTION G_sparseArray.getEntry(CONST iterator:longint):ENTRY_TYPE;
                        else result:=map[0,0].value;
   end;  
 
-procedure G_stringKeyMap.rehash(grow: boolean);
+PROCEDURE G_stringKeyMap.rehash(grow: boolean);
   VAR i,i0,j,k,c0,c1,newMask:longint;
       temp:array of KEY_VALUE_PAIR;
   begin
@@ -668,14 +668,14 @@ procedure G_stringKeyMap.rehash(grow: boolean);
     end;
   end;
 
-constructor G_stringKeyMap.create(rebalanceFactor: double);
+CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
   begin
     lock:=0;
     rebalanceFac:=rebalanceFactor;
     clear;
   end;
 
-procedure G_stringKeyMap.clear;
+PROCEDURE G_stringKeyMap.clear;
   VAR i:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -687,19 +687,19 @@ procedure G_stringKeyMap.clear;
     repeat lock:=0 until lock=0;
   end;
 
-constructor G_stringKeyMap.create;
+CONSTRUCTOR G_stringKeyMap.create;
   begin
     create(4);
   end;
 
-destructor G_stringKeyMap.destroy;
+DESTRUCTOR G_stringKeyMap.destroy;
   VAR i:longint;
   begin
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,0);
   end;
 
-function G_stringKeyMap.containsKey(const key: ansistring; out value: VALUE_TYPE): boolean;
+FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;
   VAR i,j:longint;
   begin
     i:=hashOfAnsiString(key) and bitMask;
@@ -711,12 +711,12 @@ function G_stringKeyMap.containsKey(const key: ansistring; out value: VALUE_TYPE
     end else result:=false;
   end;
 
-function G_stringKeyMap.get(const key: ansistring): VALUE_TYPE;
+FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
   begin
     containsKey(key,result);
   end;
 
-procedure G_stringKeyMap.put(const key: ansistring; const value: VALUE_TYPE);
+PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
   VAR i,j,h:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -738,7 +738,7 @@ procedure G_stringKeyMap.put(const key: ansistring; const value: VALUE_TYPE);
     repeat lock:=0 until lock=0;
   end;
 
-procedure G_stringKeyMap.dropKey(const key: ansistring);
+PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
   VAR i,j:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -758,7 +758,7 @@ procedure G_stringKeyMap.dropKey(const key: ansistring);
     repeat lock:=0 until lock=0;
   end;
   
-function G_stringKeyMap.dropAny: VALUE_TYPE;
+FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
   VAR i,j:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -777,7 +777,7 @@ function G_stringKeyMap.dropAny: VALUE_TYPE;
     repeat lock:=0 until lock=0;
   end;
 
-function G_stringKeyMap.keySet: T_arrayOfString;
+FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
   VAR k,i,j:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -792,7 +792,7 @@ function G_stringKeyMap.keySet: T_arrayOfString;
     repeat lock:=0 until lock=0;
   end;
 
-function G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
+FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
   VAR k,i,j:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -807,7 +807,7 @@ function G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
     repeat lock:=0 until lock=0;
   end;
 
-function G_stringKeyMap.entrySet: KEY_VALUE_LIST;
+FUNCTION G_stringKeyMap.entrySet: KEY_VALUE_LIST;
   VAR k,i,j:longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
@@ -822,7 +822,7 @@ function G_stringKeyMap.entrySet: KEY_VALUE_LIST;
     repeat lock:=0 until lock=0;
   end;
 
-function G_stringKeyMap.size: longint;
+FUNCTION G_stringKeyMap.size: longint;
   begin
     result:=entryCount;
   end;

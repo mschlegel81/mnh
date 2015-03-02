@@ -4,10 +4,11 @@ unit mnh_gui_main;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, SynEdit, Forms, Controls, Graphics, Dialogs,
-  ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier, SynHighlighterMnh,
-  mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-  mnh_out_adapters, mnh_stringutil, mnh_evalThread,mnh_constants, myGenerics, mnh_Plots;
+  Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
+  Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
+  SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
+  mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
+  mnh_Plots, types, LCLType;
 
 type
 
@@ -45,52 +46,58 @@ type
     StatusBar: TStatusBar;
     InputEdit: TSynEdit;
     OutputEdit: TSynEdit;
+    SynCompletion: TSynCompletion;
     UpdateTimeTimer: TTimer;
-    procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
-    procedure FormResize(Sender: TObject);
-    procedure FormShow(Sender: TObject);
-    procedure InputEditChange(Sender: TObject);
-    procedure InputEditKeyDown(Sender: TObject; var Key: Word;
+    PROCEDURE FormCreate(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE InputEditChange(Sender: TObject);
+    PROCEDURE InputEditKeyDown(Sender: TObject; VAR Key: Word;
       Shift: TShiftState);
-    procedure InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+    PROCEDURE InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
-    procedure miClearClick(Sender: TObject);
-    procedure miDecFontSizeClick(Sender: TObject);
-    procedure miDeclarationEchoClick(Sender: TObject);
-    procedure miEvalModeDirectClick(Sender: TObject);
-    procedure miEvalModeDirectOnKeypressClick(Sender: TObject);
-    procedure miEvaluateNowClick(Sender: TObject);
-    procedure miExpressionEchoClick(Sender: TObject);
-    procedure miExpressionResultClick(Sender: TObject);
-    procedure miHaltEvalutaionClick(Sender: TObject);
-    procedure miHelpClick(Sender: TObject);
-    procedure miIncFontSizeClick(Sender: TObject);
-    procedure miOpenClick(Sender: TObject);
-    procedure miOpenNppClick(Sender: TObject);
-    procedure miSaveAsClick(Sender: TObject);
-    procedure miSaveClick(Sender: TObject);
-    procedure mi_settingsClick(Sender: TObject);
-    procedure OutputEditKeyDown(Sender: TObject; var Key: Word;
+    PROCEDURE miClearClick(Sender: TObject);
+    PROCEDURE miDecFontSizeClick(Sender: TObject);
+    PROCEDURE miDeclarationEchoClick(Sender: TObject);
+    PROCEDURE miEvalModeDirectClick(Sender: TObject);
+    PROCEDURE miEvalModeDirectOnKeypressClick(Sender: TObject);
+    PROCEDURE miEvaluateNowClick(Sender: TObject);
+    PROCEDURE miExpressionEchoClick(Sender: TObject);
+    PROCEDURE miExpressionResultClick(Sender: TObject);
+    PROCEDURE miHaltEvalutaionClick(Sender: TObject);
+    PROCEDURE miHelpClick(Sender: TObject);
+    PROCEDURE miIncFontSizeClick(Sender: TObject);
+    PROCEDURE miOpenClick(Sender: TObject);
+    PROCEDURE miOpenNppClick(Sender: TObject);
+    PROCEDURE miSaveAsClick(Sender: TObject);
+    PROCEDURE miSaveClick(Sender: TObject);
+    PROCEDURE mi_settingsClick(Sender: TObject);
+    PROCEDURE OutputEditKeyDown(Sender: TObject; VAR Key: Word;
       Shift: TShiftState);
-    procedure OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
+    PROCEDURE OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
-    procedure Splitter1Moved(Sender: TObject);
-    procedure UpdateTimeTimerTimer(Sender: TObject);
+    PROCEDURE Splitter1Moved(Sender: TObject);
+    PROCEDURE SynCompletionCodeCompletion(VAR Value: string;
+      SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
+      KeyChar: TUTF8Char; Shift: TShiftState);
+    PROCEDURE SynCompletionExecute(Sender: TObject);
+    PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
+    PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 
   private
     underCursor:T_tokenInfo;
     settingsHaveBeenProcessed:boolean;
-    procedure processSettings;
+    PROCEDURE processSettings;
     PROCEDURE flushThroughput;
     PROCEDURE positionHelpNotifier;
-    PROCEDURE setUnderCursor(const lines:TStrings; const caret:TPoint);
+    PROCEDURE setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
     { private declarations }
   public
     { public declarations }
   end;
 
-var
+VAR
   MnhForm: TMnhForm;
 
 implementation
@@ -98,6 +105,7 @@ VAR errorThroughput:array of T_storedError;
     lastFormRepaint:double=0;
     repaintNecessary:boolean=false;
     output:T_listOfString;
+
 {$R *.lfm}
 
 PROCEDURE appendToOutputThroughput(CONST text:ansistring);
@@ -137,24 +145,26 @@ PROCEDURE logError(CONST error:T_storedError);
     //MnhForm.ErrorGroupBox.Visible:=true;
   end;
 
-procedure TMnhForm.flushThroughput;
+PROCEDURE TMnhForm.flushThroughput;
   VAR i:longint;
   begin
+    OutputEdit.BeginUpdate();
     for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
       ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+string(errorLocation) );
     setLength(errorThroughput,0);
     lastFormRepaint:=now;
     repaintNecessary:=false;
+    OutputEdit.EndUpdate;
   end;
 
-procedure TMnhForm.positionHelpNotifier;
+PROCEDURE TMnhForm.positionHelpNotifier;
   begin
     PopupNotifier1.ShowAtPos(left+Width-PopupNotifier1.vNotifierForm.Width,
                              ClientToScreen(Point(left,OutputEdit.Top)).y);
     InputEdit.SetFocus;
   end;
 
-procedure TMnhForm.setUnderCursor(const lines:TStrings; const caret:TPoint);
+PROCEDURE TMnhForm.setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
   begin
     if (caret.y>0) and (caret.y<=lines.Count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
@@ -169,6 +179,7 @@ procedure TMnhForm.setUnderCursor(const lines:TStrings; const caret:TPoint);
 
 PROCEDURE startOfEvaluationCallback;
   begin
+    plotForm.doConditionalReset;
     setLength(errorThroughput,0);
     MnhForm.OutputEdit.Lines.Clear;
     MnhForm.ErrorMemo.Clear;
@@ -178,7 +189,7 @@ PROCEDURE startOfEvaluationCallback;
   end;
 
 { TMnhForm }
-procedure TMnhForm.FormCreate(Sender: TObject);
+PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
     myhl:=TSynMnhSyn.Create(nil);
     InputEdit.Highlighter:=myhl;
@@ -201,14 +212,14 @@ procedure TMnhForm.FormCreate(Sender: TObject);
     mnh_out_adapters.printOut     :=@writePrint;
   end;
 
-procedure TMnhForm.FormDestroy(Sender: TObject);
+PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
     mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
     myhl.Destroy;
     ad_killEvaluationLoopSoftly;
   end;
 
-procedure TMnhForm.FormResize(Sender: TObject);
+PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.mainForm.top   :=top;
@@ -219,26 +230,26 @@ procedure TMnhForm.FormResize(Sender: TObject);
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-procedure TMnhForm.FormShow(Sender: TObject);
+PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
     DoubleBuffered:=true;
     if not(settingsHaveBeenProcessed) then processSettings;
     UpdateTimeTimer.Enabled:=true;
   end;
 
-procedure TMnhForm.InputEditChange(Sender: TObject);
+PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
-    if (miEvalModeDirectOnKeypress.Checked) then begin
+    if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       ad_evaluate(InputEdit.Lines);
     end;
   end;
 
-procedure TMnhForm.InputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR Key: Word; Shift: TShiftState);
   begin
     setUnderCursor(InputEdit.Lines,InputEdit.CaretXY);
   end;
 
-procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
+PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -246,14 +257,14 @@ procedure TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: 
     setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
-procedure TMnhForm.miClearClick(Sender: TObject);
+PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   begin
     ad_clearFile;
     InputEdit.ClearAll;
     SettingsForm.fileInEditor:='';
   end;
 
-procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
+PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize-1;
@@ -261,7 +272,7 @@ procedure TMnhForm.miDecFontSizeClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
+PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
@@ -273,24 +284,24 @@ procedure TMnhForm.miDeclarationEchoClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miEvalModeDirectClick(Sender: TObject);
+PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
   end;
 
-procedure TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
+PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
     miEvalModeDirectOnKeypress.Checked:=true;
   end;
 
-procedure TMnhForm.miEvaluateNowClick(Sender: TObject);
+PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     ad_evaluate(InputEdit.Lines);
   end;
 
-procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
+PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
@@ -302,7 +313,7 @@ procedure TMnhForm.miExpressionEchoClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miExpressionResultClick(Sender: TObject);
+PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
@@ -314,19 +325,19 @@ procedure TMnhForm.miExpressionResultClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miHaltEvalutaionClick(Sender: TObject);
+PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
     ad_haltEvaluation;
   end;
 
-procedure TMnhForm.miHelpClick(Sender: TObject);
+PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
 begin
   miHelp.Checked:=not(miHelp.Checked);
   if not(miHelp.Checked) then PopupNotifier1.Visible:=false
                          else if underCursor.tokenText<>'' then positionHelpNotifier;
 end;
 
-procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
+PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
@@ -334,7 +345,7 @@ procedure TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miOpenClick(Sender: TObject);
+PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
   begin
     OpenDialog.Title:='Open file';
     if OpenDialog.Execute and FileExists(OpenDialog.FileName)
@@ -344,13 +355,13 @@ procedure TMnhForm.miOpenClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miOpenNppClick(Sender: TObject);
+PROCEDURE TMnhForm.miOpenNppClick(Sender: TObject);
 begin
   if underCursor.declaredInFile<>'' then
     SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
 end;
 
-procedure TMnhForm.miSaveAsClick(Sender: TObject);
+PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
       MnhForm.InputEdit.Lines.SaveToFile(SaveDialog.FileName);
@@ -360,7 +371,7 @@ procedure TMnhForm.miSaveAsClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miSaveClick(Sender: TObject);
+PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile='' then miSaveAsClick(Sender)
     else begin
@@ -370,19 +381,19 @@ procedure TMnhForm.miSaveClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.mi_settingsClick(Sender: TObject);
+PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
     processSettings;
   end;
 
-procedure TMnhForm.OutputEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR Key: Word; Shift: TShiftState);
   begin
     setUnderCursor(OutputEdit.Lines,OutputEdit.CaretXY);
   end;
 
 
-procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
+PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y: Integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -390,12 +401,44 @@ procedure TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,Y:
     setUnderCursor(OutputEdit.Lines,OutputEdit.PixelsToRowColumn(point));
   end;
 
-procedure TMnhForm.Splitter1Moved(Sender: TObject);
+PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
   end;
 
-procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR Value: string;
+  SourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+  Shift: TShiftState);
+  begin
+    if (pos('.',value)>0) then begin
+      if pos(sourceValue,value)<>1 then begin
+        value:=copy(value,pos('.',value)+1,length(value));
+      end;
+    end;
+  end;
+
+PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
+  VAR i:longint;
+      s:string;
+  begin
+    SynCompletion.ItemList.Clear;
+    s:=SynCompletion.CurrentString;
+    for i:=0 to completionList.size-1 do
+      if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.Add(completionList[i]);
+  end;
+
+PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
+  VAR i:longint;
+      s:string;
+  begin
+    SynCompletion.ItemList.Clear;
+    s:=SynCompletion.CurrentString;
+    for i:=0 to completionList.size-1 do
+      if pos(s,completionList[i])=1 then SynCompletion.ItemList.Add(completionList[i]);
+    if SynCompletion.ItemList.Count>0 then APosition:=0 else APosition:=-1;
+  end;
+
+PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   CONST MIN_INTERVALL=50;
         MAX_INTERVALL=1000;
         REPAINT_INTERVAL_IN_SECONDS=1;
@@ -425,7 +468,9 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //------------------------------------------------------------:progress time
     //file state:---------------------------------------------------------------
     if ad_needReload then begin
+      InputEdit.BeginUpdate();
       ad_doReload(InputEdit.Lines);
+      InputEdit.EndUpdate;
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
       OutputEdit.ClearAll;
     end;
@@ -450,7 +495,7 @@ procedure TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.processSettings;
+PROCEDURE TMnhForm.processSettings;
   begin
     InputEdit.Font.name:=SettingsForm.getEditorFontName;
     InputEdit.Font.Size:=SettingsForm.fontSize;

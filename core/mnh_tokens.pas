@@ -128,7 +128,7 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-procedure T_package.load;
+PROCEDURE T_package.load;
   PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
     VAR this,next,prev:P_token;
     begin
@@ -465,7 +465,7 @@ procedure T_package.load;
     raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
   end;
 
-constructor T_package.create(const provider: P_codeProvider);
+CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
   begin
     setLength(packageUses,0);
     codeProvider:=provider;
@@ -473,12 +473,12 @@ constructor T_package.create(const provider: P_codeProvider);
     loadedVersion:=-1;
   end;
 
-function T_package.needReload: boolean;
+FUNCTION T_package.needReload: boolean;
   begin
     result:=loadedVersion<>codeProvider^.getVersion(true);
   end;
 
-procedure T_package.clear;
+PROCEDURE T_package.clear;
   VAR rule:P_rule;
   begin
     while rules.size>0 do begin
@@ -491,7 +491,7 @@ procedure T_package.clear;
     ready:=false;
   end;
 
-destructor T_package.destroy;
+DESTRUCTOR T_package.destroy;
   begin
     clear;
     if codeProvider<>@mainPackageProvider then dispose(codeProvider,destroy);
@@ -499,8 +499,8 @@ destructor T_package.destroy;
     setLength(packageUses,0);
   end;
 
-procedure T_package.resolveRuleId(var token: T_token;
-  const failSilently: boolean);
+PROCEDURE T_package.resolveRuleId(VAR token: T_token;
+  CONST failSilently: boolean);
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
@@ -540,7 +540,7 @@ procedure T_package.resolveRuleId(var token: T_token;
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-function T_package.ensureRuleId(const ruleId: ansistring): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring): P_rule;
   begin
     if not(rules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
@@ -549,7 +549,7 @@ function T_package.ensureRuleId(const ruleId: ansistring): P_rule;
     end;
   end;
 
-procedure T_package.updateLists(var userDefinedLocalRules, userDefinesImportedRules: T_listOfString);
+PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRules: T_listOfString);
   VAR i,j:longint;
       ids:T_arrayOfString;
       packageId:ansistring;
@@ -629,12 +629,12 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
     cascadeDisposeToken(t);
   end;
 
-function getMainPackage: P_package;
+FUNCTION getMainPackage: P_package;
   begin
     result:=@mainPackage;
   end;
 
-function getTokenAt(const line: AnsiString; const charIndex: longint): T_token;
+FUNCTION getTokenAt(CONST line: AnsiString; CONST charIndex: longint): T_token;
   VAR copyOfLine:AnsiString;
       lineLocation:T_tokenLocation;
   begin

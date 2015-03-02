@@ -480,6 +480,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION headOf2(CONST x,y:P_literal):P_listLiteral;
     VAR i,i0:longint;
     begin
+      result:=nil;
       if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
         case y^.literalType of
           lt_int: begin
@@ -709,6 +710,43 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       end;
     end else raiseNotApplicableError('size',params,tokenLocation);
   end;
+
+FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      case params^.value(0)^.literalType of
+        lt_string: result:=newIntLiteral(length(P_stringLiteral(params^.value(0))^.value));
+        lt_stringList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+            P_listLiteral(result)^.append(newIntLiteral(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),false);
+        end;
+        else raiseNotApplicableError('length',params,tokenLocation);
+      end;
+    end else raiseNotApplicableError('length',params,tokenLocation);
+  end;
+
+FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string) then begin
+      result:=newIntLiteral(pos(P_stringLiteral(params^.value(0))^.value,
+                                P_stringLiteral(params^.value(1))^.value));
+    end else raiseNotApplicableError('pos',params,tokenLocation);
+  end;
+
+FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_int) and (params^.value(2)^.literalType=lt_int) then begin
+      result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
+                                    P_intLiteral   (params^.value(1))^.value,
+                                    P_intLiteral   (params^.value(1))^.value));
+    end else raiseNotApplicableError('copy',params,tokenLocation);
+  end;
+
 
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
   VAR res:P_literal;
@@ -1140,6 +1178,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
+      executable:=P_stringLiteral(params^.value(0))^.value;
       if params^.size=2 then begin
         setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
         for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
@@ -1163,6 +1202,7 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
+      executable:=P_stringLiteral(params^.value(0))^.value;
       if params^.size=2 then begin
         setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
         for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
@@ -1249,6 +1289,9 @@ INITIALIZATION
   registerRule('min'           ,@min_imp       );
   registerRule('argMin'        ,@argMin_imp    );
   registerRule('size'          ,@size_imp      );
+  registerRule('length'        ,@length_imp    );
+  registerRule('pos'           ,@pos_imp       );
+  registerRule('copy'          ,@copy_imp      );
   registerRule('time'          ,@time_imp      );
   registerRule('split'         ,@split_imp     );
   registerRule('softCast'      ,@softCast_imp  );

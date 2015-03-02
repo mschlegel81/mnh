@@ -338,7 +338,7 @@ FUNCTION parseColorOption(colorOption: string; OUT r,g,b:byte):boolean;
     end;
   end;
 
-procedure T_plot.addRect(x0, y0, x1, y1: Extended; colorOption: string);
+PROCEDURE T_plot.addRect(x0, y0, x1, y1: Extended; colorOption: string);
   begin
     setLength(rect,length(rect)+1);
     with rect[length(rect)-1] do begin

@@ -29,7 +29,7 @@ type
     tkUnknown,
     tkNull);
 
-  TProcTableProc = procedure of object;
+  TProcTableProc = PROCEDURE of object;
 
   TRangeState = (rsANil, rsAnsi, rsPasStyle, rsCStyle, rsUnKnown);
 
@@ -51,30 +51,30 @@ type
     fLineNumber : Integer;
 
   protected
-    function GetIdentChars: TSynIdentChars; override;
+    FUNCTION GetIdentChars: TSynIdentChars; override;
   public
-    class function GetLanguageName: string; override;
+    class FUNCTION GetLanguageName: string; override;
   public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+    CONSTRUCTOR Create(AOwner: TComponent); override;
+    DESTRUCTOR Destroy; override;
+    FUNCTION GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
       override;
-    function GetEol: Boolean; override;
-    function GetRange: Pointer; override;
-    function GetTokenID: TtkTokenKind;
-    function GetToken: String; override;
-    procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override;
-    function GetTokenAttribute: TSynHighlighterAttributes; override;
-    function GetTokenKind: integer; override;
-    function GetTokenPos: Integer; override;
-    procedure Next; override;
-    procedure ResetRange; override;
-    procedure SetRange(Value: Pointer); override;
-    procedure SetLine(const NewValue: String; LineNumber: Integer); override;
+    FUNCTION GetEol: Boolean; override;
+    FUNCTION GetRange: Pointer; override;
+    FUNCTION GetTokenID: TtkTokenKind;
+    FUNCTION GetToken: String; override;
+    PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
+    FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
+    FUNCTION GetTokenKind: integer; override;
+    FUNCTION GetTokenPos: Integer; override;
+    PROCEDURE Next; override;
+    PROCEDURE ResetRange; override;
+    PROCEDURE SetRange(Value: Pointer); override;
+    PROCEDURE SetLine(CONST NewValue: String; LineNumber: Integer); override;
   end;
 
 implementation
-constructor TSynMnhSyn.Create(AOwner: TComponent);
+CONSTRUCTOR TSynMnhSyn.Create(AOwner: TComponent);
 CONST identifierForeground:TColor=$00FF0000;
 begin
   inherited Create(AOwner);
@@ -126,20 +126,20 @@ begin
   styleTable[tkNull].Background:=clYellow;
 end; { Create }
 
-destructor TSynMnhSyn.Destroy;
+DESTRUCTOR TSynMnhSyn.Destroy;
   VAR tk:TtkTokenKind;
 begin
   for tk:=tkComment to tkNull do styleTable[tk].destroy;
   inherited Destroy;
 end; { Destroy }
 
-function TSynMnhSyn.GetDefaultAttribute(Index: integer
+FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer
   ): TSynHighlighterAttributes;
 begin
   result:=styleTable[tkUnknown];
 end;
 
-procedure TSynMnhSyn.SetLine(const NewValue: String; LineNumber:Integer);
+PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: String; LineNumber:Integer);
 begin
   inherited;
   isDeclInput:=false;
@@ -151,7 +151,7 @@ begin
   Next;
 end; { SetLine }
 
-procedure TSynMnhSyn.Next;
+PROCEDURE TSynMnhSyn.Next;
 VAR localId:shortString;
     i:longint;
 begin
@@ -250,7 +250,7 @@ begin
     end;
     '"': begin
       inc(run);
-      while (fLine[run]<>#0) and ((fLine[run]<>'"') or (fLine[run-1]='\')) do inc(run);
+      while (fLine[run]<>#0) and ((fLine[run]<>'"') or (fLine[run-1]='\') and (fLine[run-2]<>'\')) do inc(run);
       if (fLine[run]='"') then inc(run);
       fTokenId:=tkString;
     end;
@@ -267,19 +267,19 @@ begin
   end;
 end;
 
-function TSynMnhSyn.GetEol: Boolean;
+FUNCTION TSynMnhSyn.GetEol: Boolean;
 begin
   Result := fTokenId = tkNull;
 end;
 
-function TSynMnhSyn.GetRange: Pointer;
+FUNCTION TSynMnhSyn.GetRange: Pointer;
 begin
   //Result := Pointer(PtrUInt(fRange));
   result:=nil;
 end;
 
-function TSynMnhSyn.GetToken: String;
-var
+FUNCTION TSynMnhSyn.GetToken: String;
+VAR
   Len: LongInt;
 begin
   Len := Run - fTokenPos;
@@ -287,19 +287,19 @@ begin
   SetString(Result, (FLine + fTokenPos), Len);
 end;
 
-procedure TSynMnhSyn.GetTokenEx(out TokenStart: PChar;
-  out TokenLength: integer);
+PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar;
+  OUT TokenLength: integer);
 begin
   TokenLength:=Run-fTokenPos;
   TokenStart:=FLine + fTokenPos;
 end;
 
-function TSynMnhSyn.GetTokenID: TtkTokenKind;
+FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
   begin
     Result := fTokenId;
   end;
 
-function TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
+FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   VAR bg:longint;
   begin
     bg:=255;
@@ -310,17 +310,17 @@ function TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
     result.Background:=(bg or (bg shl 8) or (bg shl 16));
   end;
 
-function TSynMnhSyn.GetTokenKind: integer;
+FUNCTION TSynMnhSyn.GetTokenKind: integer;
 begin
   Result := Ord(fTokenId);
 end;
 
-function TSynMnhSyn.GetTokenPos: Integer;
+FUNCTION TSynMnhSyn.GetTokenPos: Integer;
 begin
   Result := fTokenPos;
 end;
 
-procedure TSynMnhSyn.ResetRange;
+PROCEDURE TSynMnhSyn.ResetRange;
 begin
   fRange := rsUnknown;
   isDeclInput:=false;
@@ -328,18 +328,18 @@ begin
   isOutput:=false;
 end;
 
-procedure TSynMnhSyn.SetRange(Value: Pointer);
+PROCEDURE TSynMnhSyn.SetRange(Value: Pointer);
 begin
   //expressionLevel:=ptrUInt(expressionLevel);
   //fRange := TRangeState(PtrUInt(Value));
 end;
 
-class function TSynMnhSyn.GetLanguageName: string;
+class FUNCTION TSynMnhSyn.GetLanguageName: string;
 begin
   Result := 'mnh';
 end;
 
-function TSynMnhSyn.GetIdentChars: TSynIdentChars;
+FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
 begin
   Result := ['a'..'z','A'..'Z','.','_','0'..'9'];
 end;

@@ -1,0 +1,17 @@
+pi:=4*arctan(1);
+pi1(n:int)->4*each(i,1/(4*[0..n-1]+1)-1/(4*[0..n-1]+3),+);
+pi1(N:intList)->each(n,N,pi1(n));
+CACHE pi1;
+pi2(n:int)->pi1(n)+  0.5*4/(4*n+1);
+pi2(N:intList)->each(n,N,pi2(n));
+pi3(n:int)->pi1(n)+0.875*4/(4*n+1)-0.5*4/(4*n+3)+0.125*4/(4*n+5);
+pi3(N:intList)->each(n,N,pi3(n));
+N:=round(sqrt(2)**[1..36]);
+setPlotLogscale([true,true]);
+setPlotAutoscale([true,true]);
+setPlotPreserveAspect(false);
+plot(N,abs(pi-pi1(N)),"l .");
+addPlot(N,abs(pi-pi2(N)),"l +");
+addPlot(N,abs(pi-pi3(N)),"l x");
+
+

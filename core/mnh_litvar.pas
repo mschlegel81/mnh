@@ -346,7 +346,7 @@ PROCEDURE T_literal.rereference;         begin inc(numberOfReferences); end;
 FUNCTION T_literal.unreference:longint;  begin dec(numberOfReferences); result:=numberOfReferences; end;
 
 FUNCTION T_literal.literalType:T_literalType;           begin result:=lt_error;      end;
-function T_scalarLiteral.literalType: T_literalType;     begin result:=lt_error;      end;
+FUNCTION T_scalarLiteral.literalType: T_literalType;     begin result:=lt_error;      end;
 FUNCTION T_boolLiteral.literalType:T_literalType;       begin result:=lt_boolean;    end;
 FUNCTION T_intLiteral.literalType:T_literalType;        begin result:=lt_int;        end;
 FUNCTION T_realLiteral.literalType:T_literalType;       begin result:=lt_real;       end;
@@ -401,7 +401,7 @@ FUNCTION T_listLiteral.value(index:longint):P_literal;    begin result:=element[
 
 
 FUNCTION T_literal.toString:ansistring;           begin result:='<ERR>'; end;
-function T_scalarLiteral.toString: ansistring;     begin result:='<ERR>'; end;
+FUNCTION T_scalarLiteral.toString: ansistring;     begin result:='<ERR>'; end;
 FUNCTION T_boolLiteral.toString:ansistring;       begin result:=C_boolText[val]; end;
 FUNCTION T_intLiteral.toString:ansistring;        begin result:=intToStr(val); end;
 FUNCTION T_realLiteral.toString:ansistring;       begin result:=myFloatToStr(val); end;
@@ -432,14 +432,14 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized:boolean):ansistri
     end;
   end;
 
-function T_scalarLiteral.stringForm: ansistring;     begin result:=toString; end;
+FUNCTION T_scalarLiteral.stringForm: ansistring;     begin result:=toString; end;
 FUNCTION T_boolLiteral.stringForm:ansistring;       begin result:=toString; end;
 FUNCTION T_intLiteral.stringForm:ansistring;        begin result:=toString; end;
 FUNCTION T_realLiteral.stringForm:ansistring;       begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm:ansistring;     begin result:=val;      end;
 FUNCTION T_expressionLiteral.stringForm:ansistring; begin result:=toString; end;
 
-function T_scalarLiteral.isInRelationTo(const relation: T_tokenType; const other: P_scalarLiteral): boolean;
+FUNCTION T_scalarLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
   begin result:=false; end;
 FUNCTION T_scalarLiteral.leqForSorting(CONST other:P_scalarLiteral):boolean;
   begin
@@ -591,7 +591,7 @@ FUNCTION T_expressionLiteral.leqForSorting(CONST other:P_scalarLiteral):boolean;
     result:=literalType<=other^.literalType;
   end;
 
-FUNCTION T_scalarLiteral.operate(const op: T_tokenType; const other: P_scalarLiteral; const tokenLocation: T_tokenLocation): P_scalarLiteral;
+FUNCTION T_scalarLiteral.operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral;
   begin
     result:=@errLit;
     errLit.rereference;
@@ -1167,14 +1167,14 @@ FUNCTION T_listLiteral.hash:longint;
     {$Q+}
   end;
   
-FUNCTION T_literal.equals(const other:P_literal):Boolean;           begin result:=(@self=other); end;
-FUNCTION T_scalarLiteral.equals(const other:P_literal):Boolean;     begin result:=(@self=other); end; //this can only be the error literal, a singleton
-FUNCTION T_boolLiteral.equals(const other:P_literal):Boolean;       begin result:=(@self=other); end; //this can only be true or false, both singleons
-FUNCTION T_intLiteral.equals(const other:P_literal):Boolean;        begin result:=(@self=other) or (other^.literalType=lt_int) and (P_intLiteral(other)^.value=val); end;
-FUNCTION T_realLiteral.equals(const other:P_literal):Boolean;       begin result:=(@self=other) or (other^.literalType=lt_real) and (P_realLiteral(other)^.value=val); {$WARNING TODO Does this cover Nan and Inf?} end;
-FUNCTION T_stringLiteral.equals(const other:P_literal):Boolean;     begin result:=(@self=other) or (other^.literalType=lt_string) and (P_stringLiteral(other)^.value=val); end;
-FUNCTION T_expressionLiteral.equals(const other:P_literal):Boolean; begin result:=(@self=other) or (other^.literalType=lt_expression) and (P_expressionLiteral(other)^.value=val); end;
-FUNCTION T_listLiteral.equals(const other:P_literal):Boolean;       
+FUNCTION T_literal.equals(CONST other:P_literal):Boolean;           begin result:=(@self=other); end;
+FUNCTION T_scalarLiteral.equals(CONST other:P_literal):Boolean;     begin result:=(@self=other); end; //this can only be the error literal, a singleton
+FUNCTION T_boolLiteral.equals(CONST other:P_literal):Boolean;       begin result:=(@self=other); end; //this can only be true or false, both singleons
+FUNCTION T_intLiteral.equals(CONST other:P_literal):Boolean;        begin result:=(@self=other) or (other^.literalType=lt_int) and (P_intLiteral(other)^.value=val); end;
+FUNCTION T_realLiteral.equals(CONST other:P_literal):Boolean;       begin result:=(@self=other) or (other^.literalType=lt_real) and (P_realLiteral(other)^.value=val); {$WARNING TODO Does this cover Nan and Inf?} end;
+FUNCTION T_stringLiteral.equals(CONST other:P_literal):Boolean;     begin result:=(@self=other) or (other^.literalType=lt_string) and (P_stringLiteral(other)^.value=val); end;
+FUNCTION T_expressionLiteral.equals(CONST other:P_literal):Boolean; begin result:=(@self=other) or (other^.literalType=lt_expression) and (P_expressionLiteral(other)^.value=val); end;
+FUNCTION T_listLiteral.equals(CONST other:P_literal):Boolean;       
   VAR i:longint;
   begin 
     if (@self=other) then exit(true);
