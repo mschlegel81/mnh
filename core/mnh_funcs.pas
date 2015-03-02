@@ -1135,6 +1135,50 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('execAsync',params,tokenLocation);
   end;
 
+FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR stringToSplit:AnsiString;
+      i0,i1:longint;
+
+  PROCEDURE stepToken;
+    begin
+      P_listLiteral(result)^.append(newStringLiteral(copy(stringToSplit,i0,i1-i0)),false);
+      i0:=i1;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      stringToSplit:=P_stringLiteral(params^.value(0))^.value;
+      result:=newListLiteral;
+      i0:=1;
+      while i0<=length(stringToSplit) do begin
+        case stringToSplit[i0] of
+          'a'..'z','A'..'Z': begin //identifiers, keywords, etc.
+            i1:=i0;
+            while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
+          end;
+          '''','"': begin //strings
+            unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),i1);
+            if i1<=0 then i1:=i0+1
+                     else i1:=i0+i1+1;
+          end;
+          '0'..'9': begin //numbers
+            parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
+            if i1<=0 then i1:=i0+1
+                     else i1:=i0+i1+1;
+          end;
+          ' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar: begin //whitespace
+            i1:=i0;
+            while (i1<=length(stringToSplit)) and (stringToSplit[i1] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar]) do inc(i1);
+          end;
+          else i1:=i0+1; //symbols, etc.
+        end;
+        stepToken;
+      end;
+
+    end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule('print'         ,@print_imp     );
@@ -1184,6 +1228,7 @@ INITIALIZATION
   registerRule('interpret'     ,@interpret_impl);
   registerRule('execSync'      ,@execSync_impl);
   registerRule('execAsync'     ,@execAsync_impl);
+  registerRule('tokenSplit'    ,@tokenSplit_impl);
 
 FINALIZATION
   intrinsicRuleMap.destroy;

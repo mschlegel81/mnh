@@ -1,5 +1,8 @@
 {$ifdef include_interface}
   P_rule=^T_rule;
+
+  { T_rule }
+
   T_rule=object
     private
       isCached:boolean;
@@ -15,17 +18,18 @@
       PROCEDURE performSet(CONST value:P_literal);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       PROCEDURE setCached(CONST sizeLimit:longint);
+      FUNCTION hasPublicSubrule:boolean;
   end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId:ansistring);
+constructor T_rule.create(const ruleId: ansistring);
   begin
     isCached:=false;
     id:=ruleId;
     setLength(subrules,0);
   end;
 
-DESTRUCTOR T_rule.destroy;
+destructor T_rule.destroy;
   VAR i:longint;
   begin
     id:='';
@@ -36,7 +40,9 @@ DESTRUCTOR T_rule.destroy;
 
 CONST STACK_DEPTH_LIMIT=45000;
   
-FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean):boolean;
+function T_rule.replaces(const param: P_listLiteral; out firstRep,
+  lastRep: P_Token; const callDepth: word; const includePrivateRules: boolean
+  ): boolean;
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
@@ -76,7 +82,7 @@ FUNCTION T_rule.replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token
     end;
   end;
 
-PROCEDURE T_rule.addOrReplaceSubRule(CONST rule:P_subrule);
+procedure T_rule.addOrReplaceSubRule(const rule: P_subrule);
   VAR i:longint;
   begin
     i:=0;
@@ -86,7 +92,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule:P_subrule);
     subrules[i]:=rule;
   end;
 
-PROCEDURE T_rule.addOrSetSubRule(CONST rule:P_subrule);
+procedure T_rule.addOrSetSubRule(const rule: P_subrule);
   VAR i:longint;
   begin
     writeln('adding or setting subrule: ',rule^.toString);
@@ -96,7 +102,7 @@ PROCEDURE T_rule.addOrSetSubRule(CONST rule:P_subrule);
     subrules[i]:=rule;
   end;
 
-PROCEDURE T_rule.performSet(CONST value:P_literal);
+procedure T_rule.performSet(const value: P_literal);
   VAR i:longint;
   begin
     i:=0;
@@ -110,15 +116,22 @@ PROCEDURE T_rule.performSet(CONST value:P_literal);
     value^.rereference;
   end;
   
-FUNCTION T_rule.getLocationOfDeclaration:T_tokenLocation;
+function T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
     result:=subrules[0]^.declaredAt;
   end;
 
-PROCEDURE T_rule.setCached(CONST sizeLimit:longint);
+procedure T_rule.setCached(const sizeLimit: longint);
   begin
     isCached:=true;
     cache.create(sizeLimit);
+  end;
+
+FUNCTION T_rule.hasPublicSubrule: boolean;
+  VAR i:longint;
+  begin
+    for i:=0 to length(subrules)-1 do if subrules[i]^.publish then exit(true);
+    result:=false;
   end;
 
 {$endif}

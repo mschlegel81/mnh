@@ -32,8 +32,6 @@ TYPE
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
-      FUNCTION canResolveId(CONST identifier:ansistring):byte;
-      FUNCTION ruleLocation(CONST identifier:ansistring):T_tokenLocation;
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
   end;
@@ -525,7 +523,7 @@ procedure T_package.resolveRuleId(var token: T_token;
     for i:=length(packageUses)-1 downto 0 do
     if ((packageId=packageUses[i].id) or (packageId=''))
     and (packageUses[i].pack<>nil)
-    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then begin
+    and (packageUses[i].pack^.rules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
       token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
       exit;
@@ -539,62 +537,6 @@ procedure T_package.resolveRuleId(var token: T_token;
     end;
 
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
-  end;
-
-function T_package.canResolveId(const identifier: ansistring): byte;
-  VAR i:longint;
-      userRule:P_rule;
-      intrinsicFuncPtr:T_intFuncCallback;
-      packageId,ruleId:ansistring;
-  begin
-    i:=pos(C_id_qualify_character,identifier);
-    if i>0 then begin
-      packageId:=copy(identifier,1,i-1);
-      ruleId   :=copy(identifier,i+1,length(identifier));
-    end else begin
-      packageId:='';
-      ruleId   :=identifier;
-    end;
-
-    result:=0;
-
-    if ((packageId=codeProvider^.id) or (packageId=''))
-    and rules.containsKey(ruleId,userRule) then exit(1);
-
-    for i:=length(packageUses)-1 downto 0 do
-    if ((packageId=packageUses[i].id) or (packageId=''))
-    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then exit(2);
-
-    if ((packageId='mnh') or (packageId=''))
-    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then exit(3);
-  end;
-
-function T_package.ruleLocation(const identifier: ansistring): T_tokenLocation;
-  VAR i:longint;
-      userRule:P_rule;
-      intrinsicFuncPtr:T_intFuncCallback;
-      packageId,ruleId:ansistring;
-  begin
-    i:=pos(C_id_qualify_character,identifier);
-    if i>0 then begin
-      packageId:=copy(identifier,1,i-1);
-      ruleId   :=copy(identifier,i+1,length(identifier));
-    end else begin
-      packageId:='';
-      ruleId   :=identifier;
-    end;
-
-    result:=C_nilTokenLocation;
-
-    if ((packageId=codeProvider^.id) or (packageId=''))
-    and rules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
-
-    for i:=length(packageUses)-1 downto 0 do
-    if ((packageId=packageUses[i].id) or (packageId=''))
-    and packageUses[i].pack^.rules.containsKey(ruleId,userRule) then exit(userRule^.getLocationOfDeclaration);
-
-    if ((packageId='mnh') or (packageId=''))
-    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then result.column:=-111;
   end;
 
 function T_package.ensureRuleId(const ruleId: ansistring): P_rule;
