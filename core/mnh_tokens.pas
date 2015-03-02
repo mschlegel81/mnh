@@ -1,8 +1,8 @@
 UNIT mnh_tokens;
 INTERFACE
-USES LCLIntf, myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
+USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
-     {$ifdef PROFILING}epiktimer,{$endif}
+     epiktimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
 
 {$define include_interface}

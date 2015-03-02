@@ -53,6 +53,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       lit:P_literal;
       useParam:P_listLiteral;
       evalCost:longint;
+      profiler:TEpikTimer;
   begin
     if ruleType=rt_cached then begin
       if param=nil then useParam:=newListLiteral
@@ -71,9 +72,12 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
           system.LeaveCriticalSection(cache_cs);
           exit(true);
         end;
-        evalCost:=GetTickCount;
+        profiler := TEpikTimer.create(nil);
+        profiler.Clear;
+        profiler.Start;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
-        evalCost:=getTickCount-evalCost;
+        evalCost:=round(10000*profiler.Elapsed());
+        profiler.Free;
         if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
           lit:=firstRep^.data;
           cache.polish;
