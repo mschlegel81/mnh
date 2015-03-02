@@ -11,18 +11,18 @@ isValid(l:scalar)->round(l)<100 and round(l)>=0;
 densityPlot(x0:numeric,x1>x0,
             y0:numeric,y1>y0,
             gridSize>0)->
-  densityPlot(Peach(ix,[x0..floor((x1-x0)/gridSize)],|,
-              Peach(iy,[y0..floor((y1-y0)/gridSize)],
+  densityPlot(each(ix,[x0..floor((x1-x0)/gridSize)],|,
+              each(iy,[y0..floor((y1-y0)/gridSize)],
                        [ix,iy,binaryFunc(x0+(ix+0.5)*gridSize,
                                          y0+(iy+0.5)*gridSize)])),
               x0,y0,gridSize);
 
 private densityPlot(L:list,x0:numeric,y0:numeric,gridSize)->
-  densityPlot(Peach(subList,
+  densityPlot(each(subList,
                     each(interval,
                          intervals(decils(L%%2)),
                          L%(L%%2>interval%0 and L%%2<=interval%1)%%[0,1]),
-                    Peach(tuple,
+                    each(tuple,
                           subList,
                            tuple   *gridSize+[x0,y0],
                           (tuple+1)*gridSize+[x0,y0])));

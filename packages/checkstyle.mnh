@@ -25,5 +25,4 @@ fix(filename:string,old:stringList,new:stringList)->writeFile(filename,each(toke
 
 main->print(each(fname,allSourceFiles,&"\n"&,fname&"\t"&violations(fname)&"\t"&fix(fname)));
 
-//main->print(Peach(fname,allSourceFiles,&"\n"&,fname&"\t"&violations(fname)));
 

@@ -17,7 +17,7 @@
       PROCEDURE addOrSetSubRule(CONST rule:P_subrule);
       PROCEDURE performSet(CONST value:P_literal);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
-      PROCEDURE setCached(CONST sizeLimit:longint);
+      PROCEDURE setPure;
       FUNCTION hasPublicSubrule:boolean;
   end;
 {$endif}
@@ -119,10 +119,12 @@ FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
     result:=subrules[0]^.declaredAt;
   end;
 
-PROCEDURE T_rule.setCached(CONST sizeLimit: longint);
+PROCEDURE T_rule.setPure;
   begin
-    isCached:=true;
-    cache.create(sizeLimit);
+    if not(isCached) then begin
+      isCached:=true;
+      cache.create;
+    end;
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;

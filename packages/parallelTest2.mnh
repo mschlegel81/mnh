@@ -1,7 +1,0 @@
-fib(i>1)->fib(i-1)+fib(i-2);
-fib(i)->1;
-serial  -> {each(i,[1..24],fib(i))};
-parallel->{Peach(i,[1..24],fib(i))};
-prettyPrint(L)->print(each(sub,L,&"\n"&,each(e,sub,&"\t"&,string(e))));
-prettyPrint(time(serial));
-prettyPrint(time(parallel));

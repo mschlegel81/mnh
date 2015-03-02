@@ -1,8 +1,8 @@
 //Binominalkoeffizient über Pascalsches Dreieck:
-pascal(n)->pascal([1],n);
+pure pascal(n)->pascal([1],n);
 pascal(L,n>0)->pascal(L|0+0|L,n-1);
 pascal(L,n)->L;
-CACHE pascal;
+
 //Summe und gleitende Summen:
 sum([])->0;
 sum(L)->each(e,L,+);
@@ -18,8 +18,8 @@ maxN:=60;
 sum1(i)->sum(summands(i));
 sum2(i)->sum(summands(i)*weights(i));
 
-errors1:=Peach(i,[1..maxN],abs(sum1(i)-arctan(1)));
-errors2:=Peach(i,[1..maxN],abs(sum2(i)-arctan(1)));
+errors1:=each(i,[1..maxN],abs(sum1(i)-arctan(1)));
+errors2:=each(i,[1..maxN],abs(sum2(i)-arctan(1)));
 
 T (i)->abs(time({sum1(i)})%[2,1]%%1-[0,arctan(1)])*[100000,1];
 T2(i)->abs(time({sum2(i)})%[2,1]%%1-[0,arctan(1)])*[100000,1];

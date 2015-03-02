@@ -4,16 +4,16 @@
 
 //Aggregations:--------------------------------------------
 sum([]):=0;
-sum(L)->each(n,L,+,n);
+sum(L)->each(n,L,+);
 
 prod([]):=1;
-prod(L)->each(n,L,*,n);
+prod(L)->each(n,L,*);
 
 And([]):=true;
-And(L:booleanList)->each(n,L,and,n);
+And(L:booleanList)->each(n,L,and);
 
 Or([]):=false;
-Or(L:booleanList)->each(n,L,or,n);
+Or(L:booleanList)->each(n,L,or);
 
 join([])->"";
 join(L<>[])->each(n,L,&,string(n));

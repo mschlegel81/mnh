@@ -1,1 +1,1 @@
-fb->Peach(i,[1..4],fb); fb;
+fb->each(i,[1..4],fb); fb;

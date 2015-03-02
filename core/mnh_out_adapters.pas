@@ -17,7 +17,6 @@ TYPE
   T_writeErrorCallback = PROCEDURE(CONST error: T_storedError);
 
 VAR
-  mainThread:TThreadID;
   inputDeclEcho, inputExprEcho, exprOut, printOut, tablePrintOut: T_writeCallback;
   errorOut: T_writeErrorCallback;
   maxErrorLevel: T_errorLevel;
@@ -142,11 +141,11 @@ VAR
 
 FUNCTION isMemoryFree(CONST usage: string): boolean;
   CONST
-    MAX_MEMORY_THRESHOLD:array [false..true] of longint = (1500 * 1024 * 1024,300 * 1024 * 1024); //=1500 MB
+    MAX_MEMORY_THRESHOLD = 1500 * 1024 * 1024; //=1500 MB
   begin
     InterLockedIncrement(memCheckTally);
     if (memCheckTally and 1023)<>0 then exit(true);
-    result := (MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed < MAX_MEMORY_THRESHOLD[ThreadID=mainThread]);
+    result := (MEMORY_MANAGER.GetFPCHeapStatus().CurrHeapUsed < MAX_MEMORY_THRESHOLD);
     if not (result) and (maxErrorLevel < el5_systemError) then
       raiseError(el5_systemError, 'Out of memory! (' + usage + ')', C_nilTokenLocation);
   end;

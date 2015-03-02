@@ -201,7 +201,7 @@ IMPLEMENTATION
 
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
-    case X^.literalType of
+    if x=nil then result:=NAN else case X^.literalType of
       lt_real: begin
         result := P_realLiteral(x)^.Value;
         if IsInfinite(result) then
@@ -302,12 +302,12 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean);
         begin
         L := xRule^.directEvaluateUnary(@pt, 0);
         result.x := fReal(L);
-        disposeLiteral(L);
+        if L<>nil then disposeLiteral(L);
         end;
         begin
         L := yRule^.directEvaluateUnary(@pt, 0);
         result.y := fReal(L);
-        disposeLiteral(L);
+        if L<>nil then disposeLiteral(L);
         end;
       pt.Destroy;
     end;
@@ -1454,6 +1454,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       VAR
         x, y, locY: longint;
       begin
+        if (x0<0) then x0:=0 else if x0>screenWidth *scalingFactor then x0:=screenWidth *scalingFactor;
+        if (x1<0) then x1:=0 else if x1>screenWidth *scalingFactor then x1:=screenWidth *scalingFactor;
+        if (y0<0) then y0:=0 else if y0>screenHeight*scalingFactor then y0:=screenHeight*scalingFactor;
+        if (y1<0) then y1:=0 else if y1>screenHeight*scalingFactor then y1:=screenHeight*scalingFactor;
         if x1 < x0 then
           begin
           x := x1;

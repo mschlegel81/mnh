@@ -8,7 +8,7 @@ TYPE
     tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer,
     tt_importedUserRulePointer, tt_intrinsicRulePointer,
     //special operators
-    tt_each, tt_parallelEach,
+    tt_each,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -46,6 +46,9 @@ TYPE
     tt_typeCheckNonemptyList,
     tt_typeCheckEmptyList,
     tt_semicolon,
+    //modifiers:
+    tt_modifier_private,
+    tt_modifier_pure,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -99,7 +102,7 @@ CONST
     //identifier and resolved identifiers
     '', '', '', '', '',
     //special operators
-    'each', 'Peach',
+    'each', 
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -134,6 +137,8 @@ CONST
     '=[]',
     //special: [E]nd [O]f [L]ine
     ';',
+    'private',
+    'pure',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -161,7 +166,6 @@ CONST
     'user function (imported)',
     'built in function',
     'special built in function: each#can be used for constructing and/or aggregating lists',
-    'special built in function: Peach#can be used for constructing and/or aggregating lists#Is evaluated parallel',
     'round opening bracket',
     'round closing bracket',
     'parameter list constructor',
@@ -219,6 +223,8 @@ CONST
     'type check: nonempty list#matches to all non-empty lists',
     'type check: empty list#matches only to the empty list',
     'semicolon#marks the end of a statement, assignment or declaration',
+    'private modifier#hides the subrule from all importing packages',
+    'pure modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE

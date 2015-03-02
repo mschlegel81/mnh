@@ -35,7 +35,6 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
   end;
-  {$include mnh_tokens_parallel.inc}
 
 CONST C_id_qualify_character='.';
   
@@ -51,9 +50,7 @@ VAR mainPackageProvider:T_codeProvider;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=45000;
-VAR workerThread:array[0..2] of T_workerThread;
-    evaluationTask:array[0..127] of P_evaluationTask;
-    secondaryPackages:array of P_package;
+VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
 
@@ -82,7 +79,6 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
-{$include mnh_tokens_parallel.inc}
 
 PROCEDURE reloadMainPackage;
   VAR i,j:longint;
@@ -205,6 +201,7 @@ PROCEDURE T_package.load;
     PROCEDURE parseRule;
       VAR p,n,nn,nnn:P_token;
           ruleIsPrivate:boolean=false;
+          ruleIsPure:boolean=false;
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
@@ -215,6 +212,8 @@ PROCEDURE T_package.load;
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;
+
+
         //plausis:
         if (ruleBody=nil) then begin
           raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
@@ -227,20 +226,15 @@ PROCEDURE T_package.load;
           cascadeDisposeToken(first);
           exit;
         end;
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_pure]) do begin
+          if first^.tokType=tt_modifier_private then ruleIsPrivate:=true;
+          if first^.tokType=tt_modifier_pure    then ruleIsPure:=true;
+          first:=disposeToken(first);
+        end;
         if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
           raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           cascadeDisposeToken(first);
           exit;
-        end;
-        //:plausis
-        if (first^.next^.tokType=tt_identifier) and (first^.tokType=tt_identifier) then begin
-          if trim(first^.txt)='private' then ruleIsPrivate:=true
-          else if trim(first^.txt)<>'public' then begin
-            raiseError(el4_parsingError,'Invalid declaration head.',first^.location);
-            cascadeDisposeToken(first);
-            exit;
-          end;
-          first:=disposeToken(first);          
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
@@ -251,10 +245,10 @@ PROCEDURE T_package.load;
           end;
           p:=p^.next;
         end;
+        //:plausis
         
         ruleId:=trim(first^.txt);
-        p:=first;
-        first:=disposeToken(p);
+        first:=disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
           raiseError(el4_parsingError,'Invalid declaration head.',first^.location);
           cascadeDisposeToken(first);
@@ -325,38 +319,14 @@ PROCEDURE T_package.load;
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart));
           subRule^.publish:=not(ruleIsPrivate);
           ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
+          if ruleIsPure then ensureRuleId(ruleId)^.setPure;
           first:=nil;
         end else if errorLevel<el5_systemError then
           cascadeDisposeToken(first)
         else
           first:=nil;
       end;
-      
-    FUNCTION parseCache:boolean;
-      VAR ruleIdToken:P_token;
-          specifier:P_token;
-          cacheSize:longint;
-      begin
-        if not(first^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer,tt_parameterIdentifier]) or
-              (first^.txt<>'CACHE') or 
-              (first^.next=nil) 
-        then exit(false);
-        ruleIdToken:=first^.next;
-        if not(ruleIdToken^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer,tt_parameterIdentifier])
-        then exit(false);
-        specifier:=ruleIdToken^.next;
-        if (specifier=nil) or (specifier^.tokType=tt_literal) 
-                and (P_literal(specifier^.data)^.literalType=lt_int)
-                and (specifier^.next=nil) then begin          
-          if specifier=nil then cacheSize:=100
-                           else cacheSize:=P_intLiteral(specifier^.data)^.value;
-          ensureRuleId (ruleIdToken^.txt)^.setCached(cacheSize);
-          cascadeDisposeToken(first);
-          first:=nil;
-          result:=true;
-        end else result:=false;
-      end;
-    
+          
     begin
       if first=nil then exit;
       if isFirstLine then begin
@@ -370,7 +340,6 @@ PROCEDURE T_package.load;
           exit;
         end;
       end;
-      if parseCache then exit;
       predigestBeforeDeclarationParsing(first);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken=nil then predigest(first,@self)
@@ -623,7 +592,6 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   end;
 
 INITIALIZATION
-  mainThread:=ThreadID;
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);
@@ -637,10 +605,8 @@ INITIALIZATION
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
-  initWorkerThreadsAndTasks;
 
 FINALIZATION
-  finalizeWorkerThreadsAndTasks;
   finalizePackages;
   {$ifdef doTokenRecycling}
   finalizeTokens;

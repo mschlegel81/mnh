@@ -41,10 +41,9 @@ FUNCTION main(p:pointer):ptrint;
   PROCEDURE updateCompletionList;
     begin
       completionList.clear;
-      completionList.add('CACHE');
+      completionList.add('pure');
       completionList.add('USE');
       completionList.add('private');
-      completionList.add('Peach');
       completionList.add('each');
       completionList.addArr(localUserRules.elementArray);
       completionList.addArr(importedUserRules.elementArray);
@@ -53,7 +52,6 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   begin
-    mainThread:=ThreadID;
     evaluationState.value:=es_idle;
     updateCompletionList;
 
@@ -165,12 +163,6 @@ begin
       if token.txt='USE' then begin
         result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'
                                                         +'#As first token in a package, it marks the use-clause (importing packages)';
-      end else if token.txt='CACHE' then begin
-        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context specific interpretation'
-                                                        +'#In conjunction with a further identifier it enables caching for a specific rule.'
-      end else if token.txt='private' then begin
-        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context specific interpretation'
-                                                        +'#Before a declaration/assignment it makes the created (sub-)rule private, i.e. inaccessible for importing packages.'
       end
     end else if (token.tokType=tt_literal) then begin
       if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'

@@ -4,6 +4,8 @@ INTERFACE
 
 USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
 
+CONST CACHE_MOD=1023;
+
 TYPE
   T_cacheEntry = record
     key: P_listLiteral;
@@ -16,11 +18,10 @@ TYPE
   T_cache = object
   private
     useTally: longint;
-    cache_mod: longint;
     fill: longint;
-    cached: array of array of T_cacheEntry;
+    cached: array[0..CACHE_MOD] of array of T_cacheEntry;
   public
-    CONSTRUCTOR Create(CONST cacheLimit: longint);
+    CONSTRUCTOR Create();
     DESTRUCTOR Destroy;
     PROCEDURE put(CONST key: P_listLiteral; CONST Value: P_literal);
     FUNCTION get(CONST key: P_listLiteral): P_literal;
@@ -42,17 +43,10 @@ PROCEDURE clearAllCaches;
       allCaches[i]^.Clear;
   end;
 
-CONSTRUCTOR T_cache.Create(CONST cacheLimit: longint);
+CONSTRUCTOR T_cache.Create();
   begin
     useTally := 0;
-    cache_mod := 1;
-    while cache_mod * 2 < cacheLimit do
-      Inc(cache_mod, cache_mod);
-    Dec(cache_mod);
-
     fill := 0;
-    setLength(cached, CACHE_MOD + 1);
-
     setLength(allCaches, length(allCaches) + 1);
     allCaches[length(allCaches) - 1] := @self;
   end;
@@ -62,8 +56,6 @@ DESTRUCTOR T_cache.Destroy;
     i: longint;
   begin
     Clear;
-    setLength(cached, 0);
-
     i := 0;
     while (i < length(allCaches)) and (allCaches[i] <> @self) do
       Inc(i);
