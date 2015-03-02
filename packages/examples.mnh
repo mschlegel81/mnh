@@ -18,16 +18,17 @@ sievePrimes(primes,next,candidates:intList,maxCheck>next)->sievePrimes(primes|ne
 sievePrimes(primes,next,candidates        ,maxCheck     )->primes|next|candidates;
 sievePrimes(primes,     candidates        ,maxCheck     )->sievePrimes(primes,candidates%0,tail(candidates),maxCheck);
 
-type(x)->x&" is "&(x:scalar      ? " a scalar"      : "" )&
-                  (x:list        ? " a list"        : "" )&
-                  (x:boolean     ? " a boolean"     : "" )&
-                  (x:booleanList ? " a booleanList" : "" )&
-                  (x:int         ? " an int"        : "" )&
-                  (x:intList     ? " an intList"    : "" )&
-                  (x:real        ? " a real"        : "" )&
-                  (x:realList    ? " a realList"    : "" )&
-                  (x:string      ? " a string"      : "" )&
-                  (x:stringList  ? " a stringList"  : "" )&
-                  (x:numeric     ? " numeric"       : "" )&
-                  (x:numericList ? " a numericList" : "" )&
-                  (x:expression  ? " an expression" : "" );
+type(x)->x:int        ? "int"     :  
+         x:boolean    ? "boolean" : 
+         x:real       ? "real"    :
+         x:string     ? "string"  :
+         x:expression ? "expression" : 
+         x:list       ? "list"        : 
+         x:booleanList? "booleanList" : 
+         x:intList    ? " intList"    : 
+         x:realList   ? "realList"    : 
+         x:stringList ? "stringList"  : "";
+         
+//(x:numeric     ? "numeric"       : "" )&
+//(x:numericList ? "numericList" : "" )&
+//(x:scalar      ? "scalar"      : "" )&

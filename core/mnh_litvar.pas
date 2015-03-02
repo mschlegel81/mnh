@@ -184,22 +184,10 @@ VAR boolLit:array[false..true] of T_boolLiteral;
     intLit :array[0..127] of P_intLiteral;
     errLit :T_scalarLiteral;
     {$ifdef literalRecycling}
-    intLitRecycling:record
-      dat:array[0..1024] of P_intLiteral;
-      fill:longint;
-    end;
-    realLitRecycling:record
-      dat:array[0..512] of P_realLiteral;
-      fill:longint;
-    end;
-    stringLitRecycling:record
-      dat:array[0..255] of P_stringLiteral;
-      fill:longint;
-    end;
-    listLitRecycling:record
-      dat:array[0..255] of P_listLiteral;
-      fill:longint;
-    end;
+    intLitRecycling :  record dat:array[0..1024] of P_intLiteral;    fill:longint; end;
+    realLitRecycling:  record dat:array[0.. 512] of P_realLiteral;   fill:longint; end;
+    stringLitRecycling:record dat:array[0.. 255] of P_stringLiteral; fill:longint; end;
+    listLitRecycling:  record dat:array[0.. 255] of P_listLiteral;   fill:longint; end;
     {$endif}
 
 PROCEDURE disposeLiteral(VAR l:P_literal); inline;

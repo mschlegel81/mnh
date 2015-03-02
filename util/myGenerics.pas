@@ -30,6 +30,8 @@ TYPE
       FUNCTION elementArray:ENTRY_TYPE_ARRAY;
   end;
   
+  T_listOfIntegers=specialize G_list<longint>;
+  
   GENERIC G_sparseArray<ENTRY_TYPE>=object
     private      
       TYPE INDEXED_ENTRY=record index:longint; value:ENTRY_TYPE; end;

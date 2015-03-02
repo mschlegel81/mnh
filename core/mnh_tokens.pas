@@ -399,14 +399,14 @@ PROCEDURE T_package.load;
     for i:=0 to length(codeLines)-1 do begin
       location.line:=i+1;
       location.column:=1;
-      while (codeLines[i]<>'') and (errorLevel<el3_evalError) do begin
+      while not(isBlank(codeLines[i])) and (errorLevel<el3_evalError) do begin
         next:=firstToken(codeLines[i],location,@self);
         if (next<>nil) and (next^.tokType=tt_eol) then begin //EOL (end of input or semicolon)
           disposeToken(next);
           next:=nil;
           last:=nil;
         end;
-        if next=nil then begin
+        if next=nil then begin          
           if first<>nil then interpret(first);
           last:=nil;
           first:=nil;

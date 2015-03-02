@@ -1,4 +1,5 @@
 UNIT mnh_fileWrappers;
+{$WARNING TODO: Cleanup unit.}
 INTERFACE
 USES sysutils;
 TYPE
@@ -6,8 +7,10 @@ TYPE
 
   P_codeProvider=^T_codeProvider;
   T_codeProvider=object
-    FUNCTION fileName:string; virtual; abstract;
-    FUNCTION fileIdentifier:string; virtual; abstract;
+    CONSTRUCTOR forSakeOfCompleteness;
+    FUNCTION fileName:ansistring; virtual; abstract;
+    FUNCTION filePath:ansistring; virtual; abstract;
+    FUNCTION fileIdentifier:ansistring; virtual; abstract;
     FUNCTION fileLines:T_stringList; virtual; abstract;
     FUNCTION fileChanged:boolean; virtual; abstract;
     PROCEDURE logCheck; virtual; abstract;
@@ -22,8 +25,9 @@ TYPE
     public
      CONSTRUCTOR create;
      DESTRUCTOR destroy; virtual;
-     FUNCTION fileName:string; virtual;
-     FUNCTION fileIdentifier:string; virtual;
+     FUNCTION fileName:ansistring; virtual;
+     FUNCTION filePath:ansistring; virtual; 
+     FUNCTION fileIdentifier:ansistring; virtual;
      FUNCTION fileLines:T_stringList; virtual;
      FUNCTION fileChanged:boolean; virtual;
      PROCEDURE logCheck; virtual;
@@ -37,10 +41,11 @@ TYPE
       fpath:ansistring;
       checkedAtAge:longint;
     public
-      CONSTRUCTOR create(CONST filepath:ansistring);
+      CONSTRUCTOR create(CONST filepath_:ansistring);
       DESTRUCTOR destroy; virtual;
-      FUNCTION fileName:string; virtual;
-      FUNCTION fileIdentifier:string; virtual;
+      FUNCTION fileName:ansistring; virtual;
+      FUNCTION filePath:ansistring; virtual; 
+      FUNCTION fileIdentifier:ansistring; virtual;
       FUNCTION getCheckedAtAge:longint;
       FUNCTION getAge:longint;
       FUNCTION getHash:QWord;
@@ -52,23 +57,10 @@ TYPE
       FUNCTION name:ansistring;
   end;
 
-  T_fileWrapperList=object
-    private
-      f:array of P_fileWrapper;
-    public
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE addFiles(CONST pathOrPattern:ansistring);
-    PROCEDURE addFilesRecursively(CONST pathOrPattern:ansistring);
-    PROCEDURE dropNonexistentFiles;
-    FUNCTION anyChanged:boolean;
+FUNCTION fileContent(CONST name:ansistring; OUT accessed:boolean):ansistring;
+FUNCTION fileLines  (CONST name:ansistring; OUT accessed:boolean):T_stringList;
 
-    FUNCTION size:longint;
-    FUNCTION get(CONST index:longint):P_fileWrapper;
-    PROPERTY fileAt[index:longint]:P_fileWrapper read get; default;
-    FUNCTION hasFile(CONST name:ansistring):boolean;
-    PROCEDURE dropFile(CONST index:longint);
-  end;
+FUNCTION writeFile(CONST name,textToWrite:ansistring):boolean;
 
 PROCEDURE clearSourceScanPaths;
 PROCEDURE addSourceScanPath(CONST path:ansistring);
@@ -118,6 +110,8 @@ FUNCTION locateSource(CONST id:ansistring):P_fileWrapper;
     result:=nil;
     for i:=0 to length(sourceScanPath)-1 do if result=nil then recursePath(sourceScanPath[i]);
   end;
+  
+CONSTRUCTOR T_codeProvider.forSakeOfCompleteness;  begin end;
 
 CONSTRUCTOR T_directInputWrapper.create;
   begin setLength(lines,0); changedSinceCheck:=true; end;
@@ -125,12 +119,17 @@ CONSTRUCTOR T_directInputWrapper.create;
 DESTRUCTOR T_directInputWrapper.destroy;
   begin setLength(lines,0); end;
 
-FUNCTION T_directInputWrapper.fileName:string;
+FUNCTION T_directInputWrapper.fileName:ansistring;
   begin
     result:='<direct input>';
   end;
+  
+FUNCTION T_directInputWrapper.filePath:ansistring; 
+  begin
+    result:='';
+  end;
 
-FUNCTION T_directInputWrapper.fileIdentifier:string;
+FUNCTION T_directInputWrapper.fileIdentifier:ansistring;
   begin
     result:='main';
   end;
@@ -167,7 +166,7 @@ PROCEDURE T_directInputWrapper.setInput(CONST s:ansistring);
     lines[0]:=s;
   end;
 
-CONSTRUCTOR T_fileWrapper.create(CONST filepath:ansistring);
+CONSTRUCTOR T_fileWrapper.create(CONST filepath_:ansistring);
   begin
     fpath:=filepath;
     logCheck;
@@ -177,12 +176,17 @@ DESTRUCTOR T_fileWrapper.destroy;
   begin
   end;
 
-FUNCTION T_fileWrapper.fileName:string;
+FUNCTION T_fileWrapper.fileName:ansistring;
   begin
     result:=extractFileName(fpath);
   end;
+  
+FUNCTION T_fileWrapper.filePath:ansistring;
+  begin
+    result:=fpath;
+  end;  
 
-FUNCTION T_fileWrapper.fileIdentifier:string;
+FUNCTION T_fileWrapper.fileIdentifier:ansistring;
   VAR i:longint;
   begin
     result:=fileName;
@@ -278,99 +282,164 @@ FUNCTION T_fileWrapper.name:ansistring;
     result:=fPath;
   end;
 
-CONSTRUCTOR T_fileWrapperList.create;
-  begin
-    setLength(f,0);
-  end;
+//CONSTRUCTOR T_fileWrapperList.create;
+//  begin
+//    setLength(f,0);
+//  end;
+//
+//DESTRUCTOR T_fileWrapperList.destroy;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(f)-1 do dispose(f[i],destroy);
+//    setLength(f,0);
+//  end;
+//
+//PROCEDURE T_fileWrapperList.addFiles(CONST pathOrPattern:ansistring);
+//  VAR info :TSearchRec;
+//      fpath:ansistring;
+//  begin
+//    if findFirst(pathOrPattern,faAnyFile,info)=0 then repeat
+//      if ((info.attr and faDirectory)<>faDirectory) then begin
+//        fpath:=ExtractFilePath(pathOrPattern)+info.name;
+//        if not(hasFile(fpath)) then begin
+//          setLength(f,length(f)+1);
+//          new(f[length(f)-1],create(fpath));
+//        end;
+//      end;
+//    until findNext(info)<>0;
+//    sysutils.findClose(info);
+//  end;
+//
+//PROCEDURE T_fileWrapperList.addFilesRecursively(CONST pathOrPattern:ansistring);
+//  VAR info :TSearchRec;
+//      fpath:ansistring;
+//  begin
+//    if findFirst(pathOrPattern,faAnyFile,info)=0 then repeat
+//      if ((info.attr and faDirectory)<>faDirectory) then begin
+//        fpath:=ExtractFilePath(pathOrPattern)+info.name;
+//        if not(hasFile(fpath)) then begin
+//          setLength(f,length(f)+1);
+//          new(f[length(f)-1],create(fpath));
+//        end;
+//      end else if (info.name<>'.') and (info.name<>'..') then begin
+//        addFilesRecursively(ExtractFilePath(pathOrPattern)+info.name+'\*');
+//      end;
+//    until findNext(info)<>0;
+//    sysutils.findClose(info);
+//  end;
+//
+//PROCEDURE T_fileWrapperList.dropNonexistentFiles;
+//  VAR i,j:longint;
+//  begin
+//    j:=0;
+//    for i:=0 to length(f)-1 do if f[i]^.exists then begin
+//      f[j]:=f[i];
+//      inc(j);
+//    end else dispose(f[i],destroy);
+//    setLength(f,j);
+//  end;
+//
+//FUNCTION T_fileWrapperList.anyChanged:boolean;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(f)-1 do if f[i]^.fileChanged then exit(true);
+//    result:=false;
+//  end;
+//
+//FUNCTION T_fileWrapperList.size:longint;
+//  begin
+//    result:=length(f);
+//  end;
+//
+//FUNCTION T_fileWrapperList.get(CONST index:longint):P_fileWrapper;
+//  begin
+//    if (index>=0) and (index<length(f))
+//      then result:=f[index]
+//      else result:=nil;
+//  end;
+//
+//FUNCTION T_fileWrapperList.hasFile(CONST name:ansistring):boolean;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(f)-1 do if trim(uppercase(f[i]^.name))=trim(uppercase(name)) then exit(true);
+//    result:=false;
+//  end;
+//
+//PROCEDURE T_fileWrapperList.dropFile(CONST index:longint);
+//  VAR i:longint;
+//  begin
+//    if (index>=0) and (index<length(f)) then begin
+//      dispose(f[index],destroy);
+//      for i:=index to length(f)-2 do f[i]:=f[i+1];
+//      setLength(f,length(f)-1);
+//    end;
+//  end;
 
-DESTRUCTOR T_fileWrapperList.destroy;
-  VAR i:longint;
+FUNCTION fileContent(CONST name:ansistring; OUT accessed:boolean):ansistring;
+  VAR handle:file of char;
+      block:array[0..1023] of char;
+      actuallyRead,i:longint;
   begin
-    for i:=0 to length(f)-1 do dispose(f[i],destroy);
-    setLength(f,0);
-  end;
-
-PROCEDURE T_fileWrapperList.addFiles(CONST pathOrPattern:ansistring);
-  VAR info :TSearchRec;
-      fpath:ansistring;
-  begin
-    if findFirst(pathOrPattern,faAnyFile,info)=0 then repeat
-      if ((info.attr and faDirectory)<>faDirectory) then begin
-        fpath:=ExtractFilePath(pathOrPattern)+info.name;
-        if not(hasFile(fpath)) then begin
-          setLength(f,length(f)+1);
-          new(f[length(f)-1],create(fpath));
-        end;
-      end;
-    until findNext(info)<>0;
-    sysutils.findClose(info);
-  end;
-
-PROCEDURE T_fileWrapperList.addFilesRecursively(CONST pathOrPattern:ansistring);
-  VAR info :TSearchRec;
-      fpath:ansistring;
-  begin
-    if findFirst(pathOrPattern,faAnyFile,info)=0 then repeat
-      if ((info.attr and faDirectory)<>faDirectory) then begin
-        fpath:=ExtractFilePath(pathOrPattern)+info.name;
-        if not(hasFile(fpath)) then begin
-          setLength(f,length(f)+1);
-          new(f[length(f)-1],create(fpath));
-        end;
-      end else if (info.name<>'.') and (info.name<>'..') then begin
-        addFilesRecursively(ExtractFilePath(pathOrPattern)+info.name+'\*');
-      end;
-    until findNext(info)<>0;
-    sysutils.findClose(info);
-  end;
-
-PROCEDURE T_fileWrapperList.dropNonexistentFiles;
-  VAR i,j:longint;
-  begin
-    j:=0;
-    for i:=0 to length(f)-1 do if f[i]^.exists then begin
-      f[j]:=f[i];
-      inc(j);
-    end else dispose(f[i],destroy);
-    setLength(f,j);
-  end;
-
-FUNCTION T_fileWrapperList.anyChanged:boolean;
-  VAR i:longint;
-  begin
-    for i:=0 to length(f)-1 do if f[i]^.fileChanged then exit(true);
-    result:=false;
-  end;
-
-FUNCTION T_fileWrapperList.size:longint;
-  begin
-    result:=length(f);
-  end;
-
-FUNCTION T_fileWrapperList.get(CONST index:longint):P_fileWrapper;
-  begin
-    if (index>=0) and (index<length(f))
-      then result:=f[index]
-      else result:=nil;
-  end;
-
-FUNCTION T_fileWrapperList.hasFile(CONST name:ansistring):boolean;
-  VAR i:longint;
-  begin
-    for i:=0 to length(f)-1 do if trim(uppercase(f[i]^.name))=trim(uppercase(name)) then exit(true);
-    result:=false;
-  end;
-
-PROCEDURE T_fileWrapperList.dropFile(CONST index:longint);
-  VAR i:longint;
-  begin
-    if (index>=0) and (index<length(f)) then begin
-      dispose(f[index],destroy);
-      for i:=index to length(f)-2 do f[i]:=f[i+1];
-      setLength(f,length(f)-1);
+    try
+      accessed:=true;
+      assign(handle,name);
+      reset(handle);
+      result:='';
+      repeat
+        blockread(handle,block,length(block),actuallyRead);
+        for i:=0 to actuallyRead-1 do result:=result+block[i];
+      until actuallyRead<length(block);
+      close(handle);
+    except
+      accessed:=false;
+      result:='';
     end;
   end;
-
+  
+FUNCTION fileLines  (CONST name:ansistring; OUT accessed:boolean):T_stringList;
+  VAR handle:textFile;
+  begin
+    setLength(result,0);
+    try
+      accessed:=true;
+      assign(handle,name);
+      reset(handle);
+      while not(eof(handle)) do begin
+        setLength(result,length(result)+1);
+        readln(handle,result[length(result)-1]);
+      end;
+      close(handle);
+    except
+      accessed:=false;
+      setLength(result,0);
+    end;
+  end;
+  
+FUNCTION writeFile(CONST name,textToWrite:ansistring):boolean;
+  VAR handle:file of char;
+      block:array[0..1023] of char;
+      i,j:longint;
+  begin
+    try
+      result:=true;
+      assign(handle,name);
+      rewrite(handle);
+      i:=1;
+      while i<=length(textToWrite) do begin
+        j:=0;
+        while (i<=length(textToWrite)) and (j<length(block)) do begin
+          block[j]:=textToWrite[i];
+          inc(i);
+          inc(j);
+        end;
+        blockwrite(handle,block,j);
+      end;
+      close(handle);
+    except
+      result:=false;
+    end;
+  end;
+  
 INITIALIZATION
   clearSourceScanPaths;
 end.

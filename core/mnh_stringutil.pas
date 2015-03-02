@@ -1,4 +1,5 @@
 UNIT mnh_stringutil;
+{$WARNING TODO: Cleanup unit.}
 INTERFACE
 CONST
   C_lineBreakChar     =chr(13);
@@ -6,15 +7,16 @@ CONST
   C_tabChar           =chr(9);
 
 FUNCTION formatTabs(s:ansistring):ansistring;
-
-FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
-FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
-FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
-FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
+FUNCTION isBlank(CONST s:ansistring):boolean;
+//FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
+//FUNCTION replaceAll(original,lookFor,replaceBy:ansistring):ansistring; inline;
+//FUNCTION replaceRecursively(CONST original,lookFor,replaceBy:ansistring; OUT isValid:boolean):ansistring; inline;
+//FUNCTION replace(CONST original,lookFor,replaceBy:ansistring):ansistring; inline;
 FUNCTION escapeString(CONST s:ansistring):ansistring;
 FUNCTION unescapeString(CONST input:ansistring; OUT parsedLength:longint):ansistring;
-FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
+//FUNCTION isIdentifier(CONST s:ansistring; CONST allowDot:boolean):boolean;
 FUNCTION startsWith(CONST input,head:ansistring):boolean;
+
 //PROCEDURE removeLeadingBlanks(VAR input:ansistring);
 
 IMPLEMENTATION
@@ -115,6 +117,18 @@ FUNCTION formatTabs(s:ansistring):ansistring;
         for j:=0 to length(matrix[i])-1 do result:=result+matrix[i][j];
       end;
     end;
+  end;
+  
+FUNCTION isBlank(CONST s:ansistring):boolean;
+  VAR i:longint;
+  begin
+    result:=true;
+    for i:=1 to length(s) do 
+    if not(s[i] in [C_lineBreakChar,
+                    C_carriageReturnChar,
+                    C_tabChar,
+                    ' ']) 
+    then exit(false);
   end;
 
 FUNCTION getNiceHead(VAR inputAndRest:ansistring; CONST minLineLength,maxLineLength:longint):ansistring;
