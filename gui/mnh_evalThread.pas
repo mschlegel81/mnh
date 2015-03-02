@@ -30,6 +30,7 @@ VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     localUserRules,
     importedUserRules:T_listOfString;
 
+PROCEDURE initIntrinsicRuleList;
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
 

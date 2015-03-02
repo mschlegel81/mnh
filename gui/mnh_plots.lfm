@@ -1,7 +1,7 @@
 object plotForm: TplotForm
-  Left = 431
+  Left = 578
   Height = 240
-  Top = 132
+  Top = 163
   Width = 320
   Caption = 'MNH Plots'
   ClientHeight = 220
@@ -22,21 +22,70 @@ object plotForm: TplotForm
   object MainMenu1: TMainMenu
     left = 68
     top = 110
+    object MenuItem5: TMenuItem
+      Caption = 'File'
+    end
     object MenuItem1: TMenuItem
       Caption = 'Options'
       object miAntialiasing: TMenuItem
         Caption = 'Antialiasing'
         OnClick = miAntialiasingClick
       end
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'Grid'
+      object miXGridOptions: TMenuItem
+        Caption = 'x'
+        object miXTics: TMenuItem
+          Caption = 'Tics'
+          OnClick = miXTicsClick
+        end
+        object miXGrid: TMenuItem
+          Caption = 'Grid'
+          OnClick = miXGridClick
+        end
+        object miXFinerGrid: TMenuItem
+          Caption = 'Finer grid'
+          OnClick = miXFinerGridClick
+        end
+      end
+      object MenuItem4: TMenuItem
+        Caption = 'y'
+        object miYTics: TMenuItem
+          Caption = 'Tics'
+          OnClick = miYTicsClick
+        end
+        object miYGrid: TMenuItem
+          Caption = 'Grid'
+          OnClick = miYGridClick
+        end
+        object miYFinerGrid: TMenuItem
+          Caption = 'Finer Grid'
+          OnClick = miYFinerGridClick
+        end
+      end
+    end
+    object MenuItem3: TMenuItem
+      Caption = 'Scaling'
       object miPreserveAspect: TMenuItem
-        Caption = 'Preserve aspect'
+        Caption = 'Preserve aspect ratio'
         OnClick = miPreserveAspectClick
       end
+      object miAutoscaleX: TMenuItem
+        Caption = 'Autoscale x'
+        OnClick = miAutoscaleXClick
+      end
+      object miAutoscaleY: TMenuItem
+        Caption = 'Autoscale y'
+        OnClick = miAutoscaleYClick
+      end
       object miLogscaleX: TMenuItem
-        Caption = 'Log-Scale X'
+        Caption = 'Logscale x'
+        OnClick = miLogscaleXClick
       end
       object miLogscaleY: TMenuItem
-        Caption = 'Log-Scale Y'
+        Caption = 'Logscale y'
+        OnClick = miLogscaleYClick
       end
     end
   end

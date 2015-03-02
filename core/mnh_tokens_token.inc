@@ -262,7 +262,10 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_id_qualify_character]) do begin
         inc(i);
         if line[i]=C_id_qualify_character then begin
-          if not(allowQualified) then begin
+          if (i<length(line)) and (line[i+1]=C_id_qualify_character) then begin
+            parsedLength:=i-1;
+            exit(copy(line,1,i-1));
+          end else if not(allowQualified) then begin
             fail('No qualified is identifier accepted here. '+line);
             parsedLength:=i-1;
             exit(copy(line,1,i-1));          
@@ -576,8 +579,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         exit;
       end;
       while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-        if      t^.tokType in [tt_braceOpen,tt_set,tt_each]  then inc(bracketLevel)
-        else if t^.tokType=tt_braceClose then dec(bracketLevel)
+        if      t^.tokType in [tt_braceOpen,tt_set,tt_each,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
+        else if t^.tokType in [tt_braceClose              ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
         else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
           bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
           setLength(bodyPart,length(bodyPart)+1);

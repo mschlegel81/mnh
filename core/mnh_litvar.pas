@@ -369,22 +369,22 @@ FUNCTION T_listLiteral.literalType:T_literalType;
       else begin
         case element[i]^.literalType of
           lt_error, lt_listWithError: containsError:=true;
-          lt_boolean    : begin allInt:=false; allReal:=false; allNum:=false;                 allStr:=false; end;
-          lt_int        : begin                allReal:=false;                allBool:=false; allStr:=false; end;
-          lt_real       : begin allInt:=false;                                allBool:=false; allStr:=false; end;
-          lt_string     : begin allInt:=false; allReal:=false; allNum:=false; allBool:=false;                end;
-          lt_list..lt_flatList: allScalar:=false;
-          else            begin allInt:=false; allReal:=false; allNum:=false; allBool:=false; allStr:=false; end;
+          lt_boolean          : begin                   allInt:=false; allReal:=false; allNum:=false;                 allStr:=false; end;
+          lt_int              : begin                                  allReal:=false;                allBool:=false; allStr:=false; end;
+          lt_real             : begin                   allInt:=false;                                allBool:=false; allStr:=false; end;
+          lt_string           : begin                   allInt:=false; allReal:=false; allNum:=false; allBool:=false;                end;
+          lt_list..lt_flatList: begin allScalar:=false; allInt:=false; allReal:=false; allNum:=false; allBool:=false; allStr:=false; end;
+          else                  begin                   allInt:=false; allReal:=false; allNum:=false; allBool:=false; allStr:=false; end;
         end;
       end;
-      if containsError then strictType:=lt_listWithError
-      else if allInt   then strictType:=lt_intList
-      else if allReal  then strictType:=lt_realList
-      else if allNum   then strictType:=lt_numList
-      else if allBool  then strictType:=lt_booleanList
-      else if allStr   then strictType:=lt_stringList
+      if containsError  then strictType:=lt_listWithError
+      else if allInt    then strictType:=lt_intList
+      else if allReal   then strictType:=lt_realList
+      else if allNum    then strictType:=lt_numList
+      else if allBool   then strictType:=lt_booleanList
+      else if allStr    then strictType:=lt_stringList
       else if allScalar then strictType:=lt_flatList
-      else strictType:=lt_list;
+      else                   strictType:=lt_list;
     end else begin
       strictType:=lt_list;
     end;

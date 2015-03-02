@@ -26,6 +26,7 @@ join(L<>[],joiner1:string,joiner2:string)->each(inner,L,&joiner1&,each(n,inner,&
 //--------------------------------------------:Aggregations
 //Statistics:----------------------------------------------
 mean    (X)->sum(X)/size(X);
+
 variance(X)->mean(X^2)-mean(X)^2;
 //----------------------------------------------:Statistics
 //Pretty printing
@@ -40,4 +41,8 @@ minus    (A:list,B:list)->A%not(each(a,A,a in B));
 indexes(A:list)->[0..size(A)-1];
 reverse(A:list)->A%[size(A)-1..0];
 //-----------------------------------------:List operations
+
+histogram(L<>[])          ->histogram(L,1);
+histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
+histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<L<(i+1)*h,+,flag?1:0)/size(L)/h]);
 

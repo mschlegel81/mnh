@@ -1,0 +1,7 @@
+pi:=4*arctan(1);
+t:=[0..4]/4*2*pi;
+plot(sin(t),cos(t),"l .");
+t:=[0..8]/8*2*pi;
+addPlot(sin(t),cos(t),"l + 1.5");
+t:=[0..16]/16*2*pi;
+addPlot(sin(t),cos(t),"l x 2");
