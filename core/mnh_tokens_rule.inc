@@ -56,7 +56,8 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
       evalCost:longint;
       profiler:TEpikTimer;
   begin
-    if ruleType=rt_cached then begin
+    case ruleType of
+    rt_cached: begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       system.EnterCriticalSection(cache_cs);
@@ -96,20 +97,29 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         exit(true);
       end;
       result:=false;
-    end else begin
+    end;
+    rt_synchronized: begin
       for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
-        if ruleType=rt_synchronized then begin
-          if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
-          else begin
-            system.EnterCriticalSection(cache_cs);
-            reduceExpression(firstRep,callDepth+1,recycler);
-            lastRep:=firstRep^.last;
-            system.LeaveCriticalSection(cache_cs);
-          end;
+        if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+        else begin
+          system.EnterCriticalSection(cache_cs);
+          reduceExpression(firstRep,callDepth+1,recycler);
+          lastRep:=firstRep^.last;
+          system.LeaveCriticalSection(cache_cs);
         end;
         exit(true);
       end;
       result:=false;
+    end;
+    rt_mutable: begin
+      system.EnterCriticalSection(cache_cs);
+      result:=(includePrivateRules or (subrules[0]^.typ=srt_normal_public)) and subrules[0]^.replaces(param,nil,firstRep,lastRep,recycler);
+      system.LeaveCriticalsection(cache_cs);
+    end;
+    rt_normal: begin
+      for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
+      result:=false;
+    end;
     end;
   end;
 
