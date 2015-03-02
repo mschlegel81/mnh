@@ -45,6 +45,7 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add('USE');
       completionList.add('private');
       completionList.add('each');
+      completionList.add('pEach');      
       completionList.addArr(localUserRules.elementArray);
       completionList.addArr(importedUserRules.elementArray);
       completionList.addArr(intrinsicRules.elementArray);
@@ -54,7 +55,7 @@ FUNCTION main(p:pointer):ptrint;
   begin
     evaluationState.value:=es_idle;
     updateCompletionList;
-
+    mainThread:=ThreadId;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         pendingRequest.value:=er_none;

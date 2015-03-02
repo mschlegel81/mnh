@@ -1365,6 +1365,25 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
                                             else result:=newStringLiteral(tokenLocation.provider^.getPath);
   end;
 
+FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST callDepth:word):P_literal;
+  VAR B:P_literal;
+      i,c:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      B:=params^.Value(0);
+      case B^.literalType of
+        lt_boolean: if P_boolLiteral(B)^.Value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_booleanList: begin
+          c:=0;
+          for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.Value(i))^.Value then inc(c);
+          exit(newIntLiteral(c));
+        end;
+        lt_list, lt_flatList: if P_listLiteral(B)^.size=0 then exit(newIntLiteral(0));
+      end;
+    end;
+    raiseNotApplicableError('trueCount',params,tokenLocation);
+  end;
 
 INITIALIZATION
   intrinsicRuleMap.create;
@@ -1423,6 +1442,7 @@ INITIALIZATION
   registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#Returns a list of strings from S');
   registerRule('myPath',@myPath_impl,'returns the path to the current package');
+  registerRule('trueCount'     ,@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
 
 FINALIZATION
   intrinsicRuleMap.destroy;

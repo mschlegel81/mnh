@@ -12,7 +12,8 @@ TYPE
   {$include mnh_tokens_pattern.inc}
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
-
+  {$include mnh_tokens_futureTask.inc}
+  
   { T_package }
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_package=object
@@ -38,14 +39,14 @@ TYPE
 
 CONST C_id_qualify_character='.';
   
-//FUNCTION isReloadOfMainPackageIndicated:boolean;
 PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 
 VAR mainPackageProvider:T_codeProvider;
-
+    mainThread:TThreadID;
+    
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;// {$ifdef version64bit} 14750 {$else} 37000 {$endif};
@@ -78,6 +79,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_rule.inc}
+{$include mnh_tokens_futureTask.inc}
 
 PROCEDURE reloadMainPackage(CONST resolveExpressions:boolean);
   VAR i,j:longint;
@@ -598,6 +600,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   end;
 
 INITIALIZATION
+  mainThread:=ThreadId;
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);

@@ -36,16 +36,15 @@ DESTRUCTOR T_rule.destroy;
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
     if isCached then cache.destroy;
+    isCached:=false;
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,
-  lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean
-  ): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean): boolean;
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
   begin
-    if isCached then begin
+    if isCached and (threadId=mainThread) then begin
       if param=nil then useParam:=newListLiteral
                    else useParam:=param;
       lit:=cache.get(useParam);

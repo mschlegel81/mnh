@@ -66,7 +66,7 @@ DESTRUCTOR T_cache.Destroy;
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST Value: P_literal);
   VAR binIdx, i, j, tallyLimit: longint;
   begin
-    if fill > MAX_CACHE_FILL then begin
+    if (fill > MAX_CACHE_FILL) then begin
       tallyLimit := useTally - MAX_CACHE_FILL + CACHE_POLISH_PARAM;
       fill := 0;
       for binIdx := 0 to length(cached) - 1 do begin
@@ -105,10 +105,12 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR binIdx, i: longint;
       tmp: T_cacheEntry;
   begin
+
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i < length(cached[binIdx])) and not (key^.equals(cached[binIdx, i].key)) do Inc(i);
     if i >= length(cached[binIdx]) then exit(nil);
+
     cached[binIdx, i].use := useTally;
     Inc(useTally);
     result := cached[binIdx, i].Value;
@@ -118,12 +120,14 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       cached[binIdx, i - 1] := tmp;
       Dec(i);
     end;
+
   end;
 
 PROCEDURE T_cache.Clear;
   VAR
     i, j: longint;
   begin
+
     for i := 0 to length(cached) - 1 do begin
       for j := 0 to length(cached[i]) - 1 do  with cached[i, j] do begin
         disposeLiteral(key);

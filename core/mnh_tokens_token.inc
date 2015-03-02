@@ -35,7 +35,7 @@ FUNCTION disposeToken(p:P_token):P_token;
     if p=nil then exit(nil);
     result:=p^.next;
     {$ifdef doTokenRecycling}
-      if (tokenRecycling.fill>=length(tokenRecycling.dat))
+      if (tokenRecycling.fill>=length(tokenRecycling.dat)) or (ThreadID<>mainThread)
       then dispose(p,destroy)
       else with tokenRecycling do begin
         p^.undefine;
@@ -55,7 +55,7 @@ PROCEDURE cascadeDisposeToken(VAR p:P_token);
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
   begin
     {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) then with tokenRecycling do begin
+    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -67,7 +67,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
   begin
     {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) then with tokenRecycling do begin
+    if (tokenRecycling.fill>0) and (ThreadID=mainThread)then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -79,7 +79,7 @@ FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistrin
 FUNCTION newToken(CONST original:T_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) then with tokenRecycling do begin
+    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -91,7 +91,7 @@ FUNCTION newToken(CONST original:T_token):P_token;
 FUNCTION newToken(CONST original:P_token):P_token;
   begin
     {$ifdef doTokenRecycling}
-    if (tokenRecycling.fill>0) then with tokenRecycling do begin
+    if (tokenRecycling.fill>0) and (ThreadID=mainThread) then with tokenRecycling do begin
       dec(fill);
       result:=dat[fill];
     end else {$endif} new(result,create);
@@ -117,7 +117,7 @@ PROCEDURE finalizeTokens;
 
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
-  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_literal];
+  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_parallelEach, tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_literal];
   VAR p:P_token;
       lastWasIdentifierLike:boolean=false;
   begin
@@ -171,14 +171,14 @@ PROCEDURE T_token.define(CONST original:T_token);
     txt     :=original.txt;
     tokType :=original.tokType;
     data    :=original.data;
-    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType = tt_each) and (data<>nil) then P_literal(data)^.rereference;
+    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference;
   end;
 
 PROCEDURE T_Token.undefine;
   begin
     case tokType of
       tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
-      tt_each: if data<>nil then disposeLiteral(data);
+      tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
       else data:=nil;
     end;
     tokType:=tt_eol;
@@ -194,12 +194,11 @@ FUNCTION T_token.last:P_token;
 FUNCTION T_token.toString:ansistring;
   begin
     case tokType of
-      tt_each: begin
-        result:='each';
+      tt_each, tt_parallelEach: begin
+        result:=C_tokenString[tokType];
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
-      end;
-      tt_braceOpen    ,tt_braceClose    ,
+      end;         tt_braceOpen    ,tt_braceClose    ,
       tt_listBraceOpen,tt_listBraceClose,
       tt_expBraceOpen ,tt_expBraceClose,
       tt_separatorComma, tt_separatorCnt,
@@ -315,7 +314,8 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id='or'      then result.tokType:=tt_operatorOr
         else if id='mod'     then result.tokType:=tt_operatorMod
         else if id='in'      then result.tokType:=tt_operatorIn
-        else if id='each'    then begin result.tokType:=tt_each; result.data:=nil; result.txt:=''; end
+        else if id=C_tokenString[tt_each]         then begin result.tokType:=tt_each;         result.data:=nil; result.txt:=''; end
+        else if id=C_tokenString[tt_parallelEach] then begin result.tokType:=tt_parallelEach; result.data:=nil; result.txt:=''; end
         else if id='div'     then result.tokType:=tt_operatorDivInt
         else if id='and'     then result.tokType:=tt_operatorAnd
         else if id='true'    then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
@@ -458,7 +458,7 @@ PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token);
     while this<>nil do begin
       next:=this^.next;
       if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
-         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
+         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
          and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
         if this^.tokType=tt_operatorMinus then begin
           if (next<>nil) and (next^.tokType = tt_literal) then begin
@@ -492,7 +492,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package);
     while t<>nil do begin
       case t^.tokType of
         tt_identifier: if t^.data=nil then t^.data:=inPackage;
-        tt_each:
+        tt_each,tt_parallelEach:
           if  (t^.data=nil)
           and (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
           and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
@@ -606,7 +606,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveEach();
+  PROCEDURE resolveEach(CONST inParallel:boolean);
     VAR t,bracketClosingEach:P_token;
         tokensBetween:array of P_token;
         bodyRule:array of P_subrule;
@@ -631,7 +631,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-          if      t^.tokType in [tt_braceOpen,tt_each,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
+          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
           else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
           else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
@@ -703,6 +703,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         end;
       end;
 
+    VAR future:array of T_futureTask;
+    PROCEDURE initFutures;
+      VAR i,j,k:longint;
+      begin
+        k:=0;
+        setLength(future,length(bodyRule)*itList^.size);
+        for i:=0 to itList^.size-1 do
+        for j:=0 to length(bodyRule)-1 do if errorLevel<el3_evalError then begin
+          future[k].createTask(bodyRule[j],itList^.Value(i));
+          if future[k].state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
+          inc(k);
+        end else future[k].createTaskInErrorState;
+      end;
+
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
       VAR newLit:P_literal;
       begin
@@ -742,6 +756,26 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
         first^.next:=disposeToken(bracketClosingEach);
       end;
 
+    PROCEDURE aggregateFutures;
+      VAR k:longint;
+      begin
+        if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
+          for k:=0 to length(future)-1 do begin
+            addToAggregation(future[k].getResult_blocking(callDepth),true);
+            future[k].destroy;
+          end;
+          finalizeAggregation;
+        end else begin
+          for k:=0 to length(future)-1 do begin
+            if k>0 then inlineTokensBetween;
+            t^.next:=newToken(eachLocation,'',tt_literal,future[k].getResult_blocking(callDepth));
+            future[k].destroy;
+            t:=t^.next;
+          end;
+        end;
+        setLength(future,0);
+      end;
+
     begin
       eachLocation:=first^.location;
       if not(parseBodyOk) then exit;
@@ -759,7 +793,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       if aggregatorPresent and (itList^.size=0) then
         raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
       else if length(bodyRule)>0 then begin
-        if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
+        if inParallel then begin
+          initFutures;
+          aggregateFutures;
+        end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
             addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.Value(i),callDepth+1),true);
           finalizeAggregation;
@@ -853,8 +890,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,        tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -866,8 +903,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,        tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1056,7 +1093,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
-          tt_each: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
+          tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
             tt_separatorComma: if cTokType(2)<>tt_eol then begin
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
               P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
@@ -1122,7 +1159,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
           P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
-        tt_each        : if (first^.data=nil) then stack_push else resolveEach();
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
           tt_braceOpen: begin
             stack_push; //push rule pointer
@@ -1143,9 +1180,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word);
       ON EOutOfMemory DO begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
         while (length(stack)>0) do stack_popDestroy;
-      end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-        while (length(stack)>0) do stack_popDestroy;
+      //end else begin
+      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+      //  while (length(stack)>0) do stack_popDestroy;
       end;
     end;
     if callDepth=0 then begin
