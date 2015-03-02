@@ -25,10 +25,14 @@ main(n:string)->info and UlamSpiral(softCast(n));
 print(each(l,Ulam(11),&"\n"&,
       each(c,l       ,&"\t"&)));
 
-f( i, i)->i>=0 ? (2*i+1)^2
-               : (2*i)^2+1;
-f( i<=0,j)->abs(j)<=abs(i) ? f(i,j-1)-1 : j>0 ? f(i-1,j)+1 : f(i-1,j)+1;
-f( i> 0,j)->abs(j)<=abs(i) ? f(i,j+1)-1 : "-";
+f( i, j)->i=j=0 ? 1 :
+          i=j-1>=0 ? 'A' :
+          i=j  < 0 ? 'C' :
+          i=-j < 0 ? 'B' :
+          i=-j > 0 ? 'D' : '-';
+//g(i,j)->i=j=0 ? 1 :
+
+UlamPlot(100);
 
 print(each(i,[-5..5],&"\n"&,
-      each(j,[-5..5],&"\t"&,f(i,j))));                                     j
+      each(j,[-5..5],&"\t"&,f(i,j))));

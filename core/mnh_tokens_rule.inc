@@ -56,7 +56,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
         if param=nil then disposeLiteral(useParam);
         exit(true);
       end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
-        if callDepth>=STACK_DEPTH_LIMIT then exit(true);
+        if (callDepth>=STACK_DEPTH_LIMIT) or (ThreadID<>mainThread) then exit(true);
         evalCost:=GetTickCount;
         if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
         evalCost:=getTickCount-evalCost;

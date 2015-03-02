@@ -214,10 +214,11 @@ VAR
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
-    if l = nil then
+    if l = nil then begin
       writeln(stderr, 'disposing NIL literal ?!?');
-    if l^.unreference<=0 then
-      dispose(l, destroy);
+      exit;
+    end;
+    if l^.unreference<=0 then dispose(l, destroy);
     l := nil;
   end;
 
