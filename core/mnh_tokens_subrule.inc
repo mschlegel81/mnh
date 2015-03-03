@@ -445,7 +445,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve nullary call. Make sure the FUNCTION can be resolved without errors, returning only a literal.',declaredAt);
+        raiseError(el3_evalError,'Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
@@ -473,7 +473,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the FUNCTION can be resolved without errors, returning only a literal.',declaredAt);
+        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
