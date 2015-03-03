@@ -1,6 +1,0 @@
-shortForm(n)->replace(n,["regTest\\",".log.0"],'');
-compare(filename1)->compare(filename1,replace(filename1,'.log.0','.log.1'));
-compare(filename1,filename2)->not(fileExists(filename2))                 ? filename2&"\tdoes not exist!"
-                            : fileLines(filename1)==fileLines(filename2) ? shortForm(filename1)&"\to.k."
-                                                                         : shortForm(filename1)&"\tFiles differ!";
-main->print(each(log,files("regTest\\*.log.0"),&"\n"&,compare(log)));
