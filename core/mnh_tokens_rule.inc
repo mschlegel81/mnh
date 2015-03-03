@@ -84,7 +84,6 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
           evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
-            cache.polish;
             cache.put(useParam,lit,evalCost);
           end;
           lastRep:=firstRep^.last;
