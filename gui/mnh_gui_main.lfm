@@ -1041,17 +1041,22 @@ object MnhForm: TMnhForm
         ClientHeight = 59
         ClientWidth = 467
         TabOrder = 3
-        object ErrorMemo: TMemo
+        object errorStringGrid: TStringGrid
           Left = 0
           Height = 59
           Top = 0
           Width = 467
           Align = alClient
-          Font.Color = clRed
-          ParentFont = False
-          ReadOnly = True
-          ScrollBars = ssAutoBoth
+          ColCount = 0
+          DefaultRowHeight = 15
+          FixedCols = 0
+          FixedRows = 0
+          GridLineWidth = 0
+          Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect, goSmoothScroll]
+          RowCount = 0
+          TabAdvance = aaDown
           TabOrder = 0
+          OnClick = errorStringGridClick
         end
       end
       object Splitter2: TSplitter

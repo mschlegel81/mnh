@@ -17,7 +17,6 @@ type
   { TMnhForm }
 
   TMnhForm = class(TForm)
-    ErrorMemo: TMemo;
     MenuItem3: TMenuItem;
     miHelp: TMenuItem;
     miHelpExternally: TMenuItem;
@@ -27,6 +26,7 @@ type
     miAntiAliasing4: TMenuItem;
     miAntiAliasing5: TMenuItem;
     miAutoReset: TMenuItem;
+    errorStringGrid: TStringGrid;
     submenuPlotGrid: TMenuItem;
     MenuItem17: TMenuItem;
     miXTics: TMenuItem;
@@ -92,6 +92,7 @@ type
     EditorTabSheet: TTabSheet;
     PlotTabSheet: TTabSheet;
     UpdateTimeTimer: TTimer;
+    PROCEDURE errorStringGridClick(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -244,14 +245,29 @@ PROCEDURE logError(CONST error:T_storedError);
 
 PROCEDURE TMnhForm.flushThroughput;
   VAR i:longint;
+      r0:longint;
+      changed_:boolean=false;
   begin
-    for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do
-      ErrorMemo.Append(C_errorLevelTxt[errorLevel]+errorMessage+' @'+string(errorLocation) );
+    r0:=errorStringGrid.RowCount;
+    errorStringGrid.RowCount:=r0+length(errorThroughput);
+    for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do begin
+      changed_:=true;
+      errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
+      errorStringGrid.Cells[1,i+r0]:=errorMessage;
+      if errorLocation.provider<>nil then begin
+        if errorLocation.provider=@mainPackageProvider
+          then errorStringGrid.Cells[2,i+r0]:='#'
+          else errorStringGrid.Cells[2,i+r0]:='@'+errorLocation.provider^.filename;
+        errorStringGrid.Cells[3,i+r0]:=':'+IntToStr(errorLocation.line);
+        errorStringGrid.Cells[4,i+r0]:=','+IntToStr(errorLocation.column);
+      end;
+    end;
     setLength(errorThroughput,0);
-    if ErrorMemo.Lines.Count=0
+    if errorStringGrid.RowCount=0
     then i:=0
-    else i:=round(ErrorMemo.Font.GetTextHeight('1,2,3,Test')*(1.5+ErrorMemo.Lines.Count));
+    else i:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
     if i<0.4*Height then ErrorGroupBox.ClientHeight:=i;
+    if changed_ then errorStringGrid.AutoSizeColumns;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -360,7 +376,8 @@ PROCEDURE startOfEvaluationCallback;
     MnhForm.doConditionalPlotReset;
     setLength(errorThroughput,0);
     MnhForm.OutputEdit.Lines.Clear;
-    MnhForm.ErrorMemo.Clear;
+    MnhForm.errorStringGrid.RowCount:=0;
+    if MnhForm.inputHighlighter.setMarkedLine(-1) then MnhForm.Repaint;
   end;
 
 { TMnhForm }
@@ -404,6 +421,16 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     end;
     SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
+  end;
+
+PROCEDURE TMnhForm.errorStringGridClick(Sender: TObject);
+  VAR row:longint;
+  begin
+    row:=errorStringGrid.Selection.Top;
+    if (row>=0) and (row<errorStringGrid.RowCount) and (errorStringGrid.Cells[2,row]='#') then begin
+      if inputHighlighter.setMarkedLine(StrToIntDef(copy(errorStringGrid.Cells[3,row],2,20),0)-1)
+      then Repaint;
+    end;
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);

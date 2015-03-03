@@ -45,7 +45,9 @@ TYPE
     fTokenPos: integer;
     fTokenID: TtkTokenKind;
     fLineNumber: integer;
+
     markedWord:string;
+    markedLine:longint;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
@@ -68,6 +70,7 @@ TYPE
     PROCEDURE SetRange(value: Pointer); override;
     PROCEDURE SetLine(CONST NewValue: string; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
+    FUNCTION setMarkedLine(CONST i:longint):boolean;
   end;
 
 IMPLEMENTATION
@@ -129,6 +132,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkNull].Background := clYellow;
 
     markedWord:='';
+    markedLine:=-1;
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
@@ -159,7 +163,14 @@ PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
 
 FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
   begin
+    result:=(s<>markedWord);
     markedWord:=s;
+  end;
+
+FUNCTION TSynMnhSyn.setMarkedLine(CONST i:longint):boolean;
+  begin
+    result:=(i<>markedLine);
+    markedLine:=i;
   end;
 
 PROCEDURE TSynMnhSyn.Next;
@@ -367,16 +378,19 @@ FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
-  VAR
-    bg: longint;
+  VAR bg: longint;
   begin
-    bg := 255;
-    if isDeclInput then bg := bg-40;
-    if isExprInput then bg := bg-20;
-    if isOutput    then bg := bg-10;
-    if isMarked    then bg := bg-30;
     result := styleTable [fTokenID];
-    result.Background := (bg or (bg shl 8) or (bg shl 16));
+    if (LineIndex<>markedLine) then begin
+      bg := 255;
+      if isDeclInput then bg := bg-40;
+      if isExprInput then bg := bg-20;
+      if isOutput    then bg := bg-10;
+      if isMarked    then bg := bg-30;
+      result.Background := (bg or (bg shl 8) or (bg shl 16));
+    end else begin
+      result.Background:=$00BBBBFF;
+    end;
     if isMarked then result.FrameColor:=$00888888
                 else result.FrameColor:=clNone;
   end;
