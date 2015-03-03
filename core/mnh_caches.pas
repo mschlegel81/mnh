@@ -2,10 +2,9 @@ UNIT mnh_caches;
 
 INTERFACE
 
-USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
-CONST CACHE_MOD = 2047; //must be 2^n-1 because of bitwise operation used instead of mod
-      MAX_CACHE_FILL = (CACHE_MOD+1)*4;
-      CLEANUP_PARAM = (CACHE_MOD+1)*2;
+USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants, EpikTimer;
+CONST CACHE_MOD = 4095; //must be 2^n-1 because of bitwise operation used instead of mod
+
 TYPE
   T_cacheEntry = record
     key: P_listLiteral;
@@ -17,14 +16,15 @@ TYPE
 
   T_cache = object
   private
+    timer:TEpikTimer;
     timeTally: longint;
     fill: longint;
     cached: array[0..CACHE_MOD] of array of T_cacheEntry;
-    PROCEDURE polish;
+    PROCEDURE polish(CONST costLimit:double);
   public
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
-    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal; CONST costFactor: longint);
+    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal; CONST costInSeconds:double);
     FUNCTION get(CONST key: P_listLiteral): P_literal;
     PROCEDURE Clear;
   end;
@@ -45,6 +45,9 @@ PROCEDURE clearAllCaches;
 
 CONSTRUCTOR T_cache.create();
   begin
+    timer:=TEpikTimer.create(nil);
+    timer.Clear;
+    timer.Start;
     fill := 0;
     timeTally := 0;
     setLength(allCaches, length(allCaches)+1);
@@ -61,38 +64,36 @@ DESTRUCTOR T_cache.destroy;
       allCaches[i] := allCaches [length(allCaches)-1];
       setLength(allCaches, length(allCaches)-1);
     end;
+    timer.Free;
   end;
 
-PROCEDURE T_cache.polish;
-  VAR avgCost: double;
-      binIdx,i,j,timeLimit: longint;
+PROCEDURE T_cache.polish(CONST costLimit:double);
+  VAR binIdx,i,j,timeLimit: longint;
   begin
-   avgCost := 0;
-   for i := 0 to CACHE_MOD do for j := 0 to length(cached [i])-1 do with cached [i, j] do avgCost := avgCost+double(cost)*useCount;
-   avgCost := avgCost/fill;
-   timeLimit := timeTally-CLEANUP_PARAM;
-   fill := 0;
-   for binIdx := 0 to CACHE_MOD do begin
-     j := 0;
-     for i := 0 to length(cached [binIdx])-1 do
-     if (cached [binIdx, i].useTime>timeLimit) or
-        (double(cached [binIdx, i].cost)*cached [binIdx, i].useCount>=avgCost) then begin
-       if i<>j then cached[binIdx, j] := cached [binIdx, i];
-       cached[binIdx, j].useCount := 0;
-       Inc(j);
-     end else begin
-       disposeLiteral(cached [binIdx, i].key);
-       disposeLiteral(cached [binIdx, i].value);
-     end;
-     setLength(cached [binIdx], j);
-     Inc(fill, j);
-   end;
- end;
 
-PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST costFactor: longint);
+    timeLimit := timeTally-(fill shr 1);
+    fill := 0;
+    for binIdx := 0 to CACHE_MOD do begin
+      j := 0;
+      for i := 0 to length(cached [binIdx])-1 do
+      if (cached [binIdx, i].useTime>timeLimit) or
+         (double(cached[binIdx,i].cost)*
+                 cached[binIdx,i].useCount>=costLimit) then begin
+        if i<>j then cached[binIdx,j] := cached [binIdx, i];
+        cached[binIdx,j].useCount := cached[binIdx,j].useCount shr 1;
+        Inc(j);
+      end else begin
+        disposeLiteral(cached [binIdx, i].key);
+        disposeLiteral(cached [binIdx, i].value);
+      end;
+      setLength(cached [binIdx], j);
+      Inc(fill, j);
+    end;
+  end;
+
+PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST costInSeconds:double);
   VAR binIdx, i: longint;
   begin
-   if (fill>MAX_CACHE_FILL) then polish;
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
@@ -101,19 +102,23 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST co
       disposeLiteral(cached [binIdx, i].value);
       Dec(fill);
     end  else setLength(cached [binIdx], i+1);
+    inc(fill);
     cached[binIdx, i].key := key;
     key^.rereference;
     cached[binIdx, i].value := value;
     value^.rereference;
     cached[binIdx, i].useCount := 0;
     cached[binIdx, i].useTime := timeTally; Inc(timeTally);
-    if costFactor<=0 then cached[binIdx, i].cost := 1
-                     else cached[binIdx, i].cost := 10*costFactor;
+    if      costInSeconds<=1E-6 then cached[binIdx, i].cost := 1
+    else if costInSeconds>2147  then cached[binIdx, i].cost := 2147000000
+                                else cached[binIdx, i].cost := round(1E6*costInSeconds);
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR binIdx, i: longint;
   begin
+    timer.Clear;
+    timer.Start();
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
@@ -122,6 +127,8 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       Inc(cached [binIdx, i].useCount);
       cached[binIdx, i].useTime := timeTally; Inc(timeTally);
       result := cached [binIdx, i].value;
+
+      if 1E6*timer.Elapsed()>cached[binIdx,i].cost then polish(double(cached[binIdx,i].cost)*cached[binIdx, i].useCount);
     end;
   end;
 
@@ -137,6 +144,8 @@ PROCEDURE T_cache.Clear;
     end;
     fill := 0;
     timeTally := 0;
+    timer.Clear;
+    timer.Start;
   end;
 
 end.

@@ -59,7 +59,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
-      evalCost:longint;
+      evalCost:double;
   begin
     case ruleType of
       rt_memoized: begin
@@ -79,9 +79,9 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
             system.LeaveCriticalSection(rule_cs);
             exit(true);
           end;
-          evalCost:=round(1000000*rule_timer.Elapsed());
+          evalCost:=rule_timer.Elapsed();
           if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
-          evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
+          evalCost:=rule_timer.Elapsed()-evalCost;
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache.put(useParam,lit,evalCost);
@@ -134,6 +134,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
     if (length(subrules)>1) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (ruleType=rt_memoized) then cache.Clear;
   end;
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
