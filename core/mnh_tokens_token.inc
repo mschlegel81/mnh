@@ -574,7 +574,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
     end;
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
+PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -655,7 +655,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
             setLength(bodyPart,length(bodyPart)+1);
             bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-          end;
+          end else if pureOnly and (t^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_mutate]) then exit(false);
           p:=t; t:=t^.next;
         end;
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
@@ -885,14 +885,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer] then begin
+      if (first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) and not(pureOnly) then begin
         if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
           if parameterListLiteral=nil
           then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
-      end else if first^.tokType=tt_intrinsicRulePointer then begin
+      end else if (first^.tokType=tt_intrinsicRulePointer) and (not(pureOnly) or (pureIntrinsicFunctions.contains(first^.data)))  then begin
         {$ifdef PROFILING}
         profiler.Clear;
         profiler.Start;
@@ -910,12 +910,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
-      end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
+      end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) and not(pureOnly) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
       end else begin
-        raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
+        if not(pureOnly) then raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
       recycler.disposeToken(first);
@@ -1199,7 +1199,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
                 stack_push;
                 stack_push;
               end;
-              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
+              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
                 stack_popLink;
                 applyMutation;
               end;

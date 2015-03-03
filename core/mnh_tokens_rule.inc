@@ -80,7 +80,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
             exit(true);
           end;
           evalCost:=round(1000000*rule_timer.Elapsed());
-          if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
+          if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
           evalCost:=round(1000000*rule_timer.Elapsed())-evalCost;
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
@@ -106,7 +106,7 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
           if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
           else begin
             system.EnterCriticalSection(rule_cs);
-            reduceExpression(firstRep,callDepth+1,recycler);
+            reduceExpression(firstRep,false,callDepth+1,recycler);
             lastRep:=firstRep^.last;
             system.LeaveCriticalSection(rule_cs);
           end;

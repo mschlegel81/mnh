@@ -438,7 +438,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
+      reduceExpression(firstRep,false,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -466,7 +466,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     param.create;
     param.append(x,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
+      reduceExpression(firstRep,false,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;

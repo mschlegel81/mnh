@@ -349,7 +349,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           exit;
         end;
 
-        if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,0,recycler);
+        if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,false,0,recycler);
 
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
@@ -388,7 +388,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if usecase=lu_forDirectExecution then begin
           predigest(first,@self,recycler);
           writeExprEcho(tokensToString(first));
-          reduceExpression(first,0,recycler);
+          reduceExpression(first,false,0,recycler);
           if first<>nil then writeExprOut(tokensToString(first));
         end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
       end;
@@ -638,7 +638,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       parLit:=newListLiteral;
       for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
       t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);
-      reduceExpression(t,0,recycler);
+      reduceExpression(t,false,0,recycler);
       //special handling if main returns an expression:
       if (t^.tokType=tt_literal) and (t^.next=nil) and
          (P_literal(t^.data)^.literalType=lt_expression) then begin
