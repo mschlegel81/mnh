@@ -1118,13 +1118,13 @@ FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
 
 INITIALIZATION
-  mnh_funcs.registerRule('plot',@plot,'');
-  mnh_funcs.registerRule('addPlot',@addPlot,'');
-  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,'');
-  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,'');
-  mnh_funcs.registerRule('setPlotRange',@setPlotRange,'');
-  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,'');
-  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,'');
+  mnh_funcs.registerRule('plot',@plot,false,'');
+  mnh_funcs.registerRule('addPlot',@addPlot,false,'');
+  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,false,'');
+  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,false,'');
+  mnh_funcs.registerRule('setPlotRange',@setPlotRange,false,'');
+  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,false,'');
+  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,false,'');
   mnh_evalThread.initIntrinsicRuleList;
 
   plotSubsystem.renderNotBefore:=now;
