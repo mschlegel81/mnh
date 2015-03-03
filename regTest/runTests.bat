@@ -1,7 +1,8 @@
-@if "%1"=="" runTests mnh_console
+@if "%1"=="" %0 mnh_console
 @del regTest\*.log.1
 @mnh_console regTest\regTest.mnh clear_times
 @echo   executing 99bottles.mnh        & @%1 demos\99bottles.mnh        > regTest\99bottles.log.1        & @mnh_console regTest\regTest.mnh 99bottles
+@echo   executing ackermann.mnh        & @%1 demos\ackermann.mnh        > regTest\ackermann.log.1        & @mnh_console regTest\regTest.mnh ackermann
 @echo   executing anagram.mnh          & @%1 demos\anagram.mnh          > regTest\anagram.log.1          & @mnh_console regTest\regTest.mnh anagram
 @echo   executing digitSquareSum.mnh   & @%1 demos\digitSquareSum.mnh   > regTest\digitSquareSum.log.1   & @mnh_console regTest\regTest.mnh digitSquareSum
 @echo   executing fibonacci.mnh        & @%1 demos\fibonacci.mnh        > regTest\fibonacci.log.1        & @mnh_console regTest\regTest.mnh fibonacci

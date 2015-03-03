@@ -2,11 +2,7 @@ memoized
 private ackermann(m=0,n>0)->n+1;
 private ackermann(m>0,n=0)->ackermann(m-1,1);
 private ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
-private ackertime(m,n)    ->each(i,flatten(time({ackermann(m,n)})),&"\t"&);
 
-private main_(m:int,n:int)->print(print(ackTime(m,n)));
-//*Evaluates ackermann(m,n) and returns timing information
-main(m:string,n:string)->main_(softCast(m),softCast(n));
 //*Solves the "Ackermann" task from <a href="http://rosettacode.org/wiki/Ackermann_function">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Ackermann_function') and
-      each(n,[0..16],print(ackertime(3,n)));
+      each(n,[0..14],print('ackermann(3,',n,')=',ackermann(3,n)));
