@@ -489,7 +489,7 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     i: longint;
   begin
     if length(element) = 0 then if isFinalized then exit('()')
-                                               else exit('(  ');
+                                               else exit('(');
     result := element [0]^.toShorterString;
     for i := 1 to length(element)-1 do result:=result+','+element [i]^.toShorterString;
     if isFinalized then result := '('+result+')'
