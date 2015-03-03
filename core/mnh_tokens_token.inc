@@ -1248,6 +1248,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           first^.tokType:=tt_list_constructor;
           stack_push;
         end;
+        tt_list_constructor: stack_push;
         tt_identifier: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,pureOnly);
@@ -1260,6 +1261,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             stack_push; //push rule pointer
             first^.tokType:=tt_parList_constructor; //mutate ( -> tt_parList_constructor
             first^.data:=newListLiteral;
+            stack_push; //push parameter list CONSTRUCTOR
+          end;
+          tt_parList_constructor: begin
+            stack_push; //push rule pointer
             stack_push; //push parameter list CONSTRUCTOR
           end;
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
