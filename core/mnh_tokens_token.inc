@@ -1002,6 +1002,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       first:=recycler.disposeToken(first);
     end;
 
+  PROCEDURE startOrPushParameterList; inline;
+    begin
+      setLength(stack,length(stack)+2);
+      stack[length(stack)-2]:=first;
+      first:=first^.next;
+      if first^.tokType=tt_braceOpen then begin
+        first^.tokType:=tt_parList_constructor;
+        first^.data:=newListLiteral;
+      end;
+      stack[length(stack)-1]:=first;
+      first:=first^.next;
+      didSubstitution:=true;
+    end;
+
   begin
     setLength(stack,0);
     try
@@ -1086,12 +1100,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               writeln(stderr,'PROFILING;resolveOperator (C);' + FloatToStr(profiler.Elapsed));
               {$endif}                             
             end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
-            else if tt=tt_braceOpen then begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end
+            else if tt in [tt_parList_constructor,tt_braceOpen] then startOrPushParameterList
             else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
             else begin
               stack_push;
@@ -1104,15 +1113,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first^.next:=recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
+            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
@@ -1138,15 +1142,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first^.tokType:=tt_literal;
               didSubstitution:=true;
             end;
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
+            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
           tt_parList_constructor: case cTokType(1) of
@@ -1164,15 +1163,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
+            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
@@ -1183,15 +1177,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               stack_popLink;
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
+            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
@@ -1208,15 +1197,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
           end;
           else case cTokType(1) of
-            tt_braceOpen: begin
-              stack_push;
-              first^.tokType:=tt_parList_constructor;
-              first^.data:=newListLiteral;
-              stack_push;
-            end;
+            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
         end;
@@ -1257,18 +1241,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
-          tt_braceOpen: begin
-            stack_push; //push rule pointer
-            first^.tokType:=tt_parList_constructor; //mutate ( -> tt_parList_constructor
-            first^.data:=newListLiteral;
-            stack_push; //push parameter list CONSTRUCTOR
-          end;
-          tt_parList_constructor: begin
-            stack_push; //push rule pointer
-            stack_push; //push parameter list CONSTRUCTOR
-          end;
-          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
+          tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
+          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
         end;
         tt_iifCheck: if (cTokType(-1)=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
