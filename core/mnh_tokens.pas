@@ -47,6 +47,7 @@ PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
+PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
 
 VAR mainPackageProvider:T_codeProvider;
     
@@ -348,8 +349,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-
-        if evaluateBody and (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,false,0,recycler);
+        if (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,not(evaluateBody),0,recycler);
 
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));

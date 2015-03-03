@@ -565,6 +565,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
     recycler.disposeToken(t); //dispose closing curly bracket
+    reduceExpression(inlineRule,true,0,recycler);
     if   errorLevel<=el2_warning then begin
       new(inlineSubRule,createFromInline(inlineRule,recycler));
       if   errorLevel<=el2_warning then begin
@@ -1248,9 +1249,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         end;
         tt_identifier: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
-          P_package(first^.data)^.resolveRuleId(first^,false);
-          if first^.tokType<>tt_identifier then didSubstitution:=true
-                                           else raiseError(el3_evalError,'Cannot resolve id "'+first^.txt+'"',first^.location);
+          P_package(first^.data)^.resolveRuleId(first^,pureOnly);
+          if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
