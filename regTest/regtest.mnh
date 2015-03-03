@@ -1,5 +1,6 @@
 readTiming_(L)->each(i,[1..size(L)-1],[L%i%0,round((L%i%1-L%(i-1)%1)*24*60*60,2)&"\ts"]);
-readTiming:=readTiming_(softCast(split(fileLines("timing.txt"),";")));
+memoized
+readTiming->readTiming_(softCast(split(fileLines("timing.txt"),";")));
 runtime(n)->readTiming%shortForm(n);
 
 shortForm(n)->replace(n,["regTest\\",".log.0"],'');
