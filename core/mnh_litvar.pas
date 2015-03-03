@@ -1238,6 +1238,7 @@ FUNCTION T_listLiteral.clone:P_listLiteral;
   begin
     result:=newListLiteral;
     result^.appendAll(@self);
+    if nextAppendIsRange then result^.setRangeAppend;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
