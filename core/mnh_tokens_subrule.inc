@@ -77,6 +77,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
     pattern:=pat;
     pattern.finalizeRefs;
     declaredAt:=declAt;
+
     constructExpression(rep,recycler);
     if needEmbrace then embrace;
   end;
@@ -217,22 +218,20 @@ PROCEDURE T_subrule.updatePatternForInline;
 
 CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
-      bracketLevel:longint=0;
   begin
     typ:=srt_inline_for_literal;
     declaredAt:=rep^.location;
     pattern.create;
+
     setLength(expression,0);
+
     t:=rep;
-    while (t<>nil) and ((t^.tokType<>tt_expBraceClose) or (bracketLevel>0)) do begin
+    while (t<>nil) do begin
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
         token:=t^; 
-        case token.tokType of
-          tt_expBraceOpen: inc(bracketLevel);
-          tt_expBraceClose: dec(bracketLevel);
-        end;
-        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
+        t^.tokType:=tt_eol;
+        t:=recycler.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
       end;
