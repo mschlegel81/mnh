@@ -398,8 +398,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList]) then begin
-      result:=newListLiteral;
-      P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
+      result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.sort;
     end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
@@ -417,8 +416,7 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if (params^.value(0)^.literalType in [lt_list..lt_listWithError]) then begin
-        result:=newListLiteral;
-        P_listLiteral(result)^.appendAll(P_listLiteral(params^.value(0)));
+        result:=P_listLiteral(params^.value(0))^.clone;
         P_listLiteral(result)^.unique;
       end;
     end else raiseNotApplicableError('unique',params,tokenLocation);

@@ -175,6 +175,7 @@ TYPE
     PROCEDURE unique;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValueList: boolean;
+    FUNCTION clone:P_listLiteral;
     //from T_literal:
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
@@ -1233,7 +1234,11 @@ FUNCTION T_listLiteral.isKeyValueList: boolean;
     result := true;
   end;
 
-
+FUNCTION T_listLiteral.clone:P_listLiteral;
+  begin
+    result:=newListLiteral;
+    result^.appendAll(@self);
+  end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
 

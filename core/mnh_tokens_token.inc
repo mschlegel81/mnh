@@ -171,7 +171,8 @@ PROCEDURE T_token.define(CONST original:T_token);
     txt     :=original.txt;
     tokType :=original.tokType;
     data    :=original.data;
-    if (tokType in [tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference;
+    if (tokType in [tt_literal,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference
+    else if (tokType in [tt_list_constructor,tt_parList_constructor]) then data:=P_listLiteral(original.data)^.clone;
   end;
 
 PROCEDURE T_Token.undefine;
