@@ -17,6 +17,7 @@ TYPE
   T_cache = object
   private
     timer:TEpikTimer;
+    rejectionCost:double;
     timeTally: longint;
     fill: longint;
     cached: array[0..CACHE_MOD] of array of T_cacheEntry;
@@ -50,6 +51,7 @@ CONSTRUCTOR T_cache.create();
     timer.Start;
     fill := 0;
     timeTally := 0;
+    rejectionCost:=1000;
     setLength(allCaches, length(allCaches)+1);
     allCaches[length(allCaches)-1] := @self;
   end;
@@ -122,13 +124,14 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
-    if i>=length(cached [binIdx]) then result:=nil
-    else begin
+    if i>=length(cached [binIdx]) then begin
+      result:=nil;
+      rejectionCost:=rejectionCost*0.9+(1E5*timer.Elapsed());
+    end else begin
       Inc(cached [binIdx, i].useCount);
       cached[binIdx, i].useTime := timeTally; Inc(timeTally);
       result := cached [binIdx, i].value;
-
-      if 1E6*timer.Elapsed()>cached[binIdx,i].cost then polish(double(cached[binIdx,i].cost)*cached[binIdx, i].useCount);
+      if 1E6*timer.Elapsed()>(rejectionCost+cached[binIdx,i].cost) then polish(double(cached[binIdx,i].cost)*cached[binIdx, i].useCount);
     end;
   end;
 
@@ -146,6 +149,7 @@ PROCEDURE T_cache.Clear;
     timeTally := 0;
     timer.Clear;
     timer.Start;
+    rejectionCost:=1000;
   end;
 
 end.
