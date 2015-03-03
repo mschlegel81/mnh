@@ -21,6 +21,6 @@
 @echo   executing wordCount.mnh        & @mnh_console demos\wordCount.mnh        > regTest\wordCount.log.1        & @mnh_console regTest\regTest.mnh wordCount
 @echo   executing y.mnh                & @mnh_console demos\y.mnh                > regTest\y.log.1                & @mnh_console regTest\regTest.mnh y
 @echo '-----------------Comparison report start----------------------'
-@mnh_console regTest\compareLogs.mnh
+@mnh_console regTest\regTest.mnh
 @echo '-----------------Comparison report end------------------------'
 @del timing.txt
