@@ -1226,7 +1226,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
           raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
         tt_braceOpen: stack_push;
-        tt_expBraceOpen: begin
+        tt_expBraceOpen: if not(pureOnly) then begin
           digestInlineExpression(first,recycler);
           didSubstitution:=true;
         end;
