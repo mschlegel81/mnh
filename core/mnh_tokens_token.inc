@@ -1186,7 +1186,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: begin
             case cTokType(1) of
-              tt_comparatorEq..tt_operatorPot: begin
+              tt_comparatorEq..tt_operatorIn: begin
                 stack_push;
                 stack_push;
               end;
