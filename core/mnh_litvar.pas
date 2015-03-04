@@ -121,6 +121,7 @@ TYPE
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
     //from T_literal:
+    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
@@ -128,7 +129,6 @@ TYPE
     FUNCTION hash: longint; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-
   end;
 
   P_expressionLiteral = ^T_expressionLiteral;
@@ -384,6 +384,8 @@ CONSTRUCTOR T_listLiteral.create;
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
 DESTRUCTOR T_literal.destroy; begin end;
+
+DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 
 DESTRUCTOR T_expressionLiteral.destroy;
   begin
