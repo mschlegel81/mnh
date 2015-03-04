@@ -9,7 +9,6 @@
       ruleType:T_ruleType;
       cache:T_cache;
       rule_cs:system.TRTLCriticalSection;
-      rule_timer:TEpikTimer;
 
       id:ansistring;
       subrules:array of P_subrule;
@@ -45,8 +44,6 @@ DESTRUCTOR T_rule.destroy;
       cache.destroy;
       {$ifdef debugMode} writeln(stdErr,'Destroying critical section of rule '+id); {$endif}
       system.DoneCriticalsection(rule_cs);
-      {$ifdef debugMode} writeln(stdErr,'Destroying timer of rule '+id); {$endif}
-      rule_timer.Free;
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
       system.DoneCriticalsection(rule_cs);
     end;
@@ -59,7 +56,6 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
-      evalCost:double;
   begin
     case ruleType of
       rt_memoized: begin
@@ -79,12 +75,10 @@ FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Tok
             system.LeaveCriticalSection(rule_cs);
             exit(true);
           end;
-          evalCost:=rule_timer.Elapsed();
           if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
-          evalCost:=rule_timer.Elapsed()-evalCost;
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
-            cache.put(useParam,lit,evalCost);
+            cache.put(useParam,lit);
           end;
           lastRep:=firstRep^.last;
           if param=nil then disposeLiteral(useParam);
@@ -148,9 +142,6 @@ PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
       ruleType:=rt_memoized;
       cache.create;
       system.InitCriticalSection(rule_cs);
-      rule_timer:= TEpikTimer.create(nil);
-      rule_timer.Clear;
-      rule_timer.Start;
     end else if ruleType=rt_mutable then raiseError(el2_warning,'A mutable rule cannot be memoized',location);
   end;
 
