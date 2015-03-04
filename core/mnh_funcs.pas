@@ -1413,6 +1413,51 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('ord',params,tokenLocation);
   end;
 
+FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR resultString:ansistring='';
+      literalIterator:longint=1;
+
+  FUNCTION nextLiteral:P_literal;
+    begin
+      if literalIterator<params^.size then begin
+        result:=params^.value(literalIterator);
+        inc(literalIterator);
+      end else result:=nil;
+    end;
+
+  PROCEDURE decomposeFormatString(CONST s:ansistring);
+    VAR i0,i1:longint;
+    begin
+      i1:=pos('%',s);
+      if i1<=0 then begin
+        resultString:=s;
+        exit;
+      end;
+      resultString:=copy(s,1,i1-1);
+      i0:=i1;
+      while i0<=length(s) do begin
+        i1:=i0+1; while (i1<=length(s)) and (s[i1]<>'%') do inc(i1);
+        //format string
+        if (i1<=length(s)) and (i1=i0+1) then resultString:=resultString+'%'
+        else begin
+
+        end;
+
+        //direct
+      end;
+
+
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
+
+
+    end else raiseNotApplicableError('format',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);

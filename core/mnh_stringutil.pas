@@ -19,6 +19,10 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 
+FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; intData:int64):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; realData:extended):ansistring;
+
 IMPLEMENTATION
 
 FUNCTION formatTabs(s: ansistring): ansistring;
@@ -341,25 +345,45 @@ FUNCTION startsWith(CONST input, head: ansistring): boolean;
     result := copy(input, 1, length(head)) = head;
   end;
 
+FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
+  VAR targetLength:longint;
+  begin
+    if (length(formatString)>=1) and (formatString[1] in ['X','x']) then begin
+      targetLength:=StrToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData));
+      result:=stringData;
+      if length(result)>targetLength
+      then result:=copy(result,1,targetLength)
+      else while length(result)<targetLength do result:=result+' ';
+    end else result:=stringData;
+  end;
 
+FUNCTION isTimeFormat(CONST s:ansistring):boolean;
+  VAR i:longint;
+  begin
+    for i:=1 to length(s) do if s[i] in ['y','m','d','h','n','s','z'] then exit(true);
+    result:=false;
+  end;
 
+FUNCTION myFormat(CONST formatString:ansistring; intData:int64):ansistring;
+  begin
+    try
+      if isTimeFormat(formatString)
+      then DateTimeToString(result,formatString,intData)
+      else result:=FormatFloat(formatString,intData);
+    except
+      result:=myFormat(formatString,IntToStr(intData));
+    end;
+  end;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+FUNCTION myFormat(CONST formatString:ansistring; realData:extended):ansistring;
+  begin
+    try
+      if isTimeFormat(formatString)
+      then DateTimeToString(result,formatString,realData)
+      else result:=FormatFloat(formatString,realData);
+    except
+      result:=myFormat(formatString,FloatToStr(realData));
+    end;
+  end;
 
 end.
