@@ -1057,51 +1057,51 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
-//FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-//  VAR executable:ansistring;
-//      cmdLinePar:T_stringList;
-//      output:TStringList;
-//      i:longint;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-//      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
-//      setLength(cmdLinePar,0);
-//      executable:=P_stringLiteral(params^.value(0))^.value;
-//      if params^.size=2 then begin
-//        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-//        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-//          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
-//      end;
-//      runCommand(executable,
-//                 cmdLinePar,
-//                 output);
-//      result:=newListLiteral;
-//      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
-//      output.Free;
-//    end else raiseNotApplicableError('execSync',params,tokenLocation);
-//  end;
-//
-//FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-//  VAR executable:ansistring;
-//      cmdLinePar:T_stringList;
-//      i:longint;
-//  begin
-//    result:=nil;
-//    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-//      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
-//      setLength(cmdLinePar,0);
-//      executable:=P_stringLiteral(params^.value(0))^.value;
-//      if params^.size=2 then begin
-//        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-//        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-//          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
-//      end;
-//      runCommandAsync(executable,
-//                      cmdLinePar);
-//      result:=newBoolLiteral(true);
-//    end else raiseNotApplicableError('execAsync',params,tokenLocation);
-//  end;
+FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR executable:ansistring;
+      cmdLinePar:T_stringList;
+      output:TStringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      setLength(cmdLinePar,0);
+      executable:=P_stringLiteral(params^.value(0))^.value;
+      if params^.size=2 then begin
+        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+      end;
+      runCommand(executable,
+                 cmdLinePar,
+                 output);
+      result:=newListLiteral;
+      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+      output.Free;
+    end else raiseNotApplicableError('exec',params,tokenLocation);
+  end;
+
+FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR executable:ansistring;
+      cmdLinePar:T_stringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+      setLength(cmdLinePar,0);
+      executable:=P_stringLiteral(params^.value(0))^.value;
+      if params^.size=2 then begin
+        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
+        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+      end;
+      runCommandAsync(executable,
+                      cmdLinePar);
+      result:=newBoolLiteral(true);
+    end else raiseNotApplicableError('execAsync',params,tokenLocation);
+  end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToSplit:ansistring;
@@ -1481,8 +1481,8 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl,false,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,true,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('replace'       ,@replace_impl,true,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
-  //registerRule('execSync'      ,@execSync_impl,'execSync(programPath:string,parameters ...);#Executes the specified PROGRAM and returns the text output');
-  //registerRule('execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified PROGRAM and returns true');
+  registerRule('exec'          ,@execSync_impl,false,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
+  registerRule('execAsync'     ,@execAsync_impl,false,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,true,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule('myPath'        ,@myPath_impl,true,'returns the path to the current package');
   registerRule('trueCount'     ,@trueCount_impl,true,'trueCount(B:booleanList);#Returns the number of true values in B');
