@@ -3,7 +3,7 @@ UNIT myGenerics;
 {mode objfpc}{H+}
 
 INTERFACE
-USES math,sysutils;
+USES sysutils;
 TYPE
   GENERIC G_list<ENTRY_TYPE>=object
     TYPE ENTRY_TYPE_ARRAY=array of ENTRY_TYPE;
