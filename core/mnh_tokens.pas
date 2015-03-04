@@ -622,13 +622,15 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       recycler:T_tokenRecycler;
   begin
     recycler.create;
-    if not(mainPackage.ready) or (errorLevel>el1_note) then begin
-      raiseError(el5_systemError,'Call of main has been rejected due to a previous error or note.',fileTokenLocation(@mainPackageProvider));
+    mainPackage.load(lu_forCallingMain,recycler);
+    if not(mainPackage.ready) or (errorLevel>=el3_evalError) then begin
+      raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(@mainPackageProvider));
+      recycler.destroy;
       exit;
     end;
 
     t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
-    mainPackage.load(lu_forCallingMain,recycler);
+
     if not(mainPackage.rules.containsKey('main',mainRule)) then
       raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
     else begin

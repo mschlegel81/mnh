@@ -133,7 +133,6 @@ PROCEDURE fileMode;
       printMainPackageDocText;
       halt;
     end;
-    reloadMainPackage(lu_forImport);
     callMainInMain(parameters);
   end;
   
@@ -141,4 +140,5 @@ begin
   parseCmdLine;
   if fileToInterpret='' then interactiveMode
                         else fileMode;
+  {$ifdef debugMode} writeln(stdErr,'mnh_console.pas - quit'); {$endif}
 end.
