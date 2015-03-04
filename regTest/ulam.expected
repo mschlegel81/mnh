@@ -39,3 +39,7 @@ Run as a script in GUI-mode for a graphical output.
  XX          XX                      XX                                  XX          XX                XX               
                                                                                         XX                XX          XX
  XX          XX    XX          XX                XX                                  XX                                 
+An unhandled exception occurred at $000000007752E4E4 :
+EAccessViolation : 
+  $000000007752E4E4
+

@@ -1,0 +1,45 @@
+test_list:=['demos\\99bottles.mnh',
+            'demos\\ackermann.mnh',
+            'demos\\anagram.mnh',
+            'demos\\digitSquareSum.mnh',
+            'demos\\fibonacci.mnh',
+            'demos\\fibonacciWord.mnh',
+            'demos\\hailstone.mnh',
+            'demos\\hofstadterConway.mnh',
+            'demos\\huffmann.mnh',
+            'demos\\josephus.mnh',
+            'demos\\quine.mnh',
+            'demos\\quine2.mnh',
+            'demos\\rk4.mnh',
+            'demos\\root.mnh',
+            'demos\\setConsolidation.mnh',
+            'demos\\shannonEntropy.mnh',
+            'demos\\sierpinski.mnh',
+            'demos\\ulam.mnh',
+            'demos\\vampire.mnh',
+            'demos\\wordCount.mnh',
+            'demos\\y.mnh'];
+
+format(s:string)->format(s,max(length(test_list)));
+format(s,len)->length(s)<len? format(s&" ",len) : s;
+
+testDirectory:=replace(splitFileName(myPath)%"relative",
+                       splitFileName(myPath)%"filename","");
+now->systime%"time";
+expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
+lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
+expectedResultExists(scriptname)->fileExists(expectedResultName(scriptname));
+expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
+
+storeResult(filename,data)-> writeFileLines(filename,data) ? filename : void;
+
+
+
+runScript(executor,scriptName)->print(checkResult(scriptName,now,exec(executor,[scriptName]),now));
+checkResult(scriptName,t0,result,t1)->format(scriptName)&" "&format(round((t1-t0)*24*60*60,2)&"sec",10)& (
+  expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
+                                                                         :  "Results differ! Please check "&storeResult(lastResultName(scriptName),result))
+                                   : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
+
+main(executor)->each(test,test_list,runScript(executor,test));
+main->main("mnh_console.exe");
