@@ -18,7 +18,8 @@ test_list:=['demos\\99bottles.mnh',
             'demos\\ulam.mnh',
             'demos\\vampire.mnh',
             'demos\\wordCount.mnh',
-            'demos\\y.mnh'];
+            'demos\\y.mnh',
+            'demos\\12_statements.mnh'];
 
 format(s:string)->format(s,max(length(test_list)));
 format(s,len)->length(s)<len? format(s&" ",len) : s;
