@@ -1,0 +1,31 @@
+target:="METHINKS IT IS LIKE A WEASEL";
+start->mutate(target,1);
+fitness(s:string)->each(delta,
+                        abs(ord(copy(target,[0..length(target)-1],1))-
+                            ord(copy(s     ,[0..length(target)-1],1))),+);
+fitness(S:stringList)->each(s,S,fitness(s));
+CHARSET:=['A'..'Z',' '];
+randomCharacter->CHARSET%floor(random*size(CHARSET));
+
+mutate(s:string, mutateProb>0)->each(c,copy(s,[0..length(s)-1],1),&,
+                                     random<mutateProb ? randomCharacter : c);
+
+procreate(s:string, offspringCount, mutateProb)->each(i,[0..offspringCount],i=0 ? s : mutate(s,mutateProb));
+
+theFittest(S:stringList)->theFittest(S,fitness(S));
+theFittest(S:stringList,F:intList)->[S%argMin(F),min(F)];
+
+evolve(parent:string,mutRate,offspringCount,generations  )->evolve(theFittest(procreate(parent,offspringCount,mutRate)),
+                                                                   max(mutRate*0.99,0.05),
+                                                                   offspringCount,
+                                                                   generations+1);
+evolve(parent,mutRate,offspringCount,generations<100000)->((generations mod 20)=0 or parent%1 = 0  ? print(generations,' ',string(parent)) : void) and  true ?
+                                                            (parent%1 > 0 ?
+                                                            evolve(theFittest(procreate(parent%0,offspringCount,mutRate)),
+                                                                   max(mutRate*0.99,0.05),
+                                                                   offspringCount,
+                                                                   generations+1) : false) : false;
+evolve(parent,mutRate,offspringCount,generations  )->print(string(parent));
+
+//*See <a href="http://rosettacode.org/wiki/Evolutionary_algorithm">http://rosettacode.org/wiki/Evolutionary_algorithm</a>
+main->evolve(start,1,20,0);

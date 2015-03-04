@@ -38,6 +38,7 @@ PROCEDURE displayHelp;
     writeln('  -echo: force echo off (default for interpretation mode)');
     writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
     writeln('  -h   : display this help and quit');
+    writeln('  -det : force deterministic "random" numbers');
   end;
 
 PROCEDURE parseCmdLine;    
@@ -48,6 +49,7 @@ PROCEDURE parseCmdLine;
     for i:=1 to paramCount do begin
       if      paramstr(i)='+echo' then echo:=e_forcedOn
       else if paramstr(i)='-echo' then echo:=e_forcedOff
+      else if paramstr(i)='-det'  then randseed:=0
       else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
       else if startsWith(paramStr(i),'-el') then begin
         pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
