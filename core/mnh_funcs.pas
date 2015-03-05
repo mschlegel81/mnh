@@ -975,84 +975,90 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
   end;
 
-FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR originalAndResult:ansistring;
-      lookFor,replaceBy:P_literal;
+FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
+  VAR lookFor,replaceBy:T_stringList;
       i:longint;
+
+  PROCEDURE initArrays;
+    VAR L:P_literal;
+        i:longint;
+    PROCEDURE elongate(VAR list:T_stringList);
+      begin
+        if length(list)=0 then begin
+          setLength(list,1);
+          list[0]:='';
+        end else begin
+          setLength(list,length(list)+1);
+          list[length(list)-1]:=list[length(list)-2];
+        end;
+      end;
+
+    begin
+      L:=params^.value(1);
+      if L^.literalType=lt_string then begin
+        setLength(lookFor,1);
+        lookFor[0]:=P_stringLiteral(L)^.value;
+      end else begin
+        setLength(lookFor,P_listLiteral(L)^.size);
+        for i:=0 to length(lookFor)-1 do
+          lookFor[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+      end;
+      L:=params^.value(2);
+      if L^.literalType=lt_string then begin
+        setLength(replaceBy,1);
+        replaceBy[0]:=P_stringLiteral(L)^.value;
+      end else begin
+        setLength(replaceBy,P_listLiteral(L)^.size);
+        for i:=0 to length(replaceBy)-1 do
+          replaceBy[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+      end;
+      while length(replaceBy)<length(lookFor) do elongate(replaceBy);
+      while length(lookFor)<length(replaceBy) do elongate(lookFor);
+    end;
+
+  FUNCTION modify(CONST original:ansistring):ansistring;
+    VAR i:longint;
+        dummy:boolean;
+    begin
+      result:=original;
+      if all then for i:=0 to length(lookFor)-1 do result:=replaceRecursively(result,lookFor[i],replaceBy[i],dummy)
+             else for i:=0 to length(lookFor)-1 do result:=replaceOne        (result,lookFor[i],replaceBy[i]);
+    end;
+
+  begin
+    initArrays;
+    if params^.value(0)^.literalType=lt_string then result:=newStringLiteral(modify(P_stringLiteral(params^.value(0))^.value))
+    else begin
+      result:=newListLiteral;
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+        P_listLiteral(result)^.append(
+          newStringLiteral(modify(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),
+          false
+        );
+    end;
+    setLength(lookFor,0);
+    setLength(replaceBy,0);
+  end;
+
+FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) then begin
-      originalAndResult :=P_stringLiteral(params^.value(0))^.value;
-      lookFor  :=params^.value(1);
-      replaceBy:=params^.value(2);
-      if lookFor^.literalType=lt_string then begin
-        if replaceBy^.literalType=lt_string then begin
-          originalAndResult:=replaceOne(originalAndResult,
-                                        P_stringLiteral(lookFor)^.value,
-                                        P_stringLiteral(replaceBy)^.value);
-        end else if replaceBy^.literalType=lt_stringList then begin
-          for i:=0 to P_listLiteral(replaceBy)^.size-1 do
-          originalAndResult:=replaceOne(originalAndResult,
-                                        P_stringLiteral(lookFor)^.value,
-                                        P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value);
-        end else raiseNotApplicableError('replaceOne',params,tokenLocation);
-      end else if lookFor^.literalType=lt_stringList then begin
-        if replaceBy^.literalType=lt_string then begin
-          for i:=0 to P_listLiteral(lookFor)^.size-1 do
-          originalAndResult:=replaceOne(originalAndResult,
-                                        P_stringLiteral(P_listLiteral(lookFor)^.value(i))^.value,
-                                        P_stringLiteral(replaceBy)^.value);
-        end else if (replaceBy^.literalType=lt_stringList) and (P_listLiteral(lookFor)^.size=P_listLiteral(replaceBy)^.size) then begin
-          for i:=0 to P_listLiteral(lookFor)^.size-1 do
-          originalAndResult:=replaceOne(originalAndResult,
-                                        P_stringLiteral(P_listLiteral(lookFor  )^.value(i))^.value,
-                                        P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value);
-        end else raiseNotApplicableError('replaceOne',params,tokenLocation);
-      end else raiseNotApplicableError('replaceOne',params,tokenLocation);
-      result:=newStringLiteral(originalAndResult);
+    if (params<>nil) and (params^.size=3) and
+       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
+       (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
+      result:=replace_one_or_all(params,false);
     end else raiseNotApplicableError('replaceOne',params,tokenLocation);
   end;
 
 FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR originalAndResult:ansistring;
-      lookFor,replaceBy:P_literal;
-      i:longint;
-      ok:boolean=true;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType=lt_string) then begin
-      originalAndResult :=P_stringLiteral(params^.value(0))^.value;
-      lookFor  :=params^.value(1);
-      replaceBy:=params^.value(2);
-      if lookFor^.literalType=lt_string then begin
-        if replaceBy^.literalType=lt_string then begin
-          originalAndResult:=replaceRecursively(originalAndResult,
-                                                P_stringLiteral(lookFor)^.value,
-                                                P_stringLiteral(replaceBy)^.value,
-                                                ok);
-        end else if replaceBy^.literalType=lt_stringList then begin
-          for i:=0 to P_listLiteral(replaceBy)^.size-1 do
-          originalAndResult:=replaceRecursively(originalAndResult,
-                                                P_stringLiteral(lookFor)^.value,
-                                                P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value,
-                                                ok);
-        end else raiseNotApplicableError('replace',params,tokenLocation);
-      end else if lookFor^.literalType=lt_stringList then begin
-        if replaceBy^.literalType=lt_string then begin
-          for i:=0 to P_listLiteral(lookFor)^.size-1 do
-          originalAndResult:=replaceRecursively(originalAndResult,
-                                                P_stringLiteral(P_listLiteral(lookFor)^.value(i))^.value,
-                                                P_stringLiteral(replaceBy)^.value,
-                                                ok);
-        end else if (replaceBy^.literalType=lt_stringList) and (P_listLiteral(lookFor)^.size=P_listLiteral(replaceBy)^.size) then begin
-          for i:=0 to P_listLiteral(lookFor)^.size-1 do
-          originalAndResult:=replaceRecursively(originalAndResult,
-                                                P_stringLiteral(P_listLiteral(lookFor  )^.value(i))^.value,
-                                                P_stringLiteral(P_listLiteral(replaceBy)^.value(i))^.value,
-                                                ok);
-        end else raiseNotApplicableError('replace',params,tokenLocation);
-      end else raiseNotApplicableError('replace',params,tokenLocation);
-      result:=newStringLiteral(originalAndResult);
+    if (params<>nil) and (params^.size=3) and
+       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
+       (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
+      result:=replace_one_or_all(params,true);
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
