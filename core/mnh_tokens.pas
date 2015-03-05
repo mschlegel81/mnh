@@ -725,6 +725,7 @@ INITIALIZATION
   disposeSubruleCallback :=@disposeSubruleImpl;
   subruleToStringCallback:=@subruleToStringImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
+  evaluateCompatorCallback:=@evaluateComparator;
   //callbacks in mnh_funcs:
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;

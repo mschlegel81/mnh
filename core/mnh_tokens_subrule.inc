@@ -31,6 +31,7 @@
       FUNCTION toString:ansistring;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE setMutable(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST val:P_literal);
@@ -479,6 +480,36 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     end else result:=nil;
     param.destroy;
   end;
+
+FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
+  VAR firstRep,lastRep:P_token;
+      param:T_listLiteral;
+  begin
+    param.create;
+    param.append(x,true);
+    param.append(y,true);
+    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
+      reduceExpression(firstRep,false,callDepth+1,recycler);
+      if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
+      then begin
+        result:=P_boolLiteral(firstRep^.data)^.value;
+      end else begin
+        result:=false;
+        raiseError(el3_evalError,'Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
+      end;
+      recycler.cascadeDisposeToken(firstRep);
+    end else result:=false;
+    param.destroy;
+  end;
+
+FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal):boolean;
+  VAR tempRecycler:T_tokenRecycler;
+  begin
+    tempRecycler.create;
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempRecycler);
+    tempRecycler.destroy;
+  end;
+
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin

@@ -171,6 +171,7 @@ TYPE
     FUNCTION size: longint;
     FUNCTION value(index: longint): P_literal;
     PROCEDURE sort;
+    PROCEDURE customSort(CONST leqExpression:P_expressionLiteral);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -191,11 +192,13 @@ TYPE
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer): string;
+  T_evaluateCompatorCallback = FUNCTION (CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal):boolean;
 
 VAR
   disposeSubruleCallback: T_disposeSubruleCallback;
   subruleToStringCallback: T_pointerToStringCallback;
   subruleApplyOpCallback: T_subruleApplyOpCallback;
+  evaluateCompatorCallback: T_evaluateCompatorCallback;
 
 PROCEDURE disposeLiteral(VAR l: P_literal); inline;
 FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral; inline;
@@ -1080,7 +1083,48 @@ PROCEDURE T_listLiteral.sort;
     setLength(temp, 0);
   end;
 
+PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral);
+  VAR temp: array of P_literal;
+      scale: longint;
+      i, j0, j1, k: longint;
+  FUNCTION isLeq(a,b:P_literal):boolean; inline; begin result:=evaluateCompatorCallback(leqExpression,a,b); end;
+
+  begin
+    if length(element)<=1 then exit;
+    scale := 1;
+    setLength(temp, length(element));
+    while (scale<length(element)) and (errorLevel<el3_evalError) do begin
+      //merge lists of size [scale] to lists of size [scale+scale]:---------------
+      i := 0;
+      while (i<length(element)) and (errorLevel<el3_evalError) do begin
+        j0:=i; j1:=i+scale; k:=i;
+        while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
+          if isLeq(element [j0],element [j1])           then begin temp[k] := element [j0]; Inc(k); Inc(j0); end
+                                                        else begin temp[k] := element [j1]; Inc(k); Inc(j1); end;
+        while (j0<i+scale)       and (j0<length(element)) do begin temp[k] := element [j0]; Inc(k); Inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k] := element [j1]; Inc(k); Inc(j1); end;
+        Inc(i, scale+scale);
       end;
+      //---------------:merge lists of size [scale] to lists of size [scale+scale]
+      Inc(scale, scale);
+      if (scale<length(element)) and (errorLevel<el3_evalError) then begin
+        //The following is equivalent to the above with swapped roles of "list" and "temp".
+        //while making the code a little more complicated it avoids unnecessary copys.
+        //merge lists of size [scale] to lists of size [scale+scale]:---------------
+        i := 0;
+        while (i<length(element)) and (errorLevel<el3_evalError) do begin
+          j0:=i; j1:=i+scale; k:=i;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
+            if isLeq(temp [j0],temp [j1])                 then begin element[k] := temp [j0]; Inc(k); Inc(j0); end
+                                                          else begin element[k] := temp [j1]; Inc(k); Inc(j1); end;
+          while (j0<i+scale) and (j0<length(element))       do begin element[k] := temp [j0]; Inc(k); Inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k] := temp [j1]; Inc(k); Inc(j1); end;
+          Inc(i, scale+scale);
+        end;
+        //---------------:merge lists of size [scale] to lists of size [scale+scale]
+        Inc(scale, scale);
+      end else for k := 0 to length(element)-1 do element[k] := temp [k];
+    end;
     setLength(temp, 0);
   end;
 

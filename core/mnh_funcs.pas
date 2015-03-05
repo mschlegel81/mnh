@@ -399,6 +399,11 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList]) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.sort;
+    end else if (params<>nil) and (params^.size=2)
+            and (params^.value(0)^.literalType in [lt_list..lt_flatList])
+            and (params^.value(1)^.literalType=lt_expression) then begin
+      result:=P_listLiteral(params^.value(0))^.clone;
+      P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)));
     end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
 
@@ -1520,7 +1525,7 @@ INITIALIZATION
   //Functions on lists:
   registerRule('head'          ,@head_imp      ,true,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,true,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
-  registerRule('sort'          ,@sort_imp      ,true,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)');
+  registerRule('sort'          ,@sort_imp      ,true,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
   registerRule('sortPerm'      ,@sortPerm_imp  ,true,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule('unique'        ,@unique_imp    ,true,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule('flatten'       ,@flatten_imp   ,true,'flatten(L,...);#Returns all parameters as a flat list.');
