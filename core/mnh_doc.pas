@@ -201,11 +201,10 @@ PROCEDURE T_userPackageDocumentation.addComment(CONST s: ansistring);
 PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate: boolean);
   VAR ruleIdx: longint;
   begin
-    if isPrivate then
-      begin
+    if isPrivate then begin
       lastComment := '';
       exit;
-      end;
+    end;
     ruleIdx := 0;
     while (ruleIdx<length(rules)) and (rules [ruleIdx].id<>subruleId) do Inc(ruleIdx);
     if ruleIdx>=length(rules) then
