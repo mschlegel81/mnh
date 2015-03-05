@@ -1388,7 +1388,8 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   end;
 
 FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR resultString:ansistring='';
+  VAR resultString:array of ansistring;
+      resultIsList:boolean=false;
       literalIterator:longint=1;
 
   FUNCTION nextLiteral:P_literal;
@@ -1400,43 +1401,81 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
 
   PROCEDURE decomposeFormatString(CONST s:ansistring);
-    VAR i0,i1:longint;
-        L:P_literal;
+    VAR i0,i1,j:longint;
+        L,X:P_literal;
         fmtString:ansistring;
-    begin
-      if pos('%',s)<=0 then begin
-        resultString:=s;
-        exit;
+    PROCEDURE appendToAll(CONST suffix:ansistring);
+      VAR k:longint;
+      begin
+        for k:=0 to length(resultString)-1 do resultString[k]:=resultString[k]+suffix;
       end;
+
+    PROCEDURE appendTo(CONST index:longint; CONST suffix:ansistring);
+      VAR k:longint;
+      begin
+        resultIsList:=true;
+        if index>=length(resultString) then begin
+          k:=length(resultString);
+          setLength(resultString,index+1);
+          while k<length(resultString) do begin
+            resultString[k]:=resultString[k-1];
+            inc(k);
+          end;
+        end;
+        resultString[index]:=resultString[index]+suffix;
+      end;
+
+    begin
+      setLength(resultString,1);
+      if pos('%',s)<=0 then begin
+        resultString[0]:=s;
+        exit;
+      end else resultString[0]:='';
       i0:=1;
       while i0<=length(s) do begin
         i1:=i0+1; while (i1<=length(s)) and (s[i1]<>'%') do inc(i1);
         if s[i0]='%' then begin
-          if (i1<=length(s)) and (i1=i0+1) then resultString:=resultString+'%'
+          if (i1<=length(s)) and (i1=i0+1) then appendToAll('%')
           else begin
             fmtString:=copy(s,i0+1,i1-i0-1);
             L:=nextLiteral;
-            if L=nil then resultString:=resultString+'%'+fmtString+'%' else
+            if L=nil then appendToAll('%'+fmtString+'%') else
             case L^.literalType of
-              lt_int   : resultString:=resultString+myFormat(trim(fmtString),P_intLiteral (L)^.value);
-              lt_real  : resultString:=resultString+myFormat(trim(fmtString),P_realLiteral(L)^.value);
-              lt_string: resultString:=resultString+myFormat(trim(fmtString),P_stringLiteral(L)^.value);
-              else       resultString:=resultString+myFormat(trim(fmtString),L^.toString);
+              lt_int   : appendToAll(myFormat(trim(fmtString),P_intLiteral   (L)^.value));
+              lt_real  : appendToAll(myFormat(trim(fmtString),P_realLiteral  (L)^.value));
+              lt_string: appendToAll(myFormat(trim(fmtString),P_stringLiteral(L)^.value));
+              lt_list..lt_flatList: begin
+                for j:=P_listLiteral(L)^.size-1 downto 0 do begin
+                  X:=P_listLiteral(L)^.value(j);
+                  case X^.literalType of
+                    lt_int   : appendTo(j,myFormat(trim(fmtString),P_intLiteral   (X)^.value));
+                    lt_real  : appendTo(j,myFormat(trim(fmtString),P_realLiteral  (X)^.value));
+                    lt_string: appendTo(j,myFormat(trim(fmtString),P_stringLiteral(X)^.value));
+                    else       appendTo(j,myFormat(trim(fmtString),              X^.toString));
+                  end;
+                end;
+                for j:=P_listLiteral(L)^.size to length(resultString)-1 do appendTo(j,'%'+fmtString+'%');
+              end;
+              else appendToAll(myFormat(trim(fmtString),L^.toString));
             end;
           end;
           i0:=i1+1;
         end else begin
-          resultString:=resultString+copy(s,i0,i1-i0);
+          appendToAll(copy(s,i0,i1-i0));
           i0:=i1;
         end;
       end;
     end;
 
+  VAR k:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
-      result:=newStringLiteral(resultString);
+      if resultIsList or (length(resultString)<>1) then begin
+        result:=newListLiteral;
+        for k:=0 to length(resultString)-1 do P_listLiteral(result)^.append(newStringLiteral(resultString[k]),false);
+      end else result:=newStringLiteral(resultString[0]);
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
 
