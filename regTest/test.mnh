@@ -30,7 +30,7 @@ format(s,len)->length(s)<len? format(s&" ",len) : s;
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
-now->systime%"time";
+
 expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
 lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
 expectedResultExists(scriptname)->fileExists(expectedResultName(scriptname));
@@ -38,7 +38,7 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 
 storeResult(filename,data)-> writeFileLines(filename,data) ? filename : void;
 
-runScript(executor,scriptName)->print(checkResult(scriptName,now,exec(executor,["-det",scriptName]),now));
+runScript(executor,scriptName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]),systime));
 checkResult(scriptName,t0,result,t1)->format(scriptName)&" "&format(round((t1-t0)*24*60*60,2)&"sec",10)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
                                                                          :  "Results differ! Please check "&storeResult(lastResultName(scriptName),result))

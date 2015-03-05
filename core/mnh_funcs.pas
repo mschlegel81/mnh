@@ -1352,36 +1352,11 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   end;
 
 FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
-    VAR aid:P_listLiteral;
-    begin
-      aid:=newListLiteral;
-      aid^.append(newStringLiteral(el0),false);
-      aid^.append(                 el1 ,false);
-      P_listLiteral(result)^.append(aid,false);
-    end;
-
-  VAR t:double;
-      x:ansistring;
-
   begin
     result:=nil;
-    if (params=nil) or (params^.size=9) then begin
-      result:=newListLiteral;
-      t:=Now;
-      appendPair(result,'time',newRealLiteral(t));
-      appendPair(result,'timeOfDay',newRealLiteral(frac(t)));
-      appendPair(result,'date_string',newStringLiteral(DateToStr(t)));
-      appendPair(result,'time_string',newStringLiteral(TimeToStr(t)));
-      DateTimeToString(x,'yyyy',t); appendPair(result,'year',       newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'mm',t);   appendPair(result,'month',      newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'dd',t);   appendPair(result,'day',        newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'dddd',t); appendPair(result,'day of week',newStringLiteral(x));
-      DateTimeToString(x,'h',t);    appendPair(result,'hour',       newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'n',t);    appendPair(result,'minute',     newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'s',t);    appendPair(result,'second',     newIntLiteral(StrToIntDef(x,0)));
-      DateTimeToString(x,'z',t);    appendPair(result,'millisecond',newIntLiteral(StrToIntDef(x,0)));
-    end else raiseNotApplicableError('systime',params,tokenLocation);
+    if (params=nil) or (params^.size=0)
+    then exit(newRealLiteral(now))
+    else raiseNotApplicableError('systime',params,tokenLocation);
   end;
 
 FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -1542,7 +1517,7 @@ INITIALIZATION
   registerRule('isInfinite'    ,@isInfinite_impl,true,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule('isInRange'     ,@isInRange_impl,true,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
   registerRule('splitFileName' ,@splitFileName_imp,true,'splitFilename(name:string);#Returns various representations and parts of the given name');
-  registerRule('systime'       ,@systime_imp,false,'sytime;#Returns the current time in various representations');
+  registerRule('systime'       ,@systime_imp,false,'sytime;#Returns the current time as a real number');
 
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,p0,p1,...);#Returns a formatted version of the given 0..n parameters');
