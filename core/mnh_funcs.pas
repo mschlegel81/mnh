@@ -741,7 +741,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       and (params^.value(1)^.literalType in [lt_string,lt_stringList]) then begin
       initSplitters;
       result:=splitRecurse(params^.value(0));
-    end else raiseNotApplicableError('SPLIT',params,tokenLocation);
+    end else raiseNotApplicableError('split',params,tokenLocation);
   end;
 
 FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -765,7 +765,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0))
-    else raiseNotApplicableError('SOFTCAST',params,tokenLocation);
+    else raiseNotApplicableError('softcast',params,tokenLocation);
   end;
 
 FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -780,14 +780,14 @@ FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
           for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(trim_rec(P_listLiteral(x)^.value(i)),false);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply TRIM to literal of type '+C_typeString[x^.literalType],tokenLocation);
+        else result:=newErrorLiteralRaising('Cannot apply trim to literal of type '+C_typeString[x^.literalType],tokenLocation);
       end;
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=trim_rec(params^.value(0))
-    else raiseNotApplicableError('TRIM',params,tokenLocation);
+    else raiseNotApplicableError('trim',params,tokenLocation);
   end;
 
 FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -1452,22 +1452,22 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
             L:=nextLiteral;
             if L=nil then appendToAll('%'+fmtString+'%') else
             case L^.literalType of
-              lt_int   : appendToAll(myFormat(trim(fmtString),P_intLiteral   (L)^.value));
-              lt_real  : appendToAll(myFormat(trim(fmtString),P_realLiteral  (L)^.value));
-              lt_string: appendToAll(myFormat(trim(fmtString),P_stringLiteral(L)^.value));
+              lt_int   : appendToAll(myFormat(fmtString,P_intLiteral   (L)^.value));
+              lt_real  : appendToAll(myFormat(fmtString,P_realLiteral  (L)^.value));
+              lt_string: appendToAll(myFormat(fmtString,P_stringLiteral(L)^.value));
               lt_list..lt_flatList: begin
                 for j:=P_listLiteral(L)^.size-1 downto 0 do begin
                   X:=P_listLiteral(L)^.value(j);
                   case X^.literalType of
-                    lt_int   : appendTo(j,myFormat(trim(fmtString),P_intLiteral   (X)^.value));
-                    lt_real  : appendTo(j,myFormat(trim(fmtString),P_realLiteral  (X)^.value));
-                    lt_string: appendTo(j,myFormat(trim(fmtString),P_stringLiteral(X)^.value));
-                    else       appendTo(j,myFormat(trim(fmtString),              X^.toString));
+                    lt_int   : appendTo(j,myFormat(fmtString,P_intLiteral   (X)^.value));
+                    lt_real  : appendTo(j,myFormat(fmtString,P_realLiteral  (X)^.value));
+                    lt_string: appendTo(j,myFormat(fmtString,P_stringLiteral(X)^.value));
+                    else       appendTo(j,myFormat(fmtString,              X^.toString));
                   end;
                 end;
                 for j:=P_listLiteral(L)^.size to length(resultString)-1 do appendTo(j,'%'+fmtString+'%');
               end;
-              else appendToAll(myFormat(trim(fmtString),L^.toString));
+              else appendToAll(myFormat(fmtString,L^.toString));
             end;
           end;
           i0:=i1+1;

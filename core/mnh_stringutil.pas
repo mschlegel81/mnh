@@ -348,14 +348,18 @@ FUNCTION startsWith(CONST input, head: ansistring): boolean;
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
   VAR targetLength:longint;
   begin
-    if (length(formatString)>=1) and (formatString[1] in ['X','x']) then begin
+    if (length(formatString)>=1) and (formatString[1] in ['X','x','I','i']) then begin
       if length(formatString)>1
       then targetLength:=StrToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData))
       else targetLength:=length(stringData);
       result:=stringData;
       if length(result)>targetLength
       then result:=copy(result,1,targetLength)
-      else while length(result)<targetLength do result:=result+' ';
+      else while length(result)<targetLength do begin
+        if formatString[1] in ['I','i']
+        then result:=' '+result
+        else result:=result+' ';
+      end;
     end else result:=stringData;
   end;
 
@@ -366,6 +370,21 @@ FUNCTION isTimeFormat(CONST s:ansistring):boolean;
     result:=false;
   end;
 
+FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:extended):ansistring;
+  VAR i,destLen:longint;
+  begin
+    result:=FormatFloat(formatString,value);
+    i:=1;
+    while (i<length(formatString)) and (formatString[i]='#') do begin
+      formatString[i]:='0';
+      inc(i);
+    end;
+    destLen:=length(FormatFloat(formatString,value));
+    while length(result)<destLen do result:=' '+result;
+    destLen:=length(FormatFloat(replaceAll(formatString,'#','0'),value));
+    while length(result)<destLen do result:=result+' ';
+  end;
+
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
   begin
     if (copy(formatString,1,1)='X') or
@@ -373,7 +392,7 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,intData)
-      else result:=FormatFloat(formatString,intData);
+      else result:=fixedFormatFloat(formatString,intData);
     except
       result:=myFormat(formatString,IntToStr(intData));
     end;
@@ -386,7 +405,7 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansist
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,realData)
-      else result:=FormatFloat(formatString,realData);
+      else result:=fixedFormatFloat(formatString,realData);
     except
       result:=myFormat(formatString,FloatToStr(realData));
     end;
