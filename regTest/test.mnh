@@ -25,8 +25,7 @@ test_list:=['demos\\99bottles.mnh',
             'demos\\root.mnh',
             'demos\\weasel.mnh'];
             
-format(s:string)->format(s,max(length(test_list)));
-format(s,len)->length(s)<len? format(s&" ",len) : s;
+FMT_STRING:="%X" & max(length(test_list)) & "% %hh:nn:ss.zz% ";
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
@@ -39,7 +38,7 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 storeResult(filename,data)-> writeFileLines(filename,data) ? filename : void;
 
 runScript(executor,scriptName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]),systime));
-checkResult(scriptName,t0,result,t1)->format(scriptName)&" "&format(round((t1-t0)*24*60*60,2)&"sec",10)& (
+checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,t1-t0)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
                                                                          :  "Results differ! Please check "&storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
