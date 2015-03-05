@@ -1038,97 +1038,48 @@ PROCEDURE T_listLiteral.setRangeAppend;
   end;
 
 PROCEDURE T_listLiteral.sort;
-  VAR
-    temp: array of P_literal;
-    scale: longint;
-    i, j0, j1, k: longint;
+  VAR temp: array of P_literal;
+      scale: longint;
+      i, j0, j1, k: longint;
   begin
     if length(element)<=1 then exit;
     scale := 1;
     setLength(temp, length(element));
-    while scale<length(element) do
-      begin
+    while scale<length(element) do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i := 0;
-      while i<length(element) do
-        begin
-        j0 := i;
-        j1 := i+scale;
-        k := i;
+      while i<length(element) do begin
+        j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-          if P_scalarLiteral(element [j0])^.leqForSorting(P_scalarLiteral(element [j1])) then
-            begin
-            temp[k] := P_scalarLiteral(element [j0]);
-            Inc(k);
-            Inc(j0);
-            end
-          else
-            begin
-            temp[k] := P_scalarLiteral(element [j1]);
-            Inc(k);
-            Inc(j1);
-            end;
-        while (j0<i+scale) and (j0<length(element)) do
-          begin
-          temp[k] := P_scalarLiteral(element [j0]);
-          Inc(k);
-          Inc(j0);
-          end;
-        while (j1<i+scale+scale) and (j1<length(element)) do
-          begin
-          temp[k] := P_scalarLiteral(element [j1]);
-          Inc(k);
-          Inc(j1);
-          end;
+          if element [j0]^.leqForSorting(element [j1])  then begin temp[k] := element [j0]; Inc(k); Inc(j0); end
+                                                        else begin temp[k] := element [j1]; Inc(k); Inc(j1); end;
+        while (j0<i+scale)       and (j0<length(element)) do begin temp[k] := element [j0]; Inc(k); Inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k] := element [j1]; Inc(k); Inc(j1); end;
         Inc(i, scale+scale);
-        end;
+      end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       Inc(scale, scale);
-      if (scale<length(element)) then
-        begin
+      if (scale<length(element)) then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i := 0;
-        while i<length(element) do
-          begin
-          j0 := i;
-          j1 := i+scale;
-          k := i;
-          while (j0<i+scale) and (j1<i+scale+scale) and
-            (j1<length(element)) do
-            if temp [j0]^.leqForSorting(temp [j1]) then
-              begin
-              element[k] := temp [j0];
-              Inc(k);
-              Inc(j0);
-              end
-            else
-              begin
-              element[k] := temp [j1];
-              Inc(k);
-              Inc(j1);
-              end;
-          while (j0<i+scale) and (j0<length(element)) do
-            begin
-            element[k] := temp [j0];
-            Inc(k);
-            Inc(j0);
-            end;
-          while (j1<i+scale+scale) and (j1<length(element)) do
-            begin
-            element[k] := temp [j1];
-            Inc(k);
-            Inc(j1);
-            end;
+        while i<length(element) do begin
+          j0:=i; j1:=i+scale; k:=i;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
+            if temp [j0]^.leqForSorting(temp [j1])        then begin element[k] := temp [j0]; Inc(k); Inc(j0); end
+                                                          else begin element[k] := temp [j1]; Inc(k); Inc(j1); end;
+          while (j0<i+scale) and (j0<length(element))       do begin element[k] := temp [j0]; Inc(k); Inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k] := temp [j1]; Inc(k); Inc(j1); end;
           Inc(i, scale+scale);
-          end;
+        end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
         Inc(scale, scale);
-        end
-      else
-        for k := 0 to length(element)-1 do
-          element[k] := temp [k];
+      end else for k := 0 to length(element)-1 do element[k] := temp [k];
+    end;
+    setLength(temp, 0);
+  end;
+
       end;
     setLength(temp, 0);
   end;
@@ -1146,63 +1097,43 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
 
     setLength(temp1, length(element));
     setLength(temp2, length(element));
-    for i := 0 to length(element)-1 do
-      WITH temp1 [i] do
-        begin
-        v := P_scalarLiteral(element [i]);
-        index := i;
-        end;
+    for i := 0 to length(element)-1 do with temp1 [i] do begin
+      v := P_scalarLiteral(element [i]);
+      index := i;
+    end;
     scale := 1;
-    while scale<length(temp1) do
-      begin
+    while scale<length(temp1) do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i := 0;
-      while i<length(temp1) do
-        begin
-        j0 := i;
-        j1 := i+scale;
-        k := i;
+      while i<length(temp1) do begin
+        j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
-          if temp1 [j0].v^.leqForSorting(temp1 [j1].v) then
-            begin temp2[k] := temp1 [j0]; Inc(k); Inc(j0); end
-          else
-            begin temp2[k] := temp1 [j1]; Inc(k); Inc(j1); end;
-        while (j0<i+scale) and (j0<length(temp1)) do
-          begin temp2[k] := temp1 [j0]; Inc(k); Inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(temp1)) do
-          begin temp2[k] := temp1 [j1]; Inc(k); Inc(j1); end;
+          if temp1 [j0].v^.leqForSorting(temp1 [j1].v) then begin temp2[k] := temp1 [j0]; Inc(k); Inc(j0); end
+                                                       else begin temp2[k] := temp1 [j1]; Inc(k); Inc(j1); end;
+        while (j0<i+scale) and (j0<length(temp1))        do begin temp2[k] := temp1 [j0]; Inc(k); Inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp2[k] := temp1 [j1]; Inc(k); Inc(j1); end;
         Inc(i, scale+scale);
-        end;
+      end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       Inc(scale, scale);
-      if (scale<length(temp1)) then
-        begin
+      if (scale<length(temp1)) then begin
         i := 0;
-        while i<length(temp1) do
-          begin
-          j0 := i;
-          j1 := i+scale;
-          k := i;
+        while i<length(temp1) do begin
+          j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
-            if temp2 [j0].v^.leqForSorting(temp2 [j1].v) then
-              begin temp1[k] := temp2 [j0]; Inc(k); Inc(j0); end
-            else
-              begin temp1[k] := temp2 [j1]; Inc(k); Inc(j1); end;
-          while (j0<i+scale)  and (j0<length(temp1)) do
-            begin temp1[k] := temp2 [j0]; Inc(k); Inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(temp1)) do
-            begin temp1[k] := temp2 [j1]; Inc(k); Inc(j1); end;
+            if temp2 [j0].v^.leqForSorting(temp2 [j1].v) then begin temp1[k] := temp2 [j0]; Inc(k); Inc(j0); end
+                                                         else begin temp1[k] := temp2 [j1]; Inc(k); Inc(j1); end;
+          while (j0<i+scale)  and (j0<length(temp1))       do begin temp1[k] := temp2 [j0]; Inc(k); Inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp1[k] := temp2 [j1]; Inc(k); Inc(j1); end;
           Inc(i, scale+scale);
-          end;
+        end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
         Inc(scale, scale);
-        end
-      else for k := 0 to length(temp1)-1 do temp1[k] := temp2 [k];
-      end;
+      end else for k := 0 to length(temp1)-1 do temp1[k] := temp2 [k];
+    end;
     setLength(temp2, 0);
     result := newListLiteral;
-    for i := 0 to length(temp1)-1 do
-      result^.append(newIntLiteral(temp1 [i].index), false);
+    for i := 0 to length(temp1)-1 do result^.append(newIntLiteral(temp1 [i].index), false);
     setLength(temp1, 0);
   end;
 
