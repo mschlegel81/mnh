@@ -20,8 +20,8 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; intData:int64):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; realData:extended):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
 
 IMPLEMENTATION
 
@@ -349,7 +349,9 @@ FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
   VAR targetLength:longint;
   begin
     if (length(formatString)>=1) and (formatString[1] in ['X','x']) then begin
-      targetLength:=StrToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData));
+      if length(formatString)>1
+      then targetLength:=StrToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData))
+      else targetLength:=length(stringData);
       result:=stringData;
       if length(result)>targetLength
       then result:=copy(result,1,targetLength)
@@ -364,8 +366,10 @@ FUNCTION isTimeFormat(CONST s:ansistring):boolean;
     result:=false;
   end;
 
-FUNCTION myFormat(CONST formatString:ansistring; intData:int64):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
   begin
+    if (copy(formatString,1,1)='X') or
+       (copy(formatString,1,1)='x') then exit(myFormat(formatString,IntToStr(intData)));
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,intData)
@@ -375,8 +379,10 @@ FUNCTION myFormat(CONST formatString:ansistring; intData:int64):ansistring;
     end;
   end;
 
-FUNCTION myFormat(CONST formatString:ansistring; realData:extended):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
   begin
+    if (copy(formatString,1,1)='X') or
+       (copy(formatString,1,1)='x') then exit(myFormat(formatString,FloatToStr(realData)));
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,realData)

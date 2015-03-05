@@ -50,7 +50,6 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       i:longint;
   begin
     if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
-      lt_error,
       lt_boolean,
       lt_int,
       lt_real,
@@ -1427,34 +1426,42 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
   PROCEDURE decomposeFormatString(CONST s:ansistring);
     VAR i0,i1:longint;
+        L:P_literal;
+        fmtString:ansistring;
     begin
-      i1:=pos('%',s);
-      if i1<=0 then begin
+      if pos('%',s)<=0 then begin
         resultString:=s;
         exit;
       end;
-      resultString:=copy(s,1,i1-1);
-      i0:=i1;
+      i0:=1;
       while i0<=length(s) do begin
         i1:=i0+1; while (i1<=length(s)) and (s[i1]<>'%') do inc(i1);
-        //format string
-        if (i1<=length(s)) and (i1=i0+1) then resultString:=resultString+'%'
-        else begin
-
+        if s[i0]='%' then begin
+          if (i1<=length(s)) and (i1=i0+1) then resultString:=resultString+'%'
+          else begin
+            fmtString:=copy(s,i0+1,i1-i0-1);
+            L:=nextLiteral;
+            if L=nil then resultString:=resultString+'%'+fmtString+'%' else
+            case L^.literalType of
+              lt_int   : resultString:=resultString+myFormat(trim(fmtString),P_intLiteral (L)^.value);
+              lt_real  : resultString:=resultString+myFormat(trim(fmtString),P_realLiteral(L)^.value);
+              lt_string: resultString:=resultString+myFormat(trim(fmtString),P_stringLiteral(L)^.value);
+              else       resultString:=resultString+myFormat(trim(fmtString),L^.toString);
+            end;
+          end;
+          i0:=i1+1;
+        end else begin
+          resultString:=resultString+copy(s,i0,i1-i0);
+          i0:=i1;
         end;
-
-        //direct
       end;
-
-
     end;
 
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
-
-
+      result:=newStringLiteral(resultString);
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
 
@@ -1538,6 +1545,7 @@ INITIALIZATION
   registerRule('systime'       ,@systime_imp,false,'sytime;#Returns the current time in various representations');
 
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
+  registerRule('format'        ,@format_imp        ,true,'format(formatString:string,p0,p1,...);#Returns a formatted version of the given 0..n parameters');
 
 FINALIZATION
   {$ifdef debugMode}
