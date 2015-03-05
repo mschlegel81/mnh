@@ -43,6 +43,10 @@ checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,t1-t0)& (
                                                                          :  "Results differ! Please check "&storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
 
-main(executor       )->each(test,test_list,                      runScript(executor,test)       );
-main(executor,filter)->each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test) : void);
+reportStart(executor)->print('-----------------------------------------------------\n',
+                             'Starting test runs with executable '&executor,
+                             '\n-----------------------------------------------------');
+
+main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test)       );
+main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test) : void);
 main->main("mnh_console.exe");
