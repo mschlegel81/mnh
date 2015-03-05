@@ -349,7 +349,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-        if (usecase<>lu_forDocGeneration) then reduceExpression(ruleBody,not(evaluateBody),0,recycler);
+        if (usecase<>lu_forDocGeneration) or ruleIsMutable then reduceExpression(ruleBody,not(evaluateBody),0,recycler);
 
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
@@ -358,7 +358,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if ruleIsMutable      then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
           if ruleIsSynchronized then ensureRuleId(ruleId)^.setSynchronized(ruleDeclarationStart);
           first:=nil;
-          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate);
+          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate or ruleIsMutable);
         end else if errorLevel<el5_systemError then
           recycler.cascadeDisposeToken(first)
         else

@@ -251,15 +251,19 @@ PROCEDURE TMnhForm.flushThroughput;
     r0:=errorStringGrid.RowCount;
     errorStringGrid.RowCount:=r0+length(errorThroughput);
     for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do begin
+      if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
       changed_:=true;
       errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
       errorStringGrid.Cells[1,i+r0]:=errorMessage;
-      if errorLocation.provider<>nil then begin
+      if errorLocation.provider<>nil then try
         if errorLocation.provider=@mainPackageProvider
           then errorStringGrid.Cells[2,i+r0]:='#'
           else errorStringGrid.Cells[2,i+r0]:='@'+errorLocation.provider^.filename;
         errorStringGrid.Cells[3,i+r0]:=':'+IntToStr(errorLocation.line);
         errorStringGrid.Cells[4,i+r0]:=','+IntToStr(errorLocation.column);
+      except
+        errorStringGrid.Cells[3,i+r0]:='';
+        errorStringGrid.Cells[4,i+r0]:='';
       end;
     end;
     setLength(errorThroughput,0);
