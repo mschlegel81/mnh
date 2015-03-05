@@ -358,7 +358,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if ruleIsMutable      then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
           if ruleIsSynchronized then ensureRuleId(ruleId)^.setSynchronized(ruleDeclarationStart);
           first:=nil;
-          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate or ruleIsMutable);
+          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate,ruleIsSynchronized,ruleIsMutable);
         end else if errorLevel<el5_systemError then
           recycler.cascadeDisposeToken(first)
         else

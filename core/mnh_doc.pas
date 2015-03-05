@@ -17,12 +17,13 @@ TYPE
   T_userFunctionDocumentation = object
     isMemoized: boolean;
     id: ansistring;
-    subrules: array of record  isPrivate: boolean;
+    subrules: array of record
+      isPrivate,isSynchronized,isMutable: boolean;
       pattern, comment: ansistring;
     end;
     CONSTRUCTOR create(ruleId: ansistring);
     DESTRUCTOR destroy;
-    PROCEDURE addSubRule(privateSubrule: boolean; pat, comment: ansistring);
+    PROCEDURE addSubRule(privateSubrule,sync,mut: boolean; pat, comment: ansistring);
     FUNCTION toHtml: ansistring;
     FUNCTION printHelpText(sourceName:ansistring):boolean;
   end;
@@ -47,7 +48,7 @@ TYPE
     PROCEDURE resolveUses;
     FUNCTION toHtml: ansistring;
     PROCEDURE addComment(CONST s: ansistring);
-    PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate: boolean);
+    PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate, isSynchronized, isMutable: boolean);
     FUNCTION getHref: ansistring;
     FUNCTION isExecutable: boolean;
     PROCEDURE printHelpText;
@@ -198,7 +199,7 @@ PROCEDURE T_userPackageDocumentation.addComment(CONST s: ansistring);
     else lastComment := lastComment+' '+s;
   end;
 
-PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate: boolean);
+PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate, isSynchronized, isMutable:boolean);
   VAR ruleIdx: longint;
   begin
     if isPrivate then begin
@@ -207,13 +208,12 @@ PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansist
     end;
     ruleIdx := 0;
     while (ruleIdx<length(rules)) and (rules [ruleIdx].id<>subruleId) do Inc(ruleIdx);
-    if ruleIdx>=length(rules) then
-      begin
+    if ruleIdx>=length(rules) then begin
       setLength(rules, ruleIdx+1);
       rules[ruleIdx].create(subruleId);
-      end;
+    end;
     if isMemoized then rules[ruleIdx].isMemoized := true;
-    rules[ruleIdx].addSubRule(isPrivate, pattern, lastComment);
+    rules[ruleIdx].addSubRule(isPrivate or isMutable,isSynchronized, isMutable, pattern, lastComment);
     lastComment := '';
   end;
 
@@ -248,30 +248,37 @@ DESTRUCTOR T_userFunctionDocumentation.destroy;
     setLength(subrules, 0);
   end;
 
-PROCEDURE T_userFunctionDocumentation.addSubRule(privateSubrule: boolean; pat, comment: ansistring);
+PROCEDURE T_userFunctionDocumentation.addSubRule(privateSubrule,sync,mut: boolean; pat, comment: ansistring);
   begin
     setLength(subrules, length(subrules)+1);
     subrules[length(subrules)-1].isPrivate := privateSubrule;
+    subrules[length(subrules)-1].isSynchronized:=sync;
+    subrules[length(subrules)-1].isMutable:=mut;
     subrules[length(subrules)-1].pattern := pat;
     subrules[length(subrules)-1].comment := comment;
   end;
 
 FUNCTION T_userFunctionDocumentation.toHtml: ansistring;
   VAR i: longint;
+      anyPublic:boolean=false;
   begin
     result := '<table><tr class="ruleHead"><td>';
-    if isMemoized then result := result+'<div class="red">';
+    if isMemoized then result:=result+'<i>memoized </i>';
     if id = 'main' then result := result+'<b>'+id+'</b>'
     else result := result+id;
-    if isMemoized then result := result+' (memoized)</div>';
-
     result := result+'</td></tr>';
-    for i := 0 to length(subrules)-1 do with subrules [i] do if not(isPrivate) then begin
+    for i := 0 to length(subrules)-1 do with subrules [i] do begin
+      if not(isPrivate) then anyPublic:=true;
       result := result+'<tr><td>';
       if comment<>'' then result := result+'<i>'+comment+'</i><br>';
-      result := result+'<code>'+id+pattern+'</code></td></tr>';
+      result := result+'<code>';
+      if isPrivate then result:=result+'<i>private </i>';
+      if isMutable then result:=result+'<i>mutable </i>';
+      if isSynchronized then result:=result+'<i>synchronized </i>';
+      result:=result+id+pattern+'</code></td></tr>';
     end;
     result := result+'</table>';
+    if not(anyPublic) then result:='';
   end;
 
 FUNCTION T_userFunctionDocumentation.printHelpText(sourceName:ansistring):boolean;
