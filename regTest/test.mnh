@@ -25,10 +25,12 @@ test_list:=['demos\\99bottles.mnh',
             'demos\\root.mnh',
             'demos\\weasel.mnh'];
             
-FMT_STRING:="%X" & max(length(test_list)) & "% %hh:nn:ss.zz% ";
+FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
+mutable testsFailed:="";
+synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
 
 expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
 lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
@@ -38,15 +40,15 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 storeResult(filename,data)-> writeFileLines(filename,data) ? filename : void;
 
 runScript(executor,scriptName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]),systime));
-checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,t1-t0)& (
+checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
-                                                                         :  "Results differ! Please check "&storeResult(lastResultName(scriptName),result))
+                                                                         :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
 
 reportStart(executor)->print('-----------------------------------------------------\n',
                              'Starting test runs with executable '&executor,
                              '\n-----------------------------------------------------');
 
-main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test)       );
-main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test) : void);
+main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test)       ) and print(testsFailed);
+main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test) : void) and print(testsFailed);
 main->main("mnh_console.exe");
