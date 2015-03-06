@@ -4,7 +4,7 @@ INTERFACE
 
 USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
 CONST CACHE_MOD   = 2047; //must be 2^n-1 because of bitwise operation used instead of mod
-      POLISH_FREQ = 20470;
+      POLISH_FREQ = 16;
 
 TYPE
   T_cacheEntry = record
@@ -17,11 +17,9 @@ TYPE
 
   T_cache = object
   private
-    putsSinceLastPolish:longint;
-
     fill: longint;
     cached: array[0..CACHE_MOD] of array of T_cacheEntry;
-    PROCEDURE polish;
+    PROCEDURE polishBin(CONST binIdx:longint);
   public
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
@@ -46,7 +44,6 @@ PROCEDURE clearAllCaches;
 
 CONSTRUCTOR T_cache.create();
   begin
-    putsSinceLastPolish:=0;
     fill := 0;
     setLength(allCaches, length(allCaches)+1);
     allCaches[length(allCaches)-1] := @self;
@@ -64,12 +61,12 @@ DESTRUCTOR T_cache.destroy;
     end;
   end;
 
-PROCEDURE T_cache.polish;
-  VAR binIdx,i,j: longint;
+PROCEDURE T_cache.polishBin(CONST binIdx:longint);
+  VAR i,j: longint;
       swapTmp:T_cacheEntry;
   begin
-    fill := 0;
-    for binIdx := 0 to CACHE_MOD do begin
+    //fill := 0;
+    //for binIdx := 0 to CACHE_MOD do begin
       j := 0;
       for i := 0 to length(cached [binIdx])-1 do
       if (cached [binIdx, i].useCount>0) then begin
@@ -79,17 +76,17 @@ PROCEDURE T_cache.polish;
       end else begin
         disposeLiteral(cached [binIdx, i].key);
         disposeLiteral(cached [binIdx, i].value);
+        dec(fill);
       end;
       setLength(cached [binIdx], j);
-      Inc(fill, j);
+      //Inc(fill, j);
       for i:=1 to length(cached[binIdx])-1 do for j:=0 to i-1 do
       if cached[binIdx,i].useCount>cached[binIdx,j].useCount then begin
         swapTmp:=cached[binIdx,i];
         cached[binIdx,i]:=cached[binIdx,j];
         cached[binIdx,j]:=swapTmp;
       end;
-    end;
-    putsSinceLastPolish:=0;
+    //end;
   end;
 
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
@@ -107,7 +104,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
     cached[binIdx,i].key  :=key;   key  ^.rereference;
     cached[binIdx,i].value:=value; value^.rereference;
     cached[binIdx,i].useCount:= 1;
-    inc(putsSinceLastPolish);
+    if length(cached[binIdx])>POLISH_FREQ then polishBin(binIdx);
   end;
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
@@ -121,7 +118,6 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
     end else begin
       Inc(cached [binIdx, i].useCount);
       result := cached [binIdx, i].value;
-      if putsSinceLastPolish>POLISH_FREQ then polish;
     end;
   end;
 
@@ -136,7 +132,6 @@ PROCEDURE T_cache.Clear;
       setLength(cached [i], 0);
     end;
     fill := 0;
-    putsSinceLastPolish:=0;
   end;
 
 end.
