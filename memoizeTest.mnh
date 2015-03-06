@@ -1,0 +1,11 @@
+memoized F(x)->random-0.5;
+mutable timer:=systime;
+synchronized timerLap->print(replace(format("%X40%%####0.000%sec","",(-timer+(timer:=systime))*24*60*60)," ","-"));
+
+DR(distinctCount)->floor(random(1024)*distinctCount);
+
+testGet(distinctCount)-> print('testGet ',distinctCount) and
+                         each(i0,2^10*[0..2^10],+,
+                         each(i,DR(distinctCount),+,F(i))) and timerLap;
+
+main->timerLap and each(c,2^[0..20],testGet(c));
