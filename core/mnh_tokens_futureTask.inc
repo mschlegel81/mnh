@@ -26,6 +26,7 @@
     first,last:P_futureTask;
     queuedCount:longint;
     cs:system.TRTLCriticalSection;
+    destructionPending:boolean;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -54,7 +55,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         currentTask^.evaluate(0,tempRecycler);
         sleepTime:=0;
       end;
-    until sleepTime>=50;
+    until (sleepTime>=50) or (pendingTasks.destructionPending);
     tempRecycler.destroy;
     result:=0;
     InterLockedDecrement(poolThreadsRunning);
@@ -117,6 +118,7 @@ DESTRUCTOR T_futureTask.proFormaDestroy;
 CONSTRUCTOR T_taskQueue.create;
   begin
     system.InitCriticalSection(cs);
+    destructionPending:=false;
     first:=nil;
     last:=nil;
     queuedCount:=0;
@@ -124,7 +126,10 @@ CONSTRUCTOR T_taskQueue.create;
 
 DESTRUCTOR T_taskQueue.destroy;
   begin
-    while poolThreadsRunning>0 do sleep(10);
+    while poolThreadsRunning>0 do begin
+      destructionPending:=true;
+      sleep(5);
+    end;
     system.DoneCriticalsection(cs);
   end;
 
