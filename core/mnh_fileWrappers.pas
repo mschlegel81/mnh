@@ -39,18 +39,6 @@ TYPE
     PROCEDURE Clear;
   end;
 
-  //T_fileCursor=object
-  //  filename:ansistring;
-  //  handle:TextFile;
-  //  isOpen:boolean;
-  //
-  //  CONSTRUCTOR create(CONST fname:string);
-  //  FUNCTION hasNext:boolean;
-  //  FUNCTION next:ansistring;
-  //  PROCEDURE close;
-  //  PROCEDURE resetCursor;
-  //  DESTRUCTOR destroy;
-  //end;
 
 CONST sourceExt = '.MNH';
 
@@ -70,7 +58,30 @@ FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList
 
 IMPLEMENTATION
 VAR mainPackagePath: ansistring;
-
+PROCEDURE ensurePath(path:ansistring);
+  VAR newDir:string;
+      ensuredDir:string;
+      p,p2:longint;
+  begin
+    ensuredDir:='';
+    path:=ExtractFilePath(path);
+    if path[length(path)] in ['/','\'] then path:=copy(path,1,length(path)-1);
+    while path<>'' do begin
+      p:=pos('/',path);
+      p2:=pos('\',path);
+      if (p<=0) or (p2>0) and (p2<p) then p:=p2;
+      if p<=0 then begin
+        newDir:=path;
+        path:='';
+      end else begin
+        newDir:=copy(path,1,p-1);
+        path:=copy(path,p+1,length(path)-p);
+      end;
+      if ensuredDir='' then ensuredDir:=newDir
+                       else ensuredDir:=ensuredDir+DirectorySeparator+newDir;
+      CreateDir(ensuredDir);
+    end;
+  end;
 
 PROCEDURE setMainPackagePath(CONST path: ansistring);
   begin
@@ -211,15 +222,14 @@ FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
     block: array[0..1023] of char;
     i, j: longint;
   begin
-    if trim(Name) = '' then
-      exit(false);
-      try
+    if trim(Name) = '' then exit(false);
+    try
+      ensurePath(name);
       result := true;
       assign(handle, Name);
       rewrite(handle);
       i := 1;
-      while i<=length(textToWrite) do
-        begin
+      while i<=length(textToWrite) do begin
         j := 0;
         while (i<=length(textToWrite)) and (j<length(block)) do
           begin
@@ -228,11 +238,11 @@ FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
           Inc(j);
           end;
         blockwrite(handle, block, j);
-        end;
-      close(handle);
-      except
-      result := false;
       end;
+      close(handle);
+    except
+      result := false;
+    end;
   end;
 
 FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
@@ -240,18 +250,18 @@ FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList)
     handle: TextFile;
     i: longint;
   begin
-    if trim(Name) = '' then
-      exit(false);
-      try
+    if trim(Name) = '' then exit(false);
+    try
+      ensurePath(Name);
       assign(handle, Name);
       rewrite(handle);
       for i := 0 to length(textToWrite)-1 do
         writeln(handle, textToWrite [i]);
       close(handle);
       result := true;
-      except
+    except
       result := false;
-      end;
+    end;
   end;
 
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
@@ -543,54 +553,6 @@ PROCEDURE T_codeProvider.Clear;
     fileVersion := 0;
     syncedFileAge := 0;
   end;
-
-//CONSTRUCTOR T_fileCursor.create(CONST fname:ansistring);
-//  begin
-//    filename:=fname;
-//    try
-//      assign(handle,filename);
-//      reset(handle);
-//      isOpen:=true;
-//    except
-//      isOpen:=false;
-//    end;
-//  end;
-//
-//FUNCTION T_fileCursor.hasNext:boolean;
-//  begin
-//    if isOpen and eof(handle) then begin
-//      result:=false;
-//      close;
-//    end else result:=isOpen;
-//  end;
-//
-//FUNCTION T_fileCursor.next:ansistring;
-//  begin
-//    if not(hasNext) then exit('');
-//    readln(handle,result);
-//  end;
-//
-//PROCEDURE T_fileCursor.close;
-//  begin
-//    if isOpen then begin
-//      system.close(handle);
-//      isOpen:=false;
-//    end;
-//  end;
-//
-//PROCEDURE T_fileCursor.resetCursor;
-//  begin
-//    close;
-//    try
-//      reset(handle);
-//      isOpen:=true;
-//    except
-//      isOpen:=false;
-//    end;
-//  end;
-//
-//DESTRUCTOR T_fileCursor.destroy;
-//  begin close; end;
 
 INITIALIZATION
   setMainPackagePath('');
