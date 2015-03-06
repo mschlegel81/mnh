@@ -224,8 +224,8 @@ UNARY_NUM_TO_SAME;
     end;
 
   FUNCTION recurse2(CONST x,y:P_literal):P_literal;
-    FUNCTION myRound(CONST x:extended; CONST y:int64):P_literal; inline;
-      VAR pot:extended;
+    FUNCTION myRound(CONST x:T_myFloat; CONST y:int64):P_literal; inline;
+      VAR pot:T_myFloat;
           i:int64;
       begin
         pot:=1;
@@ -1299,10 +1299,10 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   end;
 
 FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR r0,r1:extended;
+  VAR r0,r1:T_myFloat;
   FUNCTION inRange(CONST L:P_literal):boolean; inline;
     VAR i:int64;
-        r:extended;
+        r:T_myFloat;
     begin
       if l^.literalType=lt_real then begin
         r:=P_realLiteral(l)^.value;

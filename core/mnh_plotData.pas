@@ -657,7 +657,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
     part, options: ansistring;
     sp: longint;
     i: longint;
-    size: extended;
+    size: T_myFloat;
     mightBeColor: boolean;
   begin
     style := 0;
@@ -1001,9 +1001,9 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
           end;
       end;
 
-    FUNCTION pot10(y: int64): extended; inline;
+    FUNCTION pot10(y: int64): T_myFloat; inline;
       VAR
-        p10: extended;
+        p10: T_myFloat;
       begin
         if y>=0 then
           p10 := 10

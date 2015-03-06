@@ -88,10 +88,10 @@ TYPE
 
   T_realLiteral = object(T_scalarLiteral)
   private
-    val: extended;
+    val: T_myFloat;
   public
-    CONSTRUCTOR create(CONST value: extended);
-    FUNCTION value: extended;
+    CONSTRUCTOR create(CONST value: T_myFloat);
+    FUNCTION value: T_myFloat;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; virtual;
@@ -203,7 +203,7 @@ VAR
 PROCEDURE disposeLiteral(VAR l: P_literal); inline;
 FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral; inline;
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral; inline;
-FUNCTION newRealLiteral(CONST value: extended): P_realLiteral; inline;
+FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral; inline;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral; inline;
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral; inline;
 FUNCTION newListLiteral: P_listLiteral; inline;
@@ -249,7 +249,7 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
     end;
   end;
 
-FUNCTION newRealLiteral(CONST value: extended): P_realLiteral;
+FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
   begin
     new(result, create(value));
   end;
@@ -301,7 +301,7 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
     voidLit.rereference;
   end;
 
-FUNCTION myFloatToStr(CONST x: extended): string;
+FUNCTION myFloatToStr(CONST x: T_myFloat): string;
   begin
     result := FloatToStr(x);
     if (pos('E', UpperCase(result))<=0) and //occurs in exponents
@@ -374,7 +374,7 @@ FUNCTION T_literal.unreference: longint;
 CONSTRUCTOR T_voidLiteral.create();                              begin inherited init;               end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init; val := value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init; val := value; end;
-CONSTRUCTOR T_realLiteral      .create(CONST value: extended);   begin inherited init; val := value; end;
+CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init; val := value; end;
 CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init; val := value; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);    begin inherited init; val := value; end;
 CONSTRUCTOR T_listLiteral.create;
@@ -455,7 +455,7 @@ FUNCTION T_listLiteral.literalType: T_literalType;
 //================================================================:?.literalType
 //?.value:======================================================================
 FUNCTION T_intLiteral       .value: int64;      begin result := val; end;
-FUNCTION T_realLiteral      .value: extended;   begin result := val; end;
+FUNCTION T_realLiteral      .value: T_myFloat;  begin result := val; end;
 FUNCTION T_stringLiteral    .value: ansistring; begin result := val; end;
 FUNCTION T_boolLiteral      .value: boolean;    begin result := val; end;
 FUNCTION T_expressionLiteral.value: pointer;    begin result := val; end;
@@ -545,7 +545,7 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
 
 FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
   VAR ovi: int64;
-      ovr: extended;
+      ovr: T_myFloat;
   begin
     case other^.literalType of
       lt_int: begin
@@ -566,7 +566,7 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P
 
 FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
   VAR ovi: int64;
-      ovr: extended;
+      ovr: T_myFloat;
   begin
     case other^.literalType of
       lt_int: begin
@@ -646,7 +646,7 @@ FUNCTION T_boolLiteral.operate(CONST op: T_tokenType; CONST other: P_scalarLiter
 FUNCTION T_intLiteral.operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral;
   FUNCTION pot_int_int(x, y: int64): P_scalarLiteral;
     VAR temp: int64;
-        tx, rx: extended;
+        tx, rx: T_myFloat;
     begin
       if y>=0 then begin
         temp := 1;
@@ -710,7 +710,7 @@ FUNCTION T_intLiteral.operate(CONST op: T_tokenType; CONST other: P_scalarLitera
 
 FUNCTION T_realLiteral.operate(CONST op: T_tokenType; CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation): P_scalarLiteral;
 
-  FUNCTION pot_real_int(x: extended; y: longint): extended;
+  FUNCTION pot_real_int(x: T_myFloat; y: longint): T_myFloat;
     begin
       if y<0 then begin
         y := -y;

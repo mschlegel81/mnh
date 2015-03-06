@@ -4,6 +4,8 @@ INTERFACE
 USES sysutils;
 
 TYPE
+  T_myFloat = double;
+
   T_tokenType = (tt_literal,
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer,

@@ -1,7 +1,7 @@
 UNIT mnh_stringutil;
 
 INTERFACE
-USES sysutils;
+USES sysutils, mnh_constants;
 
 CONST
   C_lineBreakChar = chr(13);
@@ -21,7 +21,7 @@ FUNCTION startsWith(CONST input, head: ansistring): boolean;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansistring;
 
 IMPLEMENTATION
 
@@ -370,7 +370,7 @@ FUNCTION isTimeFormat(CONST s:ansistring):boolean;
     result:=false;
   end;
 
-FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:extended):ansistring;
+FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:T_myFloat):ansistring;
   VAR i,destLen:longint;
   begin
     result:=FormatFloat(formatString,value);
@@ -398,7 +398,7 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring
     end;
   end;
 
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansistring;
   begin
     if (copy(formatString,1,1)='X') or
        (copy(formatString,1,1)='x') then exit(myFormat(formatString,FloatToStr(realData)));
