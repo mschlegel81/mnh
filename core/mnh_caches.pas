@@ -104,11 +104,9 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       Dec(fill);
     end  else setLength(cached [binIdx], i+1);
     inc(fill);
-    cached[binIdx, i].key := key;
-    key^.rereference;
-    cached[binIdx, i].value := value;
-    value^.rereference;
-    cached[binIdx, i].useCount := 0;
+    cached[binIdx,i].key  :=key;   key  ^.rereference;
+    cached[binIdx,i].value:=value; value^.rereference;
+    cached[binIdx,i].useCount:= 1;
     inc(putsSinceLastPolish);
   end;
 
