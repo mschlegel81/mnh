@@ -124,6 +124,7 @@ CONSTRUCTOR T_taskQueue.create;
 
 DESTRUCTOR T_taskQueue.destroy;
   begin
+    while poolThreadsRunning>0 do sleep(10);
     system.DoneCriticalsection(cs);
   end;
 
