@@ -22,3 +22,5 @@ gui/lib/i386-win32/mnh_gui_main.lfm
 gui/lib/i386-win32/mnh_gui_settings.lfm
 regTest/*.log.1
 *.last
+doc/builtin.html
+doc/packages.html
