@@ -4,7 +4,7 @@ INTERFACE
 USES sysutils;
 
 TYPE
-  T_myFloat = double;
+  T_myFloat = extended;
 
   T_tokenType = (tt_literal,
     //identifier and resolved identifiers
@@ -69,12 +69,15 @@ TYPE
     lt_realList,
     lt_numList,
     lt_stringList,
+    lt_emptyList,
     lt_flatList,
     lt_uncheckedList,
     lt_listWithError,
     lt_void);
 
 CONST
+  C_validListTypes: set of T_literalType=[lt_list..lt_flatList];
+
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
     (6, 6, 6, 6, 6, 6, 6, //comparators
@@ -84,25 +87,22 @@ CONST
     5,                   //special: string concatenation
     0, 0, 0, 0, 1, 7);   //list operators
 
-  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckEmptyList] of
-    SET of T_literalType =
-    {tt_typeCheckScalar}     ([lt_boolean, lt_int, lt_real, lt_string],
-    {tt_typeCheckList} [lt_booleanList, lt_intList, lt_realList,
-    lt_stringList, lt_list, lt_numList, lt_flatList],
-    {tt_typeCheckBoolean} [lt_boolean],
-    {tt_typeCheckBoolList} [lt_booleanList],
-    {tt_typeCheckInt} [lt_int],
-    {tt_typeCheckIntList} [lt_intList],
-    {tt_typeCheckReal} [lt_real],
-    {tt_typeCheckRealList} [lt_realList],
-    {tt_typeCheckString} [lt_string],
-    {tt_typeCheckStringList} [lt_stringList],
-    {tt_typeCheckNumeric} [lt_int, lt_real],
-    {tt_typeCheckNumList} [lt_intList, lt_realList, lt_numList],
-    {tt_typeCheckExpression} [lt_expression],
-    {tt_typeCheckNonemptyList} [lt_booleanList, lt_intList, lt_realList,
-    lt_stringList, lt_list, lt_numList, lt_flatList],
-    {tt_typeCheckEmptyList} [lt_list, lt_flatList]);
+  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckEmptyList] of set of T_literalType =
+    {tt_typeCheckScalar}      ([lt_boolean, lt_int, lt_real, lt_string],
+    {tt_typeCheckList}         [lt_list..lt_flatList],
+    {tt_typeCheckBoolean}      [lt_boolean],
+    {tt_typeCheckBoolList}     [lt_booleanList, lt_emptyList],
+    {tt_typeCheckInt}          [lt_int],
+    {tt_typeCheckIntList}      [lt_intList, lt_emptyList],
+    {tt_typeCheckReal}         [lt_real],
+    {tt_typeCheckRealList}     [lt_realList, lt_emptyList],
+    {tt_typeCheckString}       [lt_string],
+    {tt_typeCheckStringList}   [lt_stringList, lt_emptyList],
+    {tt_typeCheckNumeric}      [lt_int, lt_real],
+    {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
+    {tt_typeCheckExpression}   [lt_expression],
+    {tt_typeCheckNonemptyList} [lt_list..lt_stringList, lt_flatList],
+    {tt_typeCheckEmptyList}    [lt_emptyList]);
 
   C_tokenString: array[T_tokenType] of ansistring = ('',
     //identifier and resolved identifiers
@@ -162,6 +162,7 @@ CONST
     'realList',
     'numericList',
     'stringList',
+    'emptyList',
     'flatList',
     'UNCHECKED LIST!',
     'list(containing error)',

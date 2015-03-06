@@ -133,27 +133,8 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
       //writeln('trying to match parameter #',i,' index=',sig[i].restrictionIdx);
       L:=par.value(i);
       with sig[i] do case restrictionType of
-        tt_typeCheckScalar    ,
-        tt_typeCheckList      ,
-        tt_typeCheckBoolean   ,
-        tt_typeCheckBoolList  ,
-        tt_typeCheckInt       ,
-        tt_typeCheckIntList   ,
-        tt_typeCheckReal      ,
-        tt_typeCheckRealList  ,
-        tt_typeCheckString    ,
-        tt_typeCheckStringList,
-        tt_typeCheckNumeric   ,
-        tt_typeCheckNumList   ,
-        tt_typeCheckExpression  : if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
-        tt_typeCheckNonemptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) or (P_listLiteral(L)^.size<=0) then exit(false);
-        tt_typeCheckEmptyList   : if not(L^.literalType in C_matchingTypes[restrictionType]) or (P_listLiteral(L)^.size> 0) then exit(false);
-        tt_comparatorEq,
-        tt_comparatorNeq,
-        tt_comparatorLeq,
-        tt_comparatorGeq,
-        tt_comparatorLss,
-        tt_comparatorGrt:
+        tt_typeCheckScalar..tt_typeCheckEmptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
+        tt_comparatorEq..tt_comparatorGrt:
           if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
             if restrictionIdx<0 then begin
               if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))

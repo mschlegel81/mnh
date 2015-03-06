@@ -28,6 +28,14 @@ IMPLEMENTATION
 VAR print_cs:system.TRTLCriticalSection;
     file_cs :system.TRTLCriticalSection;
 //------------------------------------------------------------:Critical sections
+PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST isPure:boolean; CONST explanation:ansistring);
+  VAR oldExplanation:ansistring;
+  begin
+    intrinsicRuleMap.put(name,ptr);
+    if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(name,oldExplanation))
+      then intrinsicRuleExplanationMap.put(name,explanation);
+    if isPure then pureIntrinsicFunctions.add(ptr);
+  end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
@@ -55,14 +63,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_real,
       lt_string,
       lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
-      lt_list,
-      lt_booleanList,
-      lt_intList,
-      lt_realList,
-      lt_numList,
-      lt_stringList,
-      lt_uncheckedList,
-      lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
+      lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.EnterCriticalSection(print_cs);
     writePrint(stringToPrint);
@@ -81,7 +82,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
       lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
-      lt_list,lt_intList,lt_realList,lt_numList: begin
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
       end;
@@ -152,7 +153,7 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'not',tokenLocation);
         lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
         lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
-        lt_list,lt_booleanList, lt_intList: begin
+        lt_list,lt_booleanList, lt_intList, lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
             P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
@@ -178,7 +179,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
       lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-      lt_list,lt_intList,lt_realList,lt_numList: begin
+      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
       end;
@@ -215,7 +216,7 @@ UNARY_NUM_TO_SAME;
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : begin result:=x; x^.rereference; end;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
         end;
@@ -243,19 +244,19 @@ UNARY_NUM_TO_SAME;
         lt_real: case y^.literalType of
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
           lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-          lt_list,lt_intList: begin
+          lt_list,lt_intList,lt_emptyList: begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
           end;
           else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
         end;
-        lt_list,lt_intList,lt_realList,lt_numList: case y^.literalType of
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
           lt_int: begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
           end;
-          lt_list,lt_intList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
+          lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
           end else raiseError(el3_evalError,'Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
@@ -289,6 +290,8 @@ ROUND_IMPLEMENTATION;
 
 {$undef ROUND_IMPLEMENTATION}
 
+
+
 FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -299,7 +302,7 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
         lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList: begin
+        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
         end;
@@ -318,7 +321,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION headOf(CONST x:P_literal):P_literal;
     begin
       result:=nil;
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
+      if x^.literalType in C_validListTypes then begin
         if P_listLiteral(x)^.size>0 then begin
           result:=P_listLiteral(x)^.value(0);
           result^.rereference;
@@ -330,7 +333,7 @@ FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR i,i0:longint;
     begin
       result:=nil;
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
+      if x^.literalType in C_validListTypes then begin
         case y^.literalType of
           lt_int: begin
             result:=newListLiteral;
@@ -359,7 +362,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR i:longint;
     begin
       result:=nil;
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
+      if x^.literalType in C_validListTypes then begin
         result:=newListLiteral;
         for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
       end else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
@@ -368,7 +371,7 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
     VAR i,i0:longint;
     begin
-      if x^.literalType in [lt_list,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList,lt_flatList] then begin
+      if x^.literalType in C_validListTypes then begin
         case y^.literalType of
           lt_int: begin
             result:=newListLiteral;
@@ -396,11 +399,11 @@ FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList]) then begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.sort;
     end else if (params<>nil) and (params^.size=2)
-            and (params^.value(0)^.literalType in [lt_list..lt_flatList])
+            and (params^.value(0)^.literalType in C_validListTypes)
             and (params^.value(1)^.literalType=lt_expression) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)));
@@ -410,7 +413,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list..lt_flatList])
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)
     then result:=P_listLiteral(params^.value(0))^.sortPerm
     else raiseNotApplicableError('sortPerm',params,tokenLocation);
   end;
@@ -419,7 +422,7 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in [lt_list..lt_listWithError]) then begin
+      if (params^.value(0)^.literalType in C_validListTypes) then begin
         result:=P_listLiteral(params^.value(0))^.clone;
         P_listLiteral(result)^.unique;
       end;
@@ -462,14 +465,6 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     raiseNotApplicableError('random',params,tokenLocation);
   end;
 
-PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST isPure:boolean; CONST explanation:ansistring);
-  VAR oldExplanation:ansistring;
-  begin
-    intrinsicRuleMap.put(name,ptr);
-    if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(name,oldExplanation))
-      then intrinsicRuleExplanationMap.put(name,explanation);
-    if isPure then pureIntrinsicFunctions.add(ptr);
-  end;
 
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
@@ -725,7 +720,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     begin
       case p^.literalType of
         lt_string: result:=splitOneString(P_stringLiteral(p));
-        lt_list,lt_stringList: begin
+        lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(p)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
@@ -737,8 +732,8 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2)
-      and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_list])
-      and (params^.value(1)^.literalType in [lt_string,lt_stringList]) then begin
+      and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_list,lt_emptyList])
+      and (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       initSplitters;
       result:=splitRecurse(params^.value(0));
     end else raiseNotApplicableError('split',params,tokenLocation);
@@ -768,71 +763,45 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     else raiseNotApplicableError('softcast',params,tokenLocation);
   end;
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION trim_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.trim;
-        lt_list,lt_stringList:  begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(trim_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else result:=newErrorLiteralRaising('Cannot apply trim to literal of type '+C_typeString[x^.literalType],tokenLocation);
-      end;
-    end;
-
+{$define STRINGLITERAL_ROUTINE:=
+FUNCTION recurse(CONST x:P_literal):P_literal;
+  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=trim_rec(params^.value(0))
-    else raiseNotApplicableError('trim',params,tokenLocation);
+    case x^.literalType of
+      lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
+      lt_list,lt_stringList,lt_emptyList:  begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
+          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+      end;
+      else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation);
+    end;
   end;
+
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList])
+  then result:=recurse(params^.value(0))
+  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+end}
+
+
+FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=trim}
+{$define ID_MACRO:='trim'}
+STRINGLITERAL_ROUTINE;
 
 FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION upper_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.upper;
-        lt_list,lt_stringList:  begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(upper_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else result:=newErrorLiteralRaising('Cannot apply "upper" to literal of type '+C_typeString[x^.literalType],tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=upper_rec(params^.value(0))
-    else raiseNotApplicableError('upper',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=upper}
+{$define ID_MACRO:='upper'}
+STRINGLITERAL_ROUTINE;
 
 FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION lower_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.lower;
-        lt_list,lt_stringList:  begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(lower_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else result:=newErrorLiteralRaising('Cannot apply "lower" to literal of type '+C_typeString[x^.literalType],tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=lower_rec(params^.value(0))
-    else raiseNotApplicableError('lower',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=lower}
+{$define ID_MACRO:='lower'}
+STRINGLITERAL_ROUTINE;
+{$undef STRINGLITERAL_ROUTINE}
 
 FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
@@ -852,7 +821,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       result:=nil;
       case x^.literalType of
         lt_string: result:=stringToExprCallback(P_stringLiteral(x)^.value,tokenLocation);
-        lt_list,lt_stringList:  begin
+        lt_list,lt_stringList,lt_emptyList:  begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
             P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
@@ -863,7 +832,8 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string]) then result:=expression_rec(params^.value(0))
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_emptyList,lt_string])
+    then result:=expression_rec(params^.value(0))
     else raiseNotApplicableError('expression',params,tokenLocation);
   end;
 
@@ -969,7 +939,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
-                                          and (params^.value(1)^.literalType=lt_stringList) then begin
+                                          and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
       setLength(L,P_listLiteral(params^.value(1))^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       system.EnterCriticalSection(file_cs);
@@ -1255,8 +1225,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) then begin
+       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
        case params^.value(0)^.literalType of
          lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.value(0))^.value)));
          lt_int:  exit(newBoolLiteral(false));
@@ -1279,8 +1248,7 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) then begin
+       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
       case params^.value(0)^.literalType of
         lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.value(0))^.value)));
         lt_int:  exit(newBoolLiteral(false));
@@ -1317,8 +1285,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-      ((params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList]) or
-       (params^.value(0)^.literalType in [lt_list,lt_flatList]) and (P_listLiteral(params^.value(0))^.size=0)) and
+       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) and
        (params^.value(1)^.literalType in [lt_real,lt_int]) and
        (params^.value(2)^.literalType in [lt_real,lt_int]) then begin
       if params^.value(1)^.literalType=lt_real
@@ -1495,8 +1462,6 @@ INITIALIZATION
   system.InitCriticalSection(print_cs);
   system.InitCriticalSection(file_cs);
   //------------------------------------------------------------:Critical sections
-
-
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
   pureIntrinsicFunctions.create;

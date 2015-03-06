@@ -413,7 +413,7 @@ FUNCTION T_intLiteral       .literalType: T_literalType; begin result := lt_int;
 FUNCTION T_realLiteral      .literalType: T_literalType; begin result := lt_real;       end;
 FUNCTION T_stringLiteral    .literalType: T_literalType; begin result := lt_string;     end;
 FUNCTION T_expressionLiteral.literalType: T_literalType; begin result := lt_expression; end;
-FUNCTION T_listLiteral.literalType: T_literalType;
+FUNCTION T_listLiteral      .literalType: T_literalType;
   CONST ERROR_FREE_BITS= 1;
         SCALAR_BITS    = ERROR_FREE_BITS + 2;
         NUMERIC_BITS   = SCALAR_BITS + 4;
@@ -449,7 +449,7 @@ FUNCTION T_listLiteral.literalType: T_literalType;
       else if (bitMask and STR_BITS)     = STR_BITS     then strictType := lt_stringList
       else if (bitMask and SCALAR_BITS)  = SCALAR_BITS  then strictType := lt_flatList
       else                                                   strictType := lt_list;
-    end else strictType := lt_list;
+    end else strictType := lt_emptyList;
     result := strictType;
   end;
 //================================================================:?.literalType
@@ -885,7 +885,7 @@ FUNCTION T_expressionLiteral.leqForSorting(CONST other: P_Literal): boolean;
 FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
   VAR i: longint;
   begin
-    if (other^.literalType in [lt_list..lt_listWithError]) then
+    if (other^.literalType in C_validListTypes) then
       begin
       if length(element)<length(P_listLiteral(other)^.element) then exit(true)
       else if length(element)>length(P_listLiteral(other)^.element) then exit(false)
@@ -988,12 +988,11 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
     end;
     nextAppendIsRange := false;
 
-    if length(element) = 0 then
-      begin
+    if length(element) = 0 then begin
       strictType := lt_listWithError;
       raiseError(el3_evalError, 'Cannot append range to empty list', tokenLocation);
       exit;
-      end;
+    end;
     last := element [length(element)-1];
     if (last^.literalType = lt_int) and (L^.literalType = lt_int) then
       begin
@@ -1027,12 +1026,11 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
         append(newStringLiteral(c0), false);
         end;
       end
-    else
-      begin
+    else begin
       strictType := lt_listWithError;
       raiseError(el3_evalError, 'Invalid range expression '+
         last^.toString+'..'+L^.toString, tokenLocation);
-      end;
+    end;
   end;
 
 PROCEDURE T_listLiteral.setRangeAppend;
@@ -1205,7 +1203,7 @@ FUNCTION T_listLiteral.isKeyValueList: boolean;
   begin
     if (literalType<>lt_list) or (length(element)<=0) then exit(length(element)=0);
     for i := 0 to length(element)-1 do if not(
-        (element [i]^.literalType in [lt_list..lt_listWithError]) and
+        (element [i]^.literalType in C_validListTypes) and
         (P_listLiteral(element [i])^.size = 2) and
         (P_listLiteral(element [i])^.value(0)^.literalType = lt_string)) then exit(false);
     result := true;
@@ -1233,39 +1231,31 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               P_scalarLiteral(RHS)))
           else
             exit(false);
-        lt_list..lt_flatList: if (RHS^.literalType in [lt_list..lt_flatList]) and
-            (length(P_listLiteral(LHS)^.element) =
-            length(P_listLiteral(RHS)^.element)) then
-            begin
+        lt_list..lt_flatList: if (RHS^.literalType in C_validListTypes) and
+                                 (length(P_listLiteral(LHS)^.element) =length(P_listLiteral(RHS)^.element)) then begin
             result := true;
             i := 0;
-            while result and (i<length(P_listLiteral(LHS)^.element)) do
-              begin
+            while result and (i<length(P_listLiteral(LHS)^.element)) do begin
               result := result and equals(P_listLiteral(LHS)^.element [i],
                 P_listLiteral(RHS)^.element [i]);
               Inc(i);
-              end;
-            end
-          else
-            exit(false);
-      else exit(false);
-        end;
+            end;
+          end else exit(false);
+        else exit(false);
+      end;
     end;
 
   FUNCTION isContained(CONST LHS, RHS: P_literal): boolean;
-    VAR
-      i: longint;
+    VAR i: longint;
     begin
       result := false;
-      if RHS^.literalType in [lt_list..lt_flatList] then
-        begin
+      if RHS^.literalType in C_validListTypes then begin
         i := 0;
-        while (i<length(P_listLiteral(RHS)^.element)) and not (result) do
-          begin
+        while (i<length(P_listLiteral(RHS)^.element)) and not (result) do begin
           result := result or equals(LHS, P_listLiteral(RHS)^.element [i]);
           Inc(i);
-          end;
         end;
+      end;
     end;
 
   VAR
@@ -1339,8 +1329,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   false);
               exit(result);
               end;
-            lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList,
-            lt_stringList, lt_flatList: begin
+            lt_list..lt_flatList: begin
               //nested list X flat/nested list
               i := length(P_listLiteral(LHS)^.element);
               i1 := length(P_listLiteral(RHS)^.element);
@@ -1372,27 +1361,24 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   op, P_scalarLiteral(RHS), tokenLocation),
                   false);
               exit(result);
-              end;
+            end;
             lt_list: begin
               //flat list X nested list
               i := length(P_listLiteral(LHS)^.element);
               i1 := length(P_listLiteral(RHS)^.element);
-              if i = i1 then
-                begin
+              if i = i1 then begin
                 result := newListLiteral;
                 for i := 0 to i1-1 do
                   P_listLiteral(result)^.append(resolveOperator(
                     P_listLiteral(LHS)^.element [i], op,
                     P_listLiteral(RHS)^.element [i], tokenLocation), false);
                 exit(result);
-                end
-              else
+              end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
                   IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
-              end;
-            lt_booleanList, lt_intList, lt_realList, lt_numList,
-            lt_stringList, lt_flatList: begin
+            end;
+            lt_booleanList..lt_flatList: begin
               //flat list X flat list
               i := length(P_listLiteral(LHS)^.element);
               i1 := length(P_listLiteral(RHS)^.element);
@@ -1431,7 +1417,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
       tt_comparatorListEq: exit(newBoolLiteral(equals(LHS, RHS)));
       tt_operatorIn: exit(newBoolLiteral(isContained(LHS, RHS)));
-      tt_operatorExtractL0: if LHS^.literalType in [lt_list..lt_flatList] then
+      tt_operatorExtractL0: if LHS^.literalType in C_validListTypes then
           case RHS^.literalType of
             lt_int: begin
               i1 := length(P_listLiteral(LHS)^.element);
@@ -1495,10 +1481,8 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
                 end
               else exit(newErrorLiteralRaising('Operator % with a stringList as second operand can only be applied to key-value-lists!', tokenLocation));
-
-            lt_list, lt_flatList: if P_listLiteral(RHS)^.size = 0 then
-                exit(newListLiteral)
-              else
+            lt_emptyList: exit(newListLiteral);
+            lt_list, lt_flatList:
                 exit(newErrorLiteralRaising(LHS^.literalType,
                   RHS^.literalType, op, tokenLocation));
           else exit(newErrorLiteralRaising(LHS^.literalType,
@@ -1507,42 +1491,30 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         else
           exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,
             op, tokenLocation));
-      tt_operatorExtractL1: if LHS^.literalType in [lt_list..lt_flatList] then
-          begin
+      tt_operatorExtractL1: if LHS^.literalType in C_validListTypes then begin
           result := newListLiteral;
           for i := 0 to length(P_listLiteral(LHS)^.element)-1 do
             P_listLiteral(result)^.append(resolveOperator(
               P_listLiteral(LHS)^.element [i], tt_operatorExtractL0,
               RHS, tokenLocation), false);
           exit(result);
-          end
-        else
-          exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,
-            op, tokenLocation));
-      tt_operatorExtractL2: if LHS^.literalType in [lt_list..lt_flatList] then
-          begin
+        end else exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation));
+      tt_operatorExtractL2: if LHS^.literalType in C_validListTypes then begin
           result := newListLiteral;
           for i := 0 to length(P_listLiteral(LHS)^.element)-1 do
             P_listLiteral(result)^.append(resolveOperator(
               P_listLiteral(LHS)^.element [i], tt_operatorExtractL1,
               RHS, tokenLocation), false);
           exit(result);
-          end
-        else
-          exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,
-            op, tokenLocation));
-      tt_operatorExtractL3: if LHS^.literalType in [lt_list..lt_flatList] then
-          begin
+        end else exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation));
+      tt_operatorExtractL3: if LHS^.literalType in C_validListTypes then begin
           result := newListLiteral;
           for i := 0 to length(P_listLiteral(LHS)^.element)-1 do
             P_listLiteral(result)^.append(resolveOperator(
               P_listLiteral(LHS)^.element [i], tt_operatorExtractL2,
               RHS, tokenLocation), false);
           exit(result);
-          end
-        else
-          exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,
-            op, tokenLocation));
+        end else exit(newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation));
       end;
   end;
 

@@ -307,7 +307,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               rulePattern.appendComparison('',tt_comparatorEq,P_scalarLiteral(first^.data));
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
-            end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_list) and (P_listLiteral(first^.data)^.size=0) then begin
+            end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_emptyList) then begin
               rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
