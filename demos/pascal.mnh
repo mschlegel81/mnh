@@ -1,0 +1,9 @@
+memoized
+private tri(1)->1;
+private tri(n>1)->tri(n-1)|1+1|tri(n-1);
+private printTri(n:int)->print(each(i,[1..n],&"\n"&,each(i,[0..n-i],&,"\t")& each(x,tri(i),&"\t\t"&)));
+
+//*Simple output
+main->printTri(10);
+//*See <a href="http://rosettacode.org/wiki/Pascal%27s_triangle">http://rosettacode.org/wiki/Pascal's_triangle</a>
+main(lineCount)->printTri(softCast(lineCount));

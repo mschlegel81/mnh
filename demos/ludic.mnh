@@ -1,0 +1,11 @@
+private dropNth(L,n)->dropNth(L%([0..size(L)-1] mod n<>0));
+private dropNth([])->[];
+private dropNth(L:intList)->head(L)|dropNth(L,head(L));
+private dropNth(i:int)->i;
+private LUDICS:=1|dropNth([2..22000]);
+
+//*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
+main->print('Ludic Numbers\n  The first 25 are: ',head(LUDICS,25),'.') and
+      print('  There are ',trueCount(LUDICS<=1000),' lesser or equal to 1000.') and
+      print('  The 2000..2005th are ',LUDICS%([2000..2005]-1),'.') and
+      print('  The triplets below 250 are ',each(i,LUDICS%(LUDICS<250),i+2 in LUDICS and i+6 in LUDICS ? [i,i+2,i+6] : void));
