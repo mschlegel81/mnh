@@ -1152,10 +1152,6 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
       result:=newListLiteral;
       i0:=1;
-      if curlyBracketsDelimitOneToken and (copy(trim(stringToSplit),1,1)='{') then  begin
-        i1:=2;
-        stepToken;
-      end;
       while i0<=length(stringToSplit) do begin
         if stringToSplit[i0] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar] then begin //whitespace
           i1:=i0;
