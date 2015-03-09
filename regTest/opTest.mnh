@@ -1,0 +1,12 @@
+boolOp:=[' and ',' or ',' xor '];
+realOp:=["+","*","-","/","&","^"];
+intOp :=realOp|boolOp;
+
+testOperator(op,LHS,RHS)->print(LHS,op,RHS,' = ',expression("$x"&op&"$y")(LHS,RHS));
+
+main->each(op,boolOp,testOperator(op,true,false))|
+      each(op,intOp ,testOperator(op,3   ,5))|
+      each(op,realOp,testOperator(op,3.0,5.0))|
+      each(op,boolOp,testOperator(op,[true,true,false,false],[true,false,true,false]))|
+      each(op,intOp ,testOperator(op,[1..10],[1,2,3,2,2,3,1,4,3,5]));
+main;
