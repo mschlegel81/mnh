@@ -6,14 +6,23 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
          'result','assign','reset','rewrite','close','object','record','create','destroy','toString','inherited',
          'setLength']);
 fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
+fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
+fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
 
+mutable readOnly:=true;
+memoized printOnce(text)->print(text);
+voidOf(x)->void;
 
-check(filename)->each(t,tokenSplit(fileContents(filename),language),and,fixToken(t)<>t ? print(filename&": "&t) : true);
-fix(filename)->fix(filename,tokenSplit(fileContents(filename),language));
-fix(filename,oldTokens)->fix(filename,oldTokens,pEach(t,oldTokens,fixToken(t)));
-fix(filename,oldTokens,newTokens==oldTokens)->true;
-fix(filename,oldTokens,newTokens)->writeFile(filename,each(t,newTokens,&)) and print('file ',filename,' modified');
+fix(filename         )->fix(filename,fileLines(filename));
+fix(filename,oldLines)->fix(filename,oldLines,fixFileLines(oldLines));
+fix(filename,oldLines,newLines==oldLines)->false;
+fix(filename,oldLines,newLines          )->voidOf(each(i,[0..size(oldLines)-1],
+                                                       oldLines%i<>newLines%i ? printOnce(filename) and print('   <',oldLines%i,'>\n   >',newLines%i,'<')
+                                                                              : void) |
+                                                  (readOnly ? void
+                                                            : writeFileLines(filename,newLines)));
 
-each(s,recFiles(".","*.pas,*.inc"),and,fix(s));
-
-//each(s,recFiles("../art/source","*.pas,*.inc"),and,fix(s));
+//*Check all files, writing out potential fixes
+main("check")->each(s,recFiles("..","*.pas,*.inc"),fix(s));
+//*Fix all files, writing out potential fixes
+main("fix")->(readOnly:=false)|each(s,recFiles("..","*.pas,*.inc"),fix(s));
