@@ -1366,6 +1366,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   end;
 
 FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define INNER_FORMATTING:=
   VAR resultString:array of ansistring;
       resultIsList:boolean=false;
       literalIterator:longint=1;
@@ -1443,8 +1444,8 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           i0:=i1;
         end;
       end;
-    end;
-
+    end}
+  INNER_FORMATTING;
   VAR k:longint;
   begin
     result:=nil;
@@ -1455,6 +1456,28 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         for k:=0 to length(resultString)-1 do P_listLiteral(result)^.append(newStringLiteral(resultString[k]),false);
       end else result:=newStringLiteral(resultString[0]);
     end else raiseNotApplicableError('format',params,tokenLocation);
+  end;
+
+FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  INNER_FORMATTING;
+  VAR k:longint;
+      toPrint:ansistring;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
+      toPrint:='';
+      for k:=0 to length(resultString)-1 do begin
+        if k>0 then toPrint:=toPrint+C_lineBreakChar;
+        toPrint:=toPrint+resultString[k];
+      end;
+      setLength(resultString,0);
+
+      system.EnterCriticalSection(print_cs);
+      writePrint(toPrint);
+      system.LeaveCriticalsection(print_cs);
+      result:=newVoidLiteral;
+    end else raiseNotApplicableError('printf',params,tokenLocation);
   end;
 
 INITIALIZATION
@@ -1536,7 +1559,7 @@ INITIALIZATION
 
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,p0,p1,...);#Returns a formatted version of the given 0..n parameters');
-
+  registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,p0,p1,...);#Prints a formatted version of the given 0..n parameters');
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');
