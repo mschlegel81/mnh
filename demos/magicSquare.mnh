@@ -1,0 +1,16 @@
+private printSquare(S)->print(each(row,S,&"\n"&,each(c,row,&"\t"&))) and print("The magic number is ",each(c,S%0,+));
+private set(S:list,I,J,k)->each(i,[0..size(S)-1],i=I ? each (j,[0..size(S)-1],j=J ? k : S%i%j) : S%i);
+
+private makeSquare(n:int)->makeSquare_(n<1 ? 1 : (n and 1)=0 ? n+1 : n);
+private makeSquare_(n:int)->makeSquare_(n,each(i,[0..n-1],each(j,[0..n-1],i=0 and j=n div 2 ? 1 : 'x')),n-1,(n div 2)+1,2);
+private makeSquare_(n,S:list,i,j,k)->k<n*n ? makeSquare_(n,set(S,i,j,k),
+                                                         k mod n=0 ? (i+1) mod n : (i+n-1) mod n,
+                                                         k mod n=0 ? j           : (j+1)   mod n,
+                                                         k+1)
+                                           : set(S,i,j,k);
+
+//*Print out an 21x21 magic square for regression testing
+main->printSquare(makeSquare(21));
+
+//*Print out an n x n magic square; See <a href="http://rosettacode.org/wiki/Magic_squares_of_odd_order">http://rosettacode.org/wiki/Magic_squares_of_odd_order</a>
+main(n)->printSquare(makeSquare(softCast(n)));
