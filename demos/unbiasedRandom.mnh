@@ -1,0 +1,15 @@
+mutable N:=3;
+private biasedRandom->random<1/N ? 1 : 0;
+private unbiasedRandom->unbias(biasedRandom,biasedRandom);
+private unbias(x,x)->unbiasedRandom;
+private unbias(x,y)->x;
+
+private
+testUnbiasing(n:int)->printf('%X% %00.00%%% %00.00%%%',N:=n,
+                             each(i,[1..10000],+,  biasedRandom)/100,
+                             each(i,[1..10000],+,unbiasedRandom)/100);
+
+//*See <a href="http://rosettacode.org/wiki/Unbias_a_random_generator">http://rosettacode.org/wiki/Unbias_a_random_generator</a>
+main->print('I biased unbiased') and each(i,[3..6],testUnbiasing(i));
+
+main;
