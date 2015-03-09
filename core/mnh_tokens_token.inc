@@ -116,19 +116,25 @@ FUNCTION T_tokenRecycler.newToken(CONST original:P_token):P_token;
     result^.next:=nil;
   end;
 
+PROCEDURE polishExpressionString(VAR s:ansistring);
+  CONST specialChar:array [0..16] of char=(',','+','-','*','/','?',':','^','%','.','&','(',')','[',']','{','}');
+  VAR i:longint;
+  begin
+    s:=replaceAll(trim(s),'  ',' ');
+    for i:=0 to length(specialChar)-1 do s:=replaceAll(s,' '+specialChar[i],specialChar[i]);
+    for i:=1 to length(specialChar)-1 do s:=replaceAll(s,specialChar[i]+' ',specialChar[i]);
+  end;
+
 FUNCTION tokensToString(CONST first:P_token):ansistring;
-  CONST idLikes:set of T_tokenType=[tt_identifier,tt_intrinsicRulePointer,tt_importedUserRulePointer,tt_localUserRulePointer,tt_each,tt_parallelEach, tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_literal];
   VAR p:P_token;
-      lastWasIdentifierLike:boolean=false;
   begin
     result:='';
     p:=first;
     while p<>nil do begin
       result:=result+p^.toString;
-      lastWasIdentifierLike:=p^.tokType in idLikes;
       p:=p^.next;
-      if (p<>nil) and lastWasIdentifierLike and (p^.tokType in idLikes) then result:=result+' ';
     end;
+    polishExpressionString(result);
   end;
 
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
@@ -200,16 +206,17 @@ FUNCTION T_token.toString:ansistring;
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate,
+      tt_mutate: result:=txt;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
       tt_intrinsicRulePointer,
-      tt_parameterIdentifier: result:=txt;
-      tt_literal            : result:=P_literal(data)^.toString;
+      tt_parameterIdentifier: result:=' '+txt+' ';
+      tt_literal            : result:=' '+P_literal(data)^.toString+' ';
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
+      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod: result:=' '+C_tokenString[tokType]+' ';
       else result:=C_tokenString[tokType];
     end;
   end;

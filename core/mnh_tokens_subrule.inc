@@ -428,6 +428,7 @@ FUNCTION T_subrule.toString:ansistring;
     else begin
       result:=pattern.toString+result;
     end;
+    polishExpressionString(result);
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer):string;
