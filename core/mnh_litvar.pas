@@ -114,6 +114,8 @@ TYPE
     FUNCTION value: ansistring;
     FUNCTION softCast: P_scalarLiteral;
     FUNCTION trim: P_stringLiteral;
+    FUNCTION trimLeft: P_stringLiteral;
+    FUNCTION trimRight: P_stringLiteral;
     FUNCTION upper: P_stringLiteral;
     FUNCTION lower: P_stringLiteral;
     //from T_scalarLiteral:
@@ -923,8 +925,7 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
   end;
 
 FUNCTION T_stringLiteral.trim: P_stringLiteral;
-  VAR
-    rs: ansistring;
+  VAR rs: ansistring;
   begin
     rs := SysUtils.trim(val);
     if rs = val then begin
@@ -933,9 +934,29 @@ FUNCTION T_stringLiteral.trim: P_stringLiteral;
     end else result := newStringLiteral(rs);
   end;
 
+FUNCTION T_stringLiteral.trimLeft: P_stringLiteral;
+  VAR rs: ansistring;
+  begin
+    rs := SysUtils.TrimLeft(val);
+    if rs = val then begin
+      result := @self;
+      rereference;
+    end else result := newStringLiteral(rs);
+  end;
+
+FUNCTION T_stringLiteral.trimRight: P_stringLiteral;
+  VAR rs: ansistring;
+  begin
+    rs := SysUtils.TrimRight(val);
+    if rs = val then begin
+      result := @self;
+      rereference;
+    end else result := newStringLiteral(rs);
+  end;
+
+
 FUNCTION T_stringLiteral.upper: P_stringLiteral;
-  VAR
-    rs: string;
+  VAR rs: string;
   begin
     rs := uppercase(val);
     if rs = val then begin
@@ -945,8 +966,7 @@ FUNCTION T_stringLiteral.upper: P_stringLiteral;
   end;
 
 FUNCTION T_stringLiteral.lower: P_stringLiteral;
-  VAR
-    rs: string;
+  VAR rs: string;
   begin
     rs := lowercase(val);
     if rs = val then begin

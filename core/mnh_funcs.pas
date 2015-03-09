@@ -792,6 +792,16 @@ FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 {$define ID_MACRO:='trim'}
 STRINGLITERAL_ROUTINE;
 
+FUNCTION trimLeft_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=trimLeft}
+{$define ID_MACRO:='trimLeft'}
+STRINGLITERAL_ROUTINE;
+
+FUNCTION trimRight_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=trimRight}
+{$define ID_MACRO:='trimRight'}
+STRINGLITERAL_ROUTINE;
+
 FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=upper}
 {$define ID_MACRO:='upper'}
@@ -1532,6 +1542,8 @@ INITIALIZATION
   registerRule('time'          ,@time_imp      ,false,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('softCast'      ,@softCast_imp  ,true,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule('trim'          ,@trim_imp      ,true,'trim(S:string);#Returns string S without leading or trailing spaces');
+  registerRule('trimLeft'      ,@trimLeft_imp  ,true,'trimLeft(S:string);#Returns string S without leading spaces');
+  registerRule('trimRight'     ,@trimRight_imp ,true,'trimRight(S:string);#Returns string S without trailing spaces');
   registerRule('upper'         ,@upper_imp     ,true,'upper(S:string);#Returns an uppercase representation of S');
   registerRule('lower'         ,@lower_imp     ,true,'lower(S:string);#Returns an lowercase representation of S');
   registerRule('string'        ,@string_imp    ,true,'string(X);#Returns a string-representation of X');
