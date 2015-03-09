@@ -14,6 +14,6 @@ private fibWordLength(i)->each(s,fibWordCharFreq(i),+);
 private fibWordEntropy(i)->-each(s,fibWordCharFreq(i)/fibWordLength(i),+,s*ln(s)/ln(2));
 
 //*Solves the <a href="http://rosettacode.org/wiki/Fibonacci_word">Fibonacci Word Task</a> (with cheating)
-main->print("N\tLength\tEntropy\tWord\n"&
-            each(i,[ 1.. 9],&"\n"&,i&"\t"&length(fibWord(i))&"\t"&shannonEntropy(fibWord(i))&"\t"&fibWord(i))&"\n"&
-            each(i,[10..37],&"\n"&,i&"\t"& fibWordLength(i) &"\t"&fibWordEntropy        (i) ));
+main->print("N\tLength\tEntropy\tWord\n") |
+      each(i,[ 1.. 9],printf('%#0% %########0% %0.000000000000#% %X%',i,length(fibWord(i)),shannonEntropy(fibWord(i)),fibWord(i))) |
+      each(i,[10..37],printf('%#0% %########0% %0.000000000000#%',i,fibWordLength(i),fibWordEntropy(i)));

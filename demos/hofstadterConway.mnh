@@ -2,8 +2,8 @@ private memoized hc(k<=2):=1;
 private          hc(k)->hc(hc(k-1))+hc(k-hc(k-1));
 
 private maxBetween(i0,i1)->maxBetween(i0,i1,each(i,[i0..i1],hc(i)/i));
-private maxBetween(i0,i1,L)->max(L)&" @i="&(i0+argMax(L));
+private maxBetween(i0,i1,L)->format('%#0.00000000000000% @i=%#####0#%',max(L),i0+argMax(L));
 
 //*This solves the <a href="http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence"> Hofstadter-Conway $10,000 sequence task from Rosetta Code</a>
-main->each(i,[0..19],print("range 2^",i,'..2^',i+1,' max. a(n)/n=',maxBetween(2^i,2^(i+1)))) and
+main->each(i,[0..19],printf("range 2^%#0%..2^%#0% max. a(n)/n=%X%",i,i+1,maxBetween(2^i,2^(i+1)))) and
       print("Mallows Number: ",max(each(i,[1..2^20],hc(i)/i>0.55 ? i : void)));
