@@ -30,12 +30,12 @@ TYPE
       PROPERTY element[index:longint]:ENTRY_TYPE read getEntry; default;
       FUNCTION elementArray:ENTRY_TYPE_ARRAY;
   end;
-  
+
   T_listOfString=specialize G_list<ansistring>;
   T_listOfIntegers=specialize G_list<longint>;
-  
+
   GENERIC G_sparseArray<ENTRY_TYPE>=object
-    private      
+    private
       TYPE INDEXED_ENTRY=record index:longint; value:ENTRY_TYPE; end;
       VAR map:array of array of INDEXED_ENTRY;
       hashmask:longint;
@@ -48,11 +48,11 @@ TYPE
       PROCEDURE add(CONST index:longint; CONST value:ENTRY_TYPE);
       FUNCTION containsIndex(CONST index:longint; OUT value:ENTRY_TYPE):boolean;
       FUNCTION remove(CONST index:longint):boolean;
-      FUNCTION size:longint;      
+      FUNCTION size:longint;
       FUNCTION getEntry(CONST iterator:longint):ENTRY_TYPE;
       FUNCTION getIndex(CONST iterator:longint):longint;
   end;
-  
+
   T_arrayOfString=array of ansistring;
   { G_stringKeyMap }
 
@@ -361,7 +361,7 @@ FUNCTION G_list.elementArray:ENTRY_TYPE_ARRAY;
 
 CONSTRUCTOR G_hashMap.create(hashFunc:HASH_FUNC);
   begin
-    if hashFunc=nil then Raise Exception.Create ('Hash func is nil!');
+    if hashFunc=nil then Raise Exception.create ('Hash func is nil!');
     hash:=hashFunc;
     setLength(bucket,1);
     bitMask:=0;
@@ -599,12 +599,12 @@ PROCEDURE G_sparseArray.rehash(CONST grow:boolean);
         setLength(map[i+oldLen],j1);
       end;
     end;
-  end;  
-  
+  end;
+
 FUNCTION G_sparseArray.size:longint;
   begin result:=entryCount;end;
-  
-FUNCTION G_sparseArray.getIndex(CONST iterator:longint):longint;  
+
+FUNCTION G_sparseArray.getIndex(CONST iterator:longint):longint;
   VAR i,k:longint;
   begin
     k:=iterator;
@@ -615,8 +615,8 @@ FUNCTION G_sparseArray.getIndex(CONST iterator:longint):longint;
     end;
     if (i<length(map)) then result:=map[i,k].index
                        else result:=-1;
-  end;  
-  
+  end;
+
 FUNCTION G_sparseArray.getEntry(CONST iterator:longint):ENTRY_TYPE;
   VAR i,k:longint;
   begin
@@ -628,7 +628,7 @@ FUNCTION G_sparseArray.getEntry(CONST iterator:longint):ENTRY_TYPE;
     end;
     if (i<length(map)) then result:=map[i,k].value
                        else result:=map[0,0].value;
-  end;  
+  end;
 
 PROCEDURE G_stringKeyMap.rehash(grow: boolean);
   VAR i,i0,j,k,c0,c1,newMask:longint;
@@ -757,7 +757,7 @@ PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
     end;
     repeat lock:=0 until lock=0;
   end;
-  
+
 FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
   VAR i,j:longint;
   begin

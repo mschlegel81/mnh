@@ -41,7 +41,7 @@ TYPE
     PROCEDURE writeDouble(x:double);
     FUNCTION   readDouble  :double;
     PROCEDURE writeExtended(x:extended);
-    FUNCTION   readExtended  :extended;    
+    FUNCTION   readExtended  :extended;
 
     PROCEDURE writeShortstring(x:shortstring);
     FUNCTION   readShortstring  :shortstring;
@@ -52,7 +52,7 @@ TYPE
   end;
 
   T_serializable=object
-    CONSTRUCTOR notReallyAConstructor; 
+    CONSTRUCTOR notReallyAConstructor;
     FUNCTION  loadFromFile(filename:string):boolean;                 overload; //liest die Inhalte des Objektes aus der Datei mit dem übergebenen Namen und gibt true zurück gdw. kein Fehler auftrat
     PROCEDURE saveToFile(filename:string);                           overload; //schreibt die Inhalte des Objektes in die Datei mit dem übergebenen Namen
     FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; abstract; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
@@ -138,14 +138,14 @@ CONSTRUCTOR T_file.createToWrite(filename:string);
       stateOkay:=true;
     except stateOkay:=false; end;
   end;
-  
+
 DESTRUCTOR  T_file.destroy;
   begin
     if not(readMode) then flushBuffer;
     close(handle);
   end;
-  
-FUNCTION    T_file.allOkay:boolean;  
+
+FUNCTION    T_file.allOkay:boolean;
   begin
     result:=stateOkay;
   end;
@@ -163,7 +163,7 @@ FUNCTION    T_file.allOkay:boolean;
       stateOkay:=stateOkay and (bufFill>=sizeOf(result));
       move(buffer[0],result,sizeOf(result));
       move(buffer[sizeOf(result)],buffer[0],bufFill-sizeOf(result));
-      dec(bufFill,sizeOf(result));    
+      dec(bufFill,sizeOf(result));
     end;
   end}
 

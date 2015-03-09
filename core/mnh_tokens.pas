@@ -15,7 +15,7 @@ TYPE
   {$include mnh_tokens_futureTask.inc}
 
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
-  
+
   { T_package }
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_package=object
@@ -40,7 +40,7 @@ TYPE
   end;
 
 CONST C_id_qualify_character='.';
-  
+
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 PROCEDURE printMainPackageDocText;
@@ -50,7 +50,7 @@ PROCEDURE findAndDocumentAllPackages;
 PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
 
 VAR mainPackageProvider:T_codeProvider;
-    
+
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
@@ -119,13 +119,13 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     //-------------------------------------------------------------:housekeeping
     recycler.destroy;
   end;
-  
+
 PROCEDURE finalizePackages;
   VAR i:longint;
   begin
     if packagesAreFinalized then exit;
     mainPackage.destroy;
-    mainPackageProvider.destroy;  
+    mainPackageProvider.destroy;
     clearAllCaches;
     clearErrors;
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
@@ -138,7 +138,7 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
       newSourceName:ansistring;
       newSource:P_codeProvider=nil;
   begin
-    for i:=0 to length(secondaryPackages)-1 do 
+    for i:=0 to length(secondaryPackages)-1 do
       if secondaryPackages[i]^.codeProvider^.id = packageId then begin
         if secondaryPackages[i]^.ready then begin
           if secondaryPackages[i]^.needReload then begin
@@ -189,11 +189,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=recycler.disposeToken(temp);
         while first<>nil do begin
-          if first^.tokType=tt_identifier then begin            
+          if first^.tokType=tt_identifier then begin
             newId:=first^.txt;
             if isQualified(newId) then begin
               raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.toString,first^.location);
-              exit;            
+              exit;
             end;
             //no duplicates are created; packages are always added at the end
             i:=0;
@@ -224,7 +224,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           end;
         end;
       end;
-      
+
     VAR assignmentToken:P_token;
 
     PROCEDURE parseRule;
@@ -282,7 +282,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           p:=p^.next;
         end;
         //:plausis
-        
+
         ruleId:=trim(first^.txt);
         first:=recycler.disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
@@ -364,7 +364,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         else
           first:=nil;
       end;
-          
+
     begin
       if first=nil then exit;
       if isFirstLine then begin
@@ -478,7 +478,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
       packageId,ruleId:ansistring;
-  begin    
+  begin
     {$ifdef PROFILING}
     profiler.Clear;
     profiler.Start;
@@ -514,7 +514,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
       exit;
     end;
 
-    if ((packageId='mnh') or (packageId='')) 
+    if ((packageId='mnh') or (packageId=''))
     and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
@@ -613,7 +613,7 @@ FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scal
     recycler.destroy;
 
   end;
-  
+
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
   VAR t:P_token;
       parLit:P_listLiteral;
@@ -672,7 +672,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
     profiler.Clear;
     profiler.Start;
     {$endif}
-    
+
     try
       copyOfLine:=line;
       lineLocation.provider:=mainPackage.codeProvider;

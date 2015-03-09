@@ -253,7 +253,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
           end else if not(allowQualified) then begin
             fail('No qualified is identifier accepted here. '+line);
             parsedLength:=i-1;
-            exit(copy(line,1,i-1));          
+            exit(copy(line,1,i-1));
           end else if dotFound then begin
             fail('Over-qualified identifier! Only one level is allowed. '+line);
             parsedLength:=i-1;
@@ -275,13 +275,13 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
 
   VAR id:ansistring;
-     
+
   begin
     {$ifdef PROFILING}
     profiler.Clear;
     profiler.Start;
-    {$endif}  
-  
+    {$endif}
+
     removeLeadingBlanks;
     result.location:=lineLocation;
     result.txt:='';
@@ -295,7 +295,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         if parsedLength<=0 then fail('Cannot parse numeric literal '+line)
                            else result.tokType:=tt_literal;
       end;
-      '"','''': begin        
+      '"','''': begin
         id:=unescapeString(line,parsedLength);
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
@@ -463,7 +463,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
     {$ifdef PROFILING}
     writeln(stderr,'PROFILING;firstToken;' + FloatToStr(profiler.Elapsed));
-    {$endif}      
+    {$endif}
   end;
 
 PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_tokenRecycler);
@@ -644,8 +644,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         {$ifdef PROFILING}
         profiler.Clear;
         profiler.Start;
-        {$endif}    
-      
+        {$endif}
+
         //first token is <each>-Token
         //find closing bracket and body parts
         bracketLevel:=0; //note: first token will raise bracket Level to 1
@@ -716,7 +716,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         result:=true;
         {$ifdef PROFILING}
         writeln(stderr,'PROFILING;reduceExpression.resolveEach.parseBodyOk;' + FloatToStr(profiler.Elapsed));
-        {$endif}   
+        {$endif}
       end;
 
     VAR itList:P_listLiteral;
@@ -905,11 +905,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         {$ifdef PROFILING}
         profiler.Clear;
         profiler.Start;
-        {$endif}       
+        {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         {$ifdef PROFILING}
         writeln(stderr,'PROFILING;applying intrinsic rule;' + FloatToStr(profiler.Elapsed));
-        {$endif}           
+        {$endif}
         if newLiteral<>nil then begin
           firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
@@ -941,7 +941,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       {$ifdef PROFILING}
       profiler.Clear;
       profiler.Start;
-      {$endif}        
+      {$endif}
       prev:=first;
       stack_push; //push "?"
       p:=first;
@@ -988,7 +988,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       stack_popDestroy; //pop condition literal
       {$ifdef PROFILING}
       writeln(stderr,'PROFILING;resolve IIF;' + FloatToStr(profiler.Elapsed));
-      {$endif}           
+      {$endif}
     end;
 
   PROCEDURE applyCheck;
@@ -1046,7 +1046,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               {$ifdef PROFILING}
               profiler.Clear;
               profiler.Start;
-              {$endif}                
+              {$endif}
               newLit:=resolveOperator(stack[length(stack)-2]^.data,
                                       stack[length(stack)-1]^.tokType,
                                       first^.data,
@@ -1059,13 +1059,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               didSubstitution:=true;
               {$ifdef PROFILING}
               writeln(stderr,'PROFILING;resolveOperator (A);' + FloatToStr(profiler.Elapsed));
-              {$endif}                 
+              {$endif}
             end else if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
                         (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse]) then begin
               {$ifdef PROFILING}
               profiler.Clear;
               profiler.Start;
-              {$endif}                
+              {$endif}
               newLit:=resolveOperator(stack[length(stack)-2]^.data,
                                       stack[length(stack)-1]^.tokType,
                                       first^.data,
@@ -1076,7 +1076,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               stack_popDestroy; //pop LHS-Literal from stack
               {$ifdef PROFILING}
               writeln(stderr,'PROFILING;resolveOperator (B);' + FloatToStr(profiler.Elapsed));
-              {$endif}                 
+              {$endif}
             end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
             else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
             else begin
@@ -1094,7 +1094,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               {$ifdef PROFILING}
               profiler.Clear;
               profiler.Start;
-              {$endif}                               
+              {$endif}
               newLit:=resolveOperator(stack[length(stack)-2]^.data,
                                       stack[length(stack)-1]^.tokType,
                                       first^.data,
@@ -1105,7 +1105,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               stack_popDestroy; //pop LHS-Literal from stack
               {$ifdef PROFILING}
               writeln(stderr,'PROFILING;resolveOperator (C);' + FloatToStr(profiler.Elapsed));
-              {$endif}                             
+              {$endif}
             end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
             else if tt in [tt_parList_constructor,tt_braceOpen] then startOrPushParameterList
             else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck

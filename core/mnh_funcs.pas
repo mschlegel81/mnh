@@ -1519,7 +1519,7 @@ INITIALIZATION
   registerRule('ceil'          ,@ceil_imp      ,true,'ceil(x);#Returns the smallest integer >=x');
   registerRule('floor'         ,@floor_imp     ,true,'floor(x);#Returns the largest integer <=x');
   //round might be binary...
-  registerRule('round'         ,@round_imp     ,true,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');  
+  registerRule('round'         ,@round_imp     ,true,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
   //Functions on lists:
   registerRule('head'          ,@head_imp      ,true,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,true,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
@@ -1538,7 +1538,7 @@ INITIALIZATION
   registerRule('pos'           ,@pos_imp       ,true,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule('copy'          ,@copy_imp      ,true,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
   registerRule('split'         ,@split_imp     ,true,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
-  
+
   registerRule('time'          ,@time_imp      ,false,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('softCast'      ,@softCast_imp  ,true,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule('trim'          ,@trim_imp      ,true,'trim(S:string);#Returns string S without leading or trailing spaces');

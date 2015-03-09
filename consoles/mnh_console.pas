@@ -16,14 +16,14 @@ PROCEDURE filteredStdErrOut(CONST error:T_storedError);
   begin
     with error do if errorLevel>=minErrorLevel then writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
   end;
-  
+
 PROCEDURE displayVersionInfo;
   begin
     writeln('MNH (V5) console; by Martin Schlegel');
     writeln('compiled on: ',{$I %DATE%});
     writeln('         at: ',{$I %TIME%});
     writeln('FPC version: ',{$I %FPCVERSION%});
-    writeln('Target CPU : ',{$I %FPCTARGET%});    
+    writeln('Target CPU : ',{$I %FPCTARGET%});
   end;
 
 PROCEDURE displayHelp;
@@ -41,9 +41,9 @@ PROCEDURE displayHelp;
     writeln('  -det : force deterministic "random" numbers');
   end;
 
-PROCEDURE parseCmdLine;    
+PROCEDURE parseCmdLine;
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
-      i,pel:longint;      
+      i,pel:longint;
   begin
     setLength(parameters,0);
     for i:=1 to paramCount do begin
@@ -69,22 +69,22 @@ PROCEDURE parseCmdLine;
       end else begin
         setLength(parameters,length(parameters)+1);
         parameters[length(parameters)-1]:=paramStr(i);
-      end;    
+      end;
     end;
     //-----------------------------------------------------
     if (echo=e_forcedOn) or (echo=e_default) and (fileToInterpret='') then begin
-      mnh_out_adapters.inputDeclEcho:=@inputDeclEcho; 
+      mnh_out_adapters.inputDeclEcho:=@inputDeclEcho;
       mnh_out_adapters.inputExprEcho:=@inputExprEcho;
-      mnh_out_adapters.exprOut      :=@exprOut;             
+      mnh_out_adapters.exprOut      :=@exprOut;
     end else begin
-      mnh_out_adapters.inputDeclEcho:=nil; 
+      mnh_out_adapters.inputDeclEcho:=nil;
       mnh_out_adapters.inputExprEcho:=nil;
-      mnh_out_adapters.exprOut      :=nil;      
+      mnh_out_adapters.exprOut      :=nil;
     end;
     mnh_out_adapters.errorOut:=@filteredStdErrOut;
   end;
 
-PROCEDURE interactiveMode;  
+PROCEDURE interactiveMode;
   VAR time:double;
       hasExitSignal:boolean=false;
   PROCEDURE readInputFromConsole;
@@ -103,23 +103,23 @@ PROCEDURE interactiveMode;
         end else begin
           mainPackageProvider.appendLine(nextInput);
           exit;
-        end;      
-      until false;      
+        end;
+      until false;
     end;
-    
+
   begin
     if wantHelpDisplay then begin
-      displayHelp;      
+      displayHelp;
       halt;
     end;
-    
-    writeln;    
+
+    writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
     writeln('end a line with a \ to continue the input.');
-    
+
     readInputFromConsole;
-    while not(hasExitSignal) do begin      
+    while not(hasExitSignal) do begin
       time:=now;
       reloadMainPackage(lu_forDirectExecution);
       writeln('time: ',(now-time)*24*60*60:0:3,'sec');
@@ -137,8 +137,8 @@ PROCEDURE fileMode;
     end;
     callMainInMain(parameters);
   end;
-  
-begin    
+
+begin
   parseCmdLine;
   if fileToInterpret='' then interactiveMode
                         else fileMode;

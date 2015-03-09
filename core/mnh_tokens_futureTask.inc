@@ -12,7 +12,7 @@
     task:P_token;
     state:T_futureTaskState;
     next:P_futureTask;
-    
+
     CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler);
     PROCEDURE   evaluate(CONST callDepth:word; VAR recycler:T_tokenRecycler);
     FUNCTION    getResultAsLiteral:P_literal;

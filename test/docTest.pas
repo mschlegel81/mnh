@@ -12,7 +12,7 @@ PROCEDURE infoOnIntrinsics;
       //writeln('---------------------------------------------------------------------');
       writeln(intrinsicRuleExplanationMap.get(ids[i]));
     end;
-    
+
   end;
 
 begin

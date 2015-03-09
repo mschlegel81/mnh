@@ -230,7 +230,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRe
     while (t<>nil) do begin
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
-        token:=t^; 
+        token:=t^;
         t^.tokType:=tt_eol;
         t:=recycler.disposeToken(t);
         token.next:=nil;
@@ -263,7 +263,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     {$ifdef PROFILING}
     profiler.Clear;
     profiler.Start;
-    {$endif}  
+    {$endif}
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^) and
        (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
@@ -310,7 +310,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     end;
     {$ifdef PROFILING}
     writeln(stderr,'PROFILING;T_subrule.replaces;' + FloatToStr(profiler.Elapsed));
-    {$endif}   
+    {$endif}
   end;
 
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);

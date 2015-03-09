@@ -121,7 +121,7 @@ FUNCTION T_pattern.matchesNilPattern:boolean;
   begin
     result:=(length(sig)=0);
   end;
-  
+
 FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
   VAR i:longint;
       L:P_literal;
