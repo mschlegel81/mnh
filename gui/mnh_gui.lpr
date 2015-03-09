@@ -13,6 +13,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
 {$R *.res}
 
 BEGIN
+  Application.Title:='MNH5 - GUI';
   RequireDerivedFormResource := True;
   Application.Initialize;
 
