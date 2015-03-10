@@ -1324,8 +1324,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   false);
               exit(result);
               end;
-            lt_booleanList, lt_intList, lt_realList, lt_numList,
-            lt_stringList, lt_flatList: begin
+            lt_booleanList..lt_flatList: begin
               //scalar X flat list
               result := newListLiteral;
               for i := 0 to length(P_listLiteral(RHS)^.element)-1 do
@@ -1370,8 +1369,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           else exit(newErrorLiteralRaising(LHS^.literalType,
               RHS^.literalType, op, tokenLocation));
             end;
-        lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
-        lt_flatList: case RHS^.literalType of
+        lt_booleanList..lt_flatList: case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string, lt_expression: begin
               //flat list X scalar
               result := newListLiteral;
