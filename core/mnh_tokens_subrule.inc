@@ -421,14 +421,18 @@ FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsi
 
 FUNCTION T_subrule.toString:ansistring;
   VAR i:longint;
+      prevIdLike,idLike:boolean;
   begin
+    prevIdLike:=false;
     result:='';
-    for i:=0 to length(expression)-1 do result:=result+expression[i].token.toString;
+    for i:=0 to length(expression)-1 do begin
+      result:=result+expression[i].token.toString(prevIdLike,idLike);
+      prevIdLike:=idLike;
+    end;
     if typ=srt_inline_for_literal then result:='{'+result+'}'
     else begin
       result:=pattern.toString+result;
     end;
-    polishExpressionString(result);
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer):string;

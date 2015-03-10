@@ -500,7 +500,7 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     result := element [0]^.toShorterString;
     for i := 1 to length(element)-1 do result:=result+','+element [i]^.toShorterString;
     if isFinalized then result := '('+result+')'
-    else result := '('+result+',  ';
+    else result := '('+result+', ';
   end;
 //?.toShorterString:============================================================
 FUNCTION T_literal.toShorterString: ansistring; begin result := toString; end;

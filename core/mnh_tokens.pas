@@ -192,7 +192,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if first^.tokType=tt_identifier then begin
             newId:=first^.txt;
             if isQualified(newId) then begin
-              raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.toString,first^.location);
+              raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
               exit;
             end;
             //no duplicates are created; packages are always added at the end
@@ -205,7 +205,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               pack:=nil;
             end;
           end else if first^.tokType<>tt_separatorComma then begin
-            raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.toString,first^.location);
+            raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
             exit;
           end;
           temp:=first; first:=recycler.disposeToken(temp);

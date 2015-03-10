@@ -14,7 +14,8 @@
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
-    FUNCTION toString:ansistring;
+    FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
+    FUNCTION singleTokenToString:ansistring;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
   end;
 
@@ -116,31 +117,24 @@ FUNCTION T_tokenRecycler.newToken(CONST original:P_token):P_token;
     result^.next:=nil;
   end;
 
-PROCEDURE polishExpressionString(VAR s:ansistring);
-  CONST specialChar:array [0..16] of char=(',','+','-','*','/','?',':','^','%','.','&','(',')','[',']','{','}');
-  VAR i:longint;
-  begin
-    s:=replaceAll(trim(s),'  ',' ');
-    for i:=0 to length(specialChar)-1 do s:=replaceAll(s,' '+specialChar[i],specialChar[i]);
-    for i:=1 to length(specialChar)-1 do s:=replaceAll(s,specialChar[i]+' ',specialChar[i]);
-  end;
-
 FUNCTION tokensToString(CONST first:P_token):ansistring;
   VAR p:P_token;
+      idLike,prevIdLike:boolean;
   begin
+    prevIdLike:=false;
     result:='';
     p:=first;
     while p<>nil do begin
-      result:=result+p^.toString;
+      result:=result+p^.toString(prevIdLike,idLike);
+      prevIdLike:=idLike;
       p:=p^.next;
     end;
-    polishExpressionString(result);
   end;
 
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
   begin
     if t=nil then result:='<EOL>'
-    else result:=t^.toString;
+    else result:=t^.singleTokenToString;
   end;
 
 CONSTRUCTOR T_token.create;
@@ -198,27 +192,38 @@ FUNCTION T_token.last:P_token;
     while result^.next<>nil do result:=result^.next;
   end;
 
-FUNCTION T_token.toString:ansistring;
+FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
   begin
+    idLike:=false;
     case tokType of
       tt_each, tt_parallelEach: begin
+        idLike:=true;
         result:=C_tokenString[tokType];
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate: result:=txt;
+      tt_mutate: begin result:=txt; idLike:=data<>nil; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
       tt_intrinsicRulePointer,
-      tt_parameterIdentifier: result:=' '+txt+' ';
-      tt_literal            : result:=' '+P_literal(data)^.toString+' ';
+      tt_parameterIdentifier: begin result:=txt; idLike:=true; end;
+      tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
-      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod: result:=' '+C_tokenString[tokType]+' ';
+      tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,
+      tt_separatorComma: result:=C_tokenString[tokType]+' ';
+      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod: begin result:=C_tokenString[tokType]; idLike:=true; end;
       else result:=C_tokenString[tokType];
     end;
+    if idLike and lastWasIdLike then result:=' '+result;
+  end;
+
+FUNCTION T_token.singleTokenToString:ansistring;
+  VAR dummy:boolean;
+  begin
+    result:=toString(false,dummy);
   end;
 
 FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
@@ -781,7 +786,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
-              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.toString+')',eachLocation);
+              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.singleTokenToString+')',eachLocation);
             end;
           end;
         end else begin
@@ -1227,7 +1232,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack_push; end;
         tt_unaryOpPlus, tt_unaryOpMinus: stack_push;
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
-          raiseError(el3_evalError,'Undefined prefix operator '+first^.toString,first^.location);
+          raiseError(el3_evalError,'Undefined prefix operator '+first^.singleTokenToString,first^.location);
         tt_braceOpen: stack_push;
         tt_expBraceOpen: if not(pureOnly) then begin
           digestInlineExpression(first,recycler);
