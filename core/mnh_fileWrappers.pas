@@ -64,7 +64,7 @@ PROCEDURE ensurePath(path:ansistring);
       p,p2:longint;
   begin
     ensuredDir:='';
-    path:=ExtractFilePath(path);
+    path:=ExtractFilePath(ExpandFileName(path));
     if path[length(path)] in ['/','\'] then path:=copy(path,1,length(path)-1);
     while path<>'' do begin
       p:=pos('/',path);
