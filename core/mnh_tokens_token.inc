@@ -454,6 +454,10 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              parsedLength:=1;
              result.tokType:=tt_iifElse;
            end;
+      '@': begin
+             parsedLength:=1;
+             result.tokType:=tt_listToParameterList;
+           end;
       else begin
         fail('Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')');
         line:='';
@@ -1035,6 +1039,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal: case cTokType(-1) of
+          tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
+            stack_popDestroy;
+            first^.tokType:=tt_parList;
+            stack_popLink;
+          end;
           tt_unaryOpPlus: stack_popDestroy;
           tt_unaryOpMinus: begin
             newLit:=P_literal(first^.data)^.negate(stack[length(stack)-1]^.location);
@@ -1110,7 +1119,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               writeln(stderr,'PROFILING;resolveOperator (C);' + FloatToStr(profiler.Elapsed));
               {$endif}
             end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
-            else if tt in [tt_parList_constructor,tt_braceOpen] then startOrPushParameterList
+            else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
             else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
             else begin
               stack_push;
@@ -1123,7 +1132,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first^.next:=recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
@@ -1152,7 +1161,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first^.tokType:=tt_literal;
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
@@ -1173,7 +1182,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
@@ -1187,7 +1196,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               stack_popLink;
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
-            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
@@ -1207,7 +1216,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
           end;
           else case cTokType(1) of
-            tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
             tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
             tt_iifCheck: stack_push;
@@ -1251,7 +1260,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
-          tt_braceOpen, tt_parList_constructor: startOrPushParameterList;
+          tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
         end;

@@ -36,6 +36,7 @@ TYPE
     tt_operatorConcat, tt_operatorIn,
     //inline if: (<condition>?<then>:<else>)
     tt_iifCheck, tt_iifElse,
+    tt_listToParameterList,
     //assignment operators:
     tt_declare, tt_assign, tt_mutate,
     //type checks:
@@ -130,6 +131,7 @@ CONST
     '%', '%%', '%%%', '%%%%', '|', 'in',
     //inline if: (<condition>?<then>:<else>)
     '?', ':',
+    '@',
     //assignment operators:
     '->', ':=', ':=',
     //type checks:
@@ -218,6 +220,7 @@ CONST
     'in operator#used for determining whether a list contains a specific element',
     'ternary inline-if-operator#Completed by corresponding :',
     'ternary inline-if-operator#Completed by corresponding ?',
+    'list-to-parameter-list prefix operator#Mutates a list to a parameter list',
     'declaration operator',
     'assignment operator',
     'mutate/assign operator',
