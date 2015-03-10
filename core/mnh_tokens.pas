@@ -294,12 +294,19 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if first^.tokType=tt_braceOpen then begin
           first:=recycler.disposeToken(first);
           while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
+            if rulePattern.hasOptionals then raiseError(el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
             n  :=first^.next;
             nn :=n    ^.next;
             nnn:=nn   ^.next;
             if (first^.tokType=tt_identifier)
             and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendFreeId(first^.txt);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
+            end else if (first^.tokType=tt_optionalParameters)
+                     and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
+              if n^.tokType=tt_separatorComma then raiseError(el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
+              rulePattern.appendOptional;
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
             end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])

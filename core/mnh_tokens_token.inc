@@ -420,8 +420,11 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              parsedLength:=1;
              result.tokType:=tt_operatorExtractL0;
            end;
-      '.': if startsWith(line,'..') then begin
-             parsedLength:=2;
+      '.': if startsWith(line,C_tokenString[tt_optionalParameters]) then begin
+             parsedLength:=length(C_tokenString[tt_optionalParameters]);
+             result.tokType:=tt_optionalParameters;
+           end else if startsWith(line,C_tokenString[tt_separatorCnt]) then begin
+             parsedLength:=length(C_tokenString[tt_separatorCnt]);
              result.tokType:=tt_separatorCnt;
            end else fail('Cannot parse: '+line);
       ':': if startsWith(line,':=') then begin

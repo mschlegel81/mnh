@@ -1566,8 +1566,8 @@ INITIALIZATION
   registerRule('systime'       ,@systime_imp,false,'sytime;#Returns the current time as a real number');
 
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
-  registerRule('format'        ,@format_imp        ,true,'format(formatString:string,p0,p1,...);#Returns a formatted version of the given 0..n parameters');
-  registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,p0,p1,...);#Prints a formatted version of the given 0..n parameters');
+  registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
+  registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters');
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');

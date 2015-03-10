@@ -207,13 +207,10 @@ PROCEDURE T_subrule.updatePatternForInline;
     pattern.clear;
     for i:=0 to length(expression)-1 do with expression[i] do
     if token.tokType=tt_parameterIdentifier then begin
-      if token.txt=SELF_TOKEN_TEXT then begin
-        parIdx:=maxLongint;
-        pattern.containsSelfPointer:=true;
-      end else begin
-        parIdx:=pattern.indexOfId(token.txt); //reuse ID
-        if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt); //new parameter
-      end;
+      parIdx:=pattern.indexOfId(token.txt); //reuse ID
+      if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt) //new parameter
+      else if parIdx=SELF_TOKEN_PAR_IDX then pattern.containsSelfPointer:=true
+      else if parIdx=ALL_PARAMETERS_PAR_IDX then pattern.hasOptionals:=true;
     end;
   end;
 
@@ -259,6 +256,17 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
   VAR t:P_token;
       i:longint;
+  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token;
+    VAR L:P_literal;
+    begin
+      if index=ALL_PARAMETERS_PAR_IDX then L:=param
+      else if index=SELF_TOKEN_PAR_IDX then L:=selfLiteral
+      else L:=param^.value(index);
+      if L=nil then exit(recycler.newToken(@original));
+      result:=recycler.newToken(original.location,'',tt_literal,L);
+      L^.rereference;
+    end;
+
   begin
     {$ifdef PROFILING}
     profiler.Clear;
@@ -267,21 +275,13 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^) and
        (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
-      with expression[0] do if parIdx>=0 then begin
-        firstRep:=recycler.newToken(token.location,'',tt_literal,param^.value(parIdx));
-        param^.value(parIdx)^.rereference;
-      end else firstRep:=recycler.newToken(@token);
+      with expression[0] do if parIdx>=0
+      then firstRep:=tokenFromLiteral(token,parIdx)
+      else firstRep:=recycler.newToken(@token);
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
-        if parIdx>=0 then begin
-          if parIdx<maxLongint then begin
-            t^.next:=recycler.newToken(token.location,'',tt_literal,param^.value(parIdx));
-            param^.value(parIdx)^.rereference;
-          end else begin
-            t^.next:=recycler.newToken(token.location,SELF_TOKEN_TEXT,tt_literal,selfLiteral);
-            selfLiteral^.rereference;
-          end;
-        end else begin
+        if parIdx>=0 then t^.next:=tokenFromLiteral(token,parIdx)
+        else begin
           if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
           t^.next:=recycler.newToken(@token);
         end;

@@ -9,6 +9,7 @@
           restrictionIdx   :longint;
           restrictionId    :ansistring;
         end;
+    hasOptionals:boolean;
 
     CONSTRUCTOR create;
     PROCEDURE clear;
@@ -17,6 +18,7 @@
     FUNCTION appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tokenType):longint;
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
+    PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
     FUNCTION matches(VAR par:T_listLiteral):boolean;
@@ -33,6 +35,7 @@ PROCEDURE T_pattern.clear;
   begin
     setLength(sig,0);
     containsSelfPointer:=false;
+    hasOptionals:=false;
   end;
 
 DESTRUCTOR T_pattern.destroy;
@@ -89,9 +92,16 @@ FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_t
     end;
   end;
 
+PROCEDURE T_pattern.appendOptional;
+  begin
+    hasOptionals:=true;
+  end;
+
 FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
   VAR i:longint;
   begin
+    if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
+    if id=ALL_PARAMETERS_TOKEN_TEXT then exit(ALL_PARAMETERS_PAR_IDX);
     for i:=0 to length(sig)-1 do if sig[i].id=id then exit(i);
     result:=-1;
   end;
@@ -126,11 +136,8 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
   VAR i:longint;
       L:P_literal;
   begin
-
-    //writeln('trying to match ',toString,' with ',par.toParameterListString(true));
-    if (par.size<>length(sig)) then exit(false);
+    if (par.size<length(sig)) or ((par.size>length(sig)) and not(hasOptionals)) then exit(false);
     for i:=0 to length(sig)-1 do begin
-      //writeln('trying to match parameter #',i,' index=',sig[i].restrictionIdx);
       L:=par.value(i);
       with sig[i] do case restrictionType of
         tt_typeCheckScalar..tt_typeCheckEmptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
@@ -205,13 +212,16 @@ FUNCTION T_pattern.toString:ansistring;
         else result:=result+id;
       end;
     end;
+    if hasOptionals then result:=result+',...';
     result:=result+')';
   end;
 
 FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
   VAR i:longint;
   begin
-    result:=length(sig)=length(p.sig);
+    result:=(length(sig)=length(p.sig)) and
+            (containsSelfPointer=p.containsSelfPointer) and
+            (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do
       result:=result and (sig[i].restrictionType = p.sig[i].restrictionType)
                      and (sig[i].restrictionIdx  = p.sig[i].restrictionIdx )

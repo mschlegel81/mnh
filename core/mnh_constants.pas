@@ -49,6 +49,7 @@ TYPE
     tt_typeCheckNonemptyList,
     tt_typeCheckEmptyList,
     tt_semicolon,
+    tt_optionalParameters,
     //modifiers:
     tt_modifier_private,
     tt_modifier_memoized,
@@ -143,6 +144,7 @@ CONST
     '=[]',
     //special: [E]nd [O]f [L]ine
     ';',
+    '...',
     'private',
     'memoized',
     'mutable',
@@ -235,6 +237,7 @@ CONST
     'type check: nonempty list#matches to all non-empty lists',
     'type check: empty list#matches only to the empty list',
     'semicolon#marks the end of a statement, assignment or declaration',
+    'optional parameters#can be used inside a pattern declaration to denote further optional parameters',
     'private modifier#hides the subrule from all importing packages',
     'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
     'mutable modifier#makes the rule mutable, i.e. the value may be redefined at evaluation-time',
@@ -251,6 +254,9 @@ TYPE
 
 CONST
   SELF_TOKEN_TEXT='$self';
+  SELF_TOKEN_PAR_IDX=maxLongint;
+  ALL_PARAMETERS_TOKEN_TEXT='$params';
+  ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
   C_errorLevelTxt: array[T_errorLevel] of string = ('          ',
     'Note    : ',
     'Warning : ',
