@@ -30,7 +30,8 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\vampire.mnh",
             "demos\\weasel.mnh",
             "demos\\wordCount.mnh",
-            "demos\\y.mnh"];
+            "demos\\y.mnh",
+            "demos\\zeckendorf.mnh"];
             
 FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
 

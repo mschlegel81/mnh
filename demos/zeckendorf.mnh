@@ -1,0 +1,29 @@
+private memoized fib(i> 0)->fib(i-1)+fib(i-2);
+private          fib(i<=0):=1;
+private inv(F:expression,n  )->inv(F,n,0);
+private inv(F:expression,n,i)->(F(i))>=n ? i : inv(F,n,i+1);
+
+private encode(F,n:int     )->replace('#'&encode(F,n,inv(F,n)),["#0","#"],["#",""]);
+private encode(F,n:int,i>=0)->(F(i))<=n ? 1 & encode(F,n-(F(i)),i-1)
+                                        : 0 & encode(F,n       ,i-1);
+private encode(F,n:int,i)->"";
+private encode(F,N:intList     )->pEach(n,N,encode(F,n));
+
+private FIB:={fib($i)};
+private POT:={2^$i};
+
+private memoized avgLen(bits)->pEach(i,[2^(bits-1)..2^bits-1],+,length(encode(FIB,i)))/(2^(bits-1));
+private examples:=[1,2,3,4,5,17,100,255];
+
+//*Displays examples for Zeckendorf-encoding
+//*and average lengths compared to binary representation
+main->
+printf('%I8% %I8% %I10',
+  'decimal'|examples,
+  'binary'|encode(POT,examples),
+  'Zeckendorf'|encode(FIB,examples))|
+print('\n      bits rel. overhead') |
+printf('%#0% %###0.00%     %###0.0000%',
+       [1..12],
+       each(i,[1..12],avgLen(i)),
+       each(i,[1..12],avgLen(i))/[1..12]);
