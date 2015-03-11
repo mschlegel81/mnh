@@ -805,23 +805,28 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         nextFuture:longint=0;
         initializedFutures:longint=0;
 
-    PROCEDURE aggregateFutures(CONST stubbornly:boolean);
+    PROCEDURE aggregateFutures(CONST finalizing:boolean);
+      CONST STEP_TOL=1023;
       begin
         if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
           while (nextFuture<initializedFutures)
             and (future[nextFuture]<>nil)
-            and (stubbornly or (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            and ((initializedFutures>nextFuture+STEP_TOL) or
+                 finalizing or
+                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
             while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
             addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
             future[nextFuture]^.free(recycler);
             dispose(future[nextFuture],proFormaDestroy);
             inc(nextFuture);
           end;
-          if stubbornly then finalizeAggregation;
+          if finalizing then finalizeAggregation;
         end else begin
           while (nextFuture<initializedFutures)
             and (future[nextFuture]<>nil)
-            and (stubbornly or (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            and ((initializedFutures>nextFuture+STEP_TOL) or
+                 finalizing or
+                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
             if nextFuture>0 then inlineTokensBetween;
             while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
             t^.next:=recycler.newToken(eachLocation,'',tt_literal,future[nextFuture]^.getResultAsLiteral);
@@ -830,9 +835,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             t:=t^.next;
             inc(nextFuture);
           end;
-          if stubbornly then t^.next:=bracketClosingEach;
+          if finalizing then t^.next:=bracketClosingEach;
         end;
-        if stubbornly then setLength(future,0);
+        if finalizing then setLength(future,0);
       end;
 
     PROCEDURE initFutures;
@@ -847,7 +852,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
-          if (initializedFutures and 15)=0 then aggregateFutures(false);
+          if (initializedFutures and 255)=0 then aggregateFutures(false);
         end;
       end;
 
