@@ -1083,6 +1083,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       else stack_push_push;
     end;
 
+{$MACRO ON}
+{$define COMMON_CASES:=
+tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
+tt_parList:  applyRule(first^.next,first^.next^.next);
+tt_comparatorEq..tt_operatorIn: stack_push_push;
+tt_iifCheck: stack_push;
+tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
+
   begin
     setLength(stack,0);
     try
@@ -1169,11 +1177,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first^.tokType:=tt_literal;
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_iifCheck: stack_push;
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+            COMMON_CASES;
           end;
           tt_parList_constructor: case cTokType(1) of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
@@ -1190,11 +1194,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_iifCheck: stack_push;
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+            COMMON_CASES;
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
             tt_separatorComma: if cTokType(2)<>tt_eol then begin
@@ -1204,11 +1204,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               first:=recycler.disposeToken(first);
               stack_popLink;
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
-            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_iifCheck: stack_push;
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+            COMMON_CASES;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: begin
@@ -1221,11 +1217,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
           end;
           else case cTokType(1) of
-            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_iifCheck: stack_push;
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+            COMMON_CASES;
           end;
         end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
