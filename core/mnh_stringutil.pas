@@ -387,8 +387,8 @@ FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:T_myFloat):ansist
 
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
   begin
-    if (copy(formatString,1,1)='X') or
-       (copy(formatString,1,1)='x') then exit(myFormat(formatString,IntToStr(intData)));
+    if (length(formatString)>1) and (formatString[1] in ['X','x','I','i'])
+    then exit(myFormat(formatString,IntToStr(intData)));
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,intData)
@@ -400,8 +400,8 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring
 
 FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansistring;
   begin
-    if (copy(formatString,1,1)='X') or
-       (copy(formatString,1,1)='x') then exit(myFormat(formatString,FloatToStr(realData)));
+    if (length(formatString)>1) and (formatString[1] in ['X','x','I','i'])
+    then exit(myFormat(formatString,FloatToStr(realData)));
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,realData)
