@@ -1,7 +1,9 @@
+memoized
 private chars(s:string )->copy(s,[0..length(s)-1],1);
 private chars(i:int    )->sort(chars(string(i)));
-private chars(i:intList)->sort(chars(each(e,i,&)));
+private chars(i:intList)->sort(each(e,i,|,chars(e)));
 
+memoized
 private digits(n:int)->length(string(n));
 private dividers(n:int)->dividers(n,floor(10**(digits(n)/2-1)),
                                     floor(sqrt(n)),
