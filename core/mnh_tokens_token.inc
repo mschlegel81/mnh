@@ -640,6 +640,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       didSubstitution:=true;
     end;
 
+  PROCEDURE stack_push_push; inline;
+    begin
+      setLength(stack,length(stack)+2);
+      stack[length(stack)-2]:=first; first:=first^.next;
+      stack[length(stack)-1]:=first; first:=first^.next;
+      didSubstitution:=true;
+    end;
+
   PROCEDURE resolveEach(CONST inParallel:boolean);
     VAR t,bracketClosingEach:P_token;
         tokensBetween:array of P_token;
@@ -745,22 +753,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         end;
       end;
 
-    VAR future:array of P_futureTask;
-    PROCEDURE initFutures;
-      VAR i,j,k:longint;
-      begin
-        k:=0;
-        setLength(future,length(bodyRule)*itList^.size);
-        for i:=0 to itList^.size-1 do
-        for j:=0 to length(bodyRule)-1 do begin
-          if errorLevel<el3_evalError then begin
-            future[k]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
-            if future[k]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
-          end else future[k]:=nil;
-          inc(k);
-        end;
-      end;
-
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
       VAR newLit:P_literal;
       begin
@@ -809,29 +801,54 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         first^.next:=recycler.disposeToken(bracketClosingEach);
       end;
 
-    PROCEDURE aggregateFutures;
-      VAR k:longint;
+    VAR future:array of P_futureTask;
+        nextFuture:longint=0;
+        initializedFutures:longint=0;
+
+    PROCEDURE aggregateFutures(CONST stubbornly:boolean);
       begin
         if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
-          for k:=0 to length(future)-1 do if future[k]<>nil then begin
-            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
-            addToAggregation(future[k]^.getResultAsLiteral,true);
-            future[k]^.free(recycler);
-            dispose(future[k],proFormaDestroy);
+          while (nextFuture<initializedFutures)
+            and (future[nextFuture]<>nil)
+            and (stubbornly or (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
+            addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
+            future[nextFuture]^.free(recycler);
+            dispose(future[nextFuture],proFormaDestroy);
+            inc(nextFuture);
           end;
-          finalizeAggregation;
+          if stubbornly then finalizeAggregation;
         end else begin
-          for k:=0 to length(future)-1 do if future[k]<>nil then begin
-            if k>0 then inlineTokensBetween;
-            while (future[k]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
-            t^.next:=recycler.newToken(eachLocation,'',tt_literal,future[k]^.getResultAsLiteral);
-            future[k]^.free(recycler);
-            dispose(future[k],proFormaDestroy);
+          while (nextFuture<initializedFutures)
+            and (future[nextFuture]<>nil)
+            and (stubbornly or (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            if nextFuture>0 then inlineTokensBetween;
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
+            t^.next:=recycler.newToken(eachLocation,'',tt_literal,future[nextFuture]^.getResultAsLiteral);
+            future[nextFuture]^.free(recycler);
+            dispose(future[nextFuture],proFormaDestroy);
             t:=t^.next;
+            inc(nextFuture);
           end;
-          t^.next:=bracketClosingEach;
+          if stubbornly then t^.next:=bracketClosingEach;
         end;
-        setLength(future,0);
+        if stubbornly then setLength(future,0);
+      end;
+
+    PROCEDURE initFutures;
+      VAR i,j:longint;
+      begin
+        initializedFutures:=0;
+        setLength(future,length(bodyRule)*itList^.size);
+        for i:=0 to itList^.size-1 do
+        for j:=0 to length(bodyRule)-1 do begin
+          if errorLevel<el3_evalError then begin
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
+            if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
+          end else future[initializedFutures]:=nil;
+          inc(initializedFutures);
+          if (initializedFutures and 15)=0 then aggregateFutures(false);
+        end;
       end;
 
     begin
@@ -853,7 +870,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       else if length(bodyRule)>0 then begin
         if inParallel then begin
           initFutures;
-          aggregateFutures;
+          aggregateFutures(true);
         end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
             addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,recycler),true);
@@ -1035,6 +1052,32 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       didSubstitution:=true;
     end;
 
+  PROCEDURE process_op_lit; inline;
+    begin
+      if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
+         (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse])
+      then begin
+        {$ifdef PROFILING}
+        profiler.Clear;
+        profiler.Start;
+        {$endif}
+        newLit:=resolveOperator(stack[length(stack)-2]^.data,
+                                stack[length(stack)-1]^.tokType,
+                                first^.data,
+                                stack[length(stack)-1]^.location);
+        disposeLiteral(first^.data);
+        first^.data:=newLit; //store new literal in head
+        stack_popDestroy; //pop operator from stack
+        stack_popDestroy; //pop LHS-Literal from stack
+        {$ifdef PROFILING}
+        writeln(stderr,'PROFILING;resolveOperator (B);' + FloatToStr(profiler.Elapsed));
+        {$endif}
+      end else if tt=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
+      else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
+      else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList]                  then applyCheck
+      else stack_push_push;
+    end;
+
   begin
     setLength(stack,0);
     try
@@ -1077,59 +1120,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
               {$ifdef PROFILING}
               writeln(stderr,'PROFILING;resolveOperator (A);' + FloatToStr(profiler.Elapsed));
               {$endif}
-            end else if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
-                        (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse]) then begin
-              {$ifdef PROFILING}
-              profiler.Clear;
-              profiler.Start;
-              {$endif}
-              newLit:=resolveOperator(stack[length(stack)-2]^.data,
-                                      stack[length(stack)-1]^.tokType,
-                                      first^.data,
-                                      stack[length(stack)-1]^.location);
-              disposeLiteral(first^.data);
-              first^.data:=newLit; //store new literal in head
-              stack_popDestroy; //pop operator from stack
-              stack_popDestroy; //pop LHS-Literal from stack
-              {$ifdef PROFILING}
-              writeln(stderr,'PROFILING;resolveOperator (B);' + FloatToStr(profiler.Elapsed));
-              {$endif}
-            end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
-            else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
-            else begin
-              stack_push;
-              stack_push;
-            end;
+            end else process_op_lit;
           end;
           tt_operatorAnd, tt_operatorOr, //operators with lazy evaluation ?
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
           tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorExtractL0, tt_operatorExtractL1,
           tt_operatorExtractL2, tt_operatorExtractL3, tt_operatorConcat, tt_operatorIn: begin
             tt:=cTokType(1);
-            if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
-               (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse]) then begin
-              {$ifdef PROFILING}
-              profiler.Clear;
-              profiler.Start;
-              {$endif}
-              newLit:=resolveOperator(stack[length(stack)-2]^.data,
-                                      stack[length(stack)-1]^.tokType,
-                                      first^.data,
-                                      stack[length(stack)-1]^.location);
-              disposeLiteral(first^.data);
-              first^.data:=newLit; //store new literal in head
-              stack_popDestroy; //pop operator from stack
-              stack_popDestroy; //pop LHS-Literal from stack
-              {$ifdef PROFILING}
-              writeln(stderr,'PROFILING;resolveOperator (C);' + FloatToStr(profiler.Elapsed));
-              {$endif}
-            end else if tt=tt_parList then applyRule(first^.next,first^.next^.next)
-            else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
-            else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList] then applyCheck
-            else begin
-              stack_push;
-              stack_push;
-            end;
+            process_op_lit;
           end;
           tt_braceOpen : case cTokType(1) of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
@@ -1139,7 +1137,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
             tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_iifCheck: stack_push;
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
@@ -1168,7 +1166,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
             tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_iifCheck: stack_push;
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
@@ -1189,7 +1187,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end;
             tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_iifCheck: stack_push;
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
@@ -1203,17 +1201,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
             tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_iifCheck: stack_push;
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: begin
             case cTokType(1) of
-              tt_comparatorEq..tt_operatorIn: begin
-                stack_push;
-                stack_push;
-              end;
+              tt_comparatorEq..tt_operatorIn: stack_push_push;
               tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
                 stack_popLink;
                 applyMutation;
@@ -1223,7 +1218,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           else case cTokType(1) of
             tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
             tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push; end;
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_iifCheck: stack_push;
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
           end;
