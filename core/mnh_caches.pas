@@ -95,11 +95,8 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
     binIdx := key^.hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
-    if (i<length(cached [binIdx])) then begin
-      disposeLiteral(cached [binIdx, i].key);
-      disposeLiteral(cached [binIdx, i].value);
-      Dec(fill);
-    end  else setLength(cached [binIdx], i+1);
+    if (i<length(cached [binIdx])) then exit
+    else setLength(cached [binIdx], i+1);
     inc(fill);
     cached[binIdx,i].key  :=key;   key  ^.rereference;
     cached[binIdx,i].value:=value; value^.rereference;
