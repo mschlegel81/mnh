@@ -1,4 +1,7 @@
+USE hash;
+
 test_list:=["regTest\\opTest.mnh",
+            "regTest\\hash.mnh",
             "demos\\12_statements.mnh",
             "demos\\99bottles.mnh",
             "demos\\ackermann.mnh",
@@ -20,6 +23,7 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\pythagoras.mnh",
             "demos\\quine.mnh",
             "demos\\quine2.mnh",
+            "demos\\range_extract_expand.mnh",
             "demos\\rk4.mnh",
             "demos\\root.mnh",
             "demos\\setConsolidation.mnh",
@@ -28,10 +32,15 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\ulam.mnh",
             "demos\\unbiasedRandom.mnh",
             "demos\\vampire.mnh",
+            "demos\\variadic.mnh",
             "demos\\weasel.mnh",
             "demos\\wordCount.mnh",
             "demos\\y.mnh",
             "demos\\zeckendorf.mnh"];
+
+test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
+                        ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
+                        ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]];
             
 FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
 
@@ -47,7 +56,7 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
-runScript(executor,scriptName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]),systime));
+runScript(executor,scriptName,outputFileName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
 checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
                                                                          :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
@@ -57,6 +66,8 @@ reportStart(executor)->print('--------------------------------------------------
                              'Starting test runs with executable '&executor,
                              '\n-----------------------------------------------------');
 
-main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test)       ) and print(testsFailed);
-main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test) : void) and print(testsFailed);
+main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test  ,""    )        )
+                                 and each(test,test_with_output_list,                      runScript(executor,test%0,test%1)        ) and print(testsFailed);
+main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test  ,""    )  : void)
+                                 and each(test,test_with_output_list,pos(filter,test)>=0 ? runScript(executor,test%0,test%1)        ) and print(testsFailed);
 main->main("mnh_console.exe");
