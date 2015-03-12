@@ -82,11 +82,15 @@
 @type packages.head > packages.html
 @type packages.foot >> packages.html
 @cd ..
-@copy ..\*.exe .
+@copy ..\mnh_console.exe .
+@copy ..\mnh_gui.exe .
+@copy ..\mnh_light.exe .
 @del ..\versions\mnh5_win??_%mydate%.7z
 @%sevenZip% a -mx=9 ..\versions\mnh5_win64_%mydate%.7z
 @del /Q *
-@copy ..\bin32\*.exe .
+@copy ..\bin32\mnh_console.exe .
+@copy ..\bin32\mnh_gui.exe .
+@copy ..\bin32\mnh_light.exe .
 @%sevenZip% a -mx=9 ..\versions\mnh5_win32_%mydate%.7z
 @cd ..
 @rmdir /S /Q distro
