@@ -1,7 +1,0 @@
-private primes:=[2,3,5];
-private primes:=primes|each(n,[6..31],trueCount(n mod primes=0)=0 ? n : void);
-private isPernicious(n:int)->trueCount((2^[0..32] and n)>0) in primes;
-private pernicousInRange(iMin,iMax)->each(i,[iMin..iMax],isPernicious(i) ? i : void);
-//*See <a href="http://rosettacode.org/wiki/Pernicious_numbers">http://rosettacode.org/wiki/Pernicious_numbers</a>
-main->print(head(pernicousInRange(0,50),25),"\n",
-            pernicousInRange(888888877,888888888));
