@@ -18,7 +18,10 @@ TYPE
   T_cache = object
   private
     fill: longint;
-    cached: array[0..CACHE_MOD] of array of T_cacheEntry;
+    cached: array[0..CACHE_MOD] of record
+      putsSinceLastPolish:longint;
+      data:array of T_cacheEntry;
+    end;
     PROCEDURE polishBin(CONST binIdx:longint);
   public
     CONSTRUCTOR create();
@@ -67,22 +70,26 @@ PROCEDURE T_cache.polishBin(CONST binIdx:longint);
       swapTmp:T_cacheEntry;
   begin
     j := 0;
-    for i := 0 to length(cached [binIdx])-1 do
-    if (cached [binIdx, i].useCount<>0) then begin
-      if i<>j then cached[binIdx,j] := cached [binIdx, i];
-      if cached[binIdx,j].useCount>0 then cached[binIdx,j].useCount := cached[binIdx,j].useCount shr 1;
-      Inc(j);
-    end else begin
-      disposeLiteral(cached [binIdx, i].key);
-      disposeLiteral(cached [binIdx, i].value);
-      dec(fill);
-    end;
-    setLength(cached [binIdx], j);
-    for i:=1 to length(cached[binIdx])-1 do for j:=0 to i-1 do
-    if cached[binIdx,i].useCount>cached[binIdx,j].useCount then begin
-      swapTmp:=cached[binIdx,i];
-      cached[binIdx,i]:=cached[binIdx,j];
-      cached[binIdx,j]:=swapTmp;
+    with cached[binIdx] do begin
+      for i := 0 to length(cached [binIdx].data)-1 do
+      if (data[i].useCount<>0) then begin
+        if i<>j then data[j] := data[i];
+        data[j].useCount := data[j].useCount shr 1;
+        Inc(j);
+      end else begin
+        disposeLiteral(data[i].key);
+        disposeLiteral(data[i].value);
+        dec(fill);
+      end;
+      if j=length(data) then writeln('uneffective polish of bin ',binIdx);
+      setLength(data, j);
+      for i:=1 to length(data)-1 do for j:=0 to i-1 do
+      if data[i].useCount>data[j].useCount then begin
+        swapTmp:=data[i];
+        data[i]:=data[j];
+        data[j]:=swapTmp;
+      end;
+      putsSinceLastPolish:=0;
     end;
   end;
 
@@ -94,41 +101,47 @@ FUNCTION T_cache.getBinIdx(CONST key: P_listLiteral):longint;
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
   VAR i: longint;
   begin
-    i := 0;
-    while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
-    if (i<length(cached [binIdx]))
-    then exit
-    else setLength(cached [binIdx], i+1);
-    inc(fill);
-    cached[binIdx,i].key  :=key;   key  ^.rereference;
-    cached[binIdx,i].value:=value; value^.rereference;
-    cached[binIdx,i].useCount:= 1;
-    if length(cached[binIdx])>POLISH_FREQ then polishBin(binIdx);
+    with cached[binIdx] do begin
+      i := 0;
+      while (i<length(data)) and not (key^.equals(data[i].key)) do Inc(i);
+      if (i<length(data))
+      then exit
+      else setLength(data, i+1);
+      inc(fill);
+      data[i].key  :=key;   key  ^.rereference;
+      data[i].value:=value; value^.rereference;
+      data[i].useCount:= 1;
+      inc(putsSinceLastPolish);
+      if (putsSinceLastPolish>POLISH_FREQ) and
+         (length(data)       >POLISH_FREQ) then polishBin(binIdx);
+    end;
   end;
 
 
 FUNCTION T_cache.get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
   VAR i: longint;
   begin
-    i := 0;
-    while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
-    if i>=length(cached [binIdx]) then begin
-      result:=nil;
-    end else begin
-      Inc(cached [binIdx, i].useCount);
-      result := cached [binIdx, i].value;
+    with cached[binIdx] do begin
+      i := 0;
+      while (i<length(data)) and not (key^.equals(data[i].key)) do Inc(i);
+      if i>=length(data) then result:=nil
+      else begin
+        Inc(data[i].useCount);
+        result:=data[i].value;
+      end;
     end;
   end;
 
 PROCEDURE T_cache.Clear;
   VAR i, j: longint;
   begin
-    for i := 0 to CACHE_MOD do begin
-      for j := 0 to length(cached [i])-1 do with cached [i, j] do begin
+    for i := 0 to CACHE_MOD do with cached[i] do begin
+      for j := 0 to length(data)-1 do with data[j] do begin
         disposeLiteral(key);
         disposeLiteral(value);
       end;
-      setLength(cached [i], 0);
+      setLength(data, 0);
+      putsSinceLastPolish:=0;
     end;
     fill := 0;
   end;
