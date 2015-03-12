@@ -53,46 +53,44 @@ DESTRUCTOR T_rule.destroy;
   end;
 
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
+{$define CLEAN_EXIT:=
+if param=nil then disposeLiteral(useParam);
+system.LeaveCriticalSection(rule_cs);
+exit}
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
+      hash:longint;
   begin
     case ruleType of
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
+        hash:=useParam^.hash;
         system.EnterCriticalSection(rule_cs);
-        lit:=cache.get(useParam);
+        lit:=cache.get(useParam,hash);
         if lit<>nil then begin
           lit^.rereference;
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
           lastRep:=firstRep;
-          if param=nil then disposeLiteral(useParam);
-          system.LeaveCriticalSection(rule_cs);
-          exit(true);
+          CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
-          if (callDepth>=STACK_DEPTH_LIMIT) then begin
-            system.LeaveCriticalSection(rule_cs);
-            exit(true);
-          end;
+          if (callDepth>=STACK_DEPTH_LIMIT) then begin CLEAN_EXIT(true); end;
           if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
-            cache.put(useParam,lit);
+            cache.put(useParam,hash,lit);
           end;
           lastRep:=firstRep^.last;
-          if param=nil then disposeLiteral(useParam);
           if (errorLevel>=el3_evalError) then begin
             if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
           end;
-          system.LeaveCriticalSection(rule_cs);
-          exit(true);
+          CLEAN_EXIT(true);
         end;
-        system.LeaveCriticalSection(rule_cs);
-        result:=false;
+        CLEAN_EXIT(false);
       end;
       rt_synchronized: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
