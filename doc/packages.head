@@ -15,6 +15,7 @@
   <li><h4><a href="#importing">Importing a package</a></h4></li>
   <li><h4><a href="#executables">Executable packages</a></h4></li>
   <li><h4><a href="#comments">Comments</a></h4></li>
+  <li><h4><a href="#batchmode">Batch mode</a></h4></li>  
 </ul>  
 <h3><a href="#defined">Currently defined packages</a></h3>
 
@@ -57,5 +58,9 @@ A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments a
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
 <code>  mnh_console </code><i>packageName</i><code>.mnh -h</code>
+
+<h4><a name="batchmode">Batch mode</a></h4> 
+By default only the main rule is actually evaluated when a script is interpreted; in interactive mode on the other hand every statement is interpreted.<br>
+To enable <i>batch mode</i>, use the special (pseuco-)comment <code>//!BATCH ON</code>. Batch mode can be disabled again using <code>//!BATCH OFF</code>.
 
 <h3><a name="defined">Currently defined packages</a></h3>

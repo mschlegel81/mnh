@@ -407,7 +407,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '/': if startsWith(line,'//') then begin //comments
              parsedLength:=length(line);
              result.tokType:=tt_eol;
-             if startsWith(line,'//*') then result.txt:=trim(copy(line,4,length(line)-3));
+             if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
+             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_ON)  then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_ON
+             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF;
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorDivReal;

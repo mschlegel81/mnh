@@ -171,6 +171,7 @@ FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLoca
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler);
   VAR isFirstLine:boolean=true;
       doc:P_userPackageDocumentation;
+      batchMode:boolean=false;
 
   PROCEDURE pseudoLoadPackage(id:ansistring);
     VAR newSourceName:ansistring;
@@ -392,7 +393,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         writeDeclEcho(tokensToString(first));
         parseRule;
       end else begin
-        if usecase=lu_forDirectExecution then begin
+        if (usecase=lu_forDirectExecution) or (batchMode) then begin
           predigest(first,@self,recycler);
           writeExprEcho(tokensToString(first));
           reduceExpression(first,false,0,recycler);
@@ -435,7 +436,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
             last      :=last^.next;
           end;
           last^.next:=nil;
-        end else if (usecase=lu_forDocGeneration) and (next.txt<>'') then doc^.addComment(next.txt);
+        end else begin
+          if      next.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
+          else if next.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
+          else if (usecase=lu_forDocGeneration) and (next.txt<>'') then doc^.addComment(next.txt);
+        end;
       end;
     end;
     if (errorLevel<el3_evalError) then begin
