@@ -2,11 +2,11 @@ UNIT mnh_plotData;
 
 INTERFACE
 
-uses myFiles, SysUtils, Math, mnh_litvar, mnh_tokens, mnh_constants,
+USES myFiles, SysUtils, Math, mnh_litvar, mnh_tokens, mnh_constants,
   mnh_out_adapters, mnh_tokloc,
   mnh_funcs,
   Interfaces, ExtCtrls, Graphics, types;
-type
+TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
 
 CONST
@@ -38,7 +38,7 @@ CONST
     (idx: C_symbolStyle_cross; Name: ('cross', 'x')),
     (idx: C_symbolStyle_impulse; Name: ('impulse', 'i')));
 
-type
+TYPE
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
 
@@ -114,7 +114,7 @@ CONST
   C_ticsAndGrid = C_tics+C_grid; //=3
   C_ticsAndFinerGrid = C_tics+C_finerGrid; //=7
 
-type
+TYPE
   T_ticInfo = record
     pos: double;
     major: boolean;

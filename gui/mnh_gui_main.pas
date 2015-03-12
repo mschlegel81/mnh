@@ -3,7 +3,7 @@ UNIT mnh_gui_main;
 {$mode objfpc}{$H+}
 INTERFACE
 
-uses
+USES
   Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
@@ -12,7 +12,7 @@ uses
 
 CONST ONE_SECOND=1/(24*60*60);
 
-type
+TYPE
 
   { TMnhForm }
 

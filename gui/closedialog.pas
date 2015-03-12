@@ -4,9 +4,9 @@ UNIT closeDialog;
 
 INTERFACE
 
-uses
+USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ButtonPanel;
-type
+TYPE
 
   { TcloseDialogForm }
 

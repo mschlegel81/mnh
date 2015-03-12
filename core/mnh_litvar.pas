@@ -221,7 +221,7 @@ IMPLEMENTATION
 
 VAR
   boolLit: array[false..true] of T_boolLiteral;
-  intLit: array[-1000..1000] of T_intLiteral;
+  intLit: array[-127..128] of T_intLiteral;
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
 
@@ -243,7 +243,7 @@ FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral;
 
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
   begin
-    if (value>=-1000) and (value<=1000) then begin
+    if (value>=-127) and (value<=128) then begin
       result := @intLit [value];
       result^.rereference;
     end else begin
@@ -1544,7 +1544,7 @@ INITIALIZATION
   boolLit[true].create(true);
   errLit.init;
   voidLit.create();
-  for i := -1000 to 1000 do intLit[i].create(i);
+  for i := -127 to 128 do intLit[i].create(i);
   DefaultFormatSettings.DecimalSeparator := '.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
@@ -1557,7 +1557,7 @@ FINALIZATION
   boolLit[true].destroy;
   errLit.destroy;
   voidLit.destroy;
-  for i := -1000 to 1000 do intLit[i].destroy;
+  for i := -127 to 128 do intLit[i].destroy;
   {$ifdef debugMode}
   writeln(stdErr,'mnh_litvar finalized');
   {$endif}

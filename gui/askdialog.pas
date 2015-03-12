@@ -4,10 +4,10 @@ UNIT askDialog;
 
 INTERFACE
 
-uses
+USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
   StdCtrls, mnh_funcs, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters;
-type
+TYPE
 
   { TaskForm }
 
