@@ -75,6 +75,7 @@
 @copy demos\*.mnh distro\demos
 @copy demos\*.txt distro\demos
 @copy doc\* distro\doc
+@copy mnh_for_notepad.xml distro\
 @cd distro
 @cd doc 
 @type builtin.head > builtin.html
