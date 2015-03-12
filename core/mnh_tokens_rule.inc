@@ -7,7 +7,7 @@
   T_rule=object
     private
       ruleType:T_ruleType;
-      cache:T_cache;
+      cache:P_cache;
       rule_cs:system.TRTLCriticalSection;
 
       id:ansistring;
@@ -41,7 +41,7 @@ DESTRUCTOR T_rule.destroy;
     setLength(subrules,0);
     if ruleType=rt_memoized then begin
       {$ifdef debugMode} writeln(stdErr,'Destroying cache of rule '+id); {$endif}
-      cache.destroy;
+      dispose(cache,destroy);
       {$ifdef debugMode} writeln(stdErr,'Destroying critical section of rule '+id); {$endif}
       system.DoneCriticalsection(rule_cs);
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
@@ -60,15 +60,15 @@ exit}
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
-      hash:longint;
+      binIdx:longint;
   begin
     case ruleType of
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
-        hash:=useParam^.hash;
+        binIdx:=cache^.getBinIdx(useParam);
         system.EnterCriticalSection(rule_cs);
-        lit:=cache.get(useParam,hash);
+        lit:=cache^.get(useParam,binIdx);
         if lit<>nil then begin
           lit^.rereference;
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
@@ -79,7 +79,7 @@ exit}
           if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
-            cache.put(useParam,hash,lit);
+            cache^.put(useParam,binIdx,lit);
           end;
           lastRep:=firstRep^.last;
           if (errorLevel>=el3_evalError) then begin
@@ -126,7 +126,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
     if (length(subrules)>1) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
-    if (ruleType=rt_memoized) then cache.Clear;
+    if (ruleType=rt_memoized) then cache^.Clear;
   end;
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
@@ -138,7 +138,7 @@ PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
   begin
     if (ruleType=rt_normal) then begin
       ruleType:=rt_memoized;
-      cache.create;
+      new(cache,create);
       system.InitCriticalSection(rule_cs);
     end else if ruleType=rt_mutable then raiseError(el2_warning,'A mutable rule cannot be memoized',location);
   end;

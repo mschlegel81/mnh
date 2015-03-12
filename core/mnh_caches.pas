@@ -23,8 +23,9 @@ TYPE
   public
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
-    PROCEDURE put(CONST key: P_listLiteral; CONST hash:longint; CONST value: P_literal);
-    FUNCTION get(CONST key: P_listLiteral; CONST hash:longint): P_literal;
+    FUNCTION getBinIdx(CONST key: P_listLiteral):longint;
+    PROCEDURE put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
+    FUNCTION get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
     PROCEDURE Clear;
   end;
 
@@ -85,10 +86,14 @@ PROCEDURE T_cache.polishBin(CONST binIdx:longint);
     end;
   end;
 
-PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST hash:longint; CONST value: P_literal);
-  VAR binIdx, i: longint;
+FUNCTION T_cache.getBinIdx(CONST key: P_listLiteral):longint;
   begin
-    binIdx := hash and CACHE_MOD;
+    result:=key^.hash and CACHE_MOD;
+  end;
+
+PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
+  VAR i: longint;
+  begin
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
     if (i<length(cached [binIdx]))
@@ -102,10 +107,9 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST hash:longint; CONST value:
   end;
 
 
-FUNCTION T_cache.get(CONST key: P_listLiteral; CONST hash:longint): P_literal;
-  VAR binIdx, i: longint;
+FUNCTION T_cache.get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
+  VAR i: longint;
   begin
-    binIdx := hash and CACHE_MOD;
     i := 0;
     while (i<length(cached [binIdx])) and not (key^.equals(cached [binIdx, i].key)) do Inc(i);
     if i>=length(cached [binIdx]) then begin
