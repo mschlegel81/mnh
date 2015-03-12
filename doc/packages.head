@@ -7,6 +7,7 @@
 </head>
 <body>
 <h2 align="center"><a href="index.html">MNH 5</a> - Packages</h3>
+<div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
 <div align="right"><hr> </font></div>
 <h3><a href="#usage">Usage</a></h3>
 <ul>
