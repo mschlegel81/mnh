@@ -66,7 +66,7 @@ INTERFACE
 
 USES
 {$IFDEF Windows}
-  Windows, MMSystem,
+  Windows,
 {$ELSE}
   unix, unixutil, baseunix,
 {$ENDIF}
@@ -305,8 +305,6 @@ IMPLEMENTATION
 //
 
 CONST
-  NanoPerSec = 1000000000;
-  NanoPerMilli = 1000000;
   MilliPerSec = 1000;
 
 
