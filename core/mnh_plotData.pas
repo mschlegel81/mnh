@@ -1923,12 +1923,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
   end;
 
 FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-  VAR
-    options: ansistring = '';
-    sizeWithoutOptions: longint;
-    rowId, i, iMax: longint;
-    X, Y: P_listLiteral;
-
+  VAR options: ansistring = '';
+      sizeWithoutOptions: longint;
+      rowId, i, iMax: longint;
+      X, Y: P_listLiteral;
 
   FUNCTION isValidExpression(CONST p:P_literal; VAR recycler:T_tokenRecycler):boolean;
     VAR s:P_subrule;
@@ -2056,7 +2054,9 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation)
       exit(nil);
       end;
     activePlot.Clear;
-    result := addPlot(params, tokenLocation);
+    if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
+    then result:=newBoolLiteral(true)
+    else result:=addPlot(params, tokenLocation);
   end;
 
 FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
