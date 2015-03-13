@@ -4,7 +4,7 @@ INTERFACE
 
 USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
 CONST CACHE_MOD   = 2047; //must be 2^n-1 because of bitwise operation used instead of mod
-      POLISH_FREQ = 16;
+      POLISH_FREQ = 32;
 
 TYPE
   T_cacheEntry = record
@@ -81,7 +81,6 @@ PROCEDURE T_cache.polishBin(CONST binIdx:longint);
         disposeLiteral(data[i].value);
         dec(fill);
       end;
-      if j=length(data) then writeln('uneffective polish of bin ',binIdx);
       setLength(data, j);
       for i:=1 to length(data)-1 do for j:=0 to i-1 do
       if data[i].useCount>data[j].useCount then begin
@@ -112,8 +111,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST valu
       data[i].value:=value; value^.rereference;
       data[i].useCount:= 1;
       inc(putsSinceLastPolish);
-      if (putsSinceLastPolish>POLISH_FREQ) and
-         (length(data)       >POLISH_FREQ) then polishBin(binIdx);
+      if putsSinceLastPolish>POLISH_FREQ then polishBin(binIdx);
     end;
   end;
 
