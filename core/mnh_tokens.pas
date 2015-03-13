@@ -742,6 +742,7 @@ INITIALIZATION
   resolveNullaryCallback:=@evaluateNullary;
   stringToExprCallback:=@stringToExpression;
   applyUnaryOnExpressionCallback:=@subruleApplyFuncImpl;
+  arityCallback:=@getArity;
   {$ifdef PROFILING}
   profiler := TEpikTimer.create(nil);
   {$endif}

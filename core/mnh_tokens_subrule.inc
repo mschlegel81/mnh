@@ -487,6 +487,11 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     param.destroy;
   end;
 
+FUNCTION getArity(CONST subruleLiteral:P_expressionLiteral):longint;
+  begin
+    result:=length(P_subrule(subruleLiteral^.value)^.pattern.sig);
+  end;
+
 FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;

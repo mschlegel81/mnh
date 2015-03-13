@@ -21,6 +21,9 @@ VAR stringToExprCallback:T_stringToExprCallback;
 
 TYPE T_applyUnaryOnExpressionCallback=FUNCTION (CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
 VAR applyUnaryOnExpressionCallback:T_applyUnaryOnExpressionCallback;
+
+TYPE T_arityCallback=FUNCTION (CONST expression:P_expressionLiteral):longint;
+VAR arityCallback:T_arityCallback;
 //--------------------------------:Callbacks
 
 IMPLEMENTATION
@@ -1486,6 +1489,14 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('printf',params,tokenLocation);
   end;
 
+FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
+      result:=newIntLiteral(arityCallback(P_expressionLiteral(params^.value(0))));
+    end else raiseNotApplicableError('arity',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1568,6 +1579,8 @@ INITIALIZATION
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters');
+
+  registerRule('arity'         ,@arity_imp         ,true,'arity(e:expression);#Returns the arity of expression e');
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');
