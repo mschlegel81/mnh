@@ -9,7 +9,7 @@ TYPE
   T_tokenType = (tt_literal,
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer,
-    tt_importedUserRulePointer, tt_intrinsicRulePointer,
+    tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue,
     //special operators
     tt_each, tt_parallelEach,
     //lists and list constructors
@@ -109,6 +109,7 @@ CONST
   C_tokenString: array[T_tokenType] of ansistring = ('',
     //identifier and resolved identifiers
     '', '', '', '', '',
+    '',
     //special operators
     'each', 'pEach',
     //lists and list constructors
@@ -179,6 +180,7 @@ CONST
     'user function (local)',
     'user function (imported)',
     'built in function',
+    'put cache value',
     'special built in function: each#can be used for constructing and/or aggregating lists',
     'special built in function: pEach#can be used for constructing and/or aggregating lists#parallel equivalent to each',
     'round opening bracket',

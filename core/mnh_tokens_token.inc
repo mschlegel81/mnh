@@ -207,6 +207,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
       tt_intrinsicRulePointer,
+      tt_rulePutCacheValue,
       tt_parameterIdentifier: begin result:=txt; idLike:=true; end;
       tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
@@ -937,6 +938,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
+      end else if (first^.tokType=tt_rulePutCacheValue) and not(pureOnly) then begin
+        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
+        firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
+        lastReplace:=firstReplace;
       end else if (first^.tokType=tt_intrinsicRulePointer) and (not(pureOnly) or (pureIntrinsicFunctions.contains(first^.data)))  then begin
         {$ifdef PROFILING}
         profiler.Clear;
@@ -1258,7 +1263,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
-        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer : case cTokType(1) of
+        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue : case cTokType(1) of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);

@@ -15,6 +15,7 @@
     public
       CONSTRUCTOR create(CONST ruleId:ansistring);
       DESTRUCTOR destroy;
+      FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
@@ -52,6 +53,17 @@ DESTRUCTOR T_rule.destroy;
     id:='';
   end;
 
+FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
+  begin
+    EnterCriticalsection(rule_cs);
+    cache^.put(P_listLiteral(param^.value(0)),
+               cache^.getBinIdx(P_listLiteral(param^.value(0))),
+               param^.value(1));
+    LeaveCriticalsection(rule_cs);
+    result:=param^.value(1);
+    result^.rereference;
+  end;
+
 FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
@@ -61,13 +73,36 @@ exit}
       lit:P_literal;
       useParam:P_listLiteral;
       binIdx:longint;
+
+  PROCEDURE wrapResultInPutCacheRule;
+    VAR newFirst,t:P_token;
+    begin
+      newFirst      :=recycler.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
+      newFirst^.next:=recycler.newToken(firstRep^.location, '', tt_braceOpen); t:=newFirst^.next;
+      t       ^.next:=recycler.newToken(firstRep^.location, '', tt_literal, useParam); useParam^.rereference; t:=t^.next;
+      t       ^.next:=recycler.newToken(firstRep^.location, '', tt_separatorComma); t:=t^.next;
+      t       ^.next:=firstRep;
+      firstRep:=newFirst;
+      lastRep^.next:=recycler.newToken(firstRep^.location, '', tt_braceClose);
+      lastRep:=lastRep^.next;
+    end;
+
   begin
     case ruleType of
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
         binIdx:=cache^.getBinIdx(useParam);
-        system.EnterCriticalSection(rule_cs);
+        if (callDepth>=STACK_DEPTH_LIMIT) or (system.TryEnterCriticalsection(rule_cs)=0) then begin
+          result:=false;
+          for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler));
+          if result then begin
+            wrapResultInPutCacheRule;
+            if param=nil then disposeLiteral(useParam);
+          end;
+          exit(result);
+        end;
+
         lit:=cache^.get(useParam,binIdx);
         if lit<>nil then begin
           lit^.rereference;
