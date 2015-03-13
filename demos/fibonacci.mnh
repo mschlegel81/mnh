@@ -8,5 +8,5 @@ main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences')
       print('Fibonacci n-step sequence') and
       print(' n | values') and
       print('---+-----------------------------------------------------------------------------------------------------') and
-      print(each(k,[1..20],&"\n"&,k&"\t| "&each(i,[1..20],&"\t"&,fibNStep(i+k-3,k))));
-
+      print(each(k,[1..20],aggregator({$x&"\n"&$y}),k&"\t| "&
+            each(i,[1..20],aggregator({$x&"\t"&$y}),fibNStep(i+k-3,k))));

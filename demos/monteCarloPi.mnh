@@ -4,4 +4,4 @@ private samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sam
 
 //*Solves the "Monte carlo methods" task from <a href="http://rosettacode.org/wiki/Monte_Carlo_methods">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Monte_Carlo_methods') and
-      print(each(n,10**[1..6],&"\n"&,"n="&n&"\tpi approximated as "&monteCarloPi(n)));
+      printf("n=%I7% pi approximated as %0.#######%",10^[1..6],each(n,10^[1..6],monteCarloPi(n)));

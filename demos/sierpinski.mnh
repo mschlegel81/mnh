@@ -6,7 +6,7 @@ sierpinski(n)->sierpinski(n,0.5,0.5);
 sierpinski(10);
 //---------------------------------------------------:Graphical version
 //Text version:--------------------------------------------------------
-private join(L)->each(l,L,&"\n"&);
+private join(L)->each(l,L,aggregator({$x&"\n"&$y}));
 private blockJoin(a,b,c,d)->join(split(a,'\n')&split(b,'\n'))&'\n'&
                             join(split(c,'\n')&split(d,'\n'));
 private s(n<=0,1)->' #';
@@ -14,11 +14,10 @@ private s(n<=0,0)->'  ';
 private s(n   ,i)->blockJoin(s(n-1,i),s(n-1,0),
                              s(n-1,i),s(n-1,i));
 private centeredForm(s:string)->centeredForm(split(s,'\n'));
-private centeredForm(S:stringList)->each(i,[0..size(S)-1],&"\n"&,
+private centeredForm(S:stringList)->each(i,[0..size(S)-1],aggregator({$x&"\n"&$y}),
                                     each(j,[i..size(S)-1],&,' ')&S%i);
 //--------------------------------------------------------:Text version
 //*Solves the "Sierpinski-Triangle" task from <a href="http://rosettacode.org/wiki/Sierpinski_triangle">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Sierpinski_triangle') and
       print(centeredForm(s(5,1))) and
       print('Please open and execute in GUI-flavor of MNH5 for the graphical version');
-

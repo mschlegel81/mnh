@@ -17,7 +17,7 @@ private isVampire(i:int)->isVampire(i,chars(i));
 private isVampire(i:int,iC)->(size(iC) and 1)=1 ? false : isVampire(i,iC,factorPairs(i));
 private isVampire(i,iC,FP)->vampPrint(i,FP%each(p,FP,chars(p)==iC));
 private vampPrint(i,[])->false;
-private vampPrint(i,fangs)->true and print(i," is a vampire. It's fangs are: ",each(f,fangs,&" or "&,string(f)));
+private vampPrint(i,fangs)->true and print(i," is a vampire. It's fangs are: ",each(f,fangs,aggregator({$x&" or "&$y}),string(f)));
 
 private bigStep(n)->(digits(n) and 1) = 1 ? 10^(digits(n)) : n;
 

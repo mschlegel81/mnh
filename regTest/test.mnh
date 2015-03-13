@@ -65,9 +65,10 @@ checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60
 reportStart(executor)->print('-----------------------------------------------------\n',
                              'Starting test runs with executable '&executor,
                              '\n-----------------------------------------------------');
+matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
 
-main(executor       )->reportStart(executor) and each(test,test_list,                      runScript(executor,test  ,""    )        )
-                                 and each(test,test_with_output_list,                      runScript(executor,test%0,test%1)        ) and print(testsFailed);
-main(executor,filter)->reportStart(executor) and each(test,test_list,pos(filter,test)>=0 ? runScript(executor,test  ,""    )  : void)
-                                 and each(test,test_with_output_list,pos(filter,test)>=0 ? runScript(executor,test%0,test%1)        ) and print(testsFailed);
+main(executor           )->reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    )        )
+                                     and each(test,test_with_output_list,                                   runScript(executor,test%0,test%1)        ) and print(testsFailed);
+main(executor,filter,...)->reportStart(executor) and each(test,test_list,matchesAny(tail($params),test  ) ? runScript(executor,test  ,""    )  : void)
+                                     and each(test,test_with_output_list,matchesAny(tail($params),test%0) ? runScript(executor,test%0,test%1)  : void) and print(testsFailed);
 main->main("mnh_console.exe");

@@ -17,4 +17,4 @@ private orderListsBySize(L)->L%sortPerm(each(subList,L,size(subList)));
 main->main(default_dictionary);
 
 //*Finds anagrams in a custom dictionary
-main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),print(each(el,set,&", "&)));
+main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),print(each(el,set,aggregator({$x&", "&$y}))));

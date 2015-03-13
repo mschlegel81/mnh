@@ -25,9 +25,7 @@ private escapeChar(c   )->'"'&c&'"';
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
                        print('Analyzing file: ',filename) and
                        print(" code\tchar\n "&
-                             each(e,huffman(charactersInFile(filename)),&"\n "&,
+                             each(e,huffman(charactersInFile(filename)),aggregator({$x&"\n "&$y}),
                                   e%0&"\t"&escapeChar(e%1)));
 //*Calls main with unixdict.txt as input
 main->main((splitFileName(myPath)%"directory")&"/inputs/unixdict.txt");
-
-main;

@@ -1,4 +1,5 @@
-private printSquare(S)->print(each(row,S,&"\n"&,each(c,row,&"\t"&))) and print("The magic number is ",each(c,S%0,+));
+private printSquare(S)->print(each(row,S  ,aggregator({$x&"\n"&$y}),
+                              each(c  ,row,aggregator({$x&"\t"&$y})))) and print("The magic number is ",each(c,S%0,+));
 private set(S:list,I,J,k)->each(i,[0..size(S)-1],i=I ? each (j,[0..size(S)-1],j=J ? k : S%i%j) : S%i);
 
 private makeSquare(n:int)->makeSquare_(n<1 ? 1 : (n and 1)=0 ? n+1 : n);

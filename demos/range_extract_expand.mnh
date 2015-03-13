@@ -8,8 +8,8 @@ private exampleRange:='-6,-3--1,3-5,7-11,14,15,17-20';
 private extractRange(L:intList)->extractRange(L,-1|[0..size(L)-2]%(head(L,size(L)-1)+1<>tail(L))|(size(L)-1));
 private extractRange(L,I)->each(k,[0..size(I)-2],[L%(I%k+1),L%(I%(k+1))]);
 
-private mnhForm   (R)->'['&each(run,R,&","&,{$x=$y ? $x : $x&".."&$y}@run)&']';
-private normalForm(R)->    each(run,R,&","&,{$x=$y ? $x : $x&"-"& $y}@run)    ;
+private mnhForm   (R)->'['&each(run,R,aggregator({$x&","&$y}),{$x=$y ? $x : $x&".."&$y}@run)&']';
+private normalForm(R)->    each(run,R,aggregator({$x&","&$y}),{$x=$y ? $x : $x&"-"& $y}@run)    ;
 
 private range(x)->x;
 private range(x0,x1)->[x0..x1];
