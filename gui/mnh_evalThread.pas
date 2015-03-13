@@ -48,6 +48,7 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add('Nan');
       completionList.add('Inf');
       completionList.add('void');
+      completionList.add(C_tokenString[tt_aggregatorConstructor]);
       completionList.add(C_tokenString[tt_operatorXor]   );
       completionList.add(C_tokenString[tt_operatorOr]    );
       completionList.add(C_tokenString[tt_operatorMod]   );

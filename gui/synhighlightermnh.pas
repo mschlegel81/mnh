@@ -254,6 +254,7 @@ PROCEDURE TSynMnhSyn.Next;
         else if (localId = 'void') or
                 (localId = 'main') or
                 (localId = 'USE') or
+                (localId = C_tokenString[tt_aggregatorConstructor]) or
                 (localId = C_tokenString[tt_modifier_private] ) or
                 (localId = C_tokenString[tt_modifier_memoized]) or
                 (localId = C_tokenString[tt_modifier_mutable] ) or

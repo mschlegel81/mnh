@@ -32,6 +32,7 @@
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE setMutable(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST val:P_literal);
@@ -504,6 +505,28 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=false;
+    param.destroy;
+  end;
+
+FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+  VAR firstRep,lastRep:P_token;
+      param:T_listLiteral;
+  begin
+    param.create;
+    param.append(x,true);
+    param.append(y,true);
+    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
+      reduceExpression(firstRep,false,callDepth+1,recycler);
+      if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      then begin
+        result:=firstRep^.data;
+        result^.rereference;
+      end else begin
+        result:=nil;
+        raiseError(el3_evalError,'Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+      end;
+      recycler.cascadeDisposeToken(firstRep);
+    end else result:=nil;
     param.destroy;
   end;
 

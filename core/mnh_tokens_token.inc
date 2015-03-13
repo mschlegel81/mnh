@@ -171,14 +171,14 @@ PROCEDURE T_token.define(CONST original:T_token);
     txt     :=original.txt;
     tokType :=original.tokType;
     data    :=original.data;
-    if (tokType in [tt_literal,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference
+    if (tokType in [tt_literal,tt_aggregatorExpressionLiteral,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference
     else if (tokType in [tt_list_constructor,tt_parList_constructor]) then data:=P_listLiteral(original.data)^.clone;
   end;
 
 PROCEDURE T_Token.undefine;
   begin
     case tokType of
-      tt_literal,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
+      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
       else data:=nil;
     end;
@@ -209,6 +209,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_intrinsicRulePointer,
       tt_rulePutCacheValue,
       tt_parameterIdentifier: begin result:=txt; idLike:=true; end;
+      tt_aggregatorExpressionLiteral,
       tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
@@ -329,6 +330,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id=C_tokenString[tt_modifier_synchronized]  then result.tokType:=tt_modifier_synchronized
         else if id=C_tokenString[tt_each]         then begin result.tokType:=tt_each;         result.data:=nil; result.txt:=''; end
         else if id=C_tokenString[tt_parallelEach] then begin result.tokType:=tt_parallelEach; result.data:=nil; result.txt:=''; end
+        else if id=C_tokenString[tt_aggregatorConstructor] then begin result.tokType:=tt_aggregatorConstructor; result.data:=nil; result.txt:=''; end
         else if id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
         else if id=C_boolText[false] then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
         else if id='Nan'             then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
@@ -653,11 +655,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
 
   PROCEDURE resolveEach(CONST inParallel:boolean);
     VAR t,bracketClosingEach:P_token;
-        tokensBetween:array of P_token;
         bodyRule:array of P_subrule;
         bodyRuleLiteral:array of P_expressionLiteral;
-        aggregatorPresent:boolean;
-        aggregatorIsPrimitive:boolean;
+
+        aggregatorToken:T_tokenType;
+        aggregatorExpression:P_expressionLiteral;
+        aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
 
     FUNCTION parseBodyOk:boolean;
       VAR bracketLevel,i:longint;
@@ -702,30 +705,29 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         end;
 
         //process aggregator part (if any)----------------------------------------------
-        if (bodyPart[0,0]^.tokType in [tt_comparatorEq..tt_operatorIn]) and
-           (bodyPart[0,1]^.tokType in [tt_comparatorEq..tt_operatorIn]) then begin
-          setLength(tokensBetween,0);
+        aggregatorPresent:=no;
+        t:=bodyPart[0,0];
+        if t^.tokType=tt_aggregatorConstructor then begin
+          reduceExpression(bodyPart[0,0],pureOnly,callDepth+1,recycler);
+          bodyPart[0,1]:=bodyPart[0,0]^.last;
           t:=bodyPart[0,0];
-          while t<>nil do begin
-            setLength(tokensBetween,length(tokensBetween)+1);
-            tokensBetween[length(tokensBetween)-1]:=t;
-            t:=t^.next;
+        end;
+        if t^.next=nil then begin
+          if t^.tokType in [tt_comparatorEq..tt_operatorIn] then begin
+            aggregatorToken:=t^.tokType;
+            aggregatorPresent:=yes_as_operator;
+          end else if t^.tokType=tt_aggregatorExpressionLiteral then begin
+            aggregatorExpression:=P_expressionLiteral(t^.data);
+            aggregatorExpression^.rereference;
+            aggregatorPresent:=yes_as_expression;
           end;
+        end;
+        if aggregatorPresent<>no then begin
+          recycler.disposeToken(bodyPart[0,0]);
           for i:=0 to length(bodyPart)-2 do bodyPart[i]:=bodyPart[i+1];
           setLength(bodyPart,length(bodyPart)-1);
-
           first^.tokType:=tt_braceOpen;
           bracketClosingEach^.tokType:=tt_braceClose;
-          aggregatorPresent:=true;
-          aggregatorIsPrimitive:=length(tokensBetween)=1;
-        end else begin
-          setLength(tokensBetween,1);
-          tokensBetween[0]:=recycler.newToken(first^.location,'',tt_separatorComma);
-
-          first^.tokType:=tt_listBraceOpen;
-          bracketClosingEach^.tokType:=tt_listBraceClose;
-          aggregatorPresent    :=false;
-          aggregatorIsPrimitive:=false;
         end;
         //----------------------------------------------process aggregator part (if any)
         //process other body parts (if any)---------------------------------------------
@@ -747,15 +749,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         eachLocation:T_tokenLocation;
         resultLiteral:P_literal;
 
-    PROCEDURE inlineTokensBetween; inline;
-      VAR k:longint;
-      begin
-        for k:=0 to length(tokensBetween)-1 do begin
-          t^.next:=recycler.newToken(tokensBetween[k]);
-          t:=t^.next;
-        end;
-      end;
-
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
       VAR newLit:P_literal;
       begin
@@ -764,29 +757,43 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           exit;
         end else if L^.literalType=lt_void then exit;
-        if aggregatorPresent then begin
-          if (tokensBetween[0]^.tokType=tt_operatorConcat) then begin
+        case aggregatorPresent of
+          no: begin
             if resultLiteral=nil then resultLiteral:=newListLiteral;
-            if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
-            then P_listLiteral(resultLiteral)^.append   (L, true)
-            else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
-          end else begin
+            P_listLiteral(resultLiteral)^.append(L,true);
+          end;
+          yes_as_operator: begin
+            if (aggregatorToken=tt_operatorConcat) then begin
+              if resultLiteral=nil then resultLiteral:=newListLiteral;
+              if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
+              then P_listLiteral(resultLiteral)^.append   (L, true)
+              else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
+            end else begin
+              if resultLiteral=nil then begin
+                resultLiteral:=L; L^.rereference;
+              end else begin
+                newLit:=resolveOperator(resultLiteral,
+                                        aggregatorToken,
+                                        L,
+                                        eachLocation);
+                if newLit<>nil then begin
+                  disposeLiteral(resultLiteral);
+                  resultLiteral:=newLit;
+                end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
+              end;
+            end;
+          end;
+          yes_as_expression: begin
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=resolveOperator(resultLiteral,
-                                      tokensBetween[0]^.tokType,
-                                      L,
-                                      eachLocation);
+              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,recycler);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
-              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+tokensBetween[0]^.singleTokenToString+')',eachLocation);
+              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator '+aggregatorExpression^.toString,eachLocation);
             end;
           end;
-        end else begin
-          if resultLiteral=nil then resultLiteral:=newListLiteral;
-          P_listLiteral(resultLiteral)^.append(L,true);
         end;
         if doDispose then disposeLiteral(L);
       end;
@@ -795,7 +802,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       begin
         first^.tokType:=tt_literal;
         if resultLiteral=nil then begin
-          if aggregatorPresent then begin
+          if aggregatorPresent<>no then begin
             first^.data:=newErrorLiteral;
             raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           end else first^.data:=newListLiteral;
@@ -811,36 +818,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     PROCEDURE aggregateFutures(CONST finalizing:boolean);
       CONST STEP_TOL=1023;
       begin
-        if (aggregatorIsPrimitive or not(aggregatorPresent)) then begin
-          while (nextFuture<initializedFutures)
-            and (future[nextFuture]<>nil)
-            and ((initializedFutures>nextFuture+STEP_TOL) or
-                 finalizing or
-                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
-            addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
-            future[nextFuture]^.free(recycler);
-            dispose(future[nextFuture],proFormaDestroy);
-            inc(nextFuture);
-          end;
-          if finalizing then finalizeAggregation;
-        end else begin
-          while (nextFuture<initializedFutures)
-            and (future[nextFuture]<>nil)
-            and ((initializedFutures>nextFuture+STEP_TOL) or
-                 finalizing or
-                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
-            if nextFuture>0 then inlineTokensBetween;
-            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
-            t^.next:=recycler.newToken(eachLocation,'',tt_literal,future[nextFuture]^.getResultAsLiteral);
-            future[nextFuture]^.free(recycler);
-            dispose(future[nextFuture],proFormaDestroy);
-            t:=t^.next;
-            inc(nextFuture);
-          end;
-          if finalizing then t^.next:=bracketClosingEach;
+        while (nextFuture<initializedFutures)
+          and (future[nextFuture]<>nil)
+          and ((initializedFutures>nextFuture+STEP_TOL) or
+               finalizing or
+               (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+          while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
+          addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
+          future[nextFuture]^.free(recycler);
+          dispose(future[nextFuture],proFormaDestroy);
+          inc(nextFuture);
         end;
-        if finalizing then setLength(future,0);
+        if finalizing then begin
+          finalizeAggregation;
+          setLength(future,0);
+        end;
       end;
 
     PROCEDURE initFutures;
@@ -873,51 +865,26 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
       t:=first;
-      if aggregatorPresent and (itList^.size=0) then
-        raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',tokensBetween[0]^.location)
+      if (aggregatorPresent<>no) and (itList^.size=0) then
+        raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
         if inParallel then begin
           initFutures;
           aggregateFutures(true);
-        end else if (aggregatorIsPrimitive or not(aggregatorPresent)) and (callDepth<STACK_DEPTH_LIMIT) then begin
+        end else begin
           for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if errorLevel<=el2_warning then
             addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,recycler),true);
           finalizeAggregation;
-        end else begin
-          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-          for j:=0 to length(bodyRule)-1 do begin
-            if (i<>0) or (j<>0) then inlineTokensBetween;
-            t^.next:=recycler.newToken(eachLocation,'',tt_literal,bodyRuleLiteral[j]);
-            bodyRuleLiteral[j]^.rereference;
-            t:=t^.next;
-            t^.next:=recycler.newToken(eachLocation,'',tt_parList,newOneElementListLiteral(itList^.value(i),true));
-            t:=t^.next;
-          end;
-          t^.next:=bracketClosingEach;
         end;
       end else begin
-        if not(aggregatorPresent) then begin
-          resultLiteral:=itList;
-          resultLiteral^.rereference;
-          finalizeAggregation;
-        end else if aggregatorIsPrimitive then begin
-          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-            addToAggregation(itList^.value(i),false);
-          finalizeAggregation;
-        end else begin
-          for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then begin
-            if (i<>0) then inlineTokensBetween;
-            t^.next:=recycler.newToken(eachLocation,'',tt_literal,itList^.value(i));
-            itList^.value(i)^.rereference;
-            t:=t^.next;
-          end;
-          t^.next:=bracketClosingEach;
-        end;
+        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
+          addToAggregation(itList^.value(i),false);
+        finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
       for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRuleLiteral[i]);
-      for i:=0 to length(tokensBetween)-1 do recycler.disposeToken(tokensBetween[i]);
+      if aggregatorPresent=yes_as_expression then disposeLiteral(aggregatorExpression);
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
@@ -942,6 +909,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
+      end else if (first^.tokType=tt_aggregatorConstructor) then begin
+        if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^.value(0)^.literalType=lt_expression) then begin
+          firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,parameterListLiteral^.value(0));
+          parameterListLiteral^.value(0)^.rereference;
+          lastReplace:=firstReplace;
+        end else raiseError(el3_evalError,'Aggragators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRulePointer) and (not(pureOnly) or (pureIntrinsicFunctions.contains(first^.data)))  then begin
         {$ifdef PROFILING}
         profiler.Clear;
@@ -1106,7 +1079,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
       //writeln(tokensToString(first));
       //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
-        tt_literal: case cTokType(-1) of
+        tt_literal,tt_aggregatorExpressionLiteral: case cTokType(-1) of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
             stack_popDestroy;
             first^.tokType:=tt_parList;
@@ -1263,7 +1236,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
-        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue : case cTokType(1) of
+        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType(1) of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
