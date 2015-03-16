@@ -35,4 +35,3 @@ doPlot->setPlotLogscale([true,true]) and
         addPlot(each(i,[1..maxN],T2(i)),"red x +");
 
 main->doPlot and renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
-
