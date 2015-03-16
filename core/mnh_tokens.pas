@@ -240,6 +240,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           ruleBody:P_token;
           ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
+          ruleGroup:P_rule;
       begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -357,14 +358,19 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-        if (usecase<>lu_forDocGeneration) or ruleIsMutable then reduceExpression(ruleBody,not(evaluateBody),0,recycler);
+
+        if (usecase<>lu_forDocGeneration) or ruleIsMutable then begin
+          rulePattern.toParameterIds(ruleBody);
+          reduceExpression(ruleBody,not(evaluateBody),0,recycler);
+        end;
 
         if   errorLevel<el3_evalError then begin
           new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
-          ensureRuleId(ruleId)^.addOrReplaceSubRule(subrule);
-          if ruleIsMemoized     then ensureRuleId(ruleId)^.setMemoized(ruleDeclarationStart);
-          if ruleIsMutable      then ensureRuleId(ruleId)^.setMutable(ruleDeclarationStart);
-          if ruleIsSynchronized then ensureRuleId(ruleId)^.setSynchronized(ruleDeclarationStart);
+          ruleGroup:=ensureRuleId(ruleId);
+          ruleGroup^.addOrReplaceSubRule(subrule);
+          if ruleIsMemoized     then ruleGroup^.setMemoized(ruleDeclarationStart);
+          if ruleIsMutable      then ruleGroup^.setMutable(ruleDeclarationStart);
+          if ruleIsSynchronized then ruleGroup^.setSynchronized(ruleDeclarationStart);
           first:=nil;
           if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate,ruleIsSynchronized,ruleIsMutable);
         end else if errorLevel<el5_systemError then

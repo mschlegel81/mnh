@@ -25,6 +25,7 @@
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
+    PROCEDURE toParameterIds(CONST tok:P_token);
   end;
 {$endif}
 {$ifdef include_implementation}
@@ -228,6 +229,17 @@ FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
                      and ((sig[i].restrictionScalar =nil) and (p.sig[i].restrictionScalar =nil)
                        or (sig[i].restrictionScalar<>nil) and (p.sig[i].restrictionScalar<>nil)
                        and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar));
+  end;
+
+PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);
+  VAR t:P_token;
+  begin
+    t:=tok;
+    while t<>nil do begin
+      if (t^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer])
+      and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
+      t:=t^.next;
+    end;
   end;
 
 {$endif}
