@@ -18,6 +18,7 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
 FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ansistring;
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
+FUNCTION unbrace(CONST s:ansistring):ansistring;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
@@ -343,6 +344,16 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
   begin
     result := copy(input, 1, length(head)) = head;
+  end;
+
+FUNCTION unbrace(CONST s:ansistring):ansistring;
+  begin
+    if (length(s)>=2) and (
+        (s[1]='(') and (s[length(s)]=')') or
+        (s[1]='[') and (s[length(s)]=']') or
+        (s[1]='{') and (s[length(s)]='}'))
+    then result:=copy(s,2,length(s)-2)
+    else result:=s;
   end;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;

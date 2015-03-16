@@ -118,6 +118,7 @@ TYPE
     FUNCTION trimRight: P_stringLiteral;
     FUNCTION upper: P_stringLiteral;
     FUNCTION lower: P_stringLiteral;
+    FUNCTION unbrace: P_stringLiteral;
     //from T_scalarLiteral:
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
@@ -969,6 +970,16 @@ FUNCTION T_stringLiteral.lower: P_stringLiteral;
   VAR rs: string;
   begin
     rs := lowercase(val);
+    if rs = val then begin
+      result := @self;
+      rereference;
+    end else result := newStringLiteral(rs);
+  end;
+
+FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
+  VAR rs: string;
+  begin
+    rs := mnh_stringUtil.unbrace(val);
     if rs = val then begin
       result := @self;
       rereference;
