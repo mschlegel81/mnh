@@ -16,5 +16,10 @@ subsets(L:list)->myUnique(subsets([],L));
 private subsets(Head:list,[])->[Head];
 private subsets(Head:list,L)->subsets(Head,tail(L))|subsets(Head|head(L),tail(L));
 
-
-
+private testEx(e:expression)->printf("%X26% = %X%",unbrace(string(e)),string(e()));
+//*For reg-test
+main->testEx({permutations(3)})|
+      testEx({permutations([0,1,2,2])})|
+      testEx({subsets(['a'..'c'])})|
+      testEx({subsets(['a'..'c','a'])});
+     

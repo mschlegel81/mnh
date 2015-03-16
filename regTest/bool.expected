@@ -1,0 +1,3 @@
+Input       : trueCount($A|$B|$C)=1
+Normal Form : A and not(B) and not(C) or not(A) and B and not(C) or not(A) and not(B) and C
+Compact Form: A?not(B or C):B xor C

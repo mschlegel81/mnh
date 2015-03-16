@@ -11,7 +11,7 @@ primes(n:int)->n<=max_cached            ? cached_primes%(cached_primes<=n)
 //*Return prime numbers <= floor(n)
 primes(n:real)->primes(floor(n));
 
-isPrime(n:int)->n in cached_primes ? true : 
+isPrime(n:int)->n in cached_primes ? true :
                 n <= max_cached    ? false :
                 trueCount(n mod primes(sqrt(n))=0)=0;
 
@@ -33,3 +33,11 @@ private dividers_B(n,D)->1|unique(D|(n div D));
 memoized dividerSum(n:int)->each(d,dividers(n),+);
 
 dividerPairs(n:int)->each(d,[2..floor(sqrt(n))]%(n mod [2..floor(sqrt(n))]=0),[d,n div d]);
+
+private testEx(e:expression)->printf("%X20% = %X%",unbrace(string(e)),string(e()));
+//*Call functions for reg-testing
+main->testEx({primes(100)}) |
+      testEx({factorize(121350)}) |
+      testEx({dividers(121350)}) |
+      testEx({dividerSum(121350)}) |
+      testEx({dividerPairs(121350)});

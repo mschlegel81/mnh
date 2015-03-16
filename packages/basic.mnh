@@ -24,12 +24,12 @@ prod(L)->each(n,L,*);
 //*The conjuction of the empty list is <code>true</code>
 And([]):=true;
 //*Returns the conjuction of of all elements in <code>L</code>
-And(L:booleanList)->each(n,L,and);
+And(L:booleanList)->trueCount(L)=size(L);
 
 //*The disjuction of the empty list is <code>true</code>
 Or([]):=false;
 //*Returns the disjuction of of all elements in <code>L</code>
-Or(L:booleanList)->each(n,L,or);
+Or(L:booleanList)->trueCount(L)>0;
 
 //*Gives the empty string
 join([])->"";
@@ -38,12 +38,13 @@ join(L<>[])->each(n,L,&,string(n));
 //*Gives the empty string
 join([],joiner:string)->"";
 //*Returns a concatenation of flat list <code>L</code> using <code>joiner</code> as joiner.
-join(L<>[],joiner:string)->each(n,L,&joiner&,string(n));
+join(L<>[],joiner:string)->each(n,L,aggregator({$x&joiner&$y}),string(n));
 //*Gives the empty string
 join([],joiner1:string,joiner2:string)->"";
 //*Returns a concatenation of nested list <code>L</code> using <code>joiner1</code>
 //*as joiner on the higher level and <code>joiner2</code> as joiner on the deeper level.
-join(L<>[],joiner1:string,joiner2:string)->each(inner,L,&joiner1&,each(n,inner,&joiner2&,string(n)));
+join(L<>[],joiner1:string,joiner2:string)->each(inner,L    ,aggregator({$x&joiner1&$y}),
+                                           each(n    ,inner,aggregator({$x&joiner2&$y}),string(n)));
 //--------------------------------------------:Aggregations
 //Statistics:----------------------------------------------
 //*Returns the mean of all values in <code>X</code>
@@ -69,11 +70,6 @@ indexes(A:list)->[0..size(A)-1];
 //*Returns <code>A</code> with reversed order of elements
 reverse(A:list)->A%[size(A)-1..0];
 //-----------------------------------------:List operations
-//*Returns a histogram of <code>L</code> with default bin size of <code>1</code>
-histogram(L<>[])          ->histogram(L,1);
-//*Returns a histogram of <code>L</code> with bin size of <code>h</code>
-histogram(L<>[],h:numeric)->histogram(L,h,floor(min(L)/h),ceil(max(L)/h));
-private histogram(L,h,i0,i1)->each(i,[i0 .. i1],[i*h,each(flag,i*h<=L<(i+1)*h,+,flag?1:0)/size(L)/h]);
 
 //*Ludolf's Number (commonly known as pi)
 pi:=4*arctan(1);
@@ -84,3 +80,23 @@ fak(n<1)->1.0;
 fak(n:int)->n*fak(n-1);
 fak(N:list)->each(n,N,fak(n));
 
+private testEx(e:expression)->printf("%X31% = %X%",unbrace(string(e)),string(e()));
+//*For reg-testing
+main->testEx({sum([1,2,3.2,-1.8])}) |
+      testEx({runningSum([1,2,3.2,-1.8])}) |
+      testEx({prod([1,2,3.2,-1.8])}) |
+      testEx({And([true,false,true])}) |
+      testEx({Or([true,false,true])}) |
+      testEx({join([1,2,3])}) |
+      testEx({join([1,2,3],";")}) |
+      testEx({join([[1,2,3],[4,5,6]],";"," ")}) |
+      testEx({mean([1,2,3.2,-1.8])}) |
+      testEx({variance([1,2,3.2,-1.8])}) |
+      testEx({union([1,2,3],[2,3,4])})|
+      testEx({intersect([1,2,3],[2,3,4])})|
+      testEx({minus([1,2,3],[2,3,4])})|
+      testEx({indexes([1,2,3]|[2,3,4])})|
+      testEx({reverse([1,2,3,5])})|      
+      testEx({fak(10)})|      
+      printf("%X31% = %0.00000000%","pi",pi) |
+      tabPrint([[1,2,3],[4,5,6]]);
