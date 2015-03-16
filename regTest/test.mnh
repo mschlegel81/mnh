@@ -44,7 +44,6 @@ test_list:=["regTest\\opTest.mnh",
 
 test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
                         ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
-                        ["demos\\piPlots.mnh"     ,"demos\\piPlots.png"],
                         ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]];
             
 FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
