@@ -1,0 +1,6 @@
+This is a demo - start with any argument to play.
+ ?> Find an expression to calculate 24 from the numbers [5,6,7,8].
+ !> ((5+7)-8)*6
+The solution is valid.
+ ?> Another round?
+ !> no
