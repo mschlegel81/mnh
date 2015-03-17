@@ -29,6 +29,7 @@ TYPE
       ready:boolean;
       codeProvider:P_codeProvider;
       loadedVersion:longint;
+      hadBatchModeParts:boolean;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
@@ -448,6 +449,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if      next.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
           else if next.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
           else if (usecase=lu_forDocGeneration) and (next.txt<>'') then doc^.addComment(next.txt);
+          if batchMode then hadBatchModeParts:=true;
         end;
       end;
     end;
@@ -479,7 +481,7 @@ PROCEDURE T_package.clear;
       dispose(rule,destroy);
     end;
     rules.clear;
-
+    hadBatchModeParts:=false;
     setLength(packageUses,0);
     ready:=false;
   end;
@@ -596,9 +598,11 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
 
     t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
 
-    if not(mainPackage.rules.containsKey('main',mainRule)) then
-      raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
-    else begin
+    if not(mainPackage.rules.containsKey('main',mainRule)) then begin
+      if mainPackage.hadBatchModeParts
+      then raiseError(el1_note     ,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
+      else raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider));
+    end else begin
       t^.tokType:=tt_localUserRulePointer;
       t^.data:=mainRule;
 
