@@ -458,14 +458,6 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
     end else result:=nil;
   end;
 
-FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
-  VAR tempRecycler:T_tokenRecycler;
-  begin
-    tempRecycler.create;
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempRecycler);
-    tempRecycler.destroy;
-  end;
-
 FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
@@ -485,11 +477,6 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
     param.destroy;
-  end;
-
-FUNCTION getArity(CONST subruleLiteral:P_expressionLiteral):longint;
-  begin
-    result:=length(P_subrule(subruleLiteral^.value)^.pattern.sig);
   end;
 
 FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;

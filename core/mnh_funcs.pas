@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,EpikTimer;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -11,20 +11,7 @@ VAR
 
 PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST isPure:boolean; CONST explanation:ansistring);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
-
-//Callbacks:--------------------------------
-TYPE T_resolveNullaryCallback=FUNCTION (CONST selfPointer:P_expressionLiteral):P_literal;
-VAR resolveNullaryCallback:T_resolveNullaryCallback;
-
-TYPE T_stringToExprCallback=FUNCTION(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
-VAR stringToExprCallback:T_stringToExprCallback;
-
-TYPE T_applyUnaryOnExpressionCallback=FUNCTION (CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
-VAR applyUnaryOnExpressionCallback:T_applyUnaryOnExpressionCallback;
-
-TYPE T_arityCallback=FUNCTION (CONST expression:P_expressionLiteral):longint;
-VAR arityCallback:T_arityCallback;
-//--------------------------------:Callbacks
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
 
 IMPLEMENTATION
 //Critical sections:------------------------------------------------------------
@@ -43,7 +30,7 @@ PROCEDURE registerRule(CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to parameters ';
+    complaintText:='Built in function ['+functionName+'] cannot be applied to parameters ';
     if params=nil then complaintText:=complaintText+'()'
                   else complaintText:=complaintText+params^.toParameterListString(true);
     raiseError(el3_evalError,complaintText,tokenLocation);
@@ -52,7 +39,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in FUNCTION ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
+    complaintText:='Built in function ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
@@ -75,250 +62,6 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   end;
 
 {$MACRO ON}
-{$define UNARY_NUM_TO_REAL:=
-FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR i:longint;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-      lt_int : try result:=newRealLiteral(CALL_MACRO(P_intLiteral (x)^.value)); except result:=newRealLiteral(Nan) end;
-      lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
-      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
-      end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
-    end;
-  end;
-
-begin
-  result:=nil;
-  if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0))
-  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
-end}
-
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=sqrt}
-{$define ID_MACRO:='sqrt'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=sin}
-{$define ID_MACRO:='sin'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=arcsin}
-{$define ID_MACRO:='arcsin'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=cos}
-{$define ID_MACRO:='cos'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=arccos}
-{$define ID_MACRO:='arccos'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=tan}
-{$define ID_MACRO:='tan'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=arctan}
-{$define ID_MACRO:='arctan'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=exp}
-{$define ID_MACRO:='exp'}
-UNARY_NUM_TO_REAL;
-
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=ln}
-{$define ID_MACRO:='ln'}
-UNARY_NUM_TO_REAL;
-
-{$undef UNARY_NUM_TO_REAL}
-
-FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION not_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'not',tokenLocation);
-        lt_boolean: result:=newBoolLiteral(not(P_boolLiteral(x)^.value));
-        lt_int:     result:=newIntLiteral (not(P_intLiteral (x)^.value));
-        lt_list,lt_booleanList, lt_intList, lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=not_rec(params^.value(0))
-    else raiseNotApplicableError('not',params,tokenLocation);
-  end;
-
-{$define UNARY_NUM_TO_SAME:=
-FUNCTION recurse(CONST x:P_literal):P_literal;
-  VAR i:longint;
-  begin
-    result:=nil;
-    case x^.literalType of
-      lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-      lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-      lt_int : result:=newIntLiteral (CALL_MACRO(P_intLiteral (x)^.value));
-      lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-      lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-        result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
-      end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
-    end;
-  end;
-
-begin
-  result:=nil;
-  if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0))
-  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
-end}
-
-FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=abs}
-{$define ID_MACRO:='abs'}
-UNARY_NUM_TO_SAME;
-
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=sqr}
-{$define ID_MACRO:='sqr'}
-UNARY_NUM_TO_SAME;
-
-{$undef UNARY_NUM_TO_SAME}
-
-{$define ROUND_IMPLEMENTATION:=
-  FUNCTION recurse1(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),ID_MACRO,tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  FUNCTION recurse2(CONST x,y:P_literal):P_literal;
-    FUNCTION myRound(CONST x:T_myFloat; CONST y:int64):P_literal; inline;
-      VAR pot:T_myFloat;
-          i:int64;
-      begin
-        pot:=1;
-        i:=0;
-        while i<y do begin pot:=pot*10;  inc(i); end;
-        while i>y do begin pot:=pot*0.1; dec(i); end;
-        result:=newRealLiteral(CALL_MACRO(x*pot)/pot);
-      end;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : begin result:=x; x^.rereference; end;
-        lt_real: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
-          lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
-          lt_list,lt_intList,lt_emptyList: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
-          end;
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
-        end;
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
-          lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
-          lt_int: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
-          end;
-          lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
-        end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=recurse1(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
-  end}
-
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=round}
-{$define ID_MACRO:='round'}
-ROUND_IMPLEMENTATION;
-
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=ceil}
-{$define ID_MACRO:='ceil'}
-ROUND_IMPLEMENTATION;
-
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-{$define CALL_MACRO:=floor}
-{$define ID_MACRO:='floor'}
-ROUND_IMPLEMENTATION;
-
-{$undef ROUND_IMPLEMENTATION}
-
-
-
-FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION sign_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_expression: result:=applyUnaryOnExpressionCallback(P_expressionLiteral(x),'sign',tokenLocation);
-        lt_error,lt_listWithError: begin result:=x; result^.rereference; end;
-        lt_int : result:=newIntLiteral(sign(P_intLiteral (x)^.value));
-        lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
-        lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1)
-    then result:=sign_rec(params^.value(0))
-    else raiseNotApplicableError('sign',params,tokenLocation);
-  end;
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION headOf(CONST x:P_literal):P_literal;
@@ -641,39 +384,6 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
 
-
-FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR res:P_literal;
-      profiler:TEpikTimer;
-      t:double;
-
-  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
-    VAR aid:P_listLiteral;
-    begin
-      aid:=newListLiteral;
-      aid^.append(newStringLiteral(el0),false);
-      aid^.append(el1,false);
-      P_listLiteral(result)^.append(aid,false);
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      profiler := TEpikTimer.create(nil);
-      profiler.Clear;
-      profiler.Start;
-      res:=resolveNullaryCallback(P_expressionLiteral(params^.value(0)));
-      t:=profiler.Elapsed;
-      if res<>nil then begin
-        result:=newListLiteral;
-        appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
-        appendPair(result,'result',res);
-        appendPair(result,'time'  ,newRealLiteral(t));
-      end;
-      profiler.Free;
-    end else raiseNotApplicableError('time',params,tokenLocation);
-  end;
-
 FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR splitters:array of ansistring;
   PROCEDURE initSplitters;
@@ -833,28 +543,6 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('string',params,tokenLocation);
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION expression_rec(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      result:=nil;
-      case x^.literalType of
-        lt_string: result:=stringToExprCallback(P_stringLiteral(x)^.value,tokenLocation);
-        lt_list,lt_stringList,lt_emptyList:  begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
-        end;
-        else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation);
-      end;
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_emptyList,lt_string])
-    then result:=expression_rec(params^.value(0))
-    else raiseNotApplicableError('expression',params,tokenLocation);
-  end;
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
   VAR i,j:longint;
@@ -1495,14 +1183,6 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('printf',params,tokenLocation);
   end;
 
-FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      result:=newIntLiteral(arityCallback(P_expressionLiteral(params^.value(0))));
-    end else raiseNotApplicableError('arity',params,tokenLocation);
-  end;
-
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1512,27 +1192,6 @@ INITIALIZATION
   intrinsicRuleExplanationMap.create;
   pureIntrinsicFunctions.create;
   registerRule('print'         ,@print_imp     ,false,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
-  //Unary Numeric -> real
-  registerRule('sqrt'          ,@sqrt_imp      ,true,'sqrt(n);#Returns the square root of numeric parameter n');
-  registerRule('sin'           ,@sin_imp       ,true,'sin(n);#Returns the sine of numeric parameter n');
-  registerRule('arcsin'        ,@arcsin_imp    ,true,'arcsin(n);#Returns the arcsine of numeric parameter n');
-  registerRule('cos'           ,@cos_imp       ,true,'cos(n);#Returns the cosine of numeric parameter n');
-  registerRule('arccos'        ,@arccos_imp    ,true,'arccos(n);#Returns the arccosine of numeric parameter n');
-  registerRule('tan'           ,@tan_imp       ,true,'tan(n);#Returns the tangent of numeric parameter n');
-  registerRule('arctan'        ,@arctan_imp    ,true,'tan(n);#Returns the arctangent of numeric parameter n');
-  registerRule('exp'           ,@exp_imp       ,true,'exp(n);#Returns the exponential of numeric parameter n');
-  registerRule('ln'            ,@ln_imp        ,true,'ln(n);#Returns the natural logarithm of numeric parameter n');
-  //Unary Boolean -> boolean
-  registerRule('not'           ,@not_imp       ,true,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
-  //Unary Numeric -> same (i.e. I -> I, R -> R)
-  registerRule('abs'           ,@abs_imp       ,true,'abs(n);#Returns the absolute value of numeric parameter n');
-  registerRule('sqr'           ,@sqr_imp       ,true,'sqr(n);#Returns the square of numeric parameter n');
-  //Unary Numeric -> Integer
-  registerRule('sign'          ,@sign_imp      ,true,'sign(n);#Returns the sign of numeric parameter n');
-  registerRule('ceil'          ,@ceil_imp      ,true,'ceil(x);#Returns the smallest integer >=x');
-  registerRule('floor'         ,@floor_imp     ,true,'floor(x);#Returns the largest integer <=x');
-  //round might be binary...
-  registerRule('round'         ,@round_imp     ,true,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
   //Functions on lists:
   registerRule('head'          ,@head_imp      ,true,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,true,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
@@ -1552,7 +1211,6 @@ INITIALIZATION
   registerRule('copy'          ,@copy_imp      ,true,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
   registerRule('split'         ,@split_imp     ,true,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
 
-  registerRule('time'          ,@time_imp      ,false,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
   registerRule('softCast'      ,@softCast_imp  ,true,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule('trim'          ,@trim_imp      ,true,'trim(S:string);#Returns string S without leading or trailing spaces');
   registerRule('trimLeft'      ,@trimLeft_imp  ,true,'trimLeft(S:string);#Returns string S without leading spaces');
@@ -1561,7 +1219,7 @@ INITIALIZATION
   registerRule('lower'         ,@lower_imp     ,true,'lower(S:string);#Returns an lowercase representation of S');
   registerRule('unbrace'       ,@unbrace_imp   ,true,'unbrace(S:string);#Returns an unbraced representation of S');
   registerRule('string'        ,@string_imp    ,true,'string(X);#Returns a string-representation of X');
-  registerRule('expression'    ,@expression_imp   ,true,'expression(S:string);#Returns an expression parsed from S');
+
   registerRule('files'         ,@files_impl       ,false,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule('folders'       ,@folders_impl     ,false,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
   registerRule('fileExists'    ,@fileExists_impl  ,false,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
@@ -1587,7 +1245,7 @@ INITIALIZATION
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters');
 
-  registerRule('arity'         ,@arity_imp         ,true,'arity(e:expression);#Returns the arity of expression e');
+
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');

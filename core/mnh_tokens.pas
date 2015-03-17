@@ -2,7 +2,7 @@ UNIT mnh_tokens;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
-     {$ifdef PROFILING}EpikTimer,{$endif}
+     EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
 
 {$define include_interface}
@@ -88,7 +88,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_futureTask.inc}
 {$include mnh_tokens_rule.inc}
-
+{$include mnh_tokens_funcs.inc}
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
   VAR i,j:longint;
@@ -577,61 +577,6 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinesImportedRules.unique;
   end;
 
-FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
-  VAR next:T_token;
-      first,last,temp:P_token;
-      loc:T_tokenLocation;
-      recycler:T_tokenRecycler;
-  begin
-    loc:=location;
-    next:=firstToken(s,loc,nil,true);
-    if next.tokType=tt_eol then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
-    recycler.create;
-    first:=recycler.newToken(next);
-    last:=first;
-    repeat
-      loc:=location;
-      next:=firstToken(s,loc,nil,true);
-      if next.tokType<>tt_eol then begin
-        last^.next:=recycler.newToken(next);
-        last:=last^.next;
-      end;
-    until (next.tokType in [tt_eol,tt_semicolon]) or (errorLevel>=el3_evalError);
-    if errorLevel>=el3_evalError then begin
-      recycler.cascadeDisposeToken(first);
-      recycler.destroy;
-      exit(newErrorLiteral);
-    end;
-
-    if first^.tokType<>tt_expBraceOpen then begin
-      temp:=recycler.newToken(location,'',tt_expBraceOpen);
-      temp^.next:=first; first:=temp;
-      last^.next:=recycler.newToken(location,'',tt_expBraceClose);
-      last:=last^.next;
-    end;
-
-    digestInlineExpression(first,recycler);
-    if (errorLevel<el3_evalError) and (first^.next<>nil) then raiseError(el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-    if errorLevel>=el3_evalError then begin
-      recycler.cascadeDisposeToken(first);
-      recycler.destroy;
-      exit(newErrorLiteral);
-    end;
-    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-      recycler.disposeToken(first);
-      raiseError(el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-      recycler.destroy;
-      exit(newErrorLiteral);
-    end;
-    result:=P_expressionLiteral(first^.data);
-    first^.tokType:=tt_eol;
-    first^.data:=nil;
-    recycler.disposeToken(first);
-
-    recycler.destroy;
-
-  end;
-
 PROCEDURE callMainInMain(CONST parameters:array of ansistring);
   VAR t:P_token;
       parLit:P_listLiteral;
@@ -732,7 +677,9 @@ PROCEDURE findAndDocumentAllPackages;
     recycler.destroy;
   end;
 
+{$undef include_implementation}
 INITIALIZATION
+{$define include_initialization}
   mainThread:=ThreadId;
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
@@ -744,14 +691,12 @@ INITIALIZATION
   subruleToStringCallback:=@subruleToStringImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   evaluateCompatorCallback:=@evaluateComparator;
-  //callbacks in mnh_funcs:
-  resolveNullaryCallback:=@evaluateNullary;
-  stringToExprCallback:=@stringToExpression;
-  applyUnaryOnExpressionCallback:=@subruleApplyFuncImpl;
-  arityCallback:=@getArity;
+
   {$ifdef PROFILING}
   profiler := TEpikTimer.create(nil);
   {$endif}
+  {$include mnh_tokens_funcs.inc}
+
 FINALIZATION
   {$ifdef debugMode} writeln(stdErr,'Finalizing mnh_tokens: pending tasks');  {$endif}
   pendingTasks.destroy;
