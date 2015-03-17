@@ -9,6 +9,7 @@ USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
 TYPE
   P_package=^T_package;
   {$include mnh_tokens_token.inc}
+  {$include mnh_tokens_recycler.inc}
   {$include mnh_tokens_pattern.inc}
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
@@ -84,6 +85,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 
 {$define include_implementation}
 {$include mnh_tokens_token.inc}
+{$include mnh_tokens_recycler.inc}
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_futureTask.inc}
