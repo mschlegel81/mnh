@@ -1,5 +1,18 @@
 USE hash;
 
+slow_test_list:=["demos\\ackermann.mnh",
+                 "demos\\digitSquareSum.mnh",
+                 "demos\\hailstone.mnh",
+                 "demos\\hofstadterConway.mnh",
+                 "demos\\ludic.mnh",
+                 "demos\\monteCarloPi.mnh",
+                 "demos\\pythagoras.mnh",
+                 "demos\\selfRefSeq.mnh",
+                 "demos\\vampire.mnh",
+                 "demos\\weasel.mnh",
+                 "demos\\wordCount.mnh"];
+
+mutable
 test_list:=["regTest\\opTest.mnh",
             "regTest\\hash.mnh",
             "packages\\basic.mnh",
@@ -9,49 +22,41 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\12_statements.mnh",
             "demos\\24.mnh",
             "demos\\99bottles.mnh",
-            "demos\\ackermann.mnh",
             "demos\\anagram.mnh",
             "demos\\concatInts.mnh",
-            "demos\\dice7fromDice5.mnh",
-            "demos\\digitSquareSum.mnh",
+            "demos\\dice7fromDice5.mnh",            
             "demos\\fibonacci.mnh",
             "demos\\fibonacciWord.mnh",
-            "demos\\hailstone.mnh",
             "demos\\hamming.mnh",
-            "demos\\hofstadterConway.mnh",
             "demos\\huffmann.mnh",
             "demos\\josephus.mnh",
             "demos\\lastSundays.mnh",
-            "demos\\ludic.mnh",
             "demos\\magicSquare.mnh",
-            "demos\\monteCarloPi.mnh",
             "demos\\pascal.mnh",
             "demos\\pernicousNumbers.mnh",
-            "demos\\pythagoras.mnh",
             "demos\\quine.mnh",
             "demos\\quine2.mnh",
             "demos\\range_extract_expand.mnh",
             "demos\\rk4.mnh",
             "demos\\roman.mnh",
             "demos\\root.mnh",
-            "demos\\selfRefSeq.mnh",
             "demos\\setConsolidation.mnh",
             "demos\\shannonEntropy.mnh",
             "demos\\sierpinski.mnh",
             "demos\\ulam.mnh",
             "demos\\unbiasedRandom.mnh",
-            "demos\\vampire.mnh",
             "demos\\variadic.mnh",
-            "demos\\weasel.mnh",
-            "demos\\wordCount.mnh",
             "demos\\y.mnh",
             "demos\\zeckendorf.mnh"];
+mutable
+test_with_output_list:=[];
 
-test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
-                        ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
-                        ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]];
-            
-FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
+includeSlowTests->head(test_list:=unique(test_list| slow_test_list),0)|
+                  head(test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
+                                               ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
+                                               ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]],0);
+                        
+FMT_STRING->"%X" & max(length(test_list)) & "% %####0.00%sec ";
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
@@ -65,7 +70,8 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
-runScript(executor,scriptName,outputFileName)->print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
+runScript(executor,scriptName,outputFileName)->(outputFileName<>'' ? (deleteFile(outputFileName) ? void : void) : void)|
+                                               print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
 checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
                                                                          :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
@@ -76,8 +82,12 @@ reportStart(executor)->print('--------------------------------------------------
                              '\n-----------------------------------------------------');
 matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
 
-main(executor           )->reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    )        )
+main(executor,'quick'   )->reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    )        )
                                      and each(test,test_with_output_list,                                   runScript(executor,test%0,test%1)        ) and print(testsFailed);
-main(executor,filter,...)->reportStart(executor) and each(test,test_list,matchesAny(tail($params),test  ) ? runScript(executor,test  ,""    )  : void)
+main(executor           )->includeSlowTests | 
+                           reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    )        )
+                                     and each(test,test_with_output_list,                                   runScript(executor,test%0,test%1)        ) and print(testsFailed);
+main(executor,filter,...)->includeSlowTests | 
+                           reportStart(executor) and each(test,test_list,matchesAny(tail($params),test  ) ? runScript(executor,test  ,""    )  : void)
                                      and each(test,test_with_output_list,matchesAny(tail($params),test%0) ? runScript(executor,test%0,test%1)  : void) and print(testsFailed);
 main->main("mnh_console.exe");

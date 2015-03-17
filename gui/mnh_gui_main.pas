@@ -195,6 +195,7 @@ TYPE
 VAR
   MnhForm: TMnhForm;
 
+PROCEDURE lateInitialization;
 IMPLEMENTATION
 VAR errorThroughput:array of T_storedError;
     output:T_listOfString;
@@ -1120,24 +1121,29 @@ FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
+PROCEDURE lateInitialization;
+  begin
+    plotSubsystem.renderNotBefore:=now;
+    plotSubsystem.state:=pss_neutral;
+    plotSubsystem.rendering:=false;
+
+    setLength(errorThroughput,0);
+
+    registerRule('ask', @ask_impl,false,
+      'ask(q:string);#Asks the user question q and returns the user input#'+
+      'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
+    mnh_funcs.registerRule('plot',@plot,false,'');
+    mnh_funcs.registerRule('addPlot',@addPlot,false,'');
+    mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,false,'');
+    mnh_funcs.registerRule('setPlotLogscale',@setLogscale,false,'');
+    mnh_funcs.registerRule('setPlotRange',@setPlotRange,false,'');
+    mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,false,'');
+    mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,false,'');
+    mnh_evalThread.initUnit;
+  end;
 
 INITIALIZATION
-  mnh_funcs.registerRule('plot',@plot,false,'');
-  mnh_funcs.registerRule('addPlot',@addPlot,false,'');
-  mnh_funcs.registerRule('setPlotAutoscale',@setAutoscale,false,'');
-  mnh_funcs.registerRule('setPlotLogscale',@setLogscale,false,'');
-  mnh_funcs.registerRule('setPlotRange',@setPlotRange,false,'');
-  mnh_funcs.registerRule('setPlotAxisStyle',@setAxisStyle,false,'');
-  mnh_funcs.registerRule('setPlotPreserveAspect',@setPreserveAspect,false,'');
-  mnh_evalThread.initIntrinsicRuleList;
-
-  plotSubsystem.renderNotBefore:=now;
-  plotSubsystem.state:=pss_neutral;
-  plotSubsystem.rendering:=false;
-
   output.create;
-  setLength(errorThroughput,0);
-
 FINALIZATION
   output.destroy;
 end.

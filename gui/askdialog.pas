@@ -34,6 +34,7 @@ TYPE
 VAR
   askForm: TaskForm;
 
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
 IMPLEMENTATION
 
 {$R *.lfm}
@@ -133,10 +134,5 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       end
     else raiseNotApplicableError('ask', params, tokenLocation);
   end;
-
-INITIALIZATION
-  registerRule('ask', @ask_impl,false,
-    'ask(q:string);#Asks the user question q and returns the user input#'+
-    'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
 
 end.

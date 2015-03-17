@@ -27,9 +27,9 @@
 :64bitOpt
 @echo --------------------- building optimized 64 bit binaries ---------------------------
 @%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe        %optimize% %guiOpt64% 
-@%fpc64% consoles\mnh_console.pas -o.\mnh_console.exe      %optimize% %guiOpt64% -dplots
-@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui.exe          %optimize% %guiOpt64% -WG 
 @%delp%
+@%fpc64% consoles\mnh_console.pas -o.\mnh_console.exe      %optimize% %guiOpt64% -dplots
+@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui.exe          %optimize% %guiOpt64% -dplots
 @%fpc64% consoles\mnh_console.pas -o.\mnh_console_prof.exe %optimize% %guiOpt64% -dplots -dPROFILING
 @echo ------------------------------------------------------------------------------------
 @%delp%
@@ -39,8 +39,9 @@
 :64bitDeb
 @echo ------------------ building 64 bit binaries with debug info ------------------------
 @%fpc64% consoles\mnh_console.pas -o.\mnh_light_debug.exe   %debug% %guiOpt64%
+@%delp%
 @%fpc64% consoles\mnh_console.pas -o.\mnh_console_debug.exe %debug% %guiOpt64% -dplots
-@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui_debug.exe     %debug% %guiOpt64%
+@%fpc64% gui\mnh_gui.lpr          -o.\mnh_gui_debug.exe     %debug% %guiOpt64% -dplots
 @%delp%
 @del *.lfm *.res *.obj
 @echo ------------------------------------------------------------------------------------
@@ -49,8 +50,9 @@
 :32bitOpt
 @echo --------------------- building optimized 32 bit binaries ---------------------------
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_light.exe   %optimize% %guiOpt32% 
+@%delp%
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_console.exe %optimize% %guiOpt32% -dplots
-@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_gui.exe     %optimize% %guiOpt32% -WG 
+@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_gui.exe     %optimize% %guiOpt32% -dplots
 @%delp%
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------
@@ -59,8 +61,9 @@
 :32bitDeb
 @echo ------------------ building 32 bit binaries with debug info ------------------------
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_light_debug.exe   %debug% %guiOpt32%
+@%delp%
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_console_debug.exe %debug% %guiOpt32% -dplots
-@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_gui_debug.exe     %debug% %guiOpt32%
+@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_gui_debug.exe     %debug% %guiOpt32% -dplots
 @%delp%
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------
@@ -70,10 +73,11 @@
 @echo ---------------------------------- packaging ---------------------------------------
 @mkdir distro\packages
 @mkdir distro\demos
+@mkdir distro\demos\inputs
 @mkdir distro\doc
 @copy packages\*.mnh distro\packages
 @copy demos\*.mnh distro\demos
-@copy demos\*.txt distro\demos
+@copy demos\inputs\*.txt distro\demos\inputs
 @copy doc\* distro\doc
 @copy mnh_for_notepad.xml distro\
 @cd distro

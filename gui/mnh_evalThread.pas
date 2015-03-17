@@ -34,9 +34,11 @@ VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     completionList:T_listOfString;
 
 PROCEDURE initIntrinsicRuleList;
+PROCEDURE initUnit;
+
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
-
+    unitIsInitialized:boolean=false;
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
@@ -244,27 +246,31 @@ PROCEDURE initIntrinsicRuleList;
     intrinsicRules.unique;
   end;
 
-
-INITIALIZATION
-  pendingRequest.create(er_none);
-  evaluationState.create(es_dead);
-  startOfEvaluation.create(now);
-  endOfEvaluationText.create('');
-  intrinsicRules.create;
-  initIntrinsicRuleList;
-  localUserRules.create;
-  importedUserRules.create;
-  completionList.create;
-  beginThread(@main);
+PROCEDURE initUnit;
+  begin
+    pendingRequest.create(er_none);
+    evaluationState.create(es_dead);
+    startOfEvaluation.create(now);
+    endOfEvaluationText.create('');
+    intrinsicRules.create;
+    initIntrinsicRuleList;
+    localUserRules.create;
+    importedUserRules.create;
+    completionList.create;
+    beginThread(@main);
+    unitIsInitialized:=true;  
+  end;
 
 FINALIZATION
-  ad_killEvaluationLoopSoftly;
-  pendingRequest.destroy;
-  evaluationState.destroy;
-  startOfEvaluation.destroy;
-  endOfEvaluationText.destroy;
-  intrinsicRules.destroy;
-  localUserRules.destroy;
-  importedUserRules.destroy;
-  completionList.destroy;
+  if unitIsInitialized then begin
+    ad_killEvaluationLoopSoftly;
+    pendingRequest.destroy;
+    evaluationState.destroy;
+    startOfEvaluation.destroy;
+    endOfEvaluationText.destroy;
+    intrinsicRules.destroy;
+    localUserRules.destroy;
+    importedUserRules.destroy;
+    completionList.destroy;
+  end;
 end.

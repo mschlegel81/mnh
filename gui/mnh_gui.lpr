@@ -6,13 +6,16 @@ PROGRAM mnh_gui;
 USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   cthreads, {$ENDIF} {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog;
+  Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog, mnh_cmdLineInterpretation;
 
 
 
 {$R *.res}
 
-BEGIN
+begin
+  parseCmdLine;
+
+  mnh_gui_main.lateInitialization;
   Application.Title:='MNH5 - GUI';
   RequireDerivedFormResource := True;
   Application.Initialize;
@@ -22,4 +25,4 @@ BEGIN
   Application.CreateForm(TcloseDialogForm, closeDialogForm);
   Application.CreateForm(TaskForm, askForm);
   Application.Run;
-END.
+end.
