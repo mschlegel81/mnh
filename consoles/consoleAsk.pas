@@ -15,6 +15,15 @@ FUNCTION ask(CONST question: ansistring; CONST options: array of ansistring): an
     begin
       for j := 0 to length(options)-1 do if trim(options [j]) = trim(s) then exit(j);
       result := strToIntDef(s, -1);
+      if result>=0 then exit(result);
+      for j := 0 to length(options)-1 do if copy(options[j],1,length(s))=s then begin
+        if result=-1 then result:=j else result:=-2;   
+      end;
+      if result>=0 then exit(result);
+      result:=-1;
+      for j := 0 to length(options)-1 do if uppercase(copy(options[j],1,length(s)))=uppercase(s) then begin
+        if result=-1 then result:=j else result:=-2;   
+      end;
     end;
 
   begin
