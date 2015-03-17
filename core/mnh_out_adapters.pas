@@ -13,6 +13,7 @@ TYPE
     errorMessage: ansistring;
     errorLocation: T_tokenLocation
   end;
+
   T_writeCallback = PROCEDURE(CONST s: ansistring);
   T_writeErrorCallback = PROCEDURE(CONST error: T_storedError);
 
@@ -26,8 +27,7 @@ PROCEDURE writeExprEcho(CONST s: ansistring);
 PROCEDURE writeExprOut(CONST s: ansistring);
 PROCEDURE writePrint(CONST s: ansistring);
 PROCEDURE clearErrors;
-PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel;
-  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
 FUNCTION errorLevel: T_errorLevel;
 
 PROCEDURE plainConsoleOut(CONST s: ansistring);
