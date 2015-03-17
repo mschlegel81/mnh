@@ -1,12 +1,12 @@
 object askForm: TaskForm
-  Left = 474
-  Height = 25
-  Top = 36
+  Left = 423
+  Height = 53
+  Top = 121
   Width = 320
   AutoSize = True
   BorderStyle = bsDialog
   Caption = 'askForm'
-  ClientHeight = 25
+  ClientHeight = 53
   ClientWidth = 320
   Constraints.MinHeight = 25
   Constraints.MinWidth = 200
@@ -16,12 +16,22 @@ object askForm: TaskForm
   object ComboBox1: TComboBox
     Left = 0
     Height = 23
-    Top = 0
+    Top = 30
     Width = 320
-    Align = alClient
+    Align = alBottom
     ItemHeight = 15
     OnKeyDown = ComboBox1KeyDown
     TabOrder = 0
     Text = 'ComboBox1'
+  end
+  object Label1: TLabel
+    Left = 0
+    Height = 30
+    Top = 0
+    Width = 320
+    Align = alClient
+    Caption = 'Label1'
+    ParentColor = False
+    WordWrap = True
   end
 end

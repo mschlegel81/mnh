@@ -13,6 +13,7 @@ TYPE
 
   TaskForm = class(TForm)
     ComboBox1: TComboBox;
+    Label1: TLabel;
     PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR Key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
@@ -65,6 +66,7 @@ PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
     lastAnswer := '';
     ComboBox1.Items.Clear;
     Caption := question;
+    Label1.Caption:=question;
     ComboBox1.AutoComplete := false;
     ComboBox1.Text := '';
     displayPending := true;
@@ -78,6 +80,7 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     lastAnswer := '';
     ComboBox1.Items.Clear;
     Caption := question;
+    Label1.Caption:=question;
     if length(options) = 0 then exit;
     for i := 0 to length(options)-1 do ComboBox1.Items.Add(options [i]);
     ComboBox1.AutoComplete := true;
