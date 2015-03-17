@@ -914,7 +914,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,parameterListLiteral^.value(0));
           parameterListLiteral^.value(0)^.rereference;
           lastReplace:=firstReplace;
-        end else raiseError(el3_evalError,'Aggragators can only be constructed from expression literals!',first^.location);
+        end else raiseError(el3_evalError,'Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRulePointer) and (not(pureOnly) or (pureIntrinsicFunctions.contains(first^.data)))  then begin
         {$ifdef PROFILING}
         profiler.Clear;
