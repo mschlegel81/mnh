@@ -1182,6 +1182,15 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);
   end;
+{$undef INNER_FORMATTING}
+
+FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=newBoolLiteral(DeleteFile(P_stringLiteral(params^.value(0))^.value));
+    end else raiseNotApplicableError('deleteFile',params,tokenLocation);
+  end;
 
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
@@ -1244,7 +1253,7 @@ INITIALIZATION
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters');
-
+  registerRule('deleteFile',@deleteFile_imp,false,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
 
 FINALIZATION
   {$ifdef debugMode}
