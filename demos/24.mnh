@@ -34,7 +34,7 @@ isCorrectSolution(set,text)->
   ? print('The input does not evaluate to 24 but to ',expression(text)(),'.') | false
   : print('The solution is valid.') | true;
 
-playARound->playARound(getRiddle);
+playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
 playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&string(set)&'.'));
 playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another round?',['yes','no'])='yes' ? playARound : void)
                                                       : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
