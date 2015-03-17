@@ -284,6 +284,28 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
+FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR startTime:double;
+      timeToSleep:double;
+      sleepInt:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
+      startTime:=now;
+      result:=newVoidLiteral;
+      if params^.value(0)^.literalType=lt_int
+      then timeToSleep:=P_intLiteral (params^.value(0))^.value
+      else timeToSleep:=P_realLiteral(params^.value(0))^.value;
+      while ((now-startTime)*24*60*60<timeToSleep) and (errorLevel<el3_evalError) do begin
+        sleepInt:=round(900*(timeToSleep-(now-startTime)*24*60*60));
+        if (sleepInt>0) then begin
+          if sleepInt>100 then sleep(100)
+                          else sleep(sleepInt);
+        end;
+      end;
+    end else raiseNotApplicableError('sleep',params,tokenLocation);
+  end;
+
 FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
     VAR next:T_token;
@@ -398,6 +420,7 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   registerRule('round'         ,@round_imp     ,true,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
 
   registerRule('time'          ,@time_imp      ,false,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
+  registerRule('sleep'         ,@sleep_imp     ,false,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule('expression'    ,@expression_imp   ,true,'expression(S:string);#Returns an expression parsed from S');
   registerRule('arity'         ,@arity_imp         ,true,'arity(e:expression);#Returns the arity of expression e');
 {$endif}
