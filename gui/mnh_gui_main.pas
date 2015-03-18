@@ -18,6 +18,7 @@ TYPE
 
   TMnhForm = class(TForm)
     MenuItem3: TMenuItem;
+    miCallMain: TMenuItem;
     miHelp: TMenuItem;
     miHelpExternally: TMenuItem;
     miAntiAliasingOff: TMenuItem;
@@ -104,6 +105,7 @@ TYPE
       Shift: TShiftState);
     PROCEDURE InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
+    procedure MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
@@ -523,6 +525,13 @@ PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
+procedure TMnhForm.MenuItem4Click(Sender: TObject);
+  begin
+    askForm.initWithQuestion('Please give command line parameters');
+    askForm.ShowModal;
+    ad_callMain(InputEdit.Lines,askForm.getLastAnswerReleasing);
+  end;
+
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   VAR mr:integer;
   begin
@@ -865,7 +874,11 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     flag:=ad_evaluationRunning;
     if flag<>miHaltEvalutaion.Enabled then begin miHaltEvalutaion.Enabled:=flag; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
     flag:=not(flag);
-    if flag<>miEvaluateNow.Enabled then begin miEvaluateNow.Enabled:=flag; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
+    if flag<>miEvaluateNow.Enabled then begin
+      miEvaluateNow.Enabled:=flag;
+      miCallMain.Enabled:=flag;
+      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+    end;
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
     flag:=ad_evaluationRunning;

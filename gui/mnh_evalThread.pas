@@ -2,7 +2,7 @@ UNIT mnh_evalThread;
 INTERFACE
 USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_fileWrappers,mnh_constants,mnh_tokloc,mnh_funcs,mnh_litvar;
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_die);
+  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
@@ -12,6 +12,7 @@ TYPE
 
 PROCEDURE ad_clearFile;
 PROCEDURE ad_evaluate(CONST L:TStrings);
+PROCEDURE ad_callMain(CONST L:TStrings; params:ansistring);
 PROCEDURE ad_haltEvaluation;
 PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
 PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
@@ -39,6 +40,8 @@ PROCEDURE initUnit;
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
+    parametersForMainCall:array of ansistring;
+
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
@@ -91,6 +94,20 @@ FUNCTION main(p:pointer):ptrint;
         then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
         else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
         sleepTime:=0;
+      end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
+        pendingRequest.value:=er_none;
+        evaluationState.value:=es_running;
+        startOfEvaluation.value:=now;
+        startOfEvaluationCallback();
+        callMainInMain(parametersForMainCall);
+
+        getMainPackage^.updateLists(localUserRules,importedUserRules);
+        updateCompletionList;
+        evaluationState.value:=es_idle;
+        if hasHaltMessage
+        then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
+        else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
+        sleepTime:=0;
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);
@@ -111,6 +128,33 @@ PROCEDURE ad_evaluate(CONST L: TStrings);
   begin
     mainPackageProvider.setLines(L);
     pendingRequest.value:=er_evaluate;
+    if evaluationState.value=es_dead then begin
+      beginThread(@main);
+      sleep(10);
+    end;
+  end;
+
+PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
+  VAR sp:longint;
+  begin
+    setLength(parametersForMainCall,0);
+    params:=Trim(params);
+    while params<>'' do begin
+      sp:=pos(' ',params);
+      if sp<=0 then begin
+        setLength(parametersForMainCall,length(parametersForMainCall)+1);
+        parametersForMainCall[length(parametersForMainCall)-1]:=params;
+        params:='';
+      end else begin
+        setLength(parametersForMainCall,length(parametersForMainCall)+1);
+        parametersForMainCall[length(parametersForMainCall)-1]:=
+          copy(params,1,sp-1);
+        params:=trim(copy(params,sp+1,length(params)));
+      end;
+    end;
+
+    mainPackageProvider.setLines(L);
+    pendingRequest.value:=er_callMain;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
       sleep(10);

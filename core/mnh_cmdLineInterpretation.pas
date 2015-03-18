@@ -21,7 +21,7 @@ PROCEDURE filteredStdErrOut(CONST error:T_storedError);
 PROCEDURE parseCmdLine;
   PROCEDURE displayHelp;
     begin
-      writeln('MNH (V5) console; by Martin Schlegel');
+      writeln('MNH5; by Martin Schlegel');
       writeln('compiled on: ',{$I %DATE%});
       writeln('         at: ',{$I %TIME%});
       writeln('FPC version: ',{$I %FPCVERSION%});

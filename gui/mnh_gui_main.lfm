@@ -1191,6 +1191,11 @@ object MnhForm: TMnhForm
         ShortCut = 116
         OnClick = miEvaluateNowClick
       end
+      object miCallMain: TMenuItem
+        Caption = 'Call main'
+        ShortCut = 120
+        OnClick = MenuItem4Click
+      end
       object miEvalModeDirectOnKeypress: TMenuItem
         Caption = 'Instantly evaluate input'
         Checked = True
