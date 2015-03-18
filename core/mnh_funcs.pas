@@ -903,6 +903,11 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
                                             else result:=newStringLiteral(tokenLocation.provider^.getPath);
   end;
 
+FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=newStringLiteral(ParamStr(0));
+  end;
+
 FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR B:P_literal;
       i,c:longint;
@@ -1242,7 +1247,8 @@ INITIALIZATION
   registerRule('exec'          ,@execSync_impl,false,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,false,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,true,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
-  registerRule('myPath'        ,@myPath_impl,true,'returns the path to the current package');
+  registerRule('myPath'        ,@myPath_impl,true,'myPath;#returns the path to the current package');
+  registerRule('executor',@executor_impl,true,'executor;#returns the path to the currently executing instance of MNH');
   registerRule('trueCount'     ,@trueCount_impl,true,'trueCount(B:booleanList);#Returns the number of true values in B');
   registerRule('isNan'         ,@isNan_impl,true,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
   registerRule('isInfinite'    ,@isInfinite_impl,true,'isInfinite(n);#Returns true if n is a number representing an infinite value');
