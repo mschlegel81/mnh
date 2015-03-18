@@ -1,0 +1,16 @@
+parseFractions(s:string)->
+  expression('[['&
+             replace(s,[' ', ',' ,'/'],
+                       ['' ,'],[',','])&
+             ']]')();
+
+fractran(out:expression,fractions,k>0   )->fractran(out,fractions,k,head(fractions%((k mod fractions%%1)=0)));
+fractran(out:expression,fractions,k     )->out(k);
+fractran(out:expression,fractions,k  ,[])->out(k);
+fractran(out:expression,fractions,k  ,F )->out(k) | fractran(out,fractions,k div F%1 * F%0);
+
+printOut:={print($x)};
+
+main(fractions,n)->fractran(printOut,parseFractions(fractions),softCast(n));
+//*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
+main->main('17 / 91, 78 / 85, 19 / 51, 23 / 38, 29 / 33, 77 / 29, 95 / 23, 77 / 19, 1 / 17, 11 / 13, 13 / 11, 15 / 14, 15 / 2, 55 / 1','2');
