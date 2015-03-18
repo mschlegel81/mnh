@@ -74,6 +74,25 @@ FUNCTION main(p:pointer):ptrint;
       completionList.unique;
     end;
 
+  PROCEDURE preEval;
+    begin
+      pendingRequest.value:=er_none;
+      evaluationState.value:=es_running;
+      startOfEvaluation.value:=now;
+      startOfEvaluationCallback();
+    end;
+
+  PROCEDURE postEval;
+    begin
+      getMainPackage^.updateLists(localUserRules,importedUserRules);
+      updateCompletionList;
+      evaluationState.value:=es_idle;
+      if hasHaltMessage
+      then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
+      else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
+      sleepTime:=0;
+    end;
+
   begin
     result:=0;
     evaluationState.value:=es_idle;
@@ -81,33 +100,15 @@ FUNCTION main(p:pointer):ptrint;
     mainThread:=ThreadId;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
-        pendingRequest.value:=er_none;
-        evaluationState.value:=es_running;
-        startOfEvaluation.value:=now;
-        startOfEvaluationCallback();
+        preEval;
         reloadMainPackage(lu_forDirectExecution);
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
-        getMainPackage^.updateLists(localUserRules,importedUserRules);
-        updateCompletionList;
-        evaluationState.value:=es_idle;
-        if hasHaltMessage
-        then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
-        else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
-        sleepTime:=0;
+        postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
-        pendingRequest.value:=er_none;
-        evaluationState.value:=es_running;
-        startOfEvaluation.value:=now;
-        startOfEvaluationCallback();
+        preEval;
+        reloadMainPackage(lu_forCallingMain);
         callMainInMain(parametersForMainCall);
-
-        getMainPackage^.updateLists(localUserRules,importedUserRules);
-        updateCompletionList;
-        evaluationState.value:=es_idle;
-        if hasHaltMessage
-        then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
-        else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
-        sleepTime:=0;
+        postEval;
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);
