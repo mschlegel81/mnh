@@ -4,7 +4,7 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
          'IMPLEMENTATION','INITIALIZATION','FINALIZATION','if','then','else','case','begin','end','repeat','until',
          'while','do','to','in','ansistring','of','try','except','finally','true','false','value','word','longint',
          'result','assign','reset','rewrite','close','object','record','create','destroy','toString','inherited',
-         'setLength','USES','TYPE']);
+         'setLength','USES','TYPE','array']);
 fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
@@ -23,6 +23,6 @@ fix(filename,oldLines,newLines          )->voidOf(each(i,[0..size(oldLines)-1],
                                                             : writeFileLines(filename,newLines)));
 
 //*Check all files, writing out potential fixes
-main("check")->each(s,recFiles(".","*.pas,*.inc"),fix(s));
+main("check")->                each(s,recFiles(".","*.pas,*.inc"),fix(s));
 //*Fix all files, writing out potential fixes
-main("fix")->(readOnly:=false)|each(s,recFiles("..","*.pas,*.inc"),fix(s));
+main("fix")->(readOnly:=false)|each(s,recFiles(".","*.pas,*.inc"),fix(s));

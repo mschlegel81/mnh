@@ -4,13 +4,13 @@ recFolders(F)->flatten(each(subFolder,folders(F&"/*"),subFolder,recFolders(subFo
 recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),each(pat,searchPatterns,files(folder&"/"&pat))));
 recFiles(rootFolder,searchPattern:string)->recFiles(rootFolder,trim(split(searchPattern,[";",","])));
 
-containsCaseSensitive  (lookFor)->{pos(      lookFor ,      $lookIn )>=0};
-containsCaseInsensitive(lookFor)->{pos(upper(lookFor),upper($lookIn))>=0};
+containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
+containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
 
-find(rootFolder,filePattern,searchString,caseSensitive:boolean)->
+find(rootFolder,filePattern,searchStrings,caseSensitive:boolean)->
   findInFiles(recFiles(rootFolder,filePattern),
-              caseSensitive ? containsCaseSensitive  (searchString)
-                            : containsCaseInsensitive(searchString));
+              caseSensitive ? containsCaseSensitive  (searchStrings)
+                            : containsCaseInsensitive(searchStrings));
 
 findInFiles([]       ,F:expression)->print('No files matching the pattern were found.');
 findInFiles(fileNames,F:expression)->each(fname,fileNames,findInLines(fname,fileLines(fname),F));
@@ -21,4 +21,4 @@ findInLines(filename:string,[],F)->print('Empty file ',filename,' ?');
 printAll([])->false;
 printAll(L)->each(l,L,and,print(l));
 
-main(patterns,searchString)->find('.',patterns,searchString,false);
+main(patterns,searchString,...)->find('.',patterns,tail($params),false);
