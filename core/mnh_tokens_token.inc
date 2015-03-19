@@ -976,26 +976,26 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
   PROCEDURE writeInterpreterState;
     VAR i,j:longint;
         t:P_token;
-    PROCEDURE psx(CONST s:string);
-      begin raiseError(elX_stateInfo,s,C_nilTokenLocation); end;
+    PROCEDURE psx(CONST s:string; CONST loc:T_tokenLocation);
+      begin raiseError(elX_stateInfo,s,loc); end;
 
     begin
       if length(stack)>8 then begin
         j:=length(stack)-8;
-        psx('stack: ...');
+        psx('stack: ...',C_nilTokenLocation);
       end else begin
         j:=0;
-        if length(stack)=0 then psx('stack: <empty>');
+        if length(stack)=0 then psx('stack: <empty>',C_nilTokenLocation);
       end;
-      for i:=j to length(stack)-1 do psx('stack: '+getEnumName(TypeInfo(T_tokenType),ord(stack[i]^.tokType)));
+      for i:=j to length(stack)-1 do psx('stack: '+getEnumName(TypeInfo(T_tokenType),ord(stack[i]^.tokType)),stack[i]^.location);
       t:=first;
       i:=0;
       while (t<>nil) and (i<8) do begin
-        psx('expr.: '+GetEnumName(TypeInfo(T_tokenType),ord(t^.tokType)));
+        psx('expr.: '+GetEnumName(TypeInfo(T_tokenType),ord(t^.tokType)),t^.location);
         t:=t^.next;
         inc(i);
       end;
-      if t<>nil then psx('expr.: ...');
+      if t<>nil then psx('expr.: ...',C_nilTokenLocation);
     end;
 
 {$MACRO ON}
