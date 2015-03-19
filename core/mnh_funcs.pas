@@ -314,11 +314,43 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION posInt(x,y:P_literal):P_intLiteral;
+    begin
+      result:=newIntLiteral(pos(P_stringLiteral(x)^.value,
+                                P_stringLiteral(y)^.value)-1);
+    end;
+
+  VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string) then begin
-      result:=newIntLiteral(pos(P_stringLiteral(params^.value(0))^.value,
-                                P_stringLiteral(params^.value(1))^.value)-1);
+    if (params<>nil) and (params^.size=2) and
+       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList]) then begin
+      if params^.value(0)^.literalType=lt_string then begin
+        if params^.value(1)^.literalType=lt_string then begin
+          result:=posInt(params^.value(0),
+                         params^.value(1));
+        end else begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+            P_listLiteral(result)^.append(posInt(              params^.value(0),
+                                                 P_listLiteral(params^.value(1))^.value(i)),false);
+        end;
+      end else begin
+        if params^.value(1)^.literalType=lt_string then begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+            P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
+                                                               params^.value(1)           ),false);
+        end else begin
+          if P_listLiteral(params^.value(0))^.size=P_listLiteral(params^.value(1))^.size then begin
+            result:=newListLiteral;
+            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+              P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
+                                                   P_listLiteral(params^.value(1))^.value(i)),false);
+          end else raiseError(el3_evalError,'Incompatible list lengths for function pos.',tokenLocation)
+        end;
+      end;
     end else raiseNotApplicableError('pos',params,tokenLocation);
   end;
 
