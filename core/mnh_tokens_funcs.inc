@@ -286,9 +286,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   CONST secondsPerDay=24*60*60;
-  VAR startTime:double;
-      timeToSleep:double;
-      sleepUntil:double;
+  VAR sleepUntil:double;
       sleepInt:longint;
   begin
     result:=nil;
