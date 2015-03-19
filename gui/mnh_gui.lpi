@@ -29,7 +29,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5_devel"/>
+        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5"/>
       </local>
     </RunParams>
     <RequiredPackages Count="3">
