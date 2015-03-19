@@ -54,7 +54,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_stringList;
 
 FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
+
 
 IMPLEMENTATION
 VAR mainPackagePath: ansistring;
@@ -298,51 +298,6 @@ FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_strin
     except
       result := false;
     end;
-  end;
-
-FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
-  CONST
-    READ_BYTES = 2048;
-  VAR
-    memStream: TMemoryStream;
-    tempProcess: TProcess;
-    n: longint;
-    BytesRead: longint;
-  begin
-    memStream := TMemoryStream.create;
-    BytesRead := 0;
-    tempProcess := TProcess.create(nil);
-    tempProcess.Executable := executable;
-    for n := 0 to length(parameters)-1 do
-      tempProcess.Parameters.Add(parameters [n]);
-    tempProcess.Options := [poUsePipes, poStderrToOutPut];
-    tempProcess.ShowWindow := swoHIDE;
-      try
-      tempProcess.Execute;
-      while tempProcess.Running do
-        begin
-        memStream.SetSize(BytesRead+READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-        if n>0 then
-          Inc(BytesRead, n)
-        else
-          Sleep(10);
-        end;
-      repeat
-        memStream.SetSize(BytesRead+READ_BYTES);
-        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-        if n>0 then
-          Inc(BytesRead, n);
-      until n<=0;
-      result := (tempProcess.ExitStatus = 0);
-      except
-      result := false;
-      end;
-    tempProcess.Free;
-    memStream.SetSize(BytesRead);
-    output := TStringList.create;
-    output.LoadFromStream(memStream);
-    memStream.Free;
   end;
 
 { T_codeProvider }

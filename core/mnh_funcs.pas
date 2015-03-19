@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,mnh_stringutil,classes,process;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -745,6 +745,52 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   end;
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
+    CONST
+      READ_BYTES = 2048;
+    VAR
+      memStream: TMemoryStream;
+      tempProcess: TProcess;
+      n: longint;
+      BytesRead: longint;
+    begin
+      memStream := TMemoryStream.create;
+      BytesRead := 0;
+      tempProcess := TProcess.create(nil);
+      tempProcess.Executable := executable;
+      for n := 0 to length(parameters)-1 do
+        tempProcess.Parameters.Add(parameters [n]);
+      tempProcess.Options := [poUsePipes, poStderrToOutPut];
+      tempProcess.ShowWindow := swoHIDE;
+      try
+        tempProcess.Execute;
+        while tempProcess.Running and (errorLevel<el3_evalError) do begin
+          memStream.SetSize(BytesRead+READ_BYTES);
+          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          if n>0 then Inc(BytesRead, n)
+                 else Sleep(10);
+        end;
+        if errorLevel>=el3_evalError then begin
+          tempProcess.CloseInput;
+          tempProcess.CloseOutput;
+          tempProcess.CloseStderr;
+        end;
+        repeat
+          memStream.SetSize(BytesRead+READ_BYTES);
+          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          if n>0 then Inc(BytesRead, n);
+        until n<=0;
+        result := (tempProcess.ExitStatus = 0);
+      except
+        result := false;
+      end;
+      tempProcess.Free;
+      memStream.SetSize(BytesRead);
+      output := TStringList.create;
+      output.LoadFromStream(memStream);
+      memStream.Free;
+    end;
+
   VAR executable:ansistring;
       cmdLinePar:T_stringList;
       output:TStringList;
