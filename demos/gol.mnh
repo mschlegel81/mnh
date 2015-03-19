@@ -1,0 +1,40 @@
+worldHeight:=40;
+worldWidth:=120;
+
+initWorld->ord(random(worldHeight*worldWidth)<0.5);
+printWorld(w:intList)->printf("%X%",copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
+//printWorld2(w:intList)->printf("%X%",copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
+
+memoized
+shift(di,dj)->flatten(each(i,[0..worldHeight-1],
+                      each(j,[0..worldWidth-1],((i+di+worldHeight) mod worldHeight)*worldWidth+
+                                                (j+dj+worldWidth)  mod worldWidth )));
+
+
+neighbors(w)->w%shift(-1,-1)+w%shift( 0,-1)+w%shift( 1,-1)+
+              w%shift(-1, 0)+               w%shift( 1, 0)+
+              w%shift(-1, 1)+w%shift( 0, 1)+w%shift( 1, 1);
+
+TRANSITION:=[[0,0,0,1,0,0,0,0,0],
+             [0,0,1,1,0,0,0,0,0]];
+
+step(w)->step(w,TRANSITION%%neighbors(w));
+step(w,t)->each(i,[0..size(w)-1],t%%i%(w%i));
+
+play->play(initWorld);
+play(w)->print("\n\n\n")|printWorld(w)|sleep(0.1)|play(step(w));
+
+mutable sleepTime:=0.1;
+
+
+playUntilStatic(w)->print("\n\n\n")|printWorld(w)|sleep(sleepTime)|playUntilStatic(w,step(w));
+playUntilStatic(w,w)->void;
+playUntilStatic(w,w2)->playUntilStatic(w2);
+
+playSteps(w,n>0)->print("\n\n\n")|printWorld(w)|sleep(sleepTime)|playSteps(step(w),n-1);
+playSteps(w,n)->void;
+
+main->(sleepTime:=0) | playSteps(initWorld,10);
+main("-nowait",...)->(sleepTime:=0) | main@(tail($params));
+main("-long")->playUntilStatic(initWorld);
+main(steps)->playSteps(initWorld,softCast(steps));
