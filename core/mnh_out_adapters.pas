@@ -105,7 +105,8 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel;
     newError.errorLevel := thisErrorLevel;
     newError.errorMessage := errorMessage;
     newError.errorLocation := errorLocation;
-    if thisErrorLevel > maxErrorLevel then begin
+    if (thisErrorLevel > maxErrorLevel) or
+       (thisErrorLevel = elX_stateInfo) then begin
       maxErrorLevel := thisErrorLevel;
       errorCount:=0;
     end;

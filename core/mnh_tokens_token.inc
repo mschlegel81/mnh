@@ -973,6 +973,31 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       else stack_push_push;
     end;
 
+  PROCEDURE writeInterpreterState;
+    VAR i,j:longint;
+        t:P_token;
+    PROCEDURE psx(CONST s:string);
+      begin raiseError(elX_stateInfo,s,C_nilTokenLocation); end;
+
+    begin
+      if length(stack)>8 then begin
+        j:=length(stack)-8;
+        psx('stack: ...');
+      end else begin
+        j:=0;
+        if length(stack)=0 then psx('stack: <empty>');
+      end;
+      for i:=j to length(stack)-1 do psx('stack: '+getEnumName(TypeInfo(T_tokenType),ord(stack[i]^.tokType)));
+      t:=first;
+      i:=0;
+      while (t<>nil) and (i<8) do begin
+        psx('expr.: '+GetEnumName(TypeInfo(T_tokenType),ord(t^.tokType)));
+        t:=t^.next;
+        inc(i);
+      end;
+      if t<>nil then psx('expr.: ...');
+    end;
+
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
@@ -1155,25 +1180,26 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
-      //printState;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
     except
       on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-        while (length(stack)>0) do stack_popDestroy;
       end else begin
         raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-        while (length(stack)>0) do stack_popDestroy;
       end;
     end;
+    if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo) then writeInterpreterState;
+
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
                    else raiseError(el0_allOkay,'Reduce expression done',first^.location);
     end;
-    if (errorLevel>=el5_systemError) and (callDepth=0) then begin
-      raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);
+    if (errorLevel>=el5_systemError) then begin
       while (length(stack)>0) do stack_popDestroy;
-      recycler.cascadeDisposeToken(first);
+      if (callDepth=0) then begin
+        raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);
+        recycler.cascadeDisposeToken(first);
+      end;
     end else while (length(stack)>0) do stack_popLink;
   end;
 

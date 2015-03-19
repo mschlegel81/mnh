@@ -106,7 +106,6 @@ FUNCTION main(p:pointer):ptrint;
         postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
-        reloadMainPackage(lu_forCallingMain);
         callMainInMain(parametersForMainCall);
         postEval;
       end else begin

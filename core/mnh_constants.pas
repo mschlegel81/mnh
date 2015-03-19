@@ -258,7 +258,8 @@ TYPE
     el2_warning,
     el3_evalError,
     el4_parsingError,
-    el5_systemError);
+    el5_systemError,
+    elX_stateInfo);
 
 CONST
   SELF_TOKEN_TEXT='$self';
@@ -270,7 +271,8 @@ CONST
     'Warning : ',
     'Ev.Error: ',
     'Ps.Error: ',
-    'Sys.Err.: ');
+    'Sys.Err.: ',
+    'AbortState: ');
 
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BATCH_STYLE_ON ='//!BATCH ON';
