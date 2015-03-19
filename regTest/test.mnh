@@ -1,6 +1,7 @@
 USE hash;
 
 slow_test_list:=["demos\\ackermann.mnh",
+                 "demos\\dice7fromDice5.mnh",
                  "demos\\digitSquareSum.mnh",
                  "demos\\hailstone.mnh",
                  "demos\\hofstadterConway.mnh",
@@ -9,6 +10,8 @@ slow_test_list:=["demos\\ackermann.mnh",
                  "demos\\pythagoras.mnh",
                  "demos\\selfRefSeq.mnh",
                  "demos\\vampire.mnh",
+                 "demos\\ulam.mnh",
+                 "demos\\unbiasedRandom.mnh",
                  "demos\\weasel.mnh",
                  "demos\\wordCount.mnh"];
 
@@ -24,7 +27,6 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\99bottles.mnh",
             "demos\\anagram.mnh",
             "demos\\concatInts.mnh",
-            "demos\\dice7fromDice5.mnh",            
             "demos\\fibonacci.mnh",
             "demos\\fibonacciWord.mnh",
             "demos\\fractran.mnh",
@@ -44,20 +46,17 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\setConsolidation.mnh",
             "demos\\shannonEntropy.mnh",
             "demos\\sierpinski.mnh",
-            "demos\\ulam.mnh",
-            "demos\\unbiasedRandom.mnh",
             "demos\\variadic.mnh",
             "demos\\y.mnh",
             "demos\\zeckendorf.mnh"];
-mutable
-test_with_output_list:=[];
 
-includeSlowTests->head(test_list:=unique(test_list| slow_test_list),0)|
-                  head(test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
-                                               ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
-                                               ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]],0);
+test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png"],
+                        ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png"],
+                        ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png"]];
+
+includeSlowTests->head(test_list:=unique(test_list| slow_test_list),0);
                         
-FMT_STRING->"%X" & max(length(test_list)) & "% %####0.00%sec ";
+FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
