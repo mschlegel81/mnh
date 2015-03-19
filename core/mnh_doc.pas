@@ -38,7 +38,7 @@ TYPE
     uid: ansistring;
     id: ansistring;
     docFileName: ansistring;
-    rawUses: array of ansistring;
+    rawUses: T_arrayOfString;
     usesPackage, usedByPackage: array of P_userPackageDocumentation;
     rules: array of T_userFunctionDocumentation;
     CONSTRUCTOR create(path, Name: ansistring);
@@ -70,18 +70,15 @@ PROCEDURE locateHtml;
   end;
 
 FUNCTION prettyHtml(s: ansistring): ansistring;
-  VAR Lines: array of ansistring;
+  VAR Lines: T_arrayOfString;
     i: longint;
   begin
     setLength(Lines, 0);
-    while pos('#', s)>0 do
-      begin
-      setLength(Lines, length(Lines)+1);
-      Lines[length(Lines)-1] := copy(s, 1, pos('#', s)-1);
+    while pos('#', s)>0 do begin
+      append(Lines, copy(s, 1, pos('#', s)-1));
       s := copy(s, pos('#', s)+1, length(s));
-      end;
-    setLength(Lines, length(Lines)+1);
-    Lines[length(Lines)-1] := s;
+    end;
+    append(Lines,s);
 
     result := '';
     for i := 0 to length(Lines)-1 do

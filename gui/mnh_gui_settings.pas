@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs;
+  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs, myGenerics;
 CONST
   default_notepad_path = 'c:\PROGRAM Files (x86)\Notepad++\notepad++.exe';
 
@@ -48,8 +48,8 @@ TYPE
     resetPlotOnEvaluation: boolean;
 
 
-    fileContents: ARRAY of ansistring;
-    fileHistory: ARRAY[0..9] of ansistring;
+    fileContents: T_arrayOfString;
+    fileHistory: array[0..9] of ansistring;
 
     PROPERTY fontSize: longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName: string;
@@ -210,8 +210,7 @@ FUNCTION TSettingsForm.getEditorFontName: string;
   end;
 
 FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
-  VAR
-    par: T_stringList;
+  VAR par: T_arrayOfString;
   begin
     if (trim(NotepadFileNameEdit.Filename)<>'') and not
       (FileExistsUTF8(NotepadFileNameEdit.Filename)) then

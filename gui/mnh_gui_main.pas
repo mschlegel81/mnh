@@ -105,7 +105,7 @@ TYPE
       Shift: TShiftState);
     PROCEDURE InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
-    procedure MenuItem4Click(Sender: TObject);
+    PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
@@ -525,7 +525,7 @@ PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
     setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
   end;
 
-procedure TMnhForm.MenuItem4Click(Sender: TObject);
+PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
   begin
     askForm.initWithQuestion('Please give command line parameters');
     askForm.ShowModal;
@@ -858,7 +858,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         MAX_INTERVALL=5000;
   VAR aid:string;
       flag:boolean;
-      L:array of ansistring;
+      L:T_arrayOfString;
       i:longint;
       updateStart:double;
   begin

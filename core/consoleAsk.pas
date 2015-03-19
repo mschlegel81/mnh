@@ -1,6 +1,6 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters;
+USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters, myGenerics;
 IMPLEMENTATION
 FUNCTION ask(CONST question: ansistring): ansistring;
   begin
@@ -8,7 +8,7 @@ FUNCTION ask(CONST question: ansistring): ansistring;
     Write(' !> '); readln(result);
   end;
 
-FUNCTION ask(CONST question: ansistring; CONST options: array of ansistring): ansistring;
+FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansistring;
   VAR i: longint;
   FUNCTION stringIdx(s: string): longint;
     VAR j: longint;
@@ -17,12 +17,12 @@ FUNCTION ask(CONST question: ansistring; CONST options: array of ansistring): an
       result := strToIntDef(s, -1);
       if result>=0 then exit(result);
       for j := 0 to length(options)-1 do if copy(options[j],1,length(s))=s then begin
-        if result=-1 then result:=j else result:=-2;   
+        if result=-1 then result:=j else result:=-2;
       end;
       if result>=0 then exit(result);
       result:=-1;
       for j := 0 to length(options)-1 do if uppercase(copy(options[j],1,length(s)))=uppercase(s) then begin
-        if result=-1 then result:=j else result:=-2;   
+        if result=-1 then result:=j else result:=-2;
       end;
     end;
 
@@ -39,8 +39,8 @@ FUNCTION ask(CONST question: ansistring; CONST options: array of ansistring): an
   end;
 
 FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-  VAR opt: array of ansistring;
-    i: longint;
+  VAR opt: T_arrayOfString;
+      i: longint;
   begin
     if threadId<>MainThread then
       begin

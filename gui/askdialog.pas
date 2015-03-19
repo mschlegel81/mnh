@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters;
+  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters,myGenerics;
 TYPE
 
   { TaskForm }
@@ -26,7 +26,7 @@ TYPE
     displayPending: boolean;
     lastAnswer: ansistring;
     PROCEDURE initWithQuestion(CONST question: ansistring);
-    PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: array of ansistring);
+    PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
     PROCEDURE lock;
     FUNCTION getLastAnswerReleasing: ansistring;
   end;
@@ -73,7 +73,7 @@ PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
     displayPending := true;
   end;
 
-PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST options: array of ansistring);
+PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
   VAR i: longint;
   begin
     lock;
@@ -103,16 +103,15 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
   end;
 
 FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-  VAR opt: array of ansistring;
-    i: longint;
+  VAR opt: T_arrayOfString;
+      i: longint;
   begin
-    if threadId<>MainThread then
-      begin
+    if threadId<>MainThread then begin
       raiseError(el3_evalError,
         'I/O functions (fileContents in this case) may only be called from the main thread',
         tokenLocation);
       exit(nil);
-      end;
+    end;
     result := nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_string) then

@@ -54,8 +54,9 @@ TYPE
   end;
 
   T_arrayOfString=array of ansistring;
+  PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   { G_stringKeyMap }
-
+TYPE
   GENERIC G_stringKeyMap<VALUE_TYPE>=object
     TYPE VALUE_TYPE_ARRAY=array of VALUE_TYPE;
          KEY_VALUE_PAIR=record
@@ -103,6 +104,11 @@ TYPE
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 IMPLEMENTATION
+PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
+  begin
+    setLength(x,length(x)+1);
+    x[length(x)-1]:=y;
+  end;
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
   VAR i:longint;

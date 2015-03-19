@@ -1,9 +1,7 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES SysUtils,Classes,process;
+USES SysUtils,Classes,process,myGenerics;
 TYPE
-  T_stringList = array of ansistring;
-
   P_codeProvider = ^T_codeProvider;
 
   { T_codeProvider }
@@ -12,7 +10,7 @@ TYPE
   private
     lock: TThreadID;
     filepath: ansistring;
-    lineData: T_stringList;
+    lineData: T_arrayOfString;
     syncedFileAge: double;
     fileVersion: longint;
     version: longint;
@@ -21,8 +19,8 @@ TYPE
     CONSTRUCTOR create;
     CONSTRUCTOR create(CONST path: ansistring);
     DESTRUCTOR destroy;
-    FUNCTION getLines: T_stringList;
-    PROCEDURE setLines(CONST value: T_stringList);
+    FUNCTION getLines: T_arrayOfString;
+    PROCEDURE setLines(CONST value: T_arrayOfString);
     PROCEDURE setLines(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
     PROCEDURE appendLine(CONST value: ansistring);
@@ -43,17 +41,17 @@ TYPE
 CONST sourceExt = '.MNH';
 
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
-FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
-FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_stringList;
+FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_arrayOfString;
+FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
-FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
-FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
+FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_arrayOfString): boolean;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
 
 PROCEDURE setMainPackagePath(CONST path: ansistring);
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-FUNCTION locateSources: T_stringList;
+FUNCTION locateSources: T_arrayOfString;
 
-FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
+FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_arrayOfString): boolean;
 
 
 IMPLEMENTATION
@@ -125,24 +123,18 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     if result = '' then recursePath(expandFileName(''));
   end;
 
-FUNCTION locateSources: T_stringList;
+FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR
       info: TSearchRec;
     begin
-      if findFirst(path+'*', faAnyFile, info) = 0 then
-        repeat
-          if (info.attr and faDirectory) = faDirectory then
-            begin
-            if (info.Name<>'.') and (info.Name<>'..') then
-              recursePath(path+info.Name+DirectorySeparator);
-            end
-          else if uppercase(extractFileExt(info.Name)) = sourceExt then
-            begin
-            setLength(result, length(result)+1);
-            result[length(result)-1] := path+info.Name;
-            end;
-        until (findNext(info)<>0);
+      if findFirst(path+'*', faAnyFile, info) = 0 then repeat
+        if (info.attr and faDirectory) = faDirectory then begin
+          if (info.Name<>'.') and (info.Name<>'..') then
+            recursePath(path+info.Name+DirectorySeparator);
+        end else if uppercase(extractFileExt(info.Name)) = sourceExt then
+          append(result,path+info.Name);
+      until (findNext(info)<>0);
       SysUtils.findClose(info);
     end;
 
@@ -182,12 +174,12 @@ FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
       end;
   end;
 
-FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_stringList;
+FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_arrayOfString;
   begin
     result:=fileLines(name,0,maxLongint,accessed);
   end;
 
-FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_stringList;
+FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
   VAR handle: textFile;
       lineIndex:longint=0;
       tempLine:ansistring;
@@ -245,7 +237,7 @@ FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
     end;
   end;
 
-FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList): boolean;
+FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_arrayOfString): boolean;
   VAR
     handle: TextFile;
     i: longint;
@@ -264,7 +256,7 @@ FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_stringList)
     end;
   end;
 
-FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_stringList;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
   VAR info: TSearchRec;
     path: ansistring;
   begin
@@ -284,7 +276,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_s
     SysUtils.findClose(info);
   end;
 
-FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_stringList): boolean;
+FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_arrayOfString): boolean;
   VAR tempProcess: TProcess;
        i: longint;
   begin
@@ -302,14 +294,11 @@ FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_strin
 
 { T_codeProvider }
 
-FUNCTION T_codeProvider.getLines: T_stringList;
+FUNCTION T_codeProvider.getLines: T_arrayOfString;
   VAR i: longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
+    while (lock<>0) and (lock<>ThreadID) do sleep(1);
+    repeat lock := ThreadID until lock = ThreadID;
     setLength(result, length(lineData));
     for i := 0 to length(lineData)-1 do result[i] := lineData [i];
     repeat
@@ -317,7 +306,7 @@ FUNCTION T_codeProvider.getLines: T_stringList;
     until lock = 0;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST value: T_stringList);
+PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
   VAR
     i: longint;
   begin
@@ -422,7 +411,7 @@ FUNCTION T_codeProvider.getPath: ansistring;
 PROCEDURE T_codeProvider.load;
   VAR
     accessed: boolean;
-    L: T_stringList;
+    L: T_arrayOfString;
     i: longint;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);

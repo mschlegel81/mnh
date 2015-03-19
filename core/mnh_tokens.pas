@@ -44,7 +44,7 @@ TYPE
 CONST C_id_qualify_character='.';
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
-PROCEDURE callMainInMain(CONST parameters:array of ansistring);
+PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
@@ -413,7 +413,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       first:=nil;
     end;
 
-  VAR codeLines:T_stringList;
+  VAR codeLines:T_arrayOfString;
       i:longint;
       next:T_token;
       first,last:P_token;
@@ -581,7 +581,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinesImportedRules.unique;
   end;
 
-PROCEDURE callMainInMain(CONST parameters:array of ansistring);
+PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
   VAR t:P_token;
       parLit:P_listLiteral;
       i:longint;
@@ -664,7 +664,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   end;
 
 PROCEDURE findAndDocumentAllPackages;
-  VAR sourceNames:T_stringList;
+  VAR sourceNames:T_arrayOfString;
       i:longint;
       p:T_package;
       provider:P_codeProvider;

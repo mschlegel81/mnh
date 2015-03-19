@@ -1,7 +1,7 @@
 UNIT mnh_stringutil;
 
 INTERFACE
-USES sysutils, mnh_constants;
+USES sysutils, mnh_constants, myGenerics;
 
 CONST
   C_lineBreakChar = chr(13);
@@ -27,9 +27,8 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansis
 IMPLEMENTATION
 
 FUNCTION formatTabs(s: ansistring): ansistring;
-  VAR
-    matrix: array of array of ansistring;
-    pb, pt, i, j, maxJ, maxLength, dotpos: longint;
+  VAR matrix: array of T_arrayOfString;
+      pb, pt, i, j, maxJ, maxLength, dotpos: longint;
 
   FUNCTION isNumeric(s: ansistring): boolean;
     VAR

@@ -40,7 +40,7 @@ PROCEDURE initUnit;
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
-    parametersForMainCall:array of ansistring;
+    parametersForMainCall:T_arrayOfString;
 
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
@@ -142,13 +142,10 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
     while params<>'' do begin
       sp:=pos(' ',params);
       if sp<=0 then begin
-        setLength(parametersForMainCall,length(parametersForMainCall)+1);
-        parametersForMainCall[length(parametersForMainCall)-1]:=params;
+        append(parametersForMainCall,params);
         params:='';
       end else begin
-        setLength(parametersForMainCall,length(parametersForMainCall)+1);
-        parametersForMainCall[length(parametersForMainCall)-1]:=
-          copy(params,1,sp-1);
+        append(parametersForMainCall,copy(params,1,sp-1));
         params:=trim(copy(params,sp+1,length(params)));
       end;
     end;
@@ -171,7 +168,7 @@ PROCEDURE ad_haltEvaluation;
 
 PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
   VAR i:longint;
-      LL:T_stringList;
+      LL:T_arrayOfString;
   begin
     ad_haltEvaluation;
     if path<>mainPackageProvider.getPath then begin
@@ -267,7 +264,7 @@ FUNCTION ad_needSave(CONST L: TStrings):boolean;
   end;
 
 PROCEDURE ad_doReload(CONST L: TStrings);
-  VAR lines:T_stringList;
+  VAR lines:T_arrayOfString;
       i:longint;
   begin
     ad_haltEvaluation;
@@ -302,7 +299,7 @@ PROCEDURE initUnit;
     importedUserRules.create;
     completionList.create;
     beginThread(@main);
-    unitIsInitialized:=true;  
+    unitIsInitialized:=true;
   end;
 
 FINALIZATION

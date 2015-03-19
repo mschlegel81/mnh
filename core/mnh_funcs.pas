@@ -417,7 +417,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   end;
 
 FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR splitters:array of ansistring;
+  VAR splitters:T_arrayOfString;
   PROCEDURE initSplitters;
     VAR i:longint;
     begin
@@ -578,7 +578,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
   VAR i,j:longint;
-      found:T_stringList;
+      found:T_arrayOfString;
   begin
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
@@ -630,7 +630,7 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
 FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
-      L:T_stringList;
+      L:T_arrayOfString;
       i:longint;
   begin
     result:=nil;
@@ -673,7 +673,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
 FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR ok:boolean;
-      L:T_stringList;
+      L:T_arrayOfString;
       i:longint;
   begin
     result:=nil;
@@ -690,13 +690,13 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
   end;
 
 FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
-  VAR lookFor,replaceBy:T_stringList;
+  VAR lookFor,replaceBy:T_arrayOfString;
       i:longint;
 
   PROCEDURE initArrays;
     VAR L:P_literal;
         i:longint;
-    PROCEDURE elongate(VAR list:T_stringList);
+    PROCEDURE elongate(VAR list:T_arrayOfString);
       begin
         if length(list)=0 then begin
           setLength(list,1);
@@ -777,7 +777,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   end;
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_stringList; OUT output: TStringList): boolean;
+  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
     CONST
       READ_BYTES = 2048;
     VAR
@@ -824,7 +824,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
 
   VAR executable:ansistring;
-      cmdLinePar:T_stringList;
+      cmdLinePar:T_arrayOfString;
       output:TStringList;
       i:longint;
   begin
@@ -849,7 +849,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
 
 FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR executable:ansistring;
-      cmdLinePar:T_stringList;
+      cmdLinePar:T_arrayOfString;
       i:longint;
   begin
     result:=nil;
@@ -1153,7 +1153,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 
 FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define INNER_FORMATTING:=
-  VAR resultString:array of ansistring;
+  VAR resultString:T_arrayOfString;
       resultIsList:boolean=false;
       literalIterator:longint=1;
 

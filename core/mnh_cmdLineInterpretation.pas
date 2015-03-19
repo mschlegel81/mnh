@@ -1,12 +1,12 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef plots},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,mnh_stringutil,sysutils;
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef plots},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,mnh_stringutil,sysutils,myGenerics;
 PROCEDURE parseCmdLine;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR minErrorLevel:T_errorLevel=el2_warning;
     fileToInterpret:ansistring='';
-    parameters:array of ansistring;
+    parameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
 //---------------:by command line parameters
 
@@ -35,7 +35,7 @@ PROCEDURE parseCmdLine;
       writeln('  -echo: force echo off (default for interpretation mode)');
       writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
       writeln('  -h   : display this help and quit');
-      writeln('  -det : force deterministic "random" numbers');    
+      writeln('  -det : force deterministic "random" numbers');
     end;
 
   PROCEDURE fileMode;
@@ -93,7 +93,7 @@ PROCEDURE parseCmdLine;
     mnh_out_adapters.errorOut:=@filteredStdErrOut;
     if fileToInterpret<>'' then fileMode;
     if wantHelpDisplay then begin
-      displayHelp;      
+      displayHelp;
       halt;
     end;
   end;
