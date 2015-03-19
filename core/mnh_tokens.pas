@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,  //utilities
+USES myGenerics, mnh_constants, math, sysutils, mnh_stringUtil,typinfo,  //utilities
      mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc; //even more specific
@@ -611,7 +611,7 @@ PROCEDURE callMainInMain(CONST parameters:array of ansistring);
       t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);
       reduceExpression(t,false,0,recycler);
       //special handling if main returns an expression:
-      if (t^.tokType=tt_literal) and (t^.next=nil) and
+      if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
          (P_literal(t^.data)^.literalType=lt_expression) then begin
         P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
       end;
