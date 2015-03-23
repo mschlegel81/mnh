@@ -71,11 +71,15 @@
 @mkdir distro\demos
 @mkdir distro\demos\inputs
 @mkdir distro\doc
+@mkdir distro\regTest
 @copy packages\*.mnh distro\packages
 @copy demos\*.mnh distro\demos
 @copy demos\inputs\*.txt distro\demos\inputs
 @copy doc\* distro\doc
 @copy mnh_for_notepad.xml distro\
+@copy regTest\*.mnh distro\regTest\
+@copy regTest\*.expected distro\regTest\
+@copy regTest\t.bat distro\regTest\
 @cd distro
 @cd doc 
 @type builtin.head > builtin.html
@@ -85,12 +89,18 @@
 @cd ..
 @copy ..\mnh.exe .
 @copy ..\mnh_light.exe .
-@del ..\versions\mnh5_win??_%mydate%.7z
-@%sevenZip% a -mx=9 ..\versions\mnh5_win64_%mydate%.7z
+@del ..\versions\mnh5_%mydate%_*.7z
+@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win64R.7z
 @del /Q *
 @copy ..\bin32\mnh.exe .
 @copy ..\bin32\mnh_light.exe .
-@%sevenZip% a -mx=9 ..\versions\mnh5_win32_%mydate%.7z
+@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32R.7z
+@rmdir /S /Q regTest
+@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32.7z
+@del /Q *
+@copy ..\mnh.exe .
+@copy ..\mnh_light.exe .
+@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win64.7z
 @cd ..
 @rmdir /S /Q distro
 @echo ------------------------------------------------------------------------------------
