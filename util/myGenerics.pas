@@ -11,7 +11,7 @@ TYPE
       entry:ENTRY_TYPE_ARRAY;
       sortedUntilIndex:longint;
       isUnique:boolean;
-      lock:TThreadID;
+      cs:system.TRTLCriticalSection;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -53,7 +53,7 @@ TYPE
       FUNCTION getIndex(CONST iterator:longint):longint;
   end;
 
-  T_arrayOfString=array of ansistring;
+  T_arrayOfString=array of ansistring;  
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   { G_stringKeyMap }
 TYPE
@@ -66,7 +66,7 @@ TYPE
          end;
          KEY_VALUE_LIST=array of KEY_VALUE_PAIR;
     private VAR
-      lock:TThreadID;
+      cs:system.TRTLCriticalSection;
       entryCount:longint;
       rebalanceFac:double;
       bitMask:longint;
@@ -91,14 +91,17 @@ TYPE
   { G_safeVar }
 
   GENERIC G_safeVar<ENTRY_TYPE>=object
-    private
+    private VAR
       v :ENTRY_TYPE;
+      saveCS:TRTLCriticalSection;
       FUNCTION getValue:ENTRY_TYPE;
       PROCEDURE setValue(newValue:ENTRY_TYPE);
     public
-    CONSTRUCTOR create(CONST intialValue:ENTRY_TYPE);
-    DESTRUCTOR destroy;
-    PROPERTY value:ENTRY_TYPE read getValue write setValue;
+      CONSTRUCTOR create(CONST intialValue:ENTRY_TYPE);
+      DESTRUCTOR destroy;
+      PROPERTY value:ENTRY_TYPE read getValue write setValue;
+      PROCEDURE lock;
+      PROCEDURE unlock;
   end;
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
@@ -121,31 +124,46 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 { G_safeVar }
 
+CONSTRUCTOR G_safeVar.create(CONST intialValue: ENTRY_TYPE);
+  begin
+    system.InitCriticalSection(saveCS);
+    v:=intialValue;
+  end;
+
 FUNCTION G_safeVar.getValue: ENTRY_TYPE;
-begin
-  result:=v;
-end;
+  begin
+    system.EnterCriticalsection(saveCS);
+    result:=v;
+    system.LeaveCriticalsection(saveCS);
+  end;
 
 PROCEDURE G_safeVar.setValue(newValue: ENTRY_TYPE);
-begin
-  v:=newValue;
-  while v<>newValue do begin sleep(1); v:=newValue; end;
-end;
+  begin
+    system.EnterCriticalsection(saveCS);
+    v:=newValue;
+    system.LeaveCriticalsection(saveCS);
+  end;
 
-CONSTRUCTOR G_safeVar.create(CONST intialValue: ENTRY_TYPE);
-begin
-  v:=intialValue;
-end;
+PROCEDURE G_safeVar.lock;
+  begin
+    system.EnterCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeVar.unlock;
+  begin
+    system.LeaveCriticalsection(saveCS);
+  end;
 
 DESTRUCTOR G_safeVar.destroy;
-begin
-end;
+  begin
+    system.DoneCriticalsection(saveCS);
+  end;
 
 CONSTRUCTOR G_list.create;
-  begin lock:=0; clear; end;
+  begin system.InitCriticalSection(cs); clear; end;
 
 DESTRUCTOR G_list.destroy;
-  begin clear; end;
+  begin clear; system.DoneCriticalsection(cs); end;
 
 FUNCTION G_list.contains(CONST value:ENTRY_TYPE):boolean;
   begin result:=indexOf(value)>=0; end;
@@ -153,8 +171,7 @@ FUNCTION G_list.contains(CONST value:ENTRY_TYPE):boolean;
 FUNCTION G_list.indexOf(CONST value:ENTRY_TYPE):longint;
   VAR i0,i1:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     i0:=0;
     i1:=sortedUntilIndex-1;
     while i1>=i0 do begin
@@ -162,86 +179,80 @@ FUNCTION G_list.indexOf(CONST value:ENTRY_TYPE):longint;
       if      entry[result]<value then i0:=result+1
       else if entry[result]>value then i1:=result-1
       else begin
-        repeat lock:=0 until lock=0;
+        system.LeaveCriticalsection(cs);
         exit(result);
       end;
     end;
     for i0:=sortedUntilIndex to length(entry)-1 do
       if entry[i0]=value then begin
-        repeat lock:=0 until lock=0;
+        system.LeaveCriticalsection(cs);
         exit(i0);
       end;
     result:=-1;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.add(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     i:=length(entry);
     setLength(entry,i+1);
     entry[i]:=value;
     isUnique:=false;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.remIndex(CONST index:longint);
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     if (index>=0) and (index<length(entry)) then begin
       if index<sortedUntilIndex then dec(sortedUntilIndex);
       for i:=index to length(entry)-2 do entry[i]:=entry[i+1];
       setLength(entry,length(entry)-1);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.remValue(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     i:=indexOf(value);
     while i>=0 do begin
       remIndex(i);
       i:=indexOf(value);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.remValues(CONST values:ENTRY_TYPE_ARRAY);
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     for i:=0 to length(values)-1 do remValue(values[i]);
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.addArr(CONST values:ENTRY_TYPE_ARRAY);
   VAR i,i0:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     i0:=length(entry);
     setLength(entry,length(entry)+length(values));
     for i:=0 to length(values)-1 do entry[i0+i]:=values[i];
     isunique:=false;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.clear;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     setLength(entry,0);
     sortedUntilIndex:=0;
     isUnique:=true;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.sort;
@@ -249,8 +260,7 @@ PROCEDURE G_list.sort;
       i,j0,j1,k:longint;
       temp     :ENTRY_TYPE_ARRAY;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     if sortedUntilIndex<length(entry) then begin
       scale:=1;
       setLength(temp,length(entry)-sortedUntilIndex);
@@ -308,14 +318,13 @@ PROCEDURE G_list.sort;
       while (j1<length(temp))     do begin entry[k]:=temp[j1]; inc(k); inc(j1); end;
       sortedUntilIndex:=length(entry);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_list.unique;
   VAR i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     if not(isUnique) then begin
       sort;
       j:=1;
@@ -326,33 +335,30 @@ PROCEDURE G_list.unique;
       sortedUntilIndex:=length(entry);
     end;
     isUnique:=true;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_list.size:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     result:=length(entry);
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_list.getEntry(CONST index:longint):ENTRY_TYPE;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     result:=entry[index];
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_list.elementArray:ENTRY_TYPE_ARRAY;
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     setLength(result,length(entry));
     for i:=0 to length(result)-1 do result[i]:=entry[i];
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 
@@ -676,7 +682,7 @@ PROCEDURE G_stringKeyMap.rehash(grow: boolean);
 
 CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
   begin
-    lock:=0;
+    system.InitCriticalSection(cs);
     rebalanceFac:=rebalanceFactor;
     clear;
   end;
@@ -684,13 +690,12 @@ CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
 PROCEDURE G_stringKeyMap.clear;
   VAR i:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,1);
     bitMask:=0;
     entryCount:=0;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 CONSTRUCTOR G_stringKeyMap.create;
@@ -701,8 +706,11 @@ CONSTRUCTOR G_stringKeyMap.create;
 DESTRUCTOR G_stringKeyMap.destroy;
   VAR i:longint;
   begin
+    system.EnterCriticalsection(cs);
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,0);
+    system.LeaveCriticalsection(cs);
+    system.DoneCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;
@@ -725,8 +733,7 @@ FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
 PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
   VAR i,j,h:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     h:=hashOfAnsiString(key);
     i:=h and bitMask;
     j:=0;
@@ -741,14 +748,13 @@ PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
     end else begin
       bucket[i][j].value:=value;
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
   VAR i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     i:=hashOfAnsiString(key) and bitMask;
     j:=0;
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
@@ -761,14 +767,13 @@ PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
       dec(entryCount);
       if entryCount<0.4*length(bucket)*rebalanceFac then rehash(false);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
   VAR i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     for i:=0 to length(bucket)-1 do begin
       j:=length(bucket[i]);
       if j>0 then begin
@@ -776,18 +781,17 @@ FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
         result:=bucket[i][j].value;
         setLength(bucket[i],j);
         dec(entryCount);
-        repeat lock:=0 until lock=0;
+        system.LeaveCriticalsection(cs);
         exit(result);
       end;
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
   VAR k,i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -795,14 +799,13 @@ FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
       result[k]:=bucket[i][j].key;
       inc(k);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
   VAR k,i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -810,14 +813,13 @@ FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
       result[k]:=bucket[i][j].value;
       inc(k);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.entrySet: KEY_VALUE_LIST;
   VAR k,i,j:longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock:=ThreadID until lock=ThreadID;
+    system.EnterCriticalsection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -825,12 +827,14 @@ FUNCTION G_stringKeyMap.entrySet: KEY_VALUE_LIST;
       result[k]:=bucket[i][j];
       inc(k);
     end;
-    repeat lock:=0 until lock=0;
+    system.LeaveCriticalsection(cs);
   end;
 
 FUNCTION G_stringKeyMap.size: longint;
   begin
+    system.EnterCriticalsection(cs);
     result:=entryCount;
+    system.LeaveCriticalsection(cs);
   end;
 
 end.
