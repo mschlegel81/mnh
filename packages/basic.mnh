@@ -46,12 +46,6 @@ join([],joiner1:string,joiner2:string)->"";
 join(L<>[],joiner1:string,joiner2:string)->each(inner,L    ,aggregator({$x&joiner1&$y}),
                                            each(n    ,inner,aggregator({$x&joiner2&$y}),string(n)));
 //--------------------------------------------:Aggregations
-//Statistics:----------------------------------------------
-//*Returns the mean of all values in <code>X</code>
-mean    (X:numericList)->sum(X)/size(X);
-//*Returns the (statistical) variance of all values in <code>X</code>
-variance(X:numericList)->mean(X^2)-mean(X)^2;
-//----------------------------------------------:Statistics
 //Pretty printing
 //*Pretty-prints a nested list
 tabPrint(L)->print(join(L,"\n","\t"));
@@ -90,8 +84,6 @@ main->testEx({sum([1,2,3.2,-1.8])}) |
       testEx({join([1,2,3])}) |
       testEx({join([1,2,3],";")}) |
       testEx({join([[1,2,3],[4,5,6]],";"," ")}) |
-      testEx({mean([1,2,3.2,-1.8])}) |
-      testEx({variance([1,2,3.2,-1.8])}) |
       testEx({union([1,2,3],[2,3,4])})|
       testEx({intersect([1,2,3],[2,3,4])})|
       testEx({minus([1,2,3],[2,3,4])})|

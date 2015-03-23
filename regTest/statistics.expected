@@ -1,0 +1,16 @@
+Ps.Error: Cannot resolve ID "sum" @statistics.mnh:2,26
+AbortState: stack: tt_braceOpen @statistics.mnh:14,1
+AbortState: stack: tt_intrinsicRulePointer @statistics.mnh:13,31
+AbortState: stack: tt_parList_constructor @statistics.mnh:13,37
+AbortState: stack: tt_intrinsicRulePointer @statistics.mnh:13,71
+AbortState: stack: tt_parList_constructor @statistics.mnh:13,77
+AbortState: stack: tt_braceOpen @statistics.mnh:2,1
+AbortState: expr.: tt_identifier @statistics.mnh:2,26
+AbortState: expr.: tt_braceOpen @statistics.mnh:2,29
+AbortState: expr.: tt_literal @statistics.mnh:2,30
+AbortState: expr.: tt_braceClose @statistics.mnh:2,31
+AbortState: expr.: tt_operatorDivReal @statistics.mnh:2,32
+AbortState: expr.: tt_intrinsicRulePointer @statistics.mnh:2,33
+AbortState: expr.: tt_braceOpen @statistics.mnh:2,37
+AbortState: expr.: tt_literal @statistics.mnh:2,38
+AbortState: expr.: ... @?
