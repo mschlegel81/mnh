@@ -15,7 +15,6 @@ slow_test_list:=["demos\\ackermann.mnh",
                  "demos\\weasel.mnh",
                  "demos\\wordCount.mnh"];
 
-mutable
 test_list:=["regTest\\opTest.mnh",
             "regTest\\hash.mnh",
             "packages\\basic.mnh",
@@ -50,16 +49,24 @@ test_list:=["regTest\\opTest.mnh",
             "demos\\sierpinski.mnh",
             "demos\\variadic.mnh",
             "demos\\y.mnh",
-            "demos\\zeckendorf.mnh"];
+            "demos\\zeckendorf.mnh",
+            ["packages\\enhanceBat.mnh","regTest\\t.bat",false]];
 
-test_with_output_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png",true],
-                        ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png",true],
-                        ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png",true],
-                        ["packages\\enhanceBat.mnh","regTest\\t.bat",false]];
+plot_test_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png",true],
+                 ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png",true],
+                 ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png",true]];
 
-includeSlowTests->head(test_list:=unique(test_list| slow_test_list),0);
-                        
-FMT_STRING:="%X" & max(length(test_list)) & "% %####0.00%sec ";
+matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
+filteredTests(exe,'quick')->each(case,test_list,case:string ? [case,"",false] : case);
+filteredTests(exe:string,...)->filteredTests@((copy(head(exec(exe,["-version"])),5,4)="full")|tail($params));
+filteredTests(canPlot:boolean,filter)->each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
+                                          case:string ? (matchesAny(filter,case)   ? [case,"",false] : void)
+                                                      : (matchesAny(filter,case%0) ?  case           : void));
+filteredTests(canPlot:boolean)->each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
+                                          case:string ? [case,"",false]
+                                                      :  case);
+
+FMT_STRING:="%X40% %####0.00%sec ";
 
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
@@ -81,18 +88,9 @@ checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60
                                                                          :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
 
-reportStart(executor)->print('-----------------------------------------------------\n',
+reportStart(executor)->print('---------------------------------------------------------\n',
                              'Starting test runs with executable '&executor,
-                             '\n-----------------------------------------------------');
-matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
+                             '\n---------------------------------------------------------');
 
-
-
-main(executor,'quick'   )->reportStart(executor) and pEach(test,test_list,                                  runScript(executor,test  ,""    ,false )        ) and print(testsFailed);
-main(executor           )->includeSlowTests | 
-                           reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    ,false )        )
-                                     and each(test,test_with_output_list,                                   runScript(executor,test%0,test%1,test%2)        ) and print(testsFailed);
-main(executor,filter,...)->includeSlowTests | 
-                           reportStart(executor) and each(test,test_list,matchesAny(tail($params),test  ) ? runScript(executor,test  ,""    ,false )  : void)
-                                     and each(test,test_with_output_list,matchesAny(tail($params),test%0) ? runScript(executor,test%0,test%1,test%2)  : void) and print(testsFailed);
+main(executor,...)->reportStart(executor) and each(test,filteredTests@($params),runScript@(executor|test)) and print(testsFailed);
 main->main(executor);
