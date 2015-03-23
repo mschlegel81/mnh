@@ -27,4 +27,5 @@ begin
   Application.CreateForm(TcloseDialogForm, closeDialogForm);
   Application.CreateForm(TaskForm, askForm);
   Application.Run;
+  {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_SHOW); {$endif}
 end.
