@@ -189,6 +189,7 @@ TYPE
     PROCEDURE pushSettingsToPlotContainer(CONST plotImmediately:boolean);
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
+    PROCEDURE startOfEvaluation;
     { private declarations }
   public
     { public declarations }
@@ -282,8 +283,14 @@ PROCEDURE TMnhForm.flushThroughput;
     if errorStringGrid.RowCount=0
     then i:=0
     else i:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
-    if i<0.4*Height then ErrorGroupBox.ClientHeight:=i;
-    if changed_ then errorStringGrid.AutoSizeColumns;
+    if i<0.4*Height then begin
+      changed_:=(ErrorGroupBox.ClientHeight<>i);
+      ErrorGroupBox.ClientHeight:=i;
+    end;
+    if changed_ then begin
+      errorStringGrid.AutoSizeColumns;
+      Repaint;
+    end;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -387,7 +394,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end else if SettingsForm.polishHistory then processFileHistory;
   end;
 
-PROCEDURE startOfEvaluationCallback;
+PROCEDURE TMnhForm.startOfEvaluation;
   begin
     MnhForm.doConditionalPlotReset;
     setLength(errorThroughput,0);
@@ -420,7 +427,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.Lines.Append('       with FPC'+{$I %FPCVERSION%});
     OutputEdit.Lines.Append('       for '+{$I %FPCTARGET%});
     mnh_out_adapters.errorOut:=@logError;
-    mnh_evalThread.startOfEvaluationCallback:=@startOfEvaluationCallback;
     mnh_out_adapters.inputDeclEcho:=@writeDeclEcho;
     mnh_out_adapters.inputExprEcho:=@writeExprEcho;
     mnh_out_adapters.exprOut      :=@writeExprOut;
@@ -513,6 +519,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>doNotEvaluateBefore then begin
+        startOfEvaluation;
         ad_evaluate(InputEdit.Lines);
         needEvaluation:=false;
         doNotEvaluateBefore:=now+ONE_SECOND;
@@ -539,6 +546,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
   begin
     askForm.initWithQuestion('Please give command line parameters');
     askForm.ShowModal;
+    startOfEvaluation;
     ad_callMain(InputEdit.Lines,askForm.getLastAnswerReleasing);
   end;
 
@@ -592,6 +600,7 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>doNotEvaluateBefore then begin
+      startOfEvaluation;
       ad_evaluate(InputEdit.Lines);
       needEvaluation:=false;
       doNotEvaluateBefore:=now+ONE_SECOND;
@@ -892,7 +901,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
     flag:=ad_evaluationRunning;
-    if flag then aid:='Evaluating: '+formatFloat('0.000',(now-startOfEvaluation.value )*(24*60*60))+'s'
+    if flag then aid:='Evaluating: '+formatFloat('0.000',(now-mnh_evalThread.startOfEvaluation.value )*(24*60*60))+'s'
     else aid:=endOfEvaluationText.value;
     if (StatusBar.SimpleText<>aid) and (PageControl.ActivePageIndex=0) or flag  then begin
       StatusBar.SimpleText:=aid;

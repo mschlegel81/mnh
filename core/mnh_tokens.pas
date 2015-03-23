@@ -588,6 +588,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
       mainRule:P_rule;
       recycler:T_tokenRecycler;
   begin
+    clearErrors;
     recycler.create;
     mainPackage.load(lu_forCallingMain,recycler);
     if not(mainPackage.ready) or (errorLevel>=el3_evalError) then begin

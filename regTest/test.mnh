@@ -86,6 +86,8 @@ reportStart(executor)->print('--------------------------------------------------
                              '\n-----------------------------------------------------');
 matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
 
+
+
 main(executor,'quick'   )->reportStart(executor) and pEach(test,test_list,                                  runScript(executor,test  ,""    ,false )        ) and print(testsFailed);
 main(executor           )->includeSlowTests | 
                            reportStart(executor) and each(test,test_list,                                   runScript(executor,test  ,""    ,false )        )

@@ -19,23 +19,35 @@ PROCEDURE filteredStdErrOut(CONST error:T_storedError);
   end;
 
 PROCEDURE parseCmdLine;
+  PROCEDURE displayVersionInfo;
+    begin writeln('MNH5',
+                  {$ifdef plots}'(full'{$else}'(light'{$endif},
+                  {$ifdef debugMode}',debug)'{$else}')'{$endif},
+                  {$I %DATE%},
+                  ' ',{$I %TIME%},
+                  ' FPC',{$I %FPCVERSION%},
+                  ' for ',{$I %FPCTARGET%}); 
+    end;
+
   PROCEDURE displayHelp;
     begin
-      writeln('MNH5; by Martin Schlegel');
+      writeln('MNH5 ',{$ifdef plots}'(full'{$else}'(light'{$endif},
+                      {$ifdef debugMode}',debug)'{$else}')'{$endif},' by Martin Schlegel');
       writeln('compiled on: ',{$I %DATE%});
       writeln('         at: ',{$I %TIME%});
       writeln('FPC version: ',{$I %FPCVERSION%});
       writeln('Target CPU : ',{$I %FPCTARGET%});
       writeln;
       writeln('Accepted parameters: ');
-      writeln('  [-h] [+echo/-echo] [-el#] [filename [parameters]]');
+      writeln('  [-h/-version] [+echo/-echo] [-el#] [-det] [filename [parameters]]');
       writeln('  filename: if present the file is interpreted; parameters are passed if present');
       writeln('            if not present, interactive mode is entered');
-      writeln('  +echo: force echo on (default for interactive mode)');
-      writeln('  -echo: force echo off (default for interpretation mode)');
-      writeln('  -el# : set minimum error level for output; valid values: [0..5], default=2');
-      writeln('  -h   : display this help and quit');
-      writeln('  -det : force deterministic "random" numbers');
+      writeln('  +echo   : force echo on (default for interactive mode)');
+      writeln('  -echo   : force echo off (default for interpretation mode)');
+      writeln('  -el#    : set minimum error level for output; valid values: [0..5], default=2');
+      writeln('  -h      : display this help and quit');
+      writeln('  -det    : force deterministic "random" numbers');
+      writeln('  -version: show version info and exit');
     end;
 
   PROCEDURE fileMode;
@@ -60,6 +72,7 @@ PROCEDURE parseCmdLine;
       else if paramstr(i)='-echo' then echo:=e_forcedOff
       else if paramstr(i)='-det'  then randseed:=0
       else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
+      else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
       else if startsWith(paramStr(i),'-el') then begin
         pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
         if (pel<0) or (pel>ord(el5_systemError)) then begin
