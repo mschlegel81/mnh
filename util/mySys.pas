@@ -1,10 +1,15 @@
 UNIT mySys;
 INTERFACE
-USES myGenerics,sysutils;
+USES myGenerics,sysutils,process;
 
 FUNCTION getEnvironment:T_arrayOfString;
+FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
+PROCEDURE clearConsole;
 
-VAR CMD_PATH,SEVEN_ZIP_PATH,NOTEPAD_PATH:specialize G_lazyVar<ansistring>;
+VAR CMD_PATH,
+    SEVEN_ZIP_PATH,
+    NOTEPAD_PATH:specialize G_lazyVar<ansistring>;
+
 IMPLEMENTATION
 
 FUNCTION getEnvironment:T_arrayOfString;
@@ -42,15 +47,29 @@ FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
     recursePath(rootPath);
   end;
 
+PROCEDURE clearConsole;
+  VAR tempProcess: TProcess;
+  begin
+    try
+      tempProcess := TProcess.create(nil);
+      tempProcess.Options:=tempProcess.Options+[poWaitOnExit];
+      tempProcess.Executable := CMD_PATH.value;
+      tempProcess.Parameters.Add('/C');
+      tempProcess.Parameters.Add('cls');
+      tempProcess.Execute;
+      tempProcess.Free;
+    except
+    end;
+  end;  
+  
 FUNCTION obtainCmd:ansistring; begin result:=findDeeply('C:\*Win*','cmd.exe'); end;
 FUNCTION obtain7Zip:ansistring; begin result:=findDeeply('C:\*Program*','7z.exe'); end;
-FUNCTION obtainNotepad:ansistring; begin result:=:=findDeeply('C:\*Program*','notepad++.exe'); end;
+FUNCTION obtainNotepad:ansistring; begin result:=findDeeply('C:\*Program*','notepad++.exe'); end;
 
 INITIALIZATION
   CMD_PATH.create(@obtainCmd);
   SEVEN_ZIP_PATH.create(@obtain7Zip);
-  NOTEPAD_PATH.create(@obtainNotepad);
-  beginThread(@fillProgramMap);
+  NOTEPAD_PATH.create(@obtainNotepad);;
   sleep(10);
 
 FINALIZATION

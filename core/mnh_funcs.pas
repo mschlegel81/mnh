@@ -43,6 +43,14 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
+FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    system.EnterCriticalSection(print_cs);
+    mnh_out_adapters.clearConsole();
+    system.LeaveCriticalsection(print_cs);
+    result:=newVoidLiteral;
+  end;
+
 FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
@@ -1274,7 +1282,8 @@ INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
   pureIntrinsicFunctions.create;
-  registerRule('print'         ,@print_imp     ,false,'print(...);#Prints out the given parameters and returns true#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule('clearPrint'    ,@clearPrint_imp,false,'clearPrint(...);#Clears the output and returns void.');
+  registerRule('print'         ,@print_imp     ,false,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   //Functions on lists:
   registerRule('head'          ,@head_imp      ,true,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,true,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
@@ -1327,7 +1336,7 @@ INITIALIZATION
 
   registerRule('ord'           ,@ord_imp           ,true,'ord(x);#Returns the ordinal value of x');
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
-  registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters');
+  registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
   registerRule('deleteFile',@deleteFile_imp,false,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
 
 FINALIZATION

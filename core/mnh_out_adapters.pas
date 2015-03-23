@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES myStringutil, mnh_constants, mnh_tokLoc, myGenerics;
+USES myStringutil, mnh_constants, mnh_tokLoc, myGenerics,mySys;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
@@ -15,12 +15,14 @@ TYPE
   end;
 
   T_writeCallback = PROCEDURE(CONST s: ansistring);
+  T_clearConsoleCallback = PROCEDURE();
   T_writeMultiCallback = PROCEDURE(CONST s:T_arrayOfString);
   T_writeErrorCallback = PROCEDURE(CONST error: T_storedError);
 
 VAR
   inputDeclEcho, inputExprEcho, exprOut:T_writeCallback;
   printOut: T_writeMultiCallback;
+  clearConsole: T_clearConsoleCallback;
   errorOut: T_writeErrorCallback;
   maxErrorLevel: T_errorLevel;
 
@@ -36,6 +38,7 @@ PROCEDURE plainConsoleOut(CONST s: T_arrayOfString);
 PROCEDURE plainStdErrOut(CONST error: T_storedError);
 
 PROCEDURE haltEvaluation;
+PROCEDURE setDefaultCallbacks;
 
 VAR
   hasHaltMessage: boolean = false;
@@ -119,12 +122,18 @@ PROCEDURE haltEvaluation;
     raiseError(el5_systemError, HALT_MESSAGE, C_nilTokenLocation);
   end;
 
+PROCEDURE setDefaultCallbacks;
+  begin
+    inputDeclEcho := nil;
+    inputExprEcho := nil;
+    exprOut := nil;
+    errorOut := @plainStdErrOut;
+    printOut := @plainConsoleOut;
+    clearConsole:=@mySys.clearConsole;
+  end;
+
 INITIALIZATION
-  inputDeclEcho := nil;
-  inputExprEcho := nil;
-  exprOut := nil;
-  errorOut := @plainStdErrOut;
-  printOut := @plainConsoleOut;
+  setDefaultCallbacks;
   maxErrorLevel := el0_allOkay;
 
 end.

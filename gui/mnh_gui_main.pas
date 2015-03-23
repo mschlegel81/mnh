@@ -201,6 +201,7 @@ PROCEDURE lateInitialization;
 IMPLEMENTATION
 VAR errorThroughput:array of T_storedError;
     output:T_listOfString;
+    wantClear:specialize G_safeVar<boolean>;
     plotSubsystem:record
       rendering:boolean;
       mouseUpTriggersPlot:boolean;
@@ -236,6 +237,13 @@ PROCEDURE writePrint   (CONST list:T_arrayOfString);
   begin
     for i:=0 to length(list)-1 do appendToOutputThroughput(list[i]);
   end;
+
+PROCEDURE clearPrint();
+  begin
+    wantClear.value:=true;
+    output.clear;
+  end;
+
 
 PROCEDURE logError(CONST error:T_storedError);
   begin
@@ -417,6 +425,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     mnh_out_adapters.inputExprEcho:=@writeExprEcho;
     mnh_out_adapters.exprOut      :=@writeExprOut;
     mnh_out_adapters.printOut     :=@writePrint;
+    mnh_out_adapters.clearConsole :=@clearPrint;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -443,7 +452,7 @@ PROCEDURE TMnhForm.errorStringGridClick(Sender: TObject);
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
-    mnh_out_adapters.errorOut:=@mnh_out_adapters.plainStdErrOut;
+    mnh_out_adapters.setDefaultCallbacks;
     inputHighlighter.destroy;
     outputHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
@@ -890,6 +899,12 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
+    if wantClear.value then begin
+      wantClear.value:=false;
+      OutputEdit.ClearAll;
+      flag:=true;
+      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+    end;
     if output.size>0 then begin
       OutputEdit.BeginUpdate();
       L:=output.elementArray;
@@ -899,6 +914,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
       OutputEdit.EndUpdate;
       flag:=true;
+      UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     flushThroughput;
 
@@ -1158,7 +1174,9 @@ PROCEDURE lateInitialization;
 
 INITIALIZATION
   output.create;
+  wantClear.create(false);
 FINALIZATION
   output.destroy;
+  wantClear.destroy;
 end.
 

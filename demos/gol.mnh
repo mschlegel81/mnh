@@ -27,7 +27,7 @@ play(w)->print("\n\n\n")|printWorld(w)|sleep(0.1)|play(step(w));
 mutable sleepTime:=0.1;
 
 
-playUntilStatic(w)->print("\n\n\n")|printWorld(w)|sleep(sleepTime)|playUntilStatic(w,step(w));
+playUntilStatic(w)->clearPrint|printWorld(w)|sleep(sleepTime)|playUntilStatic(w,step(w));
 playUntilStatic(w,w)->void;
 playUntilStatic(w,w2)->playUntilStatic(w2);
 
