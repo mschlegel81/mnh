@@ -60,8 +60,8 @@ PROCEDURE clearConsole;
       tempProcess.Free;
     except
     end;
-  end;  
-  
+  end;
+
 FUNCTION obtainCmd:ansistring; begin result:=findDeeply('C:\*Win*','cmd.exe'); end;
 FUNCTION obtain7Zip:ansistring; begin result:=findDeeply('C:\*Program*','7z.exe'); end;
 FUNCTION obtainNotepad:ansistring; begin result:=findDeeply('C:\*Program*','notepad++.exe'); end;
