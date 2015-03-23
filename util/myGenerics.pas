@@ -105,6 +105,21 @@ TYPE
       PROCEDURE unlock;
   end;
 
+  { G_lazyVar }
+
+  GENERIC G_lazyVar<ENTRY_TYPE>=object
+    TYPE T_obtainer=FUNCTION():ENTRY_TYPE;
+    private
+      valueObtained:boolean;
+      obtainer:T_obtainer;
+      v :ENTRY_TYPE;
+      FUNCTION getValue:ENTRY_TYPE;
+    public
+      CONSTRUCTOR create(CONST o:T_obtainer);
+      DESTRUCTOR destroy;
+      PROPERTY value:ENTRY_TYPE read getValue;
+  end;
+
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 IMPLEMENTATION
@@ -127,6 +142,27 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
     result:=length(x);
     for i:=1 to length(x) do result:=result*31+ord(x[i]);
     {$Q+}
+  end;
+
+{ G_lazyVar }
+
+FUNCTION G_lazyVar.getValue: ENTRY_TYPE;
+  begin
+    if not(valueObtained) then begin
+      v:=obtainer();
+      valueObtained:=true;
+    end;
+    result:=v;
+  end;
+
+CONSTRUCTOR G_lazyVar.create(CONST o:T_obtainer);
+  begin
+    obtainer:=o;
+    valueObtained:=false;
+  end;
+
+DESTRUCTOR G_lazyVar.destroy;
+  begin
   end;
 
 { G_safeVar }

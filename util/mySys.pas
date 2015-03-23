@@ -3,8 +3,8 @@ INTERFACE
 USES myGenerics,sysutils;
 
 FUNCTION getEnvironment:T_arrayOfString;
- 
-VAR CMD_PATH,SEVEN_ZIP_PATH,NOTEPAD_PATH:specialize G_safeVar<ansistring>;
+
+VAR CMD_PATH,SEVEN_ZIP_PATH,NOTEPAD_PATH:specialize G_lazyVar<ansistring>;
 IMPLEMENTATION
 
 FUNCTION getEnvironment:T_arrayOfString;
@@ -25,39 +25,31 @@ FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
       end;
 
     begin
-      if (result='') and (findFirst(path+searchPattern, faAnyFile, info) = 0) then result:=path+info.name;                   
-      SysUtils.findClose(info);      
+      if (result='') and (findFirst(path+searchPattern, faAnyFile, info) = 0) then result:=path+info.name;
+      SysUtils.findClose(info);
 
       if findFirst(path+'*', faDirectory, info) = 0 then repeat
-        if ((info.attr and faDirectory) = faDirectory) and 
-           (info.Name<>'.') and 
-           (info.Name<>'..') 
+        if ((info.attr and faDirectory) = faDirectory) and
+           (info.Name<>'.') and
+           (info.Name<>'..')
         then recursePath(deeper);
       until (findNext(info)<>0) or (result<>'');
       SysUtils.findClose(info);
     end;
-  
+
   begin
     result:='';
     recursePath(rootPath);
   end;
 
-  
-FUNCTION fillProgramMap(p:pointer):ptrint;  
-  begin
-    CMD_PATH.lock;
-    SEVEN_ZIP_PATH.lock;
-    NOTEPAD_PATH.lock;
-    CMD_PATH      .value:=findDeeply('C:\*Win*','cmd.exe');            CMD_PATH.unlock;
-    SEVEN_ZIP_PATH.value:=findDeeply('C:\*Program*','7z.exe');        SEVEN_ZIP_PATH.unlock;
-    NOTEPAD_PATH  .value:=findDeeply('C:\*Program*','notepad++.exe'); NOTEPAD_PATH.unlock;
-  end;
-
+FUNCTION obtainCmd:ansistring; begin result:=findDeeply('C:\*Win*','cmd.exe'); end;
+FUNCTION obtain7Zip:ansistring; begin result:=findDeeply('C:\*Program*','7z.exe'); end;
+FUNCTION obtainNotepad:ansistring; begin result:=:=findDeeply('C:\*Program*','notepad++.exe'); end;
 
 INITIALIZATION
-  CMD_PATH.create('');
-  SEVEN_ZIP_PATH.create('');
-  NOTEPAD_PATH.create('');
+  CMD_PATH.create(@obtainCmd);
+  SEVEN_ZIP_PATH.create(@obtain7Zip);
+  NOTEPAD_PATH.create(@obtainNotepad);
   beginThread(@fillProgramMap);
   sleep(10);
 
