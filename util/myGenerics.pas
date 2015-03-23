@@ -53,7 +53,8 @@ TYPE
       FUNCTION getIndex(CONST iterator:longint):longint;
   end;
 
-  T_arrayOfString=array of ansistring;  
+  T_arrayOfString=array of ansistring;
+  OPERATOR :=(x:ansistring):T_arrayOfString;
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   { G_stringKeyMap }
 TYPE
@@ -107,6 +108,12 @@ TYPE
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 IMPLEMENTATION
+OPERATOR :=(x:ansistring):T_arrayOfString;
+  begin
+    setLength(result,1);
+    result[0]:=x;
+  end;
+
 PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   begin
     setLength(x,length(x)+1);

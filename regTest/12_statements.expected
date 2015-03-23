@@ -1,12 +1,12 @@
- 1. "This is a numbered list of twelve statements."                  is true  
- 2. "Exactly 3 of the last 6 statements are true."                   is false 
- 3. "Exactly 2 of the even-numbered statements are true."            is true  
- 4. "If statement 5 is true, then statements 6 and 7 are both true." is true  
- 5. "The 3 preceding statements are all false."                      is false 
- 6. "Exactly 4 of the odd-numbered statements are true."             is true  
- 7. "Either statement 2 or 3 is true, but not both."                 is true  
- 8. "If statement 7 is true, then 5 and 6 are both true."            is false 
- 9. "Exactly 3 of the first 6 statements are true."                  is false 
-10. "The next two statements are both true."                         is false 
-11. "Exactly 1 of statements 7, 8 and 9 are true."                   is true  
-12. "Exactly 4 of the preceding statements are true."                is false 
+ 1. "This is a numbered list of twelve statements."                  is true
+ 2. "Exactly 3 of the last 6 statements are true."                   is false
+ 3. "Exactly 2 of the even-numbered statements are true."            is true
+ 4. "If statement 5 is true, then statements 6 and 7 are both true." is true
+ 5. "The 3 preceding statements are all false."                      is false
+ 6. "Exactly 4 of the odd-numbered statements are true."             is true
+ 7. "Either statement 2 or 3 is true, but not both."                 is true
+ 8. "If statement 7 is true, then 5 and 6 are both true."            is false
+ 9. "Exactly 3 of the first 6 statements are true."                  is false
+10. "The next two statements are both true."                         is false
+11. "Exactly 1 of statements 7, 8 and 9 are true."                   is true
+12. "Exactly 4 of the preceding statements are true."                is false

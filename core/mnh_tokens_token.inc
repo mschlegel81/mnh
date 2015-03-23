@@ -1184,8 +1184,8 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
     except
       on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-      end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+      //end else begin
+      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
       end;
     end;
     if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)

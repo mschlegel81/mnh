@@ -9,7 +9,7 @@ CONST
   C_tabChar = chr(9);
   BLANK_TEXT = '';
 
-FUNCTION formatTabs(s: ansistring): ansistring;
+FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
 FUNCTION isBlank(CONST s: ansistring): boolean;
 FUNCTION replaceAll(original, lookFor, replaceBy: ansistring): ansistring; inline;
 FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT isValid: boolean): ansistring; inline;
@@ -19,6 +19,9 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 FUNCTION unbrace(CONST s:ansistring):ansistring;
+FUNCTION split(CONST s:ansistring):T_arrayOfString;
+FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
+FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
@@ -26,150 +29,67 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansis
 
 IMPLEMENTATION
 
-FUNCTION formatTabs(s: ansistring): ansistring;
+FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
   VAR matrix: array of T_arrayOfString;
-      pb, pt, i, j, maxJ, maxLength, dotpos: longint;
+      i, j, maxJ, maxLength, dotpos: longint;
 
   FUNCTION isNumeric(s: ansistring): boolean;
-    VAR
-      i: longint;
-      hasDot, hasExpo: boolean;
+    VAR i: longint;
+        hasDot, hasExpo: boolean;
     begin
       result := length(s)>0;
       hasDot := false;
       hasExpo := false;
-      for i := 1 to length(s)-1 do
-        if s [i] = '.' then
-          begin
-          result := result and not (hasDot);
-          hasDot := true;
-          end
-        else if (s [i] in ['e', 'E']) and (i>1) then
-          begin
-          result := result and not (hasExpo);
-          hasExpo := true;
-          end
-        else
-          result := result and ((s [i] in ['0'..'9']) or
-            ((i = 1) or (s [i-1] in ['e', 'E'])) and (s [i] in ['-', '+']));
+      for i := 1 to length(s)-1 do if s [i] = '.' then begin
+        result := result and not (hasDot);
+        hasDot := true;
+      end else if (s [i] in ['e', 'E']) and (i>1) then begin
+        result := result and not (hasExpo);
+        hasExpo := true;
+      end else result := result and ((s [i] in ['0'..'9']) or ((i = 1) or (s [i-1] in ['e', 'E'])) and (s [i] in ['-', '+']));
     end;
 
   FUNCTION posOfDot(s: ansistring): longint;
     begin
       result := pos('.', s);
-      if result = 0 then
-        result := length(s)+1;
+      if result = 0 then result := length(s)+1;
     end;
 
   begin
-    pb := pos(C_lineBreakChar, s);
-    pt := pos(C_tabChar, s);
-    if pt<=0 then
-      result := s//s contains no tabs -> no processing needed
-
-    else if pb<=0 then
-      begin
-      //s contains no line break but tabs -> replaceOne all tabs by spaces;
-      while pt>0 do
-        begin
-        s[pt] := ' ';
-        pt := pos(C_tabChar, s);
-        end;
-      result := s;
-      end
-    else
-      begin
-      //s contains both line breaks and tabs -> full processing
-      setLength(matrix, 1);
-      i := 0;
-      j := -1;
-      maxJ := -1;
-      repeat
-        pb := pos(C_lineBreakChar, s);
-        if pb<=0 then
-          pb := length(s)+1;
-        pt := pos(C_tabChar, s);
-        if pt<=0 then
-          pt := length(s)+1;
-        if pt<pb then
-          begin
-          //if tab comes before break, split string at tab and add new column
-          Inc(j);
-          if j>maxJ then
-            maxJ := j;
-          setLength(matrix [i], j+1);
-          matrix[i][j] := copy(s, 1, pt-1);
-          s := copy(s, pt+1, length(s));
-          pb := pos(C_lineBreakChar, s);
-          if pb<=0 then
-            pb := length(s)+1;
-          pt := pos(C_tabChar, s);
-          if pt<=0 then
-            pt := length(s)+1;
-          end
-        else if pb<pt then
-          begin
-          //if break comes before tab, add rest to current row and start new row
-          Inc(j);
-          if j>maxJ then
-            maxJ := j;
-          setLength(matrix [i], j+1);
-          matrix[i][j] := copy(s, 1, pb-1);
-          s := copy(s, pb+1, length(s));
-          Inc(i);
-          j := -1;
-          setLength(matrix, i+1);
-          pb := pos(C_lineBreakChar, s);
-          if pb<=0 then
-            pb := length(s)+1;
-          pt := pos(C_tabChar, s);
-          if pt<=0 then
-            pt := length(s)+1;
-          end
-        else
-          begin
-          //if break and tab are at equal position (meaning none are present), add rest to current row
-          Inc(j);
-          if j>maxJ then
-            maxJ := j;
-          setLength(matrix [i], j+1);
-          matrix[i][j] := s;
-          s := '';
-          end;
-      until s = '';
-      //expand columns to equal size:
-      for j := 0 to maxJ do
-        begin
-        dotpos := 0;
-        for i := 0 to length(matrix)-1 do
-          if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) and
-            (posOfDot(matrix [i] [j])>dotpos) then
-            dotpos := posOfDot(matrix [i] [j]);
-        if dotPos>0 then
-          for i := 0 to length(matrix)-1 do
-            if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) then
-              while posOfDot(matrix [i] [j])<dotpos do
-                matrix[i][j] := ' '+matrix [i] [j];
-
-        maxLength := 0;
-        for i := 0 to length(matrix)-1 do
-          if (length(matrix [i])>j) and (length(matrix [i] [j])>maxLength) then
-            maxLength := length(matrix [i] [j]);
-        for i := 0 to length(matrix)-1 do
-          if (length(matrix [i])>j) then
-            while length(matrix [i] [j])<=maxLength do
-              matrix[i][j] := matrix [i] [j]+' ';
-        end;
-      //join matrix to result;
-      result := '';
+    result:=s;
+    setLength(matrix,length(result));
+    j := -1;
+    maxJ := -1;
+    for i:=0 to length(result)-1 do begin
+      matrix[i]:=split(result[i],C_tabChar);
+      j:=length(matrix[i])-1;
+      if j>maxJ then maxJ:=j;
+    end;
+    //expand columns to equal size:
+    for j := 0 to maxJ do begin
+      dotpos := 0;
       for i := 0 to length(matrix)-1 do
-        begin
-        if (i>0) then
-          result := result+C_lineBreakChar;
-        for j := 0 to length(matrix [i])-1 do
-          result := result+matrix [i] [j];
-        end;
-      end;
+        if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) and
+          (posOfDot(matrix [i] [j])>dotpos) then
+          dotpos := posOfDot(matrix [i] [j]);
+      if dotPos>0 then
+        for i := 0 to length(matrix)-1 do
+          if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) then
+            while posOfDot(matrix [i] [j])<dotpos do
+              matrix[i][j] := ' '+matrix [i] [j];
+
+      maxLength := 0;
+      for i := 0 to length(matrix)-1 do
+        if (length(matrix [i])>j) and (length(matrix [i] [j])>maxLength) then
+          maxLength := length(matrix [i] [j]);
+      for i := 0 to length(matrix)-1 do
+        if (length(matrix [i])>j) then
+          while length(matrix [i] [j])<=maxLength do
+            matrix[i][j] := matrix [i] [j]+' ';
+    end;
+
+    //join matrix to result;
+    for i:=0 to length(matrix)-1 do result[i]:=TrimRight(join(matrix[i],''));
   end;
 
 FUNCTION isBlank(CONST s: ansistring): boolean;
@@ -353,6 +273,52 @@ FUNCTION unbrace(CONST s:ansistring):ansistring;
         (s[1]='{') and (s[length(s)]='}'))
     then result:=copy(s,2,length(s)-2)
     else result:=s;
+  end;
+
+
+FUNCTION split(CONST s:ansistring):T_arrayOfString;
+  VAR lineSplitters:T_arrayOfString;
+  begin
+    lineSplitters:=(C_carriageReturnChar+C_lineBreakChar);
+    append(lineSplitters,C_lineBreakChar+C_carriageReturnChar);
+    append(lineSplitters,C_lineBreakChar);
+    result:=split(s,lineSplitters);
+  end;
+
+FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
+  PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
+    VAR i,p:longint;
+    begin
+      splitterStart:=0;
+      for i:=0 to length(splitters)-1 do begin
+        p:=pos(splitters[i],s);
+        if (p>0) and ((splitterStart=0) or (p<splitterStart)) then begin
+          splitterStart:=p;
+          splitterEnd:=p+length(splitters[i]);
+        end;
+      end;
+    end;
+
+  VAR sp0,sp1:longint;
+      rest:ansistring;
+  begin
+    setLength(result,0);
+    firstSplitterPos(s,sp0,sp1);
+    if sp0<0 then result:=s;
+    rest:=s;
+    while sp0>0 do begin
+      append(result,copy(rest,1,sp0-1));
+      rest:=copy(rest,sp1,length(rest));
+      firstSplitterPos(rest,sp0,sp1);
+    end;
+    append(result,rest);
+  end;
+
+FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
+  VAR i:longint;
+  begin
+    if length(lines)>0 then result:=lines[0] else result:='';
+    for i:=1 to length(lines)-1 do result:=result+joiner+lines[i];
   end;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;

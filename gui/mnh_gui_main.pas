@@ -231,9 +231,10 @@ PROCEDURE writeExprOut (CONST s:ansistring);
     appendToOutputThroughput(C_ExprOutHead+' '+s);
   end;
 
-PROCEDURE writePrint   (CONST s:ansistring);
+PROCEDURE writePrint   (CONST list:T_arrayOfString);
+  VAR i:longint;
   begin
-    appendToOutputThroughput(s);
+    for i:=0 to length(list)-1 do appendToOutputThroughput(list[i]);
   end;
 
 PROCEDURE logError(CONST error:T_storedError);

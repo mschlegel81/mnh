@@ -56,7 +56,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.EnterCriticalSection(print_cs);
-    writePrint(stringToPrint);
+    writePrint(split(stringToPrint));
     system.LeaveCriticalsection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -1246,21 +1246,12 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   INNER_FORMATTING;
-  VAR k:longint;
-      toPrint:ansistring;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
-      toPrint:='';
-      for k:=0 to length(resultString)-1 do begin
-        if k>0 then toPrint:=toPrint+C_lineBreakChar;
-        toPrint:=toPrint+resultString[k];
-      end;
-      setLength(resultString,0);
-
       system.EnterCriticalSection(print_cs);
-      writePrint(toPrint);
+      writePrint(resultString);
       system.LeaveCriticalsection(print_cs);
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);

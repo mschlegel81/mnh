@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES mnh_stringutil, mnh_constants, mnh_tokLoc;
+USES mnh_stringutil, mnh_constants, mnh_tokLoc, myGenerics;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
@@ -15,22 +15,24 @@ TYPE
   end;
 
   T_writeCallback = PROCEDURE(CONST s: ansistring);
+  T_writeMultiCallback = PROCEDURE(CONST s:T_arrayOfString);
   T_writeErrorCallback = PROCEDURE(CONST error: T_storedError);
 
 VAR
-  inputDeclEcho, inputExprEcho, exprOut, printOut, tablePrintOut: T_writeCallback;
+  inputDeclEcho, inputExprEcho, exprOut:T_writeCallback;
+  printOut: T_writeMultiCallback;
   errorOut: T_writeErrorCallback;
   maxErrorLevel: T_errorLevel;
 
 PROCEDURE writeDeclEcho(CONST s: ansistring);
 PROCEDURE writeExprEcho(CONST s: ansistring);
 PROCEDURE writeExprOut(CONST s: ansistring);
-PROCEDURE writePrint(CONST s: ansistring);
+PROCEDURE writePrint(CONST s: T_arrayOfString);
 PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_errorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
 FUNCTION errorLevel: T_errorLevel;
 
-PROCEDURE plainConsoleOut(CONST s: ansistring);
+PROCEDURE plainConsoleOut(CONST s: T_arrayOfString);
 PROCEDURE plainStdErrOut(CONST error: T_storedError);
 
 PROCEDURE haltEvaluation;
@@ -58,33 +60,9 @@ PROCEDURE writeExprOut(CONST s: ansistring);
       exprOut(s);
   end;
 
-PROCEDURE writePrint(CONST s: ansistring);
-  VAR
-    i: longint;
-    tmp: ansistring;
+PROCEDURE writePrint(CONST s: T_arrayOfString);
   begin
-    if pos(C_tabChar, s) > 0 then
-      begin
-      if tablePrintOut <> nil then
-        tablePrintOut(s)
-      else if printOut <> nil then
-          writePrint(formatTabs(s));
-      end
-    else if printOut <> nil then
-        begin
-        tmp := s;
-        i := pos(C_lineBreakChar, tmp);
-        while i > 0 do
-          begin
-          if (i > 1) and (tmp[i - 1] = C_carriageReturnChar) then
-            printOut(copy(tmp, 1, i - 2))
-          else
-            printOut(copy(tmp, 1, i - 1));
-          tmp := copy(tmp, i + 1, length(tmp));
-          i := pos(C_lineBreakChar, tmp);
-          end;
-        printOut(tmp);
-        end;
+    if printOut <> nil then printOut(formatTabs(s));
   end;
 
 VAR errorCount:longint=0;
@@ -123,9 +101,10 @@ FUNCTION errorLevel: T_errorLevel;
     if hasHaltMessage then result:=el5_systemError else result := maxErrorLevel;
   end;
 
-PROCEDURE plainConsoleOut(CONST s: ansistring);
+PROCEDURE plainConsoleOut(CONST s: T_arrayOfString);
+  VAR i:longint;
   begin
-    writeln(s);
+    for i:=0 to length(s)-1 do writeln(s[i]);
   end;
 
 PROCEDURE plainStdErrOut(CONST error: T_storedError);
@@ -146,7 +125,6 @@ INITIALIZATION
   exprOut := nil;
   errorOut := @plainStdErrOut;
   printOut := @plainConsoleOut;
-  tablePrintOut := nil;
   maxErrorLevel := el0_allOkay;
 
 end.
