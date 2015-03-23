@@ -1,0 +1,37 @@
+MNH_ON_HEAD:='@rem mnh ';
+MNH_OFF_HEAD:='@rem nomnh';
+tempScriptName->tempScriptName(0);
+tempScriptName(i)->fileExists(format('temp_%X%.mnh',i)) ? tempScriptName(i+1) : format('temp_%X%.mnh',i);
+
+//extractCommands(filename)->print('Reading ',filename)| each(l,fileLines(filename),pos(HEAD,l)=0 ? copy(l,length(HEAD),length(l)) : void);
+runScript(lines:stringList)->runScript("//!BATCH ON"| lines,tempScriptName);
+voidify(...)->void;
+runScript(lines,name)->voidify(print('Writing temporary script ',name),
+                               writeFileLines(name,lines),
+                               print('Executing temporary script ',name))|
+                       exec(executor,[name])|
+                       voidify(print('Deleting temporary script ',name),
+                               deleteFile(name));
+//enhanceFile(batName)->enhanceFile(batName,extractCommands(batName));
+//enhanceFile(batName,commands)->writeFileLines(batName,(HEAD&commands)|runScript(commands)|print('Writing file ',batName));
+
+
+//main(batchFileName)->enhanceFile(batchFileName);
+//----------------------------------------------------------
+mutable lastLineStyle:=0;
+mutable scriptLines:=[];
+dumpScript->size(scriptLines)>0 ? runScript(scriptLines)|(scriptLines:=[]) : void;
+
+style(line)->trim(line)=''            ? [lastLineStyle:=1,''] :
+             pos(MNH_ON_HEAD ,line)=0 ? [lastLineStyle:=2, voidify(scriptLines:=scriptLines|copy(line,length(MNH_ON_HEAD),length(line))) , line] :
+             pos(MNH_OFF_HEAD,line)=0 ? [lastLineStyle:=3,line]
+                                      : (lastLineStyle=3 ? [3,line] :
+                                         lastLineStyle=2 ? [lastLineStyle:=1,''] : []);
+
+parse(2,line)->line;
+parse(x,line)->dumpScript|(trim(line)="" ? void : line);
+parse->void;
+
+main(batchFileName)->writeFileLines(batchFileName,each(l,fileLines(batchFileName),|,parse@style(l))|dumpScript);
+
+main->main("regTest/t.bat");
