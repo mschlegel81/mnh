@@ -2,7 +2,7 @@ UNIT mnh_litvar;
 
 INTERFACE
 
-USES mnh_constants, mnh_out_adapters, SysUtils, Math, mnh_stringUtil, mnh_tokloc, mnh_fileWrappers;
+USES mnh_constants, mnh_out_adapters, SysUtils, Math, myStringutil, mnh_tokloc, mnh_fileWrappers;
 CONST
   C_boolText: array[false..true] of string = ('false', 'true');
 
@@ -979,7 +979,7 @@ FUNCTION T_stringLiteral.lower: P_stringLiteral;
 FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
   VAR rs: string;
   begin
-    rs := mnh_stringUtil.unbrace(val);
+    rs := myStringutil.unbrace(val);
     if rs = val then begin
       result := @self;
       rereference;

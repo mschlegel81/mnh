@@ -1,7 +1,7 @@
-UNIT mnh_stringutil;
+UNIT myStringutil;
 
 INTERFACE
-USES sysutils, mnh_constants, myGenerics;
+USES sysutils,  myGenerics;
 
 CONST
   C_lineBreakChar = chr(13);
@@ -25,7 +25,7 @@ FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
 
 IMPLEMENTATION
 
@@ -346,7 +346,7 @@ FUNCTION isTimeFormat(CONST s:ansistring):boolean;
     result:=false;
   end;
 
-FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:T_myFloat):ansistring;
+FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:extended):ansistring;
   VAR i,destLen:longint;
   begin
     result:=FormatFloat(formatString,value);
@@ -374,7 +374,7 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring
     end;
   end;
 
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:T_myFloat):ansistring;
+FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
   begin
     if (length(formatString)>0) and (formatString[1] in ['X','x','I','i'])
     then exit(myFormat(formatString,FloatToStr(realData)));

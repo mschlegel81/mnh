@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef plots},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,mnh_stringutil,sysutils,myGenerics;
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef plots},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics;
 PROCEDURE parseCmdLine;
 IMPLEMENTATION
 //by command line parameters:---------------

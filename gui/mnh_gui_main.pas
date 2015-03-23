@@ -7,7 +7,7 @@ USES
   Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-    mnh_out_adapters, mnh_stringutil, mnh_evalThread, mnh_constants, myGenerics,
+  mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants, myGenerics,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
 CONST ONE_SECOND=1/(24*60*60);

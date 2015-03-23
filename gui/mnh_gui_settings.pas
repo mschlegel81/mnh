@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_stringutil, mnh_funcs, myGenerics;
+  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, myStringutil, mnh_funcs, myGenerics;
 CONST
   default_notepad_path = 'c:\PROGRAM Files (x86)\Notepad++\notepad++.exe';
 

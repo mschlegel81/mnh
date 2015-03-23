@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES SysUtils, mnh_funcs, mnh_stringutil, myGenerics;
+USES SysUtils, mnh_funcs, myStringutil, myGenerics;
 VAR htmlRoot: string;
 TYPE
 

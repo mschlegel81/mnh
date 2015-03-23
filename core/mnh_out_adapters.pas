@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES mnh_stringutil, mnh_constants, mnh_tokLoc, myGenerics;
+USES myStringutil, mnh_constants, mnh_tokLoc, myGenerics;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
