@@ -1188,7 +1188,8 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
         raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
       end;
     end;
-    if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo) then writeInterpreterState;
+    if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
+    or (callDepth=0) and (first<>nil) and (first^.next<>nil) and not(pureOnly) then writeInterpreterState;
 
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
