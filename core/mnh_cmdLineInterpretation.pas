@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef plots},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics;
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics;
 PROCEDURE parseCmdLine;
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -21,7 +21,7 @@ PROCEDURE filteredStdErrOut(CONST error:T_storedError);
 PROCEDURE parseCmdLine;
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
-                  {$ifdef plots}'(full'{$else}'(light'{$endif},
+                  {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
                   {$ifdef debugMode}',debug)'{$else}')'{$endif},
                   {$I %DATE%},
                   ' ',{$I %TIME%},
@@ -31,7 +31,7 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE displayHelp;
     begin
-      writeln('MNH5 ',{$ifdef plots}'(full'{$else}'(light'{$endif},
+      writeln('MNH5 ',{$ifdef fullVersion}'(full'{$else}'(light'{$endif},
                       {$ifdef debugMode}',debug)'{$else}')'{$endif},' by Martin Schlegel');
       writeln('compiled on: ',{$I %DATE%});
       writeln('         at: ',{$I %TIME%});
