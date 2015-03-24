@@ -1,5 +1,5 @@
 recFolders([])->[];
-recFolders(F)->flatten(each(subFolder,folders(F&"/*"),subFolder,recFolders(subFolder)));
+recFolders(F)->flatten(F,each(subFolder,folders(F&"/*"),recFolders(subFolder)));
 
 recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),each(pat,searchPatterns,files(folder&"/"&pat))));
 recFiles(rootFolder,searchPattern:string)->recFiles(rootFolder,trim(split(searchPattern,[";",","])));
