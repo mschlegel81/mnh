@@ -1014,7 +1014,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
     try
     repeat
       didSubstitution:=false;
-      //writeln(tokensToString(first));
+      //if pureOnly then write('PURE RUN: '); writeln(tokensToString(first));
       //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
       case cTokType(0) of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType(-1) of

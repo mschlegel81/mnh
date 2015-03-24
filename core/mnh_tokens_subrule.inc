@@ -54,7 +54,11 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
         token.next:=nil;
         if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then token.tokType:=tt_identifier else begin
+          if parIdx>=0 then begin
+            if parIdx>=ALL_PARAMETERS_PAR_IDX
+            then token.tokType:=tt_parameterIdentifier
+            else token.tokType:=tt_identifier;
+          end else begin
             if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
             if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) and
                ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList])) //rule must not be followed by an opening bracket, indicating a call with parameters
