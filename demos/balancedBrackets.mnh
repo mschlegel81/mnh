@@ -1,0 +1,5 @@
+//Note: Using memoization here is a hack to ensure that successive callls return the same string
+private memoized randomBrackets(n:int)->n<1 ? "" : each(b,each(i,[1..n],'[',']')%sortPerm(random(2*n)),&);
+private isOk(s:string)->replace(s,"[]","")="";
+//*See <a href="http://rosettacode.org/wiki/Balanced_brackets">http://rosettacode.org/wiki/Balanced_brackets</a>
+main->each(i,[1..8],printf('%X16% %X%',randomBrackets(i),isOk(randomBrackets(i)) ? "o.k." : "NOT o.k."));
