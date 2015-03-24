@@ -313,6 +313,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     begin
       loc:=location;
       next:=firstToken(s,loc,nil,true);
+      while (next.tokType=tt_eol) and (s<>'') do next:=firstToken(s,loc,nil,true);
       if next.tokType=tt_eol then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
       recycler.create;
       first:=recycler.newToken(next);
@@ -320,6 +321,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       repeat
         loc:=location;
         next:=firstToken(s,loc,nil,true);
+        while (next.tokType=tt_eol) and (s<>'') do next:=firstToken(s,loc,nil,true);
         if next.tokType<>tt_eol then begin
           last^.next:=recycler.newToken(next);
           last:=last^.next;

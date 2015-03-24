@@ -318,7 +318,10 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              result.tokType:=tt_comparatorLss;
            end;
       '/': if startsWith(line,'//') then begin //comments
-             parsedLength:=length(line);
+             parsedLength:=2;
+             while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
+
+
              result.tokType:=tt_eol;
              if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
              else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_ON)  then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_ON
