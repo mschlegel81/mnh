@@ -8,6 +8,18 @@ testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
 
 currentExeInfo:=head(exec(currentExe,["-version"]));
+currentExeCanPlot:=copy(currentExeInfo,5,4)="full";
+quickTestsOnly   :=testFilter==['quick'];
+
+matchesAny(input)->(testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,input)>=0);
+
+allTestCases:=each(case,
+                   expression(each(l,
+                                   fileLines('regTest/regTestCases.dat'),
+                                   aggregator({$x&"\n"&$y})))(),
+                                   (currentExeCanPlot   or not(case%3)) and
+                                   (not(quickTestsOnly) or not(case%4)) and
+                                   matchesAny(case%0) ? case%[0..2] : void);
 
 print('---------------------------------------------------------\n',
       'Starting test runs with executable '& currentExe,'\n',
@@ -20,77 +32,10 @@ voidify(...)->void;
 synchronized markAsPassed(case)->voidify(passedTests:=passedTests | (currentExeInfo & ":" & case));
 isMarkedAsPassed(case)->(currentExeInfo & ":" & case) in passedTests;
 
-slow_test_list:=["demos\\ackermann.mnh",
-                 "demos\\dice7fromDice5.mnh",
-                 "demos\\digitSquareSum.mnh",
-                 "demos\\hailstone.mnh",
-                 "demos\\hofstadterConway.mnh",
-                 "demos\\ludic.mnh",
-                 "demos\\monteCarloPi.mnh",
-                 "demos\\pythagoras.mnh",
-                 "demos\\selfRefSeq.mnh",
-                 "demos\\vampire.mnh",
-                 "demos\\ulam.mnh",
-                 "demos\\unbiasedRandom.mnh",
-                 "demos\\weasel.mnh",
-                 "demos\\wordCount.mnh"];
-
-test_list:=["regTest\\opTest.mnh",
-            "regTest\\hash.mnh",
-            "packages\\basic.mnh",
-            "packages\\bool.mnh",
-            "packages\\combinatorics.mnh",
-            "packages\\statistics.mnh",
-            "packages\\primes.mnh",
-            "demos\\12_statements.mnh",
-            "demos\\24.mnh",
-            "demos\\99bottles.mnh",
-            "demos\\anagram.mnh",
-            "demos\\concatInts.mnh",
-            "demos\\fibonacci.mnh",
-            "demos\\fibonacciWord.mnh",
-            "demos\\fractran.mnh",
-            "demos\\gol.mnh",
-            "demos\\hamming.mnh",
-            "demos\\huffmann.mnh",
-            "demos\\josephus.mnh",
-            "demos\\lastSundays.mnh",
-            "demos\\magicSquare.mnh",
-            "demos\\pascal.mnh",
-            "demos\\pernicousNumbers.mnh",
-            "demos\\quine.mnh",
-            "demos\\quine2.mnh",
-            "demos\\range_extract_expand.mnh",
-            "demos\\rk4.mnh",
-            "demos\\roman.mnh",
-            "demos\\root.mnh",
-            "demos\\setConsolidation.mnh",
-            "demos\\shannonEntropy.mnh",
-            "demos\\sierpinski.mnh",
-            "demos\\variadic.mnh",
-            "demos\\y.mnh",
-            "demos\\zeckendorf.mnh",
-            ["packages\\enhanceBat.mnh","regTest\\t.bat",false]];
-
-plot_test_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png",true],
-                 ["demos\\fibMaze.mnh"     ,"demos\\fibMaze.png",true],
-                 ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png",true]];
-
-matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
-filteredTests(exe,'quick')->sort(each(case,test_list,case:string ? [case,"",false] : case));
-filteredTests(exe:string,...)->filteredTests@((copy(currentExeInfo,5,4)="full")|tail($params));
-filteredTests(canPlot:boolean,filter)->sort(each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
-                                          case:string ? (matchesAny(filter,case)   ? [case,"",false] : void)
-                                                      : (matchesAny(filter,case%0) ?  case           : void)));
-filteredTests(canPlot:boolean)->sort(each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
-                                          case:string ? [case,"",false]
-                                                      :  case));
-testsToRun:=filteredTests@(currentExe|testFilter);
-
-FMT_STRING:="%X"&max(length(testsToRun%%0))&"% %####0.00%sec ";
-
 mutable testsFailed:="";
 synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
+
+FMT_STRING:="%X"&max(length(allTestCases%%0))&"% %####0.00%sec ";
 
 expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
 lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
@@ -101,14 +46,19 @@ storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
 runScript(executor,scriptName,outputFileName,delOutputBefore)->
   isMarkedAsPassed(scriptName) ? print(format(FMT_STRING,scriptName,0)&"(already marked as passed)")
-                               : (delOutputBefore and outputFileName<>'' ? (deleteFile(outputFileName) ? void : void) : void)|
-                                 print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
+                               : (delOutputBefore and outputFileName<>'' ? deleteFile(outputFileName) : void) |
+                                 print(checkResult(scriptName,
+                                                   systime,
+                                                   exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),
+                                                   systime));
 
 checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k." | markAsPassed(scriptName)
-                                                                         :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
+                                                                         :  "Results differ!" & 
+                                                                            addFailedTest(scriptName) &
+                                                                            storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
 
-each(test,testsToRun,runScript@(executor|test));
+each(test,allTestCases,runScript@(executor|test));
 print(testsFailed);
 storePassedTests;
