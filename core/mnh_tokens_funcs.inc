@@ -393,6 +393,17 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('arity',params,tokenLocation);
   end;
 
+FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      result:=parametersForMain;
+      if result<>nil
+      then result^.rereference
+      else result:=newListLiteral;
+    end else raiseNotApplicableError('mainParams',params,tokenLocation);
+  end;
+
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -421,4 +432,5 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   registerRule('sleep'         ,@sleep_imp     ,false,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule('expression'    ,@expression_imp,true,'expression(S:string);#Returns an expression parsed from S');
   registerRule('arity'         ,@arity_imp     ,true,'arity(e:expression);#Returns the arity of expression e');
+  registerRule('mainParams'    ,@mainParams_imp,true,'mainParams;#Returns the parameters passed to the program');
 {$endif}

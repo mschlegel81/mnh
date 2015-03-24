@@ -58,6 +58,7 @@ IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
+    parametersForMain:P_listLiteral=nil;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
     {$ifdef PROFILING}
@@ -583,13 +584,17 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
   VAR t:P_token;
-      parLit:P_listLiteral;
       i:longint;
       mainRule:P_rule;
       recycler:T_tokenRecycler;
   begin
     clearErrors;
     recycler.create;
+
+    parametersForMain:=newListLiteral;
+    parametersForMain^.rereference;
+    for i:=0 to length(parameters)-1 do parametersForMain^.append(newStringLiteral(parameters[i]),false);
+
     mainPackage.load(lu_forCallingMain,recycler);
     if not(mainPackage.ready) or (errorLevel>=el3_evalError) then begin
       raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(@mainPackageProvider));
@@ -606,10 +611,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
     end else begin
       t^.tokType:=tt_localUserRulePointer;
       t^.data:=mainRule;
-
-      parLit:=newListLiteral;
-      for i:=0 to length(parameters)-1 do parLit^.append(newStringLiteral(parameters[i]),false);
-      t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parLit);
+      t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
       reduceExpression(t,false,0,recycler);
       //special handling if main returns an expression:
       if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
@@ -620,6 +622,8 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
     end;
     recycler.cascadeDisposeToken(t);
     recycler.destroy;
+    disposeLiteral(parametersForMain);
+    parametersForMain:=nil;
   end;
 
 PROCEDURE printMainPackageDocText;

@@ -1,5 +1,25 @@
 USE hash;
 
+//!BATCH ON
+currentExe:=head(mainParams | executor);
+testFilter:=tail(mainParams);
+
+testDirectory:=replace(splitFileName(myPath)%"relative",
+                       splitFileName(myPath)%"filename","");
+
+currentExeInfo:=head(exec(currentExe,["-version"]));
+
+print('---------------------------------------------------------\n',
+      'Starting test runs with executable '& currentExe,'\n',
+      currentExeInfo,
+      '\n---------------------------------------------------------');
+
+mutable passedTests:=fileExists('regTest/passedTests.dat') ? fileLines('regTest/passedTests.dat') : [];
+storePassedTests->writeFileLines('regTest/passedTests.dat',unique(passedTests));
+voidify(...)->void;
+synchronized markAsPassed(case)->voidify(passedTests:=passedTests | (currentExeInfo & ":" & case));
+isMarkedAsPassed(case)->(currentExeInfo & ":" & case) in passedTests;
+
 slow_test_list:=["demos\\ackermann.mnh",
                  "demos\\dice7fromDice5.mnh",
                  "demos\\digitSquareSum.mnh",
@@ -57,19 +77,18 @@ plot_test_list:=[["demos\\barnsleyFern.mnh","demos\\barnsleyFern.png",true],
                  ["demos\\kochCurve.mnh"   ,"demos\\kochCurve.png",true]];
 
 matchesAny(filter,input)->each(f,filter,or,pos(f,input)>=0);
-filteredTests(exe,'quick')->each(case,test_list,case:string ? [case,"",false] : case);
-filteredTests(exe:string,...)->filteredTests@((copy(head(exec(exe,["-version"])),5,4)="full")|tail($params));
-filteredTests(canPlot:boolean,filter)->each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
+filteredTests(exe,'quick')->sort(each(case,test_list,case:string ? [case,"",false] : case));
+filteredTests(exe:string,...)->filteredTests@((copy(currentExeInfo,5,4)="full")|tail($params));
+filteredTests(canPlot:boolean,filter)->sort(each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
                                           case:string ? (matchesAny(filter,case)   ? [case,"",false] : void)
-                                                      : (matchesAny(filter,case%0) ?  case           : void));
-filteredTests(canPlot:boolean)->each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
+                                                      : (matchesAny(filter,case%0) ?  case           : void)));
+filteredTests(canPlot:boolean)->sort(each(case,test_list | slow_test_list | (canPlot ? plot_test_list : void),
                                           case:string ? [case,"",false]
-                                                      :  case);
+                                                      :  case));
+testsToRun:=filteredTests@(currentExe|testFilter);
 
-FMT_STRING:="%X40% %####0.00%sec ";
+FMT_STRING:="%X"&max(length(testsToRun%%0))&"% %####0.00%sec ";
 
-testDirectory:=replace(splitFileName(myPath)%"relative",
-                       splitFileName(myPath)%"filename","");
 mutable testsFailed:="";
 synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
 
@@ -80,17 +99,16 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
-runScript(executor,scriptName,outputFileName,delOutputBefore)->(delOutputBefore and outputFileName<>'' ? (deleteFile(outputFileName) ? void : void) : void)|
-                                              print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
+runScript(executor,scriptName,outputFileName,delOutputBefore)->
+  isMarkedAsPassed(scriptName) ? print(format(FMT_STRING,scriptName,0)&"(already marked as passed)")
+                               : (delOutputBefore and outputFileName<>'' ? (deleteFile(outputFileName) ? void : void) : void)|
+                                 print(checkResult(scriptName,systime,exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),systime));
 
 checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
-  expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k."
+  expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k." | markAsPassed(scriptName)
                                                                          :  "Results differ!"&addFailedTest(scriptName)&storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
 
-reportStart(executor)->print('---------------------------------------------------------\n',
-                             'Starting test runs with executable '&executor,
-                             '\n---------------------------------------------------------');
-
-main(executor,...)->reportStart(executor) and each(test,filteredTests@($params),runScript@(executor|test)) and print(testsFailed);
-main->main(executor);
+each(test,testsToRun,runScript@(executor|test));
+print(testsFailed);
+storePassedTests;
