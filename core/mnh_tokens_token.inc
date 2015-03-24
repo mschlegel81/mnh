@@ -724,13 +724,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     VAR future:array of P_futureTask;
         nextFuture:longint=0;
         initializedFutures:longint=0;
+    CONST STEP_TOL=64;
 
     PROCEDURE aggregateFutures(CONST finalizing:boolean);
-      CONST STEP_TOL=1023;
       begin
         while (nextFuture<initializedFutures)
           and (future[nextFuture]<>nil)
-          and ((initializedFutures>nextFuture+STEP_TOL) or
+          and ((pendingTasks.queuedCount>STEP_TOL) or
                finalizing or
                (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
           while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
@@ -757,7 +757,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
-          if (initializedFutures and 255)=0 then aggregateFutures(false);
+          if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>STEP_TOL) then aggregateFutures(false);
         end;
       end;
 
