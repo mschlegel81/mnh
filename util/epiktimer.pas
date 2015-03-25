@@ -484,7 +484,7 @@ end;
 PROCEDURE TEpikTimer.Start(VAR T: TimerData);
 begin
   if not T.running then
-    With FSelectedTimebase^ do
+    with FSelectedTimebase^ do
     begin
       T.StartTime:=Ticks()-TicksOverhead;
       T.TimebaseUsed:=FSelectedTimebase;
@@ -496,7 +496,7 @@ PROCEDURE TEpikTimer.Stop(VAR T: TimerData);
   VAR CurTicks:TickType;
 begin
   if T.Running then
-    With T.TimebaseUsed^ do
+    with T.TimebaseUsed^ do
     begin
       CurTicks:=Ticks()-TicksOverhead; // Back out the call overhead
       T.TotalTicks:=(CurTicks - T.Starttime)+T.TotalTicks; T.Running:=false
@@ -507,7 +507,7 @@ FUNCTION TEpikTimer.Elapsed(VAR T: TimerData): Extended;
 VAR
   CurTicks: TickType;
 begin
-  With T.TimebaseUsed^ do
+  with T.TimebaseUsed^ do
     if T.Running then
       begin
 
@@ -628,7 +628,7 @@ VAR
   Total, SS, SE: TickType;
   ElapsedTicks, SampleTime: Extended;
 begin
-  With Timebase, Timebase.CalibrationParms do
+  with Timebase, Timebase.CalibrationParms do
   begin
     result:=1; //maintain unitialized default in case something goes wrong.
     Total:=0;
@@ -660,7 +660,7 @@ VAR
 begin
   THW:=FHWTicks.Ticks; TSYS:=FSystemTicks.Ticks;
   TicksHW:=THW(); TicksSys:=TSYS();
-  With CorrelationData do
+  with CorrelationData do
     begin
       SystemTicks:= TicksSys-FSystemTicks.TicksOverhead;
       HWTicks:=TicksHW-FHWTicks.TicksOverhead;
@@ -707,7 +707,7 @@ CONSTRUCTOR TEpikTimer.create(AOwner: TComponent);
     // Tick frequency rates are different for the system and HW timebases so we
     // need to store calibration data in the period format of each one.
     FSystemTicks.Ticks:=@SystemTicks; // Point to Ticks routine
-    With FSystemTicks.CalibrationParms do
+    with FSystemTicks.CalibrationParms do
       begin
         FreqCalibrated:=false;
         OverheadCalibrated:=false;
@@ -722,7 +722,7 @@ CONSTRUCTOR TEpikTimer.create(AOwner: TComponent);
     FHWTickSupportAvailable:=false;
     FHWTicks.Ticks:=@NullHardwareTicks; // returns a zero if no HW support
     FHWTicks.TicksFrequency:=1;
-    With FHWTicks.CalibrationParms do
+    with FHWTicks.CalibrationParms do
       begin
         FreqCalibrated:=false;
         OverheadCalibrated:=false;
@@ -747,7 +747,7 @@ CONSTRUCTOR TEpikTimer.create(AOwner: TComponent);
 
     // Overheads are set... get starting timestamps for long term calibration runs
     GetCorrelationSample(StartupCorrelationSample);
-    With FSystemTicks do
+    with FSystemTicks do
       if (TicksFrequency>(DefaultSystemTicksPerSecond-SystemTicksNormalRangeLimit)) and
         (TicksFrequency<(DefaultSystemTicksPerSecond+SystemTicksNormalRangeLimit)) then
         begin // We've got a good microsecond system clock

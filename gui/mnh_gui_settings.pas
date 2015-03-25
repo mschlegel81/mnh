@@ -6,9 +6,7 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, myStringutil, mnh_funcs, myGenerics;
-CONST
-  default_notepad_path = 'c:\PROGRAM Files (x86)\Notepad++\notepad++.exe';
+  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, myStringutil, mnh_funcs, myGenerics, mySys;
 
 TYPE
 
@@ -82,81 +80,71 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     iMax, i: longint;
 
   begin
-    if fileExists(settingsFileName) then
-      begin
+    if fileExists(settingsFileName) then begin
       ff.createToRead(settingsFileName);
 
       NotepadFileNameEdit.FileName := ff.readAnsiString;
+      if (trim(NotepadFileNameEdit.Filename)='') or not(FileExistsUTF8(NotepadFileNameEdit.Filename))
+      then NotepadFileNameEdit.Filename := NOTEPAD_PATH.value;
 
       setFontSize(ff.readLongint);
       editorFontname := ff.readAnsiString;
       EditorFontDialog.Font.Name := editorFontname;
 
       AntialiasCheckbox.Checked := ff.readBoolean;
-      WITH mainForm do
-        begin
+      with mainForm do begin
         top := ff.readLongint;
         left := ff.readLongint;
         Width := ff.readLongint;
         Height := ff.readLongint;
         isFullscreen := ff.readBoolean;
-        end;
-      WITH outputBehaviour do
-        begin
+      end;
+      with outputBehaviour do begin
         doEchoInput := ff.readBoolean;
         doEchoDeclaration := ff.readBoolean;
         doShowExpressionOut := ff.readBoolean;
-        end;
+      end;
       instantEvaluation := ff.readBoolean;
       resetPlotOnEvaluation := ff.readBoolean;
       for i := 0 to 9 do
         fileHistory[i] := ff.readAnsiString;
 
       fileInEditor := ff.readAnsiString;
-      if fileInEditor = '' then
-        begin
+      if fileInEditor = '' then begin
         iMax := ff.readLongint;
-        if iMax>=0 then
-          begin
+        if iMax>=0 then begin
           setLength(fileContents, iMax);
           for i := 0 to iMax-1 do
             fileContents[i] := ff.readAnsiString;
-          end
-        else
-          setLength(fileContents, 0);
-        end;
+        end else setLength(fileContents, 0);
+      end;
       ff.destroy;
       if not (FileExists(fileInEditor)) then
         fileInEditor := '';
-      end
-    else
-      begin for i := 0 to 9 do
-        fileHistory[i] := '';
+    end else begin
+      for i := 0 to 9 do fileHistory[i] := '';
       editorFontname := 'Courier New';
       fontSize := 11;
-      WITH mainForm do
-        begin
+      with mainForm do begin
         top := 0;
         left := 0;
         Width := 480;
         Height := 480;
         isFullscreen := false;
-        end;
-      WITH outputBehaviour do
-        begin
+      end;
+      with outputBehaviour do begin
         doEchoInput := true;
         doEchoDeclaration := true;
         doShowExpressionOut := true;
-        end;
+      end;
       instantEvaluation := true;
       resetPlotOnEvaluation := false;
       fileInEditor := '';
-      end;
+    end;
     FontButton.Font.Name := editorFontname;
     FontButton.Font.Size := getFontSize;
     FontButton.Caption := editorFontname;
-    WITH mainForm do
-      begin
+    with mainForm do begin
       if top<0 then
         top := 0;
       if left<0 then
@@ -172,7 +160,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         Width := 480;
         Height := 480;
         end;
-      end;
+    end;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
@@ -214,7 +202,7 @@ FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber:
   begin
     if (trim(NotepadFileNameEdit.Filename)<>'') and not
       (FileExistsUTF8(NotepadFileNameEdit.Filename)) then
-      NotepadFileNameEdit.Filename := '';
+      NotepadFileNameEdit.Filename := NOTEPAD_PATH.value;
     if (trim(NotepadFileNameEdit.Filename)<>'') then
       begin
       setLength(par, 1);
@@ -243,7 +231,7 @@ PROCEDURE TSettingsForm.saveSettings;
     ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
-    WITH mainForm do
+    with mainForm do
       begin
       ff.writeLongint(top);
       ff.writeLongint(left);
@@ -251,7 +239,7 @@ PROCEDURE TSettingsForm.saveSettings;
       ff.writeLongint(Height);
       ff.writeBoolean(isFullscreen);
       end;
-    WITH outputBehaviour do
+    with outputBehaviour do
       begin
       ff.writeBoolean(doEchoInput);
       ff.writeBoolean(doEchoDeclaration);

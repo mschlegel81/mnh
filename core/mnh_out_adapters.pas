@@ -112,7 +112,7 @@ PROCEDURE plainConsoleOut(CONST s: T_arrayOfString);
 
 PROCEDURE plainStdErrOut(CONST error: T_storedError);
   begin
-    WITH error do
+    with error do
       writeln(stdErr, C_errorLevelTxt[errorLevel], errorMessage, ' @',
         ansistring(errorLocation));
   end;
