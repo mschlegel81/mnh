@@ -784,6 +784,21 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
+FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR sub,res:ansistring;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       (params^.value(0)^.literalType = lt_string) and
+       (params^.value(1)^.literalType = lt_int) then begin
+      res:='';
+      sub:=P_stringLiteral(params^.value(0))^.value;
+      for i:=1 to P_intLiteral(params^.value(1))^.value do res:=res+sub;
+      result:=newStringLiteral(res);
+    end else raiseNotApplicableError('repeat',params,tokenLocation);
+  end;
+
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
     CONST
@@ -1322,6 +1337,7 @@ INITIALIZATION
   registerRule('writeFileLines',@writeFileLines_impl,false,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule('replaceOne'    ,@replaceOne_impl,true,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule('replace'       ,@replace_impl,true,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
+  registerRule('repeat'        ,@repeat_impl,true,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
   registerRule('exec'          ,@execSync_impl,false,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule('execAsync'     ,@execAsync_impl,false,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule('tokenSplit'    ,@tokenSplit_impl,true,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
