@@ -766,7 +766,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
 
     begin
       eachLocation:=first^.location;
+      if callDepth>STACK_DEPTH_LIMIT then begin
+        raiseError(el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
+        exit;
+      end;
       if not(parseBodyOk) then exit;
+
 
       if (P_literal(first^.data)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
       then itList:=newOneElementListLiteral(first^.data,false)
@@ -778,8 +783,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
       t:=first;
-      if (aggregatorPresent<>no) and (itList^.size=0) then
-        raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
+      if (aggregatorPresent<>no) and (itList^.size=0)
+      then raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
         if inParallel then begin
           initFutures;
@@ -790,8 +795,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           finalizeAggregation;
         end;
       end else begin
-        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then
-          addToAggregation(itList^.value(i),false);
+        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList
@@ -1187,8 +1191,8 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
     except
       on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
-      //end else begin
-      //  raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+      end else begin
+        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
       end;
     end;
     if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
