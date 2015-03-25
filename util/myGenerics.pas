@@ -105,6 +105,27 @@ TYPE
       PROCEDURE unlock;
   end;
 
+  { G_safeArray }
+
+  GENERIC G_safeArray<ENTRY_TYPE>=object
+    TYPE ENTRY_TYPE_ARRAY=array of ENTRY_TYPE;
+    private VAR
+      data :ENTRY_TYPE_ARRAY;
+      saveCS:TRTLCriticalSection;
+      FUNCTION getValue(index:longint):ENTRY_TYPE;
+      PROCEDURE setValue(index:longint; newValue:ENTRY_TYPE);
+    public
+      CONSTRUCTOR create();
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      FUNCTION size:longint;
+      PROPERTY value[index:longint]:ENTRY_TYPE read getValue write setValue; default;
+      PROCEDURE append(CONST newValue:ENTRY_TYPE);
+      PROCEDURE appendAll(CONST newValue:ENTRY_TYPE_ARRAY);
+      PROCEDURE lock;
+      PROCEDURE unlock;
+  end;
+
   { G_lazyVar }
 
   GENERIC G_lazyVar<ENTRY_TYPE>=object
@@ -142,6 +163,78 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
     result:=length(x);
     for i:=1 to length(x) do result:=result*31+ord(x[i]);
     {$Q+}
+  end;
+
+{ G_safeArray }
+
+CONSTRUCTOR G_safeArray.create;
+  begin
+    system.InitCriticalSection(saveCS);
+    clear;
+  end;
+
+FUNCTION G_safeArray.getValue(index: longint): ENTRY_TYPE;
+  begin
+    system.EnterCriticalsection(saveCS);
+    result:=data[index];
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeArray.setValue(index: longint; newValue: ENTRY_TYPE);
+  begin
+    system.EnterCriticalsection(saveCS);
+    if index=length(data) then append(newValue)
+                          else data[index]:=newValue;
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeArray.clear;
+  begin
+    system.EnterCriticalsection(saveCS);
+    setLength(data,0);
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+FUNCTION G_safeArray.size: longint;
+  begin
+    system.EnterCriticalsection(saveCS);
+    result:=length(data);
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeArray.append(CONST newValue: ENTRY_TYPE);
+  begin
+    system.EnterCriticalsection(saveCS);
+    setLength(data,length(data)+1);
+    data[length(data)-1]:=newValue;
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeArray.appendAll(CONST newValue: ENTRY_TYPE_ARRAY);
+  VAR i,i0:longint;
+  begin
+    system.EnterCriticalsection(saveCS);
+    i0:=length(data);
+    setLength(data,length(newValue)+1);
+    for i:=0 to length(newValue)-1 do data[i0+i]:=newValue[i];
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+
+PROCEDURE G_safeArray.lock;
+  begin
+    system.EnterCriticalsection(saveCS);
+  end;
+
+PROCEDURE G_safeArray.unlock;
+  begin
+    system.LeaveCriticalsection(saveCS);
+  end;
+
+DESTRUCTOR G_safeArray.destroy;
+  begin
+    clear;
+    system.DoneCriticalsection(saveCS);
   end;
 
 { G_lazyVar }

@@ -200,9 +200,9 @@ VAR
 
 PROCEDURE lateInitialization;
 IMPLEMENTATION
-VAR errorThroughput:array of T_storedError;
-    output:T_listOfString;
-    wantClear:specialize G_safeVar<boolean>;
+VAR errorThroughput:specialize G_safeArray<T_storedError>;
+    output         :specialize G_safeArray<ansistring>;
+    wantClear      :specialize G_safeVar<boolean>;
     plotSubsystem:record
       rendering:boolean;
       mouseUpTriggersPlot:boolean;
@@ -213,30 +213,24 @@ VAR errorThroughput:array of T_storedError;
 
 {$R *.lfm}
 
-PROCEDURE appendToOutputThroughput(CONST text:ansistring);
-  begin
-    output.add(text);
-  end;
-
 PROCEDURE writeDeclEcho(CONST s:ansistring);
   begin
-    appendToOutputThroughput(C_DeclEchoHead+' '+s);
+    output.append(C_DeclEchoHead+' '+s);
   end;
 
 PROCEDURE writeExprEcho(CONST s:ansistring);
   begin
-    appendToOutputThroughput(C_ExprEchoHead+' '+s);
+    output.append(C_ExprEchoHead+' '+s);
   end;
 
 PROCEDURE writeExprOut (CONST s:ansistring);
   begin
-    appendToOutputThroughput(C_ExprOutHead+' '+s);
+    output.append(C_ExprOutHead+' '+s);
   end;
 
 PROCEDURE writePrint   (CONST list:T_arrayOfString);
-  VAR i:longint;
   begin
-    for i:=0 to length(list)-1 do appendToOutputThroughput(list[i]);
+    output.appendAll(list);
   end;
 
 PROCEDURE clearPrint();
@@ -252,8 +246,7 @@ PROCEDURE logError(CONST error:T_storedError);
     mnh_out_adapters.plainStdErrOut(error);
     {$endif}
     if error.errorLevel<el2_warning then exit;
-    setLength(errorThroughput,length(errorThroughput)+1);
-    errorThroughput[length(errorThroughput)-1]:=error;
+    errorThroughput.append(error);
   end;
 
 PROCEDURE TMnhForm.flushThroughput;
@@ -262,8 +255,9 @@ PROCEDURE TMnhForm.flushThroughput;
       changed_:boolean=false;
   begin
     r0:=errorStringGrid.RowCount;
-    errorStringGrid.RowCount:=r0+length(errorThroughput);
-    for i:=0 to length(errorThroughput)-1 do with errorThroughput[i] do begin
+    errorThroughput.lock;
+    errorStringGrid.RowCount:=r0+errorThroughput.size;
+    for i:=0 to errorThroughput.size-1 do with errorThroughput[i] do begin
       if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
       changed_:=true;
       errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
@@ -279,7 +273,8 @@ PROCEDURE TMnhForm.flushThroughput;
         errorStringGrid.Cells[4,i+r0]:='';
       end;
     end;
-    setLength(errorThroughput,0);
+    errorThroughput.clear;
+    errorThroughput.unlock;
     if errorStringGrid.RowCount=0
     then i:=0
     else i:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
@@ -397,7 +392,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 PROCEDURE TMnhForm.startOfEvaluation;
   begin
     MnhForm.doConditionalPlotReset;
-    setLength(errorThroughput,0);
+    errorThroughput.clear;
     MnhForm.OutputEdit.Lines.Clear;
     MnhForm.errorStringGrid.RowCount:=0;
     if MnhForm.inputHighlighter.setMarkedLine(-1) then MnhForm.Repaint;
@@ -877,7 +872,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         MAX_INTERVALL=5000;
   VAR aid:string;
       flag:boolean;
-      L:T_arrayOfString;
       i:longint;
       updateStart:double;
   begin
@@ -916,9 +910,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
     if output.size>0 then begin
       OutputEdit.BeginUpdate();
-      L:=output.elementArray;
+      output.lock;
+      for i:=0 to output.size-1 do OutputEdit.Lines.Append(output[i]);
       output.clear;
-      for i:=0 to length(L)-1 do OutputEdit.Lines.Append(L[i]);
+      output.unlock;
       OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
       OutputEdit.EndUpdate;
@@ -1165,8 +1160,8 @@ PROCEDURE lateInitialization;
     plotSubsystem.renderNotBefore:=now;
     plotSubsystem.state:=pss_neutral;
     plotSubsystem.rendering:=false;
+    errorThroughput.clear;
 
-    setLength(errorThroughput,0);
 
     registerRule('ask', @ask_impl,false,
       'ask(q:string);#Asks the user question q and returns the user input#'+
@@ -1184,8 +1179,10 @@ PROCEDURE lateInitialization;
 INITIALIZATION
   output.create;
   wantClear.create(false);
+  errorThroughput.create();
 FINALIZATION
   output.destroy;
   wantClear.destroy;
+  errorThroughput.destroy;
 end.
 

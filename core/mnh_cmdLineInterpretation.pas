@@ -26,7 +26,7 @@ PROCEDURE parseCmdLine;
                   {$I %DATE%},
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTARGET%}); 
+                  ' for ',{$I %FPCTARGET%});
     end;
 
   PROCEDURE displayHelp;
