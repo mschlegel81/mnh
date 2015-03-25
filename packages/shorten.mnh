@@ -1,0 +1,32 @@
+private benefit(s:string,rep)->length(s)-length(replace(s,rep,'~'))-length(rep)-1;
+private filterByFirst(b<=0,s)->[-1,""];
+private filterByFirst(b,s)->$params;
+
+private bestSequence(s:string)->
+  pEach(sub,
+        unique(copy(s,[0..length(s)-2],2)),
+        aggregator({$x%0<$y%0 ? $y : $x}),
+        filterByFirst(benefit(s,sub),sub))%1;
+
+private unusedChars(s:string)->unusedChars(unique(copy(s,[0..length(s)-1],1)));
+private unusedChars(s:stringList)->each(c,[' '..'[',']'..'~'],c in s ? void : c);
+
+private formattedResult(s,find,replaceBy)->format('replace(%X%,\ncopy(%X%,[0..%I%],1),\ncopy(%X%,[0..%I%]*2,2))',
+  unbrace(string([s])),
+  unbrace(string([each(s,replaceBy,&)])), size(replaceBy)-1,
+  unbrace(string([each(s,find     ,&)])), size(find)-1);
+
+//*Returns an expression <code>replace(x,Y,Z)</code> returning s
+shorten(s)->shorten(s,[],[],unusedChars(s));
+private shorten(s,find,replaceBy,[]      )->formattedResult@head($params,3);
+private shorten(s,find,replaceBy,charPool)->shorten(s,find,replaceBy,charPool,bestSequence(s));
+private shorten(s,find,replaceBy,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,tail(charPool));
+private shorten(s,find,replaceBy,charPool,nextFind)->formattedResult@head($params,3);
+
+shortenWithInfo(s)->shortenWithInfo(s,shorten(s));
+private shortenWithInfo(s,res)->printf("Input length  %I%\n"&
+                               "Output length %I%\n"&
+                               "Relative : %00.00%%%\n"&
+                               "%X%",length(s),length(res),100*length(res)/length(s),res)|res;
+//*For regression test
+main->shortenWithInfo(fileContents(myPath));
