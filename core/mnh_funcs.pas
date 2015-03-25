@@ -1274,7 +1274,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       system.EnterCriticalSection(print_cs);
-      writePrint(resultString);
+      writePrint(reSplit(resultString));
       system.LeaveCriticalsection(print_cs);
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);

@@ -56,6 +56,7 @@ TYPE
   T_arrayOfString=array of ansistring;
   OPERATOR :=(x:ansistring):T_arrayOfString;
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
+  PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);
   { G_stringKeyMap }
 TYPE
   GENERIC G_stringKeyMap<VALUE_TYPE>=object
@@ -154,6 +155,14 @@ PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   begin
     setLength(x,length(x)+1);
     x[length(x)-1]:=y;
+  end;
+
+PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);
+  VAR i,i0:longint;
+  begin
+    i0:=length(x);
+    setLength(x,i0+length(y));
+    for i:=0 to length(y)-1 do x[i+i0]:=y[i];
   end;
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;

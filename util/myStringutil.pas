@@ -20,6 +20,7 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 FUNCTION unbrace(CONST s:ansistring):ansistring;
 FUNCTION split(CONST s:ansistring):T_arrayOfString;
+FUNCTION reSplit(CONST s:T_arrayOfString):T_arrayOfString;
 FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
 FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 
@@ -255,6 +256,13 @@ FUNCTION split(CONST s:ansistring):T_arrayOfString;
     result:=split(s,lineSplitters);
   end;
 
+FUNCTION reSplit(CONST s:T_arrayOfString):T_arrayOfString;
+  VAR i:longint;
+  begin
+    setLength(result,0);
+    for i:=0 to length(s)-1 do append(result,split(s[i]));
+  end;
+
 FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
   PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
     VAR i,p:longint;
@@ -274,7 +282,7 @@ FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfStr
   begin
     setLength(result,0);
     firstSplitterPos(s,sp0,sp1);
-    if sp0<0 then result:=s;
+    if sp0<=0 then exit(s);
     rest:=s;
     while sp0>0 do begin
       append(result,copy(rest,1,sp0-1));
