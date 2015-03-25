@@ -215,7 +215,7 @@ PROCEDURE G_safeArray.appendAll(CONST newValue: ENTRY_TYPE_ARRAY);
   begin
     system.EnterCriticalsection(saveCS);
     i0:=length(data);
-    setLength(data,length(newValue)+1);
+    setLength(data,i0+length(newValue));
     for i:=0 to length(newValue)-1 do data[i0+i]:=newValue[i];
     system.LeaveCriticalsection(saveCS);
   end;
