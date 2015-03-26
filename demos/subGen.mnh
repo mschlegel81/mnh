@@ -1,0 +1,13 @@
+private m109(x>=0)->x mod 10^9;
+private m109(x)->m109(x+10^9);
+
+memoized
+private s(0)->292929;
+private s(1)->1;
+private s(n<=54)->m109(s(n-2)-s(n-1));
+
+memoized
+private r(n<=54)->s((34*(n+1)) mod 55);
+private r(n)->m109(r(n-55)-r(n-24));
+//See: <a href="http://rosettacode.org/wiki/Subtractive_generator">http://rosettacode.org/wiki/Subtractive_generator</a>
+main->each(i,[220..222],printf('%I3% : %I9%',i,r(i)));
