@@ -12,7 +12,7 @@ TYPE
 
   { TSettingsForm }
 
-  TSettingsForm = CLASS(TForm)
+  TSettingsForm = class(TForm)
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;

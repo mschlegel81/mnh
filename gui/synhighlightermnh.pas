@@ -420,7 +420,7 @@ PROCEDURE TSynMnhSyn.SetRange(value: Pointer);
     //fRange := TRangeState(PtrUInt(Value));
   end;
 
-CLASS FUNCTION TSynMnhSyn.GetLanguageName: string;
+class FUNCTION TSynMnhSyn.GetLanguageName: string;
   begin
     result := 'mnh';
   end;
