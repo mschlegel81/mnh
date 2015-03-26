@@ -24,3 +24,4 @@ regTest/*.log.1
 *.last
 doc/builtin.html
 doc/packages.html
+regTest/passedTests.dat
