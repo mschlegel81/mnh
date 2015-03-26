@@ -172,6 +172,15 @@ TYPE
     PROCEDURE appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation);
     PROCEDURE setRangeAppend;
     FUNCTION size: longint;
+    FUNCTION head:P_literal;
+    FUNCTION head(CONST headSize:longint):P_listLiteral;
+    FUNCTION tail:P_listLiteral;
+    FUNCTION tail(CONST headSize:longint):P_listLiteral;
+    FUNCTION trailing:P_literal;
+    FUNCTION trailing(CONST trailSize:longint):P_listLiteral;
+    FUNCTION leading:P_listLiteral;
+    FUNCTION leading(CONST trailSize:longint):P_listLiteral;
+
     FUNCTION value(index: longint): P_literal;
     PROCEDURE sort;
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral);
@@ -472,6 +481,52 @@ FUNCTION T_listLiteral.size: longint;
   begin
     result := length(element);
   end;
+
+FUNCTION T_listLiteral.head:P_literal;
+  begin
+    if length(element)=0
+    then result:=@self
+    else result:=element[0];
+    result^.rereference;
+  end;
+
+FUNCTION T_listLiteral.head(CONST headSize:longint):P_listLiteral;
+  VAR i,iMax:longint;
+  begin
+    iMax:=headSize;
+    if iMax>length(element) then iMax:=length(element);
+    result:=newListLiteral;
+    for i:=0 to iMax-1 do result^.append(element[i],true);
+  end;
+
+FUNCTION T_listLiteral.tail:P_listLiteral;
+  begin result:=tail(1); end;
+
+FUNCTION T_listLiteral.tail(CONST headSize:longint):P_listLiteral;
+  VAR i,iMin:longint;
+  begin
+    iMin:=headSize;
+    if iMin>length(element) then iMin:=length(element);
+    result:=newListLiteral;
+    for i:=iMin to length(element)-1 do result^.append(element[i],true);
+  end;
+
+FUNCTION T_listLiteral.trailing:P_Literal;
+  begin
+    if length(element)=0
+    then result:=@self
+    else result:=element[length(element)-1];
+    result^.rereference;
+  end;
+
+FUNCTION T_listLiteral.trailing(CONST trailSize:longint):P_listLiteral;
+  begin result:=tail(length(element)-trailSize); end;
+
+FUNCTION T_listLiteral.leading:P_listLiteral;
+  begin result:=head(length(element)-1); end;
+
+FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
+  begin result:=head(length(element)-trailSize); end;
 //?.toString:===================================================================
 FUNCTION T_literal          .toString: ansistring; begin result := '<ERR>';                      end;
 FUNCTION T_voidLiteral      .toString: ansistring; begin result :='void';                        end;

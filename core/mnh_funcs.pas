@@ -70,85 +70,37 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   end;
 
 {$MACRO ON}
+{$define SUB_LIST_IMPL:=
+begin
+  result:=nil;
+  if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
+    if      (params^.size=1) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO
+    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO(P_intLiteral(params^.value(1))^.value)
+    else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+  end else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+end}
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION headOf(CONST x:P_literal):P_literal;
-    begin
-      result:=nil;
-      if x^.literalType in C_validListTypes then begin
-        if P_listLiteral(x)^.size>0 then begin
-          result:=P_listLiteral(x)^.value(0);
-          result^.rereference;
-        end else result:=newListLiteral;
-      end else raiseNotApplicableError('head',x^.literalType,'',tokenLocation);
-    end;
-
-  FUNCTION headOf2(CONST x,y:P_literal):P_listLiteral;
-    VAR i,i0:longint;
-    begin
-      result:=nil;
-      if x^.literalType in C_validListTypes then begin
-        case y^.literalType of
-          lt_int: begin
-            result:=newListLiteral;
-            i0:=P_intLiteral(y)^.value;
-            if i0>P_listLiteral(x)^.size then i0:=P_listLiteral(x)^.size;
-            for i:=0 to i0-1 do result^.append(P_listLiteral(x)^.value(i),true);
-          end;
-          lt_intList: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do result^.append(headOf2(x,P_listLiteral(y)^.value(i)),false);
-          end;
-          else raiseNotApplicableError('head',y^.literalType,' (second parameter)',tokenLocation);
-        end;
-      end else raiseNotApplicableError('head',x^.literalType,' (first parameter)',tokenLocation);
-    end;
-
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=headOf(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=headOf2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('head',params,tokenLocation);
-  end;
+{$define CALL_MACRO:=head}
+{$define ID_MACRO:='head'}
+SUB_LIST_IMPL;
 
 FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION tailOf(CONST x:P_literal):P_listLiteral;
-    VAR i:longint;
-    begin
-      result:=nil;
-      if x^.literalType in C_validListTypes then begin
-        result:=newListLiteral;
-        for i:=1 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
-      end else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[x^.literalType],tokenLocation);
-    end;
+{$define CALL_MACRO:=tail}
+{$define ID_MACRO:='tail'}
+SUB_LIST_IMPL;
 
-  FUNCTION tailOf2(CONST x,y:P_literal):P_listLiteral;
-    VAR i,i0:longint;
-    begin
-      if x^.literalType in C_validListTypes then begin
-        case y^.literalType of
-          lt_int: begin
-            result:=newListLiteral;
-            i0:=P_intLiteral(y)^.value;
-            if i0<0 then i0:=0;
-            if i0>P_listLiteral(x)^.size then i0:=P_listLiteral(x)^.size;
-            for i:=i0 to P_listLiteral(x)^.size-1 do result^.append(P_listLiteral(x)^.value(i),true);
-          end;
-          lt_intList: begin
-            result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do result^.append(tailOf2(x,P_listLiteral(y)^.value(i)),false);
-          end;
-          else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[y^.literalType]+' (second parameter)',tokenLocation);
-        end;
-      end else raiseError(el3_evalError,'FUNCTION tail cannot be applied to type '+C_typeString[x^.literalType]+' (first parameter)',tokenLocation);
-    end;
+FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=leading}
+{$define ID_MACRO:='leading'}
+SUB_LIST_IMPL;
 
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=tailOf(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=tailOf2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError('tail',params,tokenLocation);
-  end;
+FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=trailing}
+{$define ID_MACRO:='trailing'}
+SUB_LIST_IMPL;
+
+{$undef SUB_LIST_IMPL}
 
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
@@ -1302,6 +1254,8 @@ INITIALIZATION
   //Functions on lists:
   registerRule('head'          ,@head_imp      ,true,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule('tail'          ,@tail_imp      ,true,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
+  registerRule('leading'       ,@leading_imp   ,true,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
+  registerRule('trailing'      ,@trailing_imp  ,true,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L');
   registerRule('sort'          ,@sort_imp      ,true,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
   registerRule('sortPerm'      ,@sortPerm_imp  ,true,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule('unique'        ,@unique_imp    ,true,'unique(L);#Returns list L sorted ascending and without duplicates');
