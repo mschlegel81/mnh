@@ -182,7 +182,7 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
 
   begin
     result := '<h4><a name="'+docFileName+'">'+id+'</a></h4><table class="oben">'+
-      '<tr class="oben"><td>Path: </td><td><code>'+uid+'</code></td></tr>'+
+      '<tr class="oben"><td>Path: </td><td><a href="file:///'+replaceAll(uid,'\','/')+'"><code>'+uid+'</code></a></td></tr>'+
       '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
       '<tr class="oben"><td>Publishes: </td><td>';
     for i := 0 to length(rules)-1 do result := result+rules [i].toHtml;
@@ -354,7 +354,7 @@ PROCEDURE writeUserPackageDocumentations;
       begin
       if odd(i) then Write(outfile, '<tr>')
       else Write(outfile, '<tr class="ruleHead">');
-      Write(outfile, '<td>', packages [i]^.getHref, '</td><td>', packages [i]^.uid, '</td>');
+      Write(outfile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
       if packages [i]^.isExecutable then
         Write(outfile, '<td>executable</td>') else Write(outfile, '<td>&nbsp;</td>');
       writeln(outfile, '</tr>');

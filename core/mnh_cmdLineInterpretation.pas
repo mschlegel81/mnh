@@ -1,6 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics;
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics,
+     mnh_doc,lclintf;
 PROCEDURE parseCmdLine;
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -19,6 +20,12 @@ PROCEDURE filteredStdErrOut(CONST error:T_storedError);
   end;
 
 PROCEDURE parseCmdLine;
+  PROCEDURE makeAndShowDoc;
+    begin
+      findAndDocumentAllPackages;
+      OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
+    end;
+
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
@@ -48,6 +55,7 @@ PROCEDURE parseCmdLine;
       writeln('  -h      : display this help and quit');
       writeln('  -det    : force deterministic "random" numbers');
       writeln('  -version: show version info and exit');
+      writeln('  -doc    : regnerate and show documentation');
     end;
 
   PROCEDURE fileMode;
@@ -73,6 +81,7 @@ PROCEDURE parseCmdLine;
       else if paramstr(i)='-det'  then randseed:=0
       else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
       else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
+      else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
       else if startsWith(paramStr(i),'-el') then begin
         pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
         if (pel<0) or (pel>ord(el5_systemError)) then begin
