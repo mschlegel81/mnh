@@ -11,11 +11,11 @@
 <h3><a href="#scalarOps"> Scalar operators</a></h3>
 <ul>
   <li><h4><a href="#arithOps"> Arithmetic operators</a></h4></li>
-  <li><h4><a href="#compOps"> Comparators         </a></h4></li>
-  <li><h4><a href="#logOps"> Logical operators   </a></h4></li>
+  <li><h4><a href="#compOps"> Comparators </a></h4></li>
+  <li><h4><a href="#logOps"> Logical operators </a></h4></li>
   <li><h4><a href="#stringOps"> String concatenation</a></h4></li>
 </ul>
-<h3><a href="#listOps"> List operators                </a></h3>
+<h3><a href="#listOps"> List operators </a></h3>
 <h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
 <h3><a href="#typecheckOps"> Type check operators</a></h3>
 <h3><a href="#assignmentOps"> Assignment operators</a></h3>
@@ -162,6 +162,14 @@ The level 3 extraction operator behaves similar to the level 1 extraction operat
 <tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> 
 The level 4 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
   [X0,X1,X2,...]%%%%Y -> [X0%%%Y,X1%%%Y,X2%%%Y,...]</code>
+</td></tr>
+
+<tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td> 
+The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>
+The following calls are equivalent:<code>
+  f(1,2,3,4,5);
+  f@[1,2,3,4,5];
+  f@[1..5];</code>
 </td></tr>
 </table>
 

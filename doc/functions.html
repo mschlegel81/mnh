@@ -11,6 +11,7 @@
 <h3><a     href="#declarations">Declarations</a></h3>
 <h3><a     href="#assignments">Assignments</a></h3>
 <h3><a     href="#restrictions">Parameter restrictions</a></h3>
+<h3><a     href="#variadic">Variadic functions</a></h3>
 <h3><a     href="#modifiers">Modifiers</a></h3><ul>
 <li><h4><a href="#privateMod">private</a></h4></li>
 <li><h4><a href="#memoizedMod">memoized</a></h4></li>
@@ -53,6 +54,13 @@ There is a shorthand for tests on equality: the first comparand can be omitted:<
 <code>  f(x=1)...;  </code> is eqivalent to <code>f(x)...;</code><br>
 <code>  f(x=y,y)...;</code> is eqivalent to <code>f(y,y)...;</code><br>
 <code>  f(x=[])...; </code> is eqivalent to <code>f([])...;</code><br>
+
+<h3><a name="variadic">Variadic functions</a></h3>
+Variadic functions can be defined using three dots (<code>...</code>) as last parameter in the function head.
+This allows the function to accept any number of additional parameters.<br>
+The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>. An example for a variadic recursive function, printing out all parameters in a separate line wold be:<code>
+  multiPrint->void;
+  multiPrint(x,...)->print(x) | multiPrint@...;</code>
 
 <h3><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
