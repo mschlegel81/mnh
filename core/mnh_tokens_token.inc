@@ -477,8 +477,6 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
   begin
-    predigestBeforeDeclarationParsing(rep,recycler);
-    predigest(rep,nil,recycler);
     if (rep^.tokType<>tt_expBraceOpen) then begin
       raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
