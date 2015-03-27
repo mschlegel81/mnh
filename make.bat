@@ -29,6 +29,7 @@
 @%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe %optimize% %guiOpt64% 
 @%delp%
 @%fpc64% gui\mnh_gui.lpr          -o.\mnh.exe      %optimize% %guiOpt64% -dfullversion
+@%delp%
 @%fpc64% consoles\mnh_console.pas -o.\mnh_prof.exe %optimize% %guiOpt64% -dfullversion -dPROFILING
 @echo ------------------------------------------------------------------------------------
 @%delp%
