@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, myStringutil, mnh_funcs, myGenerics, mySys;
+  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_funcs, myGenerics, mySys;
 
 TYPE
 
