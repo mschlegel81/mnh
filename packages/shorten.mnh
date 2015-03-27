@@ -27,7 +27,7 @@ private shorten(s:string,find,replaceBy,seqLen:int,charPool)->shorten(s,find,rep
 private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,seqLen,tail(charPool));
 private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind)->formattedResult@head($params,4);
 
-private shortenHard(input,best,this,len<=8)->printf('Sequence length %I%; Ratio %00.00%%%',len,100*length(this)/length(input)) &
+private shortenHard(input,best,this,len)->printf('Sequence length %I%; Ratio %00.00%%%',len,100*length(this)/length(input)) &
   length(this)<length(best) ? shortenHard(input,this,shorten(input,len+1),len+1)
                             : best;
 
