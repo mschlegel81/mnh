@@ -356,19 +356,19 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
            end else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
              id:=leadingId(false);
              parsedLength:=length(id);
-             if      id=':booleanList' then result.tokType:=tt_typeCheckBoolList
-             else if id=':boolean'     then result.tokType:=tt_typeCheckBoolean
-             else if id=':expression'  then result.tokType:=tt_typeCheckExpression
-             else if id=':intList'     then result.tokType:=tt_typeCheckIntList
-             else if id=':int'         then result.tokType:=tt_typeCheckInt
-             else if id=':list'        then result.tokType:=tt_typeCheckList
-             else if id=':numericList' then result.tokType:=tt_typeCheckNumList
-             else if id=':numeric'     then result.tokType:=tt_typeCheckNumeric
-             else if id=':stringList'  then result.tokType:=tt_typeCheckStringList
-             else if id=':scalar'      then result.tokType:=tt_typeCheckScalar
-             else if id=':string'      then result.tokType:=tt_typeCheckString
-             else if id=':realList'    then result.tokType:=tt_typeCheckRealList
-             else if id=':real'        then result.tokType:=tt_typeCheckReal
+             if      id=C_tokenString[tt_typeCheckBoolList  ] then result.tokType:=tt_typeCheckBoolList
+             else if id=C_tokenString[tt_typeCheckBoolean   ] then result.tokType:=tt_typeCheckBoolean
+             else if id=C_tokenString[tt_typeCheckExpression] then result.tokType:=tt_typeCheckExpression
+             else if id=C_tokenString[tt_typeCheckIntList   ] then result.tokType:=tt_typeCheckIntList
+             else if id=C_tokenString[tt_typeCheckInt       ] then result.tokType:=tt_typeCheckInt
+             else if id=C_tokenString[tt_typeCheckList      ] then result.tokType:=tt_typeCheckList
+             else if id=C_tokenString[tt_typeCheckNumList   ] then result.tokType:=tt_typeCheckNumList
+             else if id=C_tokenString[tt_typeCheckNumeric   ] then result.tokType:=tt_typeCheckNumeric
+             else if id=C_tokenString[tt_typeCheckStringList] then result.tokType:=tt_typeCheckStringList
+             else if id=C_tokenString[tt_typeCheckScalar    ] then result.tokType:=tt_typeCheckScalar
+             else if id=C_tokenString[tt_typeCheckString    ] then result.tokType:=tt_typeCheckString
+             else if id=C_tokenString[tt_typeCheckRealList  ] then result.tokType:=tt_typeCheckRealList
+             else if id=C_tokenString[tt_typeCheckReal      ] then result.tokType:=tt_typeCheckReal
              else begin
                parsedLength:=1;
                result.tokType:=tt_iifElse;
