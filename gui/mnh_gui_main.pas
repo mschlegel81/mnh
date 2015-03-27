@@ -669,10 +669,10 @@ begin
 end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
-begin
-  findAndDocumentAllPackages;
-  OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
-end;
+  begin
+    findAndDocumentAllPackages;
+    OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
+  end;
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
