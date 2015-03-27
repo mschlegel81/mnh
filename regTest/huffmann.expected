@@ -40,5 +40,5 @@ Analyzing file: demos/inputs/unixdict.txt
  1010             "i"
  1100             "a"
  1110             "e"
- 001              \r
- 010              \n
+ 001              "\r"
+ 010              "\n"

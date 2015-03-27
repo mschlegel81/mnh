@@ -1,3 +1,4 @@
+USE basic;
 //*Returns the mean of all values in <code>X</code>
 mean    (X:numericList)->sum(X)/size(X);
 //*Returns the (statistical) variance of all values in <code>X</code>

@@ -1,3 +1,4 @@
 Input       : trueCount($A|$B|$C)=1
 Normal Form : A and not(B) and not(C) or not(A) and B and not(C) or not(A) and not(B) and C
 Compact Form: A?not(B or C):B xor C
+Warning : Unused private subrule compactForm(TL:list, arity=1, IDs) @bool.mnh:37,1

@@ -1,7 +1,6 @@
 private dropNth(L,n)->dropNth(L%([0..size(L)-1] mod n<>0));
 private dropNth([])->[];
 private dropNth(L:intList)->head(L)|dropNth(L,head(L));
-private dropNth(i:int)->i;
 private LUDICS:=1|dropNth([2..22000]);
 
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>

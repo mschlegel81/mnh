@@ -2,7 +2,6 @@
 runningSum([])->[];
 //*Returns the running sum of numeric list L (nested numeric lists are supported)
 runningSum(L)->(size(L)<10 ? each(i,[1..size(L)],each(s,head(L,i),+)) : runningSum_merge(runningSum(head(L,size(L) div 2)),runningSum(tail(L,size(L) div 2))));
-private safePlus(summand:list,list<>[])->each(l,list,l+summand);
 private safePlus(summand     ,list<>[])->summand+list;
 private runningSum_merge(L1,L2)->L1|safePlus(L1%(size(L1)-1),L2);
 
@@ -29,4 +28,3 @@ main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,
 main(filename           )->main_impl(filename                        ,1366,768);
 //*Plots a Koch Curve using the package path and a resolution of 1366x768
 main                     ->main_impl(replace(myPath&"#","mnh#","png"),1366,768);
-

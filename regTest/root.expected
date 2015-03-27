@@ -3,3 +3,4 @@ Analyzing {($x^3-3*$x^2+2*$x)}
 Root found at   0.0
 Root found at   1.0
 Root found at   2.0
+Warning : Unused private subrule regulaFalsi(F:expression, x0, f0, x1, f1, k) @root.mnh:5,1

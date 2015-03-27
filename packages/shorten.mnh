@@ -22,10 +22,9 @@ private formattedResult(s,find,replaceBy,seqLen)->format('replace(%X%,\ncopy(%X%
 //*Returns an expression <code>replace(x,Y,Z)</code> returning s
         shorten(s:string)->shortenHard(s,s,shorten(s,2),2);
 private shorten(s:string,               seqLen:int         )->shorten(s,[],[],seqLen,unusedChars(s));
-private shorten(s:string,find,replaceBy,seqLen:int,[]      )->formattedResult@head($params,4);
-private shorten(s:string,find,replaceBy,seqLen:int,charPool)->shorten(s,find,replaceBy,seqLen,charPool,bestSequence(seqLen,s));
+private shorten(s:string,find,replaceBy,seqLen:int,charPool<>[])->shorten(s,find,replaceBy,seqLen,charPool,bestSequence(seqLen,s));
 private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,seqLen,tail(charPool));
-private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind)->formattedResult@head($params,4);
+private shorten(...)->formattedResult@head($params,4);
 
 private shortenHard(input,best,this,len)->printf('Sequence length %I%; Ratio %00.00%%%',len,100*length(this)/length(input)) &
   length(this)<length(best) ? shortenHard(input,this,shorten(input,len+1),len+1)
