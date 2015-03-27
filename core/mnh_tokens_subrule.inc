@@ -52,10 +52,12 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
         token:=t^;
         t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
         token.next:=nil;
-        if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
+        if token.tokType=tt_optionalParameters then begin
+          parIdx:=REMAINING_PARAMETERS_IDX;
+        end else if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
           parIdx:=pattern.indexOfId(token.txt);
           if parIdx>=0 then begin
-            if parIdx>=ALL_PARAMETERS_PAR_IDX
+            if parIdx>=REMAINING_PARAMETERS_IDX
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
           end else begin
@@ -215,7 +217,10 @@ PROCEDURE T_subrule.updatePatternForInline;
       parIdx:=pattern.indexOfId(token.txt); //reuse ID
       if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt) //new parameter
       else if parIdx=SELF_TOKEN_PAR_IDX then pattern.containsSelfPointer:=true
-      else if parIdx=ALL_PARAMETERS_PAR_IDX then pattern.hasOptionals:=true;
+      else if parIdx=REMAINING_PARAMETERS_IDX then pattern.hasOptionals:=true;
+    end else if token.tokType=tt_optionalParameters then begin
+      parIdx:=REMAINING_PARAMETERS_IDX;
+      pattern.hasOptionals:=true;
     end;
   end;
 
@@ -261,12 +266,22 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
   VAR t:P_token;
       i:longint;
+      remaining:P_listLiteral=nil;
+
   FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token;
     VAR L:P_literal;
     begin
       if index=ALL_PARAMETERS_PAR_IDX then L:=param
       else if index=SELF_TOKEN_PAR_IDX then L:=selfLiteral
-      else L:=param^.value(index);
+      else if index=REMAINING_PARAMETERS_IDX then begin
+        if remaining=nil then begin
+          if param=nil
+          then remaining:=newListLiteral
+          else remaining:=param^.tail(length(pattern.sig));
+          remaining^.unreference;
+        end;
+        L:=remaining;
+      end else L:=param^.value(index);
       if L=nil then exit(recycler.newToken(@original));
       result:=recycler.newToken(original.location,'',tt_literal,L);
       L^.rereference;

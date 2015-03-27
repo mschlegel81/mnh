@@ -266,6 +266,7 @@ CONST
   SELF_TOKEN_PAR_IDX=maxLongint;
   ALL_PARAMETERS_TOKEN_TEXT='$params';
   ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
+  REMAINING_PARAMETERS_IDX=ALL_PARAMETERS_PAR_IDX-1;
   C_errorLevelTxt: array[T_errorLevel] of string = ('          ',
     'Note    : ',
     'Warning : ',
