@@ -7,6 +7,7 @@
   P_subrule=^T_subrule;
   T_subrule=object
     private
+      called:boolean;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
@@ -36,6 +37,7 @@
       FUNCTION getInlineValue:P_literal;
       PROCEDURE setMutable(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST val:P_literal);
+      PROCEDURE complainAboutUncalled(CONST ruleId:ansistring);
   end;
 
 {$endif}
@@ -80,6 +82,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
 
 CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
   begin
+    called:=false;
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
     pattern:=pat;
@@ -92,6 +95,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
   begin
+    called:=false;
     typ:=srt_inline_for_each;
     pattern.create;
     pattern.appendFreeId(parameterId);
@@ -227,6 +231,7 @@ PROCEDURE T_subrule.updatePatternForInline;
 CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
   begin
+    called:=false;
     typ:=srt_inline_for_literal;
     declaredAt:=rep^.location;
     pattern.create;
@@ -298,6 +303,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       with expression[0] do if parIdx>=0
       then firstRep:=tokenFromLiteral(token,parIdx)
       else firstRep:=recycler.newToken(@token);
+      called:=true;
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
         if parIdx>=0 then t^.next:=tokenFromLiteral(token,parIdx)
@@ -314,8 +320,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
             and (expression[0].token.tokType=tt_literal)
             and (P_literal(expression[0].token.data)^.literalType = lt_expression)
             and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^))
-    then result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler)
-    else begin
+    then begin
+      result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler);
+      called:=called or result;
+    end else begin
       result:=false;
       case typ of
         srt_inline_for_each: begin
@@ -368,6 +376,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end;
 
   begin
+    called:=false;
     declaredAt:=opLocation;
     pattern.create;
     typ:=srt_inline_for_literal;
@@ -419,6 +428,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     end;
 
   begin
+    called:=false;
     origRule:=original^.value;
     declaredAt:=funcLocation;
     pattern.create;
@@ -554,6 +564,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
   begin
     if (length(expression)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal,srt_mutable]) then exit(nil);
     with expression[0] do if token.tokType=tt_literal then begin
+      called:=true;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
@@ -577,6 +588,11 @@ PROCEDURE T_subrule.setMutableValue(CONST val:P_literal);
     disposeLiteral(expression[0].token.data);
     expression[0].token.data:=val;
     val^.rereference;
+  end;
+
+PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);
+  begin
+    if (typ=srt_normal_private) and not(called) then raiseError(el2_warning,'Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 
 {$endif}

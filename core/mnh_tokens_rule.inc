@@ -25,6 +25,7 @@
       PROCEDURE setMutableValue(CONST value:P_literal);
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
+      PROCEDURE complainAboutUncalled;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -220,5 +221,10 @@ FUNCTION T_rule.getInlineValue:P_literal;
                           else result:=nil;
   end;
 
+PROCEDURE T_rule.complainAboutUncalled;
+  VAR i:longint;
+  begin
+    for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id);
+  end;
 
 {$endif}

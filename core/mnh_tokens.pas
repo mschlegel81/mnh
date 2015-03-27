@@ -39,6 +39,7 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
       PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
+      PROCEDURE complainAboutUncalled;
   end;
 
 CONST C_id_qualify_character='.';
@@ -459,6 +460,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     end else recycler.cascadeDisposeToken(first);
     ready:=true;
     raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
+    clearErrors;
+    if usecase=lu_forDirectExecution then complainAboutUncalled;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
@@ -582,6 +585,16 @@ PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRu
     userDefinesImportedRules.unique;
   end;
 
+PROCEDURE T_package.complainAboutUncalled;
+  VAR ruleList:array of P_rule;
+      i:longint;
+  begin
+    ruleList:=rules.valueSet;
+    for i:=0 to length(ruleList)-1 do ruleList[i]^.complainAboutUncalled;
+    setLength(ruleList,0);
+  end;
+
+
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
   VAR t:P_token;
       i:longint;
@@ -619,6 +632,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
         P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
       end;
       //:special handling if main returns an expression
+      mainPackage.complainAboutUncalled;
     end;
     recycler.cascadeDisposeToken(t);
     recycler.destroy;
