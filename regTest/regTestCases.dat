@@ -283,7 +283,7 @@
   "",
   false,
   false,
-  false],
+  true],
 [ "packages\\statistics.mnh",
   "",
   false,

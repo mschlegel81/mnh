@@ -3,7 +3,6 @@ worldWidth:=120;
 
 initWorld->ord(random(worldHeight*worldWidth)<0.5);
 printWorld(w:intList)->printf("%X%",copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
-//printWorld2(w:intList)->printf("%X%",copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
 
 memoized
 shift(di,dj)->flatten(each(i,[0..worldHeight-1],

@@ -1,6 +1,10 @@
-Input length  1704
-Output length 1314
-Relative : 77.11%
-replace("wka+ bKefit#:str7g,GNlKgJ#8lKgJ(`DG,'~')8lKgJ(G81Qwka+ fil+rByFirst(b<=0,sN[-1,\"\"]Qwka+ fil+rByFirst(b,sN$pTamsQ4wka+ bestSequKce#:str7gN4!pE9h#ub,455unique(copyD[0..lKgJ#82],2U,455agg6gatA({$x%0<$y%0 ? $y : $x}),455fil+rByFirst(bKefitDsub),subU%1Q4wka+ unusedChTs#:str7gNunusedChTs(unique(copyD[0..lKgJ#81],1U)Qwka+ unusedChTs#:str7gListNe9h(c,[' '..'[',']'..'~'],c 7 s ? void : c)Q4wka+ fAmat+dResultDfV,`ByNfAmat('`(%X%,\\ncopy(%X%,[0..%I%],1),\\ncopy(%X%,[0..%I%]*2,2U',4!unbrH#tr7g([s]U,4!unbrH#tr7g([e9hD`By,&)]U, size(`By81,4!unbrH#tr7g([e9hDfV5 ,&)]U, size(fV81)Q4//*Returns an exp6ssion <code>`(x,Y,Z)</code> 6turn7g s4sj#NsjD[],[],unusedChTs#UQwka+ sjDfV,`By,[]5!NfAmat+dResult@head($pTams,3)Qwka+ sjDfV,`By,chTPoolNsjDfV,`By,chTPool,bestSequKce#UQwka+ sjDfV,`By,chTPool,nextFV<>\"\"Nsj(`DnextFV,head(chTPoolU,nextFV|fV,head(chTPool)|`By,tail(chTPoolUQwka+ sjDfV,`By,chTPool,nextFVNfAmat+dResult@head($pTams,3)Q4sjWiJInfo#NsjWiJInfoDsj#UQwka+ sjWiJInfoD6sNw7tf(\"Input lKgJ!%I%\\n\"&45555555! \"Output lKgJ %I%\\n\"&45555555! \"Relatke : %00.00%%%\\n\"&45555555! \"%X%\",lKgJ#),lKgJ(6s),100*lKgJ(6s)/lKgJ#),6s)|6sQ//*FA 6g6ssion +st4ma7->sjWiJInfo(fileConMts(myPaJU;",
-copy("wkj`_^VUTQNMKJHGDA987654+#!",[0..26],1),
-copy("privh^_HGlAM7d))ar;48>+nenth9e6p#,orac)-inre!!\n\rte(s  ",[0..26]*2,2))
+Sequence length 2; Ratio 75.74%
+Sequence length 3; Ratio 72.66%
+Sequence length 4; Ratio 70.57%
+Sequence length 5; Ratio 72.19%
+Input length  2341
+Output length 1652
+Relative : 70.57%
+replace("A7benefitjrep)->Ks)-KM(s,rep,'~'))-Krep)-1;DfilterByFirst(b<=0,s)->[-1,\"\"];DfilterByFirst(b,s)->$params;\n\rD^Sequence(s9n:int,sG)->^Sequence(unique(copy(s,[0..Ks)-s9n]N)),s);D^Sequence(candidatesGList,sG)->`pEach(sub,Tcandidates,Taggregator({$x%0<$y%0 ? $y : $x}),TfilterByFirst(benefit(s,sub),sub))%1;\n\rDunusedChars(sG)->unusedChars(unique(copy(s,[0..Ks)-1],1)));DunusedChars(sGList)->each(c,[' '..'[',']'..'~'],c in s ? void : c);\n\rDformattedResult(s,QUN)->format('M(%X%,\\ncopy(%X%,[0..%I%],1),\\ncopy(%X%,[0..%I%]*%I%,%I%))',`unbrace(st6([s])),`unbrace(st6([each(sU,&)])), size(MBy)-1,`unbrace(st6([each(s,Q! ,&)])), size(Q)-1,`s9nN);\n\r\n\r//*Returns an expression <code>M(x,Y,Z)</code> returning sT3(sGkHard(s,s,3(s,2),2wj!!!   s9n:int!! k(s,[],[]N,unusedChars(s)wjQUN:int,[]!  )->formattedResult@head($params,4wjQUN:int,_Vk(s,QUN,_V,^Sequence(s9n,s)wjQUN:int,_V,nextFind<>\"\"k(M(s,nextFind,head(_V)),nextFind|Q,head(_V)|MByN,tail(_V)wjQUN:int,_V,nextFind)->formattedResult@head($params,4);\n\rD3Hard(input,^,this,len<=8)->printf('Sequence l5h %I%; Ratio %00.00%%%',len,100*Kthis)/Kinput)) &`Kthis)<K^) ? 3Hard(input,this,3(input,len+1),len+1)T!!!!!: ^;\n\r\n\r3WithInfo(skWithInfo(s,3(s)wWithInfo(s,resG)->printf(\"Input l5h  %I%\\n\"&T!!!!!   \"Output l5h %I%\\n\"&T!!!!!   \"Relative : %00.00%%%\\n\"&T!!!!!   \"%X%\",Ks),Kres),100*Kres)/Ks),res)|res;\n\r//*For regression test\n\rmain->main(myPath);\n\rmain(filenamekWithInfo(fileContents(filename));\n\r",
+copy("wkj`_^VUTQNMKJGDA97653#!",[0..23],1),
+copy(");D3)->3(sG,\n\r  charbestPool,MBy\n\r!!find,s9nrJcel5h(epla:st6\n\rA7priveqLeate ringengts#enhort    ",[0..23]*4,4))

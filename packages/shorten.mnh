@@ -2,31 +2,40 @@ private benefit(s:string,rep)->length(s)-length(replace(s,rep,'~'))-length(rep)-
 private filterByFirst(b<=0,s)->[-1,""];
 private filterByFirst(b,s)->$params;
 
-private bestSequence(s:string)->
+private bestSequence(seqLen:int,s:string)->bestSequence(unique(copy(s,[0..length(s)-seqLen],seqLen)),s);
+private bestSequence(candidates:stringList,s:string)->
+  filterByFirst@
   pEach(sub,
-        unique(copy(s,[0..length(s)-2],2)),
+        candidates,
         aggregator({$x%0<$y%0 ? $y : $x}),
-        filterByFirst(benefit(s,sub),sub))%1;
+        [benefit(s,sub),sub])%1;
 
 private unusedChars(s:string)->unusedChars(unique(copy(s,[0..length(s)-1],1)));
 private unusedChars(s:stringList)->each(c,[' '..'[',']'..'~'],c in s ? void : c);
 
-private formattedResult(s,find,replaceBy)->format('replace(%X%,\ncopy(%X%,[0..%I%],1),\ncopy(%X%,[0..%I%]*2,2))',
+private formattedResult(s,find,replaceBy,seqLen)->format('replace(%X%,\ncopy(%X%,[0..%I%],1),\ncopy(%X%,[0..%I%]*%I%,%I%))',
   unbrace(string([s])),
   unbrace(string([each(s,replaceBy,&)])), size(replaceBy)-1,
-  unbrace(string([each(s,find     ,&)])), size(find)-1);
+  unbrace(string([each(s,find     ,&)])), size(find)-1,
+  seqLen,seqLen);
 
 //*Returns an expression <code>replace(x,Y,Z)</code> returning s
-shorten(s)->shorten(s,[],[],unusedChars(s));
-private shorten(s,find,replaceBy,[]      )->formattedResult@head($params,3);
-private shorten(s,find,replaceBy,charPool)->shorten(s,find,replaceBy,charPool,bestSequence(s));
-private shorten(s,find,replaceBy,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,tail(charPool));
-private shorten(s,find,replaceBy,charPool,nextFind)->formattedResult@head($params,3);
+        shorten(s:string)->shortenHard(s,s,shorten(s,2),2);
+private shorten(s:string,               seqLen:int         )->shorten(s,[],[],seqLen,unusedChars(s));
+private shorten(s:string,find,replaceBy,seqLen:int,[]      )->formattedResult@head($params,4);
+private shorten(s:string,find,replaceBy,seqLen:int,charPool)->shorten(s,find,replaceBy,seqLen,charPool,bestSequence(seqLen,s));
+private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,seqLen,tail(charPool));
+private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind)->formattedResult@head($params,4);
+
+private shortenHard(input,best,this,len<=8)->printf('Sequence length %I%; Ratio %00.00%%%',len,100*length(this)/length(input)) &
+  length(this)<length(best) ? shortenHard(input,this,shorten(input,len+1),len+1)
+                            : best;
 
 shortenWithInfo(s)->shortenWithInfo(s,shorten(s));
-private shortenWithInfo(s,res)->printf("Input length  %I%\n"&
+private shortenWithInfo(s,res:string)->printf("Input length  %I%\n"&
                                "Output length %I%\n"&
                                "Relative : %00.00%%%\n"&
                                "%X%",length(s),length(res),100*length(res)/length(s),res)|res;
 //*For regression test
-main->shortenWithInfo(fileContents(myPath));
+main->main(myPath);
+main(filename)->shortenWithInfo(fileContents(filename));
