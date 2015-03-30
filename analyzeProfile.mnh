@@ -1,0 +1,17 @@
+private voidify(...)->void;
+mutable L:=[];
+
+synchronized collapse->L:=each(case,unique(L%%0),case|each(t,L%%[1,2]%(L%%0=case),+));
+synchronized putCase(c,t<1)->voidify(L:=L|[[c,t,1]],size(L)>200 ? collapse : void);
+putCase(c,t)->void;
+
+takeIfProfiling('PROFILING',case,t)->putCase(case,softCast(t));
+takeIfProfiling(...)->void;
+analyzeLine(s:string)->takeIfProfiling@(split(s,';'));
+
+endTime:=systime+1/(24*60);
+
+main->voidify(collapse,L:=sort(L,{$x%1/$x%2>=$y%1/$y%2}),printf("%X%\t  %X%\t  %X%\t  %X%",L%%0,L%%1,L%%2,L%%1/L%%2));
+main(filename,...)->print('Reading ',filename)|
+                    pEach(line,fileLines(filename),systime<endTime ? analyzeLine(line) : void)|
+                    main@...;
