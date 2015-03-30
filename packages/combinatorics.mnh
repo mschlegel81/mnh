@@ -22,4 +22,3 @@ main->testEx({permutations(3)})|
       testEx({permutations([0,1,2,2])})|
       testEx({subsets(['a'..'c'])})|
       testEx({subsets(['a'..'c','a'])});
-     

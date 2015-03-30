@@ -54,7 +54,7 @@ runScript(executor,scriptName,outputFileName,delOutputBefore)->
 
 checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
   expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k." | markAsPassed(scriptName)
-                                                                         :  "Results differ!" & 
+                                                                         :  "Results differ!" &
                                                                             addFailedTest(scriptName) &
                                                                             storeResult(lastResultName(scriptName),result))
                                    : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));

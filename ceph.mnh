@@ -8,5 +8,3 @@ RFSLOC:=SLOC*0.5;
 print("Kosten/EUR:\t",ArbeitstageProJahr*Teamgroesse*EuroProPT,"\n",
       "RFSLOC/PT:\t" ,RFSLOC/(ArbeitstageProJahr*Teamgroesse), "\n",
       "EUR/RFSLOC:\t",(ArbeitstageProJahr*Teamgroesse*EuroProPT)/RFSLOC);
-
-

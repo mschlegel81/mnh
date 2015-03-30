@@ -25,10 +25,3 @@ print(each(l,trim(statementsWithPart('CREATE TABLE')),&'\n'&,replace(replaceOne(
 //size(statementsWithPart('CREATE TABLE'));
 //statementsWithPart('ALTER TABLE');
 //size(statementsWithPart('ALTER TABLE'));
-
-
-
-
-
-
-

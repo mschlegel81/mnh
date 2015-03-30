@@ -8,21 +8,26 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
 fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
+trimBottom(S:stringList)->trailing(S)="" ? trimBottom(leading(S)) : S;
+fixMnhFileLines(S:stringList)->trimBottom(trimRight(S));
+
 
 mutable readOnly:=true;
 memoized printOnce(text)->print(text);
 voidOf(x)->void;
 
 fix(filename         )->fix(filename,fileLines(filename));
-fix(filename,oldLines)->fix(filename,oldLines,fixFileLines(oldLines));
+fix(filename,oldLines)->fix(filename,oldLines,splitFileName(filename)%"extension"=".mnh" ? fixMnhFileLines(oldLines)
+                                                                                         : fixFileLines(oldLines));
 fix(filename,oldLines,newLines==oldLines)->false;
-fix(filename,oldLines,newLines          )->voidOf(each(i,[0..size(oldLines)-1],
-                                                       oldLines%i<>newLines%i ? printOnce(filename) and print('   <',oldLines%i,'>\n   >',newLines%i,'<')
+fix(filename,oldLines,newLines          )->printOnce(filename)|
+                                           voidOf(each(i,[0..size(newLines)-1],
+                                                       oldLines%i<>newLines%i ? print('   <',oldLines%i,'>\n   >',newLines%i,'<')
                                                                               : void) |
                                                   (readOnly ? void
                                                             : writeFileLines(filename,newLines)));
 
 //*Check all files, writing out potential fixes
-main("check")->                each(s,recFiles(".","*.pas,*.inc"),fix(s));
+main("check")->                each(s,recFiles(".","*.pas,*.inc,*.mnh"),fix(s));
 //*Fix all files, writing out potential fixes
-main("fix")->(readOnly:=false)|each(s,recFiles(".","*.pas,*.inc"),fix(s));
+main("fix")->(readOnly:=false)|each(s,recFiles(".","*.pas,*.inc,*.mnh"),fix(s));

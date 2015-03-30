@@ -72,7 +72,7 @@ main("riddle")->printRiddle(randomRiddle);
 //*Create count random riddles in packed form
 main(count:string)->each(l,pEach(i,[1..softCast(count)],pack(randomRiddle)),print(l));
 
-private 
+private
 PREPARED:=["1h2e6d3c804h8f56g90307f7d3d5e4182f62h9"     ,"ag3f2e8h709a705g3h1080265043c69h501f269g",
            "04h32h69h7c3g1g9h8f7e4g541h307g52g1f6a0509" ,"ab9g2g5g6h3f7g108e5h74057e3093h72060804g10",
            "17b2g4h3f921c9h5090703h2054f7d17b48f5f9"    ,"h9h3025f1f6b8024075c9017h5a50403e6018h8d9",
@@ -83,4 +83,3 @@ PREPARED:=["1h2e6d3c804h8f56g90307f7d3d5e4182f62h9"     ,"ag3f2e8h709a705g3h1080
            "149ag607h3d2f18g60859e7g4g8f7d1508g102g9"   ,"09c52g78h8h14h7h70402f3h5h4g9h6e18f5b6e1h9"];
 //*Create count random riddles from prepared ones
 main("lazy",count:string)->each(i,[1..softCast(count)],and,print("\n"&format2(scrambledRiddle(unpack(PREPARED%floor(random*(size(PREPARED)-1)))))));
-

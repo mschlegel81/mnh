@@ -51,11 +51,11 @@ join(L<>[],joiner1:string,joiner2:string)->each(inner,L    ,aggregator({$x&joine
 tabPrint(L)->print(join(L,"\n","\t"));
 //---------------------------------------------------------
 //Set operations:------------------------------------------
-//*Set union of <code>A</code> and <code>B</code> 
+//*Set union of <code>A</code> and <code>B</code>
 union    (A:list,B:list)->unique(A|B);
-//*Set intersection of <code>A</code> and <code>B</code> 
+//*Set intersection of <code>A</code> and <code>B</code>
 intersect(A:list,B:list)->A%    each(a,A,a in B);
-//*Set difference; returns <code>A</code> without <code>B</code> 
+//*Set difference; returns <code>A</code> without <code>B</code>
 minus    (A:list,B:list)->A%not(each(a,A,a in B));
 //------------------------------------------:Set operations
 //List operations:-----------------------------------------
@@ -89,7 +89,7 @@ main->testEx({sum([1,2,3.2,-1.8])}) |
       testEx({intersect([1,2,3],[2,3,4])})|
       testEx({minus([1,2,3],[2,3,4])})|
       testEx({indexes([1,2,3]|[2,3,4])})|
-      testEx({reverse([1,2,3,5])})|      
-      testEx({fak(10)})|      
+      testEx({reverse([1,2,3,5])})|
+      testEx({fak(10)})|
       printf("%X31% = %0.00000000%","pi",pi) |
       tabPrint([[1,2,3],[4,5,6]]);

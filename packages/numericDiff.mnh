@@ -10,4 +10,3 @@ D(f:expression,n:int,h>0,x)->each(i,[0..n],+,f(  x +(n/2-i)*h)*bin(n)%i/h^n);
 TaylorSeries  (f:expression,nMax>=0,x0:numeric,h:numeric)->polyExpression(-x0,each(n,[0..nMax],D(f,n,h,x0)/fak(n)));
 //*Returns the McLaurin Series expansion of f around x0 with nMax summands
 McLaurinSeries(f:expression,nMax>=0,           h:numeric)->polyExpression(    each(n,[0..nMax],D(f,n,h, 0)/fak(n)));
-

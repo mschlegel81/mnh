@@ -8,4 +8,3 @@ private Josephus(n:int,k:int,survivors:int)->print('Prisoners: ',n,
 main->Josephus(41,3,1);
 //*Call from console with n prisoners a step size of k and a given number of survivors
 main(n:string,k:string,survivors:string)->Josephus(softCast(n),softCast(k),softCast(survivors));
-

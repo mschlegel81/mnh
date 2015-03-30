@@ -26,6 +26,3 @@ decils(L:numericList)->sort(L)%round([0..20]/20*(size(L)-1));
 intervals(L:numericList)->each(i,[0..size(L)-2],[L%i+(i==0?-1:0),L%(i+1)]);
 
 densityPlot({sin($x^2+$y^2)},-10,10,-10,10,0.1);
-
-
-
