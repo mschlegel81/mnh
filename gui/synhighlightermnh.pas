@@ -47,7 +47,9 @@ TYPE
     fLineNumber: integer;
 
     markedWord:string;
-    markedLine:longint;
+    markedLine,
+    markedCol:longint;
+    atMarkedToken:boolean;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
@@ -70,7 +72,7 @@ TYPE
     PROCEDURE SetRange(value: Pointer); override;
     PROCEDURE SetLine(CONST NewValue: string; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
-    FUNCTION setMarkedLine(CONST i:longint):boolean;
+    FUNCTION setMarkedLine(CONST i,j:longint):boolean;
   end;
 
 IMPLEMENTATION
@@ -167,17 +169,22 @@ FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
     markedWord:=s;
   end;
 
-FUNCTION TSynMnhSyn.setMarkedLine(CONST i:longint):boolean;
+FUNCTION TSynMnhSyn.setMarkedLine(CONST i,j:longint):boolean;
   begin
-    result:=(i<>markedLine);
+    result:=(i<>markedLine) or (j<>markedCol);
     markedLine:=i;
+    markedCol:=j;
   end;
 
 PROCEDURE TSynMnhSyn.Next;
   VAR
     localId: shortString;
     i: longint;
+    runStart:longint;
   begin
+    atMarkedToken:=false;
+    runStart:=run;
+
     isMarked:=false;
     fTokenID := tkUnknown;
     fTokenPos := Run;
@@ -346,6 +353,7 @@ PROCEDURE TSynMnhSyn.Next;
         Inc(Run);
       end;
     end;
+    atMarkedToken:=(LineIndex=markedLine) and ((markedCol<0) or (runStart<=markedCol) and (markedCol<run));
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
@@ -382,7 +390,7 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   VAR bg: longint;
   begin
     result := styleTable [fTokenID];
-    if (LineIndex<>markedLine) then begin
+    if not(atMarkedToken) then begin
       bg := 255;
       if isDeclInput then bg := bg-40;
       if isExprInput then bg := bg-20;

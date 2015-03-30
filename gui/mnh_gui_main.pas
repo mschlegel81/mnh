@@ -258,6 +258,7 @@ PROCEDURE TMnhForm.flushThroughput;
     errorThroughput.lock;
     errorStringGrid.RowCount:=r0+errorThroughput.size;
     for i:=0 to errorThroughput.size-1 do with errorThroughput[i] do begin
+      writeln('Taking error');
       if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
       changed_:=true;
       errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
@@ -278,8 +279,8 @@ PROCEDURE TMnhForm.flushThroughput;
     if errorStringGrid.RowCount=0
     then i:=0
     else i:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
-    if i<0.4*Height then begin
-      changed_:=(ErrorGroupBox.ClientHeight<>i);
+    if (i<0.4*Height) or (changed_) then begin
+      changed_:=changed_ or (ErrorGroupBox.ClientHeight<>i);
       ErrorGroupBox.ClientHeight:=i;
     end;
     if changed_ then begin
@@ -395,7 +396,7 @@ PROCEDURE TMnhForm.startOfEvaluation;
     errorThroughput.clear;
     MnhForm.OutputEdit.Lines.Clear;
     MnhForm.errorStringGrid.RowCount:=0;
-    if MnhForm.inputHighlighter.setMarkedLine(-1) then MnhForm.Repaint;
+    if MnhForm.inputHighlighter.setMarkedLine(-1,-1) then MnhForm.Repaint;
   end;
 
 { TMnhForm }
@@ -446,7 +447,8 @@ PROCEDURE TMnhForm.errorStringGridClick(Sender: TObject);
   begin
     row:=errorStringGrid.Selection.Top;
     if (row>=0) and (row<errorStringGrid.RowCount) and (errorStringGrid.Cells[2,row]='#') then begin
-      if inputHighlighter.setMarkedLine(StrToIntDef(copy(errorStringGrid.Cells[3,row],2,20),0)-1)
+      if inputHighlighter.setMarkedLine(StrToIntDef(copy(errorStringGrid.Cells[3,row],2,20),0)-1,
+                                        StrToIntDef(copy(errorStringGrid.Cells[4,row],2,20),-1))
       then Repaint;
     end;
   end;
