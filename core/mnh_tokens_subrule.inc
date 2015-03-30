@@ -273,23 +273,28 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       i:longint;
       remaining:P_listLiteral=nil;
 
-  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token;
+  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; inline;
     VAR L:P_literal;
     begin
-      if index=ALL_PARAMETERS_PAR_IDX then L:=param
-      else if index=SELF_TOKEN_PAR_IDX then L:=selfLiteral
-      else if index=REMAINING_PARAMETERS_IDX then begin
-        if remaining=nil then begin
-          if param=nil
-          then remaining:=newListLiteral
-          else remaining:=param^.tail(length(pattern.sig));
-          remaining^.unreference;
-        end;
-        L:=remaining;
-      end else L:=param^.value(index);
-      if L=nil then exit(recycler.newToken(@original));
-      result:=recycler.newToken(original.location,'',tt_literal,L);
-      L^.rereference;
+      if index>=0 then begin
+        if index=ALL_PARAMETERS_PAR_IDX then L:=param
+        else if index=SELF_TOKEN_PAR_IDX then L:=selfLiteral
+        else if index=REMAINING_PARAMETERS_IDX then begin
+          if remaining=nil then begin
+            if param=nil
+            then remaining:=newListLiteral
+            else remaining:=param^.tail(length(pattern.sig));
+            remaining^.unreference;
+          end;
+          L:=remaining;
+        end else L:=param^.value(index);
+        if L=nil then exit(recycler.newToken(@original));
+        result:=recycler.newToken(original.location,'',tt_literal,L);
+        L^.rereference;
+      end else begin
+        if (original.tokType = tt_identifier) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
+        result:=recycler.newToken(@original);
+      end;
     end;
 
   begin
@@ -298,19 +303,12 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     profiler.Start;
     {$endif}
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^) and
-       (not(pattern.containsSelfPointer) or (selfLiteral<>nil)) then begin
-      with expression[0] do if parIdx>=0
-      then firstRep:=tokenFromLiteral(token,parIdx)
-      else firstRep:=recycler.newToken(@token);
+       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
       called:=true;
+      with expression[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
       for i:=1 to length(expression)-1 do with expression[i] do begin
-        if parIdx>=0 then t^.next:=tokenFromLiteral(token,parIdx)
-        else begin
-          if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
-          t^.next:=recycler.newToken(@token);
-        end;
+        t^.next:=tokenFromLiteral(token,parIdx);
         t:=t^.next;
       end;
       lastRep:=t;
@@ -319,7 +317,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
             and (length(expression)=1)
             and (expression[0].token.tokType=tt_literal)
             and (P_literal(expression[0].token.data)^.literalType = lt_expression)
-            and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^))
+            and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^,true))
     then begin
       result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler);
       called:=called or result;

@@ -434,6 +434,10 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
   VAR t:P_token;
       rule:P_rule;
   begin
+    {$ifdef PROFILING}
+    profiler.Clear;
+    profiler.Start;
+    {$endif}
     t:=first;
     while t<>nil do begin
       case t^.tokType of
@@ -470,6 +474,9 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
         end;
       t:=t^.next;
     end;
+    {$ifdef PROFILING}
+    writeln(stderr,'PROFILING;predigest;' + FloatToStr(profiler.Elapsed));
+    {$endif}
   end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
@@ -477,6 +484,11 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
   begin
+    {$ifdef PROFILING}
+    profiler.Clear;
+    profiler.Start;
+    {$endif}
+
     if (rep^.tokType<>tt_expBraceOpen) then begin
       raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
@@ -509,6 +521,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
         rep^.data:=newExpressionLiteral(inlineSubRule);
       end else dispose(inlineSubRule,destroy);
     end;
+    {$ifdef PROFILING}
+    writeln(stderr,'PROFILING;digestInlineExpression;' + FloatToStr(profiler.Elapsed));
+    {$endif}
   end;
 
 PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
@@ -622,6 +637,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           if bodyPart[i,1]^.next<>bracketClosingEach then recycler.disposeToken(bodyPart[i,1]^.next);
           bodyPart[i,1]^.next:=nil;
         end;
+        {$ifdef PROFILING}
+        writeln(stderr,'PROFILING;reduceExpression.resolveEach.parseBody;' + FloatToStr(profiler.Elapsed));
+        profiler.Clear;
+        profiler.Start;
+        {$endif}
 
         //process aggregator part (if any)----------------------------------------------
         aggregatorPresent:=no;
@@ -649,6 +669,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           bracketClosingEach^.tokType:=tt_braceClose;
         end;
         //----------------------------------------------process aggregator part (if any)
+        {$ifdef PROFILING}
+        writeln(stderr,'PROFILING;reduceExpression.resolveEach.processAggregator;' + FloatToStr(profiler.Elapsed));
+        profiler.Clear;
+        profiler.Start;
+        {$endif}
         //process other body parts (if any)---------------------------------------------
         setLength(bodyRule       ,length(bodyPart));
         setLength(bodyRuleLiteral,length(bodyPart));
@@ -657,10 +682,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           bodyRuleLiteral[i]:=newExpressionLiteral(bodyRule[i]);
         end;
         //---------------------------------------------process other body parts (if any)
-        result:=true;
         {$ifdef PROFILING}
-        writeln(stderr,'PROFILING;reduceExpression.resolveEach.parseBodyOk;' + FloatToStr(profiler.Elapsed));
+        writeln(stderr,'PROFILING;reduceExpression.resolveEach.buildBodyRules;' + FloatToStr(profiler.Elapsed));
         {$endif}
+        result:=true;
       end;
 
     VAR itList:P_listLiteral;
@@ -671,6 +696,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
       VAR newLit:P_literal;
       begin
+        {$ifdef PROFILING}
+        profiler.Clear;
+        profiler.Start;
+        {$endif}
         if L=nil then begin
           if resultLiteral=nil then resultLiteral:=newErrorLiteral;
           raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
@@ -715,6 +744,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           end;
         end;
         if doDispose then disposeLiteral(L);
+        {$ifdef PROFILING}
+        writeln(stderr,'PROFILING;reduceExpression.resolveEach.addToAggregation;' + FloatToStr(profiler.Elapsed));
+        {$endif}
       end;
 
     PROCEDURE finalizeAggregation; inline;
@@ -777,14 +809,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         exit;
       end;
       if not(parseBodyOk) then exit;
-
-
       if (P_literal(first^.data)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
       then itList:=newOneElementListLiteral(first^.data,false)
       else itList:=first^.data;
-
       resultLiteral:=nil;
-
       first^.data:=nil;
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
@@ -845,7 +873,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         {$ifdef PROFILING}
-        writeln(stderr,'PROFILING;applying intrinsic rule '+first^.txt+';' + FloatToStr(profiler.Elapsed));
+        writeln(stderr,'PROFILING;applying intrinsic rule;' + FloatToStr(profiler.Elapsed));
         {$endif}
         if newLiteral<>nil then begin
           firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
@@ -931,23 +959,41 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
   PROCEDURE applyCheck;
     VAR checkResult:boolean;
     begin
+      {$ifdef PROFILING}
+      profiler.Clear;
+      profiler.Start;
+      {$endif}
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
       first^.next:=recycler.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;reduceExpression.applyCheck;' + FloatToStr(profiler.Elapsed));
+      {$endif}
     end;
 
   PROCEDURE applyMutation;
     VAR newValue:P_literal;
     begin
+      {$ifdef PROFILING}
+      profiler.Clear;
+      profiler.Start;
+      {$endif}
       newValue:=first^.next^.data;
       P_rule(first^.data)^.setMutableValue(newValue);
       first:=recycler.disposeToken(first);
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;reduceExpression.applyMutation;' + FloatToStr(profiler.Elapsed));
+      {$endif}
     end;
 
   PROCEDURE startOrPushParameterList; inline;
     begin
+      {$ifdef PROFILING}
+      profiler.Clear;
+      profiler.Start;
+      {$endif}
       setLength(stack,length(stack)+2);
       stack[length(stack)-2]:=first;
       first:=first^.next;
@@ -958,18 +1004,17 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       stack[length(stack)-1]:=first;
       first:=first^.next;
       didSubstitution:=true;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;reduceExpression.startOrPushParameterList;' + FloatToStr(profiler.Elapsed));
+      {$endif}
     end;
 
   PROCEDURE process_op_lit; inline;
-    {$ifdef PROFILING}
-    VAR op:string;
-    {$endif}
     begin
       if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType[-1]]) or
          (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
         {$ifdef PROFILING}
-        op:=C_tokenString[stack[length(stack)-1]^.tokType];
         profiler.Clear;
         profiler.Start;
         {$endif}
@@ -982,7 +1027,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         stack_popDestroy; //pop operator from stack
         stack_popDestroy; //pop LHS-Literal from stack
         {$ifdef PROFILING}
-        writeln(stderr,'PROFILING;resolveOperator (B,'+op+');' + FloatToStr(profiler.Elapsed));
+        writeln(stderr,'PROFILING;resolveOperator (B);' + FloatToStr(profiler.Elapsed));
         {$endif}
       end else if tt=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList

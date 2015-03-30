@@ -21,7 +21,7 @@
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
-    FUNCTION matches(VAR par:T_listLiteral):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -133,7 +133,7 @@ FUNCTION T_pattern.matchesNilPattern:boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
+FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
   VAR i:longint;
       L:P_literal;
   begin
@@ -170,7 +170,7 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral):boolean;
           end else exit(false);
       end;
     end;
-    result:=true;
+    result:=selfPointerProvided or not(containsSelfPointer);
   end;
 
 FUNCTION T_pattern.toString:ansistring;
