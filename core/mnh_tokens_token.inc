@@ -521,6 +521,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     VAR p:P_token;
         i:longint;
     begin
+      {$ifdef PROFILING}
+      profiler.Clear;
+      profiler.Start;
+      {$endif}
       if index>=0 then begin
         p:=first;
         for i:=1 to index do if p<>nil then p:=p^.next;
@@ -529,6 +533,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       end else if index>=-length(stack) then begin
         result:=stack[length(stack)+index]^.tokType;
       end else result:=tt_eol;
+      {$ifdef PROFILING}
+      writeln(stderr,'PROFILING;reduceExpression.cTokType',index,';' + FloatToStr(profiler.Elapsed));
+      {$endif}
     end;
 
   PROCEDURE stack_popDestroy; inline;
@@ -1178,7 +1185,8 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           P_package(first^.data)^.resolveRuleId(first^,pureOnly);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
+        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType(1) of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
