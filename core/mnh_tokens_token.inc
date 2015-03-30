@@ -516,26 +516,27 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       newLit:P_literal;
       didSubstitution:boolean;
       tt:T_tokenType;
+      cTokType:array[-1..2] of T_tokenType;
 
-  FUNCTION cTokType(CONST index:longint):T_tokenType; inline;
-    VAR p:P_token;
-        i:longint;
+  PROCEDURE initTokTypes; inline;
     begin
-      {$ifdef PROFILING}
-      profiler.Clear;
-      profiler.Start;
-      {$endif}
-      if index>=0 then begin
-        p:=first;
-        for i:=1 to index do if p<>nil then p:=p^.next;
-        if p=nil then result:=tt_eol
-                 else result:=p^.tokType;
-      end else if index>=-length(stack) then begin
-        result:=stack[length(stack)+index]^.tokType;
-      end else result:=tt_eol;
-      {$ifdef PROFILING}
-      writeln(stderr,'PROFILING;reduceExpression.cTokType',index,';' + FloatToStr(profiler.Elapsed));
-      {$endif}
+      if length(stack)>0 then cTokType[-1]:=stack[length(stack)-1]^.tokType
+                         else cTokType[-1]:=tt_eol;
+      if first<>nil then begin
+        cTokType[0]:=first^.tokType;
+        if first^.next<>nil then begin
+          cTokType[1]:=first^.next^.tokType;
+          if first^.next^.next<>nil then cTokType[2]:=first^.next^.next^.tokType
+                                    else cTokType[2]:=tt_eol;
+        end else begin
+          cTokType[1]:=tt_eol;
+          cTokType[2]:=tt_eol;
+        end;
+      end else begin
+        cTokType[0]:=tt_eol;
+        cTokType[1]:=tt_eol;
+        cTokType[2]:=tt_eol;
+      end;
     end;
 
   PROCEDURE stack_popDestroy; inline;
@@ -964,7 +965,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     VAR op:string;
     {$endif}
     begin
-      if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
+      if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType[-1]]) or
          (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
         {$ifdef PROFILING}
@@ -1027,10 +1028,11 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
     try
     repeat
       didSubstitution:=false;
+      initTokTypes;
       //if pureOnly then write('PURE RUN: '); writeln(tokensToString(first));
       //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
-      case cTokType(0) of
-        tt_literal,tt_aggregatorExpressionLiteral: case cTokType(-1) of
+      case cTokType[0] of
+        tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
             stack_popDestroy;
             first^.tokType:=tt_parList;
@@ -1044,7 +1046,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             stack_popDestroy;
           end;
           tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
-            tt:=cTokType(1);
+            tt:=cTokType[1];
             if (tt in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
               {$ifdef PROFILING}
@@ -1070,10 +1072,10 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
           tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorExtractL0, tt_operatorExtractL1,
           tt_operatorExtractL2, tt_operatorExtractL3, tt_operatorConcat, tt_operatorIn: begin
-            tt:=cTokType(1);
+            tt:=cTokType[1];
             process_op_lit;
           end;
-          tt_braceOpen : case cTokType(1) of // ( | <Lit>
+          tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
               first^.next:=recycler.disposeToken(first^.next);
@@ -1086,7 +1088,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
-          tt_list_constructor: case cTokType(1) of
+          tt_list_constructor: case cTokType[1] of
             tt_separatorComma: begin // [ | <Lit> ,
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               first:=recycler.disposeToken(first);
@@ -1110,7 +1112,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             end;
             COMMON_CASES;
           end;
-          tt_parList_constructor: case cTokType(1) of
+          tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
               stack[length(stack)-1]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
@@ -1127,8 +1129,8 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             end;
             COMMON_CASES;
           end;
-          tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType(1) of
-            tt_separatorComma: if cTokType(2)<>tt_eol then begin
+          tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
+            tt_separatorComma: if cTokType[2]<>tt_eol then begin
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
               P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
               first:=recycler.disposeToken(first);
@@ -1139,7 +1141,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: begin
-            case cTokType(1) of
+            case cTokType[1] of
               tt_comparatorEq..tt_operatorIn: stack_push_push;
               tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
                 stack_popLink;
@@ -1147,7 +1149,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
               end;
             end;
           end;
-          else case cTokType(1) of
+          else case cTokType[1] of
             COMMON_CASES;
           end;
         end;
@@ -1161,14 +1163,14 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           digestInlineExpression(first,recycler);
           didSubstitution:=true;
         end;
-        tt_braceClose: if cTokType(-1)=tt_parList_constructor then begin
+        tt_braceClose: if cTokType[-1]=tt_parList_constructor then begin
           first:=recycler.disposeToken(first);
           stack_popLink;
           first^.tokType:=tt_parList;
           stack_popLink;
           didSubstitution:=true;
         end;
-        tt_listBraceOpen: if cTokType(1)=tt_listBraceClose then begin
+        tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
           //empty list
           first^.data:=newListLiteral;
           first^.tokType:=tt_literal;
@@ -1188,12 +1190,12 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
-        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType(1) of
+        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
         end;
-        tt_iifCheck: if (cTokType(-1)=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
+        tt_iifCheck: if (cTokType[-1]=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
