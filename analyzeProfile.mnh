@@ -1,17 +1,14 @@
 private voidify(...)->void;
 mutable L:=[];
-
-synchronized collapse->L:=each(case,unique(L%%0),case|each(t,L%%[1,2]%(L%%0=case),+));
-synchronized putCase(c,t<1)->voidify(L:=L|[[c,t,1]],size(L)>200 ? collapse : void);
-putCase(c,t)->void;
-
-takeIfProfiling('PROFILING',case,t)->putCase(case,softCast(t));
-takeIfProfiling(...)->void;
-analyzeLine(s:string)->takeIfProfiling@(split(s,';'));
-
-endTime:=systime+1/(24*60);
-
-main->voidify(collapse,L:=sort(L,{$x%1/$x%2>=$y%1/$y%2}),printf("%X%\t  %X%\t  %X%\t  %X%",L%%0,L%%1,L%%2,L%%1/L%%2));
-main(filename,...)->print('Reading ',filename)|
-                    pEach(line,fileLines(filename),systime<endTime ? analyzeLine(line) : void)|
-                    main@...;
+private collapse->L:=each(case,unique(L%%0),case|each(t,L%%[1,2]%(L%%0=case),+));
+private putCase(c,t<1)->voidify(L:=L|[[c,t,1]],size(L)>200 ? collapse : void);
+private putCase(c,t)->void;
+private takeIfProfiling('PROFILING',case,t)->putCase(case,softCast(t));
+private takeIfProfiling(...)->void;
+private analyzeLine(s:string)->takeIfProfiling@(split(s,';'));
+main              ->voidify(collapse,
+                            L:=sort(L,{$x%1>=$y%1}),
+                            printf("%X%\t  %###0.000000%\t %I6%\t %###0.000000%",L%%0,L%%1*1000,L%%2,L%%1/L%%2*1000));
+main(filename,...)->voidify(print('Reading ',filename),
+                            each(line,fileLines(filename,0,50000),analyzeLine(line)),
+                            main@...);
