@@ -837,7 +837,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         {$ifdef PROFILING}
-        writeln(stderr,'PROFILING;applying intrinsic rule;' + FloatToStr(profiler.Elapsed));
+        writeln(stderr,'PROFILING;applying intrinsic rule '+first^.txt+';' + FloatToStr(profiler.Elapsed));
         {$endif}
         if newLiteral<>nil then begin
           firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
@@ -953,11 +953,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     end;
 
   PROCEDURE process_op_lit; inline;
+    {$ifdef PROFILING}
+    VAR op:string;
+    {$endif}
     begin
       if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType(-1)]) or
          (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
         {$ifdef PROFILING}
+        op:=C_tokenString[stack[length(stack)-1]^.tokType];
         profiler.Clear;
         profiler.Start;
         {$endif}
@@ -970,7 +974,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         stack_popDestroy; //pop operator from stack
         stack_popDestroy; //pop LHS-Literal from stack
         {$ifdef PROFILING}
-        writeln(stderr,'PROFILING;resolveOperator (B);' + FloatToStr(profiler.Elapsed));
+        writeln(stderr,'PROFILING;resolveOperator (B,'+op+');' + FloatToStr(profiler.Elapsed));
         {$endif}
       end else if tt=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
