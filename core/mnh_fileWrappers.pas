@@ -389,8 +389,7 @@ CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
     lock := 0;
     Clear;
     filepath := path;
-    if FileExists(path) then
-      load;
+    if FileExists(path) then load;
   end;
 
 DESTRUCTOR T_codeProvider.destroy;

@@ -27,6 +27,7 @@
       CONSTRUCTOR createFromInline (CONST rep:P_Token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+      CONSTRUCTOR createClone(VAR original:T_subrule);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION toString:ansistring;
@@ -251,6 +252,21 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRe
     end;
     if needEmbrace then embrace;
     updatePatternForInline;
+  end;
+
+CONSTRUCTOR T_subrule.createClone(VAR original:T_subrule);
+  VAR i:longint;
+  begin
+    called:=true;
+    typ:=original.typ;
+    declaredAt:=original.declaredAt;
+    pattern.createClone(original.pattern);
+    setLength(expression,length(original.expression));
+    for i:=0 to length(expression)-1 do begin
+      expression[i].parIdx:=original.expression[i].parIdx;
+      expression[i].token.create;
+      expression[i].token.define(original.expression[i].token);
+    end;
   end;
 
 DESTRUCTOR T_subrule.destroy;

@@ -1,7 +1,6 @@
 {$ifdef include_interface}
   P_pattern=^T_pattern;
   T_pattern=object
-    containsSelfPointer:boolean;
     sig:array of record
           id               :ansistring;
           restrictionType  :T_tokenType;
@@ -9,9 +8,11 @@
           restrictionIdx   :longint;
           restrictionId    :ansistring;
         end;
+    containsSelfPointer,
     hasOptionals:boolean;
 
     CONSTRUCTOR create;
+    CONSTRUCTOR createClone(VAR pattern:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
@@ -32,6 +33,19 @@
 CONSTRUCTOR T_pattern.create;
   begin clear; end;
 
+CONSTRUCTOR T_pattern.createClone(VAR pattern:T_pattern);
+  VAR i:longint;
+  begin
+    clear;
+    containsSelfPointer:=pattern.containsSelfPointer;
+    hasOptionals:=pattern.containsSelfPointer;
+    setLength(sig,length(pattern.sig));
+    for i:=0 to length(sig)-1 do begin
+      sig[i]:=pattern.sig[i];
+      with sig[i] do if restrictionIdx<0 then restrictionScalar^.rereference;
+    end;
+  end;
+
 PROCEDURE T_pattern.clear;
   begin
     setLength(sig,0);
@@ -51,6 +65,7 @@ FUNCTION T_pattern.appendFreeId    (CONST parId:ansistring):longint;
       restrictionType:=tt_literal;
       restrictionIdx :=-1;
       restrictionId  :='';
+      restrictionScalar:=nil;
     end;
   end;
 
@@ -63,6 +78,7 @@ FUNCTION T_pattern.appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tok
       restrictionType:=typeRest;
       restrictionIdx :=-1;
       restrictionId  :='';
+      restrictionScalar:=nil;
     end;
   end;
 
@@ -90,6 +106,7 @@ FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_t
       restrictionType:=comparator;
       restrictionIdx :=-1;
       restrictionId  :=otherId;
+      restrictionScalar:=nil;
     end;
   end;
 

@@ -32,6 +32,7 @@ TYPE
       hadBatchModeParts:boolean;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
+      CONSTRUCTOR createClone(VAR original:T_package);
       FUNCTION needReload:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler);
       PROCEDURE clear;
@@ -470,6 +471,27 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
     codeProvider:=provider;
     rules.create;
     loadedVersion:=-1;
+  end;
+
+CONSTRUCTOR T_package.createClone(VAR original:T_package);
+  VAR i:longint;
+      originalRules:array of P_rule;
+      tempRule:P_rule;
+  begin
+    setLength(packageUses,length(original.packageUses));
+    for i:=0 to length(packageUses)-1 do packageUses[i]:=original.packageUses[i];
+    ready:=original.ready;
+    if original.codeProvider=@mainPackageProvider
+    then codeProvider:=@mainPackageProvider
+    else new(codeProvider,create(original.codeProvider^.getPath));
+    loadedVersion:=original.loadedVersion;
+    hadBatchModeParts:=original.hadBatchModeParts;
+    rules.create;
+    originalRules:=original.rules.valueSet;
+    for i:=0 to length(originalRules)-1 do begin
+      new(tempRule,createClone(originalRules[i]^));
+      rules.put(tempRule^.id,tempRule);
+    end;
   end;
 
 FUNCTION T_package.needReload: boolean;
