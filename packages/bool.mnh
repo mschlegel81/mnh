@@ -3,8 +3,6 @@ private param(count)->each(i,[0..2^count-1],(2^[0..count-1] and i)>0);
 trueParams(f:expression)->trueParams(f,param(arity(f)));
 private trueParams(f,Params)->pEach(p,Params,f@p ? p : void);
 
-private //*Identifiers: characters A..Z
-ID_LIST:=['A'..'Z'];
 private //*All 16 binary operators with format string
 BIN:=[[trueParams({$x or $y or true}),    "true"],
       [trueParams({$x and $y and false}), "false"],
@@ -31,9 +29,9 @@ UN:=[[trueParams({$x}),            "%X%"],
 //*Returns the konjunctive normal form as a string
 normalForm(f:expression)->each(par,trueParams(f)   ,aggregator({$x&" or "&$y}),
                           each(i  ,[0..size(par)-1],aggregator({$x&" and "&$y}),
-                               format(par%i ? "%X%" : "not(%X%)",ID_LIST%i)));
+                               format(par%i ? "%X%" : "not(%X%)",parameterNames(f)%i)));
 //*Returns a compact representation of boolean function f as string
-compactForm(f:expression)->compactForm(trueParams(f),arity(f),head(ID_LIST,arity(f)));
+compactForm(f:expression)->compactForm(trueParams(f),arity(f),head(parameterNames(f),arity(f)));
 private compactForm(TL:list,arity=1,IDs)->each(un ,UN ,&,un %0==TL ? format(un %1,IDs%0      ) : void);
 private compactForm(TL:list,arity=2,IDs)->each(bin,BIN,&,bin%0==TL ? format(bin%1,IDs%0,IDs%1) : void);
 private compactForm(TL:list,arity>2,IDs)->each(i,[0..arity-1],aggregator({length($x)>length($y) ? $y : $x}),

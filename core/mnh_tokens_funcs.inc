@@ -395,6 +395,21 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('arity',params,tokenLocation);
   end;
 
+FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION getNames(CONST subrule:P_subrule):P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=newListLiteral;
+      for i:=0 to length(subrule^.pattern.sig)-1 do result^.append(newStringLiteral(subrule^.pattern.sig[i].id),false);
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
+      result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
+    end else raiseNotApplicableError('parameterNames',params,tokenLocation);
+  end;
+
 FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
@@ -434,5 +449,6 @@ FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   registerRule('sleep'         ,@sleep_imp     ,false,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule('expression'    ,@expression_imp,true,'expression(S:string);#Returns an expression parsed from S');
   registerRule('arity'         ,@arity_imp     ,true,'arity(e:expression);#Returns the arity of expression e');
+  registerRule('parameterNames',@parameterNames_imp,true,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
   registerRule('mainParams'    ,@mainParams_imp,true,'mainParams;#Returns the parameters passed to the program');
 {$endif}
