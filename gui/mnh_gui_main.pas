@@ -250,15 +250,39 @@ PROCEDURE logError(CONST error:T_storedError);
   end;
 
 PROCEDURE TMnhForm.flushThroughput;
+  CONST SAMPLE_TEXT='1!gPQ|';
   VAR i:longint;
       r0:longint;
       changed_:boolean=false;
+      idealInputHeight,
+      idealOutputHeight,
+      idealErrorHeight,
+      idealTotalHeight,
+      availableTotalHeight:longint;
   begin
+    //--------------------------------------------------------------------------
+    if wantClear.value then begin
+      wantClear.value:=false;
+      OutputEdit.ClearAll;
+      changed_:=true;
+    end;
+    //--------------------------------------------------------------------------
+    if output.size>0 then begin
+      OutputEdit.BeginUpdate();
+      output.lock;
+      for i:=0 to output.size-1 do OutputEdit.Lines.Append(output[i]);
+      output.clear;
+      output.unlock;
+      OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
+      OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
+      OutputEdit.EndUpdate;
+      changed_:=true;
+    end;
+    //--------------------------------------------------------------------------
     r0:=errorStringGrid.RowCount;
     errorThroughput.lock;
     errorStringGrid.RowCount:=r0+errorThroughput.size;
     for i:=0 to errorThroughput.size-1 do with errorThroughput[i] do begin
-      writeln('Taking error');
       if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
       changed_:=true;
       errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
@@ -276,16 +300,29 @@ PROCEDURE TMnhForm.flushThroughput;
     end;
     errorThroughput.clear;
     errorThroughput.unlock;
-    if errorStringGrid.RowCount=0
-    then i:=0
-    else i:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
-    if (i<0.4*Height) or (changed_) then begin
-      changed_:=changed_ or (ErrorGroupBox.ClientHeight<>i);
-      ErrorGroupBox.ClientHeight:=i;
-    end;
+    changed_:=changed_ or ((errorStringGrid.Height=0) xor (errorStringGrid.RowCount=0));
     if changed_ then begin
+      UpdateTimeTimer.Interval:=200;
       errorStringGrid.AutoSizeColumns;
-      Repaint;
+
+      if errorStringGrid.RowCount=0
+      then idealErrorHeight:=0
+      else idealErrorHeight:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
+
+      idealInputHeight :=InputEdit .Font.GetTextHeight(SAMPLE_TEXT)*InputEdit .Lines.Count;
+      idealOutputHeight:=OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*OutputEdit.Lines.Count;
+      availableTotalHeight:=InputEdit.Height+OutputEdit.Height+ErrorGroupBox.Height;
+      for i:=0 to 3 do begin
+
+        idealTotalHeight :=idealInputHeight+idealOutputHeight+idealErrorHeight;
+        idealInputHeight :=round(idealInputHeight*availableTotalHeight/idealTotalHeight);
+
+        if idealOutputHeight<0.2*availableTotalHeight then idealOutputHeight:=round(0.2*availableTotalHeight);
+        if idealInputHeight <0.2*availableTotalHeight then idealInputHeight :=round(0.2*availableTotalHeight);
+        if idealErrorHeight >0.5*availableTotalHeight then idealErrorHeight :=round(0.5*availableTotalHeight);
+      end;
+      InputEdit    .Height:=idealInputHeight;
+      ErrorGroupBox.Height:=idealErrorHeight;
     end;
   end;
 
@@ -904,24 +941,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
-    if wantClear.value then begin
-      wantClear.value:=false;
-      OutputEdit.ClearAll;
-      flag:=true;
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
-    end;
-    if output.size>0 then begin
-      OutputEdit.BeginUpdate();
-      output.lock;
-      for i:=0 to output.size-1 do OutputEdit.Lines.Append(output[i]);
-      output.clear;
-      output.unlock;
-      OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
-      OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
-      OutputEdit.EndUpdate;
-      flag:=true;
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
-    end;
     flushThroughput;
 
     if ((plotSubsystem.state=pss_plotAfterCalculation) or
