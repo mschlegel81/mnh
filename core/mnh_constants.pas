@@ -57,6 +57,10 @@ TYPE
     tt_modifier_memoized,
     tt_modifier_mutable,
     tt_modifier_synchronized,
+    tt_modifier_local,
+    //procedure block:
+    tt_procedureBlockBegin,
+    tt_procedureBlockEnd,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -153,6 +157,9 @@ CONST
     'memoized',
     'mutable',
     'synchronized',
+    'local',
+    'begin',
+    'end',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -250,6 +257,9 @@ CONST
     'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
     'mutable modifier#makes the rule mutable, i.e. the value may be redefined at evaluation-time',
     'synchronized modifier#makes the rule synchronized, i.e. only one instance of the rule is evaluated at any time',
+    'local modifier#allows for the declaration of local variables inside of procedure blocks',
+    'begin#marks the begin of a procedure block',
+    'end#marks the end of a procedure block',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE

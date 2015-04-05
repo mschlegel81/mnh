@@ -9,8 +9,10 @@ USES myGenerics, mnh_constants, math, sysutils, myStringutil,typinfo,  //utiliti
 TYPE
   P_package=^T_package;
   {$include mnh_tokens_token.inc}
-  {$include mnh_tokens_recycler.inc}
   {$include mnh_tokens_pattern.inc}
+  P_rule=^T_rule;
+  T_ruleMap=specialize G_stringKeyMap<P_rule>;
+  {$include mnh_tokens_recycler.inc}
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
@@ -18,7 +20,6 @@ TYPE
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
 
   { T_package }
-  T_ruleMap=specialize G_stringKeyMap<P_rule>;
   T_package=object
     private
       rules:T_ruleMap;
@@ -371,8 +372,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         end;
 
         if   errorLevel<el3_evalError then begin
-          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
           ruleGroup:=ensureRuleId(ruleId);
+          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
           ruleGroup^.addOrReplaceSubRule(subrule);
           if ruleIsMemoized     then ruleGroup^.setMemoized(ruleDeclarationStart);
           if ruleIsMutable      then ruleGroup^.setMutable(ruleDeclarationStart);
