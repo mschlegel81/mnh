@@ -2,6 +2,11 @@
   T_tokenRecycler=object
     dat:array[0..1023] of P_token;
     fill:longint;
+
+    scopeStack:array of array of record
+      id:ansistring;
+      value:P_literal;
+    end;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION disposeToken(p:P_token):P_token; inline;
@@ -10,6 +15,13 @@
     FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token; inline;
     FUNCTION newToken(CONST original:T_token):P_token; inline;
     FUNCTION newToken(CONST original:P_token):P_token; inline;
+
+    PROCEDURE scopePush;
+    PROCEDURE scopePop;
+    FUNCTION scopeBottom:boolean;
+    PROCEDURE declareLocalValue(CONST id:ansistring; CONST value:P_literal);
+    PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
+    FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
   end;
 
 {$endif}
@@ -20,6 +32,7 @@ CONSTRUCTOR T_tokenRecycler.create;
   begin
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
+    setLength(scopeStack,0);
   end;
 
 DESTRUCTOR T_tokenRecycler.destroy;
@@ -32,6 +45,7 @@ DESTRUCTOR T_tokenRecycler.destroy;
         dat[fill]:=nil;
       end;
     end;
+    while not(scopeBottom) do scopePop;
   end;
 
 FUNCTION T_tokenRecycler.disposeToken(p:P_token):P_token;
@@ -91,4 +105,64 @@ FUNCTION T_tokenRecycler.newToken(CONST original:P_token):P_token;
     result^.define(original^);
     result^.next:=nil;
   end;
+
+PROCEDURE T_tokenRecycler.scopePush;
+  begin
+    setLength(scopeStack,length(scopeStack)+1);
+  end;
+
+PROCEDURE T_tokenRecycler.scopePop;
+  VAR topIdx,i:longint;
+  begin
+    topIdx:=length(scopeStack)-1;
+    for i:=0 to length(scopeStack[topIdx])-1 do begin
+      disposeLiteral(scopeStack[topIdx,i].value);
+      scopeStack[topIdx,i].id:='';
+    end;
+    setLength(scopeStack[topIdx],0);
+    setLength(scopeStack,topIdx);
+  end;
+
+FUNCTION T_tokenRecycler.scopeBottom:boolean;
+  begin
+    result:=length(scopeStack)=0;
+  end;
+
+PROCEDURE T_tokenRecycler.declareLocalValue(CONST id:ansistring; CONST value:P_literal);
+  VAR i,j:longint;
+  begin
+    i:=length(scopeStack)-1;
+    j:=0;
+    while (j<length(scopeStack[i])) and (scopeStack[i,j].id<>id) do inc(j);
+    if j>=length(scopeStack[i]) then begin
+      setLength(scopeStack[i],j+1);
+      scopeStack[i,j].id:=id;
+    end else disposeLiteral(scopeStack[i,j].value);
+    scopeStack[i,j].value:=value;
+    value^.rereference;
+  end;
+
+PROCEDURE T_tokenRecycler.setLocalValue(CONST id:ansistring; CONST value:P_literal);
+  VAR i,j:longint;
+  begin
+    for i:=length(scopeStack)-1 downto 0 do
+    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
+      scopeStack[i,j].value:=value;
+      value^.rereference;
+      exit;
+    end;
+  end;
+
+FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;
+  VAR i,j:longint;
+  begin
+    result:=nil;
+    for i:=length(scopeStack)-1 downto 0 do
+    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
+      result:=scopeStack[i,j].value;
+      result^.rereference;
+      exit(result);
+    end;
+  end;
+
 {$endif}
