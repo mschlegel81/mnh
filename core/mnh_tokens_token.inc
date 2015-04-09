@@ -18,6 +18,7 @@
     FUNCTION singleTokenToString:ansistring;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
   end;
+  T_tokenArray=array of T_token;
 
 {$endif}
 {$ifdef include_implementation}
@@ -397,6 +398,28 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     {$ifdef PROFILING}
     writeln(stderr,'PROFILING;firstToken;' + FloatToStr(profiler.Elapsed));
     {$endif}
+  end;
+
+FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T_tokenArray;
+  VAR location:T_tokenLocation;
+      lineIndex:longint;
+      next:T_token;
+      lines:T_arrayOfString;
+  begin
+    lines:=provider^.getLines;
+    setLength(result,0);
+    location.provider:=provider;
+    for lineIndex:=0 to length(lines)-1 do begin
+      location.line:=lineIndex+1;
+      location.column:=1;
+      while not(isBlank(lines[lineIndex])) and (errorLevel<el3_evalError) do begin
+        next:=firstToken(lines[lineIndex],location,inPackage,true);
+        if (next.tokType<>tt_eol) or (next.txt<>'') then begin
+          setLength(result,length(result)+1);
+          result[length(result)-1]:=next
+        end;
+      end;
+    end;
   end;
 
 PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_tokenRecycler);

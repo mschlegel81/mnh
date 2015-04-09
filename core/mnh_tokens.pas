@@ -417,51 +417,65 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       first:=nil;
     end;
 
-  VAR codeLines:T_arrayOfString;
-      i:longint;
-      next:T_token;
+  VAR i,
+      procBlockLevel:longint;
       first,last:P_token;
-      location:T_TokenLocation;
+      fileTokens:T_tokenArray;
   begin
     if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
     loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
-    codeLines:=codeProvider^.getLines;
-
+    fileTokens:=tokenizeAll(codeProvider,@self);
     first:=nil;
     last :=nil;
-    location.provider:=codeProvider;
-    for i:=0 to length(codeLines)-1 do if (errorLevel<el3_evalError) then begin
-      location.line:=i+1;
-      location.column:=1;
-      while not(isBlank(codeLines[i])) and (errorLevel<el3_evalError) do begin
-        next:=firstToken(codeLines[i],location,@self,true);
-        if (next.tokType=tt_semicolon) then begin
-          if first<>nil then interpret(first);
-          last:=nil;
-          first:=nil;
-        end else if (next.tokType<>tt_eol) then begin
-          if first=nil then begin
-            first:=recycler.newToken(next); next.undefine;
-            last :=first
-          end else begin
-            last^.next:=recycler.newToken(next); next.undefine;
+    i:=0;
+    while i<length(fileTokens) do begin
+      if fileTokens[i].tokType=tt_procedureBlockBegin then begin
+        if first<>nil then
+          raiseError(el4_parsingError,'"begin"-Tokens are only allowed as first element of a statement.',fileTokens[i].location)
+        else begin
+          first:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          last :=first;
+          procBlockLevel:=1;
+          inc(i);
+          while (i<length(fileTokens)) and not((fileTokens[i].tokType=tt_procedureBlockEnd) and (procBlockLevel=1)) do begin
+            case fileTokens[i].tokType of
+              tt_procedureBlockBegin: inc(procBlockLevel);
+              tt_procedureBlockEnd  : dec(procBlockLevel);
+            end;
+            last^.next:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
             last      :=last^.next;
+            inc(i);
           end;
-          last^.next:=nil;
-        end else begin
-          if      next.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
-          else if next.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
-          else if (usecase=lu_forDocGeneration) and (next.txt<>'') then doc^.addComment(next.txt);
-          if batchMode then hadBatchModeParts:=true;
         end;
+      end else if (fileTokens[i].tokType=tt_semicolon) then begin
+        if first<>nil then interpret(first);
+        last:=nil;
+        first:=nil;
+        inc(i);
+      end else if (fileTokens[i].tokType<>tt_eol) then begin
+        if first=nil then begin
+          first:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          last :=first
+        end else begin
+          last^.next:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          last      :=last^.next;
+        end;
+        last^.next:=nil;
+        inc(i);
+      end else begin
+        if      fileTokens[i].txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
+        else if fileTokens[i].txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
+        else if (usecase=lu_forDocGeneration) and (fileTokens[i].txt<>'') then doc^.addComment(fileTokens[i].txt);
+        if batchMode then hadBatchModeParts:=true;
+        inc(i);
       end;
     end;
-    if (errorLevel<el3_evalError) then begin
-      if first<>nil then interpret(first);
-    end else recycler.cascadeDisposeToken(first);
+    if (errorLevel<el3_evalError)
+    then begin if first<>nil then interpret(first); end
+    else recycler.cascadeDisposeToken(first);
     ready:=true;
-    raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',location);
+    raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens[length(fileTokens)-1].location);
     clearErrors;
     if usecase=lu_forDirectExecution then complainAboutUncalled;
   end;
