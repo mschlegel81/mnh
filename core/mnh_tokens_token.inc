@@ -1112,7 +1112,8 @@ tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: stack_push_push;
 tt_iifCheck: stack_push;
 tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
-tt_semicolon: if cTokType[2]=tt_procedureBlockEnd then begin
+tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
+  stack_popDestroy;
   first^.next:=recycler.disposeToken(first^.next);
   first^.next:=recycler.disposeToken(first^.next);
   recycler.scopePop;
@@ -1256,7 +1257,7 @@ end}
         end;
         tt_procedureBlockBegin: if not(pureOnly) then begin
           recycler.scopePush;
-          first:=recycler.disposeToken(first);
+          stack_push;
           didSubstitution:=true;
         end;
         tt_modifier_local: if recycler.scopeBottom
@@ -1265,6 +1266,7 @@ end}
             first:=recycler.disposeToken(first);
             first^.tokType:=tt_assignNewBlockLocal;
             first^.next:=recycler.disposeToken(first^.next);
+            recycler.declareLocalValue(first^.txt,newVoidLiteral);
             stack_push;
           end else raiseError(el4_parsingError,'Modifier "local" is not allowed here.',first^.location);
         tt_blockLocalVariable: if cTokType[1]=tt_assign then begin
