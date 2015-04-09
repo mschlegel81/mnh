@@ -417,60 +417,79 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       first:=nil;
     end;
 
-  VAR i,
-      procBlockLevel:longint;
-      first,last:P_token;
+  VAR currentTokenIndex:longint;
       fileTokens:T_tokenArray;
+      {$define currentToken:=fileTokens[currentTokenIndex]}
+
+  PROCEDURE stepToken;
+    begin
+      repeat
+        inc(currentTokenIndex);
+        if (currentTokenIndex<length(fileTokens)) and
+           (currentToken.tokType=tt_eol) then begin
+          if      currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
+          else if currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
+          else if (usecase=lu_forDocGeneration) and (currentToken.txt<>'') then doc^.addComment(currentToken.txt);
+          if batchMode then hadBatchModeParts:=true;
+        end;
+      until (currentTokenIndex>=length(fileTokens)) or
+            (currentToken.tokType<>tt_eol);
+    end;
+
+
+  VAR procBlockLevel:longint;
+      first,last:P_token;
+      dummy:boolean;
   begin
     if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
     loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
     fileTokens:=tokenizeAll(codeProvider,@self);
+    currentTokenIndex:=-1;
+    stepToken;
     first:=nil;
     last :=nil;
-    i:=0;
-    while i<length(fileTokens) do begin
-      if fileTokens[i].tokType=tt_procedureBlockBegin then begin
+
+    while currentTokenIndex<length(fileTokens) do begin
+      //writeln('token: ',currentToken.tokType,' ',currentToken.toString(false,dummy));
+      if currentToken.tokType=tt_procedureBlockBegin then begin
         if first<>nil then
-          raiseError(el4_parsingError,'"begin"-Tokens are only allowed as first element of a statement.',fileTokens[i].location)
+          raiseError(el4_parsingError,'"begin"-Tokens are only allowed as first element of a statement.',currentToken.location)
         else begin
-          first:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          first:=recycler.newToken(currentToken); currentToken.undefine;
           last :=first;
           procBlockLevel:=1;
-          inc(i);
-          while (i<length(fileTokens)) and not((fileTokens[i].tokType=tt_procedureBlockEnd) and (procBlockLevel=1)) do begin
-            case fileTokens[i].tokType of
+          stepToken;
+          while (currentTokenIndex<length(fileTokens)) and not((currentToken.tokType=tt_procedureBlockEnd) and (procBlockLevel=1)) do begin
+            case currentToken.tokType of
               tt_procedureBlockBegin: inc(procBlockLevel);
               tt_procedureBlockEnd  : dec(procBlockLevel);
             end;
-            last^.next:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+            last^.next:=recycler.newToken(currentToken); currentToken.undefine;
             last      :=last^.next;
-            inc(i);
+            stepToken;
           end;
         end;
-      end else if (fileTokens[i].tokType=tt_semicolon) then begin
+      end else if (currentToken.tokType=tt_semicolon) then begin
+        //writeln('-----------evaluate--------------');
         if first<>nil then interpret(first);
         last:=nil;
         first:=nil;
-        inc(i);
-      end else if (fileTokens[i].tokType<>tt_eol) then begin
+        stepToken;
+      end else begin
         if first=nil then begin
-          first:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          first:=recycler.newToken(currentToken); currentToken.undefine;
           last :=first
         end else begin
-          last^.next:=recycler.newToken(fileTokens[i]); fileTokens[i].undefine;
+          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
           last      :=last^.next;
         end;
         last^.next:=nil;
-        inc(i);
-      end else begin
-        if      fileTokens[i].txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
-        else if fileTokens[i].txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
-        else if (usecase=lu_forDocGeneration) and (fileTokens[i].txt<>'') then doc^.addComment(fileTokens[i].txt);
-        if batchMode then hadBatchModeParts:=true;
-        inc(i);
+        stepToken;
       end;
     end;
+
+
     if (errorLevel<el3_evalError)
     then begin if first<>nil then interpret(first); end
     else recycler.cascadeDisposeToken(first);
