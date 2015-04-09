@@ -16,6 +16,7 @@ TYPE
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
+  {$include mnh_tokens_procBlock.inc}
 
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
 
@@ -94,6 +95,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_futureTask.inc}
+{$include mnh_tokens_procBlock.inc}
 {$include mnh_tokens_rule.inc}
 {$include mnh_tokens_funcs.inc}
 
@@ -257,12 +259,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         //plausis:
         if (ruleBody=nil) then begin
           raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
-          recycler.cascadeDisposeToken(first);
-          exit;
-        end;
-        p:=ruleBody^.getDeclarationOrAssignmentToken;
-        if (p<>nil) then begin
-          raiseError(el4_parsingError,'Function body contains unplausible assignment/declaration token.',p^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
@@ -436,8 +432,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
             (currentToken.tokType<>tt_eol);
     end;
 
-
-  VAR procBlockLevel:longint;
+  VAR localIdStack:T_idStack;
       first,last:P_token;
       dummy:boolean;
   begin
@@ -449,27 +444,36 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     stepToken;
     first:=nil;
     last :=nil;
-
+    localIdStack.create;
     while currentTokenIndex<length(fileTokens) do begin
       //writeln('token: ',currentToken.tokType,' ',currentToken.toString(false,dummy));
       if currentToken.tokType=tt_procedureBlockBegin then begin
-        if first<>nil then
-          raiseError(el4_parsingError,'"begin"-Tokens are only allowed as first element of a statement.',currentToken.location)
-        else begin
+        if first=nil then begin
           first:=recycler.newToken(currentToken); currentToken.undefine;
           last :=first;
-          procBlockLevel:=1;
-          stepToken;
-          while (currentTokenIndex<length(fileTokens)) and not((currentToken.tokType=tt_procedureBlockEnd) and (procBlockLevel=1)) do begin
-            case currentToken.tokType of
-              tt_procedureBlockBegin: inc(procBlockLevel);
-              tt_procedureBlockEnd  : dec(procBlockLevel);
-            end;
-            last^.next:=recycler.newToken(currentToken); currentToken.undefine;
-            last      :=last^.next;
-            stepToken;
-          end;
+        end else begin
+          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
+          last      :=last^.next;
         end;
+
+        localIdStack.clear;
+        localIdStack.scopePush;
+        stepToken;
+        while (currentTokenIndex<length(fileTokens)) and not((currentToken.tokType=tt_procedureBlockEnd) and (localIdStack.oneAboveBottom)) do begin
+          case currentToken.tokType of
+            tt_procedureBlockBegin: localIdStack.scopePush;
+            tt_procedureBlockEnd  : localIdStack.scopePop;
+            tt_identifier: if (last^.tokType=tt_modifier_local) then begin
+              currentToken.tokType:=tt_blockLocalVariable;
+              localIdStack.addId(currentToken.txt);
+            end else if (localIdStack.hasId(currentToken.txt)) then
+              currentToken.tokType:=tt_blockLocalVariable;
+          end;
+          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
+          last      :=last^.next;
+          stepToken;
+        end;
+
       end else if (currentToken.tokType=tt_semicolon) then begin
         //writeln('-----------evaluate--------------');
         if first<>nil then interpret(first);
@@ -488,8 +492,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         stepToken;
       end;
     end;
-
-
+    localIdStack.destroy;
     if (errorLevel<el3_evalError)
     then begin if first<>nil then interpret(first); end
     else recycler.cascadeDisposeToken(first);

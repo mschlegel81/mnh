@@ -485,7 +485,7 @@ PROCEDURE TMnhForm.errorStringGridClick(Sender: TObject);
     row:=errorStringGrid.Selection.Top;
     if (row>=0) and (row<errorStringGrid.RowCount) and (errorStringGrid.Cells[2,row]='#') then begin
       if inputHighlighter.setMarkedLine(StrToIntDef(copy(errorStringGrid.Cells[3,row],2,20),0)-1,
-                                        StrToIntDef(copy(errorStringGrid.Cells[4,row],2,20),-1))
+                                        StrToIntDef(copy(errorStringGrid.Cells[4,row],2,20),0)-1)
       then Repaint;
     end;
   end;

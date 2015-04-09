@@ -113,21 +113,22 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate: begin result:=txt; idLike:=data<>nil; end;
+      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: begin result:=txt; idLike:=data<>nil; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
       tt_intrinsicRulePointer,
       tt_rulePutCacheValue,
-      tt_parameterIdentifier: begin result:=txt; idLike:=true; end;
+      tt_parameterIdentifier,
+      tt_blockLocalVariable: begin result:=txt; idLike:=true; end;
       tt_aggregatorExpressionLiteral,
       tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
-      tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,
+      tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,tt_modifier_local,tt_procedureBlockBegin,
       tt_separatorComma: result:=C_tokenString[tokType]+' ';
-      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod: begin result:=C_tokenString[tokType]; idLike:=true; end;
+      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_procedureBlockEnd: begin result:=C_tokenString[tokType]; idLike:=true; end;
       else result:=C_tokenString[tokType];
     end;
     if idLike and lastWasIdLike then result:=' '+result;
@@ -140,10 +141,19 @@ FUNCTION T_token.singleTokenToString:ansistring;
   end;
 
 FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
+  VAR scopeLevel:longint=0;
+      t:P_token;
   begin
-    if tokType in [tt_declare,tt_assign] then result:=@self
-    else if next<>nil then result:=next^.getDeclarationOrAssignmentToken
-    else result:=nil;
+    result:=nil;
+    t:=@self;
+    while t<>nil do begin
+      case t^.tokType of
+        tt_declare,tt_assign: if scopeLevel=0 then exit(t);
+        tt_procedureBlockBegin: inc(scopeLevel);
+        tt_procedureBlockEnd: dec(scopeLevel);
+      end;
+      t:=t^.next;
+    end;
   end;
 
 FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
@@ -1014,6 +1024,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       {$endif}
     end;
 
+  PROCEDURE applyLocalAssignment;
+    VAR newValue:P_literal;
+    begin
+      newValue:=first^.next^.data;
+      recycler.declareLocalValue(first^.txt,newValue);
+      first:=recycler.disposeToken(first);
+    end;
+
   PROCEDURE startOrPushParameterList; inline;
     begin
       {$ifdef PROFILING}
@@ -1211,19 +1229,78 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             COMMON_CASES;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
-          tt_mutate: begin
-            case cTokType[1] of
-              tt_comparatorEq..tt_operatorIn: stack_push_push;
-              tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
-                stack_popLink;
-                applyMutation;
-              end;
+          tt_mutate: case cTokType[1] of
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+              stack_popLink;
+              applyMutation;
+            end;
+          end;
+          tt_assignNewBlockLocal,tt_assignExistingBlockLocal: case cTokType[1] of
+            tt_comparatorEq..tt_operatorIn: stack_push_push;
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+              stack_popLink;
+              applyLocalAssignment;
             end;
           end;
           else case cTokType[1] of
             COMMON_CASES;
+            tt_semicolon: if cTokType[2]=tt_procedureBlockEnd then begin
+              writeln('Finishing final statement @pre: ',tokensToString(first));
+              first^.next:=recycler.disposeToken(first^.next);
+              first^.next:=recycler.disposeToken(first^.next);
+              recycler.scopePop;
+              didSubstitution:=true;
+              writeln('                         @post: ',tokensToString(first));
+            end else begin
+              writeln('Finishing non-final statement @pre: ',tokensToString(first));
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
+              didSubstitution:=true;
+              writeln('                             @post: ',tokensToString(first));
+            end;
           end;
         end;
+        tt_procedureBlockBegin: begin
+          recycler.scopePush;
+          first:=recycler.disposeToken(first);
+          didSubstitution:=true;
+        end;
+        tt_procedureBlockEnd: begin
+          recycler.scopePop;
+          first:=recycler.disposeToken(first);
+          didSubstitution:=true;
+        end;
+        tt_modifier_local: if recycler.scopeBottom
+          then raiseError(el4_parsingError,'Modifier "local" is only allowed within begin-end-blocks.',first^.location)
+          else if (cTokType[1]=tt_blockLocalVariable) and (cTokType[2]=tt_assign) then begin
+            first:=recycler.disposeToken(first);
+            first^.tokType:=tt_assignNewBlockLocal;
+            first^.next:=recycler.disposeToken(first^.next);
+            stack_push;
+          end else raiseError(el4_parsingError,'Modifier "local" is not allowed here.',first^.location);
+        tt_blockLocalVariable: if cTokType[1]=tt_assign then begin
+          first^.tokType:=tt_assignExistingBlockLocal;
+          first^.next:=recycler.disposeToken(first^.next);
+          stack_push;
+        end else begin
+          first^.data:=recycler.getLocalValueOrNull(first^.txt);
+          if first^.data<>nil then begin
+            first^.tokType:=tt_literal;
+            didSubstitution:=true;
+          end;
+        end;
+        //  if
+        //  case cTokType[2] of
+        //    tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push_push; end;
+        //    tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+        //      stack_popLink;
+        //      applyMutation;
+        //    end;
+        //  end;
+        //end else begin
+        //
+        //end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
         tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack_push; end;
         tt_unaryOpPlus, tt_unaryOpMinus: stack_push;
@@ -1260,11 +1337,11 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
-        tt_mutate: stack_push;
+        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
-          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma: applyRule(nil,first^.next);
+          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon: applyRule(nil,first^.next);
         end;
         tt_iifCheck: if (cTokType[-1]=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
