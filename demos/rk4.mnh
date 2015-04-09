@@ -1,9 +1,11 @@
 //*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(dt)
-        RK4(F:expression,y0,dt>0          )->RK4(F,y0,dt,         dt*F(y0       ));
-private RK4(F:expression,y0,dt,F1         )->RK4(F,y0,dt,F1      ,dt*F(y0+0.5*F1));
-private RK4(F:expression,y0,dt,F1,F2      )->RK4(F,y0,dt,F1,F2   ,dt*F(y0+0.5*F2));
-private RK4(F:expression,y0,dt,F1,F2,F3   )->RK4(F,y0,dt,F1,F2,F3,dt*F(y0    +F3));
-private RK4(F:expression,y0,dt,F1,F2,F3,F4)->y0+(1/6)*(F1+2*F2+2*F3+F4);
+RK4(F:expression,y0,dt>0)->begin
+  local F1:=dt*F(y0       );
+  local F2:=dt*F(y0+0.5*F1);
+  local F3:=dt*F(y0+0.5*F2);
+  local F4:=dt*F(y0    +F3);
+  y0+(1/6)*(F1+2*F2+2*F3+F4);
+end;
 
 //*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(tEnd)
 rk4evolve(F,y0,dt,tEnd>0)->(y0:scalar ? y0 : [y0]) |rk4evolve(F,RK4(F,y0,dt),dt,round(tEnd-dt,3));
