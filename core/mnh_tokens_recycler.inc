@@ -151,6 +151,7 @@ PROCEDURE T_tokenRecycler.setLocalValue(CONST id:ansistring; CONST value:P_liter
       value^.rereference;
       exit;
     end;
+    declareLocalValue(id,value);
   end;
 
 FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;

@@ -434,7 +434,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
 
   VAR localIdStack:T_idStack;
       first,last:P_token;
-      dummy:boolean;
   begin
     if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
@@ -446,7 +445,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     last :=nil;
     localIdStack.create;
     while currentTokenIndex<length(fileTokens) do begin
-      //writeln('token: ',currentToken.tokType,' ',currentToken.toString(false,dummy));
       if currentToken.tokType=tt_procedureBlockBegin then begin
         if first=nil then begin
           first:=recycler.newToken(currentToken); currentToken.undefine;
@@ -475,7 +473,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         end;
 
       end else if (currentToken.tokType=tt_semicolon) then begin
-        //writeln('-----------evaluate--------------');
         if first<>nil then interpret(first);
         last:=nil;
         first:=nil;

@@ -1,4 +1,4 @@
-{$ifdef include_interface}                        
+{$ifdef include_interface}
   T_idStack=object
     ids:array of array of ansistring;
     CONSTRUCTOR create;
@@ -9,7 +9,7 @@
     FUNCTION oneAboveBottom:boolean;
     FUNCTION scopeBottom:boolean;
     PROCEDURE addId(CONST id:ansistring);
-    FUNCTION hasId(CONST id:ansistring):boolean;    
+    FUNCTION hasId(CONST id:ansistring):boolean;
   end;
 {$endif}
 {$ifdef include_implementation}
@@ -20,12 +20,12 @@ CONSTRUCTOR T_idStack.create;
 
 DESTRUCTOR T_idStack.destroy;
   begin clear;  end;
-  
+
 PROCEDURE T_idStack.clear;
   begin
     while not(scopeBottom) do scopePop;
-  end;  
-  
+  end;
+
 PROCEDURE T_idStack.scopePush;
   begin
     setLength(ids,length(ids)+1);
@@ -47,15 +47,15 @@ FUNCTION T_idStack.scopeBottom:boolean;
   end;
 
 PROCEDURE T_idStack.addId(CONST id:ansistring);
-  VAR i,j:longint;  
+  VAR i,j:longint;
   begin
     i:=length(ids)-1;
     j:=length(ids[i]);
     setLength(ids[i],j+1);
-    ids[i,j]:=id;    
+    ids[i,j]:=id;
   end;
-  
-FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;    
+
+FUNCTION T_idStack.hasId(CONST id:ansistring):boolean;
   VAR i,j:longint;
   begin
     result:=false;

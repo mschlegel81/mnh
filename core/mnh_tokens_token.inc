@@ -1024,11 +1024,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       {$endif}
     end;
 
-  PROCEDURE applyLocalAssignment;
+  PROCEDURE applyLocalAssignment(CONST declareNew:boolean);
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      recycler.declareLocalValue(first^.txt,newValue);
+      if declareNew then recycler.declareLocalValue(first^.txt,newValue)
+                    else recycler.setLocalValue    (first^.txt,newValue);
       first:=recycler.disposeToken(first);
     end;
 
@@ -1056,7 +1057,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
   PROCEDURE process_op_lit; inline;
     begin
       if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType[-1]]) or
-         (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_separatorCnt, tt_iifCheck, tt_iifElse])
+         (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
         {$ifdef PROFILING}
         profiler.Clear;
@@ -1110,7 +1111,17 @@ tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParamet
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: stack_push_push;
 tt_iifCheck: stack_push;
-tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
+tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+tt_semicolon: if cTokType[2]=tt_procedureBlockEnd then begin
+  first^.next:=recycler.disposeToken(first^.next);
+  first^.next:=recycler.disposeToken(first^.next);
+  recycler.scopePop;
+  didSubstitution:=true;
+end else begin
+  first:=recycler.disposeToken(first);
+  first:=recycler.disposeToken(first);
+  didSubstitution:=true;
+end}
 
   begin
     setLength(stack,0);
@@ -1119,7 +1130,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
       didSubstitution:=false;
       initTokTypes;
       //if pureOnly then write('PURE RUN: '); writeln(tokensToString(first));
-      //writeln('                                           ',cTokType(-1),' ] ',cTokType(0),' | ',cTokType(1));
+      //writeln('                                           ',cTokType[-1],' ] ',cTokType[0],' | ',cTokType[1]);
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1170,11 +1181,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
               first^.next:=recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
-            tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-            tt_parList:  applyRule(first^.next,first^.next^.next);
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_iifCheck: stack_push;
-            tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+            COMMON_CASES;
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
@@ -1240,34 +1247,15 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
             tt_comparatorEq..tt_operatorIn: stack_push_push;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
               stack_popLink;
-              applyLocalAssignment;
+              applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
             end;
           end;
           else case cTokType[1] of
             COMMON_CASES;
-            tt_semicolon: if cTokType[2]=tt_procedureBlockEnd then begin
-              writeln('Finishing final statement @pre: ',tokensToString(first));
-              first^.next:=recycler.disposeToken(first^.next);
-              first^.next:=recycler.disposeToken(first^.next);
-              recycler.scopePop;
-              didSubstitution:=true;
-              writeln('                         @post: ',tokensToString(first));
-            end else begin
-              writeln('Finishing non-final statement @pre: ',tokensToString(first));
-              first:=recycler.disposeToken(first);
-              first:=recycler.disposeToken(first);
-              didSubstitution:=true;
-              writeln('                             @post: ',tokensToString(first));
-            end;
           end;
         end;
-        tt_procedureBlockBegin: begin
+        tt_procedureBlockBegin: if not(pureOnly) then begin
           recycler.scopePush;
-          first:=recycler.disposeToken(first);
-          didSubstitution:=true;
-        end;
-        tt_procedureBlockEnd: begin
-          recycler.scopePop;
           first:=recycler.disposeToken(first);
           didSubstitution:=true;
         end;
@@ -1288,7 +1276,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
-          end;
+          end else raiseError(el3_evalError,'Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
         //  if
         //  case cTokType[2] of
@@ -1336,7 +1324,7 @@ tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
-        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
+        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and recycler.scopeBottom and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
