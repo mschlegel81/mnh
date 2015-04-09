@@ -1,6 +1,4 @@
 {$ifdef include_interface}
-  P_rule=^T_rule;
-
   { T_rule }
   T_ruleType=(rt_normal,rt_memoized,rt_mutable,rt_synchronized);
 
