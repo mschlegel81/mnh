@@ -12,11 +12,13 @@
 <h3><a     href="#assignments">Assignments</a></h3>
 <h3><a     href="#restrictions">Parameter restrictions</a></h3>
 <h3><a     href="#variadic">Variadic functions</a></h3>
+<h3><a     href="#beginEnd">Begin-End-Blocks</a></h3>
 <h3><a     href="#modifiers">Modifiers</a></h3><ul>
 <li><h4><a href="#privateMod">private</a></h4></li>
 <li><h4><a href="#memoizedMod">memoized</a></h4></li>
 <li><h4><a href="#synchronizedMod">synchronized</a></h4></li>
 <li><h4><a href="#mutableMod">mutable</a></h4></li></ul>
+<li><h4><a href="#localMod">local</a></h4></li></ul>
 <div align="right"><hr> </font></div>
 <h3><a name="declarations">Declarations</a></h3>
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
@@ -62,6 +64,27 @@ The trailing anonymous parameters can be referenced inside the function body by 
   multiPrint->void;
   multiPrint(x,...)->print(x) | multiPrint@...;</code>
 
+<h3><a name="beginEnd">Begin-End-Blocks</a></h3>
+  
+<i>Begin-End-Blocks</i> are a means to program in a prodedural manner. It looks as follows <code>
+  begin
+    <i>statement</i>
+    <i>...</i>
+    <i>statement</i>
+    <i>result statement</i>
+  end;  
+</code> The last statement provides a result which is returned from the block. The other statements are executed before and only have an effect if they
+have side effects. <br> Identifiers occuring as the left hand side of an assignment will be created in the current scope if (and only if) they
+are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be found in any surrounding scope.
+<br>A neat example demonstrating the usefulnes of this feature is calculation of a running sum of a numeric list:<code>
+  runningSum(L:numericList)->begin
+    local sum:=0;
+    each(element,L,sum:=sum+element);
+  end;
+</code>This function makes use of the fact that the assignment-operator returns the value its right hand side.<br>
+Note, that parallel processing via <code>pEach</code> is disabled within Begin-End-Blocks. Occuring <code>pEach</code>-statements will silently be converted
+to <code>each</code>-statements.
+    
 <h3><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
 The <i>private modifier</i> can be used to hide a subrule from importing packages.
@@ -72,7 +95,7 @@ The <i>memoized modifier</i> enables caching for the complete rule; if one subru
 <br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
 map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
 Used appropriately, caching results in enormous speedup. <br>
-Note that memoized functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
+Note that memoized functions do not work well with parallelized evaluations. This issue might be adressed in later versions.
 
 <h4><a name="synchronizedMod">synchronized</a></h4>
 The <i>synchronized modifier</i> protects a rule against parallel execution.<br>
@@ -86,6 +109,10 @@ The <i>mutable modifier</i> allows for a rule to be mutable. The following restr
   <li> A mutable rule must be nullary </li>
 </ul>
 Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
+
+<h4><a name="localMod">local</a></h4>
+The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>. 
+It is only allowed in this context. Local variables always are mutable.
 
 <div align="right"><hr> </font></div>
 </body>
