@@ -1,0 +1,53 @@
+private degToRad:=arctan(1)/45;
+private removeRedundantSequences(s,s)->s;
+private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
+
+private cleanString(drawChars:string, input:string)->begin
+  local ignorables:=each(c,unique('~'|copy(input,[0..length(input)-1],1)),c in ['+','-','F','[',']'] ? void : c);
+  local clean:=replace(replace(input,
+                               copy(drawChars,[0..length(drawChars)-1],1),
+                               'F'),
+                       ignorables,
+                       '');
+  replace(
+    removeRedundantSequences(clean,''),
+    ['F','11','22','44','21','41','42','43','81'],
+    ['1','2' ,'4' ,'8' ,'3' ,'5' ,'6' ,'7' ,'9']);
+end;
+
+turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin   
+  local cleanInput:=cleanString(drawChars,s);
+  //init State variables
+  local turtlePos:=[0,0];
+  local turtleDir:=startAngle*degToRad;
+  local posStack:=[];
+  local dirStack:=[];
+  local rotAngle:=rotAngleInDegrees*degToRad;
+  each(c,copy(cleanInput,[0..length(cleanInput)-1],1),
+    c in ['1'..'9'] ? begin
+                        local oldPos:=turtlePos;
+                        turtlePos:=turtlePos+softCast(c)*[cos(turtleDir),sin(turtleDir)];
+                        oldPos;
+                      end :
+    c='+' ? begin
+              turtleDir:=turtleDir-rotAngle;
+              void;
+            end :
+    c='-' ? begin
+              turtleDir:=turtleDir+rotAngle;
+              void;
+            end :
+    c='[' ? begin
+              posStack:=posStack|[turtlePos];
+              dirStack:=dirStack|turtleDir;
+              void;
+            end :
+            begin
+              turtlePos:=trailing(posStack);
+              posStack := leading(posStack);
+              turtleDir:=trailing(dirStack);
+              dirStack := leading(dirStack);
+              [[Nan,Nan]] | turtlePos;
+            end) |
+  [turtlePos];
+end;

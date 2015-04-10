@@ -1,0 +1,16 @@
+USE turtleGfx;
+
+lindenmayer(config,depth)->lindenmayer@(config|depth);
+private lindenmayer(data,productionLHS,productionRHS,depth>0)->
+        lindenmayer(replace(upper(data),upper(productionLHS),lower(productionRHS)),
+                    productionLHS,
+                    productionRHS,
+                    depth-1);
+private lindenmayer(data,productionLHS,productionRHS,depth)->upper(data);
+lindenmayerTurtle(config,depth)->turtle@(config%1|lindenmayer(config%0,depth));
+
+HILBERT       :=[['A'      ,['A','B'],['-BF+AFA+FB-','+AF-BFB-FA+']],[ 0, 90,'F' ]];
+KOCH_SNOWFLAKE:=[['F++F++F',['F'    ],['F-F++F-F'                 ]],[ 0, 60,'F' ]];
+SIERPINSKI    :=[['A'      ,['A','B'],['B-A-B'      ,'A+B+A'      ]],[ 0, 60,'AB']];
+SIERPINSKI2   :=[['F-G-G'  ,['F','G'],['F-G+F+G-F'  ,'GG'         ]],[ 0,120,'FG']];
+PLANT         :=[['X'      ,['X','F'],['F-[[X]+X]+F[+FX]-X','FF'  ]],[70, 25,'F' ]];
