@@ -961,8 +961,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck, tt_procedureBlockBegin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse , tt_procedureBlockEnd  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
