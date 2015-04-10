@@ -33,9 +33,10 @@ synchronized markAsPassed(case)->voidify(passedTests:=passedTests | (currentExeI
 isMarkedAsPassed(case)->(currentExeInfo & ":" & case) in passedTests;
 
 mutable testsFailed:="";
+mutable previouslyPassedTests:=0;
 synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
 
-FMT_STRING:="%X"&max(length(allTestCases%%0))&"% %####0.00%sec ";
+FMT_STRING:="%X"&max(length(allTestCases%%0))&"% %####0.00%sec %X%";
 
 expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
 lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
@@ -44,21 +45,28 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
-runScript(executor,scriptName,outputFileName,delOutputBefore)->
-  isMarkedAsPassed(scriptName) ? print(format(FMT_STRING,scriptName,0)&"(already marked as passed)")
-                               : (delOutputBefore and outputFileName<>'' ? deleteFile(outputFileName) : void) |
-                                 print(checkResult(scriptName,
-                                                   systime,
-                                                   exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName)),
-                                                   systime));
+runTest(executor,scriptName,outputFileName,delOutputBefore)->
+  isMarkedAsPassed(scriptName)
+  ? previouslyPassedTests:=previouslyPassedTests+1
+  : begin
+      delOutputBefore and outputFileName<>''
+      ? deleteFile(outputFileName)
+      : void;
+      local startTime:=systime;
+      local scriptOutput:=exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName));
+      local scriptTime:=(systime-startTime)*24*60*60;
+      expectedResultExists(scriptName)
+      ? begin
+          expectedResult(scriptName)==scriptOutput
+          ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName))
+          : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
+                                                     addFailedTest(scriptName) &
+                                                     storeResult(lastResultName(scriptName),scriptOutput));
+        end
+      : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName),scriptOutput));
+    end;
 
-checkResult(scriptName,t0,result,t1)->format(FMT_STRING,scriptName,(t1-t0)*24*60*60)& (
-  expectedResultExists(scriptName) ? (expectedResult(scriptName)==result ? "o.k." | markAsPassed(scriptName)
-                                                                         :  "Results differ!" &
-                                                                            addFailedTest(scriptName) &
-                                                                            storeResult(lastResultName(scriptName),result))
-                                   : "No reference result found. Storing "&storeResult(expectedResultName(scriptName),result));
-
-each(test,allTestCases,runScript@(executor|test));
+each(test,allTestCases,runTest@(executor|test));
+print(previouslyPassedTests,' Tests were already marked as passed.');
 print(testsFailed);
 storePassedTests;
