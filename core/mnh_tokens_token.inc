@@ -623,7 +623,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveEach(CONST inParallel:boolean);
+  PROCEDURE resolveEach(inParallel:boolean);
     VAR t,bracketClosingEach:P_token;
         bodyRule:array of P_subrule;
         bodyRuleLiteral:array of P_expressionLiteral;
@@ -656,6 +656,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
           if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
           else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
+          else if t^.tokType in [tt_blockLocalVariable,tt_modifier_local] then inParallel:=false
           else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
             setLength(bodyPart,length(bodyPart)+1);
@@ -1111,7 +1112,8 @@ tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParamet
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: stack_push_push;
 tt_iifCheck: stack_push;
-tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck;
+tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
+{$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
   stack_popDestroy;
   first^.next:=recycler.disposeToken(first^.next);
@@ -1183,6 +1185,7 @@ end}
               didSubstitution:=true;
             end;
             COMMON_CASES;
+            COMMON_SEMICOLON_HANDLING;
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
@@ -1208,6 +1211,7 @@ end}
               didSubstitution:=true;
             end;
             COMMON_CASES;
+            COMMON_SEMICOLON_HANDLING;
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
@@ -1225,6 +1229,7 @@ end}
               didSubstitution:=true;
             end;
             COMMON_CASES;
+            COMMON_SEMICOLON_HANDLING;
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
             tt_separatorComma: if cTokType[2]<>tt_eol then begin
@@ -1235,24 +1240,46 @@ end}
               stack_popLink;
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
             COMMON_CASES;
+            COMMON_SEMICOLON_HANDLING;
             else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+            tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
+              stack_popDestroy;
+              first^.next:=recycler.disposeToken(first^.next);
+              first^.next:=recycler.disposeToken(first^.next);
+              recycler.scopePop;
+              didSubstitution:=true;
+            end else begin
               stack_popLink;
               applyMutation;
             end;
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+              stack_popLink;
+              applyMutation;
+            end;
+            COMMON_CASES;
           end;
           tt_assignNewBlockLocal,tt_assignExistingBlockLocal: case cTokType[1] of
-            tt_comparatorEq..tt_operatorIn: stack_push_push;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+            tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
+              stack_popDestroy;
+              first^.next:=recycler.disposeToken(first^.next);
+              first^.next:=recycler.disposeToken(first^.next);
+              recycler.scopePop;
+              didSubstitution:=true;
+            end else begin
               stack_popLink;
               applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
             end;
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+              stack_popLink;
+              applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
+            end;
+            COMMON_CASES;
           end;
           else case cTokType[1] of
             COMMON_CASES;
+            COMMON_SEMICOLON_HANDLING;
           end;
         end;
         tt_procedureBlockBegin: if not(pureOnly) then begin
@@ -1326,7 +1353,7 @@ end}
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
-        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and recycler.scopeBottom and (callDepth<STACK_DEPTH_LIMIT));
+        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
