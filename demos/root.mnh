@@ -1,18 +1,29 @@
-        regulaFalsi(F:expression,x0:numeric, x1>x0,   k  )->regulaFalsi(F,x0,F(x0),x1,F(x1),k);
-private regulaFalsi(F:expression,x0, 0,x1,f1      ,k  )->x0;
-private regulaFalsi(F:expression,x0,f0,x1, 0      ,k  )->x1;
-private regulaFalsi(F:expression,x0,f0,x1,f1      ,k>0)->sign(f0)=sign(f1) ? [] : regulaFalsi(F,x0,f0,x1,f1,x1-f1*(x0-x1)/(f0-f1),k);
-private regulaFalsi(F:expression,x0,f0,x1,f1      ,k  )->0.5*(x0+x1);
-private regulaFalsi(F:expression,x0,f0,x1,f1,x2   ,k>0)->regulaFalsi(F,x0,f0,x1,f1,x2,F(x2),k);
-private regulaFalsi(F:expression,x0,f0,x1,f1,x2,f2,k>0)->x2;
-private regulaFalsi(F:expression,x0,f0,x1,f1,x2,f2,k>0)->
-  sign(f0)=sign(f2) ? regulaFalsi(F,x1,f1,x2,f2,k-1)
-                    : regulaFalsi(F,x0,f0,x2,f2,k-1);
+regulaFalsi(F:expression,x0input:numeric,x1input>x0input,steps>0)->begin
+  local x0:=x0input;
+  local f0:=F(x0);
+  local x1:=x1input;
+  local f1:=F(x1);
+  each(step,[1..steps],
+    f0=0 or f1=0 ? void :
+    begin
+      local xm:=x1-f1*(x0-x1)/(f0-f1);
+      local fm:=F(xm);
+      sign(f0)=sign(fm) 
+      ? begin f0:=fm; x0:=xm; end
+      : begin f1:=fm; x1:=xm; end;
+      void;
+    end
+  );
+  abs(f1)<abs(f0) ? x1 : x0;
+end;
 
-        roots(F:expression,x0:numeric,x1:numeric)->unique(roots(F,x0+[0..100]/100*(x1-x0)));
-private roots(F,xList)->each(i,[0..size(xList)-2],|,regulaFalsi(F,xList%i,xList%(i+1),20));
+roots(F:expression,x0:numeric,x1:numeric)->begin
+  local X:=x0|sort(x0+random(1000)*(x1-x0))|x1;
+  local S:=each(x,X,sign(F(x)));
+  each(i,[0..size(S)-2],S%i<>S%(i+1) ? regulaFalsi(F,X%i,X%(i+1),100) : void);
+end;
 
-epsilon:=1E-12;
+private epsilon:=1E-12;
 
 main(F:expression)->print("Analyzing ",F) and
                     each(r,roots(F,-6,6),print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));

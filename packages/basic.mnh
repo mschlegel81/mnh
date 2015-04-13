@@ -10,11 +10,10 @@ sum(L:numericList)->each(n,L,+);
 
 //*The running sum of the empty list is <code>[]</code>
 runningSum([])->[];
-//*Returns the running sum of numeric list L (nested numeric lists are supported)
-runningSum(L)->(size(L)<10 ? each(i,[1..size(L)],each(s,head(L,i),+)) : runningSum_merge(runningSum(head(L,size(L) div 2)),runningSum(tail(L,size(L) div 2))));
-private safePlus(summand:list,list<>[])->each(l,list,l+summand);
-private safePlus(summand     ,list<>[])->summand+list;
-private runningSum_merge(L1,L2)->L1|safePlus(trailing(L1),L2);
+runningSum(L)->begin
+  local sum:=0;
+  each(e,L,sum:=sum+e);
+end;
 
 //*The product of the empty list is <code>1</code>
 prod([]):=1;

@@ -1,6 +1,5 @@
 See http://rosettacode.org/wiki/Roots_of_a_function
 Analyzing {($x^3-3*$x^2+2*$x)}
-Root found at   0.0
+Root found at   7.14145152166649E-153
 Root found at   1.0
 Root found at   2.0
-Warning : Unused private subrule regulaFalsi(F:expression, x0, f0, x1, f1, k) @root.mnh:5,1

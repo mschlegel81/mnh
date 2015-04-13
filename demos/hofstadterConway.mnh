@@ -1,15 +1,23 @@
-private memoized hc(k<=2):=1;
-private          hc(k)->hc(  hc(k-1))+
-                        hc(k-hc(k-1));
+//!BATCH ON
+private memoized hc(k)->k<=2 ? 1 : hc(hc(k-1))+hc(k-hc(k-1));
+private HC_LIST:=each(i,[0..100000],hc(i));
+private memoized hc(k)->k<size(HC_LIST) ? HC_LIST%k : hc(hc(k-1))+hc(k-hc(k-1));
+private HC_LIST:=HC_LIST|each(i,[100001..200000],hc(i));
+private memoized hc(k)->k<size(HC_LIST) ? HC_LIST%k : hc(hc(k-1))+hc(k-hc(k-1));
+private HC_LIST:=HC_LIST|each(i,[200001..300000],hc(i));
+private memoized hc(k)->k<size(HC_LIST) ? HC_LIST%k : hc(hc(k-1))+hc(k-hc(k-1));
+private HC_LIST:=HC_LIST|each(i,[300001..400000],hc(i));
+private memoized hc(k)->k<size(HC_LIST) ? HC_LIST%k : hc(hc(k-1))+hc(k-hc(k-1));
+private HC_LIST:=HC_LIST|each(i,[400001..524288],hc(i));
+HC_RATIO:=HC_LIST/[1,1..size(HC_LIST)-1];
+HC_LIST:=[];
+hc(k)->void;
 
-private mutable HC_LIST:=[];
-private synchronized ensureHcList(            iMin,iMax)->ensureHcList(size(HC_LIST),iMin,iMax);
-private synchronized ensureHcList(iMaxCurrent,iMin,iMax)->(HC_LIST:=(HC_LIST | each(i,[iMaxCurrent..iMax],getHc(i))))%[iMin..iMax];
-private getHc(i)->i<size(HC_LIST) ? HC_LIST%i : hc(i);
-
-private maxBetween(i0,i1)->maxBetween(i0,i1,ensureHcList(i0,i1)/[i0..i1]);//  each(i,[i0..i1],hc(i)/i));
+private maxBetween(i0,i1)->maxBetween(i0,i1,head(tail(HC_RATIO,i0),i1-i0));
 private maxBetween(i0,i1,L)->format('%#0.00000000000000% @i=%######0%',max(L),i0+argMax(L));
 
+each(i,[0..18],printf("range 2^%#0%..2^%#0% max. a(n)/n=%X%",i,i+1,maxBetween(2^i,2^(i+1))));
+print("Mallows Number: ",max(pEach(i,[1..2^19],HC_RATIO%i>0.55 ? i : void)));
+
 //*This solves the <a href="http://rosettacode.org/wiki/Hofstadter-Conway_$10,000_sequence"> Hofstadter-Conway $10,000 sequence task from Rosetta Code</a>
-main->each(i,[0..19],printf("range 2^%#0%..2^%#0% max. a(n)/n=%X%",i,i+1,maxBetween(2^i,2^(i+1)))) and
-      print("Mallows Number: ",max(pEach(i,[1..2^20],HC_LIST%i/i>0.55 ? i : void)));
+main->void;

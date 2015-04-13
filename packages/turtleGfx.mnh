@@ -11,8 +11,8 @@ private cleanString(drawChars:string, input:string)->begin
                        '');
   replace(
     removeRedundantSequences(clean,''),
-    ['F','11','22','44','21','41','42','43','81'],
-    ['1','2' ,'4' ,'8' ,'3' ,'5' ,'6' ,'7' ,'9']);
+    ['F','00','11','22','33','44','55','66','77','88'],
+    ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9']);
 end;
 
 turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin   
@@ -24,9 +24,9 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->
   local dirStack:=[];
   local rotAngle:=rotAngleInDegrees*degToRad;
   each(c,copy(cleanInput,[0..length(cleanInput)-1],1),
-    c in ['1'..'9'] ? begin
+    c in ['0'..'9'] ? begin
                         local oldPos:=turtlePos;
-                        turtlePos:=turtlePos+softCast(c)*[cos(turtleDir),sin(turtleDir)];
+                        turtlePos:=turtlePos+2^softCast(c)*[cos(turtleDir),sin(turtleDir)];
                         oldPos;
                       end :
     c='+' ? begin
