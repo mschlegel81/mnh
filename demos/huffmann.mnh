@@ -16,13 +16,11 @@ private histogram(words,IDX)->each(i,[0..size(IDX)-2],[(IDX%(i+1)-IDX%i),words%(
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
 private charactersInString     (s:string)->histogram(sort(copy(s,[0..length(s)-1],1)));
 
-private escapeChar(c)->unbrace(string([c]));
-
 //*Solves the "Huffman coding" task from <a href="http://rosettacode.org/wiki/Huffman_coding">RosettaCode</a>
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
                        print('Analyzing file: ',filename) and
                        print(" code\tchar\n "&
                              each(e,huffman(charactersInFile(filename)),aggregator({$x&"\n "&$y}),
-                                  e%0&"\t"&escapeChar(e%1)));
+                                  e%0&"\t"&escape(e%1)));
 //*Calls main with unixdict.txt as input
 main->main((splitFileName(myPath)%"directory")&"/inputs/unixdict.txt");

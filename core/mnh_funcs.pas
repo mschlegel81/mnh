@@ -521,6 +521,11 @@ FUNCTION unbrace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 {$define CALL_MACRO:=unbrace}
 {$define ID_MACRO:='unbrace'}
 STRINGLITERAL_ROUTINE;
+
+FUNCTION escape_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+{$define CALL_MACRO:=escape}
+{$define ID_MACRO:='escape'}
+STRINGLITERAL_ROUTINE;
 {$undef STRINGLITERAL_ROUTINE}
 
 
@@ -1279,6 +1284,7 @@ INITIALIZATION
   registerRule('upper'         ,@upper_imp     ,true,'upper(S:string);#Returns an uppercase representation of S');
   registerRule('lower'         ,@lower_imp     ,true,'lower(S:string);#Returns an lowercase representation of S');
   registerRule('unbrace'       ,@unbrace_imp   ,true,'unbrace(S:string);#Returns an unbraced representation of S');
+  registerRule('escape'        ,@escape_imp    ,true,'escape(S:string);#Returns an escaped representation of S');
   registerRule('string'        ,@string_imp    ,true,'string(X);#Returns a string-representation of X');
 
   registerRule('files'         ,@files_impl       ,false,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
