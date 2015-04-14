@@ -1,40 +1,50 @@
-private benefit(s:string,rep)->length(s)-length(replace(s,rep,'~'))-length(rep)-1;
-private filterByFirst(b<=0,s)->[-1,""];
-private filterByFirst(b,s)->$params;
+shorten(s:string)->begin
+  local result:=shorten(s,2);
+  local tryOn:=true;
+  each(subLen,[3..32],tryOn ? begin
+    local newResult:=shorten(s,subLen);
+    length(newResult)<length(result) 
+    ? result:=newResult
+    : tryOn:=false;
+    void;
+  end : void);
+  
+  print ('Input length  : ',length(escape(s)));
+  print ('Result length : ',length(result));
+  printf('Ratio         :%##0.00%%%',length(result)/length(escape(s))*100);
+  print (result);
+  result;
+end;
 
-private bestSequence(seqLen:int,s:string)->bestSequence(unique(copy(s,[0..length(s)-seqLen],seqLen)),s);
-private bestSequence(candidates:stringList,s:string)->
-  filterByFirst@
-  pEach(sub,
-        candidates,
-        aggregator({$x%0<$y%0 ? $y : $x}),
-        [benefit(s,sub),sub])%1;
+private benefit2(source:string,replaceWhat)->length(source)-length(replace(source,replaceWhat,'~'))-length(replaceWhat)-1;
 
-private unusedChars(s:string)->unusedChars(unique(copy(s,[0..length(s)-1],1)));
-private unusedChars(s:stringList)->each(c,[' '..'[',']'..'~'],c in s ? void : c);
+shorten(s:string,subLength)->begin
+  local alphabetOut:=[];
+  local workString:=s;
+  local replacements:=[];
+  local proceed:=true;
+  local result:='';
+  each(run,[0..9],begin
+    local alphabet:=unique(copy(workString,[0..length(workString)-1],1));
+    alphabet:=each(c,[' '..'[',']'..'~'],c in alphabet ? void : c);
+    each(alphabetChar,alphabet,proceed ? begin
+      local subStrings:=unique(copy(workString,[0..length(workString)-subLength],subLength));
+      local benefits:=pEach(sub,subStrings,benefit2(workString,sub));
+      local bestIdx:=argMax(benefits);
+      replacements:=subStrings%bestIdx|replacements;
+      alphabetOut:=alphabetChar|alphabetOut;
+      workString:=replace(workString,subStrings%bestIdx,alphabetChar);
+      local oldLen:=length(result)=0 ? 2^62 : length(result);
+      result:='replace('&escape(workString)&','&
+              'copy('&escape(each(c,alphabetOut ,&))&',[0..'&(size(alphabetOut )-1)&']*1,1),'&
+              'copy('&escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'));';
+      length(result)>=oldLen ? proceed:=false : void;
+      void;
+    end : void);
+  end);
+  result;
+end;
 
-private formattedResult(s,find,replaceBy,seqLen)->format('replace(%X%,\ncopy(%X%,[0..%I%],1),\ncopy(%X%,[0..%I%]*%I%,%I%))',
-  unbrace(string([s])),
-  unbrace(string([each(s,replaceBy,&)])), size(replaceBy)-1,
-  unbrace(string([each(s,find     ,&)])), size(find)-1,
-  seqLen,seqLen);
-
-//*Returns an expression <code>replace(x,Y,Z)</code> returning s
-        shorten(s:string)->shortenHard(s,s,shorten(s,2),2);
-private shorten(s:string,               seqLen:int         )->shorten(s,[],[],seqLen,unusedChars(s));
-private shorten(s:string,find,replaceBy,seqLen:int,charPool<>[])->shorten(s,find,replaceBy,seqLen,charPool,bestSequence(seqLen,s));
-private shorten(s:string,find,replaceBy,seqLen:int,charPool,nextFind<>"")->shorten(replace(s,nextFind,head(charPool)),nextFind|find,head(charPool)|replaceBy,seqLen,tail(charPool));
-private shorten(...)->formattedResult@head($params,4);
-
-private shortenHard(input,best,this,len)->printf('Sequence length %I%; Ratio %00.00%%%',len,100*length(this)/length(input)) &
-  length(this)<length(best) ? shortenHard(input,this,shorten(input,len+1),len+1)
-                            : best;
-
-shortenWithInfo(s)->shortenWithInfo(s,shorten(s));
-private shortenWithInfo(s,res:string)->printf("Input length  %I%\n"&
-                               "Output length %I%\n"&
-                               "Relative : %00.00%%%\n"&
-                               "%X%",length(s),length(res),100*length(res)/length(s),res)|res;
 //*For regression test
 main->main(myPath);
-main(filename)->shortenWithInfo(fileContents(filename));
+main(filename)->shorten(fileContents(filename));

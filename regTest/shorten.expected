@@ -1,11 +1,4 @@
-Sequence length 2; Ratio 75.34%
-Sequence length 3; Ratio 73.02%
-Sequence length 4; Ratio 71.30%
-Sequence length 5; Ratio 73.25%
-Input length  2202
-Output length 1570
-Relative : 71.30%
-replace("76benefit(sG,rep)->Ds)-DK(s,rep,'~'))-Drep)-1;9filterByFirst(b<=0,s)->[-1,\"\"];9filterByFirst(b,s)->$params;\n\r9Twence(sAn:int,sG)->Twence(unique(copy(s,[0..Ds)-sAn]N)),s);9Twence(candidatesGList,sG)->QfilterByFirst@QpEach(sub,Mcandidates,Maggregator({$x%0<$y%0 ? $y : $x}),M[benefit(s,sub),sub])%1;\n\r9unusedChars(sG)->unusedChars(unique(copy(s,[0..Ds)-1],1)`unusedChars(sGList)->each(c,[' '..'[',']'..'~'],c in s ? void : cj9formattedResult(s,UkN)->format('K(%X%,\\ncopy(%X%,[0..%I%],1),\\ncopy(%X%,[0..%I%]*%I%,%I%))',Qunbrace(st8([s])),Qunbrace(st8([each(sk,&)])), size(KBy)-1,Qunbrace(st8([each(s,U! ,&)])), size(U)-1,QsAnNj\n\r//*Returns an expression <code>K(x,Y,Z)</code> returning sM3(sGVHard(s,s,3(s,2),2);93(sG,!!!   sAn:int!! V(s,[],[]N,unusedChars(s`3(sG,UkN:int,_^<>[]V(s,UkN,_^,Twence(sAn,s`3(sG,UkN:int,_^,nextFind<>\"\"V(K(s,nextFind,head(_^)),nextFind|U,head(_^)|KByN,tail(_^`3(...)->formattedResult@head($params,4j93Hard(input,T,this,len)->printf('wence l5h %I%; Ratio %00.00%%%',len,100*Dthis)/Dinput)) &QDthis)<DT) ? 3Hard(input,this,3(input,len+1),len+1)M!!!!!: T;\n\r\n\r3WithInfo(sVWithInfo(s,3(s`3WithInfo(s,resG)->printf(\"Input l5h  %I%\\n\"&M!!!!!   \"Output l5h %I%\\n\"&M!!!!!   \"Relative : %00.00%%%\\n\"&M!!!!!   \"%X%\",Ds),Dres),100*Dres)/Ds),res)|res;\n\r//*For regression test\n\rmain->main(myPathjmain(filenameVWithInfo(fileContents(filename)j",
-copy("wkj`_^VUTQNMKJGDA987653#!",[0..24],1),
-copy("Sequ,KBy);\n\r));9charPool)->3findbest\n\r  ,sAn\n\r!!rJceepla:st8l5h(eqLe\n\r76ringprivate engts#enhort    ",[0..24]*4,4))
-Warning : Unused private subrule filterByFirst(b<=0, s) @shorten.mnh:2,1
+Input length  : 2003
+Result length : 1200
+Ratio         : 59.91%
+replace("s{s:st4)->_nHrUs{s,2);HtryOn:=true;!eJNen,[3..32],tryOn ? _n!  lo7newRUs{s,Nen)Y5newR+t)<5K !  ? rUnewR+t!  : tryOn:=falseYT;!endD);!Ant ('Input l\"h  : ',5`s)));Ant ('R+t l\"h : ',5K);Antf('Ratio$$ :%##0.00%%%',5K/5`s))*100);Ant (K;!r+t;\n\rend;Zprivate j2(source:st4,BWhat)->5source)-5B(source,BWhat,'~'))-5BWhat)-1;Zs{s:st4,N\"h)->_nH@X:=[];HG:=s;HBmQ:=[];Hproceed:=true;HrU'';!eJrunV.9],_n!  lo7@8:=unique(k(GV.5G)-1],1))Y@8:=eJc,[' '..'[',']'..'~'],c in @8 ? T : c)YeJ@8Char,@8,proceed ? _n}7S:=unique(k(GV.5G)-N\"h],N\"h));}7js:=pEJsub,S,j2(G,sub));}7bestIdx:=argMax(js);!$BmQ:=S%bestIdx|BmQ;!$@X:=@8Char|@X;!$G:=B(G,S%bestIdx,@8Char);}7oldLen:=5K=0 ? 2^62 : 5K;!$rU'B('&`G)&','&!$$$'k('&`eJc,@X ,&))&'V.'&(size(@X )-1)&']*1,1),'&!$$$'k('&`eJr,BmQ,&))&'V.'&(size(BmQ)-1)&']*'&N\"h&','&N\"h&'));';!$5K>=oldLen ? proceed:=falseD;!$TYendD);!end);!r+t;\n\rend;Z//*For regression test\n\rmain->main(myPath);\n\rmain(filename)->s{fileContQ(filename));\n\r",copy('DZSkjZDA}{j`_ZYXVUTQNKJHGDBA@8754+$"!',[0..36]*1,1),copy(' : T\n\r\n\rsubDcopyZfitbeneSt4s!pri!$lojen(hortescZbegiape(;!  8Out,[0.+t:=voidentssubLr+t)ach(!lo7worDkSt4rAceeplaalphabetcal l"h(ringesul    engt\n\r  ',[0..36]*4,4));
