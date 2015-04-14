@@ -1354,9 +1354,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     i, i1, j: longint;
     key: ansistring;
   begin
-    //writeln('resolving operator ',op);
-    //writeln('             LHS = @',ptrint(LHS));
-    //writeln('             RHS = @',ptrint(RHS));
     //HANDLE ERROR LITERALS:---------------------------------------------------
     case LHS^.literalType of
       lt_void:  begin RHS^.rereference; exit(RHS); end;
