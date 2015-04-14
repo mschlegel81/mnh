@@ -334,12 +334,12 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '/': if startsWith(line,'//') then begin //comments
              parsedLength:=2;
              while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
-
-
              result.tokType:=tt_eol;
              if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
              else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_ON)  then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_ON
-             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF;
+             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF
+             else if startsWith(line,SPECIAL_COMMENT_BLOB_BEGIN)  then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
+             else if startsWith(line,SPECIAL_COMMENT_BLOB_END) then result.txt:=SPECIAL_COMMENT_BLOB_END;
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorDivReal;
@@ -415,18 +415,44 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
       lineIndex:longint;
       next:T_token;
       lines:T_arrayOfString;
+      blob:record
+        active:boolean;
+        text  :ansistring;
+        start :T_tokenLocation;
+      end;
+
   begin
+    blob.active:=false;
     lines:=provider^.getLines;
     setLength(result,0);
     location.provider:=provider;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;
-      while not(isBlank(lines[lineIndex])) and (errorLevel<el3_evalError) do begin
-        next:=firstToken(lines[lineIndex],location,inPackage,true);
-        if (next.tokType<>tt_eol) or (next.txt<>'') then begin
+      if blob.active then begin
+        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_END then begin
+          blob.active:=false;
+          next.create;
+          next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
           setLength(result,length(result)+1);
           result[length(result)-1]:=next
+        end else begin
+          if blob.text=C_carriageReturnChar
+          then blob.text:=                          lines[lineIndex]
+          else blob.text:=blob.text+C_lineBreakChar+lines[lineIndex];
+        end;
+      end else while not(isBlank(lines[lineIndex])) and (errorLevel<el3_evalError) do begin
+        next:=firstToken(lines[lineIndex],location,inPackage,true);
+        if (next.tokType<>tt_eol) or (next.txt<>'') then begin
+          if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
+            active:=true;
+            start:=location;
+            text:=C_carriageReturnChar;
+            lines[lineIndex]:='';
+          end else begin
+            setLength(result,length(result)+1);
+            result[length(result)-1]:=next
+          end;
         end;
       end;
     end;

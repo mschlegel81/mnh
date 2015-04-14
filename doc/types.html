@@ -50,6 +50,16 @@ You can alternatively use <code>'</code> or <code>"</code> as string delimiters.
 <li><code>\"  </code> The delimiter (if it was <code>"</code>)</li>
 <li><code>\'  </code> The delimiter (if it was <code>'</code>)</li>
 </ul>
+Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are delimited by the special comments
+<code>//!BLOB START</code> and <code>//!BLOB END</code>. An example:<code>
+  print(
+  //!BLOB START
+  This is a simple text...
+       with a \ which would have to be escaped otherwise.
+    And indentations of course.
+  //!BLOB END
+  );
+</code>
 
 <h4><a name="expressions">Expressions</a></h4>
 Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
