@@ -12,8 +12,18 @@ DIGIT:=[['  -----   ',' /     \\  ','|       | ','|       | ','|       | ','|   
 
 printBigTime->printBigTime@softCast(copy(format('%hhnnss%',systime),[0..5],1));
 printBigTime(h0,h1,m0,m1,s0,s1:int)->printf('%X%%X%%X%%X%%X%%X%%X%%X%',DIGIT%h0,DIGIT%h1,DIGIT%10,DIGIT%m0,DIGIT%m1,DIGIT%10,DIGIT%s0,DIGIT%s1);
-clear->printf('%X0%',[0..50]);
+mutable proceed:=true;
 
-main->printBigTime | sleep(1) | clear | main;
+
+main->pEach(task,[
+  {begin
+    ask('Press enter to quit.');
+    proceed:=false;
+  end},
+  {while(proceed,begin
+    clearPrint;
+    printBigTime;
+    sleep(1);
+  end)}],task()); //printBigTime | sleep(1) | clear | main;
 
 printBigTime;

@@ -149,8 +149,8 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
     while t<>nil do begin
       case t^.tokType of
         tt_declare,tt_assign: if scopeLevel=0 then exit(t);
-        tt_procedureBlockBegin: inc(scopeLevel);
-        tt_procedureBlockEnd: dec(scopeLevel);
+        tt_procedureBlockBegin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
+        tt_procedureBlockEnd  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
       end;
       t:=t^.next;
     end;
@@ -252,6 +252,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id=C_tokenString[tt_modifier_local]        then result.tokType:=tt_modifier_local
         else if id=C_tokenString[tt_procedureBlockBegin]   then result.tokType:=tt_procedureBlockBegin
         else if id=C_tokenString[tt_procedureBlockEnd]     then result.tokType:=tt_procedureBlockEnd
+        else if id=C_tokenString[tt_procedureBlockWhile]   then result.tokType:=tt_procedureBlockWhile
         else if id=C_tokenString[tt_each]                  then begin result.tokType:=tt_each;                  result.data:=nil; result.txt:=''; end
         else if id=C_tokenString[tt_parallelEach]          then begin result.tokType:=tt_parallelEach;          result.data:=nil; result.txt:=''; end
         else if id=C_tokenString[tt_aggregatorConstructor] then begin result.tokType:=tt_aggregatorConstructor; result.data:=nil; result.txt:=''; end
@@ -652,7 +653,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
   PROCEDURE resolveEach(inParallel:boolean);
     VAR t,bracketClosingEach:P_token;
         bodyRule:array of P_subrule;
-        bodyRuleLiteral:array of P_expressionLiteral;
 
         aggregatorToken:T_tokenType;
         aggregatorExpression:P_expressionLiteral;
@@ -680,8 +680,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen]  then inc(bracketLevel)
-          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose] then dec(bracketLevel)
+          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin] then inc(bracketLevel)
+          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  ] then dec(bracketLevel)
           else if t^.tokType in [tt_blockLocalVariable,tt_modifier_local] then inParallel:=false
           else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
@@ -739,11 +739,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         {$endif}
         //process other body parts (if any)---------------------------------------------
         setLength(bodyRule       ,length(bodyPart));
-        setLength(bodyRuleLiteral,length(bodyPart));
-        for i:=0 to length(bodyPart)-1 do begin
+        for i:=0 to length(bodyPart)-1 do
           new(bodyRule[i],createForEachBody(first^.txt,bodyPart[i,0],recycler));
-          bodyRuleLiteral[i]:=newExpressionLiteral(bodyRule[i]);
-        end;
         //---------------------------------------------process other body parts (if any)
         {$ifdef PROFILING}
         writeln(stderr,'PROFILING;reduceExpression.resolveEach.buildBodyRules;' + FloatToStr(profiler.Elapsed));
@@ -897,12 +894,112 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       end;
       //----------------------------------------------------------iterate over itList
       //cleanup----------------------------------------------------------------------
-      for i:=0 to length(bodyRule)-1 do disposeLiteral(bodyRuleLiteral[i]);
       if aggregatorPresent=yes_as_expression then disposeLiteral(aggregatorExpression);
+      for i:=0 to length(bodyRule)-1 do dispose(bodyRule[i],destroy);
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
     end;
+
+  PROCEDURE resolveWhile;
+    VAR t,bracketClosingWhile:P_token;
+        headRule:P_subrule;
+        bodyRule:P_subrule;
+
+    FUNCTION parseBodyOk:boolean;
+      VAR bracketLevel,i:longint;
+          p:P_token;
+          bodyPart:array of array[0..1] of P_token;
+          emptyPattern:T_pattern;
+      begin
+        //first token is <while>-Token
+        //find closing bracket and body parts
+        bracketLevel:=1;
+        t:=first; p:=nil;
+        if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+          setLength(bodyPart,1);
+          bodyPart[0,0]:=first^.next;
+        end else begin
+          raiseError(el4_parsingError,'Invalid while-construct; Cannot find closing bracket.',first^.location);
+          exit(false);
+        end;
+        while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin] then inc(bracketLevel)
+          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd]   then dec(bracketLevel)
+          else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+            bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
+            setLength(bodyPart,length(bodyPart)+1);
+            bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
+          end else if pureOnly and (t^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_mutate]) then exit(false);
+          p:=t; t:=t^.next;
+        end;
+        bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
+        if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+          raiseError(el4_parsingError,'Invalid while-construct; Cannot find closing bracket.',first^.location);
+          exit(false);
+        end;
+        bracketClosingWhile:=t;
+        if length(bodyPart)<>2 then begin
+          raiseError(el4_parsingError,'Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
+          exit(false);
+        end;
+
+        for i:=0 to length(bodyPart)-1 do begin
+          if bodyPart[i,1]^.next<>bracketClosingWhile then recycler.disposeToken(bodyPart[i,1]^.next);
+          bodyPart[i,1]^.next:=nil;
+        end;
+
+
+        //create head/body rules------------------------------------------------
+        emptyPattern.create;
+        new(headRule,create(emptyPattern,bodyPart[0,0],bodyPart[0,0]^.location,true,recycler));
+        new(bodyRule,create(emptyPattern,bodyPart[1,0],bodyPart[1,0]^.location,true,recycler));
+        emptyPattern.destroy;
+        //------------------------------------------------create head/body rules
+        result:=true;
+      end;
+
+    VAR whileLocation:T_tokenLocation;
+
+    FUNCTION evaluateHead:boolean;
+      VAR res:P_literal;
+      begin
+        res:=headRule^.directEvaluateNullary(nil,callDepth+1,recycler);
+        if (res<>nil) and (res^.literalType=lt_boolean) then begin
+          result:=P_boolLiteral(res)^.value;
+        end else begin
+          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
+          result:=false;
+        end;
+        if res<>nil then disposeLiteral(res);
+      end;
+
+    PROCEDURE evaluateBody;
+      VAR res:P_literal;
+      begin
+        res:=bodyRule^.directEvaluateNullary(nil,callDepth+1,recycler);
+        if res<>nil then disposeLiteral(res);
+      end;
+
+    begin
+      whileLocation:=first^.location;
+      if callDepth>STACK_DEPTH_LIMIT then begin
+        raiseError(el5_systemError,'Stack overflow in while construct.',whileLocation);
+        exit;
+      end;
+      if not(parseBodyOk) then exit;
+      while evaluateHead and (errorLevel<=el3_evalError) do evaluateBody;
+      first^.txt:='';
+      first^.tokType:=tt_literal;
+      first^.data:=newVoidLiteral;
+      first^.next:=recycler.disposeToken(bracketClosingWhile);
+      //cleanup----------------------------------------------------------------------
+      dispose(headRule,destroy);
+      dispose(bodyRule,destroy);
+      //----------------------------------------------------------------------cleanup
+      didSubstitution:=true;
+    end;
+
 
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
@@ -975,8 +1072,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -988,8 +1085,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck, tt_procedureBlockBegin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse , tt_procedureBlockEnd  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1385,6 +1482,10 @@ end}
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon: applyRule(nil,first^.next);
+        end;
+        tt_procedureBlockWhile: if not(pureOnly) and (cTokType[1]=tt_braceOpen) then begin
+          first^.next:=recycler.disposeToken(first^.next);
+          resolveWhile;
         end;
         tt_iifCheck: if (cTokType[-1]=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
           resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);

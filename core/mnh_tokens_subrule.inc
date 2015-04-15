@@ -134,7 +134,8 @@ FUNCTION T_subrule.needEmbrace:boolean;
       begin
         result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
              or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
-             or (oT = tt_expBraceOpen) and (ct=tt_expBraceClose);
+             or (oT=tt_expBraceOpen) and (ct=tt_expBraceClose)
+             or (ot=tt_procedureBlockBegin) and (ct=tt_procedureBlockEnd);
       end;
 
     begin
@@ -165,8 +166,8 @@ FUNCTION T_subrule.needEmbrace:boolean;
 
     result:=false;
     for i:=0 to length(expression)-1 do case expression[i].token.tokType of
-      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: push(i);
-      tt_braceClose, tt_listBraceClose, tt_expBraceClose: pop(i);
+      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_procedureBlockBegin: push(i);
+      tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_procedureBlockEnd: pop(i);
 
       tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
@@ -308,7 +309,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         result:=recycler.newToken(original.location,'',tt_literal,L);
         L^.rereference;
       end else begin
-        if (original.tokType = tt_identifier) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
+        if (original.tokType=tt_identifier) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
         result:=recycler.newToken(@original);
       end;
     end;
@@ -332,7 +333,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     end else if (param<>nil)
             and (length(expression)=1)
             and (expression[0].token.tokType=tt_literal)
-            and (P_literal(expression[0].token.data)^.literalType = lt_expression)
+            and (P_literal(expression[0].token.data)^.literalType=lt_expression)
             and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^,true))
     then begin
       result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler);

@@ -62,6 +62,7 @@ TYPE
     //procedure block:
     tt_procedureBlockBegin,
     tt_procedureBlockEnd,
+    tt_procedureBlockWhile,
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
@@ -161,6 +162,7 @@ CONST
     'local',
     'begin',
     'end',
+    'while',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -264,6 +266,7 @@ CONST
     'local modifier#allows for the declaration of local variables inside of procedure blocks',
     'begin#marks the begin of a procedure block',
     'end#marks the end of a procedure block',
+    'while#denotes the beginning of a (head controlled) loop',
     '<void>#this means that there is nothing plausible to parse, e.g. a comment');
 
 TYPE
