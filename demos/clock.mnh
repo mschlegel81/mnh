@@ -1,20 +1,6 @@
-DIGIT:=[['  -----   ',' /     \\  ','|       | ','|       | ','|       | ','|       | ','|       | ',' \\     /  ','  -----   '],
-        ['        | ','      / | ','    /   | ','  /     | ','        | ','        | ','        | ','        | ','        | '],
-        ['  -----   ',' /     \\  ','/       | ','        | ','       /  ','     /    ','   /      ',' /        ','--------- '],
-        ['  -----   ',' /     \\  ','/       | ','       /  ','    ---   ','       \\  ','\\       | ',' \\     /  ','  -----   '],
-        ['    /     ','   /      ','  /       ',' /  |     ','----+---- ','    |     ','    |     ','    |     ','    |     '],
-        ['+-------- ','|         ','|         ','|         ','+------   ','       \\  ','        | ','       /  ','-------   '],
-        ['  ------  ',' /        ','/         ','|         ','|------   ','|      \\  ','|       | ',' \\     /  ','  -----   '],
-        ['--------- ','       /  ','      /   ','     /    ','    /     ','   /      ','  /       ',' /        ','/         '],
-        ['  -----   ',' /     \\  ','|       | ',' \\     /  ','  -----   ',' /     \\  ','|       | ',' \\     /  ','  -----   '],
-        ['  -----   ',' /     \\  ','|       | ','\\       | ',' ------/  ','      /   ','     /    ','    /     ',' ---      '],
-        ['    ','    ','    ',' O  ','    ',' O  ','    ','    ','    ']];
-
-printBigTime->printBigTime@softCast(copy(format('%hhnnss%',systime),[0..5],1));
-printBigTime(h0,h1,m0,m1,s0,s1:int)->printf('%X%%X%%X%%X%%X%%X%%X%%X%',DIGIT%h0,DIGIT%h1,DIGIT%10,DIGIT%m0,DIGIT%m1,DIGIT%10,DIGIT%s0,DIGIT%s1);
 mutable proceed:=true;
-
-
+glyphs:=expression(replace("[*0L...N1>G$#+)!+GGGAE2LG$'(!'DO@@#!C3LJ;+JN4>$'(!'D'+@@<GGAE5>@@<OO@#+JJ@#E6LO@#FN7>@@<JJG$'(!'D'AC8LIFN9LI#<JN:>DD<D<D$C >M$ &D! &( &?]",copy("ONMLKJIHGFEDCBA@?>=<;.-+*)('&%$#!",[0..32]*1,1),copy("'MIE$(>K;FH<.;$$A++.'C$&?B,*$!##=]%*\"]#()#-(')'&[\"!#!&#$%\"\",!!_/  ",[0..32]*2,2)))();
+printTime->printf('%X%',each(g,glyphs%copy(format(' %hh:nn:ss%',systime),[0..8],1),&));
 main->pEach(task,[
   {begin
     ask('Press enter to quit.');
@@ -22,8 +8,6 @@ main->pEach(task,[
   end},
   {while(proceed,begin
     clearPrint;
-    printBigTime;
+    printTime;
     sleep(1);
-  end)}],task()); //printBigTime | sleep(1) | clear | main;
-
-printBigTime;
+  end)}],task());
