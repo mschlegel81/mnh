@@ -1,10 +1,11 @@
 UNIT mySys;
 INTERFACE
-USES myGenerics,sysutils,process;
+USES dos,myGenerics,sysutils,process;
 
 FUNCTION getEnvironment:T_arrayOfString;
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
 PROCEDURE clearConsole;
+PROCEDURE getFileInfo(CONST filePath:string; OUT time:double; OUT size:int64; OUT isExistent, isArchive, isDirectory, isReadOnly, isSystem, isHidden:boolean);
 
 VAR CMD_PATH,
     SEVEN_ZIP_PATH,
@@ -66,11 +67,53 @@ FUNCTION obtainCmd:ansistring; begin result:=findDeeply('C:\*Win*','cmd.exe'); e
 FUNCTION obtain7Zip:ansistring; begin result:=findDeeply('C:\*Program*','7z.exe'); end;
 FUNCTION obtainNotepad:ansistring; begin result:=findDeeply('C:\*Program*','notepad++.exe'); end;
 
+PROCEDURE getFileInfo(CONST filePath:string;
+  OUT time:double;
+  OUT size:int64;
+  OUT isExistent,
+      isArchive,
+      isDirectory,
+      isReadOnly,
+      isSystem,
+      isHidden:boolean);
+  VAR f:file of byte;
+      attr:word;
+      ft:longint;
+  begin
+    time:=-1;
+    size:=-1;
+    isExistent :=false;
+    isArchive  :=false;
+    isDirectory:=false;
+    isReadOnly :=false;
+    isSystem   :=false;
+    isHidden   :=false;
+    if DirectoryExists(filePath) or FileExists(filePath) then begin
+      isExistent:=true;
+      ft:=fileAge(filePath);
+      if ft<>-1 then time:=FileDateToDateTime(ft);
+
+      assign (f,filePath);
+      GetFAttr(f,Attr);
+      isArchive  :=(Attr and archive  )<>0;
+      isDirectory:=(Attr and directory)<>0;
+      isReadOnly :=(Attr and readonly )<>0;
+      isSystem   :=(Attr and sysfile  )<>0;
+      isHidden   :=(Attr and hidden   )<>0;
+      if FileExists(filePath) then try
+        reset (F);
+        size:=FileSize(F);
+        close (F);
+      except
+        size:=-2;
+      end;
+    end;
+  end;
+
 INITIALIZATION
   CMD_PATH.create(@obtainCmd);
   SEVEN_ZIP_PATH.create(@obtain7Zip);
-  NOTEPAD_PATH.create(@obtainNotepad);;
-  sleep(10);
+  NOTEPAD_PATH.create(@obtainNotepad);
 
 FINALIZATION
   CMD_PATH.destroy;

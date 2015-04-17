@@ -15,7 +15,7 @@ private cleanString(drawChars:string, input:string)->begin
     ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9']);
 end;
 
-turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin   
+turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin
   local cleanInput:=cleanString(drawChars,s);
   //init State variables
   local turtlePos:=[0,0];

@@ -8,7 +8,7 @@ regulaFalsi(F:expression,x0input:numeric,x1input>x0input,steps>0)->begin
     begin
       local xm:=x1-f1*(x0-x1)/(f0-f1);
       local fm:=F(xm);
-      sign(f0)=sign(fm) 
+      sign(f0)=sign(fm)
       ? begin f0:=fm; x0:=xm; end
       : begin f1:=fm; x1:=xm; end;
       void;

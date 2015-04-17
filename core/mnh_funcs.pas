@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -1246,6 +1246,49 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('deleteFile',params,tokenLocation);
   end;
 
+FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR time:double;
+      size:int64;
+      isExistent,
+      isArchive,
+      isDirectory,
+      isReadOnly,
+      isSystem,
+      isHidden:boolean;
+      //-------------------------
+      resultAsList:P_listLiteral;
+      attributeList:P_listLiteral;
+
+  PROCEDURE appendKeyValuePair(CONST key:string; CONST value:P_literal);
+    VAR subList:P_listLiteral;
+    begin
+      subList:=newListLiteral;
+      subList^.append(newStringLiteral(key),false);
+      subList^.append(value,false);
+      resultAsList^.append(subList,false);
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      getFileInfo(P_stringLiteral(params^.value(0))^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      resultAsList:=newListLiteral;
+      appendKeyValuePair('exists',newBoolLiteral(isExistent));
+      if isExistent then begin
+        if size>=0 then appendKeyValuePair('size',newIntLiteral(size));
+        if time<>-1 then appendKeyValuePair('time',newRealLiteral(time));
+        attributeList:=newListLiteral;
+        if isArchive   then attributeList^.append(newStringLiteral('archive'  ),false);
+        if isDirectory then attributeList^.append(newStringLiteral('directory'),false);
+        if isReadOnly  then attributeList^.append(newStringLiteral('readonly' ),false);
+        if isSystem    then attributeList^.append(newStringLiteral('system'   ),false);
+        if isHidden    then attributeList^.append(newStringLiteral('hidden'   ),false);
+        appendKeyValuePair('attributes',attributeList);
+      end;
+      result:=resultAsList;
+    end else raiseNotApplicableError('fileInfo',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1314,6 +1357,7 @@ INITIALIZATION
   registerRule('format'        ,@format_imp        ,true,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule('printf'        ,@printf_imp        ,false,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
   registerRule('deleteFile',@deleteFile_imp,false,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
+  registerRule('fileInfo',@fileInfo_imp,false,'fileInfo(filename:string);#Retuns file info as a key-value-list');
 
 FINALIZATION
   {$ifdef debugMode}
