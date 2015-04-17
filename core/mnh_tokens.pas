@@ -761,7 +761,6 @@ PROCEDURE findAndDocumentAllPackages;
 {$undef include_implementation}
 INITIALIZATION
 {$define include_initialization}
-  mainThread:=ThreadId;
   mainPackageProvider.create;
   mainPackage.create(@mainPackageProvider);
   setLength(secondaryPackages,0);

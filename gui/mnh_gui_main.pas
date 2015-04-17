@@ -367,19 +367,19 @@ PROCEDURE TMnhForm.doPlot;
   end;
 
 PROCEDURE TMnhForm.pullPlotSettingsToGui;
-begin
-  miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
-  miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
-  miXFinerGrid.Checked    :=(activePlot.axisStyle['x'] and C_finerGrid)=C_finerGrid;
-  miYTics.Checked         :=(activePlot.axisStyle['y'] and C_tics)=C_tics;
-  miYGrid.Checked         :=(activePlot.axisStyle['y'] and C_grid)=C_grid;
-  miYFinerGrid.Checked    :=(activePlot.axisStyle['y'] and C_finerGrid)=C_finerGrid;
-  miPreserveAspect.Checked:=activePlot.preserveAspect;
-  miAutoscaleX.Checked    :=activePlot.autoscale['x'];
-  miAutoscaleY.Checked    :=activePlot.autoscale['y'];
-  miLogscaleX.Checked     :=activePlot.logscale['x'];
-  miLogscaleY.Checked     :=activePlot.logscale['y'];
-end;
+  begin
+    miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
+    miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
+    miXFinerGrid.Checked    :=(activePlot.axisStyle['x'] and C_finerGrid)=C_finerGrid;
+    miYTics.Checked         :=(activePlot.axisStyle['y'] and C_tics)=C_tics;
+    miYGrid.Checked         :=(activePlot.axisStyle['y'] and C_grid)=C_grid;
+    miYFinerGrid.Checked    :=(activePlot.axisStyle['y'] and C_finerGrid)=C_finerGrid;
+    miPreserveAspect.Checked:=activePlot.preserveAspect;
+    miAutoscaleX.Checked    :=activePlot.autoscale['x'];
+    miAutoscaleY.Checked    :=activePlot.autoscale['y'];
+    miLogscaleX.Checked     :=activePlot.logscale['x'];
+    miLogscaleY.Checked     :=activePlot.logscale['y'];
+  end;
 
 PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
   VAR aidX,aidY:longint;

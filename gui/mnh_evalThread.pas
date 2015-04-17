@@ -97,7 +97,6 @@ FUNCTION main(p:pointer):ptrint;
     result:=0;
     evaluationState.value:=es_idle;
     updateCompletionList;
-    mainThread:=ThreadId;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         preEval;

@@ -106,12 +106,6 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
   VAR opt: T_arrayOfString;
       i: longint;
   begin
-    if threadId<>MainThread then begin
-      raiseError(el3_evalError,
-        'I/O functions (fileContents in this case) may only be called from the main thread',
-        tokenLocation);
-      exit(nil);
-    end;
     result := nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_string) then
