@@ -42,11 +42,6 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
   VAR opt: T_arrayOfString;
       i: longint;
   begin
-    if threadId<>MainThread then
-      begin
-      raiseError(el3_evalError, 'I/O functions (ask in this case) may only be called from the main thread', tokenLocation);
-      exit(nil);
-      end;
     result := nil;
     if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_string) then result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value)) else if (params<>nil) and (params^.size = 2) and (params^.value(0)^.literalType = lt_string) and (params^.value(1)^.literalType = lt_stringList) then
       begin

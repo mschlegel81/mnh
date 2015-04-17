@@ -60,7 +60,6 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE fileMode;
     begin
-      mainThread:=threadId;
       mainPackageProvider.setPath(fileToInterpret);
       if wantHelpDisplay then begin
         displayHelp;

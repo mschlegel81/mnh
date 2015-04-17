@@ -122,7 +122,7 @@ TYPE
   end;
 
   T_plot = object(T_serializable)
-    private
+    //private
       //non-persistent:
       screenWidth, screenHeight: longint;
       xOffset, yOffset: longint;
@@ -139,7 +139,7 @@ TYPE
       FUNCTION oex(CONST x: double): double;
       FUNCTION oly(CONST y: double): double;
       FUNCTION oey(CONST y: double): double;
-    public
+    //public
       CONSTRUCTOR createWithDefaults;
       PROCEDURE setDefaults;
       DESTRUCTOR destroy;
