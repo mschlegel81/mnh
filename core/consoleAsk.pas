@@ -2,6 +2,7 @@ UNIT consoleAsk;
 INTERFACE
 USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters, myGenerics;
 IMPLEMENTATION
+VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;
   begin
     writeln(' ?> ', question);
@@ -43,16 +44,20 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       i: longint;
   begin
     result := nil;
-    if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_string) then result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value)) else if (params<>nil) and (params^.size = 2) and (params^.value(0)^.literalType = lt_string) and (params^.value(1)^.literalType = lt_stringList) then
-      begin
+    if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_string) then result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value)) else if (params<>nil) and (params^.size = 2) and (params^.value(0)^.literalType = lt_string) and (params^.value(1)^.literalType = lt_stringList) then begin
+      system.EnterCriticalsection(cs);
       setLength(opt, P_listLiteral(params^.value(1))^.size);
       for i := 0 to length(opt)-1 do opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value, opt));
-      end
+      system.LeaveCriticalsection(cs);
+    end
     else raiseNotApplicableError('ask', params, tokenLocation);
   end;
 
 INITIALIZATION
+  system.InitCriticalSection(cs);
   registerRule('ask', @ask_impl, false,'ask(q:string);#Asks the user question q and returns the user input#'+
     'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
+FINALIZATION;
+  system.DoneCriticalsection(cs);
 end.

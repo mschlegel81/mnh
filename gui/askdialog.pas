@@ -36,7 +36,7 @@ VAR
 
 FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
 IMPLEMENTATION
-
+VAR cs:TRTLCriticalSection;
 {$R *.lfm}
 
 { TaskForm }
@@ -108,24 +108,31 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and
-      (params^.value(0)^.literalType = lt_string) then
-      begin
+      (params^.value(0)^.literalType = lt_string) then begin
+      system.EnterCriticalsection(cs);
       askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
-      end
+      system.LeaveCriticalsection(cs);
+    end
     else if (params<>nil) and (params^.size = 2) and
       (params^.value(0)^.literalType = lt_string) and
-      (params^.value(1)^.literalType = lt_stringList) then
-      begin
+      (params^.value(1)^.literalType = lt_stringList) then begin
+      system.EnterCriticalsection(cs);
       setLength(opt, P_listLiteral(params^.value(1))^.size);
       for i := 0 to length(opt)-1 do
         opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
-
-
-      end
+      system.LeaveCriticalsection(cs);
+    end
     else raiseNotApplicableError('ask', params, tokenLocation);
   end;
+
+INITIALIZATION
+  system.InitCriticalSection(cs);
+
+FINALIZATION
+  system.DoneCriticalsection(cs);
+
 
 end.
