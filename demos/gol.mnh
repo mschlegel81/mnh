@@ -9,7 +9,6 @@ shift(di,dj)->flatten(each(i,[0..worldHeight-1],
                       each(j,[0..worldWidth-1],((i+di+worldHeight) mod worldHeight)*worldWidth+
                                                 (j+dj+worldWidth)  mod worldWidth )));
 
-
 neighbors(w)->w%shift(-1,-1)+w%shift( 0,-1)+w%shift( 1,-1)+
               w%shift(-1, 0)+               w%shift( 1, 0)+
               w%shift(-1, 1)+w%shift( 0, 1)+w%shift( 1, 1);
@@ -24,16 +23,32 @@ play->play(initWorld);
 play(w)->print("\n\n\n")|printWorld(w)|sleep(0.1)|play(step(w));
 
 mutable sleepTime:=0.1;
+mutable wantQuit:=false;
 
+playUntilStatic(w)->begin
+  local world:=w;
+  while(not(wantQuit),begin
+    clearPrint;
+    printWorld(world);
+    sleep(sleepTime);
+    local newWorld:=step(world);
+    world==newWorld ? wantQuit:=true : void;
+    world:=newWorld;
+    void;
+  end);
+end;
 
-playUntilStatic(w)->clearPrint|printWorld(w)|sleep(sleepTime)|playUntilStatic(w,step(w));
-playUntilStatic(w,w)->void;
-playUntilStatic(w,w2)->playUntilStatic(w2);
-
-playSteps(w,n>0)->print("\n\n\n")|printWorld(w)|sleep(sleepTime)|playSteps(step(w),n-1);
-playSteps(w,n)->void;
+playSteps(w,n>0)->begin
+  local world:=w;
+  each(i,[1..n],begin
+    printWorld(world);
+    sleep(sleepTime);
+    world:=step(world);
+    void;
+  end);
+end;
 
 main->(sleepTime:=0) | playSteps(initWorld,10);
 main("-nowait",...)->(sleepTime:=0) | main@(tail($params));
-main("-long")->playUntilStatic(initWorld);
+main("-long")->pEach(task,[{playUntilStatic(initWorld)},{begin ask('Press Enter to quit.'); wantQuit:=true; end}],task());
 main(steps)->playSteps(initWorld,softCast(steps));

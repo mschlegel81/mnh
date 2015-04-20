@@ -51,3 +51,6 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->
             end) |
   [turtlePos];
 end;
+
+//*For reg-test
+main->setPlotAxisStyle([0,0]) and plot(turtle(0,59,'F',each(i,[1..100],&,repeat('F',i),'+'))) and renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
