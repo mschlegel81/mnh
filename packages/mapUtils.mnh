@@ -1,0 +1,31 @@
+
+contains([]    ,key       )->false;
+contains(L:list,key:string)->trueCount(L%%0=key)>0;
+get(L:list,key:string)->l%key;
+put(L:list,key:string,value)->contains(L,key)
+  ? each(e,L,e%0=key ? [key,value] : e)
+  : L | [[key,value]];
+
+niceForm(L)->begin
+  local result:="";
+  local indent:=0;
+  each(t,tokenSplit(string(L),'mnh'),begin
+    t='[' ? begin
+      indent:=indent+2;
+      result:=result&' [';
+    end : t=',' ? begin
+      result:=result&t&"\n"&repeat(' ',indent);
+    end : t=']' ? begin
+      result:=result&t;
+      indent:=indent-2;
+    end : result:=result&t;
+    void;
+  end);
+  result;
+end;
+
+print(fileInfo(myPath));
+
+each(e,fileInfo(myPath),print(e));
+
+print(niceForm([["exists",true],["size",280],["time",42111.6215046296],["attributes",["archive",'hidden']]]));
