@@ -163,6 +163,7 @@ TYPE
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction
       );
     PROCEDURE Splitter1Moved(Sender: TObject);
+    procedure Splitter2Moved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
       SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
@@ -177,10 +178,12 @@ TYPE
     doNotEvaluateBefore:double;
     doNotMarkWordBefore:double;
     needMarkPaint:boolean;
+    autosizingEnabled:boolean;
 
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
-    PROCEDURE flushThroughput;
+    PROCEDURE autosizeBlocks(CONST forceOutputFocus:boolean);
+    FUNCTION flushThroughput:boolean;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
 
@@ -249,22 +252,64 @@ PROCEDURE logError(CONST error:T_storedError);
     errorThroughput.append(error);
   end;
 
-PROCEDURE TMnhForm.flushThroughput;
+PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
   CONST SAMPLE_TEXT='1!gPQ|';
-  VAR i:longint;
-      r0:longint;
-      changed_:boolean=false;
+  VAR i,
       idealInputHeight,
       idealOutputHeight,
       idealErrorHeight,
       idealTotalHeight,
       availableTotalHeight:longint;
+
   begin
+    if autosizingEnabled then begin
+      UpdateTimeTimer.Interval:=200;
+      errorStringGrid.AutoSizeColumns;
+
+      if errorStringGrid.RowCount=0
+      then idealErrorHeight:=0
+      else idealErrorHeight:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
+
+      idealInputHeight :=InputEdit .Font.GetTextHeight(SAMPLE_TEXT)*InputEdit .Lines.Count;
+      idealOutputHeight:=OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*OutputEdit.Lines.Count;
+      availableTotalHeight:=InputEdit.Height+OutputEdit.Height+ErrorGroupBox.Height;
+      if InputEdit.Focused and not forceOutputFocus then idealInputHeight:=idealInputHeight*2;
+      if OutputEdit.Focused and not forceOutputFocus then idealOutputHeight:=idealOutputHeight*2;
+      if errorStringGrid.Focused or forceOutputFocus then idealErrorHeight:=idealErrorHeight*2;
+
+      for i:=0 to 3 do begin
+
+        idealTotalHeight :=idealInputHeight+idealOutputHeight+idealErrorHeight;
+        idealInputHeight :=round(idealInputHeight*availableTotalHeight/idealTotalHeight);
+
+        if idealOutputHeight<0.2*availableTotalHeight then idealOutputHeight:=round(0.2*availableTotalHeight);
+        if idealInputHeight <0.2*availableTotalHeight then idealInputHeight :=round(0.2*availableTotalHeight);
+        if idealErrorHeight >0.5*availableTotalHeight then idealErrorHeight :=round(0.5*availableTotalHeight);
+      end;
+      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.Height*0.8);
+      idealErrorHeight:=round(idealErrorHeight*0.2+ErrorGroupBox.Height*0.8);
+
+      //if      idealInputHeight<InputEdit.Height-10 then idealInputHeight:=InputEdit.Height-10
+      //else if idealInputHeight>InputEdit.Height+10 then idealInputHeight:=InputEdit.Height+10;
+      //if      idealErrorHeight<ErrorGroupBox.Height-10 then idealErrorHeight:=ErrorGroupBox.Height-10
+      //else if idealErrorHeight>ErrorGroupBox.Height+10 then idealErrorHeight:=ErrorGroupBox.Height+10;
+      InputEdit    .Height:=idealInputHeight;
+      ErrorGroupBox.Height:=idealErrorHeight;
+      if PopupNotifier1.Visible then positionHelpNotifier;
+    end;
+
+  end;
+
+FUNCTION TMnhForm.flushThroughput:boolean;
+  VAR i:longint;
+      r0:longint;
+  begin
+    result:=false;
     //--------------------------------------------------------------------------
     if wantClear.value then begin
       wantClear.value:=false;
       OutputEdit.ClearAll;
-      changed_:=true;
+      result:=true;
     end;
     //--------------------------------------------------------------------------
     if output.size>0 then begin
@@ -276,7 +321,7 @@ PROCEDURE TMnhForm.flushThroughput;
       OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
       OutputEdit.EndUpdate;
-      changed_:=true;
+      result:=true;
     end;
     //--------------------------------------------------------------------------
     r0:=errorStringGrid.RowCount;
@@ -284,7 +329,6 @@ PROCEDURE TMnhForm.flushThroughput;
     errorStringGrid.RowCount:=r0+errorThroughput.size;
     for i:=0 to errorThroughput.size-1 do with errorThroughput[i] do begin
       if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
-      changed_:=true;
       errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
       errorStringGrid.Cells[1,i+r0]:=errorMessage;
       if errorLocation.provider<>nil then try
@@ -300,30 +344,6 @@ PROCEDURE TMnhForm.flushThroughput;
     end;
     errorThroughput.clear;
     errorThroughput.unlock;
-    changed_:=changed_ or ((errorStringGrid.Height=0) xor (errorStringGrid.RowCount=0));
-    if changed_ then begin
-      UpdateTimeTimer.Interval:=200;
-      errorStringGrid.AutoSizeColumns;
-
-      if errorStringGrid.RowCount=0
-      then idealErrorHeight:=0
-      else idealErrorHeight:=round(errorStringGrid.DefaultRowHeight*(1.5+errorStringGrid.RowCount));
-
-      idealInputHeight :=InputEdit .Font.GetTextHeight(SAMPLE_TEXT)*InputEdit .Lines.Count;
-      idealOutputHeight:=OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*OutputEdit.Lines.Count;
-      availableTotalHeight:=InputEdit.Height+OutputEdit.Height+ErrorGroupBox.Height;
-      for i:=0 to 3 do begin
-
-        idealTotalHeight :=idealInputHeight+idealOutputHeight+idealErrorHeight;
-        idealInputHeight :=round(idealInputHeight*availableTotalHeight/idealTotalHeight);
-
-        if idealOutputHeight<0.2*availableTotalHeight then idealOutputHeight:=round(0.2*availableTotalHeight);
-        if idealInputHeight <0.2*availableTotalHeight then idealInputHeight :=round(0.2*availableTotalHeight);
-        if idealErrorHeight >0.5*availableTotalHeight then idealErrorHeight :=round(0.5*availableTotalHeight);
-      end;
-      InputEdit    .Height:=idealInputHeight;
-      ErrorGroupBox.Height:=idealErrorHeight;
-    end;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -429,6 +449,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.startOfEvaluation;
   begin
+    autosizingEnabled:=true;
     MnhForm.doConditionalPlotReset;
     errorThroughput.clear;
     MnhForm.OutputEdit.Lines.Clear;
@@ -439,6 +460,7 @@ PROCEDURE TMnhForm.startOfEvaluation;
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   begin
+    autosizingEnabled:=true;
     needEvaluation:=false;
     needMarkPaint:=false;
     doNotEvaluateBefore:=now;
@@ -852,26 +874,30 @@ PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
     end;
   end;
 
-PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-begin
-  with plotSubsystem do if mouseUpTriggersPlot then begin
-    pullPlotSettingsToGui();
-    lastMouseX:=x;
-    lastMouseY:=y;
-    doPlot();
+PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+  begin
+    with plotSubsystem do if mouseUpTriggersPlot then begin
+      pullPlotSettingsToGui();
+      lastMouseX:=x;
+      lastMouseY:=y;
+      doPlot();
+    end;
   end;
-end;
 
-PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
-  VAR CloseAction: TCloseAction);
-begin
-  miHelp.Checked:=false;
-end;
+PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
+  begin
+    miHelp.Checked:=false;
+  end;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
+    autosizingEnabled:=false;
+  end;
+
+PROCEDURE TMnhForm.Splitter2Moved(Sender: TObject);
+  begin
+    autosizingEnabled:=false;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
@@ -941,7 +967,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
-    flushThroughput;
+    autosizeBlocks(flushThroughput);
 
     if ((plotSubsystem.state=pss_plotAfterCalculation) or
         (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and

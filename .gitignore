@@ -25,3 +25,5 @@ regTest/*.log.1
 doc/builtin.html
 doc/packages.html
 regTest/passedTests.dat
+
+gui/lib/x86_64-win64/*

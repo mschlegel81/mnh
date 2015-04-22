@@ -15,7 +15,7 @@ object MnhForm: TMnhForm
   OnKeyPress = FormKeyPress
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.2.2.0'
+  LCLVersion = '1.2.6.0'
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
@@ -539,7 +539,7 @@ object MnhForm: TMnhForm
       end
       inline OutputEdit: TSynEdit
         Left = 0
-        Height = 68
+        Height = 65
         Top = 155
         Width = 471
         Align = alClient
@@ -1062,10 +1062,11 @@ object MnhForm: TMnhForm
       object Splitter2: TSplitter
         Cursor = crVSplit
         Left = 0
-        Height = 2
-        Top = 223
+        Height = 5
+        Top = 220
         Width = 471
         Align = alBottom
+        OnMoved = Splitter2Moved
         ResizeAnchor = akBottom
       end
     end

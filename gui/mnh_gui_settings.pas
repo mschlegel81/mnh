@@ -45,7 +45,6 @@ TYPE
     instantEvaluation: boolean;
     resetPlotOnEvaluation: boolean;
 
-
     fileContents: T_arrayOfString;
     fileHistory: array[0..9] of ansistring;
 
