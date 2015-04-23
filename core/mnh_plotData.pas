@@ -1965,7 +1965,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
             then activePlot.row[rowId].addSample(fReal(Y^.value(0)), fReal(Y^.value(1)))
             else activePlot.row[rowId].addSample(Nan, Nan);
           end else activePlot.row[rowId].addSample(Nan, Nan);
-        result:=newBoolLiteral(true);
+        result:=newVoidLiteral;
       end else if (sizeWithoutOptions = 1) and
                   (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) then
         begin
@@ -1973,7 +1973,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         X:=P_listLiteral(params^.value(0));
         for i:=0 to X^.size-1 do
           activePlot.row[rowId].addSample(i, fReal(X^.value(i)));
-        result:=newBoolLiteral(true);
+        result:=newVoidLiteral;
         end
       else if (sizeWithoutOptions = 2) and
               (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) and
@@ -1983,7 +1983,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         Y:=P_listLiteral(params^.value(1));
         iMax:=Min(X^.size, Y^.size);
         for i:=0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
-        result:=newBoolLiteral(true);
+        result:=newVoidLiteral;
       end else if (sizeWithoutOptions = 4) and
                   (params^.value(0)^.literalType = lt_expression) and
                   (params^.value(1)^.literalType in [lt_int, lt_real]) and
@@ -2005,7 +2005,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           recycler);
         if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
         recycler.destroy;
-        result:=newBoolLiteral(true);
+        result:=newVoidLiteral;
       end else if (sizeWithoutOptions = 5) and
                   (params^.value(0)^.literalType = lt_expression) and
                   (params^.value(1)^.literalType = lt_expression) and
@@ -2025,7 +2025,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
           recycler);
         if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
         recycler.destroy;
-        result:=newBoolLiteral(true);
+        result:=newVoidLiteral;
       end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
                                                 tokenLocation);
@@ -2038,7 +2038,7 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation)
     system.EnterCriticalsection(plotCS);
     activePlot.Clear;
     if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
-    then result:=newBoolLiteral(true)
+    then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation);
     system.LeaveCriticalsection(plotCS);
   end;
@@ -2053,7 +2053,7 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       activePlot.setAutoscale(
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
-      result:=newBoolLiteral(true);
+      result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else
       raiseError(el3_evalError,
@@ -2076,7 +2076,7 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
       activePlot.setLogscale(P_boolLiteral(
         P_listLiteral(params^.value(0))^.value(0))^.value,
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
-      result:=newBoolLiteral(true);
+      result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else
       raiseError(el3_evalError,
@@ -2110,7 +2110,7 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         if not (IsNan(x0)) and not (IsInfinite(x0)) and not (IsNan(x1)) and  not (IsInfinite(x1)) and not (IsNan(y0)) and not (IsInfinite(y0)) and  not (IsNan(y1)) and not (IsInfinite(y1)) then begin
           system.EnterCriticalsection(plotCS);
           activePlot.setRange(x0, y0, x1, y1);
-          result:=newBoolLiteral(true);
+          result:=newVoidLiteral;
           system.LeaveCriticalsection(plotCS);
         end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
       end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
@@ -2132,7 +2132,7 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       activePlot.setAxisStyle(
         P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
         P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
-      result:=newBoolLiteral(true);
+      result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else raiseError(el3_evalError, 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
   end;
@@ -2149,7 +2149,7 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
       (params^.value(0)^.literalType = lt_boolean) then begin
       system.EnterCriticalsection(plotCS);
       activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
-      result:=newBoolLiteral(true);
+      result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else raiseError(el3_evalError,'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
@@ -2203,7 +2203,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       storeImage.Free;
 
       plotImage.Free;
-      result:=newBoolLiteral(true);
+      result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else
       raiseError(el3_evalError,
@@ -2239,15 +2239,15 @@ INITIALIZATION
   mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,
     'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
   mnh_funcs.registerRule('setPlotLogscale', @setLogscale,
-    'setPlotLogscale([forX,forY]);#Sets log-scale per axis and returns true#Expects a tuple of two booleans as parameter.');
+    'setPlotLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
   mnh_funcs.registerRule('getPlotLogscale', @getLogscale,
     'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
   mnh_funcs.registerRule('setPlotRange', @setPlotRange,
-    'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot and returns true.');
+    'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
   mnh_funcs.registerRule('getPlotRange', @getPlotRange,
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
   mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
-    'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true. #valid options are:'+
+    'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
     '#  0; //no tics, no grid#  1; //tics, no gris'+
     '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
     '#  6; //no tics, finer grid#  7; //tics and finer grid');

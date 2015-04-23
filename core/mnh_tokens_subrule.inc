@@ -184,7 +184,8 @@ FUNCTION T_subrule.needEmbrace:boolean;
       tt_typeCheckNumeric, tt_typeCheckNumList,
       tt_typeCheckExpression,
       tt_typeCheckNonemptyList,
-      tt_typeCheckEmptyList: if length(bracketStack)=0 then result:=true;
+      tt_typeCheckEmptyList,
+      tt_typeCheckKeyValueList: if length(bracketStack)=0 then result:=true;
     end;
     checkStackAtEnd;
   end;

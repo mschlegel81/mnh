@@ -145,6 +145,7 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:bool
       L:=par.value(i);
       with sig[i] do case restrictionType of
         tt_typeCheckScalar..tt_typeCheckEmptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
+        tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) or not(P_listLiteral(L)^.isKeyValueList) then exit(false) ;
         tt_comparatorEq..tt_comparatorGrt:
           if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
             if restrictionIdx<0 then begin
@@ -204,7 +205,8 @@ FUNCTION T_pattern.toString:ansistring;
         tt_typeCheckNumList   ,
         tt_typeCheckExpression  ,
         tt_typeCheckNonemptyList,
-        tt_typeCheckEmptyList   : result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]);
+        tt_typeCheckEmptyList,
+        tt_typeCheckKeyValueList: result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]);
         tt_comparatorEq,
         tt_comparatorNeq,
         tt_comparatorLeq,

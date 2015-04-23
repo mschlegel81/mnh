@@ -368,7 +368,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       ':': if startsWith(line,':=') then begin
              parsedLength:=2;
              result.tokType:=tt_assign;
-           end else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r']) then begin
+           end else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r','k']) then begin
              id:=leadingId(false);
              parsedLength:=length(id);
              if      id=C_tokenString[tt_typeCheckBoolList  ] then result.tokType:=tt_typeCheckBoolList
@@ -384,6 +384,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              else if id=C_tokenString[tt_typeCheckString    ] then result.tokType:=tt_typeCheckString
              else if id=C_tokenString[tt_typeCheckRealList  ] then result.tokType:=tt_typeCheckRealList
              else if id=C_tokenString[tt_typeCheckReal      ] then result.tokType:=tt_typeCheckReal
+             else if id=C_tokenString[tt_typeCheckKeyValueList] then result.tokType:=tt_typeCheckKeyValueList
              else begin
                parsedLength:=1;
                result.tokType:=tt_iifElse;
@@ -1123,6 +1124,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       profiler.Start;
       {$endif}
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
+      if checkResult and (first^.next^.tokType=tt_typeCheckKeyValueList) then
+        checkResult:=checkResult and P_listLiteral(first^.data)^.isKeyValueList;
       first^.next:=recycler.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
@@ -1199,7 +1202,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         {$endif}
       end else if tt=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
-      else if tt in [tt_typeCheckScalar..tt_typeCheckEmptyList]                  then applyCheck
+      else if tt in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else stack_push_push;
     end;
 
@@ -1234,7 +1237,7 @@ tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParamet
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: stack_push_push;
 tt_iifCheck: stack_push;
-tt_typeCheckScalar..tt_typeCheckEmptyList: applyCheck}
+tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
   stack_popDestroy;

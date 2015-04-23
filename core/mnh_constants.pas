@@ -51,6 +51,7 @@ TYPE
     tt_typeCheckExpression,
     tt_typeCheckNonemptyList,
     tt_typeCheckEmptyList,
+    tt_typeCheckKeyValueList,
     tt_semicolon,
     tt_optionalParameters,
     //modifiers:
@@ -96,7 +97,7 @@ CONST
     5,                   //special: string concatenation
     0, 0, 0, 0, 1, 7);   //list operators
 
-  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckEmptyList] of set of T_literalType =
+  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckKeyValueList] of set of T_literalType =
     {tt_typeCheckScalar}      ([lt_boolean, lt_int, lt_real, lt_string],
     {tt_typeCheckList}         [lt_list..lt_flatList],
     {tt_typeCheckBoolean}      [lt_boolean],
@@ -111,7 +112,8 @@ CONST
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckNonemptyList} [lt_list..lt_stringList, lt_flatList],
-    {tt_typeCheckEmptyList}    [lt_emptyList]);
+    {tt_typeCheckEmptyList}    [lt_emptyList],
+    {tt_typeCheckKeyValueList} [lt_list, lt_emptyList]);
 
   C_tokenString: array[T_tokenType] of ansistring = ('','',
     //identifier and resolved identifiers
@@ -152,6 +154,7 @@ CONST
     ':expression',
     '<>[]',
     '=[]',
+    ':keyValueList',
     //special: [E]nd [O]f [L]ine
     ';',
     '...',
@@ -257,6 +260,7 @@ CONST
     'type check: expression#matches to expressions',
     'type check: nonempty list#matches to all non-empty lists',
     'type check: empty list#matches only to the empty list',
+    'type check: key-value-list#matches (nonempty) key-value lists',
     'semicolon#marks the end of a statement, assignment or declaration',
     'optional parameters#can be used inside a pattern declaration to denote further optional parameters',
     'private modifier#hides the subrule from all importing packages',
