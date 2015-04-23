@@ -52,7 +52,7 @@ PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
 FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
-PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
 
 VAR mainPackageProvider:T_codeProvider;
 
@@ -363,7 +363,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
 
         if (usecase<>lu_forDocGeneration) or ruleIsMutable then begin
           rulePattern.toParameterIds(ruleBody);
-          reduceExpression(ruleBody,not(evaluateBody),0,recycler);
+          if evaluateBody then reduceExpression(ruleBody,0,recycler);
         end;
 
         if   errorLevel<el3_evalError then begin
@@ -404,7 +404,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if (usecase=lu_forDirectExecution) or (batchMode) then begin
           predigest(first,@self,recycler);
           writeExprEcho(tokensToString(first));
-          reduceExpression(first,false,0,recycler);
+          reduceExpression(first,0,recycler);
           if first<>nil then writeExprOut(tokensToString(first));
         end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
       end;
@@ -659,7 +659,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
       t^.tokType:=tt_localUserRulePointer;
       t^.data:=mainRule;
       t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
-      reduceExpression(t,false,0,recycler);
+      reduceExpression(t,0,recycler);
       //special handling if main returns an expression:
       if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
          (P_literal(t^.data)^.literalType=lt_expression) then begin

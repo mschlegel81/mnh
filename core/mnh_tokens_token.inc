@@ -576,7 +576,6 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
     recycler.disposeToken(t); //dispose closing curly bracket
-    reduceExpression(inlineRule,true,0,recycler);
     if   errorLevel<=el2_warning then begin
       new(inlineSubRule,createFromInline(inlineRule,recycler));
       if   errorLevel<=el2_warning then begin
@@ -589,7 +588,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
     {$endif}
   end;
 
-PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST callDepth:word; VAR recycler:T_tokenRecycler);
+PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
@@ -687,7 +686,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
             setLength(bodyPart,length(bodyPart)+1);
             bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-          end else if pureOnly and (t^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_mutate]) then exit(false);
+          end;
           p:=t; t:=t^.next;
         end;
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
@@ -710,7 +709,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
         aggregatorPresent:=no;
         t:=bodyPart[0,0];
         if t^.tokType=tt_aggregatorConstructor then begin
-          reduceExpression(bodyPart[0,0],pureOnly,callDepth+1,recycler);
+          reduceExpression(bodyPart[0,0],callDepth+1,recycler);
           bodyPart[0,1]:=bodyPart[0,0]^.last;
           t:=bodyPart[0,0];
         end;
@@ -930,7 +929,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
             setLength(bodyPart,length(bodyPart)+1);
             bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-          end else if pureOnly and (t^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_mutate]) then exit(false);
+          end;
           p:=t; t:=t^.next;
         end;
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
@@ -1009,14 +1008,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if (first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) and not(pureOnly) then begin
+      if (first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
         if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
           if parameterListLiteral=nil
           then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
-      end else if (first^.tokType=tt_rulePutCacheValue) and not(pureOnly) then begin
+      end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
@@ -1026,7 +1025,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           parameterListLiteral^.value(0)^.rereference;
           lastReplace:=firstReplace;
         end else raiseError(el3_evalError,'Aggregators can only be constructed from expression literals!',first^.location);
-      end else if (first^.tokType=tt_intrinsicRulePointer) and (not(pureOnly) or (pureIntrinsicFunctions.contains(first^.data)))  then begin
+      end else if (first^.tokType=tt_intrinsicRulePointer) then begin
         {$ifdef PROFILING}
         profiler.Clear;
         profiler.Start;
@@ -1044,12 +1043,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST pureOnly:boolean; CONST call
           else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
-      end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) and not(pureOnly) then begin
+      end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
       end else begin
-        if not(pureOnly) then raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
+        raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
       recycler.disposeToken(first);
@@ -1377,7 +1376,7 @@ end}
               stack_popLink;
               applyMutation;
             end;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
               stack_popLink;
               applyMutation;
             end;
@@ -1394,7 +1393,7 @@ end}
               stack_popLink;
               applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
             end;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
               stack_popLink;
               applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
             end;
@@ -1405,7 +1404,7 @@ end}
             COMMON_SEMICOLON_HANDLING;
           end;
         end;
-        tt_procedureBlockBegin: if not(pureOnly) then begin
+        tt_procedureBlockBegin: begin
           recycler.scopePush;
           stack_push;
           didSubstitution:=true;
@@ -1430,24 +1429,13 @@ end}
             didSubstitution:=true;
           end else raiseError(el3_evalError,'Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
-        //  if
-        //  case cTokType[2] of
-        //    tt_comparatorEq..tt_operatorIn: begin stack_push; stack_push_push; end;
-        //    tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: if not(pureOnly) then begin
-        //      stack_popLink;
-        //      applyMutation;
-        //    end;
-        //  end;
-        //end else begin
-        //
-        //end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
         tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack_push; end;
         tt_unaryOpPlus, tt_unaryOpMinus: stack_push;
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
           raiseError(el3_evalError,'Undefined prefix operator '+first^.singleTokenToString,first^.location);
         tt_braceOpen: stack_push;
-        tt_expBraceOpen: if not(pureOnly) then begin
+        tt_expBraceOpen: begin
           digestInlineExpression(first,recycler);
           didSubstitution:=true;
         end;
@@ -1472,7 +1460,7 @@ end}
         tt_list_constructor: stack_push;
         tt_identifier: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
-          P_package(first^.data)^.resolveRuleId(first^,pureOnly);
+          P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
@@ -1483,7 +1471,7 @@ end}
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon: applyRule(nil,first^.next);
         end;
-        tt_procedureBlockWhile: if not(pureOnly) and (cTokType[1]=tt_braceOpen) then begin
+        tt_procedureBlockWhile: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=recycler.disposeToken(first^.next);
           resolveWhile;
         end;
@@ -1500,7 +1488,7 @@ end}
       end;
     end;
     if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
-    or (callDepth=0) and (first<>nil) and (first^.next<>nil) and not(pureOnly) then writeInterpreterState;
+    or (callDepth=0) and (first<>nil) and (first^.next<>nil) then writeInterpreterState;
 
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)

@@ -2215,7 +2215,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
 INITIALIZATION
   system.InitCriticalSection(plotCS);
   activePlot.createWithDefaults;
-  mnh_funcs.registerRule('plot', @plot,false,
+  mnh_funcs.registerRule('plot', @plot,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'+
@@ -2230,34 +2230,34 @@ INITIALIZATION
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]');
-  mnh_funcs.registerRule('addPlot', @addPlot,false,
+  mnh_funcs.registerRule('addPlot', @addPlot,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
-  mnh_funcs.registerRule('setPlotAutoscale', @setAutoscale,false,
+  mnh_funcs.registerRule('setPlotAutoscale', @setAutoscale,
     'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,false,
+  mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,
     'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule('setPlotLogscale', @setLogscale,false,
+  mnh_funcs.registerRule('setPlotLogscale', @setLogscale,
     'setPlotLogscale([forX,forY]);#Sets log-scale per axis and returns true#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule('getPlotLogscale', @getLogscale,false,
+  mnh_funcs.registerRule('getPlotLogscale', @getLogscale,
     'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule('setPlotRange', @setPlotRange,false,
+  mnh_funcs.registerRule('setPlotRange', @setPlotRange,
     'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot and returns true.');
-  mnh_funcs.registerRule('getPlotRange', @getPlotRange,false,
+  mnh_funcs.registerRule('getPlotRange', @getPlotRange,
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
-  mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,false,
+  mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
     'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot and returns true. #valid options are:'+
     '#  0; //no tics, no grid#  1; //tics, no gris'+
     '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
     '#  6; //no tics, finer grid#  7; //tics and finer grid');
-  mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,false,
+  mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,
     'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
-  mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,false,
+  mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,
     'setPlotPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
-  mnh_funcs.registerRule('getPlotPreserveAspect', @getPreserveAspect,false,
+  mnh_funcs.registerRule('getPlotPreserveAspect', @getPreserveAspect,
     'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
-  mnh_funcs.registerRule('renderToFile', @renderToFile_impl,false,
+  mnh_funcs.registerRule('renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,
     exOverflow, exUnderflow, exPrecision]);

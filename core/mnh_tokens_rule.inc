@@ -110,7 +110,7 @@ exit}
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin CLEAN_EXIT(true); end;
-          if (errorLevel<el3_evalError) then reduceExpression(firstRep,false,callDepth+1,recycler);
+          if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
           if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,binIdx,lit);
@@ -131,7 +131,7 @@ exit}
           if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
           else begin
             system.EnterCriticalSection(rule_cs);
-            reduceExpression(firstRep,false,callDepth+1,recycler);
+            reduceExpression(firstRep,callDepth+1,recycler);
             lastRep:=firstRep^.last;
             system.LeaveCriticalSection(rule_cs);
           end;

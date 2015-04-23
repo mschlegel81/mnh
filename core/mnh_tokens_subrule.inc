@@ -473,7 +473,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,false,callDepth+1,recycler);
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -493,7 +493,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     param.create;
     param.append(x,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,false,callDepth+1,recycler);
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
@@ -515,7 +515,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
     param.append(x,true);
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,false,callDepth+1,recycler);
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
       then begin
         result:=P_boolLiteral(firstRep^.data)^.value;
@@ -536,7 +536,7 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
     param.append(x,true);
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,false,callDepth+1,recycler);
+      reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
