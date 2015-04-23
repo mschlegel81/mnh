@@ -12,7 +12,6 @@
       subrules:array of P_subrule;
     public
       CONSTRUCTOR create(CONST ruleId:ansistring);
-      CONSTRUCTOR createClone(VAR original:T_rule);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
@@ -33,17 +32,6 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
     ruleType:=rt_normal;
     id:=ruleId;
     setLength(subrules,0);
-  end;
-
-CONSTRUCTOR T_rule.createClone(VAR original:T_rule);
-  VAR i:longint;
-  begin
-    ruleType:=original.ruleType;
-    if ruleType=rt_memoized then new(cache,create);
-    if ruleType in [rt_memoized,rt_synchronized,rt_mutable] then system.InitCriticalSection(rule_cs);
-    id:=original.id;
-    setLength(subrules,length(original.subrules));
-    for i:=0 to length(subrules)-1 do new(subrules[i],createClone(original.subrules[i]^));
   end;
 
 DESTRUCTOR T_rule.destroy;

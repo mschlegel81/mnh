@@ -12,7 +12,6 @@
     hasOptionals:boolean;
 
     CONSTRUCTOR create;
-    CONSTRUCTOR createClone(VAR pattern:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
@@ -32,19 +31,6 @@
 {$ifdef include_implementation}
 CONSTRUCTOR T_pattern.create;
   begin clear; end;
-
-CONSTRUCTOR T_pattern.createClone(VAR pattern:T_pattern);
-  VAR i:longint;
-  begin
-    clear;
-    containsSelfPointer:=pattern.containsSelfPointer;
-    hasOptionals:=pattern.containsSelfPointer;
-    setLength(sig,length(pattern.sig));
-    for i:=0 to length(sig)-1 do begin
-      sig[i]:=pattern.sig[i];
-      with sig[i] do if restrictionIdx<0 then restrictionScalar^.rereference;
-    end;
-  end;
 
 PROCEDURE T_pattern.clear;
   begin
