@@ -1,0 +1,63 @@
+private points:=(each(i,[0..199],sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]) );
+
+private sqNorm(x)->x%0*x%0+x%1*x%1;
+
+private pathLength(points)->begin
+  local result:=0;
+  local lastPoint:=points%(size(points)-1);
+  each(p,points,result:=result+sqrt(sqNorm(lastPoint-p)),
+                lastPoint:=p);
+  result;
+end;
+
+private shortestInsertion(L,el)->begin
+  local j:=argMin(pEach(i,
+                        [0..size(L)-1],
+                        sqrt(sqNorm(L%i                  -el ))+
+                        sqrt(sqNorm(L%((i+1) mod size(L))-el ))-
+                        sqrt(sqNorm(L%((i+1) mod size(L))-L%i))));
+  j:=(j+1) mod size(L);
+  head(L,j) | [el] | tail(L,j);
+end;
+
+private dropFromList(L :list,index:int)->head(L,index)|tail(L,index+1);
+
+dartSort(points)->begin
+  print('Beginning dart-sort');
+  local result:=void;
+  local P:=void;
+  begin
+    local first:=floor(random*size(points));
+    result:=[points%first];
+    P:=dropFromList(points,first);
+  end;
+  while(size(P)>1,begin
+    local next:=argMax(pEach(p,P,min(each(r,result,sqNorm(r-p)))));
+    result:=result|[P%next];
+    P:=dropFromList(P,next);
+  end);
+  result|P;
+end;
+
+constructPath(points)->begin
+  print('Beginning construction');
+  local result:=points%[0,1,2];
+  each(i,[3..size(points)-1],begin
+    result:=shortestInsertion(result,points%i);
+    //setPlotAxisStyle([0,0]);
+    //plot(result|result%[0],'l');
+    //addPlot(points,". 0.7");
+    //addPlot(result,".");
+    //renderToFile(format('tsp%000%.png',size(result)),768,768,4);
+    void;
+  end);
+  print('Path length is ',pathLength(result));
+  result|result%[0];
+end;
+
+//*Approximately solves the Travelling Salesman Problem using a Greedy approach
+main->begin
+  setPlotAxisStyle([0,0]);
+  plot(constructPath(dartSort(points)),'. l');
+  renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
+end;
