@@ -15,17 +15,17 @@ CONST
 TYPE
   TtkTokenKind = (
     tkComment,
-    tkIdentifier,
+    tkDocComment,
+    tkSpecialComment,
+    tkDefault,
     tkDollarIdentifier,
     tkUserRule,
-    tkIntrinsicRuleOrKeyword,
-    tkTypeCheck,
-    tkString,
-    tkNumber,
-    tkBoolean,
+    tkBultinRule,
+    tkSpecialRule,
     tkOperator,
-    tkDeclarationOp,
-    tkUnknown,
+    tkNonStringLiteral,
+    tkString,
+    tkModifier,
     tkNull);
 
 TYPE
@@ -83,55 +83,47 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
   begin
     inherited create(AOwner);
     defaultToPrint:=forOutput;
+    styleTable[tkComment         ]:=TSynHighlighterAttributes.create('Comment');
+    styleTable[tkDocComment      ]:=TSynHighlighterAttributes.create('DocComment');
+    styleTable[tkSpecialComment  ]:=TSynHighlighterAttributes.create('SpecialComment');
+    styleTable[tkDefault         ]:=TSynHighlighterAttributes.create('Default');
+    styleTable[tkDollarIdentifier]:=TSynHighlighterAttributes.create('DollarIdentifier');
+    styleTable[tkUserRule        ]:=TSynHighlighterAttributes.create('UserRule');
+    styleTable[tkBultinRule      ]:=TSynHighlighterAttributes.create('BultinRule');
+    styleTable[tkSpecialRule     ]:=TSynHighlighterAttributes.create('SpecialRule');
+    styleTable[tkOperator        ]:=TSynHighlighterAttributes.create('Operator');
+    styleTable[tkNonStringLiteral]:=TSynHighlighterAttributes.create('NonStringLiteral');
+    styleTable[tkString          ]:=TSynHighlighterAttributes.create('String');
+    styleTable[tkModifier        ]:=TSynHighlighterAttributes.create('Modifier');
+    styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
 
-    styleTable[tkComment] := TSynHighlighterAttributes.create('comment');
-    styleTable[tkComment].Style := [fsItalic];
-    styleTable[tkComment].Foreground := $00999999;
+    styleTable[tkComment         ].style:=[fsItalic];
+    styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
+    styleTable[tkSpecialComment  ].style:=[fsItalic,fsBold,fsUnderline];
+  //styleTable[tkDefault         ].style:=[];
+    styleTable[tkDollarIdentifier].style:=[fsItalic];
+  //styleTable[tkUserRule        ].style:=[];
+    styleTable[tkBultinRule      ].style:=[fsBold];
+    styleTable[tkSpecialRule     ].style:=[fsBold];
+    styleTable[tkOperator        ].style:=[fsBold];
+  //styleTable[tkNonStringLiteral].style:=[];
+  //styleTable[tkString          ].style:=[];
+    styleTable[tkModifier        ].style:=[fsBold];
+  //styleTable[tkNull            ].style:=[];
 
-    styleTable[tkIdentifier] := TSynHighlighterAttributes.create('identifier');
-    styleTable[tkIdentifier].Foreground := identifierForeground;
-
-    styleTable[tkDollarIdentifier] :=
-      TSynHighlighterAttributes.create('dollarIdentifier');
-    styleTable[tkDollarIdentifier].Style := [fsItalic];
-
-    styleTable[tkUserRule] := TSynHighlighterAttributes.create('userRule');
-    styleTable[tkUserRule].Style := [fsBold];
-    styleTable[tkUserRule].Foreground := identifierForeground;
-
-    styleTable[tkIntrinsicRuleOrKeyword] :=
-      TSynHighlighterAttributes.create('intrinsicRuleOrKeyword');
-    styleTable[tkIntrinsicRuleOrKeyword].Style := [fsBold];
-    styleTable[tkIntrinsicRuleOrKeyword].Foreground := $00888800;
-
-    styleTable[tkTypeCheck] := TSynHighlighterAttributes.create('typeCheck');
-    styleTable[tkTypeCheck].Style := [fsBold];
-    styleTable[tkTypeCheck].Foreground := $00880088;
-
-    styleTable[tkString] := TSynHighlighterAttributes.create('string');
-    styleTable[tkString].Foreground := $000000FF;
-
-    styleTable[tkNumber] := TSynHighlighterAttributes.create('number');
-    styleTable[tkNumber].Foreground := $000088FF;
-
-    styleTable[tkBoolean] := TSynHighlighterAttributes.create('boolean');
-    styleTable[tkBoolean].Foreground := $000044FF;
-    styleTable[tkBoolean].Style := [fsItalic];
-
-    styleTable[tkOperator] := TSynHighlighterAttributes.create('operator');
-    styleTable[tkOperator].Foreground := $00008800;
-
-    styleTable[tkDeclarationOp] := TSynHighlighterAttributes.create('declarationOp');
-    styleTable[tkDeclarationOp].Foreground := $00008800;
-    styleTable[tkDeclarationOp].Style := [fsBold];
-
-    styleTable[tkUnknown] := TSynHighlighterAttributes.create('unknown');
-    styleTable[tkUnknown].Foreground := clBlack;
-    styleTable[tkUnknown].Background := $000088FF;
-
-    styleTable[tkNull] := TSynHighlighterAttributes.create('null');
-    styleTable[tkNull].Foreground := clBlack;
-    styleTable[tkNull].Background := clYellow;
+    styleTable[tkComment         ].Foreground:=$00999999;
+    styleTable[tkDocComment      ].foreground:=$00999999;
+    styleTable[tkSpecialComment  ].foreground:=$00999999;
+    styleTable[tkDefault         ].foreground:=$00000000;
+    styleTable[tkDollarIdentifier].foreground:=$00000000;
+    styleTable[tkUserRule        ].foreground:=$00FF0000;
+    styleTable[tkBultinRule      ].foreground:=$00FF0000;
+    styleTable[tkSpecialRule     ].foreground:=$00FF0000;
+    styleTable[tkOperator        ].foreground:=$00880000;
+    styleTable[tkNonStringLiteral].foreground:=$000000FF;
+    styleTable[tkString          ].foreground:=$00008800;
+    styleTable[tkModifier        ].foreground:=$000088FF;
+    styleTable[tkNull            ].foreground:=$00000000;
 
     markedWord:='';
     markedLine:=-1;
@@ -148,7 +140,7 @@ DESTRUCTOR TSynMnhSyn.destroy;
 
 FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
   begin
-    result := styleTable [tkUnknown];
+    result := styleTable [tkDefault];
   end;
 
 PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
@@ -186,7 +178,7 @@ PROCEDURE TSynMnhSyn.Next;
     runStart:=run;
 
     isMarked:=false;
-    fTokenID := tkUnknown;
+    fTokenID := tkDefault;
     fTokenPos := Run;
     if defaultToPrint then begin
       if (run = 0) and (fLine [0] = #10) then begin
@@ -215,7 +207,7 @@ PROCEDURE TSynMnhSyn.Next;
         if fLine[run]=#0 then fTokenID := tkNull
         else begin
           while (fLine[run]<>#0) do inc(run);
-          fTokenID:=tkUnknown;
+          fTokenID:=tkDefault;
         end;
         exit;
       end;
@@ -225,13 +217,13 @@ PROCEDURE TSynMnhSyn.Next;
       #0: fTokenID := tkNull;
       ';': begin
         Inc(run);
-        fTokenID := tkUnknown;
+        fTokenID := tkDefault;
         ResetRange;
         end;
       '0'..'9': begin
         while fLine [run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
           Inc(run);
-        fTokenId := tkNumber;
+        fTokenId := tkNonStringLiteral;
         end;
       '$': begin
         Inc(run);
@@ -252,54 +244,43 @@ PROCEDURE TSynMnhSyn.Next;
            (localId = C_tokenString[tt_operatorMod]   ) or
            (localId = C_tokenString[tt_operatorIn]    ) or
            (localId = C_tokenString[tt_operatorDivInt]) or
-           (localId = C_tokenString[tt_operatorAnd]   ) then
-          fTokenId := tkOperator
-        else if (localId = C_boolText[true]) or (localId = C_boolText[false]) then
-          fTokenId := tkBoolean
-        else if (localId = 'Nan') or (localId = 'Inf')  then
-          fTokenId := tkNumber
-        else if (localId = 'void') or
-                (localId = 'main') or
-                (localId = 'USE') or
-                (localId = C_tokenString[tt_aggregatorConstructor]) or
-                (localId = C_tokenString[tt_modifier_private] ) or
+           (localId = C_tokenString[tt_operatorAnd]   ) then fTokenId := tkOperator
+        else if (localId = C_boolText[true]) or
+                (localId = C_boolText[false]) or
+                (localId = 'Nan') or
+                (localId = 'Inf') or
+                (localId = 'void')  then fTokenId := tkNonStringLiteral
+        else if (localId = C_tokenString[tt_modifier_private] ) or
                 (localId = C_tokenString[tt_modifier_memoized]) or
                 (localId = C_tokenString[tt_modifier_mutable] ) or
                 (localId = C_tokenString[tt_modifier_synchronized]) or
-                (localId = C_tokenString[tt_modifier_local]) or
+                (localId = C_tokenString[tt_modifier_local]) then fTokenID := tkModifier
+        else if (localId = C_tokenString[tt_aggregatorConstructor]) or
                 (localId = C_tokenString[tt_procedureBlockBegin]) or
                 (localId = C_tokenString[tt_procedureBlockEnd]) or
+                (localId = C_tokenString[tt_procedureBlockWhile] ) or
                 (localId = C_tokenString[tt_each]             ) or
                 (localId = C_tokenString[tt_parallelEach]     ) then
-          fTokenId := tkIntrinsicRuleOrKeyword
+          fTokenId := tkSpecialRule
         else
-        if      localUserRules   .contains(localId) then fTokenID := tkUserRule
-        else if importedUserRules.contains(localId) then fTokenID := tkUserRule
-        else if intrinsicRules   .contains(localId) then fTokenID := tkIntrinsicRuleOrKeyword
-        else fTokenID := tkIdentifier;
+        if      userRules     .contains(localId) then fTokenID := tkUserRule
+        else if intrinsicRules.contains(localId) then fTokenID := tkBultinRule
+        else fTokenID := tkDefault;
         isMarked:=(localId=markedWord);
       end;
-      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>': begin
+      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>' ,'-', '@': begin
         Inc(run);
         fTokenID := tkOperator;
       end;
-      '-': begin
-        Inc(run);
-        if fLine [run] = '>' then
-          begin
-          Inc(run);
-          fTokenID := tkDeclarationOp;
-          end
-        else fTokenID := tkOperator;
-      end;
       '/': begin
         Inc(run);
-        if fLine [run] = '/' then
-          begin
-          while fLine [run]<>#0 do
-            Inc(run);
-          fTokenId := tkComment;
-          end
+        if fLine [run] = '/' then begin
+          Inc(run);
+          if      fLine[run]='!' then fTokenID:=tkSpecialComment
+          else if fLine[run]='*' then fTokenID:=tkDocComment
+                                 else fTokenID:=tkComment;
+          while fLine [run]<>#0 do Inc(run);
+        end
         else fTokenId := tkOperator;
       end;
       ':': begin
@@ -319,17 +300,13 @@ PROCEDURE TSynMnhSyn.Next;
               (localId = ':stringList') or (localId = ':scalar') or
               (localId = ':string') or (localId = ':realList') or
               (localId = ':real') then begin
-              fTokenID := tkTypeCheck;
+              fTokenID := tkOperator;
               run:=i;
             end
             else begin
               fTokenID := tkOperator;
               Inc(run);
             end;
-          end;
-          '=': begin
-            Inc(run);
-            fTokenID := tkDeclarationOp;
           end;
           else fTokenID := tkOperator;
         end;
@@ -352,7 +329,7 @@ PROCEDURE TSynMnhSyn.Next;
         fTokenId := tkString;
       end;
       else begin
-        fTokenID := tkUnknown;
+        fTokenID := tkDefault;
         Inc(Run);
       end;
     end;

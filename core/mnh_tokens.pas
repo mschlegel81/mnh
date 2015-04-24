@@ -40,7 +40,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
-      PROCEDURE updateLists(VAR userDefinedLocalRules,userDefinesImportedRules:T_listOfString);
+      PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
   end;
 
@@ -599,24 +599,22 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring): P_rule;
     end;
   end;
 
-PROCEDURE T_package.updateLists(VAR userDefinedLocalRules, userDefinesImportedRules: T_listOfString);
+PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
   VAR i,j:longint;
       ids:T_arrayOfString;
       packageId:ansistring;
   begin
-    userDefinedLocalRules.clear;
-    userDefinedLocalRules.addArr(rules.keySet);
-    userDefinedLocalRules.unique;
-    userDefinesImportedRules.clear;
+    userDefinedRules.clear;
+    userDefinedRules.addArr(rules.keySet);
     for i:=0 to length(packageUses)-1 do if (packageUses[i].pack<>nil) and packageUses[i].pack^.ready then begin
       packageId:=packageUses[i].id;
       ids:=packageUses[i].pack^.rules.keySet;
       for j:=0 to length(ids)-1 do begin
-        userDefinesImportedRules.add(ids[j]);
-        userDefinesImportedRules.add(packageId+C_id_qualify_character+ids[j]);
+        userDefinedRules.add(ids[j]);
+        userDefinedRules.add(packageId+C_id_qualify_character+ids[j]);
       end;
     end;
-    userDefinesImportedRules.unique;
+    userDefinedRules.unique;
   end;
 
 PROCEDURE T_package.complainAboutUncalled;

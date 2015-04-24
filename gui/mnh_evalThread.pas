@@ -28,8 +28,7 @@ VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     startOfEvaluation  :specialize G_safeVar<double>;
     endOfEvaluationText:specialize G_safeVar<ansistring>;
     intrinsicRules,
-    localUserRules,
-    importedUserRules,
+    userRules,
     completionList:T_listOfString;
 
 PROCEDURE initIntrinsicRuleList;
@@ -47,7 +46,6 @@ FUNCTION main(p:pointer):ptrint;
     begin
       completionList.clear;
       completionList.add(C_tokenString[tt_modifier_memoized]);
-      completionList.add('USE');
       completionList.add('Nan');
       completionList.add('Inf');
       completionList.add('void');
@@ -69,8 +67,7 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add(C_tokenString[tt_parallelEach]     );
       completionList.add(C_boolText[true]);
       completionList.add(C_boolText[false]);
-      completionList.addArr(localUserRules.elementArray);
-      completionList.addArr(importedUserRules.elementArray);
+      completionList.addArr(userRules.elementArray);
       completionList.addArr(intrinsicRules.elementArray);
       completionList.unique;
     end;
@@ -84,7 +81,7 @@ FUNCTION main(p:pointer):ptrint;
 
   PROCEDURE postEval;
     begin
-      getMainPackage^.updateLists(localUserRules,importedUserRules);
+      getMainPackage^.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
       if hasHaltMessage
@@ -294,8 +291,7 @@ PROCEDURE initUnit;
     endOfEvaluationText.create('');
     intrinsicRules.create;
     initIntrinsicRuleList;
-    localUserRules.create;
-    importedUserRules.create;
+    userRules.create;
     completionList.create;
     beginThread(@main);
     unitIsInitialized:=true;
@@ -309,8 +305,7 @@ FINALIZATION
     startOfEvaluation.destroy;
     endOfEvaluationText.destroy;
     intrinsicRules.destroy;
-    localUserRules.destroy;
-    importedUserRules.destroy;
+    userRules.destroy;
     completionList.destroy;
   end;
 end.
