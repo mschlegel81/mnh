@@ -254,42 +254,46 @@ PROCEDURE logError(CONST error:T_storedError);
 
 PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
   CONST SAMPLE_TEXT='1!gPQ|';
-  VAR i,
+  VAR temp,
       idealInputHeight,
       idealOutputHeight,
-      idealTotalHeight,
-      availableTotalHeight:longint;
-
+      availableTotalHeight,
+      scrollbarHeight:longint;
+      inputFocus:boolean;
   begin
     if autosizingEnabled then begin
-      UpdateTimeTimer.Interval:=200;
-
       if errorStringGrid.RowCount=0
       then ErrorGroupBox.Width:=0
       else ErrorGroupBox.Width:=round(Width/3);
-
-      idealInputHeight :=InputEdit .Font.GetTextHeight(SAMPLE_TEXT)*InputEdit .Lines.Count;
-      idealOutputHeight:=OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*OutputEdit.Lines.Count;
+      scrollbarHeight     :=InputEdit.Height-InputEdit.ClientHeight;
+      idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .Lines.Count;
+      idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.Lines.Count+1);
       availableTotalHeight:=InputEdit.Height+OutputEdit.Height;
-      if InputEdit.Focused and not forceOutputFocus then idealInputHeight:=idealInputHeight*2;
-      if OutputEdit.Focused and not forceOutputFocus then idealOutputHeight:=idealOutputHeight*2;
+      inputFocus:=not(forceOutputFocus or OutputEdit.Focused);
 
-      for i:=0 to 3 do begin
-
-        idealTotalHeight :=idealInputHeight+idealOutputHeight;
-        idealInputHeight :=round(idealInputHeight*availableTotalHeight/idealTotalHeight);
-
-        if idealOutputHeight<0.2*availableTotalHeight then idealOutputHeight:=round(0.2*availableTotalHeight);
-        if idealInputHeight <0.2*availableTotalHeight then idealInputHeight :=round(0.2*availableTotalHeight);
+      //Are both editors large enough?
+      if (InputEdit.Height>=idealInputHeight) and (OutputEdit.Height>=idealOutputHeight) then exit;
+      if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
+        //There is enough room for both
+        if inputFocus then idealInputHeight:=availableTotalHeight-idealOutputHeight;
+      end else begin
+        //There is NOT enough room for both
+        temp:=round(0.9*availableTotalHeight);
+        if inputFocus
+        then begin
+          if idealInputHeight>=temp then idealInputHeight:=temp;
+        end else begin
+          if idealOutputHeight>=temp then idealOutputHeight:=temp;
+          idealInputHeight:=availableTotalHeight-idealOutputHeight;
+        end;
       end;
-      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.Height*0.8);
 
-      //if      idealInputHeight<InputEdit.Height-10 then idealInputHeight:=InputEdit.Height-10
-      //else if idealInputHeight>InputEdit.Height+10 then idealInputHeight:=InputEdit.Height+10;
-      //if      idealErrorHeight<ErrorGroupBox.Height-10 then idealErrorHeight:=ErrorGroupBox.Height-10
-      //else if idealErrorHeight>ErrorGroupBox.Height+10 then idealErrorHeight:=ErrorGroupBox.Height+10;
-      InputEdit    .Height:=idealInputHeight;
-      if PopupNotifier1.Visible then positionHelpNotifier;
+      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.Height*0.8);
+      if idealInputHeight<>InputEdit.Height then begin
+        if UpdateTimeTimer.Interval<200 then UpdateTimeTimer.Interval:=200;
+        InputEdit.Height:=idealInputHeight;
+        if PopupNotifier1.Visible then positionHelpNotifier;
+      end;
     end;
 
   end;

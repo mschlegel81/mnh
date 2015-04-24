@@ -1,10 +1,10 @@
 object MnhForm: TMnhForm
   Left = 800
-  Height = 373
-  Top = 222
+  Height = 368
+  Top = 227
   Width = 479
   Caption = 'MNH5'
-  ClientHeight = 353
+  ClientHeight = 348
   ClientWidth = 479
   Color = clWhite
   Menu = MainMenu1
@@ -19,13 +19,13 @@ object MnhForm: TMnhForm
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
-    Top = 330
+    Top = 325
     Width = 479
     Panels = <>
   end
   object PageControl: TPageControl
     Left = 0
-    Height = 330
+    Height = 325
     Top = 0
     Width = 479
     ActivePage = EditorTabSheet
@@ -35,21 +35,21 @@ object MnhForm: TMnhForm
     OnChange = PageControlChange
     object EditorTabSheet: TTabSheet
       Caption = 'Editor'
-      ClientHeight = 302
+      ClientHeight = 297
       ClientWidth = 471
       object ErrorGroupBox: TGroupBox
         Left = 390
-        Height = 302
+        Height = 297
         Top = 0
         Width = 81
         Align = alRight
         Caption = 'Errors'
-        ClientHeight = 284
+        ClientHeight = 279
         ClientWidth = 77
         TabOrder = 0
         object errorStringGrid: TStringGrid
           Left = 5
-          Height = 284
+          Height = 279
           Top = 0
           Width = 72
           Align = alClient
@@ -66,25 +66,25 @@ object MnhForm: TMnhForm
         end
         object SplitterH: TSplitter
           Left = 0
-          Height = 284
+          Height = 279
           Top = 0
           Width = 5
         end
       end
       object Panel1: TPanel
         Left = 0
-        Height = 302
+        Height = 297
         Top = 0
         Width = 390
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 302
+        ClientHeight = 297
         ClientWidth = 390
         TabOrder = 1
         inline InputEdit: TSynEdit
           Left = 0
           Height = 150
-          Top = 5
+          Top = 0
           Width = 390
           Align = alTop
           Font.Height = -13
@@ -575,7 +575,7 @@ object MnhForm: TMnhForm
           Cursor = crVSplit
           Left = 0
           Height = 5
-          Top = 0
+          Top = 150
           Width = 390
           Align = alTop
           OnMoved = Splitter1Moved
@@ -583,7 +583,7 @@ object MnhForm: TMnhForm
         end
         inline OutputEdit: TSynEdit
           Left = 0
-          Height = 147
+          Height = 142
           Top = 155
           Width = 390
           Align = alClient
