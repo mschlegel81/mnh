@@ -41,6 +41,7 @@ TYPE
     tt_listToParameterList,
     //assignment operators:
     tt_declare, tt_assign, tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,
+    tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignStrConcat,tt_cso_assignAppend, //+= -= &= |=
     //type checks:
     tt_typeCheckScalar, tt_typeCheckList,
     tt_typeCheckBoolean, tt_typeCheckBoolList,
@@ -144,6 +145,7 @@ CONST
     '@',
     //assignment operators:
     '->', ':=', ':=', ':=', ':=',
+    '+=', '-=', '&=', '|=',
     //type checks:
     ':scalar', ':list',
     ':boolean', ':booleanList',
@@ -245,6 +247,10 @@ CONST
     'mutate/assign operator',
     'mutate/new local operator',
     'mutate/ex. local operator',
+    'add-mutate/ex. local operator',
+    'subtract-mutate/ex. local operator',
+    'concat-mutate/ex. local operator',
+    'append-mutate/ex. local operator',
     'type check: scalar#matches to all primitive (i.e. non-list) types',
     'type check: list#matches to all list types',
     'type check: boolean#matches to primitive booleans',

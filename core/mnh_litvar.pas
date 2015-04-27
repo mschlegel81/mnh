@@ -17,6 +17,7 @@ TYPE
     CONSTRUCTOR init;
     PROCEDURE rereference;
     FUNCTION unreference: longint;
+    FUNCTION getReferenceCount: longint;
 
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
@@ -419,6 +420,11 @@ PROCEDURE T_literal.rereference;
 FUNCTION T_literal.unreference: longint;
   begin
     InterLockedDecrement(numberOfReferences);
+    result:=numberOfReferences;
+  end;
+
+FUNCTION T_literal.getReferenceCount: longint;
+  begin
     result:=numberOfReferences;
   end;
 
@@ -1304,16 +1310,27 @@ FUNCTION T_stringLiteral.escape: P_stringLiteral;
 
 PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
   begin
-    if L^.literalType=lt_void then exit;
     if L = nil then begin
-      raiseError(el3_evalError, 'Trying to append NIL literal to list',
-        C_nilTokenLocation);
+      raiseError(el3_evalError, 'Trying to append NIL literal to list', C_nilTokenLocation);
       exit;
     end;
+    if L^.literalType=lt_void then exit;
     setLength(element, length(element)+1);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;
-    strictType:=lt_uncheckedList;
+    case strictType of
+      lt_booleanList: if L^.literalType<>lt_boolean then strictType:=lt_list;
+      lt_list       : begin end;
+      lt_intList    : if      L^.literalType= lt_real then strictType:=lt_numList
+                      else if L^.literalType<>lt_int  then strictType:=lt_list;
+      lt_realList   : if      L^.literalType= lt_int  then strictType:=lt_numList
+                      else if L^.literalType<>lt_real then strictType:=lt_list;
+      lt_numList    : if not(L^.literalType in [lt_int,lt_real]) then strictType:=lt_list;
+      lt_stringList : if L^.literalType<>lt_boolean then strictType:=lt_list;
+      lt_emptyList  : strictType:=lt_uncheckedList;
+      lt_flatList   : if L^.literalType in C_validListTypes then strictType:=lt_list;
+      else strictType:=lt_uncheckedList;
+    end;
   end;
 
 PROCEDURE T_listLiteral.appendAll(CONST L: P_listLiteral);
@@ -1855,10 +1872,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
       tt_operatorConcat: begin
         result:=newListLiteral;
-        if (LHS^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
+        if (LHS^.literalType in [lt_boolean..lt_expression])
         then P_listLiteral(result)^.append(LHS, true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
-        if (RHS^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
+        if (RHS^.literalType in [lt_boolean..lt_expression])
         then P_listLiteral(result)^.append(RHS, true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         exit(result);

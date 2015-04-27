@@ -113,7 +113,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: begin result:=txt; idLike:=data<>nil; end;
+      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: begin result:=txt; idLike:=data<>nil; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -270,20 +270,26 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       end;
       ';': begin parsedLength:=1; result.tokType:=tt_semicolon; end;
       '}': begin parsedLength:=1; result.tokType:=tt_expBraceClose; end;
-      '|': begin parsedLength:=1; result.tokType:=tt_operatorConcat; end;
+      '|': if startsWith(line,'|=') then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend; end
+                                    else begin parsedLength:=1; result.tokType:=tt_operatorConcat; end;
       '{': begin parsedLength:=1; result.tokType:=tt_expBraceOpen; end;
       '^': begin parsedLength:=1; result.tokType:=tt_operatorPot; end;
       ']': begin parsedLength:=1; result.tokType:=tt_listBraceClose; end;
       '[': begin parsedLength:=1; result.tokType:=tt_listBraceOpen; end;
       '?': begin parsedLength:=1; result.tokType:=tt_iifCheck; end;
       ',': begin parsedLength:=1; result.tokType:=tt_separatorComma; end;
-      '+': begin parsedLength:=1; result.tokType:=tt_operatorPlus; end;
+      '+': if startsWith(line,'+=') then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus; end
+                                    else begin parsedLength:=1; result.tokType:=tt_operatorPlus; end;
       ')': begin parsedLength:=1; result.tokType:=tt_braceClose; end;
       '(': begin parsedLength:=1; result.tokType:=tt_braceOpen; end;
-      '&': begin parsedLength:=1; result.tokType:=tt_operatorStrConcat; end;
+      '&': if startsWith(line,'&=') then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat; end
+                                    else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat; end;
       '-': if startsWith(line,'->') then begin
              parsedLength:=2;
              result.tokType:=tt_declare;
+           end else if startsWith(line,'-=') then begin
+              parsedLength:=2;
+              result.tokType:=tt_cso_assignMinus;
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorMinus;
@@ -1150,13 +1156,28 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       {$endif}
     end;
 
-  PROCEDURE applyLocalAssignment(CONST declareNew:boolean);
+  PROCEDURE applyLocalAssignment(CONST kind:T_tokenType);
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      if declareNew then recycler.declareLocalValue(first^.txt,newValue)
-                    else recycler.setLocalValue    (first^.txt,newValue);
-      first:=recycler.disposeToken(first);
+      case kind of
+        tt_assignNewBlockLocal: begin
+          recycler.declareLocalValue(first^.txt,newValue);
+          first:=recycler.disposeToken(first);
+        end;
+        tt_assignExistingBlockLocal: begin
+          recycler.setLocalValue(first^.txt,newValue);
+          first:=recycler.disposeToken(first);
+        end;
+        tt_cso_assignPlus..tt_cso_assignAppend:begin
+          newValue:=recycler.mutateInline(first^.txt,kind,newValue,first^.location);
+          if errorLevel<el3_evalError then begin
+            first:=recycler.disposeToken(first);
+            disposeLiteral(first^.data);
+            first^.data:=newValue;
+          end;
+        end;
+      end;
     end;
 
   PROCEDURE startOrPushParameterList; inline;
@@ -1257,7 +1278,7 @@ end}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      //if pureOnly then write('PURE RUN: '); writeln(tokensToString(first));
+      //writeln(tokensToString(first));
       //writeln('                                           ',cTokType[-1],' ] ',cTokType[0],' | ',cTokType[1]);
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
@@ -1385,7 +1406,7 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal,tt_assignExistingBlockLocal: case cTokType[1] of
+          tt_assignNewBlockLocal,tt_assignExistingBlockLocal,tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
               stack_popDestroy;
               first^.next:=recycler.disposeToken(first^.next);
@@ -1394,11 +1415,11 @@ end}
               didSubstitution:=true;
             end else begin
               stack_popLink;
-              applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
+              applyLocalAssignment(cTokType[-1]);
             end;
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
               stack_popLink;
-              applyLocalAssignment(cTokType[0]=tt_assignNewBlockLocal);
+              applyLocalAssignment(cTokType[-1]);
             end;
             COMMON_CASES;
           end;
@@ -1423,6 +1444,10 @@ end}
           end else raiseError(el4_parsingError,'Modifier "local" is not allowed here.',first^.location);
         tt_blockLocalVariable: if cTokType[1]=tt_assign then begin
           first^.tokType:=tt_assignExistingBlockLocal;
+          first^.next:=recycler.disposeToken(first^.next);
+          stack_push;
+        end else if cTokType[1] in [tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat] then begin
+          first^.tokType:=cTokType[1];
           first^.next:=recycler.disposeToken(first^.next);
           stack_push;
         end else begin
@@ -1468,7 +1493,7 @@ end}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
-        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: stack_push;
+        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);

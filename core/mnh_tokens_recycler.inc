@@ -21,6 +21,7 @@
     FUNCTION scopeBottom:boolean;
     PROCEDURE declareLocalValue(CONST id:ansistring; CONST value:P_literal);
     PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
+    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
     FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
   end;
 
@@ -152,6 +153,48 @@ PROCEDURE T_tokenRecycler.setLocalValue(CONST id:ansistring; CONST value:P_liter
       exit;
     end;
     declareLocalValue(id,value);
+  end;
+
+FUNCTION T_tokenRecycler.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  VAR i,j:longint;
+      value:P_literal;
+  begin
+    for i:=length(scopeStack)-1 downto 0 do
+    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
+      value:=scopeStack[i,j].value;
+      case mutation of
+        tt_cso_assignPlus: begin
+          result:=resolveOperator(value, tt_operatorPlus     , RHS, location);
+          disposeLiteral(value);
+          scopeStack[i,j].value:=result;
+        end;
+        tt_cso_assignMinus: begin
+          result:=resolveOperator(value, tt_operatorMinus    , RHS, location);
+          disposeLiteral(value);
+          scopeStack[i,j].value:=result;
+        end;
+        tt_cso_assignStrConcat: begin
+          result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
+          disposeLiteral(value);
+          scopeStack[i,j].value:=result;
+        end;
+        tt_cso_assignAppend: begin
+          if (value^.literalType in C_validListTypes) and (value^.getReferenceCount=1) then begin
+            if (RHS^.literalType in [lt_boolean..lt_expression])
+            then P_listLiteral(value)^.append(RHS, true)
+            else P_listLiteral(value)^.appendAll(P_listLiteral(RHS));
+            result:=value;
+            result^.rereference;
+          end else begin
+            result:=resolveOperator(value, tt_operatorConcat   , RHS, location);
+            result^.rereference;
+            disposeLiteral(value);
+            scopeStack[i,j].value:=result;
+          end;
+        end;
+      end;
+      Exit(result);
+    end;
   end;
 
 FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;
