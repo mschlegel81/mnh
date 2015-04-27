@@ -17,6 +17,7 @@ TYPE
     CONSTRUCTOR init;
     PROCEDURE rereference;
     FUNCTION unreference: longint;
+    FUNCTION getReferenceCount: longint;
 
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
@@ -419,6 +420,11 @@ PROCEDURE T_literal.rereference;
 FUNCTION T_literal.unreference: longint;
   begin
     InterLockedDecrement(numberOfReferences);
+    result:=numberOfReferences;
+  end;
+
+FUNCTION T_literal.getReferenceCount: longint;
+  begin
     result:=numberOfReferences;
   end;
 
@@ -1855,10 +1861,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
       tt_operatorConcat: begin
         result:=newListLiteral;
-        if (LHS^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
+        if (LHS^.literalType in [lt_boolean..lt_expression])
         then P_listLiteral(result)^.append(LHS, true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
-        if (RHS^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
+        if (RHS^.literalType in [lt_boolean..lt_expression])
         then P_listLiteral(result)^.append(RHS, true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         exit(result);
