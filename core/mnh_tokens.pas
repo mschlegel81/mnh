@@ -493,7 +493,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     then begin if first<>nil then interpret(first); end
     else recycler.cascadeDisposeToken(first);
     ready:=true;
-    raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens[length(fileTokens)-1].location);
+    if length(fileTokens)>0
+    then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens[length(fileTokens)-1].location)
+    else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     clearErrors;
     if usecase=lu_forDirectExecution then complainAboutUncalled;
   end;
