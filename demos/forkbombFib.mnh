@@ -1,0 +1,5 @@
+private forkbombFib(i:int)->i<1 ? 1 : pEach(arg,[i-1,i-2],+,softCast(head(exec(executor,[myPath,arg]))));
+//*Returns the i-th Fibonacci number using forked calls of the MNH-Interpreter
+main(i)->print(forkbombFib(softCast(i)));
+//*Returns the 1st through 10th Fibonacci number
+main->each(i,[1..10],main(i));
