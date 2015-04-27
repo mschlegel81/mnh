@@ -439,7 +439,7 @@ CONSTRUCTOR T_listLiteral.create;
   begin
     inherited init;
     setLength(element, 0);
-    strictType:=lt_uncheckedList;
+    strictType:=lt_emptyList;
     nextAppendIsRange:=false;
   end;
 //=================================================================:CONSTRUCTORS
@@ -472,42 +472,9 @@ FUNCTION T_realLiteral      .literalType: T_literalType; begin result:=lt_real; 
 FUNCTION T_stringLiteral    .literalType: T_literalType; begin result:=lt_string;     end;
 FUNCTION T_expressionLiteral.literalType: T_literalType; begin result:=lt_expression; end;
 FUNCTION T_listLiteral      .literalType: T_literalType;
-  CONST ERROR_FREE_BITS= 1;
-        SCALAR_BITS    = ERROR_FREE_BITS + 2;
-        NUMERIC_BITS   = SCALAR_BITS + 4;
-        INT_BITS       = NUMERIC_BITS+ 8;
-        REAL_BITS      = NUMERIC_BITS+ 16;
-        BOOL_BITS      = SCALAR_BITS + 32;
-        STR_BITS       = SCALAR_BITS + 64;
-
-  VAR i: longint;
-      bitMask:byte=255;
   begin
     if strictType<>lt_uncheckedList then exit(strictType);
-    if length(element)>0 then begin
-      for i:=0 to length(element)-1 do
-        if element [i] = nil then bitMask:=0
-        else case element [i]^.literalType of
-          lt_error, lt_listWithError: bitMask:=0;
-          lt_boolean                : bitMask:=bitMask and BOOL_BITS;
-          lt_int                    : bitMask:=bitMask and INT_BITS;
-          lt_real                   : bitMask:=bitMask and REAL_BITS;
-          lt_string                 : bitMask:=bitMask and STR_BITS;
-          lt_list..lt_flatList      : bitMask:=bitMask and ERROR_FREE_BITS;
-          else                        bitMask:=bitMask and SCALAR_BITS;
-        end;
-      if (bitMask and ERROR_FREE_BITS) <> ERROR_FREE_BITS then begin
-        strictType:=lt_listWithError;
-        raiseError(el3_evalError, 'List-with-error encountered.', C_nilTokenLocation);
-      end
-      else if (bitMask and INT_BITS)     = INT_BITS     then strictType:=lt_intList
-      else if (bitMask and REAL_BITS)    = REAL_BITS    then strictType:=lt_realList
-      else if (bitMask and NUMERIC_BITS) = NUMERIC_BITS then strictType:=lt_numList
-      else if (bitMask and BOOL_BITS)    = BOOL_BITS    then strictType:=lt_booleanList
-      else if (bitMask and STR_BITS)     = STR_BITS     then strictType:=lt_stringList
-      else if (bitMask and SCALAR_BITS)  = SCALAR_BITS  then strictType:=lt_flatList
-      else                                                   strictType:=lt_list;
-    end else strictType:=lt_emptyList;
+    writeln('Still needing a type-check.');
     result:=strictType;
   end;
 //================================================================:?.literalType
@@ -1319,17 +1286,55 @@ PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;
     case strictType of
-      lt_booleanList: if L^.literalType<>lt_boolean then strictType:=lt_list;
-      lt_list       : begin end;
-      lt_intList    : if      L^.literalType= lt_real then strictType:=lt_numList
-                      else if L^.literalType<>lt_int  then strictType:=lt_list;
-      lt_realList   : if      L^.literalType= lt_int  then strictType:=lt_numList
-                      else if L^.literalType<>lt_real then strictType:=lt_list;
-      lt_numList    : if not(L^.literalType in [lt_int,lt_real]) then strictType:=lt_list;
-      lt_stringList : if L^.literalType<>lt_boolean then strictType:=lt_list;
-      lt_emptyList  : strictType:=lt_uncheckedList;
-      lt_flatList   : if L^.literalType in C_validListTypes then strictType:=lt_list;
-      else strictType:=lt_uncheckedList;
+      lt_list,lt_uncheckedList: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
+      lt_booleanList  : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    lt_boolean: begin end;
+  						else strictType:=lt_flatList;
+  	                  end;
+      lt_intList      : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    lt_int: begin end;
+  						lt_real: strictType:=lt_numList;
+  						else strictType:=lt_flatList;
+  	                  end;
+      lt_realList     : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    lt_real: begin end;
+  						lt_int: strictType:=lt_numList;
+  						else strictType:=lt_flatList;
+  	                  end;
+      lt_numList      : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    lt_int,lt_real: begin end;
+  						else strictType:=lt_flatList;
+  	                  end;
+      lt_stringList   : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    lt_string: begin end;
+  						else strictType:=lt_flatList;
+  	                  end;
+      lt_emptyList    : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+                          lt_uncheckedList: strictType:=lt_uncheckedList;
+  						lt_boolean: strictType:=lt_booleanList;
+                          lt_int: strictType:=lt_intList;
+                          lt_real: strictType:=lt_realList;
+                          lt_string: strictType:=lt_stringList;
+                          lt_expression: strictType:=lt_flatList;
+                          lt_list..lt_flatList: strictType:=lt_list;
+  	                  end;
+      lt_flatList     : case L^.literalType of
+  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  	                    else begin end;
+  	                  end;
+      lt_listWithError: begin end;
     end;
   end;
 
