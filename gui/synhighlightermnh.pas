@@ -78,8 +78,6 @@ TYPE
 IMPLEMENTATION
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
-  CONST
-    identifierForeground: TColor = $00FF0000;
   begin
     inherited create(AOwner);
     defaultToPrint:=forOutput;
