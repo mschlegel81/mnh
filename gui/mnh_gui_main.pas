@@ -290,7 +290,7 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
 
       idealInputHeight:=round(idealInputHeight*0.2+InputEdit.Height*0.8);
       if idealInputHeight<>InputEdit.Height then begin
-        if UpdateTimeTimer.Interval<200 then UpdateTimeTimer.Interval:=200;
+        if UpdateTimeTimer.Interval>200 then UpdateTimeTimer.Interval:=200;
         InputEdit.Height:=idealInputHeight;
         if PopupNotifier1.Visible then positionHelpNotifier;
       end;
