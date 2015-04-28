@@ -149,6 +149,7 @@ TYPE
     FUNCTION lower: P_stringLiteral;
     FUNCTION unbrace: P_stringLiteral;
     FUNCTION escape: P_stringLiteral;
+    PROCEDURE append(CONST suffix:ansistring);
     //from T_scalarLiteral:
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
@@ -1273,6 +1274,11 @@ FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
 FUNCTION T_stringLiteral.escape: P_stringLiteral;
   begin
     result:=newStringLiteral(escapeString(val));
+  end;
+
+PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
+  begin
+    val:=val+suffix;
   end;
 
 PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);

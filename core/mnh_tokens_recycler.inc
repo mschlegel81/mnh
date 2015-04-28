@@ -167,16 +167,25 @@ FUNCTION T_tokenRecycler.mutateInline(CONST id:ansistring; CONST mutation:T_toke
           result:=resolveOperator(value, tt_operatorPlus     , RHS, location);
           disposeLiteral(value);
           scopeStack[i,j].value:=result;
+          result^.rereference;
         end;
         tt_cso_assignMinus: begin
           result:=resolveOperator(value, tt_operatorMinus    , RHS, location);
           disposeLiteral(value);
           scopeStack[i,j].value:=result;
+          result^.rereference;
         end;
         tt_cso_assignStrConcat: begin
-          result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
-          disposeLiteral(value);
-          scopeStack[i,j].value:=result;
+          if (value^.literalType=lt_string) and (value^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
+            P_stringLiteral(value)^.append(P_scalarLiteral(RHS)^.stringForm);
+            result:=value;
+            result^.rereference;
+          end else begin
+            result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
+            disposeLiteral(value);
+            scopeStack[i,j].value:=result;
+            result^.rereference;
+          end;
         end;
         tt_cso_assignAppend: begin
           if (value^.literalType in C_validListTypes) and (value^.getReferenceCount=1) then begin
