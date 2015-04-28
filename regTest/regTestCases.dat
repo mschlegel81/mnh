@@ -93,7 +93,7 @@
   "",
   false,
   false,
-  false],
+  true],
 [ "demos\\gol.mnh",
   "",
   false,

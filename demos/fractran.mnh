@@ -1,16 +1,46 @@
-parseFractions(s:string)->
+private BASE:=  [2,3,5,7,11,13,17,19,23,29];
+private POT2TAIL:=[0,0,0, 0, 0, 0, 0, 0, 0];
+private niceRational(L)->each(i,[0..size(L)-1],aggregator({$x&"*"&$y}),L%i<>0 ? BASE%i&"^"&L%i : void)&" = "&each(f,BASE^L,*);
+
+private rational(enumerator:int,denominator:int)->begin
+  local en:=enumerator;
+  local de:=denominator;
+  each(b,BASE,begin
+    local k:=0;
+    while(en mod b=0,begin k+=1; en:=en div b; end);
+    while(de mod b=0,begin k-=1; de:=de div b; end);
+    k;
+  end);
+end;
+
+private isInteger(L:intList)->trueCount(L<0)=0;
+
+private parseFractions(s:string)->
   expression('[['&
              replace(s,[' ', ',' ,'/'],
                        ['' ,'],[',','])&
              ']]')();
 
-fractran(out:expression,fractions,k>0   )->fractran(out,fractions,k,head(fractions%((k mod fractions%%1)=0)));
-fractran(out:expression,fractions,k     )->out(k);
-fractran(out:expression,fractions,k  ,[])->out(k);
-fractran(out:expression,fractions,k  ,F )->out(k) | fractran(out,fractions,k div F%1 * F%0);
+private Fractran(out:expression,fractions,k,steplimit)->begin
+  local state:=k;
+  local first:=false;
+  out(0,state);
+  each(step,[1..steplimit],first ? void : begin
+    first:=true;
+    each(f,fractions,first and isInteger(state+f) ? begin first:=false; state+=f; end : void);
+    out(step,state);
+  end);
+end;
 
-printOut:={print($x)};
+Conway_primes_algorithm:='17 / 91, 78 / 85, 19 / 51, 23 / 38, 29 / 33, 77 / 29, 95 / 23, 77 / 19, 1 / 17, 11 / 13, 13 / 11, 15 / 14, 15 / 2, 55 / 1';
+private printPowersOf2:={tail($params%1)==POT2TAIL ? print($step,': ',niceRational($state)) : void};
+private printAll      :={                            print($step,': ',niceRational($state))       };
 
-main(fractions,n)->fractran(printOut,parseFractions(fractions),softCast(n));
+main(fractions,n)->Fractran(printAll      ,each(f,parseFractions(fractions),rational@f),rational(softCast(n),1),30)|
+                   print('----------------------------------')|
+                   Fractran(printPowersOf2,each(f,parseFractions(fractions),rational@f),rational(softCast(n),1),428553);
 //*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
-main->main('17 / 91, 78 / 85, 19 / 51, 23 / 38, 29 / 33, 77 / 29, 95 / 23, 77 / 19, 1 / 17, 11 / 13, 13 / 11, 15 / 14, 15 / 2, 55 / 1','2');
+main->main(Conway_primes_algorithm,'2');
+
+
+
