@@ -1,13 +1,19 @@
 mutable cached_primes:=[2,3];
 mutable max_cached:=3;
 
-private resieve(primes,candidates)->primes|(candidates%pEach(p,primes%(primes<=sqrt(max(candidates))),and,candidates mod p != 0));
-private onlySecond(x,y)->y;
 //*Return prime numbers <= n
 synchronized
-primes(n:int)->n<=max_cached            ? cached_primes%(cached_primes<=n)
-             : n<=max_cached*max_cached ? cached_primes:=resieve(cached_primes,[max_cached+1..max_cached:=n])
-                                        : onlySecond(primes(max_cached*max_cached),primes(n));
+primes(n:int)->
+  n<=max_cached
+  ? cached_primes%(cached_primes<=n)
+  : begin
+      while(n>max_cached,begin
+        local candidates:=[max_cached+1..max_cached:=min(n,max_cached*max_cached)];
+        cached_primes:=cached_primes|(candidates%each(p,cached_primes%(cached_primes<=sqrt(max_cached)),and,candidates mod p != 0));
+      end);
+      cached_primes%(cached_primes<=n);
+    end;
+
 //*Return prime numbers <= floor(n)
 primes(n:real)->primes(floor(n));
 
@@ -20,17 +26,28 @@ firstKPrimes(k:int)->k<size(cached_primes) ? head(cached_primes,k)
                                            : (primes(max(k*11,round(max_cached*1.1))))%-1 | firstKPrimes(k);
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
-memoized factorize(n:int)->factorize(n,primes(sqrt(n))%(n mod primes(sqrt(n))=0));
-private factorize(1,[])->[];
-private factorize(n:int,[])->n;
-private factorize(n:int,dividers:intList)->dividers|factorize(n div each(d,dividers,*));
+factorize(n:int)-> n<=1 ? [1] :
+begin
+  local factors:=[];
+  local k:=n;
+  local P:=primes(sqrt(k));
+  each(p,P%(k mod P=0),
+    while(k mod p = 0, begin
+      k:=k div p;
+      factors|=p;
+    end));
+  factors|k;
+end;
 
 //*Return the dividers of integer <code>n</code>
-dividers(n:int)->dividers_A(n,[2..floor(sqrt(n))]);
-private dividers_A(n,C)->dividers_B(n,C%(n mod C = 0));
-private dividers_B(n,D)->1|unique(D|(n div D));
+dividers(n:int)->begin
+  local C:=[2..floor(sqrt(n))];
+  C:=C%(n mod C = 0);
+  unique(1|C|(n div C));
+end;
 //*Return the divider-sum of integer <code>n</code>
 memoized dividerSum(n:int)->each(d,dividers(n),+);
+
 
 dividerPairs(n:int)->each(d,[2..floor(sqrt(n))]%(n mod [2..floor(sqrt(n))]=0),[d,n div d]);
 
