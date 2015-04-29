@@ -311,8 +311,7 @@ PROCEDURE TSynMnhSyn.Next;
       end;
       '"': begin
         Inc(run);
-        while (fLine [run]<>#0) and ((fLine [run]<>'"') or
-            (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
+        while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
           Inc(run);
         if (fLine [run] = '"') then
           Inc(run);
@@ -320,7 +319,7 @@ PROCEDURE TSynMnhSyn.Next;
       end;
       '''': begin
         Inc(run);
-        while (fLine [run]<>#0) and ((fLine [run]<>'''') or (fLine [run-1] = '\')) do
+        while (fLine [run]<>#0) and ((fLine [run]<>'''') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
           Inc(run);
         if (fLine [run] = '''') then
           Inc(run);
