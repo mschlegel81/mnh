@@ -1,28 +1,29 @@
 densityPlot(binaryFunc:expression,
             x0:numeric,x1>x0,
             y0:numeric,y1>y0,
-            gridSize>0)->
-  densityPlot(each(ix,[x0..floor((x1-x0)/gridSize)],|,
-              each(iy,[y0..floor((y1-y0)/gridSize)],
-                       [ix,iy,binaryFunc(x0+(ix+0.5)*gridSize,
-                                         y0+(iy+0.5)*gridSize)])),
-              x0,y0,gridSize);
+            gridSize>0)->densityPlot(binaryFunc,x0,x1,y0,y1,gridSize,20,{"GREY"&$x});
 
-private densityPlot(L:list,x0:numeric,y0:numeric,gridSize)->
-  densityPlot(each(subList,
-                    each(interval,
-                         intervals(decils(L%%2)),
-                         L%(L%%2>interval%0 and L%%2<=interval%1)%%[0,1]),
-                     each(tuple,
-                          subList,
-                           tuple   *gridSize+[x0,y0],
-                          (tuple+1)*gridSize+[x0,y0])));
-private densityPlot(splittedList)->
-     plot(splittedList%0,"GREY0   box") and
-     each(i,[1..size(splittedList)-1],and,
-             addPlot(splittedList%i,"GREY"&(i/(size(splittedList)-1))&" box"));
+densityPlot(binaryFunc:expression,
+            x0:numeric,x1>x0,
+            y0:numeric,y1>y0,
+            gridSize>0,
+            levelCount>0,
+            levelColorExpression:expression)->begin
+  local halfSize:=gridSize*0.5;
+  local points:=each(x,x0+[0..round((x1-x0)/gridSize)-1]*gridSize+halfSize,|,
+                each(y,y0+[0..round((y1-y0)/gridSize)-1]*gridSize+halfSize,[x,y]));
+  local values:=pEach(p,points,binaryFunc@p);
+  local levels:=sort(values)%round([0..levelCount]/levelCount*(size(values)-1));
+  levels:=each(i,[0..size(levels)-2],[levels%i+(i==0?-1:0),levels%(i+1)]);
+  plot([]);
+  each(i,[0..size(levels)-1],
+    addPlot(each(p,points% isInRange(values,levels%i%0,levels%i%1),p-halfSize,p+halfSize),
+            "box "&levelColorExpression(i/(size(levels)-1)))
+  );
+end;
 
-decils(L:numericList)->sort(L)%round([0..20]/20*(size(L)-1));
-intervals(L:numericList)->each(i,[0..size(L)-2],[L%i+(i==0?-1:0),L%(i+1)]);
-
-densityPlot({sin($x^2+$y^2)},-10,10,-10,10,0.1);
+//*For regression test
+main->begin
+  densityPlot({sin($x^2-$y^2)},-10,10,-10,10,0.1);
+  renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
+end;
