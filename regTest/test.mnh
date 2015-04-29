@@ -14,12 +14,10 @@ quickTestsOnly   :=testFilter==['quick'];
 matchesAny(input)->(testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,input)>=0);
 
 allTestCases:=each(case,
-                   expression(each(l,
-                                   fileLines('regTest/regTestCases.dat'),
-                                   aggregator({$x&"\n"&$y})))(),
-                                   (currentExeCanPlot   or not(case%3)) and
-                                   (not(quickTestsOnly) or not(case%4)) and
-                                   matchesAny(case%0) ? case%[0..2] : void);
+                   expression(fileContents('regTest/regTestCases.dat'))(),
+                   (currentExeCanPlot   or not(case%3)) and
+                   (not(quickTestsOnly) or not(case%4)) and
+                   matchesAny(case%0) ? case%[0..2] : void);
 
 print('---------------------------------------------------------\n',
       'Starting test runs with executable '& currentExe,'\n',
@@ -70,3 +68,18 @@ each(test,allTestCases,runTest@(executor|test));
 print(previouslyPassedTests,' Tests were already marked as passed.');
 print(testsFailed);
 storePassedTests;
+
+//displayUncoveredTests
+begin
+  local coveredTests:= replace(unique(expression(fileContents('regTest/regTestCases.dat'))()%%0),'\\','/');
+  local first:=true;
+  each(script,
+       replace(unique(files('demos/*.mnh')|files('packages/*.mnh')),'\\','/'),
+       script in coveredTests ? void : begin
+         first ? begin
+           first:=false;
+           print('The following scripts are not covered by tests:');
+         end : void;
+         print('  ',script);
+       end);
+end;
