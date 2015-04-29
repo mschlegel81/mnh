@@ -164,6 +164,7 @@ TYPE
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction
       );
     PROCEDURE Splitter1Moved(Sender: TObject);
+    procedure SplitterHMoved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
       SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
@@ -260,11 +261,15 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       availableTotalHeight,
       scrollbarHeight:longint;
       inputFocus:boolean;
+      needRepositioningOfHelp:boolean=false;
   begin
     if autosizingEnabled then begin
       if errorStringGrid.RowCount=0
-      then ErrorGroupBox.Width:=0
-      else ErrorGroupBox.Width:=round(Width/3);
+      then temp:=0
+      else temp:=round(Width/3);
+      needRepositioningOfHelp:=temp<>ErrorGroupBox.Width;
+      ErrorGroupBox.Width:=temp;
+
       scrollbarHeight     :=InputEdit.Height-InputEdit.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .Lines.Count;
       idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.Lines.Count+1);
@@ -292,10 +297,10 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       if idealInputHeight<>InputEdit.Height then begin
         if UpdateTimeTimer.Interval>200 then UpdateTimeTimer.Interval:=200;
         InputEdit.Height:=idealInputHeight;
-        if PopupNotifier1.Visible then positionHelpNotifier;
+        needRepositioningOfHelp:=true;
       end;
+      if PopupNotifier1.Visible and needRepositioningOfHelp then positionHelpNotifier;
     end;
-
   end;
 
 FUNCTION TMnhForm.flushThroughput:boolean;
@@ -347,7 +352,7 @@ FUNCTION TMnhForm.flushThroughput:boolean;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   begin
-    PopupNotifier1.ShowAtPos(left+Width-PopupNotifier1.vNotifierForm.Width,
+    PopupNotifier1.ShowAtPos(left+InputEdit.Width-PopupNotifier1.vNotifierForm.Width,
                              ClientToScreen(Point(left,OutputEdit.Top)).y);
     InputEdit.SetFocus;
   end;
@@ -889,6 +894,12 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseA
   end;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
+  begin
+    if PopupNotifier1.Visible then positionHelpNotifier;
+    autosizingEnabled:=false;
+  end;
+
+procedure TMnhForm.SplitterHMoved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
     autosizingEnabled:=false;

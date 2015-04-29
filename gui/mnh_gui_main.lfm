@@ -48,10 +48,10 @@ object MnhForm: TMnhForm
         ClientWidth = 77
         TabOrder = 0
         object errorStringGrid: TStringGrid
-          Left = 5
+          Left = 0
           Height = 279
           Top = 0
-          Width = 72
+          Width = 77
           Align = alClient
           ColCount = 0
           DefaultRowHeight = 15
@@ -64,28 +64,22 @@ object MnhForm: TMnhForm
           TabOrder = 0
           OnClick = errorStringGridClick
         end
-        object SplitterH: TSplitter
-          Left = 0
-          Height = 279
-          Top = 0
-          Width = 5
-        end
       end
       object Panel1: TPanel
         Left = 0
         Height = 297
         Top = 0
-        Width = 390
+        Width = 385
         Align = alClient
         BevelOuter = bvNone
         ClientHeight = 297
-        ClientWidth = 390
+        ClientWidth = 385
         TabOrder = 1
         inline InputEdit: TSynEdit
           Left = 0
           Height = 150
           Top = 0
-          Width = 390
+          Width = 385
           Align = alTop
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -576,7 +570,7 @@ object MnhForm: TMnhForm
           Left = 0
           Height = 5
           Top = 150
-          Width = 390
+          Width = 385
           Align = alTop
           OnMoved = Splitter1Moved
           ResizeAnchor = akTop
@@ -585,7 +579,7 @@ object MnhForm: TMnhForm
           Left = 0
           Height = 142
           Top = 155
-          Width = 390
+          Width = 385
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -1075,6 +1069,15 @@ object MnhForm: TMnhForm
             end
           end
         end
+      end
+      object SplitterH: TSplitter
+        Left = 385
+        Height = 297
+        Top = 0
+        Width = 5
+        Align = alRight
+        OnMoved = SplitterHMoved
+        ResizeAnchor = akRight
       end
     end
     object PlotTabSheet: TTabSheet
