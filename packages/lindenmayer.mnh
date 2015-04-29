@@ -14,3 +14,6 @@ KOCH_SNOWFLAKE:=[['F++F++F',['F'    ],['F-F++F-F'                 ]],[ 0, 60,'F'
 SIERPINSKI    :=[['A'      ,['A','B'],['B-A-B'      ,'A+B+A'      ]],[ 0, 60,'AB']];
 SIERPINSKI2   :=[['F-G-G'  ,['F','G'],['F-G+F+G-F'  ,'GG'         ]],[ 0,120,'FG']];
 PLANT         :=[['X'      ,['X','F'],['F-[[X]+X]+F[+FX]-X','FF'  ]],[70, 25,'F' ]];
+
+//*For regTest
+main->print(round(lindenmayerTurtle(HILBERT,3),2));
