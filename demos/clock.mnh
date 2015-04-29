@@ -1,13 +1,22 @@
 mutable proceed:=true;
-glyphs:=expression(replace("[*0L...N1>G$#+)!+GGGAE2LG$'(!'DO@@#!C3LJ;+JN4>$'(!'D'+@@<GGAE5>@@<OO@#+JJ@#E6LO@#FN7>@@<JJG$'(!'D'AC8LIFN9LI#<JN:>DD<D<D$C >M$ &D! &( &?]",copy("ONMLKJIHGFEDCBA@?>=<;.-+*)('&%$#!",[0..32]*1,1),copy("'MIE$(>K;FH<.;$$A++.'C$&?B,*$!##=]%*\"]#()#-(')'&[\"!#!&#$%\"\",!!_/  ",[0..32]*2,2)))();
-printTime->printf('%X%',each(g,glyphs%copy(format(' %hh:nn:ss%',systime),[0..8],1),&));
-main->pEach(task,[
+private glyphs:=expression(replace("[*0L...N1>G$#+)!+GGGAE2LG$'(!'DO@@#!C3LJ;+JN4>$'(!'D'+@@<GGAE5>@@<OO@#+JJ@#E6LO@#FN7>@@<JJG$'(!'D'AC8LIFN9LI#<JN:>DD<D<D$C >M$ &D! &( &?]",copy("ONMLKJIHGFEDCBA@?>=<;.-+*)('&%$#!",[0..32]*1,1),copy("'MIE$(>K;FH<.;$$A++.'C$&?B,*$!##=]%*\"]#()#-(')'&[\"!#!&#$%\"\",!!_/  ",[0..32]*2,2)))();
+private printTime(time:real)->printf('%X%',each(g,glyphs%copy(format(' %hh:nn:ss%',time),[0..8],1),&));
+//*For regtest
+main->begin
+  print('Call with any string parameter for continuous run.');
+  proceed:=false;
+  printTime(0.123);
+end;
+
+main(...)->
+pEach(task,[
   {begin
-    ask('Press enter to quit.');
+    ask('');
     proceed:=false;
   end},
   {while(proceed,begin
     clearPrint;
-    printTime;
+    print('Press enter to quit.');
+    printTime(systime);
     sleep(1);
   end)}],task());
