@@ -13,7 +13,7 @@ private rational(enumerator:int,denominator:int)->begin
   end);
 end;
 
-private isInteger(L:intList)->trueCount(L<0)=0;
+private isInteger(L:intList)->min(L)>=0;
 
 private parseFractions(s:string)->
   expression('[['&
@@ -41,6 +41,3 @@ main(fractions,n)->Fractran(printAll      ,each(f,parseFractions(fractions),rati
                    Fractran(printPowersOf2,each(f,parseFractions(fractions),rational@f),rational(softCast(n),1),428553);
 //*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
 main->main(Conway_primes_algorithm,'2');
-
-
-
