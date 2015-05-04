@@ -3,6 +3,7 @@ INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics,
      mnh_doc,lclintf;
 PROCEDURE parseCmdLine;
+VAR displayTime:boolean=false;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR minErrorLevel:T_errorLevel=el2_warning;
@@ -51,15 +52,19 @@ PROCEDURE parseCmdLine;
       writeln('            if not present, interactive mode is entered');
       writeln('  +echo   : force echo on (default for interactive mode)');
       writeln('  -echo   : force echo off (default for interpretation mode)');
+      writeln('  +time   : force time on (default for interactive mode)');
+      writeln('  -time   : force time off (default for interpretation mode)');
       writeln('  -el#    : set minimum error level for output; valid values: [0..5], default=2');
       writeln('  -h      : display this help and quit');
       writeln('  -det    : force deterministic "random" numbers');
       writeln('  -version: show version info and exit');
-      writeln('  -doc    : regnerate and show documentation');
+      writeln('  -doc    : regenerate and show documentation');
     end;
 
   PROCEDURE fileMode;
+    VAR startTime:double;
     begin
+	  startTime:=now;
       mainPackageProvider.setPath(fileToInterpret);
       if wantHelpDisplay then begin
         displayHelp;
@@ -67,39 +72,45 @@ PROCEDURE parseCmdLine;
         halt;
       end;
       callMainInMain(parameters);
+	  if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
       halt;
     end;
 
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
+      time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       i,pel:longint;
   begin
     setLength(parameters,0);
     for i:=1 to paramCount do begin
-      if      paramstr(i)='+echo' then echo:=e_forcedOn
-      else if paramstr(i)='-echo' then echo:=e_forcedOff
-      else if paramstr(i)='-det'  then randseed:=0
-      else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
-      else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
-      else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
-      else if startsWith(paramStr(i),'-el') then begin
-        pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
-        if (pel<0) or (pel>ord(el5_systemError)) then begin
-          writeln('Invalid minimum error level given!');
-          writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramstr(i),4,length(paramstr(i))-3));
-          writeln('Allowed values: 0, 1, 2, 3, 4, 5');
-          halt;
-        end else minErrorLevel:=T_errorLevel(pel);
-      end else if fileToInterpret='' then begin
-        if fileExists(paramstr(i)) then fileToInterpret:=paramStr(i) else begin
-          writeln('Invalid filename given!');
-          writeln('Parameter: ',paramStr(i));
-          writeln('File does not exist.');
-          halt;
+	  if fileToInterpret='' then begin
+        if      paramstr(i)='+echo' then echo:=e_forcedOn
+        else if paramstr(i)='-echo' then echo:=e_forcedOff
+        else if paramstr(i)='+time' then time:=t_forcedOn
+        else if paramstr(i)='-time' then time:=t_forcedOff
+        else if paramstr(i)='-det'  then randseed:=0
+        else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
+        else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
+        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
+        else if startsWith(paramStr(i),'-el') then begin
+          pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
+          if (pel<0) or (pel>ord(el5_systemError)) then begin
+            writeln('Invalid minimum error level given!');
+            writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramstr(i),4,length(paramstr(i))-3));
+            writeln('Allowed values: 0, 1, 2, 3, 4, 5');
+            halt;
+          end else minErrorLevel:=T_errorLevel(pel);
+        end else begin
+          if fileExists(paramstr(i)) then fileToInterpret:=paramStr(i) else begin
+            writeln('Invalid filename given!');
+            writeln('Parameter: ',paramStr(i));
+            writeln('File does not exist.');
+            halt;
+          end;
         end;
-      end else begin
+	  end else begin
         setLength(parameters,length(parameters)+1);
         parameters[length(parameters)-1]:=paramStr(i);
-      end;
+	  end;
     end;
     //-----------------------------------------------------
     if (echo=e_forcedOn) or (echo=e_default) and (fileToInterpret='') then begin
@@ -111,6 +122,8 @@ PROCEDURE parseCmdLine;
       mnh_out_adapters.inputExprEcho:=nil;
       mnh_out_adapters.exprOut      :=nil;
     end;
+	displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileToInterpret=''));
+
     mnh_out_adapters.errorOut:=@filteredStdErrOut;
     if fileToInterpret<>'' then fileMode;
     if wantHelpDisplay then begin

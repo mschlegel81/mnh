@@ -35,7 +35,7 @@ PROCEDURE interactiveMode;
     while not(hasExitSignal) do begin
       time:=now;
       reloadMainPackage(lu_forDirectExecution);
-      writeln('time: ',(now-time)*24*60*60:0:3,'sec');
+      if displayTime then writeln('time: ',(now-time)*24*60*60:0:3,'sec');
       readInputFromConsole;
     end;
   end;
