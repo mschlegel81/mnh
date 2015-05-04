@@ -1219,7 +1219,7 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       if resultIsList or (length(resultString)<>1) then begin
         result:=newListLiteral;
         for k:=0 to length(resultString)-1 do P_listLiteral(result)^.append(newStringLiteral(resultString[k]),false);
-      end else result:=newStringLiteral(resultString[0]);
+      end else result:=newStringLiteral(join(formatTabs(split(resultString[0])),C_lineBreakChar));
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
 
