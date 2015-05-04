@@ -82,6 +82,7 @@
 @copy regTest\*.expected distro\regTest\
 @copy regTest\regTestCases.dat distro\regTest\
 @copy regTest\t.bat distro\regTest\
+@copy doTests_distro.bat distro\doTests.bat
 @cd distro
 @cd doc 
 @type builtin.head > builtin.html
@@ -98,6 +99,7 @@
 @copy ..\bin32\mnh_light.exe .
 @%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32R.7z
 @rmdir /S /Q regTest
+@del doTests.bat
 @%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32.7z
 @del /Q *
 @copy ..\mnh.exe .
