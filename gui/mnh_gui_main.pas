@@ -164,7 +164,7 @@ TYPE
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction
       );
     PROCEDURE Splitter1Moved(Sender: TObject);
-    procedure SplitterHMoved(Sender: TObject);
+    PROCEDURE SplitterHMoved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
       SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
@@ -899,7 +899,7 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
     autosizingEnabled:=false;
   end;
 
-procedure TMnhForm.SplitterHMoved(Sender: TObject);
+PROCEDURE TMnhForm.SplitterHMoved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
     autosizingEnabled:=false;
