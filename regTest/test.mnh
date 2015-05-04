@@ -19,6 +19,8 @@ allTestCases:=each(case,
                    (not(quickTestsOnly) or not(case%4)) and
                    matchesAny(case%0) ? case%[0..2] : void);
 
+allTestCases:=allTestCases%sortPerm(allTestCases%%0);
+
 print('---------------------------------------------------------\n',
       'Starting test runs with executable '& currentExe,'\n',
       currentExeInfo,
