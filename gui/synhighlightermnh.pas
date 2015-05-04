@@ -284,20 +284,27 @@ PROCEDURE TSynMnhSyn.Next;
       ':': begin
         Inc(run);
         case fLine [run] of
-          'b', 'e', 'i', 'l', 'n', 's', 'r': begin
+          'b', 'e', 'i', 'l', 'n', 's', 'r', 'k': begin
             localId := ':';
             i:=run;
             while fLine [i] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
               localId := localId+fLine [i];
               Inc(i);
             end;
-            if (localId = ':booleanList') or (localId = ':boolean') or
-              (localId = ':expression') or (localId = ':intList') or
-              (localId = ':int') or (localId = ':list') or
-              (localId = ':numericList') or (localId = ':numeric') or
-              (localId = ':stringList') or (localId = ':scalar') or
-              (localId = ':string') or (localId = ':realList') or
-              (localId = ':real') then begin
+            if (localId=C_tokenString[tt_typeCheckScalar      ]) or
+               (localId=C_tokenString[tt_typeCheckList        ]) or
+               (localId=C_tokenString[tt_typeCheckBoolean     ]) or
+               (localId=C_tokenString[tt_typeCheckBoolList    ]) or
+               (localId=C_tokenString[tt_typeCheckInt         ]) or
+               (localId=C_tokenString[tt_typeCheckIntList     ]) or
+               (localId=C_tokenString[tt_typeCheckReal        ]) or
+               (localId=C_tokenString[tt_typeCheckRealList    ]) or
+               (localId=C_tokenString[tt_typeCheckString      ]) or
+               (localId=C_tokenString[tt_typeCheckStringList  ]) or
+               (localId=C_tokenString[tt_typeCheckNumeric     ]) or
+               (localId=C_tokenString[tt_typeCheckNumList     ]) or
+               (localId=C_tokenString[tt_typeCheckExpression  ]) or
+               (localId=C_tokenString[tt_typeCheckKeyValueList]) then begin
               fTokenID := tkOperator;
               run:=i;
             end

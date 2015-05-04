@@ -1274,7 +1274,7 @@ end}
 
   begin
     setLength(stack,0);
-    try
+    {$ifndef debugMode} try {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1508,6 +1508,7 @@ end}
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
+    {$ifndef debugMode}
     except
       on EOutOfMemory do begin
         raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
@@ -1515,6 +1516,7 @@ end}
         raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
       end;
     end;
+    {$endif}
     if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
     or (callDepth=0) and (first<>nil) and (first^.next<>nil) then writeInterpreterState;
 

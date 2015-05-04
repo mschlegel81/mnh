@@ -1,7 +1,8 @@
 UNIT mnh_constants;
 
 INTERFACE
-USES sysutils;
+CONST
+  MAX_NUMBER_OF_SECONDARY_WORKER_THREADS=7;
 
 TYPE
   T_myFloat = extended;

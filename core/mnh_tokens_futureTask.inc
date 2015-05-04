@@ -63,7 +63,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 
 PROCEDURE ensurePoolThreads;
   begin
-    if (poolThreadsRunning<3) then begin
+    if (poolThreadsRunning<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) then begin
       InterLockedIncrement(poolThreadsRunning);
       BeginThread(@threadPoolThread);
     end;
