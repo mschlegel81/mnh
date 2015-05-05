@@ -113,7 +113,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: begin result:=txt; idLike:=data<>nil; end;
+      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: begin result:=txt; idLike:=data<>nil; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -273,16 +273,18 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '[': begin parsedLength:=1; result.tokType:=tt_listBraceOpen; end;
       '?': begin parsedLength:=1; result.tokType:=tt_iifCheck; end;
       ',': begin parsedLength:=1; result.tokType:=tt_separatorComma; end;
-      '+': if startsWith(line,'+=') then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus; end
-                                    else begin parsedLength:=1; result.tokType:=tt_operatorPlus; end;
+      '+': if startsWith(line,C_tokenString[tt_cso_assignPlus])
+           then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus; end
+           else begin parsedLength:=1; result.tokType:=tt_operatorPlus; end;
       ')': begin parsedLength:=1; result.tokType:=tt_braceClose; end;
       '(': begin parsedLength:=1; result.tokType:=tt_braceOpen; end;
-      '&': if startsWith(line,'&=') then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat; end
-                                    else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat; end;
+      '&': if startsWith(line,C_tokenString[tt_cso_assignStrConcat])
+           then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat; end
+           else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat; end;
       '-': if startsWith(line,'->') then begin
              parsedLength:=2;
              result.tokType:=tt_declare;
-           end else if startsWith(line,'-=') then begin
+           end else if startsWith(line,C_tokenString[tt_cso_assignMinus]) then begin
               parsedLength:=2;
               result.tokType:=tt_cso_assignMinus;
            end else begin
@@ -292,6 +294,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '*': if startsWith(line,'**') then begin
              parsedLength:=2;
              result.tokType:=tt_operatorPot;
+           end else if startsWith(line,C_tokenString[tt_cso_assignMult]) then begin
+             parsedLength:=2;
+             result.tokType:=tt_cso_assignMult;
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorMult;
@@ -342,6 +347,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF
              else if startsWith(line,SPECIAL_COMMENT_BLOB_BEGIN)  then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
              else if startsWith(line,SPECIAL_COMMENT_BLOB_END) then result.txt:=SPECIAL_COMMENT_BLOB_END;
+           end else if startsWith(line,C_tokenString[tt_cso_assignDiv]) then begin
+             parsedLength:=2;
+             result.tokType:=tt_cso_assignDiv;
            end else begin
              parsedLength:=1;
              result.tokType:=tt_operatorDivReal;
@@ -1308,7 +1316,7 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal,tt_assignExistingBlockLocal,tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: case cTokType[1] of
+          tt_assignNewBlockLocal,tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
               stack_popDestroy;
               first^.next:=recycler.disposeToken(first^.next);
@@ -1348,7 +1356,7 @@ end}
           first^.tokType:=tt_assignExistingBlockLocal;
           first^.next:=recycler.disposeToken(first^.next);
           stack_push;
-        end else if cTokType[1] in [tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat] then begin
+        end else if cTokType[1] in [tt_cso_assignPlus..tt_cso_assignAppend] then begin
           first^.tokType:=cTokType[1];
           first^.next:=recycler.disposeToken(first^.next);
           stack_push;
@@ -1395,7 +1403,7 @@ end}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
-        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignAppend,tt_cso_assignMinus,tt_cso_assignPlus,tt_cso_assignStrConcat: stack_push;
+        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);

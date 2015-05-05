@@ -158,19 +158,14 @@ PROCEDURE T_tokenRecycler.setLocalValue(CONST id:ansistring; CONST value:P_liter
 FUNCTION T_tokenRecycler.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   VAR i,j:longint;
       value:P_literal;
+  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   begin
     for i:=length(scopeStack)-1 downto 0 do
     for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
       value:=scopeStack[i,j].value;
       case mutation of
-        tt_cso_assignPlus: begin
-          result:=resolveOperator(value, tt_operatorPlus     , RHS, location);
-          disposeLiteral(value);
-          scopeStack[i,j].value:=result;
-          result^.rereference;
-        end;
-        tt_cso_assignMinus: begin
-          result:=resolveOperator(value, tt_operatorMinus    , RHS, location);
+        tt_cso_assignPlus..tt_cso_assignDiv: begin
+          result:=resolveOperator(value, MAPPED_OP[mutation], RHS, location);
           disposeLiteral(value);
           scopeStack[i,j].value:=result;
           result^.rereference;

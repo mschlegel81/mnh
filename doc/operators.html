@@ -19,6 +19,7 @@
 <h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
 <h3><a href="#typecheckOps"> Type check operators</a></h3>
 <h3><a href="#assignmentOps"> Assignment operators</a></h3>
+<h3><a href="#cStyleOps"> C-Style operators</a></h3>
 <div align="right"><font color="#a0a0a0"><hr> </font></div>
 
 <h3><a name="scalarOps"> Scalar operators<a></h3>
@@ -207,12 +208,24 @@ For sake of completeness we also list the assignment operator and declaration op
 Declares a function, returning nothing.</td></tr>
 <tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
 Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
-It can also be used to assign a value to a mutable rule, returning the value after assigning:<code>
+It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:<code>
   mutable last_x_in_f:=void;
   f(x)->print('Last x was: ',last_x_in_f) and
         print('This x is : ',last_x_in_f:=x);
 </code> </td></tr>
 </table>
+
+<h3><a name="cStyleOps"> C-Style operators</a></h3>
+The following C-Style operators are supported: <ul>
+  <li> <code>+=</code> Adds the right-hand-side to the left-hand-side and returns the new value. </li>
+  <li> <code>-=</code> Subtracts the right-hand-side from the left-hand-side and returns the new value. </li>
+  <li> <code>*=</code> Multiplies the right-hand-side with the left-hand-side and returns the new value. </li>
+  <li> <code>/=</code> Divides the right-hand-side by the left-hand-side and returns the new value. </li>
+  <li> <code>&=</code> String-Concatenates the right-hand-side with the left-hand-side and returns the new value. </li>
+  <li> <code>|=</code> Append the left-hand-side to the right-hand-side and returns the new value. </li>
+</ul>
+While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
+the latter 2 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
 
 <div align="right"><font color="#a0a0a0"><hr> </font></div>
 </body>
