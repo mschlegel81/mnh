@@ -10,6 +10,7 @@ testDirectory:=replace(splitFileName(myPath)%"relative",
 currentExeInfo:=head(exec(currentExe,["-version"]));
 currentExeCanPlot:=copy(currentExeInfo,5,4)="full";
 quickTestsOnly   :=testFilter==['quick'];
+specific_tests   :=not((testFilter==[]) or (quickTestsOnly));
 
 matchesAny(input)->(testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,input)>=0);
 
@@ -46,7 +47,7 @@ expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
 runTest(executor,scriptName,outputFileName,delOutputBefore)->
-  isMarkedAsPassed(scriptName)
+  isMarkedAsPassed(scriptName) and not(specific_tests)
   ? previouslyPassedTests:=previouslyPassedTests+1
   : begin
       delOutputBefore and outputFileName<>''

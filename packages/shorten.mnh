@@ -1,4 +1,4 @@
-shorten(s:string)->begin
+shortenSilently(s:string)->begin
   local result:=shorten(s,2);
   local tryOn:=true;
   each(subLen,[3..32],tryOn ? begin
@@ -8,7 +8,11 @@ shorten(s:string)->begin
     : tryOn:=false;
     void;
   end : void);
+  result;
+end;
 
+shorten(s:string)->begin
+  local result:=shortenSilently(s);
   print ('Input length  : ',length(escape(s)));
   print ('Result length : ',length(result));
   printf('Ratio         :%##0.00%%%',length(result)/length(escape(s))*100);
