@@ -1289,15 +1289,17 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   end;
 
 FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR resultText:AnsiString;
+  VAR resultText:ansistring;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       try
         resultText:=TFPCustomHTTPClient.SimpleGet(P_stringLiteral(params^.value(0))^.value);
       except
-        resultText:='';
-        raiseError(el2_warning,'httpGet failed.',tokenLocation);
+        On E : Exception do begin
+          resultText:='';
+          raiseError(el5_systemError,'httpGet failed with:'+E.Message,tokenLocation);
+        end;
       end;
       result:=newStringLiteral(resultText);
     end else raiseNotApplicableError('httpGet',params,tokenLocation);
