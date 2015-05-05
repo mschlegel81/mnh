@@ -216,7 +216,6 @@ PROCEDURE TSynMnhSyn.Next;
       ';': begin
         Inc(run);
         fTokenID := tkDefault;
-        ResetRange;
         end;
       '0'..'9': begin
         while fLine [run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do

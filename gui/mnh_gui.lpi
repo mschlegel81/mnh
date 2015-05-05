@@ -29,7 +29,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <WorkingDirectory Value="C:\Users\schlegel\Documents\mnh5"/>
+        <WorkingDirectory Value="d:\dev\mnh5"/>
       </local>
     </RunParams>
     <RequiredPackages Count="3">
@@ -87,7 +87,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="mnh_gui"/>
+      <Filename Value="mnh"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core"/>
@@ -96,13 +96,14 @@
     </SearchPaths>
     <Parsing>
       <SyntaxOptions>
+        <CStyleOperator Value="False"/>
+        <AllowLabel Value="False"/>
         <CPPInline Value="False"/>
       </SyntaxOptions>
     </Parsing>
     <CodeGeneration>
       <Checks>
         <IOChecks Value="True"/>
-        <RangeChecks Value="True"/>
         <OverflowChecks Value="True"/>
         <StackChecks Value="True"/>
       </Checks>
