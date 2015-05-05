@@ -1,3 +1,12 @@
+private default_dictionary->begin
+  local result:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
+  fileExists(result) ? result : begin
+    local dictContents:=split(httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'),'\r');
+    writeFileLines(result,dictContents);
+    result;
+  end;
+end;
+
 private mergeNodes(n1,n2)->[n1%0+n2%0,[n1%1,n2%1]];
 
 private huffman(L         )->size(L)<=1 ? codeSort(traverseBinaryTree("",L%0%1))
@@ -23,4 +32,4 @@ main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') a
                              each(e,huffman(charactersInFile(filename)),aggregator({$x&"\n "&$y}),
                                   e%0&"\t"&escape(e%1)));
 //*Calls main with unixdict.txt as input
-main->main((splitFileName(myPath)%"directory")&"/inputs/unixdict.txt");
+main->main(default_dictionary);

@@ -1,4 +1,13 @@
-private default_dictionary:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
+//*Returns the path of unixdict.txt and ensures the file is existent.
+//*If the file is missing it is downloaded from http://www.puzzlers.org/pub/wordlists/unixdict.txt
+private default_dictionary->begin
+  local result:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
+  fileExists(result) ? result : begin
+    local dictContents:=split(httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'),'\r');
+    writeFileLines(result,dictContents);
+    result;
+  end;
+end;
 
 private normalForm(s:string)->each(char,sort(copy(s,[0..length(s)-1],1)),&);
 
