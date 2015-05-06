@@ -1402,7 +1402,7 @@ end}
           if first^.tokType<>tt_identifier then didSubstitution:=true;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
-        {$ifdef PROFILING} false {$else} (first^.tokType=tt_parallelEach) {$endif} and (callDepth<STACK_DEPTH_LIMIT));
+        (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
