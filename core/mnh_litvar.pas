@@ -241,8 +241,19 @@ TYPE
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
   end;
 
+  T_namedVariable=object
+    private
+      id:ansistring;
+      value:P_literal;
+    public
+      CONSTRUCTOR create(CONST initialId:ansistring; CONST initialValue:P_literal);
+      DESTRUCTOR destroy;
+      PROCEDURE setValue(CONST newValue:P_literal);
+      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+      FUNCTION getId:ansistring;
+      FUNCTION getValue:P_literal;
+  end;
 
-TYPE
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer): string;
@@ -1984,6 +1995,76 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end;
     //-------------------------------:HANDLE ERROR, VOID AND EXPRESSION LITERALS
     result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation);
+  end;
+
+CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValue:P_literal);
+  begin
+    id:=initialId;
+    value:=initialValue;
+  end;
+
+DESTRUCTOR T_namedVariable.destroy;
+  begin
+    disposeLiteral(value);
+  end;
+
+PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
+  begin
+    disposeLiteral(value);
+    value:=newValue;
+    value^.rereference;
+  end;
+
+FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
+  VAR oldValue:P_literal;
+  begin
+    oldValue:=value;
+    case mutation of
+      tt_cso_assignPlus..tt_cso_assignDiv: begin
+        result:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location);
+        disposeLiteral(oldValue);
+        value:=result;
+        result^.rereference;
+      end;
+      tt_cso_assignStrConcat: begin
+        if (oldValue^.literalType=lt_string) and (oldValue^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
+          P_stringLiteral(oldValue)^.append(P_scalarLiteral(RHS)^.stringForm);
+          result:=oldValue;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location);
+          disposeLiteral(oldValue);
+          value:=result;
+          result^.rereference;
+        end;
+      end;
+      tt_cso_assignAppend: begin
+        if (oldValue^.literalType in C_validListTypes) and (oldValue^.getReferenceCount=1) then begin
+          if (RHS^.literalType in [lt_boolean..lt_expression])
+          then P_listLiteral(oldValue)^.append(RHS, true)
+          else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
+          result:=oldValue;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location);
+          result^.rereference;
+          disposeLiteral(oldValue);
+          value:=result;
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION T_namedVariable.getId:ansistring;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_namedVariable.getValue:P_literal;
+  begin
+    result:=value;
+    result^.rereference;
   end;
 
 VAR

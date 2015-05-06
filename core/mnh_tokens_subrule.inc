@@ -2,8 +2,7 @@
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
                  srt_inline_for_literal,
-                 srt_inline_for_each,
-                 srt_mutable);
+                 srt_inline_for_each);
   P_subrule=^T_subrule;
   T_subrule=object
     private
@@ -35,8 +34,6 @@
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION getInlineValue:P_literal;
-      PROCEDURE setMutable(CONST location:T_tokenLocation);
-      PROCEDURE setMutableValue(CONST val:P_literal);
       PROCEDURE complainAboutUncalled(CONST ruleId:ansistring);
   end;
 
@@ -555,32 +552,12 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin
-    if (length(expression)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal,srt_mutable]) then exit(nil);
+    if (length(expression)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
     with expression[0] do if token.tokType=tt_literal then begin
       called:=true;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
-  end;
-
-PROCEDURE T_subrule.setMutable(CONST location:T_tokenLocation);
-  begin
-    if length(pattern.sig)>0 then
-      raiseError(el3_evalError,'Only nullary functions can be made mutable.',location)
-    else if (length(expression)<>1) or (expression[0].token.tokType<>tt_literal) then
-      raiseError(el3_evalError,'Only functions returning a simple literal can be made mutable.',location)
-    else typ:=srt_mutable;
-  end;
-
-PROCEDURE T_subrule.setMutableValue(CONST val:P_literal);
-  begin
-    if (typ<>srt_mutable) then begin
-      raiseError(el5_systemError,'This should not have happened: trying to mutate an immutable subrule!',C_nilTokenLocation);
-      exit;
-    end;
-    disposeLiteral(expression[0].token.data);
-    expression[0].token.data:=val;
-    val^.rereference;
   end;
 
 PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);

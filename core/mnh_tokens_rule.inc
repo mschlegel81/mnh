@@ -4,6 +4,7 @@
 
   T_rule=object
     private
+      namedValue:T_namedVariable;
       ruleType:T_ruleType;
       cache:P_cache;
       rule_cs:system.TRTLCriticalSection;
@@ -47,6 +48,7 @@ DESTRUCTOR T_rule.destroy;
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
       system.DoneCriticalsection(rule_cs);
     end;
+    if ruleType=rt_mutable then namedValue.destroy;
     {$ifdef debugMode} writeln(stdErr,'Rule '+id+' destroyed'); {$endif}
     ruleType:=rt_normal;
     id:='';
@@ -140,9 +142,13 @@ exit}
         result:=false;
       end;
       rt_mutable: begin
-        system.EnterCriticalSection(rule_cs);
-        result:=(includePrivateRules or (subrules[0]^.typ=srt_normal_public)) and subrules[0]^.replaces(param,nil,firstRep,lastRep,recycler);
-        system.LeaveCriticalsection(rule_cs);
+        result:=includePrivateRules and ((param=nil) or (param^.size=0));
+        if result then begin
+          system.EnterCriticalSection(rule_cs);
+          firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,namedValue.getValue);
+          system.LeaveCriticalsection(rule_cs);
+          lastRep:=firstRep;
+        end;
       end;
       rt_normal: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then exit(true);
@@ -159,7 +165,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>1) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>0) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.Clear;
   end;
 
@@ -178,13 +184,19 @@ PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
   end;
 
 PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
+  VAR valueFromSubrule:P_literal;
   begin
     if (ruleType=rt_normal) then begin
       if length(subrules)<>1 then raiseError(el4_parsingError,'A rule with more than one subrule cannot be mutable!',location)
       else begin
-        subrules[0]^.setMutable(location);
-        ruleType:=rt_mutable;
-        system.InitCriticalSection(rule_cs);
+        valueFromSubrule:=subrules[0]^.getInlineValue;
+        if valueFromSubrule<>nil then begin
+          dispose(subrules[0],destroy);
+          setLength(subrules,0);
+          namedValue.create(id,valueFromSubrule);
+          ruleType:=rt_mutable;
+          system.InitCriticalSection(rule_cs);
+        end else raiseError(el3_evalError,'This rule cannot be made mutable!',location);
       end;
     end else if ruleType in [rt_memoized,rt_synchronized] then raiseError(el4_parsingError,'A memoized or synchronized rule cannot be mutable!',location);
   end;
@@ -201,7 +213,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
   begin
     if (ruleType=rt_mutable) then begin
       system.EnterCriticalSection(rule_cs);
-      subrules[0]^.setMutableValue(value);
+      namedValue.setValue(value);
       system.LeaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;

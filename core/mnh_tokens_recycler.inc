@@ -1,23 +1,7 @@
 {$ifdef include_interface}
-  T_valueStore=object
-    data:array of record
-      id:ansistring;
-      value:P_literal;
-    end;
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    FUNCTION indexOfId(id:ansistring):longint;
-    PROCEDURE declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
-    PROCEDURE setValue(CONST id:ansistring; CONST value:P_literal);
-    PROCEDURE setValue(CONST idx:longint; CONST value:P_literal);
-    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-    FUNCTION mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-    FUNCTION getValueOrNull(CONST id:ansistring):P_literal;
-    FUNCTION getValueOrNull(CONST idx:longint):P_literal;
-  end;
 
-  T_threadsafeValueStore=object(T_valueStore)
-    cs:TRTLCriticalSection;
+  T_valueStore=object
+    data:array of T_namedVariable;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION indexOfId(id:ansistring):longint;
@@ -63,14 +47,14 @@ CONSTRUCTOR T_valueStore.create;
 DESTRUCTOR T_valueStore.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(data)-1 do disposeLiteral(data[i].value);
+    for i:=0 to length(data)-1 do data[i].destroy;
     setLength(data,0);
   end;
 
 FUNCTION T_valueStore.indexOfId(id:ansistring):longint;
   VAR i:longint;
   begin
-    for i:=0 to length(data)-1 do if data[i].id=id then exit(i);
+    for i:=0 to length(data)-1 do if data[i].getId=id then exit(i);
     result:=-1;
   end;
 
@@ -79,14 +63,12 @@ PROCEDURE T_valueStore.declareValue(CONST id:ansistring; CONST value:P_literal; 
   begin
     if guaranteedToBeNew then i:=length(data) else begin
       i:=0;
-      while (i<length(data)) and (data[i].id<>id) do inc(i);
+      while (i<length(data)) and (data[i].getId<>id) do inc(i);
     end;
     if i>=length(data) then begin
       setLength(data,i+1);
-      data[i].id:=id;
-    end else disposeLiteral(data[i].value);
-    data[i].value:=value;
-    value^.rereference;
+      data[i].create(id,value);
+    end else data[i].setValue(value);
   end;
 
 PROCEDURE T_valueStore.setValue(CONST id:ansistring; CONST value:P_literal);
@@ -99,9 +81,7 @@ PROCEDURE T_valueStore.setValue(CONST id:ansistring; CONST value:P_literal);
 
 PROCEDURE T_valueStore.setValue(CONST idx:longint; CONST value:P_literal);
   begin
-    disposeLiteral(data[idx].value);
-    data[idx].value:=value;
-    value^.rereference;
+    data[idx].setValue(value);
   end;
 
 FUNCTION T_valueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
@@ -115,44 +95,8 @@ FUNCTION T_valueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenTy
   end;
 
 FUNCTION T_valueStore.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
-  VAR value:P_literal;
   begin
-    value:=data[idx].value;
-    case mutation of
-      tt_cso_assignPlus..tt_cso_assignDiv: begin
-        result:=resolveOperator(value, MAPPED_OP[mutation], RHS, location);
-        disposeLiteral(value);
-        data[idx].value:=result;
-        result^.rereference;
-      end;
-      tt_cso_assignStrConcat: begin
-        if (value^.literalType=lt_string) and (value^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
-          P_stringLiteral(value)^.append(P_scalarLiteral(RHS)^.stringForm);
-          result:=value;
-          result^.rereference;
-        end else begin
-          result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
-          disposeLiteral(value);
-          data[idx].value:=result;
-          result^.rereference;
-        end;
-      end;
-      tt_cso_assignAppend: begin
-        if (value^.literalType in C_validListTypes) and (value^.getReferenceCount=1) then begin
-          if (RHS^.literalType in [lt_boolean..lt_expression])
-          then P_listLiteral(value)^.append(RHS, true)
-          else P_listLiteral(value)^.appendAll(P_listLiteral(RHS));
-          result:=value;
-          result^.rereference;
-        end else begin
-          result:=resolveOperator(value, tt_operatorConcat   , RHS, location);
-          result^.rereference;
-          disposeLiteral(value);
-          data[idx].value:=result;
-        end;
-      end;
-    end;
+    result:=data[idx].mutate(mutation,RHS,location);
   end;
 
 FUNCTION T_valueStore.getValueOrNull(CONST id:ansistring):P_literal;
@@ -160,89 +104,15 @@ FUNCTION T_valueStore.getValueOrNull(CONST id:ansistring):P_literal;
   begin
     idx:=indexOfId(id);
     if idx<0 then result:=nil else begin
-      result:=data[idx].value;
-      result^.rereference;
+      result:=data[idx].getValue;
     end;
   end;
 
 FUNCTION T_valueStore.getValueOrNull(CONST idx:longint):P_literal;
   begin
     if idx<0 then result:=nil else begin
-      result:=data[idx].value;
-      result^.rereference;
+      result:=data[idx].getValue;
     end;
-  end;
-
-CONSTRUCTOR T_threadsafeValueStore.create;
-  begin
-    system.InitCriticalSection(cs);
-    system.EnterCriticalsection(cs);
-    inherited create;
-    system.LeaveCriticalsection(cs);
-  end;
-
-DESTRUCTOR T_threadsafeValueStore.destroy;
-  begin
-    system.EnterCriticalsection(cs);
-    inherited destroy;
-    system.LeaveCriticalsection(cs);
-    system.DoneCriticalsection(cs);
-  end;
-
-FUNCTION T_threadsafeValueStore.indexOfId(id:ansistring):longint;
-  begin
-    system.EnterCriticalsection(cs);
-    result:=inherited indexOfId(id);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_threadsafeValueStore.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
-  begin
-    system.EnterCriticalsection(cs);
-    inherited declareValue(id,value,guaranteedToBeNew);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_threadsafeValueStore.setValue(CONST id:ansistring; CONST value:P_literal);
-  begin
-    system.EnterCriticalsection(cs);
-    inherited setValue(id,value);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_threadsafeValueStore.setValue(CONST idx:longint; CONST value:P_literal);
-  begin
-    system.EnterCriticalsection(cs);
-    inherited setValue(idx,value);
-    system.LeaveCriticalsection(cs);
-  end;
-
-FUNCTION T_threadsafeValueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-  begin
-    system.EnterCriticalsection(cs);
-    result:=inherited mutateInline(id,mutation,RHS,location);
-    system.LeaveCriticalsection(cs);
-  end;
-
-FUNCTION T_threadsafeValueStore.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-  begin
-    system.EnterCriticalsection(cs);
-    result:=inherited mutateInline(idx,mutation,RHS,location);
-    system.LeaveCriticalsection(cs);
-  end;
-
-FUNCTION T_threadsafeValueStore.getValueOrNull(CONST id:ansistring):P_literal;
-  begin
-    system.EnterCriticalsection(cs);
-    result:=inherited getValueOrNull(id);
-    system.LeaveCriticalsection(cs);
-  end;
-
-FUNCTION T_threadsafeValueStore.getValueOrNull(CONST idx:longint):P_literal;
-  begin
-    system.EnterCriticalsection(cs);
-    result:=inherited getValueOrNull(idx);
-    system.LeaveCriticalsection(cs);
   end;
 
 CONSTRUCTOR T_tokenRecycler.create;
