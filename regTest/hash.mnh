@@ -2,3 +2,4 @@ stringHash(s:string)->pEach(i,[0..length(s)-1],+,ord(copy(s,i,1))*(31^i));
 hex(x:int)->each(c,['0'..'9','A'..'F']%each(i,16^[0..15],abs(x and (i*15)) div i ),&);
 fileHash(filename:string)->fileExists(filename) ? hex(stringHash(fileContents(filename))) : '--file does not exist--';
 main->print(fileHash(myPath));
+main(...)->printf("%X%\t%X%",$params,each(p,$params,fileHash(p)));
