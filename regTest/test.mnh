@@ -45,9 +45,6 @@ main->main(executor);
 main(exe,...)->begin
   local testFilter       := tail($params);
   local currentExeInfo   := head(exec(exe,["-version"]));
-  print('---------------------------------------------------------\n',
-        'Starting test runs with executable ',exe,'\n',currentExeInfo,
-        '\n---------------------------------------------------------');
   local currentExeCanPlot:= copy(currentExeInfo,5,4)="full";
   local quickTestsOnly   := testFilter==['quick'];
   local specific_tests   := not((testFilter==[]) or (quickTestsOnly));
@@ -56,19 +53,25 @@ main(exe,...)->begin
                    (currentExeCanPlot   or not(case%3)) and
                    (not(quickTestsOnly) or not(case%4)) and
                    ((testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,case%0)>=0)) ? case%[0..2] : void));
-  local FMT_STRING:="%X"&max(length(testCases%%0))&"% %####0.00%sec %X%";
+  local FMT_STRING:="%X"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"% %####0.00%sec %X%";
+
+  size(testCases)>0 ?
+  print('---------------------------------------------------------\n',
+        'Starting test runs with executable ',exe,'\n',currentExeInfo,
+        '\n---------------------------------------------------------') : void;
+
 
   each(test,testCases, begin
     isMarkedAsPassed(test%0,currentExeInfo) and not(specific_tests)
     ? previouslyPassedTests:=previouslyPassedTests+1
     : runTest@(exe|currentExeInfo|test|FMT_STRING);
   end);
-  print(previouslyPassedTests,' Tests were already marked as passed.');
-  print(testsFailed);
-  storePassedTests;
 
-  //displayUncoveredTests
-  begin
+  size(testCases)>0 ? begin
+    print(previouslyPassedTests,' Tests were already marked as passed.');
+    print(testsFailed);
+    storePassedTests;
+    //displayUncoveredTests
     local coveredTests:= replace(unique(expression(fileContents('regTest/regTestCases.dat'))()%%0),'\\','/');
     local first:=true;
     each(script,
@@ -80,5 +83,5 @@ main(exe,...)->begin
            end : void;
            print('  ',script);
          end);
-  end;
+  end : void;
 end;
