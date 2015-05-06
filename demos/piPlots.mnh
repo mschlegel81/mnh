@@ -1,7 +1,8 @@
 //Binominalkoeffizient über Pascalsches Dreieck:
-memoized pascal(n)->pascal([1],n);
-pascal(L,n>0)->pascal(L|0+0|L,n-1);
-pascal(L,n)->L;
+memoized
+private pascal(n)->pascal([1],n);
+private pascal(L,n>0)->pascal(L|0+0|L,n-1);
+private pascal(L,n)->L;
 
 //Summe und gleitende Summen:
 private sum(L)->each(e,L,+);

@@ -2,6 +2,7 @@
 @if "%1"=="help" goto help
 @if "%1"=="" %0 32o 32d 64o 64d 
 @if "%1"=="all" %0 32o 32d 64o 64d distro
+@if "%1"=="rebuild" %0 clean 32o 32d 64o 64d distro && call doTests
 
 @set delp=C:\lazarus32\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32 gui
 @set fpc32=C:\lazarus32\fpc\2.6.4\bin\i386-win32\fpc         
@@ -119,11 +120,12 @@
 
 :help
 @echo %0 usage:
-@echo   32o    - builds 32bit optimized binaries
-@echo   32d    - builds 32bit binaried for debugging
-@echo   64o    - builds 32bit optimized binaries
-@echo   64d    - builds 32bit binaried for debugging
-@echo   distro - makes a distro package
-@echo   all    - all of the above
-@echo   clean  - cleanup
+@echo   32o     - builds 32bit optimized binaries
+@echo   32d     - builds 32bit binaried for debugging
+@echo   64o     - builds 32bit optimized binaries
+@echo   64d     - builds 32bit binaried for debugging
+@echo   distro  - makes a distro package
+@echo   all     - all of the above
+@echo   clean   - cleanup
+@echo   rebuild - clean and build all
 :end
