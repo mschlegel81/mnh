@@ -37,6 +37,7 @@
       FUNCTION getInlineValue:P_literal;
       PROCEDURE setMutable(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST val:P_literal);
+      FUNCTION csoMutateValue (CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       PROCEDURE complainAboutUncalled(CONST ruleId:ansistring);
   end;
 
@@ -588,6 +589,52 @@ PROCEDURE T_subrule.setMutableValue(CONST val:P_literal);
     disposeLiteral(expression[0].token.data);
     expression[0].token.data:=val;
     val^.rereference;
+  end;
+
+FUNCTION T_subrule.csoMutateValue (CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
+  VAR oldValue:P_literal;
+  begin
+    if (typ<>srt_mutable) then begin
+      raiseError(el5_systemError,'This should not have happened: trying to mutate an immutable subrule!',C_nilTokenLocation);
+      exit;
+    end;
+    oldValue:=expression[0].token.data;
+
+    case mutation of
+      tt_cso_assignPlus..tt_cso_assignDiv: begin
+        result:=resolveOperator(oldValue, MAPPED_OP[mutation], RHS, location);
+        disposeLiteral(oldValue);
+        expression[0].token.data:=result;
+        result^.rereference;
+      end;
+      tt_cso_assignStrConcat: begin
+        if (oldValue^.literalType=lt_string) and (oldValue^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
+          P_stringLiteral(oldValue)^.append(P_scalarLiteral(RHS)^.stringForm);
+          result:=oldValue;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(oldValue, tt_operatorStrConcat, RHS, location);
+          disposeLiteral(oldValue);
+          expression[0].token.data:=result;
+          result^.rereference;
+        end;
+      end;
+      tt_cso_assignAppend: begin
+        if (oldValue^.literalType in C_validListTypes) and (oldValue^.getReferenceCount=1) then begin
+          if (RHS^.literalType in [lt_boolean..lt_expression])
+          then P_listLiteral(oldValue)^.append(RHS, true)
+          else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
+          result:=oldValue;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(oldValue, tt_operatorConcat   , RHS, location);
+          result^.rereference;
+          disposeLiteral(oldValue);
+          expression[0].token.data:=result;
+        end;
+      end;
+    end;
   end;
 
 PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);
