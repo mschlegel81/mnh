@@ -1,12 +1,40 @@
 {$ifdef include_interface}
+  T_valueStore=object
+    data:array of record
+      id:ansistring;
+      value:P_literal;
+    end;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION indexOfId(id:ansistring):longint;
+    PROCEDURE declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
+    PROCEDURE setValue(CONST id:ansistring; CONST value:P_literal);
+    PROCEDURE setValue(CONST idx:longint; CONST value:P_literal);
+    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+    FUNCTION mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+    FUNCTION getValueOrNull(CONST id:ansistring):P_literal;
+    FUNCTION getValueOrNull(CONST idx:longint):P_literal;
+  end;
+
+  T_threadsafeValueStore=object(T_valueStore)
+    cs:TRTLCriticalSection;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION indexOfId(id:ansistring):longint;
+    PROCEDURE declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
+    PROCEDURE setValue(CONST id:ansistring; CONST value:P_literal);
+    PROCEDURE setValue(CONST idx:longint; CONST value:P_literal);
+    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+    FUNCTION mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+    FUNCTION getValueOrNull(CONST id:ansistring):P_literal;
+    FUNCTION getValueOrNull(CONST idx:longint):P_literal;
+  end;
+
   T_tokenRecycler=object
     dat:array[0..1023] of P_token;
     fill:longint;
 
-    scopeStack:array of array of record
-      id:ansistring;
-      value:P_literal;
-    end;
+    scopeStack:array of T_valueStore;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION disposeToken(p:P_token):P_token; inline;
@@ -27,6 +55,195 @@
 
 {$endif}
 {$ifdef include_implementation}
+CONSTRUCTOR T_valueStore.create;
+  begin
+    setLength(data,0);
+  end;
+
+DESTRUCTOR T_valueStore.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(data)-1 do disposeLiteral(data[i].value);
+    setLength(data,0);
+  end;
+
+FUNCTION T_valueStore.indexOfId(id:ansistring):longint;
+  VAR i:longint;
+  begin
+    for i:=0 to length(data)-1 do if data[i].id=id then exit(i);
+    result:=-1;
+  end;
+
+PROCEDURE T_valueStore.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
+  VAR i:longint;
+  begin
+    if guaranteedToBeNew then i:=length(data) else begin
+      i:=0;
+      while (i<length(data)) and (data[i].id<>id) do inc(i);
+    end;
+    if i>=length(data) then begin
+      setLength(data,i+1);
+      data[i].id:=id;
+    end else disposeLiteral(data[i].value);
+    data[i].value:=value;
+    value^.rereference;
+  end;
+
+PROCEDURE T_valueStore.setValue(CONST id:ansistring; CONST value:P_literal);
+  VAR idx:longint;
+  begin
+    idx:=indexOfId(id);
+    if idx<0 then declareValue(id,value,true)
+             else setValue(idx,value);
+  end;
+
+PROCEDURE T_valueStore.setValue(CONST idx:longint; CONST value:P_literal);
+  begin
+    disposeLiteral(data[idx].value);
+    data[idx].value:=value;
+    value^.rereference;
+  end;
+
+FUNCTION T_valueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  VAR idx:longint;
+  begin
+    idx:=indexOfId(id);
+    if idx<0 then begin
+      raiseError(el3_evalError,'Value with ID="'+id+'" is not contained in value store! Cannot apply mutation.',location);
+      result:=nil;
+    end else mutateInline(idx,mutation,RHS,location);
+  end;
+
+FUNCTION T_valueStore.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
+  VAR value:P_literal;
+  begin
+    value:=data[idx].value;
+    case mutation of
+      tt_cso_assignPlus..tt_cso_assignDiv: begin
+        result:=resolveOperator(value, MAPPED_OP[mutation], RHS, location);
+        disposeLiteral(value);
+        data[idx].value:=result;
+        result^.rereference;
+      end;
+      tt_cso_assignStrConcat: begin
+        if (value^.literalType=lt_string) and (value^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
+          P_stringLiteral(value)^.append(P_scalarLiteral(RHS)^.stringForm);
+          result:=value;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
+          disposeLiteral(value);
+          data[idx].value:=result;
+          result^.rereference;
+        end;
+      end;
+      tt_cso_assignAppend: begin
+        if (value^.literalType in C_validListTypes) and (value^.getReferenceCount=1) then begin
+          if (RHS^.literalType in [lt_boolean..lt_expression])
+          then P_listLiteral(value)^.append(RHS, true)
+          else P_listLiteral(value)^.appendAll(P_listLiteral(RHS));
+          result:=value;
+          result^.rereference;
+        end else begin
+          result:=resolveOperator(value, tt_operatorConcat   , RHS, location);
+          result^.rereference;
+          disposeLiteral(value);
+          data[idx].value:=result;
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION T_valueStore.getValueOrNull(CONST id:ansistring):P_literal;
+  VAR idx:longint;
+  begin
+    idx:=indexOfId(id);
+    if idx<0 then result:=nil else begin
+      result:=data[idx].value;
+      result^.rereference;
+    end;
+  end;
+
+FUNCTION T_valueStore.getValueOrNull(CONST idx:longint):P_literal;
+  begin
+    if idx<0 then result:=nil else begin
+      result:=data[idx].value;
+      result^.rereference;
+    end;
+  end;
+
+CONSTRUCTOR T_threadsafeValueStore.create;
+  begin
+    system.InitCriticalSection(cs);
+    system.EnterCriticalsection(cs);
+    inherited create;
+    system.LeaveCriticalsection(cs);
+  end;
+
+DESTRUCTOR T_threadsafeValueStore.destroy;
+  begin
+    system.EnterCriticalsection(cs);
+    inherited destroy;
+    system.LeaveCriticalsection(cs);
+    system.DoneCriticalsection(cs);
+  end;
+
+FUNCTION T_threadsafeValueStore.indexOfId(id:ansistring):longint;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=inherited indexOfId(id);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_threadsafeValueStore.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
+  begin
+    system.EnterCriticalsection(cs);
+    inherited declareValue(id,value,guaranteedToBeNew);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_threadsafeValueStore.setValue(CONST id:ansistring; CONST value:P_literal);
+  begin
+    system.EnterCriticalsection(cs);
+    inherited setValue(id,value);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_threadsafeValueStore.setValue(CONST idx:longint; CONST value:P_literal);
+  begin
+    system.EnterCriticalsection(cs);
+    inherited setValue(idx,value);
+    system.LeaveCriticalsection(cs);
+  end;
+
+FUNCTION T_threadsafeValueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=inherited mutateInline(id,mutation,RHS,location);
+    system.LeaveCriticalsection(cs);
+  end;
+
+FUNCTION T_threadsafeValueStore.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=inherited mutateInline(idx,mutation,RHS,location);
+    system.LeaveCriticalsection(cs);
+  end;
+
+FUNCTION T_threadsafeValueStore.getValueOrNull(CONST id:ansistring):P_literal;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=inherited getValueOrNull(id);
+    system.LeaveCriticalsection(cs);
+  end;
+
+FUNCTION T_threadsafeValueStore.getValueOrNull(CONST idx:longint):P_literal;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=inherited getValueOrNull(idx);
+    system.LeaveCriticalsection(cs);
+  end;
 
 CONSTRUCTOR T_tokenRecycler.create;
   VAR i:longint;
@@ -113,14 +330,10 @@ PROCEDURE T_tokenRecycler.scopePush;
   end;
 
 PROCEDURE T_tokenRecycler.scopePop;
-  VAR topIdx,i:longint;
+  VAR topIdx:longint;
   begin
     topIdx:=length(scopeStack)-1;
-    for i:=0 to length(scopeStack[topIdx])-1 do begin
-      disposeLiteral(scopeStack[topIdx,i].value);
-      scopeStack[topIdx,i].id:='';
-    end;
-    setLength(scopeStack[topIdx],0);
+    scopeStack[topIdx].destroy;
     setLength(scopeStack,topIdx);
   end;
 
@@ -130,86 +343,42 @@ FUNCTION T_tokenRecycler.scopeBottom:boolean;
   end;
 
 PROCEDURE T_tokenRecycler.declareLocalValue(CONST id:ansistring; CONST value:P_literal);
-  VAR i,j:longint;
+  VAR topIdx:longint;
   begin
-    i:=length(scopeStack)-1;
-    j:=0;
-    while (j<length(scopeStack[i])) and (scopeStack[i,j].id<>id) do inc(j);
-    if j>=length(scopeStack[i]) then begin
-      setLength(scopeStack[i],j+1);
-      scopeStack[i,j].id:=id;
-    end else disposeLiteral(scopeStack[i,j].value);
-    scopeStack[i,j].value:=value;
-    value^.rereference;
+    topIdx:=length(scopeStack)-1;
+    scopeStack[topIdx].declareValue(id,value,false);
   end;
 
 PROCEDURE T_tokenRecycler.setLocalValue(CONST id:ansistring; CONST value:P_literal);
   VAR i,j:longint;
   begin
-    for i:=length(scopeStack)-1 downto 0 do
-    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
-      scopeStack[i,j].value:=value;
-      value^.rereference;
-      exit;
+    for i:=length(scopeStack)-1 downto 0 do begin
+      j:=scopeStack[i].indexOfId(id);
+      if j>=0 then begin
+        scopeStack[i].setValue(j,value);
+        exit;
+      end;
     end;
-    declareLocalValue(id,value);
+    scopeStack[length(scopeStack)-1].declareValue(id,value,true);
   end;
 
 FUNCTION T_tokenRecycler.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   VAR i,j:longint;
-      value:P_literal;
-  CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   begin
-    for i:=length(scopeStack)-1 downto 0 do
-    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
-      value:=scopeStack[i,j].value;
-      case mutation of
-        tt_cso_assignPlus..tt_cso_assignDiv: begin
-          result:=resolveOperator(value, MAPPED_OP[mutation], RHS, location);
-          disposeLiteral(value);
-          scopeStack[i,j].value:=result;
-          result^.rereference;
-        end;
-        tt_cso_assignStrConcat: begin
-          if (value^.literalType=lt_string) and (value^.getReferenceCount=1) and (RHS^.literalType in [lt_boolean..lt_string]) then begin
-            P_stringLiteral(value)^.append(P_scalarLiteral(RHS)^.stringForm);
-            result:=value;
-            result^.rereference;
-          end else begin
-            result:=resolveOperator(value, tt_operatorStrConcat, RHS, location);
-            disposeLiteral(value);
-            scopeStack[i,j].value:=result;
-            result^.rereference;
-          end;
-        end;
-        tt_cso_assignAppend: begin
-          if (value^.literalType in C_validListTypes) and (value^.getReferenceCount=1) then begin
-            if (RHS^.literalType in [lt_boolean..lt_expression])
-            then P_listLiteral(value)^.append(RHS, true)
-            else P_listLiteral(value)^.appendAll(P_listLiteral(RHS));
-            result:=value;
-            result^.rereference;
-          end else begin
-            result:=resolveOperator(value, tt_operatorConcat   , RHS, location);
-            result^.rereference;
-            disposeLiteral(value);
-            scopeStack[i,j].value:=result;
-          end;
-        end;
-      end;
-      Exit(result);
+    for i:=length(scopeStack)-1 downto 0 do begin
+      j:=scopeStack[i].indexOfId(id);
+      if j>=0 then exit(scopeStack[i].mutateInline(j,mutation,RHS,location));
     end;
+    result:=nil;
   end;
 
 FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;
   VAR i,j:longint;
   begin
     result:=nil;
-    for i:=length(scopeStack)-1 downto 0 do
-    for j:=0 to length(scopeStack[i])-1 do if scopeStack[i,j].id=id then begin
-      result:=scopeStack[i,j].value;
-      result^.rereference;
-      exit(result);
+    for i:=length(scopeStack)-1 downto 0 do begin
+      j:=scopeStack[i].indexOfId(id);
+      if j>=0 then exit(scopeStack[i].getValueOrNull(j));
     end;
   end;
 
