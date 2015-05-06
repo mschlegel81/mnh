@@ -113,7 +113,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal: begin result:=txt; idLike:=data<>nil; end;
+      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: begin result:=txt; idLike:=data<>nil; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -1100,24 +1100,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           recycler.setLocalValue(first^.txt,newValue);
           first:=recycler.disposeToken(first);
         end;
-        tt_cso_assignPlus..tt_cso_assignAppend:if first^.tokType=tt_assignExistingBlockLocal then begin
+        tt_cso_assignPlus..tt_cso_assignAppend:begin
           newValue:=recycler.mutateInline(first^.txt,kind,newValue,first^.location);
           if errorLevel<el3_evalError then begin
             first:=recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
-        end else if (length(stack)>0) and
-                    (stack[length(stack)-1]^.tokType=tt_localUserRulePointer) and
-                    (P_rule(stack[length(stack)-1]^.data)^.ruleType=rt_mutable) then begin
-          newValue:=P_rule(stack[length(stack)-1]^.data)^.csoMutateValue(kind,newValue,first^.location);
-          if errorLevel<el3_evalError then begin
-            stack_popDestroy;
-            first:=recycler.disposeToken(first);
-            disposeLiteral(first^.data);
-            first^.data:=newValue;
-          end;
-        end else didSubstitution:=false;
+        end;
       end;
     end;
 
@@ -1418,7 +1408,6 @@ end}
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon: applyRule(nil,first^.next);
-          tt_cso_assignPlus..tt_cso_assignAppend:stack_push_push;
         end;
         tt_procedureBlockWhile: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=recycler.disposeToken(first^.next);
