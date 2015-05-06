@@ -35,6 +35,7 @@
     PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
     FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
     FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
+    FUNCTION hasId(CONST id:ansistring):boolean;
   end;
 
 {$endif}
@@ -250,6 +251,13 @@ FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;
       j:=scopeStack[i].indexOfId(id);
       if j>=0 then exit(scopeStack[i].getValueOrNull(j));
     end;
+  end;
+
+FUNCTION T_tokenRecycler.hasId(CONST id:ansistring):boolean;
+  VAR i:longint;
+  begin
+    for i:=length(scopeStack)-1 downto 0 do if scopeStack[i].indexOfId(id)>=0 then exit(true);
+    result:=false;
   end;
 
 {$endif}

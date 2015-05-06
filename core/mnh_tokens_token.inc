@@ -511,8 +511,8 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
         tt_identifier: begin
           if t^.data=nil then t^.data:=inPackage;
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
-            inPackage^.resolveRuleId(t^,false);
-            if errorLevel<el3_evalError then begin
+            inPackage^.resolveRuleId(t^,true);
+            if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRulePointer then begin
                 rule:=t^.data;
                 if rule^.ruleType=rt_mutable then begin
@@ -523,7 +523,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
                   t^.next:=recycler.disposeToken(t^.next);
                 end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
               end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_tokenInfoString[t^.tokType],t^.next^.location);
-            end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Identifier '+t^.txt+' cannot be resolved.',t^.next^.location);
+            end else begin
+              raiseError(el2_warning,'Cannot resolve identifier "'+t^.txt+'" using dynamic scoping (expecting a block-local variable for this identifier) as a fallback.',t^.location);
+              t^.tokType:=t^.next^.tokType;
+              if t^.tokType=tt_assign then t^.tokType:=tt_assignExistingBlockLocal;
+              t^.data:=nil;
+              t^.next:=recycler.disposeToken(t^.next);
+              //raiseError(el4_parsingError,'You can only mutate local mutable rules! Identifier '+t^.txt+' cannot be resolved.',t^.next^.location);
+            end;
           end;
         end;
         tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
@@ -1407,9 +1414,15 @@ end}
         end;
         tt_list_constructor: stack_push;
         tt_identifier: begin
-          if first^.data=nil then first^.data:=guessPackageForToken(first^);
-          P_package(first^.data)^.resolveRuleId(first^,false);
-          if first^.tokType<>tt_identifier then didSubstitution:=true;
+          if not(recycler.scopeBottom) and (recycler.hasId(first^.txt)) then begin
+            first^.tokType:=tt_blockLocalVariable;
+            first^.data:=nil;
+            didSubstitution:=true;
+          end else begin
+            if first^.data=nil then first^.data:=guessPackageForToken(first^);
+            P_package(first^.data)^.resolveRuleId(first^,false);
+            if first^.tokType<>tt_identifier then didSubstitution:=true;
+          end;
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));

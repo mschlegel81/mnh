@@ -15,6 +15,12 @@ private cleanString(drawChars:string, input:string)->begin
     ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9']);
 end;
 
+multistep(i)->{begin
+                 local oldPos:=turtlePos;
+                 turtlePos+=i*[cos(turtleDir),sin(turtleDir)];
+                 oldPos;
+               end};
+
 turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin
   local cleanInput:=cleanString(drawChars,s);
   //init State variables
@@ -23,33 +29,22 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->
   local posStack:=[];
   local dirStack:=[];
   local rotAngle:=rotAngleInDegrees*degToRad;
-  each(c,copy(cleanInput,[0..length(cleanInput)-1],1),
-    c in ['0'..'9'] ? begin
-                        local oldPos:=turtlePos;
-                        turtlePos:=turtlePos+2^softCast(c)*[cos(turtleDir),sin(turtleDir)];
-                        oldPos;
-                      end :
-    c='+' ? begin
-              turtleDir:=turtleDir-rotAngle;
-              void;
-            end :
-    c='-' ? begin
-              turtleDir:=turtleDir+rotAngle;
-              void;
-            end :
-    c='[' ? begin
-              posStack:=posStack|[turtlePos];
-              dirStack:=dirStack|turtleDir;
-              void;
-            end :
-            begin
-              turtlePos:=trailing(posStack);
-              posStack := leading(posStack);
-              turtleDir:=trailing(dirStack);
-              dirStack := leading(dirStack);
-              [[Nan,Nan]] | turtlePos;
-            end) |
-  [turtlePos];
+  local OP_LUT:=each(i,[0..9],[string(i),multistep(2^i)])|[
+        ['+',{begin turtleDir-=rotAngle; void; end}],
+        ['-',{begin turtleDir+=rotAngle; void; end}],
+        ['[',{begin
+                posStack|=[turtlePos];
+                dirStack|=turtleDir;
+                void;
+              end}],
+        [']',{begin
+                turtlePos:=trailing(posStack);
+                posStack := leading(posStack);
+                turtleDir:=trailing(dirStack);
+                dirStack := leading(dirStack);
+                [[Nan,Nan]] | turtlePos;
+              end}]];
+  each(c,copy(cleanInput,[0..length(cleanInput)-1],1),(OP_LUT%c)()) | [turtlePos];
 end;
 
 //*For reg-test
