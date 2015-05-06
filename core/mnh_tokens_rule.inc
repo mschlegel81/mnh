@@ -22,6 +22,7 @@
       PROCEDURE setMutable     (CONST location:T_tokenLocation);
       PROCEDURE setSynchronized(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST value:P_literal);
+      FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE complainAboutUncalled;
@@ -216,6 +217,15 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
       namedValue.setValue(value);
       system.LeaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
+  end;
+
+FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+  begin
+    if (ruleType=rt_mutable) then begin
+      system.EnterCriticalSection(rule_cs);
+      result:=namedValue.mutate(mutation,RHS,location);
+      system.LeaveCriticalSection(rule_cs);
+    end else raiseError(el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;

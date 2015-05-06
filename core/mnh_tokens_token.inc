@@ -113,7 +113,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: begin result:=txt; idLike:=data<>nil; end;
+      tt_assignNewBlockLocal: begin result:='local '+txt+C_tokenString[tokType]; idLike:=true; end;
+      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: begin result:=txt+C_tokenString[tokType]; idLike:=true; end;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -509,22 +510,38 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
       case t^.tokType of
         tt_identifier: begin
           if t^.data=nil then t^.data:=inPackage;
-          if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+          if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
             inPackage^.resolveRuleId(t^,false);
             if errorLevel<el3_evalError then begin
               if t^.tokType=tt_localUserRulePointer then begin
                 rule:=t^.data;
                 if rule^.ruleType=rt_mutable then begin
                   t^.data:=rule;
-                  t^.tokType:=tt_mutate;
-                  t^.txt:=t^.txt+C_tokenString[tt_mutate];
+                  t^.tokType:=t^.next^.tokType;
+                  if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
+                  t^.txt:=t^.txt;
                   t^.next:=recycler.disposeToken(t^.next);
                 end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
               end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_tokenInfoString[t^.tokType],t^.next^.location);
             end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Identifier '+t^.txt+' cannot be resolved.',t^.next^.location);
           end;
         end;
-
+        tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignNewBlockLocal;
+          t^.data:=nil;
+          t^.txt:=t^.next^.txt;
+          t^.next:=recycler.disposeToken(t^.next);
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
+        tt_blockLocalVariable: if (t^.next<>nil) and (t^.next^.tokType=tt_assign) then begin
+          t^.tokType:=tt_assignExistingBlockLocal;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end else if (t^.next<>nil) and (t^.next^.tokType in [tt_cso_assignPlus..tt_cso_assignAppend]) then begin
+          t^.tokType:=t^.next^.tokType;
+          t^.data:=nil;
+          t^.next:=recycler.disposeToken(t^.next);
+        end;
         tt_each,tt_parallelEach:
           if  (t^.data=nil)
           and (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
@@ -1100,8 +1117,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           recycler.setLocalValue(first^.txt,newValue);
           first:=recycler.disposeToken(first);
         end;
-        tt_cso_assignPlus..tt_cso_assignAppend:begin
+        tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin
           newValue:=recycler.mutateInline(first^.txt,kind,newValue,first^.location);
+          if errorLevel<el3_evalError then begin
+            first:=recycler.disposeToken(first);
+            disposeLiteral(first^.data);
+            first^.data:=newValue;
+          end;
+        end else begin
+          newValue:=P_rule(first^.data)^.mutateInline(kind,newValue,first^.location);
           if errorLevel<el3_evalError then begin
             first:=recycler.disposeToken(first);
             disposeLiteral(first^.data);
@@ -1316,9 +1340,9 @@ end}
             end;
             COMMON_CASES;
           end;
-          tt_assignNewBlockLocal,tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
+          tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
-              stack_popDestroy;
+              first:=recycler.disposeToken(first);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
               recycler.scopePop;
@@ -1333,9 +1357,11 @@ end}
             end;
             COMMON_CASES;
           end;
-          else case cTokType[1] of
-            COMMON_CASES;
-            COMMON_SEMICOLON_HANDLING;
+          else begin
+            case cTokType[1] of
+              COMMON_CASES;
+              COMMON_SEMICOLON_HANDLING;
+            end;
           end;
         end;
         tt_procedureBlockBegin: begin
@@ -1343,24 +1369,8 @@ end}
           stack_push;
           didSubstitution:=true;
         end;
-        tt_modifier_local: if recycler.scopeBottom
-          then raiseError(el4_parsingError,'Modifier "local" is only allowed within begin-end-blocks.',first^.location)
-          else if (cTokType[1]=tt_blockLocalVariable) and (cTokType[2]=tt_assign) then begin
-            first:=recycler.disposeToken(first);
-            first^.tokType:=tt_assignNewBlockLocal;
-            first^.next:=recycler.disposeToken(first^.next);
-            recycler.declareLocalValue(first^.txt,newVoidLiteral);
-            stack_push;
-          end else raiseError(el4_parsingError,'Modifier "local" is not allowed here.',first^.location);
-        tt_blockLocalVariable: if cTokType[1]=tt_assign then begin
-          first^.tokType:=tt_assignExistingBlockLocal;
-          first^.next:=recycler.disposeToken(first^.next);
-          stack_push;
-        end else if cTokType[1] in [tt_cso_assignPlus..tt_cso_assignAppend] then begin
-          first^.tokType:=cTokType[1];
-          first^.next:=recycler.disposeToken(first^.next);
-          stack_push;
-        end else begin
+        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
+        tt_blockLocalVariable: begin
           first^.data:=recycler.getLocalValueOrNull(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
@@ -1403,7 +1413,8 @@ end}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
-        tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
+        //tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
+        tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);

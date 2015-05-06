@@ -55,7 +55,7 @@ main(exe,...)->begin
                    expression(fileContents('regTest/regTestCases.dat'))(),
                    (currentExeCanPlot   or not(case%3)) and
                    (not(quickTestsOnly) or not(case%4)) and
-                   ((testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,input)>=0)) ? case%[0..2] : void));
+                   ((testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,case%0)>=0)) ? case%[0..2] : void));
   local FMT_STRING:="%X"&max(length(testCases%%0))&"% %####0.00%sec %X%";
 
   each(test,testCases, begin

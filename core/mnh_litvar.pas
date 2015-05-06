@@ -2001,6 +2001,7 @@ CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValu
   begin
     id:=initialId;
     value:=initialValue;
+    value^.rereference;
   end;
 
 DESTRUCTOR T_namedVariable.destroy;
