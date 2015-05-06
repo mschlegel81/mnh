@@ -9,7 +9,7 @@ primes(n:int)->
   : begin
       while(n>max_cached,begin
         local candidates:=[max_cached+1..max_cached:=min(n,max_cached*max_cached)];
-        cached_primes:=cached_primes|(candidates%each(p,cached_primes%(cached_primes<=sqrt(max_cached)),and,candidates mod p != 0));
+        cached_primes|=candidates%each(p,cached_primes%(cached_primes<=sqrt(max_cached)),and,candidates mod p != 0);
       end);
       cached_primes%(cached_primes<=n);
     end;
