@@ -1,0 +1,7 @@
+./packages/basic.mnh@26: And(L:booleanList)->trueCount(L)=size(L);
+./packages/basic.mnh@31: Or(L:booleanList)->trueCount(L)>0;
+./packages/bool.mnh@57: main->main('trueCount($A|$B|$C)=1');
+./packages/fileUtil.mnh@7: containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
+./packages/fileUtil.mnh@8: containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
+./packages/fileUtil.mnh@26: main->main('packages/*.mnh','trueCount');
+./packages/primes.mnh@22: trueCount(n mod primes(sqrt(n))=0)=0;

@@ -22,3 +22,5 @@ printAll([])->false;
 printAll(L)->each(l,L,and,print(l));
 
 main(patterns,searchString,...)->find('.',patterns,tail($params),false);
+//*For regression test
+main->main('packages/*.mnh','trueCount');
