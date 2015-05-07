@@ -413,7 +413,7 @@ PROCEDURE TSynMnhSyn.SetRange(value: Pointer);
 
 class FUNCTION TSynMnhSyn.GetLanguageName: string;
   begin
-    result := 'mnh';
+    result := 'MNH';
   end;
 
 FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;

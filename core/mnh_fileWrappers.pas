@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES SysUtils,Classes,process,myGenerics;
+USES SysUtils,Classes,process,myGenerics,mnh_constants;
 TYPE
   P_codeProvider = ^T_codeProvider;
 
@@ -36,9 +36,6 @@ TYPE
     FUNCTION id: ansistring;
     PROCEDURE Clear;
   end;
-
-
-CONST sourceExt = '.MNH';
 
 FUNCTION fileContent(CONST Name: ansistring; OUT accessed: boolean): ansistring;
 FUNCTION fileLines(CONST Name: ansistring; OUT accessed: boolean): T_arrayOfString;
@@ -89,14 +86,14 @@ PROCEDURE setMainPackagePath(CONST path: ansistring);
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   FUNCTION nameToId(CONST fname: ansistring): ansistring;
     begin
-      if uppercase(extractFileExt(fname)) = sourceExt then
+      if uppercase(extractFileExt(fname)) = SCRIPT_EXTENSION then
         begin
         result := extractFileName(fname);
-        result := copy(result, 1, length(result)-length(sourceExt));
+        result := copy(result, 1, length(result)-length(SCRIPT_EXTENSION));
         end
       else
         result := '';
-      if UpperCase(result) = 'MNH' then
+      if UpperCase(result) = uppercase(DEFAULT_BUILTIN_NAMESPACE) then
         result := '';
     end;
 
@@ -132,7 +129,7 @@ FUNCTION locateSources: T_arrayOfString;
         if (info.attr and faDirectory) = faDirectory then begin
           if (info.Name<>'.') and (info.Name<>'..') then
             recursePath(path+info.Name+DirectorySeparator);
-        end else if uppercase(extractFileExt(info.Name)) = sourceExt then
+        end else if uppercase(extractFileExt(info.Name)) = SCRIPT_EXTENSION then
           append(result,path+info.Name);
       until (findNext(info)<>0);
       SysUtils.findClose(info);

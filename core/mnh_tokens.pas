@@ -23,7 +23,7 @@ TYPE
   { T_package }
   T_package=object
     private
-      rules:T_ruleMap;
+      packageRules:T_ruleMap;
       packageUses:array of record
         id:ansistring;
         pack:P_package;
@@ -501,7 +501,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
   begin
     setLength(packageUses,0);
     codeProvider:=provider;
-    rules.create;
+    packageRules.create;
     loadedVersion:=-1;
   end;
 
@@ -513,11 +513,11 @@ FUNCTION T_package.needReload: boolean;
 PROCEDURE T_package.clear;
   VAR rule:P_rule;
   begin
-    while rules.size>0 do begin
-      rule:=rules.dropAny;
+    while packageRules.size>0 do begin
+      rule:=packageRules.dropAny;
       dispose(rule,destroy);
     end;
-    rules.clear;
+    packageRules.clear;
     hadBatchModeParts:=false;
     setLength(packageUses,0);
     ready:=false;
@@ -527,12 +527,11 @@ DESTRUCTOR T_package.destroy;
   begin
     clear;
     if codeProvider<>@mainPackageProvider then dispose(codeProvider,destroy);
-    rules.destroy;
+    packageRules.destroy;
     setLength(packageUses,0);
   end;
 
-PROCEDURE T_package.resolveRuleId(VAR token: T_token;
-  CONST failSilently: boolean);
+PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolean);
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
@@ -547,7 +546,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
       ruleId   :=token.txt;
     end;
     if ((codeProvider<>nil) and (packageId=codeProvider^.id) or (packageId=''))
-    and rules.containsKey(ruleId,userRule) then begin
+    and packageRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
       exit;
@@ -556,13 +555,13 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
     for i:=length(packageUses)-1 downto 0 do
     if ((packageId=packageUses[i].id) and (packageUses[i].pack<>nil) and (packageUses[i].pack^.ready) or (packageId=''))
     and (packageUses[i].pack<>nil)
-    and (packageUses[i].pack^.rules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
+    and (packageUses[i].pack^.packageRules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
       token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
       exit;
     end;
 
-    if ((packageId='mnh') or (packageId=''))
+    if ((packageId=DEFAULT_BUILTIN_NAMESPACE) or (packageId=''))
     and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
@@ -574,9 +573,9 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring): P_rule;
   begin
-    if not(rules.containsKey(ruleId,result)) then begin
+    if not(packageRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId));
-      rules.put(ruleId,result);
+      packageRules.put(ruleId,result);
       raiseError(el0_allOkay,'New rule '+ruleId,fileTokenLocation(codeProvider));
     end;
   end;
@@ -587,10 +586,10 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
       packageId:ansistring;
   begin
     userDefinedRules.clear;
-    userDefinedRules.addArr(rules.keySet);
+    userDefinedRules.addArr(packageRules.keySet);
     for i:=0 to length(packageUses)-1 do if (packageUses[i].pack<>nil) and packageUses[i].pack^.ready then begin
       packageId:=packageUses[i].id;
-      ids:=packageUses[i].pack^.rules.keySet;
+      ids:=packageUses[i].pack^.packageRules.keySet;
       for j:=0 to length(ids)-1 do begin
         userDefinedRules.add(ids[j]);
         userDefinedRules.add(packageId+C_id_qualify_character+ids[j]);
@@ -603,7 +602,7 @@ PROCEDURE T_package.complainAboutUncalled;
   VAR ruleList:array of P_rule;
       i:longint;
   begin
-    ruleList:=rules.valueSet;
+    ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do ruleList[i]^.complainAboutUncalled;
     setLength(ruleList,0);
   end;
@@ -631,7 +630,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 
     t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
 
-    if not(mainPackage.rules.containsKey('main',mainRule)) then begin
+    if not(mainPackage.packageRules.containsKey('main',mainRule)) then begin
       if mainPackage.hadBatchModeParts
       then raiseError(el1_note     ,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
       else raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider));
