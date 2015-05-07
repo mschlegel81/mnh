@@ -1,5 +1,5 @@
 USE lindenmayer;
 //*Draws a fractal plant
-main->setPlotAxisStyle([0,0]) and
-      plot(lindenmayerTurtle(PLANT,6)) and
-      renderToFile(replace(myPath,'.mnh','.png'),768,768,8);
+main->plot.setAxisStyle([0,0]) and
+      plot.plot(lindenmayerTurtle(PLANT,6)) and
+      plot.renderToFile(replace(myPath,'.mnh','.png'),768,768,8);

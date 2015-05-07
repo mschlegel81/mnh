@@ -543,8 +543,7 @@ DESTRUCTOR T_package.destroy;
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolean);
-  VAR i:longint;
-      userRule:P_rule;
+  VAR userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
       ruleId:ansistring;
   begin

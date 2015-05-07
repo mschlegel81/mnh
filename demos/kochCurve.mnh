@@ -13,12 +13,12 @@ private kochCurve(depth>=0,LX,LY)->kochCurve(depth-1,
 private kochCurve(depth,LX,LY)->interlace(runningSum(LX),runningSum(LY));
 
 private main_impl(filename:string,xRes:int,yRes:int)->
-  setPlotAutoscale([true,true]) and
-  setPlotLogscale([false,false]) and
-  setPlotPreserveAspect(true) and
-  setPlotAxisStyle([1,1]) and
-  plot(kochCurve(7),"0.5") and
-  renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
+  plot.setAutoscale([true,true]) and
+  plot.setLogscale([false,false]) and
+  plot.setPreserveAspect(true) and
+  plot.setAxisStyle([1,1]) and
+  plot.plot(kochCurve(7),"0.5") and
+  plot.renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
 
 //*Plots a Koch Curve to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));

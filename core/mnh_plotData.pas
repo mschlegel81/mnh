@@ -2235,29 +2235,29 @@ INITIALIZATION
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAutoscale', @setAutoscale,
-    'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotAutoscale', @getAutoscale,
-    'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotLogscale', @setLogscale,
-    'setPlotLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotLogscale', @getLogscale,
-    'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotRange', @setPlotRange,
-    'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotRange', @getPlotRange,
-    'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAxisStyle', @setAxisStyle,
-    'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setAutoscale', @setAutoscale,
+    'setAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getAutoscale', @getAutoscale,
+    'getAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setLogscale', @setLogscale,
+    'setLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getLogscale', @getLogscale,
+    'getLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setRange', @setPlotRange,
+    'setRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getRange', @getPlotRange,
+    'getRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setAxisStyle', @setAxisStyle,
+    'setAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
     '#  0; //no tics, no grid#  1; //tics, no gris'+
     '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
     '#  6; //no tics, finer grid#  7; //tics and finer grid');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotAxisStyle', @getAxisStyle,
-    'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotPreserveAspect', @setPreserveAspect,
-    'setPlotPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotPreserveAspect', @getPreserveAspect,
-    'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getAxisStyle', @getAxisStyle,
+    'getAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPreserveAspect', @setPreserveAspect,
+    'setPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPreserveAspect', @getPreserveAspect,
+    'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,

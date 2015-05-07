@@ -1220,11 +1220,11 @@ PROCEDURE lateInitialization;
       'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
     mnh_funcs.registerRule(PLOT_NAMESPACE,'plot',@plot,'');
     mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot',@addPlot,'');
-    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAutoscale',@setAutoscale,'');
-    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotLogscale',@setLogscale,'');
-    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotRange',@setPlotRange,'');
-    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAxisStyle',@setAxisStyle,'');
-    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotPreserveAspect',@setPreserveAspect,'');
+    mnh_funcs.registerRule(PLOT_NAMESPACE,'setAutoscale',@setAutoscale,'');
+    mnh_funcs.registerRule(PLOT_NAMESPACE,'setLogscale',@setLogscale,'');
+    mnh_funcs.registerRule(PLOT_NAMESPACE,'setRange',@setPlotRange,'');
+    mnh_funcs.registerRule(PLOT_NAMESPACE,'setAxisStyle',@setAxisStyle,'');
+    mnh_funcs.registerRule(PLOT_NAMESPACE,'setPreserveAspect',@setPreserveAspect,'');
     mnh_evalThread.initUnit;
   end;
 

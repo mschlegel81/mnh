@@ -16,7 +16,7 @@ private findPath(last,L    ,     result)->condPlot(result);
 private findPath(last,L<>[],i>=0,result)->findPath(L%i,L%([0..size(L)-1]<>i),result|[L%i]);
 private findPath(last,L    ,i   ,result)->condPlot(result) and findPath(L%(size(L)-1),L,[]);
 
-private doPlot->setPlotAxisStyle([0,0]) and
+private doPlot->plot.setAxisStyle([0,0]) and
                 plot([]) and
                 findPath(fibPoint(5000),fibPoint([0..5000]),[]);
 

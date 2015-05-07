@@ -18,15 +18,17 @@ VAR print_cs:system.TRTLCriticalSection;
     file_cs :system.TRTLCriticalSection;
 //------------------------------------------------------------:Critical sections
 PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
-  VAR oldExplanation:ansistring;
-      n:ansistring;
-  begin
-    n:=name;
-    while n=name do begin
-      intrinsicRuleMap.put(n,ptr);
-      if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(n,oldExplanation)) then intrinsicRuleExplanationMap.put(n,explanation);
-      n:=namespace+C_ID_QUALIFY_CHARACTER+n;
+  PROCEDURE registerImp(CONST regName:ansistring);
+    VAR oldExplanation:ansistring;
+    begin
+      intrinsicRuleMap.put(regName,ptr);
+      if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(regName,oldExplanation))
+                             then intrinsicRuleExplanationMap.put        (regName,explanation);
     end;
+
+  begin
+    registerImp(name);
+    registerImp(namespace+C_ID_QUALIFY_CHARACTER+name);
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);

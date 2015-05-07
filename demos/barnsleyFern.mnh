@@ -9,12 +9,12 @@ private barnsleyFern(x,y,sampleCount,p1,p2,p3)->barnsleyFern(
   sampleCount);
 
 private main_impl(filename:string,xRes:int,yRes:int)->
-  setPlotAutoscale([true,true]) and
-  setPlotLogscale([false,false]) and
-  setPlotPreserveAspect(true) and
-  setPlotAxisStyle([3,3]) and
-  plot(barnsleyFern(200000),"0.2 . green") and
-  renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
+  plot.setAutoscale([true,true]) and
+  plot.setLogscale([false,false]) and
+  plot.setPreserveAspect(true) and
+  plot.setAxisStyle([3,3]) and
+  plot.plot(barnsleyFern(200000),"0.2 . green") and
+  plot.renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
 
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));

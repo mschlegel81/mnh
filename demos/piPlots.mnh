@@ -25,9 +25,9 @@ private T (i)->abs(time({sum1(i)})%[2,1]%%1-[0,arctan(1)])*[60000,1];
 private T2(i)->abs(time({sum2(i)})%[2,1]%%1-[0,arctan(1)])*[60000,1];
 
 doPlot(includeTime:boolean)->begin
-  setPlotLogscale([true,true]);
-  setPlotAutoscale([true,true]);
-  setPlotPreserveAspect(false);
+  plot.setLogscale([true,true]);
+  plot.setAutoscale([true,true]);
+  plot.setPreserveAspect(false);
   print('Row #1: series A, error vs. summand count');
   plot([1..maxN],errors1,"black l .");
   print('Row #2: series B, error vs. summand count');
