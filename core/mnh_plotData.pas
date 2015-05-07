@@ -10,6 +10,7 @@ TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
 
 CONST
+  PLOT_NAMESPACE='plot';
   C_lineStyle_none = 0;
   C_lineStyle_straight = 1;
   C_lineStyle_stepLeft = 2;
@@ -2215,7 +2216,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
 INITIALIZATION
   system.InitCriticalSection(plotCS);
   activePlot.createWithDefaults;
-  mnh_funcs.registerRule('plot', @plot,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
     '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
     '#plot(yExpression,t0,t1,samples,[options]); //plots yExpression versus t in [t0,t1]'+
@@ -2230,34 +2231,34 @@ INITIALIZATION
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
     '#  GREY$; //With one real number in range [0,1]');
-  mnh_funcs.registerRule('addPlot', @addPlot,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
-  mnh_funcs.registerRule('setPlotAutoscale', @setAutoscale,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAutoscale', @setAutoscale,
     'setPlotAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule('getPlotAutoscale', @getAutoscale,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotAutoscale', @getAutoscale,
     'getPlotAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule('setPlotLogscale', @setLogscale,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotLogscale', @setLogscale,
     'setPlotLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule('getPlotLogscale', @getLogscale,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotLogscale', @getLogscale,
     'getPlotLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule('setPlotRange', @setPlotRange,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotRange', @setPlotRange,
     'setPlotRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
-  mnh_funcs.registerRule('getPlotRange', @getPlotRange,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotRange', @getPlotRange,
     'getPlotRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
-  mnh_funcs.registerRule('setPlotAxisStyle', @setAxisStyle,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotAxisStyle', @setAxisStyle,
     'setPlotAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
     '#  0; //no tics, no grid#  1; //tics, no gris'+
     '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
     '#  6; //no tics, finer grid#  7; //tics and finer grid');
-  mnh_funcs.registerRule('getPlotAxisStyle', @getAxisStyle,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotAxisStyle', @getAxisStyle,
     'getPlotAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
-  mnh_funcs.registerRule('setPlotPreserveAspect', @setPreserveAspect,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPlotPreserveAspect', @setPreserveAspect,
     'setPlotPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
-  mnh_funcs.registerRule('getPlotPreserveAspect', @getPreserveAspect,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPlotPreserveAspect', @getPreserveAspect,
     'getPlotPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
-  mnh_funcs.registerRule('renderToFile', @renderToFile_impl,
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,
     exOverflow, exUnderflow, exPrecision]);

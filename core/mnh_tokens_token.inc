@@ -25,7 +25,7 @@
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin
-    result:=pos(C_id_qualify_character,s)>0;
+    result:=pos(C_ID_QUALIFY_CHARACTER,s)>0;
   end;
 
 FUNCTION tokensToString(CONST first:P_token):ansistring;
@@ -169,25 +169,19 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
 
   FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
     VAR i:longint;
-        dotFound:boolean;
     begin
       i:=1;
-      dotFound:=false;
-      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_id_qualify_character]) do begin
+      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_ID_QUALIFY_CHARACTER]) do begin
         inc(i);
-        if line[i]=C_id_qualify_character then begin
-          if (i<length(line)) and (line[i+1]=C_id_qualify_character) then begin
+        if line[i]=C_ID_QUALIFY_CHARACTER then begin
+          if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
             parsedLength:=i-1;
             exit(copy(line,1,i-1));
           end else if not(allowQualified) then begin
             fail('No qualified is identifier accepted here. '+line);
             parsedLength:=i-1;
             exit(copy(line,1,i-1));
-          end else if dotFound then begin
-            fail('Over-qualified identifier! Only one level is allowed. '+line);
-            parsedLength:=i-1;
-            exit(copy(line,1,i-1));
-          end else dotFound:=true;
+          end;
         end;
       end;
       parsedLength:=i;

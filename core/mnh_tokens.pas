@@ -23,7 +23,7 @@ TYPE
   { T_package }
   T_package=object
     private
-      packageRules:T_ruleMap;
+      packageRules,importedRules:T_ruleMap;
       packageUses:array of record
         id:ansistring;
         pack:P_package;
@@ -43,8 +43,6 @@ TYPE
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
   end;
-
-CONST C_id_qualify_character='.';
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
@@ -191,6 +189,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
           newId:string;
+          rulesSet:T_ruleMap.KEY_VALUE_LIST;
+          dummyRule:P_rule;
       begin
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=recycler.disposeToken(temp);
@@ -227,6 +227,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
               setLength(packageUses,length(packageUses)-1);
             end else inc(i);
+          end;
+          if errorLevel<el3_evalError then for i:=length(packageUses)-1 downto 0 do begin
+             rulesSet:=packageUses[i].pack^.packageRules.entrySet;
+             for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
+               if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
+               then importedRules.put(rulesSet[j].key,rulesSet[j].value);
+               importedRules.put(packageUses[i].id+C_ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
+             end;
           end;
         end;
       end;
@@ -502,6 +510,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
     setLength(packageUses,0);
     codeProvider:=provider;
     packageRules.create;
+    importedRules.create;
     loadedVersion:=-1;
   end;
 
@@ -518,6 +527,7 @@ PROCEDURE T_package.clear;
       dispose(rule,destroy);
     end;
     packageRules.clear;
+    importedRules.clear;
     hadBatchModeParts:=false;
     setLength(packageUses,0);
     ready:=false;
@@ -528,6 +538,7 @@ DESTRUCTOR T_package.destroy;
     clear;
     if codeProvider<>@mainPackageProvider then dispose(codeProvider,destroy);
     packageRules.destroy;
+    importedRules.destroy;
     setLength(packageUses,0);
   end;
 
@@ -535,39 +546,24 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
   VAR i:longint;
       userRule:P_rule;
       intrinsicFuncPtr:T_intFuncCallback;
-      packageId,ruleId:ansistring;
+      ruleId:ansistring;
   begin
-    i:=pos(C_id_qualify_character,token.txt);
-    if i>0 then begin
-      packageId:=copy(token.txt,1,i-1);
-      ruleId   :=copy(token.txt,i+1,length(token.txt));
-    end else begin
-      packageId:='';
-      ruleId   :=token.txt;
-    end;
-    if ((codeProvider<>nil) and (packageId=codeProvider^.id) or (packageId=''))
-    and packageRules.containsKey(ruleId,userRule) then begin
+    ruleId   :=token.txt;
+    if packageRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
       exit;
     end;
-
-    for i:=length(packageUses)-1 downto 0 do
-    if ((packageId=packageUses[i].id) and (packageUses[i].pack<>nil) and (packageUses[i].pack^.ready) or (packageId=''))
-    and (packageUses[i].pack<>nil)
-    and (packageUses[i].pack^.packageRules.containsKey(ruleId,userRule)) and (userRule^.hasPublicSubrule) then begin
+    if importedRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
       exit;
     end;
-
-    if ((packageId=DEFAULT_BUILTIN_NAMESPACE) or (packageId=''))
-    and intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
+    if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
       exit;
     end;
-
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
@@ -592,7 +588,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
       ids:=packageUses[i].pack^.packageRules.keySet;
       for j:=0 to length(ids)-1 do begin
         userDefinedRules.add(ids[j]);
-        userDefinedRules.add(packageId+C_id_qualify_character+ids[j]);
+        userDefinedRules.add(packageId+C_ID_QUALIFY_CHARACTER+ids[j]);
       end;
     end;
     userDefinedRules.unique;

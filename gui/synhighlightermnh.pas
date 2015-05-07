@@ -231,7 +231,7 @@ PROCEDURE TSynMnhSyn.Next;
       'a'..'z', 'A'..'Z': begin
         localId := fLine [run];
         Inc(run);
-        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', '.'] do
+        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', C_ID_QUALIFY_CHARACTER] do
           begin
           localId := localId+fLine [run];
           Inc(run);
@@ -418,7 +418,7 @@ class FUNCTION TSynMnhSyn.GetLanguageName: string;
 
 FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
   begin
-    result := ['a'..'z', 'A'..'Z', '.', '_', '0'..'9'];
+    result := ['a'..'z', 'A'..'Z', C_ID_QUALIFY_CHARACTER, '_', '0'..'9'];
   end;
 
 end.
