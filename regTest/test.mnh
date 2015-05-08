@@ -69,10 +69,10 @@ main(exe,...)->begin
         void;
       end;
   end);
+  first ? void : print(testsFailed);
 
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
-    print(testsFailed);
     storePassedTests;
     //displayUncoveredTests
     local coveredTests:= replace(unique(expression(fileContents('regTest/regTestCases.dat'))()%%0),'\\','/');
