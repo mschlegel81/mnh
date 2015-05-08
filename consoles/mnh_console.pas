@@ -1,6 +1,6 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_cmdLineInterpretation, mnh_tokens, sysutils;
+USES mnh_cmdLineInterpretation, mnh_tokens, sysutils, mnh_constants;
 
 PROCEDURE interactiveMode;
   VAR time:double;
@@ -24,8 +24,9 @@ PROCEDURE interactiveMode;
         end;
       until false;
     end;
-
+  VAR i:longint;
   begin
+    for i:=0 to length(LOGO)-1 do writeln(LOGO[i]); 
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');

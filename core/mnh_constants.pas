@@ -6,6 +6,14 @@ CONST
   SCRIPT_EXTENSION='.MNH';
   DEFAULT_BUILTIN_NAMESPACE='mnh';
   C_ID_QUALIFY_CHARACTER='.';
+  
+  LOGO:array[0..6] of string=(' ___      ___ ___   ___ ___   ___   _________',
+                              '|   \    /   |   \ |   |   | |   | |    _____|',
+                              '|    \  /    |    \|   |   |_|   | |   |____',
+                              '|     \/     |     \   |         | |_____   \',
+                              '|   \    /   |   \     |    _    |       \   |',
+                              '|   |\  /|   |   |\    |   | |   |  _____/   |',
+                              '|___| \/ |___|___| \___|___| |___| |________/');
 
 TYPE
   T_myFloat = extended;

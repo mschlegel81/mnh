@@ -463,6 +463,7 @@ PROCEDURE TMnhForm.startOfEvaluation;
 
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
+  VAR i:longint;
   begin
     autosizingEnabled:=true;
     needEvaluation:=false;
@@ -481,6 +482,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       ' at: '+{$I %TIME%}+
       ' with FPC'+{$I %FPCVERSION%}+
       ' for '+{$I %FPCTARGET%};
+    for i:=0 to length(LOGO)-1 do OutputEdit.Lines.Append(LOGO[i]);
     OutputEdit.Lines.Append('       compiled on: '+{$I %DATE%});
     OutputEdit.Lines.Append('       at: '+{$I %TIME%});
     OutputEdit.Lines.Append('       with FPC'+{$I %FPCVERSION%});
