@@ -24,6 +24,6 @@ end;
 
 //*For regression test
 main->begin
-  densityPlot({sin($x^2-$y^2)},-10,10,-10,10,0.1);
+  densityPlot({round($x^2-$y^2,3)},-10,10,-10,10,0.2,5,{"GREY"&$x});
   renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
 end;

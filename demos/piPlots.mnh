@@ -40,5 +40,6 @@ doPlot(includeTime:boolean)->begin
   end : void;
 end;
 
-main        ->doPlot(false) and renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
-main('time')->doPlot(false) and renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
+main('plot')->doPlot(true) and renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
+
+main->printf('%0.000000000000% %0.000000000000%',errors1,errors2);
