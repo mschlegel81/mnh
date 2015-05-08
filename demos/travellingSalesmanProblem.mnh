@@ -1,58 +1,58 @@
-private points:=(each(i,[0..199],sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]) );
+private points:=(each(i,[0..999],sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]) );
 
-private sqNorm(x)->x%0*x%0+x%1*x%1;
+private norm(x)->sqrt(x%0*x%0+x%1*x%1);
 
 private pathLength(points)->begin
   local result:=0;
   local lastPoint:=points%(size(points)-1);
-  each(p,points,result:=result+sqrt(sqNorm(lastPoint-p)),
-                lastPoint:=p);
+  each(p,points,result:=result+norm(lastPoint-p),lastPoint:=p);
   result;
 end;
 
-private shortestInsertion(L,el)->begin
-  local j:=argMin(pEach(i,
-                        [0..size(L)-1],
-                        sqrt(sqNorm(L%i                  -el ))+
-                        sqrt(sqNorm(L%((i+1) mod size(L))-el ))-
-                        sqrt(sqNorm(L%((i+1) mod size(L))-L%i))));
-  j:=(j+1) mod size(L);
-  head(L,j) | [el] | tail(L,j);
-end;
+private len4(a,b,c,d)->norm(b-a)+norm(c-b)+norm(d-c);
 
-private dropFromList(L :list,index:int)->head(L,index)|tail(L,index+1);
-
-dartSort(points)->begin
-  print('Beginning dart-sort');
-  local result:=void;
-  local P:=void;
-  begin
-    local first:=floor(random*size(points));
-    result:=[points%first];
-    P:=dropFromList(points,first);
-  end;
-  while(size(P)>1,begin
-    local next:=argMax(pEach(p,P,min(each(r,result,sqNorm(r-p)))));
-    result:=result|[P%next];
-    P:=dropFromList(P,next);
-  end);
-  result|P;
-end;
-
-constructPath(points)->begin
-  print('Beginning construction');
-  local result:=points%[0,1,2];
-  each(i,[3..size(points)-1],begin
-    result:=shortestInsertion(result,points%i);
-    void;
-  end);
+scSort(L)->begin
+  local x:=L%%0; local xr:=[min(x),max(x)];
+  local y:=L%%1; local yr:=[min(y),max(y)];
+  local h:=max(xr%1-xr%0,yr%1-yr%0)/2;
+  local x0:=(xr%1+xr%0)-h;
+  local x1:=(xr%1+xr%0)+h;
+  local y0:=(yr%1+yr%0)-h;
+  local y1:=(yr%1+yr%0)+h;
+  local mask:=sqr(x-x0)+sqr(y-y1)<sqr(x-x1)+sqr(y-y0);
+  local result:=scSort_(x0,y0,x0,y1,x1,y1,x%    mask ,y%    mask )|
+                scSort_(x1,y1,x1,y0,x0,y0,x%not(mask),y%not(mask));
   print('Path length is ',round(pathLength(result),3));
+  local changing:=true;
+  while(changing,begin
+    changing:=false;
+    each(i,[0..size(result)-1],begin
+      local beforeSwapping:=len4@(result%([i,i+1,i+2,i+3] mod size(result)));
+      local afterSwapping :=len4@(result%([i,i+2,i+1,i+3] mod size(result)));
+      afterSwapping<beforeSwapping ? begin
+        changing:=true;
+        local j0:=(i+1) mod size(result);
+        local j1:=(i+2) mod size(result);
+        result:=result%each(j,[0..size(result)-1],j=j0 ? j1 :
+                                                  j=j1 ? j0 : j);
+        void;
+      end : void;
+    end);
+  end);
+  print('            or ',round(pathLength(result),3));
   result|result%[0];
 end;
+
+private scSort_(ax,ay,bx,by,cx,cy,x,y)->
+  size(x)>1 ? begin
+    local mask:=sqr(x-ax) + sqr(y-ay) < sqr(x-cx) + sqr(y-cy);
+    scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x%    mask ,y%    mask ) |
+    scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x%not(mask),y%not(mask));
+  end : size(x)=1 ? [x|y] : [];
 
 //*Approximately solves the Travelling Salesman Problem using a Greedy approach
 main->begin
   plot.setAxisStyle([0,0]);
-  plot(constructPath(dartSort(points)),'. l');
-  renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
+  plot(scSort(points),'. l');
+  plot.renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
 end;
