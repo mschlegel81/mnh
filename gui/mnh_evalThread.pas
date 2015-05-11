@@ -225,7 +225,8 @@ VAR token:T_token;
       end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
         loc:=P_rule(token.data)^.getLocationOfDeclaration;
         result.declaredInLine:=loc.line;
-        result.declaredInFile:=loc.provider^.getPath;
+        if loc.provider<>nil then result.declaredInFile:=loc.provider^.getPath
+                             else result.declaredInFile:='?';
         result.tokenExplanation:=result.tokenExplanation+'#@Line '+IntToStr(loc.line);
         if trim(result.declaredInFile)<>'' then
           result.tokenExplanation:=result.tokenExplanation+'#in '+result.declaredInFile;

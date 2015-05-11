@@ -70,7 +70,9 @@ main(exe,...)->begin
       end;
   end);
   first ? void : print(testsFailed);
-  testsFailed<>'' ? setErrorlevel(1) : setErrorlevel(0);
+  not(first) or //at least one test should have been executed
+  testsFailed<>'' ? setErrorlevel(1)
+                  : setErrorlevel(0);
 
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
