@@ -22,12 +22,6 @@
 
 {$endif}
 {$ifdef include_implementation}
-
-FUNCTION isQualified(CONST s:string):boolean;
-  begin
-    result:=pos(C_ID_QUALIFY_CHARACTER,s)>0;
-  end;
-
 FUNCTION tokensToString(CONST first:P_token):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;

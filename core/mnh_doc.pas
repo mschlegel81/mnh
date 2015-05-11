@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES SysUtils, mnh_funcs, myStringutil, myGenerics;
+USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants;
 VAR htmlRoot: string;
 TYPE
 
@@ -64,9 +64,9 @@ PROCEDURE locateHtml;
   CONST primary = 'doc';
     secondary = '..'+DirectorySeparator+'doc';
   begin
-    if DirectoryExists(primary) then htmlRoot := primary
-    else if DirectoryExists(secondary) then htmlRoot := secondary
-    else htmlRoot := '';
+    if DirectoryExists(primary) then htmlRoot:=primary
+    else if DirectoryExists(secondary) then htmlRoot:=secondary
+    else htmlRoot:='';
   end;
 
 FUNCTION prettyHtml(s: ansistring): ansistring;
@@ -76,16 +76,16 @@ FUNCTION prettyHtml(s: ansistring): ansistring;
     setLength(Lines, 0);
     while pos('#', s)>0 do begin
       append(Lines, copy(s, 1, pos('#', s)-1));
-      s := copy(s, pos('#', s)+1, length(s));
+      s:=copy(s, pos('#', s)+1, length(s));
     end;
     append(Lines,s);
 
-    result := '';
-    for i := 0 to length(Lines)-1 do
+    result:='';
+    for i:=0 to length(Lines)-1 do
       begin
-      if i>0 then result := result+'<br>';
-      if pos(';', Lines [i])>0 then result := result+'<code>'+Lines [i]+'</code>'
-      else result := result+Lines [i];
+      if i>0 then result:=result+'<br>';
+      if pos(';', Lines [i])>0 then result:=result+'<code>'+Lines [i]+'</code>'
+      else result:=result+Lines [i];
       end;
   end;
 
@@ -93,17 +93,17 @@ FUNCTION prettyHtml(s: ansistring): ansistring;
 
 CONSTRUCTOR T_userPackageDocumentation.create(path, Name: ansistring);
   begin
-    lastComment := '';
-    id := Name;
-    uid := ExpandFileName(path);
-    docFileName := replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
+    lastComment:='';
+    id:=Name;
+    uid:=ExpandFileName(path);
+    docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
       '/', '_'), '.', '_');
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
     setLength(rules, 0);
     setLength(packages, length(packages)+1);
-    packages[length(packages)-1] := @self;
+    packages[length(packages)-1]:=@self;
   end;
 
 DESTRUCTOR T_userPackageDocumentation.destroy;
@@ -112,41 +112,41 @@ DESTRUCTOR T_userPackageDocumentation.destroy;
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
-    for i := 0 to length(rules)-1 do rules[i].destroy;
+    for i:=0 to length(rules)-1 do rules[i].destroy;
     setLength(rules, 0);
   end;
 
 PROCEDURE T_userPackageDocumentation.addUses(OtherUid: ansistring);
   begin
     setLength(rawUses, length(rawUses)+1);
-    rawUses[length(rawUses)-1] := OtherUid;
+    rawUses[length(rawUses)-1]:=OtherUid;
   end;
 
 PROCEDURE T_userPackageDocumentation.addUsed(other: P_userPackageDocumentation);
   begin
     setLength(usedByPackage, length(usedByPackage)+1);
-    usedByPackage[length(usedByPackage)-1] := other;
+    usedByPackage[length(usedByPackage)-1]:=other;
   end;
 
 PROCEDURE T_userPackageDocumentation.resolveUses;
   FUNCTION packageByPath(CONST path: ansistring): P_userPackageDocumentation;
     VAR i: longint;
     begin
-      for i := 0 to length(packages)-1 do if packages [i]^.uid = path then exit(packages [i]);
-      result := nil;
+      for i:=0 to length(packages)-1 do if packages [i]^.uid = path then exit(packages [i]);
+      result:=nil;
     end;
 
   VAR other: P_userPackageDocumentation;
     i: longint;
   begin
     setLength(usesPackage, 0);
-    for i := 0 to length(rawUses)-1 do
+    for i:=0 to length(rawUses)-1 do
       begin
-      other := packageByPath(rawUses [i]);
+      other:=packageByPath(rawUses [i]);
       if other<>nil then
         begin
         setLength(usesPackage, length(usesPackage)+1);
-        usesPackage[length(usesPackage)-1] := other;
+        usesPackage[length(usesPackage)-1]:=other;
         other^.addUsed(@self);
         end;
       end;
@@ -158,11 +158,11 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
     VAR i: longint;
     begin
       if length(usesPackage) = 0 then exit('none');
-      result := '';
-      for i := 0 to length(usesPackage)-1 do
+      result:='';
+      for i:=0 to length(usesPackage)-1 do
         begin
-        if result<>'' then result := result+', ';
-        result := result+usesPackage [i]^.getHref;
+        if result<>'' then result:=result+', ';
+        result:=result+usesPackage [i]^.getHref;
         end;
     end;
 
@@ -170,60 +170,60 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
     VAR i: longint;
     begin
       if length(usedByPackage) = 0 then exit('none');
-      result := '';
-      for i := 0 to length(usedByPackage)-1 do
+      result:='';
+      for i:=0 to length(usedByPackage)-1 do
         begin
-        if result<>'' then result := result+', ';
-        result := result+usedByPackage [i]^.getHref;
+        if result<>'' then result:=result+', ';
+        result:=result+usedByPackage [i]^.getHref;
         end;
     end;
 
   VAR i: longint;
 
   begin
-    result := '<h4><a name="'+docFileName+'">'+id+'</a></h4><table class="oben">'+
+    result:='<h4><a name="'+docFileName+'">'+id+'</a></h4><table class="oben">'+
       '<tr class="oben"><td>Path: </td><td><a href="file:///'+replaceAll(uid,'\','/')+'"><code>'+uid+'</code></a></td></tr>'+
       '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
       '<tr class="oben"><td>Publishes: </td><td>';
-    for i := 0 to length(rules)-1 do result := result+rules [i].toHtml;
-    result := result+'</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+
+    for i:=0 to length(rules)-1 do result:=result+rules [i].toHtml;
+    result:=result+'</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+
       getUsed+'</td></tr></table>';
   end;
 
 PROCEDURE T_userPackageDocumentation.addComment(CONST s: ansistring);
   begin
-    if lastComment = '' then lastComment := s
-    else lastComment := lastComment+' '+s;
+    if lastComment = '' then lastComment:=s
+    else lastComment:=lastComment+' '+s;
   end;
 
 PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate, isSynchronized, isMutable:boolean);
   VAR ruleIdx: longint;
   begin
     if isPrivate then begin
-      lastComment := '';
+      lastComment:='';
       exit;
     end;
-    ruleIdx := 0;
+    ruleIdx:=0;
     while (ruleIdx<length(rules)) and (rules [ruleIdx].id<>subruleId) do Inc(ruleIdx);
     if ruleIdx>=length(rules) then begin
       setLength(rules, ruleIdx+1);
       rules[ruleIdx].create(subruleId);
     end;
-    if isMemoized then rules[ruleIdx].isMemoized := true;
+    if isMemoized then rules[ruleIdx].isMemoized:=true;
     rules[ruleIdx].addSubRule(isPrivate or isMutable,isSynchronized, isMutable, pattern, lastComment);
-    lastComment := '';
+    lastComment:='';
   end;
 
 FUNCTION T_userPackageDocumentation.getHref: ansistring;
   begin
-    result := '<a href="#'+docFileName+'"><code>'+id+'</code></a>';
+    result:='<a href="#'+docFileName+'"><code>'+id+'</code></a>';
   end;
 
 FUNCTION T_userPackageDocumentation.isExecutable: boolean;
   VAR i: longint;
   begin
-    result := false;
-    for i := 0 to length(rules)-1 do if rules [i].id = 'main' then exit(true);
+    result:=false;
+    for i:=0 to length(rules)-1 do if rules [i].id = 'main' then exit(true);
   end;
 
 PROCEDURE T_userPackageDocumentation.printHelpText;
@@ -236,7 +236,7 @@ PROCEDURE T_userPackageDocumentation.printHelpText;
 
 CONSTRUCTOR T_userFunctionDocumentation.create(ruleId: ansistring);
   begin
-    id := ruleId;
+    id:=ruleId;
     setLength(subrules, 0);
   end;
 
@@ -248,33 +248,33 @@ DESTRUCTOR T_userFunctionDocumentation.destroy;
 PROCEDURE T_userFunctionDocumentation.addSubRule(privateSubrule,sync,mut: boolean; pat, comment: ansistring);
   begin
     setLength(subrules, length(subrules)+1);
-    subrules[length(subrules)-1].isPrivate := privateSubrule;
+    subrules[length(subrules)-1].isPrivate:=privateSubrule;
     subrules[length(subrules)-1].isSynchronized:=sync;
     subrules[length(subrules)-1].isMutable:=mut;
-    subrules[length(subrules)-1].pattern := pat;
-    subrules[length(subrules)-1].comment := comment;
+    subrules[length(subrules)-1].pattern:=pat;
+    subrules[length(subrules)-1].comment:=comment;
   end;
 
 FUNCTION T_userFunctionDocumentation.toHtml: ansistring;
   VAR i: longint;
       anyPublic:boolean=false;
   begin
-    result := '<table><tr class="ruleHead"><td>';
+    result:='<table><tr class="ruleHead"><td>';
     if isMemoized then result:=result+'<i>memoized </i>';
-    if id = 'main' then result := result+'<b>'+id+'</b>'
-    else result := result+id;
-    result := result+'</td></tr>';
-    for i := 0 to length(subrules)-1 do with subrules [i] do begin
+    if id = 'main' then result:=result+'<b>'+id+'</b>'
+    else result:=result+id;
+    result:=result+'</td></tr>';
+    for i:=0 to length(subrules)-1 do with subrules [i] do begin
       if not(isPrivate) then anyPublic:=true;
-      result := result+'<tr><td>';
-      if comment<>'' then result := result+'<i>'+comment+'</i><br>';
-      result := result+'<code>';
+      result:=result+'<tr><td>';
+      if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
+      result:=result+'<code>';
       if isPrivate then result:=result+'<i>private </i>';
       if isMutable then result:=result+'<i>mutable </i>';
       if isSynchronized then result:=result+'<i>synchronized </i>';
       result:=result+id+pattern+'</code></td></tr>';
     end;
-    result := result+'</table>';
+    result:=result+'</table>';
     if not(anyPublic) then result:='';
   end;
 
@@ -303,19 +303,19 @@ FUNCTION T_userFunctionDocumentation.printHelpText(sourceName:ansistring):boolea
 
 CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
-    id := funcName;
-    description := intrinsicRuleExplanationMap.get(id);
+    id:=funcName;
+    description:=intrinsicRuleExplanationMap.get(id);
   end;
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
-    id := '';
-    description := '';
+    id:='';
+    description:='';
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
   begin
-    result := '<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
+    result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
   end;
 
 PROCEDURE writeUserPackageHelpText;
@@ -338,7 +338,7 @@ PROCEDURE writeUserPackageDocumentations;
     tmp: ansistring;
     inFile, outFile: Text;
   begin
-    for i := 0 to length(packages)-1 do packages[i]^.resolveUses;
+    for i:=0 to length(packages)-1 do packages[i]^.resolveUses;
     assign(outFile, htmlRoot+htmlResult); rewrite(outfile);
 
     assign(inFile, htmlRoot+htmlHead); reset(inFile);
@@ -350,7 +350,7 @@ PROCEDURE writeUserPackageDocumentations;
     close(inFile);
 
     Write(outfile, '<table>');
-    for i := 0 to length(packages)-1 do
+    for i:=0 to length(packages)-1 do
       begin
       if odd(i) then Write(outfile, '<tr>')
       else Write(outfile, '<tr class="ruleHead">');
@@ -361,8 +361,8 @@ PROCEDURE writeUserPackageDocumentations;
       end;
     Write(outfile, '</table>');
 
-    for i := 0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
-    for i := 0 to length(packages)-1 do dispose(packages [i], destroy);
+    for i:=0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
+    for i:=0 to length(packages)-1 do dispose(packages [i], destroy);
     setLength(packages, 0);
 
     assign(inFile, htmlRoot+htmlFoot); reset(inFile);
@@ -391,11 +391,17 @@ PROCEDURE documentBuiltIns;
     if not(FileExists(htmlRoot+htmlHead)) or not(FileExists(htmlRoot+htmlFoot)) then
       exit;
 
-    ids := intrinsicRuleExplanationMap.keySet;
-    for i := 1 to length(ids)-1 do for j := 0 to i-1 do if ids [i]<ids [j] then
-          begin
-          tmp := ids [i]; ids[i] := ids [j]; ids[j] := tmp;
-          end;
+    ids:=intrinsicRuleExplanationMap.keySet;
+    j:=0;
+    for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
+      ids[j]:=ids[i]; inc(j);
+    end;
+    setLength(ids,j);
+
+    for i:=1 to length(ids)-1 do for j:=0 to i-1 do
+    if ids [i]<ids [j] then begin
+      tmp:=ids [i]; ids[i]:=ids [j]; ids[j]:=tmp;
+    end;
 
     assign(outFile, htmlRoot+htmlResult); rewrite(outfile);
 
@@ -408,11 +414,11 @@ PROCEDURE documentBuiltIns;
     close(inFile);
 
     writeln(outFile, '<br><div>');
-    for i := 0 to length(ids)-1 do
+    for i:=0 to length(ids)-1 do
       writeln(outFile, '<a href="#', ids [i], '">', ids [i], '</a> &nbsp; ');
     writeln(outFile, '</div>');
 
-    for i := 0 to length(ids)-1 do
+    for i:=0 to length(ids)-1 do
       begin
       doc.create(ids [i]);
       writeln(outFile, doc.toHtml);
