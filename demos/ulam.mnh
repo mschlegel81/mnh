@@ -1,4 +1,4 @@
-USE primes;
+USE primes, turtleGfx;
 
 memoized
 private Ulam(1)->[[1]];
@@ -15,3 +15,12 @@ private UlamSpiral(Lines,Primes)->print(pEach(l,Lines,aggregator({$x&"\n"&$y}),p
 main->UlamSpiral(40);
 //*Displays a n x n Ulam-Spiral
 main(n:string)->info and UlamSpiral(softCast(n));
+
+
+begin
+  local points:=turtle(0,90,'F',pEach(i,[1..200],&,repeat(repeat('F',i)&'-',2)),false);
+  isPrime(size(points));
+  //local mask:=each(i,[1..size(points)],isPrime(i));
+  local mask:=isPrime([1..size(points)]);
+  plot(points%mask,'.');
+end;

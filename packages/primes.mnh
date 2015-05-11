@@ -20,6 +20,11 @@ primes(n:real)->primes(floor(n));
 isPrime(n:int)->n in cached_primes ? true :
                 n <= max_cached    ? false :
                 trueCount(n mod primes(sqrt(n))=0)=0;
+isPrime(N:intList)->begin
+  local maxP:=sqrt(max(N));
+  maxP>max_cached ? primes(maxP) : void;
+  pEach(n,N,n in cached_primes ? true : trueCount((n mod cached_primes)=0)=0);
+end;
 
 //*Returns the first k primes
 firstKPrimes(k:int)->k<size(cached_primes) ? head(cached_primes,k)

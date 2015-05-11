@@ -2,17 +2,18 @@ private degToRad:=arctan(1)/45;
 private removeRedundantSequences(s,s)->s;
 private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
 
-private cleanString(drawChars:string, input:string)->begin
+private cleanString(drawChars:string, input:string, allowShortening:boolean)->begin
   local ignorables:=each(c,unique('~'|copy(input,[0..length(input)-1],1)),c in ['+','-','F','[',']'] ? void : c);
   local clean:=replace(replace(input,
                                copy(drawChars,[0..length(drawChars)-1],1),
                                'F'),
                        ignorables,
                        '');
+
   replace(
     removeRedundantSequences(clean,''),
-    ['F','00','11','22','33','44','55','66','77','88'],
-    ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9']);
+    allowShortening ? ['F','00','11','22','33','44','55','66','77','88'] : 'F',
+    allowShortening ? ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9'] : '0');
 end;
 
 multistep(i)->{begin
@@ -20,9 +21,9 @@ multistep(i)->{begin
                  turtlePos+=i*[cos(turtleDir),sin(turtleDir)];
                  oldPos;
                end};
-
-turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->begin
-  local cleanInput:=cleanString(drawChars,s);
+turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
+turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,allowShortening:boolean)->begin
+  local cleanInput:=cleanString(drawChars,s,allowShortening);
   //init State variables
   local turtlePos:=[0,0];
   local turtleDir:=startAngle*degToRad;
