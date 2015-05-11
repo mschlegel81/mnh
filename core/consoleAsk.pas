@@ -56,7 +56,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
 
 INITIALIZATION
   system.InitCriticalSection(cs);
-  registerRule(DEFAULT_BUILTIN_NAMESPACE, 'ask', @ask_impl, 'ask(q:string);#Asks the user question q and returns the user input#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl, 'ask(q:string);#Asks the user question q and returns the user input#'+
     'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
 FINALIZATION;
   system.DoneCriticalsection(cs);

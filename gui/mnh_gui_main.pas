@@ -1217,7 +1217,7 @@ PROCEDURE lateInitialization;
     errorThroughput.clear;
 
 
-    registerRule(DEFAULT_BUILTIN_NAMESPACE,'ask', @ask_impl,
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,
       'ask(q:string);#Asks the user question q and returns the user input#'+
       'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
     mnh_funcs.registerRule(PLOT_NAMESPACE,'plot',@plot,'');

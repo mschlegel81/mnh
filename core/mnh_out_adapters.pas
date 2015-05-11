@@ -42,6 +42,7 @@ PROCEDURE setDefaultCallbacks;
 
 VAR
   hasHaltMessage: boolean = false;
+  systemErrorlevel: specialize G_safeVar<longint>;
 
 IMPLEMENTATION
 
@@ -135,5 +136,6 @@ PROCEDURE setDefaultCallbacks;
 INITIALIZATION
   setDefaultCallbacks;
   maxErrorLevel := el0_allOkay;
+  systemErrorlevel.create(0);
 
 end.

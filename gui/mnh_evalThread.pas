@@ -211,42 +211,41 @@ PROCEDURE ad_killEvaluationLoopSoftly;
 FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_tokenInfo;
 VAR token:T_token;
     loc:T_tokenLocation;
-begin
-  result.tokenText:='';
-  result.tokenExplanation:='';
-  result.declaredInFile:='';
-  result.declaredInLine:=-1;
-  if evaluationState.value<>es_running then begin
-    token:=getTokenAt(line,column);
-    result.tokenText:=token.txt;
-    result.tokenExplanation:=C_tokenInfoString[token.tokType];
-    if (token.tokType=tt_intrinsicRulePointer) then begin
-      if copy(token.txt,1,4)='mnh.' then result.tokenExplanation:=intrinsicRuleExplanationMap.get(copy(token.txt,5,length(token.txt)-4))
-                                    else result.tokenExplanation:=intrinsicRuleExplanationMap.get(token.txt);
-
-    end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
-      loc:=P_rule(token.data)^.getLocationOfDeclaration;
-      result.declaredInLine:=loc.line;
-      result.declaredInFile:=loc.provider^.getPath;
-      result.tokenExplanation:=result.tokenExplanation+'#@Line '+IntToStr(loc.line);
-      if trim(result.declaredInFile)<>'' then
-        result.tokenExplanation:=result.tokenExplanation+'#in '+result.declaredInFile;
-    end else if (token.tokType=tt_identifier) then begin
-      if token.txt='USE' then begin
-        result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'
-                                                        +'#As first token in a package, it marks the use-clause (importing packages)';
-      end
-    end else if (token.tokType=tt_literal) then begin
-      if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
-      else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'
-      else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
-      else if (token.txt='void') then result.tokenExplanation:='void literal'
-      else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
-      else if (pos('.',token.txt)>0) or (pos('E',UpperCase(token.txt))>0) then result.tokenExplanation:='real literal'
-      else result.tokenExplanation:='integer literal';
+  begin
+    result.tokenText:='';
+    result.tokenExplanation:='';
+    result.declaredInFile:='';
+    result.declaredInLine:=-1;
+    if evaluationState.value<>es_running then begin
+      token:=getTokenAt(line,column);
+      result.tokenText:=token.txt;
+      result.tokenExplanation:=C_tokenInfoString[token.tokType];
+      if (token.tokType=tt_intrinsicRulePointer) then begin
+        result.tokenExplanation:=intrinsicRuleExplanationMap.get(token.txt);
+      end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
+        loc:=P_rule(token.data)^.getLocationOfDeclaration;
+        result.declaredInLine:=loc.line;
+        result.declaredInFile:=loc.provider^.getPath;
+        result.tokenExplanation:=result.tokenExplanation+'#@Line '+IntToStr(loc.line);
+        if trim(result.declaredInFile)<>'' then
+          result.tokenExplanation:=result.tokenExplanation+'#in '+result.declaredInFile;
+        result.tokenExplanation:=result.tokenExplanation+P_rule(token.data)^.getSubRuleHeaders;
+      end else if (token.tokType=tt_identifier) then begin
+        if token.txt='USE' then begin
+          result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'
+                                                          +'#As first token in a package, it marks the use-clause (importing packages)';
+        end
+      end else if (token.tokType=tt_literal) then begin
+        if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
+        else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'
+        else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
+        else if (token.txt='void') then result.tokenExplanation:='void literal'
+        else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
+        else if (pos('.',token.txt)>0) or (pos('E',UpperCase(token.txt))>0) then result.tokenExplanation:='real literal'
+        else result.tokenExplanation:='integer literal';
+      end;
     end;
   end;
-end;
 
 FUNCTION ad_needReload: boolean;
   begin

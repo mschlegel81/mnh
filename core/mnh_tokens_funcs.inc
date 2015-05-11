@@ -262,25 +262,44 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR tempRecycler:T_tokenRecycler;
     begin
       tempRecycler.create;
+      profiler.Start;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempRecycler);
+      t:=profiler.Elapsed;
+      tempRecycler.destroy;
+    end;
+
+  FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
+    VAR tempRecycler:T_tokenRecycler;
+        first:P_token;
+    begin
+      tempRecycler.create;
+      first:=tempRecycler.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
+      first^.next:=tempRecycler.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
+      profiler.Start;
+      reduceExpression(first,0,tempRecycler);
+      t:=profiler.Elapsed;
+      if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
+      then begin result:=first^.data; result^.rereference; end
+      else result:=nil;
+      if first<>nil then tempRecycler.cascadeDisposeToken(first);
       tempRecycler.destroy;
     end;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
+      ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       profiler := TEpikTimer.create(nil);
       profiler.Clear;
-      profiler.Start;
-      res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
-      t:=profiler.Elapsed;
+      if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
+                        else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
+      profiler.Free;
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
         appendPair(result,'result',res);
         appendPair(result,'time'  ,newRealLiteral(t));
       end;
-      profiler.Free;
     end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
@@ -445,7 +464,8 @@ FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   //round might be binary...
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'round'         ,@round_imp     ,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
 
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+                                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'         ,@sleep_imp     ,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression'    ,@expression_imp,'expression(S:string);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp     ,'arity(e:expression);#Returns the arity of expression e');

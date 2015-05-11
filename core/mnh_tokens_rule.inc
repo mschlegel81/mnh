@@ -18,6 +18,7 @@
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
+      FUNCTION getSubRuleHeaders:ansistring;
       PROCEDURE setMemoized    (CONST location:T_tokenLocation);
       PROCEDURE setMutable     (CONST location:T_tokenLocation);
       PROCEDURE setSynchronized(CONST location:T_tokenLocation);
@@ -172,7 +173,16 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
-    result:=subrules[0]^.declaredAt;
+    if length(subrules)>0 then result:=subrules[0]^.declaredAt
+                          else result:=C_nilTokenLocation;
+  end;
+
+FUNCTION T_rule.getSubRuleHeaders:ansistring;
+  VAR i:longint;
+  begin
+    result:='';
+    for i:=0 to length(subrules)-1 do
+      result:=result+'#'+id+subrules[i]^.pattern.toString;
   end;
 
 PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);

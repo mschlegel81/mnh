@@ -73,7 +73,7 @@ PROCEDURE parseCmdLine;
       end;
       callMainInMain(parameters);
 	  if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
-      halt;
+      halt(mnh_out_adapters.systemErrorlevel.value);
     end;
 
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;

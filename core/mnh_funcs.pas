@@ -1310,6 +1310,15 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('httpGet',params,tokenLocation);
   end;
 
+FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
+      mnh_out_adapters.systemErrorlevel.value:=P_intLiteral(params^.value(0))^.value;
+      result:=newVoidLiteral;
+    end else raiseNotApplicableError('setErrorlevel',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1318,8 +1327,8 @@ INITIALIZATION
   intrinsicRuleMap.create;
   intrinsicRuleExplanationMap.create;
 
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'clearPrint'    ,@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'    ,@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'         ,@print_imp     ,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   //Functions on lists:
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'head'          ,@head_imp      ,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'tail'          ,@tail_imp      ,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
@@ -1329,7 +1338,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sortPerm'      ,@sortPerm_imp  ,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'unique'        ,@unique_imp    ,'unique(L);#Returns list L sorted ascending and without duplicates');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'flatten'       ,@flatten_imp   ,'flatten(L,...);#Returns all parameters as a flat list.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'        ,@random_imp    ,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'max'           ,@max_imp       ,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'argMax'        ,@argMax_imp    ,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'min'           ,@min_imp       ,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
@@ -1351,19 +1360,19 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'escape'        ,@escape_imp    ,'escape(S:string);#Returns an escaped representation of S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'string'        ,@string_imp    ,'string(X);#Returns a string-representation of X');
 
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'files'         ,@files_impl       ,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'folders'       ,@folders_impl     ,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fileExists'    ,@fileExists_impl  ,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fileContents'  ,@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'files'         ,@files_impl       ,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders'       ,@folders_impl     ,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists'    ,@fileExists_impl  ,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents'  ,@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
                                                          'fileLines(filename:string,firstIdx:int,lastIdx:int);#Returns the specified range of lines or the empty list if no line was found in the range. Indexes are inclusive and start with 0.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'writeFile'     ,@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFile'     ,@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'replaceOne'    ,@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'repeat'        ,@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'exec'          ,@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec'          ,@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'        ,@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');
@@ -1372,14 +1381,15 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'isInfinite'    ,@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'isInRange'     ,@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName' ,@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'systime'       ,@systime_imp,'sytime;#Returns the current time as a real number');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'       ,@systime_imp,'sytime;#Returns the current time as a real number');
 
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord'           ,@ord_imp           ,'ord(x);#Returns the ordinal value of x');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'format'        ,@format_imp        ,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'printf'        ,@printf_imp        ,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'deleteFile',@deleteFile_imp,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'        ,@printf_imp        ,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deleteFile',@deleteFile_imp,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setErrorlevel',@setErrorlevel_imp,'setErrorlevel(level:int);#Sets the errorlevel returned by the interpreter');
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');
