@@ -1,4 +1,4 @@
-private points:=(each(i,[0..999],sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]) );
+private points:=each(p,each(i,[0..1199],sqrt(i)*[cos(2.39996323*i),sin(2.39996323*i)]),-25<p%0<25 and -25<p%1<25 ? p : void);
 
 private norm(x)->sqrt(x%0*x%0+x%1*x%1);
 
