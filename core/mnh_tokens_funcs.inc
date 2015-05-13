@@ -297,14 +297,15 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
-        appendPair(result,'result',res);
+        if res^.literalType<>lt_void then appendPair(result,'result',res)
+                                     else disposeLiteral(res);
         appendPair(result,'time'  ,newRealLiteral(t));
       end;
     end else raiseNotApplicableError('time',params,tokenLocation);
   end;
 
 FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  CONST secondsPerDay=24*60*60;
+  CONST SECONDS_PER_DAY=24*60*60;
   VAR sleepUntil:double;
       sleepInt:longint;
   begin
@@ -313,10 +314,10 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       sleepUntil:=now;
       result:=newVoidLiteral;
       if params^.value(0)^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value/secondsPerDay
-      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value/secondsPerDay;
+      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value/SECONDS_PER_DAY
+      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value/SECONDS_PER_DAY;
       while (now<sleepUntil) and (errorLevel<el3_evalError) do begin
-        sleepInt:=round(900*(sleepUntil-now)*secondsPerDay);
+        sleepInt:=round(900*(sleepUntil-now)*SECONDS_PER_DAY);
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
       end;
@@ -440,6 +441,15 @@ FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('mainParams',params,tokenLocation);
   end;
 
+FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
+      limitPoolThreads(P_intLiteral(params^.value(0))^.value-1);
+      result:=newVoidLiteral;
+    end else raiseNotApplicableError('setThreadCount',params,tokenLocation);
+  end;
+
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -471,4 +481,5 @@ FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp     ,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'mainParams'    ,@mainParams_imp,'mainParams;#Returns the parameters passed to the program');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
 {$endif}

@@ -38,6 +38,7 @@
 {$endif}
 {$ifdef include_implementation}
 VAR poolThreadsRunning:longint=0;
+    MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepTime:longint;
@@ -67,6 +68,12 @@ PROCEDURE ensurePoolThreads;
       InterLockedIncrement(poolThreadsRunning);
       BeginThread(@threadPoolThread);
     end;
+  end;
+
+PROCEDURE limitPoolThreads(CONST newLimit:longint);
+  begin
+    if newLimit>=0 then MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=newLimit;
+    while poolThreadsRunning>MAX_NUMBER_OF_SECONDARY_WORKER_THREADS do sleep(100);
   end;
 
 CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; VAR recycler:T_tokenRecycler);
