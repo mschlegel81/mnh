@@ -40,12 +40,13 @@ PROCEDURE plainStdErrOut(CONST error: T_storedError);
 PROCEDURE haltEvaluation;
 PROCEDURE setDefaultCallbacks;
 
+PROCEDURE haltWithAdaptedSystemErrorLevel;
 VAR
   hasHaltMessage: boolean = false;
   systemErrorlevel: specialize G_safeVar<longint>;
 
-IMPLEMENTATION
 
+IMPLEMENTATION
 PROCEDURE writeDeclEcho(CONST s: ansistring);
   begin
     if inputDeclEcho <> nil then
@@ -131,6 +132,20 @@ PROCEDURE setDefaultCallbacks;
     errorOut := @plainStdErrOut;
     printOut := @plainConsoleOut;
     clearConsole:=@mySys.clearConsole;
+  end;
+
+PROCEDURE haltWithAdaptedSystemErrorLevel;
+  VAR L:longint=0;
+  begin
+    if errorLevel>=el3_evalError then begin
+      L:=103;
+      if errorLevel>=el4_parsingError then begin
+        L:=104;
+        if errorLevel>=el5_systemError then L:=105;
+      end;
+    end;
+    if L>systemErrorlevel.value then halt(L)
+                                else halt(systemErrorlevel.value);
   end;
 
 INITIALIZATION
