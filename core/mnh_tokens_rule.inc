@@ -12,16 +12,13 @@
       id:ansistring;
       subrules:array of P_subrule;
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring);
+      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
-      PROCEDURE setMemoized    (CONST location:T_tokenLocation);
-      PROCEDURE setMutable     (CONST location:T_tokenLocation);
-      PROCEDURE setSynchronized(CONST location:T_tokenLocation);
       PROCEDURE setMutableValue(CONST value:P_literal);
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       FUNCTION hasPublicSubrule:boolean;
@@ -30,11 +27,23 @@
     end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring);
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType);
   begin
-    ruleType:=rt_normal;
+    ruleType:=ruleTyp;
     id:=ruleId;
     setLength(subrules,0);
+    case ruleTyp of
+      rt_memoized:begin
+        new(cache,create);
+        system.InitCriticalSection(rule_cs);
+      end;
+      rt_mutable: begin
+        namedValue.create(id,newVoidLiteral);
+        system.InitCriticalSection(rule_cs);
+      end;
+      rt_synchronized:
+        system.InitCriticalSection(rule_cs);
+    end;
   end;
 
 DESTRUCTOR T_rule.destroy;
@@ -183,41 +192,6 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
     result:='';
     for i:=0 to length(subrules)-1 do
       result:=result+'#'+id+subrules[i]^.pattern.toString;
-  end;
-
-PROCEDURE T_rule.setMemoized(CONST location:T_tokenLocation);
-  begin
-    if (ruleType=rt_normal) then begin
-      ruleType:=rt_memoized;
-      new(cache,create);
-      system.InitCriticalSection(rule_cs);
-    end else if ruleType=rt_mutable then raiseError(el2_warning,'A mutable rule cannot be memoized',location);
-  end;
-
-PROCEDURE T_rule.setMutable(CONST location:T_tokenLocation);
-  VAR valueFromSubrule:P_literal;
-  begin
-    if (ruleType=rt_normal) then begin
-      if length(subrules)<>1 then raiseError(el4_parsingError,'A rule with more than one subrule cannot be mutable!',location)
-      else begin
-        valueFromSubrule:=subrules[0]^.getInlineValue;
-        if valueFromSubrule<>nil then begin
-          dispose(subrules[0],destroy);
-          setLength(subrules,0);
-          namedValue.create(id,valueFromSubrule);
-          ruleType:=rt_mutable;
-          system.InitCriticalSection(rule_cs);
-        end else raiseError(el3_evalError,'This rule cannot be made mutable!',location);
-      end;
-    end else if ruleType in [rt_memoized,rt_synchronized] then raiseError(el4_parsingError,'A memoized or synchronized rule cannot be mutable!',location);
-  end;
-
-PROCEDURE T_rule.setSynchronized(CONST location:T_tokenLocation);
-  begin
-    if (ruleType=rt_normal) then begin
-      ruleType:=rt_synchronized;
-      system.InitCriticalSection(rule_cs);
-    end else if ruleType = rt_mutable then raiseError(el4_parsingError,'A mutable rule cannot be synchronized!',location);
   end;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal);

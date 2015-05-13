@@ -39,7 +39,7 @@ TYPE
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
   end;
@@ -371,15 +371,21 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if evaluateBody then reduceExpression(ruleBody,0,recycler);
         end;
 
-        if   errorLevel<el3_evalError then begin
-          ruleGroup:=ensureRuleId(ruleId);
-          new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
-          ruleGroup^.addOrReplaceSubRule(subrule);
-          if ruleIsMemoized     then ruleGroup^.setMemoized(ruleDeclarationStart);
-          if ruleIsMutable      then ruleGroup^.setMutable(ruleDeclarationStart);
-          if ruleIsSynchronized then ruleGroup^.setSynchronized(ruleDeclarationStart);
-          first:=nil;
-          if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate,ruleIsSynchronized,ruleIsMutable);
+        if errorLevel<el3_evalError then begin
+          ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsSynchronized,ruleDeclarationStart);
+          if errorLevel<el3_evalError then begin
+            new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
+            if ruleGroup^.ruleType=rt_mutable
+            then begin
+              ruleGroup^.setMutableValue(subRule^.getInlineValue);
+              dispose(subRule,destroy);
+            end else ruleGroup^.addOrReplaceSubRule(subrule);
+            first:=nil;
+            if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate,ruleIsSynchronized,ruleIsMutable);
+          end else if errorLevel<el5_systemError then
+            recycler.cascadeDisposeToken(first)
+          else
+            first:=nil;
         end else if errorLevel<el5_systemError then
           recycler.cascadeDisposeToken(first)
         else
@@ -566,12 +572,21 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
+  CONST ruleTypeTxt:array[T_ruleType] of string=('normal','memoized','mutable','synchronized');
+
+  VAR ruleType:T_ruleType=rt_normal;
   begin
+    if ruleIsSynchronized then ruleType:=rt_synchronized;
+    if ruleIsMemoized then ruleType:=rt_memoized else
+    if ruleIsMutable then ruleType:=rt_mutable;
+
     if not(packageRules.containsKey(ruleId,result)) then begin
-      new(result,create(ruleId));
+      new(result,create(ruleId,ruleType));
       packageRules.put(ruleId,result);
-      raiseError(el0_allOkay,'New rule '+ruleId,fileTokenLocation(codeProvider));
+      raiseError(el0_allOkay,'New rule '+ruleId,ruleDeclarationStart);
+    end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin
+      raiseError(el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+ruleTypeTxt[result^.ruleType]+', redeclared as '+ruleTypeTxt[ruleType],ruleDeclarationStart);
     end;
   end;
 
