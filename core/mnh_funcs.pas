@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient,FileUtil;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -544,7 +544,6 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('string',params,tokenLocation);
   end;
 
-
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
   VAR i,j:longint;
       found:T_arrayOfString;
@@ -780,17 +779,14 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       tempProcess.ShowWindow := swoHIDE;
       try
         tempProcess.Execute;
+        tempProcess.CloseInput;
         while tempProcess.Running and (errorLevel<el3_evalError) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then Inc(BytesRead, n)
                  else Sleep(10);
         end;
-        if errorLevel>=el3_evalError then begin
-          tempProcess.CloseInput;
-          tempProcess.CloseOutput;
-          tempProcess.CloseStderr;
-        end;
+        if tempProcess.Running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
@@ -1246,8 +1242,38 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteFile(P_stringLiteral(params^.value(0))^.value));
+      result:=newBoolLiteral(DeleteFileUTF8(P_stringLiteral(params^.value(0))^.value));
     end else raiseNotApplicableError('deleteFile',params,tokenLocation);
+  end;
+
+FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=newBoolLiteral(DeleteDirectory(P_stringLiteral(params^.value(0))^.value,false));
+    end else raiseNotApplicableError('deleteDir',params,tokenLocation);
+  end;
+
+FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
+      ensurePath(P_stringLiteral(params^.value(1))^.value);
+      result:=newBoolLiteral(
+      FileUtil.CopyFile(P_stringLiteral(params^.value(0))^.value,
+                        P_stringLiteral(params^.value(1))^.value,true));
+    end else raiseNotApplicableError('copyFile',params,tokenLocation);
+  end;
+
+FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
+      ensurePath(P_stringLiteral(params^.value(1))^.value);
+      result:=newBoolLiteral(
+      FileUtil.RenameFileUTF8(P_stringLiteral(params^.value(0))^.value,
+                              P_stringLiteral(params^.value(1))^.value));
+    end else raiseNotApplicableError('moveFile',params,tokenLocation);
   end;
 
 FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -1319,6 +1345,27 @@ FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else raiseNotApplicableError('setErrorlevel',params,tokenLocation);
   end;
 
+FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then result:=newIntLiteral(params^.value(0)^.hash)
+    else raiseNotApplicableError('hash',params,tokenLocation);
+  end;
+
+FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR keys:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      keys:=intrinsicRuleExplanationMap.keySet;
+      result:=newListLiteral;
+      for i:=0 to length(keys)-1 do P_listLiteral(result)^.append(newStringLiteral(keys[i]),false);
+      setLength(keys,0);
+    end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1387,9 +1434,15 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'format'        ,@format_imp        ,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'        ,@printf_imp        ,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deleteFile',@deleteFile_imp,'deleteFile(filename:string);#Deletes the given file, returning true on success and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'deleteDir',@deleteDir_imp,'deleteDir(directoryname:string);#Deletes the given directory, returning true on success and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'copyFile',@copyFile_imp,'copyFile(source:string,dest:string);#Copies a file from source to dest, returning true on success and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);#Moves a file from source to dest, returning true on success and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setErrorlevel',@setErrorlevel_imp,'setErrorlevel(level:int);#Sets the errorlevel returned by the interpreter');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
+
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');

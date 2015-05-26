@@ -49,7 +49,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_arrayOfString;
 
 FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_arrayOfString): boolean;
-
+PROCEDURE ensurePath(path:ansistring);
 
 IMPLEMENTATION
 VAR mainPackagePath: ansistring;
