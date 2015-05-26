@@ -8,8 +8,8 @@ storePassedTests->writeFileLines('regTest/passedTests.dat',unique(flatten(
   fileExists('regTest/passedTests.dat') ? fileLines('regTest/passedTests.dat') : [],
    passedTests)));
 
-synchronized markAsPassed(case,exeInfo)->begin passedTests:=passedTests | (exeInfo & ":" & case & ":" & fileHash(case)); void; end;
-synchronized isMarkedAsPassed(case,exeInfo)->(exeInfo & ":" & case & ":" & fileHash(case)) in passedTests;
+synchronized markAsPassed(case,exeHash)->begin passedTests:=passedTests | (exeHash & ":" & case & ":" & fileHash(case)); void; end;
+synchronized isMarkedAsPassed(case,exeHash)->(exeHash & ":" & case & ":" & fileHash(case)) in passedTests;
 
 mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
@@ -21,51 +21,56 @@ expectedResultExists(scriptname)->fileExists(expectedResultName(scriptname));
 expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
 storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
-runTest(executor,exeInfo, scriptName,outputFileName,delOutputBefore,FMT_STRING)->
-    begin
-      delOutputBefore and outputFileName<>''
-      ? deleteFile(outputFileName)
-      : void;
-      local startTime:=systime;
-      local scriptOutput:=exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName));
-      local scriptTime:=(systime-startTime)*24*60*60;
-      expectedResultExists(scriptName)
-      ? begin
-          expectedResult(scriptName)==scriptOutput
-          ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeInfo))
-          : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
-                                                     addFailedTest(scriptName) &
-                                                     storeResult(lastResultName(scriptName),scriptOutput));
-        end
-      : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName),scriptOutput));
-    end;
+runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)->
+  begin
+    delOutputBefore and outputFileName<>''
+    ? deleteFile(outputFileName)
+    : void;
+    local startTime:=systime;
+    local scriptOutput:=exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName));
+    local scriptTime:=(systime-startTime)*24*60*60;
+    expectedResultExists(scriptName)
+    ? begin
+        expectedResult(scriptName)==scriptOutput
+        ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeHash))
+        : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
+                                                   addFailedTest(scriptName) &
+                                                   storeResult(lastResultName(scriptName),scriptOutput));
+      end
+    : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName),scriptOutput));
+  end;
 
 main->main(executor);
 
 main(exe,...)->begin
   local testFilter       := tail($params);
   local currentExeInfo   := head(exec(exe,["-version"]));
+  local currentExeHash   := head(exec(exe,["-codeHash"]));
   local currentExeCanPlot:= copy(currentExeInfo,5,4)="full";
   local quickTestsOnly   := testFilter==['quick'];
-  local specific_tests   := not((testFilter==[]) or (quickTestsOnly));
+  local checkOnly        := testFilter==['checkOnly'];
+  local specific_tests   := not((testFilter==[]) or quickTestsOnly or checkOnly);
+  quickTestsOnly or checkOnly ? testFilter:=[] : void;
   local testCases:=sort(each(case,
                    expression(fileContents('regTest/regTestCases.dat'))(),
                    (currentExeCanPlot   or not(case%3)) and
                    (not(quickTestsOnly) or not(case%4)) and
-                   ((testFilter==[]) or (quickTestsOnly) ? true : each(f,testFilter,or,pos(f,case%0)>=0)) ? case%[0..2] : void));
+                   ((testFilter==[]) ? true : each(f,testFilter,or,pos(f,case%0)>=0)) ? case%[0..2] : void));
   local FMT_STRING:="%X"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"% %####0.00%sec %X%";
 
   local first:=true;
   each(test,testCases, begin
-    isMarkedAsPassed(test%0,currentExeInfo) and not(specific_tests)
+    isMarkedAsPassed(test%0,currentExeHash) and not(specific_tests)
     ? previouslyPassedTests:=previouslyPassedTests+1
-    : begin
-        first ? print('---------------------------------------------------------\n',
-                      'Starting test runs with executable ',exe,'\n',currentExeInfo,
-                      '\n---------------------------------------------------------')
-              : void;
+    : checkOnly ? addFailedTest(test%0) : 
+      begin
+        first and not(checkOnly) 
+        ? print('---------------------------------------------------------\n',
+               'Starting test runs with executable ',exe,'\n',currentExeInfo,
+               '\n---------------------------------------------------------')
+        : void;
         first:=false;
-        runTest@(exe|currentExeInfo|test|FMT_STRING);
+        runTest@(exe|currentExeHash|test|FMT_STRING);
         void;
       end;
   end);
@@ -75,7 +80,7 @@ main(exe,...)->begin
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
     storePassedTests;
-    //displayUncoveredTests
+    //displayUncoveredTests:--------------
     local coveredTests:= replace(unique(expression(fileContents('regTest/regTestCases.dat'))()%%0),'\\','/');
     first:=true;
     each(script,
@@ -87,5 +92,9 @@ main(exe,...)->begin
            end : void;
            print('  ',script);
          end);
+    //--------------:displayUncoveredTests
   end : void;
+
+  checkOnly and testsFailed<>'' ? print(size(split(testsFailed,'\n')),' tests have not been passed or executed') : void;
+  testsFailed=''; 
 end;
