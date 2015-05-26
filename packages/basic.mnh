@@ -12,7 +12,7 @@ sum(L:numericList)->each(n,L,+);
 runningSum([])->[];
 runningSum(L)->begin
   local sum:=0;
-  each(e,L,sum:=sum+e);
+  each(e,L,sum+=e);
 end;
 
 //*The product of the empty list is <code>1</code>
@@ -71,7 +71,7 @@ pi:=4*arctan(1);
 memoized
 fak(n<1)->1.0;
 fak(n:int)->n*fak(n-1);
-fak(N:list)->each(n,N,fak(n));
+fak(N:intList)->each(n,N,fak(n));
 
 private testEx(e:expression)->printf("%X31% = %X%",unbrace(string(e)),string(e()));
 //*For reg-testing

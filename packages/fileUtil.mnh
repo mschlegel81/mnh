@@ -1,26 +1,28 @@
+//*"no folder" has no subfolders
 recFolders([])->[];
-recFolders(F)->flatten(F,each(subFolder,folders(F&"/*"),recFolders(subFolder)));
+//*recursively finds all folders
+recFolders(F)->flatten(F,pEach(subFolder,folders(F&"/*"),recFolders(subFolder)));
 
-recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),each(pat,searchPatterns,files(folder&"/"&pat))));
+//*recursively finds all files
+recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),pEach(pat,searchPatterns,files(folder&"/"&pat))));
+//*recursively finds all files; searchPattern may be delimited by ; or ,
 recFiles(rootFolder,searchPattern:string)->recFiles(rootFolder,trim(split(searchPattern,[";",","])));
 
-containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
-containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
+private containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
+private containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
 
+//*finds a search string in all files (recursively)
 find(rootFolder,filePattern,searchStrings,caseSensitive:boolean)->
   findInFiles(recFiles(rootFolder,filePattern),
               caseSensitive ? containsCaseSensitive  (searchStrings)
                             : containsCaseInsensitive(searchStrings));
 
-findInFiles([]       ,F:expression)->print('No files matching the pattern were found.');
-findInFiles(fileNames,F:expression)->each(fname,fileNames,findInLines(fname,fileLines(fname),F));
+private findInFiles([]       ,F:expression)->print('No files matching the pattern were found.');
+private findInFiles(fileNames,F:expression)->each(fname,fileNames,findInLines(fname,fileLines(fname),F));
+private findInLines(filename:string,lines:stringList,F)->each(i,[0..size(lines)-1],and,F(lines%i) ?  print(filename,'@',i+1,': ',trim(lines%i)) : true);
+private findInLines(filename:string,[],F)->print('Empty file ',filename,' ?');
 
-findInLines(filename:string,lines:stringList,F)->each(i,[0..size(lines)-1],and,F(lines%i) ?  print(filename,'@',i+1,': ',trim(lines%i)) : true);
-findInLines(filename:string,[],F)->print('Empty file ',filename,' ?');
-
-printAll([])->false;
-printAll(L)->each(l,L,and,print(l));
-
+//*Finds searchStrings (case insensitive) in the given files, searcing recursively from the current directory
 main(patterns,searchString,...)->find('.',patterns,tail($params),false);
 //*For regression test
 main->main('packages/*.mnh','trueCount');
