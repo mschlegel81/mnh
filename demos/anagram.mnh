@@ -1,6 +1,6 @@
 //*Returns the path of unixdict.txt and ensures the file is existent.
 //*If the file is missing it is downloaded from http://www.puzzlers.org/pub/wordlists/unixdict.txt
-private default_dictionary->begin
+DEFAULT_DICTIONARY->begin
   local result:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
   fileExists(result) ? result : begin
     local dictContents:=split(httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'),'\r');
@@ -11,19 +11,19 @@ end;
 
 private normalForm(s:string)->each(char,sort(copy(s,[0..length(s)-1],1)),&);
 
-private readDict(filename)->sort(pEach(word,fileLines(filename),[normalForm(word),word]));
+readDict(filename)->sort(pEach(word,fileLines(filename),[normalForm(word),word]));
 
 private duplicates(sortedList)->unique(tail(sortedList)%(head(sortedList,size(sortedList)-1)=tail(sortedList)));
 private splitDict(DICT)->splitDict(DICT,size(DICT) div 2);
 private splitDict(DICT,i)->DICT%i%0 = DICT%(i-1)%0 ? splitDict(DICT,i+1) : [head(DICT,i),tail(DICT,i)];
 
-private anagramsInDict(DICT)->size(DICT)>1000 ? pEach(subDict,splitDict(DICT),|,anagramsInDict(subDict))
-                                              : pEach(m,duplicates(DICT%%0),DICT%(DICT%%0=m)%%1);
+anagramsInDict(DICT)->size(DICT)>1000 ? pEach(subDict,splitDict(DICT),|,anagramsInDict(subDict))
+                                      : pEach(m,duplicates(DICT%%0),DICT%(DICT%%0=m)%%1);
 
 private orderListsBySize(L)->L%sortPerm(each(subList,L,size(subList)));
 
 //*Finds anagrams in unixdict.txt
-main->main(default_dictionary);
+main->main(DEFAULT_DICTIONARY);
 
 //*Finds anagrams in a custom dictionary
 main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),print(each(el,set,aggregator({$x&", "&$y}))));

@@ -1,0 +1,16 @@
+USE anagram;
+
+private a_is_b_reversed(a:string,b:string)->each(char,copy(b,[length(b)-1..0],1),&)=a;
+
+private findSemordnilaps->
+  pEach(anagramGroup,
+        anagramsInDict(readDict(DEFAULT_DICTIONARY)),|,
+        each(i,[1..size(anagramGroup)-1],|,
+        each(j,[0..i-1],a_is_b_reversed@(anagramGroup%[i,j]) ? anagramGroup%[i,j] : void)));
+
+//*See <a href="http://rosettacode.org/wiki/Semordnilap">http://rosettacode.org/wiki/Semordnilap</a>
+main->begin
+  local fullList:=findSemordnilaps;
+  printf('Found %I% Semordnilaps',size(fullList));
+  printf('%X%\t%X%',['Examples:','','','',''],fullList%floor(size(fullList)*random(5)));
+end;
