@@ -8,8 +8,7 @@ CONST CACHE_MOD   = 2047; //must be 2^n-1 because of bitwise operation used inst
 
 TYPE
   T_cacheEntry = record
-    key: P_listLiteral;
-    value: P_literal;
+    key,value: P_literal;
     useCount: longint;
   end;
 
@@ -26,9 +25,9 @@ TYPE
   public
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
-    FUNCTION getBinIdx(CONST key: P_listLiteral):longint;
-    PROCEDURE put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
-    FUNCTION get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
+    FUNCTION getBinIdx(CONST key: P_literal):longint;
+    PROCEDURE put(CONST key: P_literal; CONST binIdx:longint; CONST value: P_literal);
+    FUNCTION get(CONST key: P_literal; CONST binIdx:longint): P_literal;
     PROCEDURE Clear;
   end;
 
@@ -92,12 +91,12 @@ PROCEDURE T_cache.polishBin(CONST binIdx:longint);
     end;
   end;
 
-FUNCTION T_cache.getBinIdx(CONST key: P_listLiteral):longint;
+FUNCTION T_cache.getBinIdx(CONST key: P_literal):longint;
   begin
     result:=key^.hash and CACHE_MOD;
   end;
 
-PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
+PROCEDURE T_cache.put(CONST key: P_literal; CONST binIdx:longint; CONST value: P_literal);
   VAR i: longint;
   begin
     with cached[binIdx] do begin
@@ -116,7 +115,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST valu
   end;
 
 
-FUNCTION T_cache.get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
+FUNCTION T_cache.get(CONST key: P_literal; CONST binIdx:longint): P_literal;
   VAR i: longint;
   begin
     with cached[binIdx] do begin

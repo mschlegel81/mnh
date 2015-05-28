@@ -82,7 +82,7 @@ PROCEDURE parseCmdLine;
   begin
     setLength(parameters,0);
     for i:=1 to paramCount do begin
-    if fileToInterpret='' then begin 
+    if fileToInterpret='' then begin
         if      paramstr(i)='+echo' then echo:=e_forcedOn
         else if paramstr(i)='-echo' then echo:=e_forcedOff
         else if paramstr(i)='+time' then time:=t_forcedOn
@@ -90,7 +90,7 @@ PROCEDURE parseCmdLine;
         else if paramstr(i)='-det'  then randseed:=0
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
-        else if startsWith(paramStr(i),'-codeHash') then begin {$include code_hash.inc} halt; end
+        else if startsWith(paramStr(i),'-codeHash') then begin write({$I %FPCTARGET%},{$ifdef fullVersion}'F'{$else}'L'{$endif}); {$include code_hash.inc} halt; end
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
           pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);

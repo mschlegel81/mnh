@@ -34,7 +34,7 @@ TYPE
 VAR
   askForm: TaskForm;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION ask_impl(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 {$R *.lfm}
@@ -102,7 +102,7 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
     ownerThread := 0;
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION ask_impl(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR opt: T_arrayOfString;
       i: longint;
   begin
@@ -110,7 +110,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_string) then begin
       system.EnterCriticalsection(cs);
-      askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);
+      askForm.initWithQuestion(params^.value(0)^.getStringValue);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
       system.LeaveCriticalsection(cs);
     end
@@ -118,10 +118,10 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       (params^.value(0)^.literalType = lt_string) and
       (params^.value(1)^.literalType = lt_stringList) then begin
       system.EnterCriticalsection(cs);
-      setLength(opt, P_listLiteral(params^.value(1))^.size);
+      setLength(opt, P_literal(params^.value(1))^.size);
       for i := 0 to length(opt)-1 do
-        opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
+        opt[i] := params^.value(1)^.value(i)^.getStringValue;
+      askForm.initWithQuestionAndOptions(params^.value(0)^.getStringValue, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
       system.LeaveCriticalsection(cs);
     end

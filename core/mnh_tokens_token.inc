@@ -77,7 +77,10 @@ PROCEDURE T_token.define(CONST original:T_token);
     tokType :=original.tokType;
     data    :=original.data;
     if (tokType in [tt_literal,tt_aggregatorExpressionLiteral,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference
-    else if (tokType in [tt_list_constructor,tt_parList_constructor]) then data:=P_listLiteral(original.data)^.clone;
+    else if (tokType in [tt_list_constructor,tt_parList_constructor]) then begin
+      data:=newListLiteral;
+      P_literal(data)^.appendAll(original.data);
+    end;
   end;
 
 PROCEDURE T_Token.undefine;
@@ -118,8 +121,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_blockLocalVariable: begin result:=txt; idLike:=true; end;
       tt_aggregatorExpressionLiteral,
       tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
+      tt_parList_constructor: result:=P_literal(data)^.toParameterListString(false);
+      tt_parList            : result:=P_literal(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
       tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,tt_modifier_local,tt_procedureBlockBegin,
       tt_separatorComma: result:=C_tokenString[tokType]+' ';
@@ -658,7 +661,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         bodyRule:array of P_subrule;
 
         aggregatorToken:T_tokenType;
-        aggregatorExpression:P_expressionLiteral;
+        aggregatorExpression:P_literal;
         aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
 
     FUNCTION parseBodyOk:boolean;
@@ -711,7 +714,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             aggregatorToken:=t^.tokType;
             aggregatorPresent:=yes_as_operator;
           end else if t^.tokType=tt_aggregatorExpressionLiteral then begin
-            aggregatorExpression:=P_expressionLiteral(t^.data);
+            aggregatorExpression:=t^.data;
             aggregatorExpression^.rereference;
             aggregatorPresent:=yes_as_expression;
           end;
@@ -732,7 +735,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         result:=true;
       end;
 
-    VAR itList:P_listLiteral;
+    VAR itList:P_literal;
         i,j:longint;
         eachLocation:T_tokenLocation;
         resultLiteral:P_literal;
@@ -741,21 +744,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       VAR newLit:P_literal;
       begin
         if L=nil then begin
-          if resultLiteral=nil then resultLiteral:=newErrorLiteral;
-          raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
+          if resultLiteral=nil then resultLiteral:=newErrorLiteralRaising(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           exit;
         end else if L^.literalType=lt_void then exit;
         case aggregatorPresent of
           no: begin
             if resultLiteral=nil then resultLiteral:=newListLiteral;
-            P_listLiteral(resultLiteral)^.append(L,true);
+            P_literal(resultLiteral)^.append(L,true);
           end;
           yes_as_operator: begin
             if (aggregatorToken=tt_operatorConcat) then begin
               if resultLiteral=nil then resultLiteral:=newListLiteral;
               if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
-              then P_listLiteral(resultLiteral)^.append   (L, true)
-              else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
+              then P_literal(resultLiteral)^.append   (L, true)
+              else P_literal(resultLiteral)^.appendAll(P_literal(L));
             end else begin
               if resultLiteral=nil then begin
                 resultLiteral:=L; L^.rereference;
@@ -775,7 +777,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,recycler);
+              newLit:=P_subrule(aggregatorExpression^.getExpressionValue)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,recycler);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
@@ -791,8 +793,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         first^.tokType:=tt_literal;
         if resultLiteral=nil then begin
           if aggregatorPresent<>no then begin
-            first^.data:=newErrorLiteral;
-            raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
+            first^.data:=newErrorLiteralRaising(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           end else first^.data:=newListLiteral;
         end else first^.data:=resultLiteral;
         first^.txt:='';
@@ -943,7 +944,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       begin
         res:=headRule^.directEvaluateNullary(nil,callDepth+1,recycler);
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
-          result:=P_boolLiteral(res)^.value;
+          result:=res^.getBoolValue;
         end else begin
           raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
           result:=false;
@@ -981,7 +982,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
-        parameterListLiteral:P_listLiteral;
+        parameterListLiteral:P_literal;
         inlineRule:P_subrule;
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
@@ -1015,9 +1016,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           exit;
         end;
       end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
-        inlineRule:=P_expressionLiteral(first^.data)^.value;
+        inlineRule:=P_literal(first^.data)^.getExpressionValue;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,first^.data,firstReplace,lastReplace,recycler)) then exit;
       end else begin
         raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
         exit;
@@ -1084,7 +1085,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
       if checkResult and (first^.next^.tokType=tt_typeCheckKeyValueList) then
-        checkResult:=checkResult and P_listLiteral(first^.data)^.isKeyValueList;
+        checkResult:=checkResult and P_literal(first^.data)^.isKeyValueList;
       first^.next:=recycler.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
@@ -1265,20 +1266,20 @@ end}
           end;
           tt_list_constructor: case cTokType[1] of
             tt_separatorComma: begin // [ | <Lit> ,
-              P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
+              P_literal(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_separatorCnt: begin // [ | <Lit> ..
-              P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-              P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
+              P_literal(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
+              P_literal(stack[length(stack)-1]^.data)^.setRangeAppend;
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ]
-              P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
+              P_literal(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               stack_popLink;
@@ -1290,7 +1291,7 @@ end}
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
-              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
+              P_literal(stack[length(stack)-1]^.data)^.append(first^.data,true);
               stack[length(stack)-1]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
               first:=recycler.disposeToken(first); //dispose literal
               first:=recycler.disposeToken(first); //dispose closing bracket
@@ -1298,7 +1299,7 @@ end}
               stack_popLink; //pop FUNCTION
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
-              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
+              P_literal(stack[length(stack)-1]^.data)^.append(first^.data,true);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
@@ -1426,7 +1427,7 @@ end}
           resolveWhile;
         end;
         tt_iifCheck: if (cTokType[-1]=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
-          resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
+          resolveInlineIf(P_literal(stack[length(stack)-1]^.data)^.getBoolValue);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
       end;
     until not(didSubstitution) or (errorLevel>=el3_evalError);

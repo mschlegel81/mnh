@@ -43,6 +43,8 @@ runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)-
 main->main(executor);
 
 main(exe,...)->begin
+  testsFailed:="";
+  previouslyPassedTests:=0;
   local testFilter       := tail($params);
   local currentExeInfo   := head(exec(exe,["-version"]));
   local currentExeHash   := head(exec(exe,["-codeHash"]));
@@ -62,9 +64,9 @@ main(exe,...)->begin
   each(test,testCases, begin
     isMarkedAsPassed(test%0,currentExeHash) and not(specific_tests)
     ? previouslyPassedTests:=previouslyPassedTests+1
-    : checkOnly ? addFailedTest(test%0) : 
+    : checkOnly ? addFailedTest(test%0) :
       begin
-        first and not(checkOnly) 
+        first and not(checkOnly)
         ? print('---------------------------------------------------------\n',
                'Starting test runs with executable ',exe,'\n',currentExeInfo,
                '\n---------------------------------------------------------')
@@ -96,5 +98,5 @@ main(exe,...)->begin
   end : void;
 
   checkOnly and testsFailed<>'' ? print(size(split(testsFailed,'\n')),' tests have not been passed or executed') : void;
-  testsFailed=''; 
+  testsFailed='';
 end;

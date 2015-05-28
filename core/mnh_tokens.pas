@@ -59,7 +59,7 @@ IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
-    parametersForMain:P_listLiteral=nil;
+    parametersForMain:P_literal=nil;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
 
@@ -320,7 +320,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               first:=recycler.disposeToken(first);
             end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
                      and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison('',tt_comparatorEq,P_scalarLiteral(first^.data));
+              rulePattern.appendComparison('',tt_comparatorEq,P_literal(first^.data));
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
             end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_emptyList) then begin
@@ -338,7 +338,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
                      and (nn^.tokType=tt_literal) and (P_literal(nn^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison(first^.txt,n^.tokType,P_scalarLiteral(nn^.data));
+              rulePattern.appendComparison(first^.txt,n^.tokType,P_literal(nn^.data));
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
@@ -652,7 +652,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
       //special handling if main returns an expression:
       if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
          (P_literal(t^.data)^.literalType=lt_expression) then begin
-        P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
+        P_subrule(P_literal(t^.data)^.getExpressionValue)^.directEvaluateNullary(nil,0,recycler);
       end;
       //:special handling if main returns an expression
       mainPackage.complainAboutUncalled;

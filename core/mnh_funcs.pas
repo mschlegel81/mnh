@@ -2,14 +2,14 @@ UNIT mnh_funcs;
 INTERFACE
 USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient,FileUtil;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
 
 PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_literal; CONST tokenLocation:T_tokenLocation);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
 
 IMPLEMENTATION
@@ -31,7 +31,7 @@ PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallb
     registerImp(namespace+C_ID_QUALIFY_CHARACTER+name);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_literal; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function ['+functionName+'] cannot be applied to parameters ';
@@ -47,7 +47,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
-FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION clearPrint_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     system.EnterCriticalSection(print_cs);
     mnh_out_adapters.clearConsole();
@@ -55,7 +55,7 @@ FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=newVoidLiteral;
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION print_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -64,7 +64,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_int,
       lt_real,
       lt_string,
-      lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
+      lt_expression: stringToPrint:=stringToPrint + params^.value(i)^.stringForm;
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.EnterCriticalSection(print_cs);
@@ -78,75 +78,75 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 begin
   result:=nil;
   if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-    if      (params^.size=1) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO
-    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO(P_intLiteral(params^.value(1))^.value)
+    if      (params^.size=1) then result:=params^.value(0)^.CALL_MACRO
+    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=params^.value(0)^.CALL_MACRO(params^.value(1)^.getIntValue)
     else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
   end else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
 end}
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION head_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=head}
 {$define ID_MACRO:='head'}
 SUB_LIST_IMPL;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tail_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=tail}
 {$define ID_MACRO:='tail'}
 SUB_LIST_IMPL;
 
-FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION leading_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=leading}
 {$define ID_MACRO:='leading'}
 SUB_LIST_IMPL;
 
-FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trailing_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=trailing}
 {$define ID_MACRO:='trailing'}
 SUB_LIST_IMPL;
 
 {$undef SUB_LIST_IMPL}
 
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sort_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.sort;
+      result:=newListLiteral; result^.appendAll(params^.value(0));
+      result^.sort;
     end else if (params<>nil) and (params^.size=2)
             and (params^.value(0)^.literalType in C_validListTypes)
             and (params^.value(1)^.literalType=lt_expression) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)));
+      result:=newListLiteral; result^.appendAll(params^.value(0));
+      result^.customSort(params^.value(1));
     end else raiseNotApplicableError('sort',params,tokenLocation);
   end;
 
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)
-    then result:=P_listLiteral(params^.value(0))^.sortPerm
+    then result:=P_literal(params^.value(0))^.sortPerm
     else raiseNotApplicableError('sortPerm',params,tokenLocation);
   end;
 
-FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION unique_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       if (params^.value(0)^.literalType in C_validListTypes) then begin
-        result:=P_listLiteral(params^.value(0))^.clone;
-        P_listLiteral(result)^.unique;
+        result:=newListLiteral; result^.appendAll(params^.value(0));
+        result^.unique;
       end;
     end else raiseNotApplicableError('unique',params,tokenLocation);
   end;
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  PROCEDURE recurse_flatten(CONST L:P_listLiteral);
+FUNCTION flatten_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+  PROCEDURE recurse_flatten(CONST L:P_literal);
     VAR i:longint;
     begin
       for i:=0 to L^.size-1 do
       if L^.value(i)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]
-      then P_listLiteral(result)^.append(L^.value(i),true)
-      else recurse_flatten(P_listLiteral(L^.value(i)));
+      then result^.append(L^.value(i),true)
+      else recurse_flatten(P_literal(L^.value(i)));
     end;
 
   begin
@@ -159,15 +159,15 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION random_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
     else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
-      count:=P_intLiteral(params^.value(0))^.value;
+      count:=params^.value(0)^.getIntValue;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do P_listLiteral(result)^.append(newRealLiteral(random),false);
+        for i:=1 to count do result^.append(newRealLiteral(random),false);
         exit(result);
       end;
     end;
@@ -176,7 +176,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 
-FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION max_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -185,34 +185,34 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then x:=params^.value(0)
     else x:=params;
     if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      result:=P_listLiteral(x)^.value(0);
-      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
+      result:=P_literal(x)^.value(0);
+      for i:=1 to P_literal(x)^.size-1 do if P_literal(x)^.value(i)^.isInRelationTo(tt_comparatorGrt,result^) then result:=P_literal(x)^.value(i);
       result^.rereference;
     end else raiseNotApplicableError('max',params,tokenLocation);
   end;
 
-FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR x,xMin:P_scalarLiteral;
-      L:P_listLiteral;
-      i,iMin:longint;
+FUNCTION argMax_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR x,xMax:P_literal;
+      L:P_literal;
+      i,iMax:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      L:=P_listLiteral(params^.value(0));
-      iMin:=0;
-      xMin:=P_scalarLiteral(L^.value(0));
+      L:=P_literal(params^.value(0));
+      iMax:=0;
+      xMax:=L^.value(0);
       for i:=1 to L^.size-1 do begin
-        x:=P_scalarLiteral(L^.value(i));
-        if x^.isInRelationTo(tt_comparatorGrt,xMin) then begin
-          iMin:=i;
-          xMin:=x;
+        x:=L^.value(i);
+        if x^.isInRelationTo(tt_comparatorGrt,xMax^) then begin
+          iMax:=i;
+          xMax:=x;
         end;
       end;
-      result:=newIntLiteral(iMin);
+      result:=newIntLiteral(iMax);
     end else raiseNotApplicableError('argMax',params,tokenLocation);
   end;
 
-FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION min_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -221,25 +221,25 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then x:=params^.value(0)
     else x:=params;
     if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      result:=P_listLiteral(x)^.value(0);
-      for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
+      result:=P_literal(x)^.value(0);
+      for i:=1 to P_literal(x)^.size-1 do if P_literal(x)^.value(i)^.isInRelationTo(tt_comparatorLss,result^) then result:=P_literal(x)^.value(i);
       result^.rereference;
     end else raiseNotApplicableError('min',params,tokenLocation);
   end;
 
-FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  VAR x,xMin:P_scalarLiteral;
-      L:P_listLiteral;
+FUNCTION argMin_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR x,xMin:P_literal;
+      L:P_literal;
       i,iMin:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      L:=P_listLiteral(params^.value(0));
+      L:=P_literal(params^.value(0));
       iMin:=0;
-      xMin:=P_scalarLiteral(L^.value(0));
+      xMin:=L^.value(0);
       for i:=1 to L^.size-1 do begin
-        x:=P_scalarLiteral(L^.value(i));
-        if x^.isInRelationTo(tt_comparatorLss,xMin) then begin
+        x:=L^.value(i);
+        if x^.isInRelationTo(tt_comparatorLss,xMin^) then begin
           iMin:=i;
           xMin:=x;
         end;
@@ -249,39 +249,38 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 
-FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION size_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case params^.value(0)^.literalType of
         lt_error..  lt_expression: result:=newIntLiteral(1);
-        lt_list..lt_listWithError: result:=newIntLiteral(P_listLiteral(params^.value(0))^.size);
+        lt_list..lt_listWithError: result:=newIntLiteral(P_literal(params^.value(0))^.size);
       end;
     end else raiseNotApplicableError('size',params,tokenLocation);
   end;
 
-FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION length_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
       case params^.value(0)^.literalType of
-        lt_string: result:=newIntLiteral(length(P_stringLiteral(params^.value(0))^.value));
+        lt_string: result:=newIntLiteral(length(params^.value(0)^.getStringValue));
         lt_stringList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newIntLiteral(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),false);
+          for i:=0 to P_literal(params^.value(0))^.size-1 do
+            result^.append(newIntLiteral(length(params^.value(0)^.value(i)^.getStringValue)),false);
         end;
         else raiseNotApplicableError('length',params,tokenLocation);
       end;
     end else raiseNotApplicableError('length',params,tokenLocation);
   end;
 
-FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION posInt(x,y:P_literal):P_intLiteral;
+FUNCTION pos_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION posInt(x,y:P_literal):P_literal;
     begin
-      result:=newIntLiteral(pos(P_stringLiteral(x)^.value,
-                                P_stringLiteral(y)^.value)-1);
+      result:=newIntLiteral(pos(x^.getStringValue,y^.getStringValue)-1);
     end;
 
   VAR i:longint;
@@ -296,29 +295,29 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
                          params^.value(1));
         end else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-            P_listLiteral(result)^.append(posInt(              params^.value(0),
-                                                 P_listLiteral(params^.value(1))^.value(i)),false);
+          for i:=0 to P_literal(params^.value(1))^.size-1 do
+            result^.append(posInt(              params^.value(0),
+                                                 P_literal(params^.value(1))^.value(i)),false);
         end;
       end else begin
         if params^.value(1)^.literalType=lt_string then begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
+          for i:=0 to P_literal(params^.value(0))^.size-1 do
+            result^.append(posInt(P_literal(params^.value(0))^.value(i),
                                                                params^.value(1)           ),false);
         end else begin
-          if P_listLiteral(params^.value(0))^.size=P_listLiteral(params^.value(1))^.size then begin
+          if P_literal(params^.value(0))^.size=P_literal(params^.value(1))^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-              P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
-                                                   P_listLiteral(params^.value(1))^.value(i)),false);
+            for i:=0 to P_literal(params^.value(0))^.size-1 do
+              result^.append(posInt(P_literal(params^.value(0))^.value(i),
+                                                   P_literal(params^.value(1))^.value(i)),false);
           end else raiseError(el3_evalError,'Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
     end else raiseNotApplicableError('pos',params,tokenLocation);
   end;
 
-FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION copy_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
       i1,i:longint;
@@ -326,7 +325,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   PROCEDURE checkLength(L:P_literal);
     VAR s:longint;
     begin
-      s:=P_listLiteral(L)^.size;
+      s:=L^.size;
       if not(anyList) then begin i1:=s; anyList:=true; end
                       else if    i1<>s then allOkay:=false;
     end;
@@ -334,23 +333,23 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION safeString(index:longint):ansistring;
     begin
       if params^.value(0)^.literalType=lt_string
-        then result:=P_stringLiteral(              params^.value(0)               )^.value
-        else result:=P_stringLiteral(P_listLiteral(params^.value(0))^.value(index))^.value;
+        then result:=params^.value(0)              ^.getStringValue
+        else result:=params^.value(0)^.value(index)^.getStringValue;
     end;
 
   FUNCTION safeStart(index:longint):longint;
     begin
       if params^.value(1)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.value(1)               )^.value
-        else result:=P_intLiteral(P_listLiteral(params^.value(1))^.value(index))^.value;
+        then result:=params^.value(1)              ^.getIntValue
+        else result:=params^.value(1)^.value(index)^.getIntValue;
       inc(result);
     end;
 
   FUNCTION safeLen(index:longint):longint;
     begin
       if params^.value(2)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.value(2)               )^.value
-        else result:=P_intLiteral(P_listLiteral(params^.value(2))^.value(index))^.value;
+        then result:=params^.value(2)              ^.getIntValue
+        else result:=params^.value(2)^.value(index)^.getIntValue;
     end;
 
   begin
@@ -364,13 +363,13 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if params^.value(2)^.literalType=lt_intList    then checkLength(params^.value(2));
       if not(allOkay) then raiseNotApplicableError('copy',params,tokenLocation)
       else if not(anyList) then
-        result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
-                                      P_intLiteral   (params^.value(1))^.value+1,
-                                      P_intLiteral   (params^.value(2))^.value))
+        result:=newStringLiteral(copy(params^.value(0)^.getStringValue,
+                                      params^.value(1)^.getIntValue+1,
+                                      params^.value(2)^.getIntValue))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
-          P_listLiteral(result)^.append(
+          result^.append(
             newStringLiteral(
               copy(safeString(i),
                    safeStart(i),
@@ -380,22 +379,22 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
 
-FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION split_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR splitters:T_arrayOfString;
   PROCEDURE initSplitters;
     VAR i:longint;
     begin
       if params^.value(1)^.literalType=lt_string then begin
         setLength(splitters,1);
-        splitters[0]:=P_stringLiteral(params^.value(1))^.value;
+        splitters[0]:=params^.value(1)^.getStringValue;
       end else begin
-        setLength(splitters,P_listLiteral(params^.value(1))^.size);
+        setLength(splitters,P_literal(params^.value(1))^.size);
         for i:=0 to length(splitters)-1 do
-          splitters[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+          splitters[i]:=params^.value(1)^.value(i)^.getStringValue;
       end;
     end;
 
-  FUNCTION splitOneString(CONST s:P_stringLiteral):P_listLiteral;
+  FUNCTION splitOneString(CONST s:P_literal):P_literal;
     PROCEDURE firstSplitterPos(CONST s:ansistring; OUT splitterStart,splitterEnd:longint);
       VAR i,p:longint;
       begin
@@ -412,10 +411,10 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     VAR sp0,sp1:longint;
         rest:ansistring;
     begin
-      firstSplitterPos(s^.value,sp0,sp1);
+      firstSplitterPos(s^.getStringValue,sp0,sp1);
       if sp0<0 then exit(newOneElementListLiteral(s,true));
       result:=newListLiteral;
-      rest:=s^.value;
+      rest:=s^.getStringValue;
       while sp0>0 do begin
         result^.append(newStringLiteral(copy(rest,1,sp0-1)),false);
         rest:=copy(rest,sp1,length(rest));
@@ -428,11 +427,11 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     VAR i:longint;
     begin
       case p^.literalType of
-        lt_string: result:=splitOneString(P_stringLiteral(p));
+        lt_string: result:=splitOneString(p);
         lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(p)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
+          for i:=0 to P_literal(p)^.size-1 do if errorLevel<el3_evalError then
+            result^.append(splitRecurse(P_literal(p)^.value(i)),false);
         end
        else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation);
       end;
@@ -448,27 +447,11 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('split',params,tokenLocation);
   end;
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
-    VAR i:longint;
-    begin
-      case x^.literalType of
-        lt_string: result:=P_stringLiteral(x)^.softCast;
-        lt_list..lt_listWithError: begin
-          result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
-        end;
-        else begin
-          x^.rereference;
-          result:=x;
-        end;
-      end;
-    end;
-
+FUNCTION softCast_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0))
+    if (params<>nil) and (params^.size=1)
+    then result:=params^.value(0)^.softCast
     else raiseNotApplicableError('softcast',params,tokenLocation);
   end;
 
@@ -478,11 +461,11 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
   begin
     result:=nil;
     case x^.literalType of
-      lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
+      lt_string: result:=x^.CALL_MACRO;
       lt_list,lt_stringList,lt_emptyList:  begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        for i:=0 to P_literal(x)^.size-1 do if errorLevel<el3_evalError then
+          result^.append(recurse(x^.value(i)),false);
       end;
       else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation);
     end;
@@ -496,44 +479,44 @@ begin
 end}
 
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trim_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=trim}
 {$define ID_MACRO:='trim'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimLeft_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trimLeft_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=trimLeft}
 {$define ID_MACRO:='trimLeft'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimRight_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trimRight_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=trimRight}
 {$define ID_MACRO:='trimRight'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION upper_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=upper}
 {$define ID_MACRO:='upper'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION lower_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=lower}
 {$define ID_MACRO:='lower'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION unbrace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION unbrace_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=unbrace}
 {$define ID_MACRO:='unbrace'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION escape_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION escape_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define CALL_MACRO:=escape}
 {$define ID_MACRO:='escape'}
 STRINGLITERAL_ROUTINE;
 {$undef STRINGLITERAL_ROUTINE}
 
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION string_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -544,23 +527,23 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('string',params,tokenLocation);
   end;
 
-FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
+FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_literal;
   VAR i,j:longint;
       found:T_arrayOfString;
   begin
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
-      found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
+      found:=find(pathOrPathList^.getStringValue,filesAndNotFolders);
       for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
     end else if pathOrPathList^.literalType=lt_stringList then begin
-      for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
-        found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
+      for j:=0 to pathOrPathList^.size-1 do begin
+        found:=find(pathOrPathList^.value(j)^.getStringValue,filesAndNotFolders);
         for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
       end;
     end;
   end;
 
-FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION files_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -568,7 +551,7 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end else raiseNotApplicableError('files',params,tokenLocation);
   end;
 
-FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION folders_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
@@ -576,27 +559,27 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('folders',params,tokenLocation);
   end;
 
-FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION fileExists_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(FileExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
+      result:=newBoolLiteral(FileExists(UTF8Decode(params^.value(0)^.getStringValue)));
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
-FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION fileContents_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       system.EnterCriticalSection(file_cs);
-      result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
+      result:=newStringLiteral(fileContent(params^.value(0)^.getStringValue,accessed));
       system.LeaveCriticalsection(file_cs);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then raiseError(el2_warning,'File "'+params^.value(0)^.getStringValue+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
 
-FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION fileLines_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
       L:T_arrayOfString;
       i:longint;
@@ -604,42 +587,42 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       system.EnterCriticalSection(file_cs);
-      L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
+      L:=fileLines(params^.value(0)^.getStringValue,accessed);
       system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
-      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      for i:=0 to length(L)-1 do result^.append(newStringLiteral(L[i]),false);
+      if not(accessed) then raiseError(el2_warning,'File "'+params^.value(0)^.getStringValue+'" cannot be accessed',tokenLocation);
     end else if (params<>nil) and (params^.size=3) and
                 (params^.value(0)^.literalType=lt_string) and
                 (params^.value(1)^.literalType=lt_int) and
                 (params^.value(2)^.literalType=lt_int) then begin
       system.EnterCriticalSection(file_cs);
-      L:=fileLines(P_stringLiteral(params^.value(0))^.value,
-                   P_intLiteral   (params^.value(1))^.value,
-                   P_intLiteral   (params^.value(2))^.value,accessed);
+      L:=fileLines(params^.value(0)^.getStringValue,
+                   params^.value(1)^.getIntValue,
+                   params^.value(2)^.getIntValue,accessed);
       system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
-      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      for i:=0 to length(L)-1 do result^.append(newStringLiteral(L[i]),false);
+      if not(accessed) then raiseError(el2_warning,'File "'+params^.value(0)^.getStringValue+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileLines',params,tokenLocation);
   end;
 
-FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION writeFile_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR ok:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
       system.EnterCriticalSection(file_cs);
-      ok:=writeFile(P_stringLiteral(params^.value(0))^.value,
-                    P_stringLiteral(params^.value(1))^.value);
+      ok:=writeFile(params^.value(0)^.getStringValue,
+                    params^.value(1)^.getStringValue);
       system.LeaveCriticalsection(file_cs);
       result:=newBoolLiteral(ok);
-      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then raiseError(el2_warning,'File "'+params^.value(0)^.getStringValue+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
   end;
 
-FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION writeFileLines_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR ok:boolean;
       L:T_arrayOfString;
       i:longint;
@@ -647,17 +630,17 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
-      setLength(L,P_listLiteral(params^.value(1))^.size);
-      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+      setLength(L,P_literal(params^.value(1))^.size);
+      for i:=0 to length(L)-1 do L[i]:=params^.value(1)^.value(i)^.getStringValue;
       system.EnterCriticalSection(file_cs);
-      ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L);
+      ok:=writeFileLines(params^.value(0)^.getStringValue,L);
       system.LeaveCriticalsection(file_cs);
       result:=newBoolLiteral(ok);
-      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then raiseError(el2_warning,'File "'+params^.value(0)^.getStringValue+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
   end;
 
-FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
+FUNCTION replace_one_or_all(CONST params:P_literal; CONST all:boolean):P_literal;
   VAR lookFor,replaceBy:T_arrayOfString;
       i:longint;
 
@@ -679,20 +662,20 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
       L:=params^.value(1);
       if L^.literalType=lt_string then begin
         setLength(lookFor,1);
-        lookFor[0]:=P_stringLiteral(L)^.value;
+        lookFor[0]:=L^.getStringValue;
       end else begin
-        setLength(lookFor,P_listLiteral(L)^.size);
+        setLength(lookFor,L^.size);
         for i:=0 to length(lookFor)-1 do
-          lookFor[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+          lookFor[i]:=L^.value(i)^.getStringValue;
       end;
       L:=params^.value(2);
       if L^.literalType=lt_string then begin
         setLength(replaceBy,1);
-        replaceBy[0]:=P_stringLiteral(L)^.value;
+        replaceBy[0]:=L^.getStringValue;
       end else begin
-        setLength(replaceBy,P_listLiteral(L)^.size);
+        setLength(replaceBy,L^.size);
         for i:=0 to length(replaceBy)-1 do
-          replaceBy[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
+          replaceBy[i]:=L^.value(i)^.getStringValue;
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);
@@ -709,12 +692,12 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
 
   begin
     initArrays;
-    if params^.value(0)^.literalType=lt_string then result:=newStringLiteral(modify(P_stringLiteral(params^.value(0))^.value))
+    if params^.value(0)^.literalType=lt_string then result:=newStringLiteral(modify(params^.value(0)^.getStringValue))
     else begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-        P_listLiteral(result)^.append(
-          newStringLiteral(modify(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),
+      for i:=0 to P_literal(params^.value(0))^.size-1 do
+        result^.append(
+          newStringLiteral(modify(params^.value(0)^.value(i)^.getStringValue)),
           false
         );
     end;
@@ -722,7 +705,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     setLength(replaceBy,0);
   end;
 
-FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION replaceOne_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -733,7 +716,7 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('replaceOne',params,tokenLocation);
   end;
 
-FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION replace_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -744,7 +727,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('replace',params,tokenLocation);
   end;
 
-FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION repeat_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR sub,res:ansistring;
       i:longint;
   begin
@@ -753,56 +736,56 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
        (params^.value(0)^.literalType = lt_string) and
        (params^.value(1)^.literalType = lt_int) then begin
       res:='';
-      sub:=P_stringLiteral(params^.value(0))^.value;
-      for i:=1 to P_intLiteral(params^.value(1))^.value do res:=res+sub;
+      sub:=params^.value(0)^.getStringValue;
+      for i:=1 to params^.value(1)^.getIntValue do res:=res+sub;
       result:=newStringLiteral(res);
     end else raiseNotApplicableError('repeat',params,tokenLocation);
   end;
 
-FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
-    CONST
-      READ_BYTES = 2048;
-    VAR
-      memStream: TMemoryStream;
-      tempProcess: TProcess;
-      n: longint;
-      BytesRead: longint;
-    begin
-      memStream := TMemoryStream.create;
-      BytesRead := 0;
-      tempProcess := TProcess.create(nil);
-      tempProcess.Executable := executable;
-      for n := 0 to length(parameters)-1 do
-        tempProcess.Parameters.Add(parameters [n]);
-      tempProcess.Options := [poUsePipes, poStderrToOutPut];
-      tempProcess.ShowWindow := swoHIDE;
-      try
-        tempProcess.Execute;
-        tempProcess.CloseInput;
-        while tempProcess.Running and (errorLevel<el3_evalError) do begin
-          memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-          if n>0 then Inc(BytesRead, n)
-                 else Sleep(10);
-        end;
-        if tempProcess.Running then tempProcess.Terminate(999);
-        repeat
-          memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-          if n>0 then Inc(BytesRead, n);
-        until n<=0;
-        result := (tempProcess.ExitStatus = 0);
-      except
-        result := false;
+FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
+  CONST
+    READ_BYTES = 2048;
+  VAR
+    memStream: TMemoryStream;
+    tempProcess: TProcess;
+    n: longint;
+    BytesRead: longint;
+  begin
+    memStream := TMemoryStream.create;
+    BytesRead := 0;
+    tempProcess := TProcess.create(nil);
+    tempProcess.Executable := executable;
+    for n := 0 to length(parameters)-1 do
+      tempProcess.Parameters.Add(parameters [n]);
+    tempProcess.Options := [poUsePipes, poStderrToOutPut];
+    tempProcess.ShowWindow := swoHIDE;
+    try
+      tempProcess.Execute;
+      tempProcess.CloseInput;
+      while tempProcess.Running and (errorLevel<el3_evalError) do begin
+        memStream.SetSize(BytesRead+READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+        if n>0 then Inc(BytesRead, n)
+               else Sleep(10);
       end;
-      tempProcess.Free;
-      memStream.SetSize(BytesRead);
-      output := TStringList.create;
-      output.LoadFromStream(memStream);
-      memStream.Free;
+      if tempProcess.Running then tempProcess.Terminate(999);
+      repeat
+        memStream.SetSize(BytesRead+READ_BYTES);
+        n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+        if n>0 then Inc(BytesRead, n);
+      until n<=0;
+      result := (tempProcess.ExitStatus = 0);
+    except
+      result := false;
     end;
+    tempProcess.Free;
+    memStream.SetSize(BytesRead);
+    output := TStringList.create;
+    output.LoadFromStream(memStream);
+    memStream.Free;
+  end;
 
+FUNCTION execSync_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       output:TStringList;
@@ -812,22 +795,56 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
+      executable:=params^.value(0)^.getStringValue;
       if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+        setLength(cmdLinePar,params^.value(1)^.size);
+        for i:=0 to params^.value(1)^.size-1 do
+          cmdLinePar[i]:=params^.value(1)^.value(i)^.stringForm;
       end;
       runCommand(executable,
                  cmdLinePar,
                  output);
       result:=newListLiteral;
-      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+      for i:=0 to output.Count-1 do result^.append(newStringLiteral(output[i]),false);
       output.Free;
     end else raiseNotApplicableError('exec',params,tokenLocation);
   end;
 
-FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION runBatch_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR tmp:T_arrayOfString;
+      output:TStringList;
+      tempname:string;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.literalType=lt_stringList) then begin
+      setLength(tmp,params^.size);
+      for i:=0 to params^.size-1 do
+        tmp[i]:=params^.value(i)^.stringForm;
+
+      i:=0;
+      repeat
+        inc(i);
+        tempname:='TEMP_'+IntToStr(i)+'.bat';
+      until not(FileExists(tempname));
+
+      writeFileLines(tempname,tmp);
+      setLength(tmp,2);
+      tmp[0]:='/C';
+      tmp[1]:=tempname;
+      runCommand(CMD_PATH.value,
+                 tmp,
+                 output);
+      DeleteFile(tempname);
+      result:=newListLiteral;
+      for i:=0 to output.Count-1 do result^.append(newStringLiteral(output[i]),false);
+      output.Free;
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_stringList)
+    then result:=runBatch_impl(P_literal(params^.value(0)),tokenLocation)
+    else raiseNotApplicableError('runBatch',params,tokenLocation);
+  end;
+
+FUNCTION execAsync_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       i:longint;
@@ -836,11 +853,11 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
+      executable:=params^.value(0)^.getStringValue;
       if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+        setLength(cmdLinePar,P_literal(params^.value(1))^.size);
+        for i:=0 to P_literal(params^.value(1))^.size-1 do
+          cmdLinePar[i]:=params^.value(1)^.value(i)^.stringForm;
       end;
       runCommandAsync(executable,
                       cmdLinePar);
@@ -848,13 +865,13 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end else raiseNotApplicableError('execAsync',params,tokenLocation);
   end;
 
-FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tokenSplit_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToSplit:ansistring;
       i0,i1:longint;
 
   PROCEDURE stepToken;
     begin
-      P_listLiteral(result)^.append(newStringLiteral(copy(stringToSplit,i0,i1-i0)),false);
+      result^.append(newStringLiteral(copy(stringToSplit,i0,i1-i0)),false);
       i0:=i1;
     end;
 
@@ -894,7 +911,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       if (params^.value(1)^.literalType=lt_string)
-      then setLanguage(P_stringLiteral(params^.value(1))^.value)
+      then setLanguage(params^.value(1)^.getStringValue)
       else begin
         raiseNotApplicableError('tokenSplit',params,tokenLocation);
         exit(nil);
@@ -903,7 +920,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
     if (params<>nil) and (params^.size>=1) and
        (params^.value(0)^.literalType=lt_string) then begin
-      stringToSplit:=P_stringLiteral(params^.value(0))^.value;
+      stringToSplit:=params^.value(0)^.getStringValue;
 
       result:=newListLiteral;
       i0:=1;
@@ -954,19 +971,19 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
   end;
 
-FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION myPath_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     if (tokenLocation.provider=nil) or
        (tokenLocation.provider^.getPath='') then result:=newStringLiteral('<Unknown>')
                                             else result:=newStringLiteral(tokenLocation.provider^.getPath);
   end;
 
-FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION executor_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=newStringLiteral(ParamStr(0));
   end;
 
-FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trueCount_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR B:P_literal;
       i,c:longint;
   begin
@@ -974,75 +991,75 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size=1) then begin
       B:=params^.value(0);
       case B^.literalType of
-        lt_boolean: if P_boolLiteral(B)^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_boolean: if B^.getBoolValue then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
         lt_booleanList: begin
           c:=0;
-          for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.value(i))^.value then inc(c);
+          for i:=0 to B^.size-1 do if B^.value(i)^.getBoolValue then inc(c);
           exit(newIntLiteral(c));
         end;
-        lt_list, lt_flatList: if P_listLiteral(B)^.size=0 then exit(newIntLiteral(0));
+        lt_list, lt_flatList: if P_literal(B)^.size=0 then exit(newIntLiteral(0));
       end;
     end;
     raiseNotApplicableError('trueCount',params,tokenLocation);
   end;
 
-FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isNan_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
        case params^.value(0)^.literalType of
-         lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.value(0))^.value)));
+         lt_real: exit(newBoolLiteral(IsNan(params^.value(0)^.getRealValue)));
          lt_int:  exit(newBoolLiteral(false));
          lt_intList: begin
            result:=newListLiteral;
-           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-             P_listLiteral(result)^.append(newBoolLiteral(false),false);
+           for i:=0 to (params^.value(0))^.size-1 do
+             result^.append(newBoolLiteral(false),false);
          end;
          else begin
            result:=newListLiteral;
-           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-             P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
+           for i:=0 to (params^.value(0))^.size-1 do
+             result^.append(newBoolLiteral((params^.value(0)^.literalType=lt_real) and IsNan(params^.value(0)^.getRealValue)),false);
          end;
        end;
     end else raiseNotApplicableError('isNan',params,tokenLocation);
   end;
 
-FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isInfinite_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
       case params^.value(0)^.literalType of
-        lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.value(0))^.value)));
+        lt_real: exit(newBoolLiteral(IsInfinite(params^.value(0)^.getRealValue)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newBoolLiteral(false),false);
+          for i:=0 to params^.value(0)^.size-1 do
+            result^.append(newBoolLiteral(false),false);
         end;
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
+          for i:=0 to params^.value(0)^.size-1 do
+            result^.append(newBoolLiteral((params^.value(0)^.literalType=lt_real) and IsInfinite(params^.value(0)^.getRealValue)),false);
         end;
       end;
     end else raiseNotApplicableError('isInfinite',params,tokenLocation);
   end;
 
-FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isInRange_impl(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR r0,r1:T_myFloat;
   FUNCTION inRange(CONST L:P_literal):boolean; inline;
     VAR i:int64;
         r:T_myFloat;
     begin
       if l^.literalType=lt_real then begin
-        r:=P_realLiteral(l)^.value;
+        r:=l^.getRealValue;
         result:=not(IsNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
       end else begin
-        i:=P_intLiteral(l)^.value;
+        i:=l^.getIntValue;
         result:=(r0<=i) and (i<=r1);
       end;
     end;
@@ -1055,28 +1072,28 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
        (params^.value(1)^.literalType in [lt_real,lt_int]) and
        (params^.value(2)^.literalType in [lt_real,lt_int]) then begin
       if params^.value(1)^.literalType=lt_real
-        then r0:=P_realLiteral(params^.value(1))^.value
-        else r0:=P_intLiteral (params^.value(1))^.value;
+        then r0:=params^.value(1)^.getRealValue
+        else r0:=params^.value(1)^.getIntValue;
       if params^.value(2)^.literalType=lt_real
-        then r1:=P_realLiteral(params^.value(2))^.value
-        else r1:=P_intLiteral (params^.value(2))^.value;
+        then r1:=params^.value(2)^.getRealValue
+        else r1:=params^.value(2)^.getIntValue;
       if params^.value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.value(0))))
       else begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-          P_listLiteral(result)^.append(newBoolLiteral(inRange(P_listLiteral(params^.value(0))^.value(i))),false);
+        for i:=0 to P_literal(params^.value(0))^.size-1 do
+          result^.append(newBoolLiteral(inRange(P_literal(params^.value(0))^.value(i))),false);
       end;
     end else raiseNotApplicableError('isInRange',params,tokenLocation);
   end;
 
-FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION splitFileName_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
-    VAR aid:P_listLiteral;
+    VAR aid:P_literal;
     begin
       aid:=newListLiteral;
       aid^.append(newStringLiteral(el0),false);
       aid^.append(newStringLiteral(el1),false);
-      P_listLiteral(result)^.append(aid,false);
+      result^.append(aid,false);
     end;
 
   VAR name:string;
@@ -1085,7 +1102,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=newListLiteral;
-      name:=P_stringLiteral(params^.value(0))^.value;
+      name:=params^.value(0)^.getStringValue;
       appendPair(result,'input',name);
       appendPair(result,'expanded',ExpandFileName(name));
       appendPair(result,'relative',ExtractRelativepath(ExpandFileName(''),name));
@@ -1095,7 +1112,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else raiseNotApplicableError('splitFileName',params,tokenLocation);
   end;
 
-FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION systime_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
@@ -1103,23 +1120,23 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     else raiseNotApplicableError('systime',params,tokenLocation);
   end;
 
-FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ord_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
       case x^.literalType of
-        lt_boolean: if P_boolLiteral(x)^.value
+        lt_boolean: if x^.getBoolValue
                     then exit(newIntLiteral(1))
                     else exit(newIntLiteral(0));
         lt_int: begin x^.rereference; exit(x); end;
-        lt_string : if length(P_stringLiteral(x)^.value)=1
-                    then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
+        lt_string : if length(x^.getStringValue)=1
+                    then exit(newIntLiteral(ord(x^.getStringValue[1])))
                     else exit(newIntLiteral(-1));
         lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation));
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<el3_evalError then
-            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+          for i:=0 to P_literal(x)^.size-1 do if errorLevel<el3_evalError then
+            result^.append(recurse(P_literal(x)^.value(i)),false);
         end;
       end;
     end;
@@ -1131,7 +1148,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     else raiseNotApplicableError('ord',params,tokenLocation);
   end;
 
-FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION format_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
 {$define INNER_FORMATTING:=
   VAR resultString:T_arrayOfString;
       resultIsList:boolean=false;
@@ -1186,20 +1203,20 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
             L:=nextLiteral;
             if L=nil then appendToAll('%'+fmtString+'%') else
             case L^.literalType of
-              lt_int   : appendToAll(myFormat(fmtString,P_intLiteral   (L)^.value));
-              lt_real  : appendToAll(myFormat(fmtString,P_realLiteral  (L)^.value));
-              lt_string: appendToAll(myFormat(fmtString,P_stringLiteral(L)^.value));
+              lt_int   : appendToAll(myFormat(fmtString,L^.getIntValue   ));
+              lt_real  : appendToAll(myFormat(fmtString,L^.getRealValue  ));
+              lt_string: appendToAll(myFormat(fmtString,L^.getStringValue));
               lt_list..lt_flatList: begin
-                for j:=P_listLiteral(L)^.size-1 downto 0 do begin
-                  X:=P_listLiteral(L)^.value(j);
+                for j:=L^.size-1 downto 0 do begin
+                  X:=L^.value(j);
                   case X^.literalType of
-                    lt_int   : appendTo(j,myFormat(fmtString,P_intLiteral   (X)^.value));
-                    lt_real  : appendTo(j,myFormat(fmtString,P_realLiteral  (X)^.value));
-                    lt_string: appendTo(j,myFormat(fmtString,P_stringLiteral(X)^.value));
-                    else       appendTo(j,myFormat(fmtString,              X^.toString));
+                    lt_int   : appendTo(j,myFormat(fmtString,X^.getIntValue   ));
+                    lt_real  : appendTo(j,myFormat(fmtString,X^.getRealValue  ));
+                    lt_string: appendTo(j,myFormat(fmtString,X^.getStringValue));
+                    else       appendTo(j,myFormat(fmtString,X^.toString));
                   end;
                 end;
-                for j:=P_listLiteral(L)^.size to length(resultString)-1 do appendTo(j,'%'+fmtString+'%');
+                for j:=L^.size to length(resultString)-1 do appendTo(j,'%'+fmtString+'%');
               end;
               else appendToAll(myFormat(fmtString,L^.toString));
             end;
@@ -1216,20 +1233,20 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
-      decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
+      decomposeFormatString(params^.value(0)^.getStringValue);
       if resultIsList or (length(resultString)<>1) then begin
         result:=newListLiteral;
-        for k:=0 to length(resultString)-1 do P_listLiteral(result)^.append(newStringLiteral(resultString[k]),false);
+        for k:=0 to length(resultString)-1 do result^.append(newStringLiteral(resultString[k]),false);
       end else result:=newStringLiteral(join(formatTabs(split(resultString[0])),C_lineBreakChar));
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
 
-FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION printf_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   INNER_FORMATTING;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
-      decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
+      decomposeFormatString(params^.value(0)^.getStringValue);
       system.EnterCriticalSection(print_cs);
       writePrint(reSplit(resultString));
       system.LeaveCriticalsection(print_cs);
@@ -1238,45 +1255,45 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 {$undef INNER_FORMATTING}
 
-FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION deleteFile_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteFileUTF8(P_stringLiteral(params^.value(0))^.value));
+      result:=newBoolLiteral(DeleteFileUTF8(params^.value(0)^.getStringValue));
     end else raiseNotApplicableError('deleteFile',params,tokenLocation);
   end;
 
-FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION deleteDir_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteDirectory(P_stringLiteral(params^.value(0))^.value,false));
+      result:=newBoolLiteral(DeleteDirectory(params^.value(0)^.getStringValue,false));
     end else raiseNotApplicableError('deleteDir',params,tokenLocation);
   end;
 
-FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION copyFile_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
-      ensurePath(P_stringLiteral(params^.value(1))^.value);
+      ensurePath(params^.value(1)^.getStringValue);
       result:=newBoolLiteral(
-      FileUtil.CopyFile(P_stringLiteral(params^.value(0))^.value,
-                        P_stringLiteral(params^.value(1))^.value,true));
+      FileUtil.CopyFile(params^.value(0)^.getStringValue,
+                        params^.value(1)^.getStringValue,true));
     end else raiseNotApplicableError('copyFile',params,tokenLocation);
   end;
 
-FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION moveFile_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
-      ensurePath(P_stringLiteral(params^.value(1))^.value);
+      ensurePath(params^.value(1)^.getStringValue);
       result:=newBoolLiteral(
-      FileUtil.RenameFileUTF8(P_stringLiteral(params^.value(0))^.value,
-                              P_stringLiteral(params^.value(1))^.value));
+      FileUtil.RenameFileUTF8(params^.value(0)^.getStringValue,
+                              params^.value(1)^.getStringValue));
     end else raiseNotApplicableError('moveFile',params,tokenLocation);
   end;
 
-FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION fileInfo_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR time:double;
       size:int64;
       isExistent,
@@ -1286,11 +1303,11 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       isSystem,
       isHidden:boolean;
       //-------------------------
-      resultAsList:P_listLiteral;
-      attributeList:P_listLiteral;
+      resultAsList:P_literal;
+      attributeList:P_literal;
 
   PROCEDURE appendKeyValuePair(CONST key:string; CONST value:P_literal);
-    VAR subList:P_listLiteral;
+    VAR subList:P_literal;
     begin
       subList:=newListLiteral;
       subList^.append(newStringLiteral(key),false);
@@ -1301,7 +1318,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      getFileInfo(P_stringLiteral(params^.value(0))^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      getFileInfo(params^.value(0)^.getStringValue,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
       if isExistent then begin
@@ -1319,13 +1336,13 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('fileInfo',params,tokenLocation);
   end;
 
-FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION httpGet_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR resultText:ansistring;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       try
-        resultText:=TFPCustomHTTPClient.SimpleGet(P_stringLiteral(params^.value(0))^.value);
+        resultText:=TFPCustomHTTPClient.SimpleGet(params^.value(0)^.getStringValue);
       except
         On E : Exception do begin
           resultText:='';
@@ -1336,16 +1353,16 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('httpGet',params,tokenLocation);
   end;
 
-FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setErrorlevel_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
-      mnh_out_adapters.systemErrorlevel.value:=P_intLiteral(params^.value(0))^.value;
+      mnh_out_adapters.systemErrorlevel.value:=params^.value(0)^.getIntValue;
       result:=newVoidLiteral;
     end else raiseNotApplicableError('setErrorlevel',params,tokenLocation);
   end;
 
-FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION hash_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
@@ -1353,7 +1370,7 @@ FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else raiseNotApplicableError('hash',params,tokenLocation);
   end;
 
-FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION listBuiltin_imp(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR keys:T_arrayOfString;
       i:longint;
   begin
@@ -1361,7 +1378,7 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params=nil) or (params^.size=0) then begin
       keys:=intrinsicRuleExplanationMap.keySet;
       result:=newListLiteral;
-      for i:=0 to length(keys)-1 do P_listLiteral(result)^.append(newStringLiteral(keys[i]),false);
+      for i:=0 to length(keys)-1 do result^.append(newStringLiteral(keys[i]),false);
       setLength(keys,0);
     end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
   end;
@@ -1419,7 +1436,9 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'replace'       ,@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'repeat'        ,@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec'          ,@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'runBatch',@runBatch_impl,'runBatch(lines,...);#Stores the lines in a temporary (Windows-)Batch file, executes and deletes it');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
+
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'        ,@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');

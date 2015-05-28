@@ -78,9 +78,9 @@ PROCEDURE limitPoolThreads(CONST newLimit:longint);
 
 CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; VAR recycler:T_tokenRecycler);
   VAR dummy:P_token;
-      param:T_listLiteral;
+      param:T_literal;
   begin
-    param.create;
+    param.createList;
     param.append(x,true);
     if expr^.replaces(@param,nil,task,dummy,recycler)
     then state:=fts_pending
@@ -108,7 +108,7 @@ FUNCTION T_futureTask.getResultAsLiteral: P_literal;
       result:=task^.data;
       result^.rereference;
     end
-    else result:=newErrorLiteral;
+    else result:=newErrorLiteralRaising(el3_evalError,'A future task did not yield a valid result',C_nilTokenLocation);
   end;
 
 PROCEDURE T_futureTask.free(VAR recycler:T_tokenRecycler);
