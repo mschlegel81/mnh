@@ -27,19 +27,19 @@
  
 :64bitOpt
 @echo --------------------- building optimized 64 bit binaries ---------------------------
-@%fpc64% gui\mnh_gui.lpr          -o.\mnh.exe      %optimize% %guiOpt64% -dfullversion
-@%delp%
 @%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe %optimize% %guiOpt64%
 @%delp%
-@del *.lfm *.res *.obj
+@%fpc64% gui\mnh_gui.lpr          -o.\mnh.exe      %optimize% %guiOpt64% -dfullversion
 @echo ------------------------------------------------------------------------------------
+@%delp%
+@del *.lfm *.res *.obj
 @goto loop
  
 :32bitOpt
 @echo --------------------- building optimized 32 bit binaries ---------------------------
-@%fpc32% gui\mnh_gui.lpr          -obin32\mnh.exe     %optimize% %guiOpt32% -dfullversion
-@%delp%
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_light.exe   %optimize% %guiOpt32%
+@%delp%
+@%fpc32% gui\mnh_gui.lpr          -obin32\mnh.exe     %optimize% %guiOpt32% -dfullversion
 @%delp%
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------
@@ -47,9 +47,9 @@
  
 :64bitDeb
 @echo ------------------ building 64 bit binaries with debug info ------------------------
-@%fpc64% gui\mnh_gui.lpr          -o.\mnh_debug.exe     %debug% %guiOpt64% -dfullversion
-@%delp%
 @%fpc64% consoles\mnh_console.pas -o.\mnh_light_debug.exe   %debug% %guiOpt64%
+@%delp%
+@%fpc64% gui\mnh_gui.lpr          -o.\mnh_debug.exe     %debug% %guiOpt64% -dfullversion
 @%delp%
 @del *.lfm *.res *.obj
 @echo ------------------------------------------------------------------------------------
@@ -57,9 +57,9 @@
  
 :32bitDeb
 @echo ------------------ building 32 bit binaries with debug info ------------------------
-@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_debug.exe     %debug% %guiOpt32% -dfullversion
-@%delp%
 @%fpc32% consoles\mnh_console.pas -obin32\mnh_light_debug.exe   %debug% %guiOpt32%
+@%delp%
+@%fpc32% gui\mnh_gui.lpr          -obin32\mnh_debug.exe     %debug% %guiOpt32% -dfullversion
 @%delp%
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------

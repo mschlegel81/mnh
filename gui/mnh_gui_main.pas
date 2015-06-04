@@ -1159,14 +1159,14 @@ begin
   pushSettingsToPlotContainer(true);
 end;
 
-FUNCTION plot(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.plot(params,tokenLocation);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION addPlot(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     activePlot.setScreenSize(MnhForm.PlotTabSheet.Width,
                              MnhForm.PlotTabSheet.Height);
@@ -1174,35 +1174,35 @@ FUNCTION addPlot(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION setAutoscale(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.setAutoscale(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setLogscale(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.setLogscale(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPlotRange(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.setPlotRange(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setAxisStyle(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.setAxisStyle(params,tokenLocation);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPreserveAspect(CONST params:P_literal; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
     result:=mnh_plotData.setPreserveAspect(params,tokenLocation);

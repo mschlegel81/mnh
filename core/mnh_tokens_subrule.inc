@@ -25,14 +25,14 @@
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromInline (CONST rep:P_Token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
-      CONSTRUCTOR createFromInlineWithOp(CONST original:P_literal; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+      CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_literal; CONST selfLiteral:P_literal; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION toString:ansistring;
-      FUNCTION directEvaluateNullary(CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
-      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
-      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
-      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE complainAboutUncalled(CONST ruleId:ansistring);
   end;
@@ -267,10 +267,10 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_literal; CONST selfLiteral:P_literal; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
   VAR t:P_token;
       i:longint;
-      remaining:P_literal=nil;
+      remaining:P_listLiteral=nil;
 
   FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; inline;
     VAR L:P_literal;
@@ -312,9 +312,9 @@ FUNCTION T_subrule.replaces(CONST param:P_literal; CONST selfLiteral:P_literal; 
             and (length(expression)=1)
             and (expression[0].token.tokType=tt_literal)
             and (P_literal(expression[0].token.data)^.literalType=lt_expression)
-            and (P_subrule(P_literal(expression[0].token.data)^.getExpressionValue)^.pattern.matches(param^,true))
+            and (P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.pattern.matches(param^,true))
     then begin
-      result:=P_subrule(P_literal(expression[0].token.data)^.getExpressionValue)^.replaces(param,P_literal(expression[0].token.data),firstRep,lastRep,recycler);
+      result:=P_subrule(P_expressionLiteral(expression[0].token.data)^.value)^.replaces(param,P_expressionLiteral(expression[0].token.data),firstRep,lastRep,recycler);
       called:=called or result;
     end else begin
       result:=false;
@@ -373,13 +373,13 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     setLength(expression,0);
 
     if LHS^.literalType=lt_expression then begin
-      r:=LHS^.getExpressionValue;
+      r:=P_expressionLiteral(LHS)^.value;
       if r^.canUnbrace(op) then for i:=1 to length(r^.expression)-2 do appendToExpression(r^.expression[i].token)
                            else for i:=0 to length(r^.expression)-1 do appendToExpression(r^.expression[i].token);
     end else appendToExpression(LHS);
     appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
-      r:=RHS^.getExpressionValue;
+      r:=P_expressionLiteral(RHS)^.value;
       if r^.canUnbrace(op) then for i:=1 to length(r^.expression)-2 do appendToExpression(r^.expression[i].token)
                            else for i:=0 to length(r^.expression)-1 do appendToExpression(r^.expression[i].token);
     end else appendToExpression(RHS);
@@ -394,7 +394,7 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
     result:=newRule;
   end;
 
-CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_literal; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
   VAR origRule:P_subrule;
       i:longint;
   PROCEDURE appendToExpression(VAR T:T_token);
@@ -419,7 +419,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_literal; CONST int
 
   begin
     called:=false;
-    origRule:=original^.getExpressionValue;
+    origRule:=original^.value;
     declaredAt:=funcLocation;
     pattern.create;
     typ:=srt_inline_for_literal;
@@ -432,7 +432,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_literal; CONST int
     updatePatternForInline;
   end;
 
-FUNCTION subruleApplyFuncImpl(CONST original:P_literal; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_literal;
+FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsicRuleId:ansistring; CONST funcLocation:T_tokenLocation):P_expressionLiteral;
   VAR newRule:P_subrule;
   begin
     new(newRule,createFromInlineWithOp(original,intrinsicRuleId,funcLocation));
@@ -460,7 +460,7 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
@@ -477,11 +477,11 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_literal; CONST call
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
-      param:T_literal;
+      param:T_listLiteral;
   begin
-    param.createList;
+    param.create;
     param.append(x,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
@@ -498,18 +498,18 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_li
     param.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
+FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
   VAR firstRep,lastRep:P_token;
-      param:T_literal;
+      param:T_listLiteral;
   begin
-    param.createList;
+    param.create;
     param.append(x,true);
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
       if (errorLevel<el3_evalError) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
       then begin
-        result:=P_literal(firstRep^.data)^.getBoolValue;
+        result:=P_boolLiteral(firstRep^.data)^.value;
       end else begin
         result:=false;
         raiseError(el3_evalError,'Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
@@ -519,11 +519,11 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
     param.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_literal; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
   VAR firstRep,lastRep:P_token;
-      param:T_literal;
+      param:T_listLiteral;
   begin
-    param.createList;
+    param.create;
     param.append(x,true);
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
@@ -541,11 +541,11 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
     param.destroy;
   end;
 
-FUNCTION evaluateComparator(CONST subruleLiteral:P_literal; CONST LHSComparand,RHScomparand:P_literal):boolean;
+FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal):boolean;
   VAR tempRecycler:T_tokenRecycler;
   begin
     tempRecycler.create;
-    result:=P_subrule(subruleLiteral^.getExpressionValue)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempRecycler);
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempRecycler);
     tempRecycler.destroy;
   end;
 

@@ -14,8 +14,8 @@
     public
       CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy;
-      FUNCTION doPutCache(CONST param:P_literal):P_literal;
-      FUNCTION replaces(CONST param:P_literal; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
+      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
@@ -65,25 +65,25 @@ DESTRUCTOR T_rule.destroy;
     id:='';
   end;
 
-FUNCTION T_rule.doPutCache(CONST param:P_literal):P_literal;
+FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
     EnterCriticalsection(rule_cs);
-    cache^.put(P_literal(param^.value(0)),
-               cache^.getBinIdx(P_literal(param^.value(0))),
+    cache^.put(P_listLiteral(param^.value(0)),
+               cache^.getBinIdx(P_listLiteral(param^.value(0))),
                param^.value(1));
     LeaveCriticalsection(rule_cs);
     result:=param^.value(1);
     result^.rereference;
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_literal; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
 system.LeaveCriticalSection(rule_cs);
 exit}
   VAR i:longint;
       lit:P_literal;
-      useParam:P_literal;
+      useParam:P_listLiteral;
       binIdx:longint;
 
   PROCEDURE wrapResultInPutCacheRule;
@@ -132,7 +132,7 @@ exit}
           if (errorLevel>=el3_evalError) then begin
             if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
-            firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteralSilent);
+            firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
           end;
           CLEAN_EXIT(true);

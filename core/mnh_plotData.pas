@@ -87,7 +87,7 @@ TYPE
   T_sampleRow = object(T_serializable)
     //nonpersistent:
     computed: record  temp: array of T_sampleWithTime;
-      xRule, yRule: P_literal;
+      xRule, yRule: P_expressionLiteral;
       t0, t1: double;
       maxSamples: longint;
     end;
@@ -96,7 +96,7 @@ TYPE
     sample: T_dataRow;
     CONSTRUCTOR create(CONST index: byte);
     PROCEDURE getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
-    PROCEDURE setRules(CONST forXOrNil, forY: P_literal; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
+    PROCEDURE setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
     PROCEDURE computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
     PROCEDURE addSample(CONST x, y: double);
     DESTRUCTOR destroy;
@@ -164,15 +164,15 @@ TYPE
       FUNCTION isSampleValid(CONST sample: T_point): boolean;
       //interfacing:
       PROCEDURE setAutoscale(CONST autoX, autoY: boolean);
-      FUNCTION getAutoscale: P_literal;
+      FUNCTION getAutoscale: P_listLiteral;
       PROCEDURE setRange(CONST x0, y0, x1, y1: double);
-      FUNCTION getRange: P_literal;
+      FUNCTION getRange: P_listLiteral;
       PROCEDURE setAxisStyle(CONST x, y: longint);
-      FUNCTION getAxisStyle: P_literal;
+      FUNCTION getAxisStyle: P_listLiteral;
       PROCEDURE setLogscale(CONST logX, logY: boolean);
-      FUNCTION getLogscale: P_literal;
+      FUNCTION getLogscale: P_listLiteral;
       PROCEDURE setPreserveAspect(CONST flag: boolean);
-      FUNCTION getPreserveAspect: P_literal;
+      FUNCTION getPreserveAspect: P_boolLiteral;
 
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
@@ -184,13 +184,13 @@ VAR
   activePlot: T_plot;
   plotCS:TRTLCriticalSection;
 
-FUNCTION plot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setAutoscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setLogscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setPlotRange(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setAxisStyle(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setPreserveAspect(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
 
 IMPLEMENTATION
 
@@ -198,11 +198,11 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
     if x = nil then result:=NAN else case X^.literalType of
         lt_real: begin
-          result:=x^.getRealValue;
+          result:=P_realLiteral(x)^.value;
           if IsInfinite(result) then
             result:=NaN;
           end;
-        lt_int: result:=x^.getIntValue;
+        lt_int: result:=P_intLiteral(x)^.value;
       else result:=NaN;
         end;
   end;
@@ -250,7 +250,7 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
       end;
   end;
 
-PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_literal; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
+PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
   begin
     if maxSamples>100
     then computed.maxSamples:=maxSamples
@@ -274,25 +274,25 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
     initialSampleCount = 100;
 
   VAR
-    xRule, yRule: P_literal;
+    xRule, yRule: P_expressionLiteral;
 
   FUNCTION getSampleWithTime(CONST atTime: double; VAR recycler:T_tokenRecycler): T_sampleWithTime; inline;
     VAR
-      pt: T_literal;
+      pt: T_realLiteral;
       L: P_literal;
     begin
       result.t:=atTime;
-      pt.createReal(atTime);
+      pt.create(atTime);
       if xRule = nil then
         result.x:=atTime
       else
         begin
-        L:=P_subrule(xRule^.getExpressionValue)^.directEvaluateUnary(@pt,xRule, 0,recycler);
+        L:=P_subrule(xRule^.value)^.directEvaluateUnary(@pt,xRule, 0,recycler);
         result.x:=fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
         begin
-        L:=P_subrule(yRule^.getExpressionValue)^.directEvaluateUnary(@pt,yRule, 0,recycler);
+        L:=P_subrule(yRule^.value)^.directEvaluateUnary(@pt,yRule, 0,recycler);
         result.y:=fReal(L);
         if L<>nil then disposeLiteral(L);
         end;
@@ -1343,7 +1343,7 @@ PROCEDURE T_plot.setAutoscale(CONST autoX, autoY: boolean);
     autoscale['y']:=autoY;
   end;
 
-FUNCTION T_plot.getAutoscale: P_literal;
+FUNCTION T_plot.getAutoscale: P_listLiteral;
   begin
     result:=newListLiteral;
     result^.append(newBoolLiteral(autoscale ['x']), false);
@@ -1360,15 +1360,15 @@ PROCEDURE T_plot.setRange(CONST x0, y0, x1, y1: double);
     range['y', 1]:=oly(y1);
   end;
 
-FUNCTION T_plot.getRange: P_literal;
+FUNCTION T_plot.getRange: P_listLiteral;
   begin
     result:=newListLiteral;
     result^.append(newListLiteral, false);
     result^.append(newListLiteral, false);
-    P_literal(result^.value(0))^.append(newRealLiteral(oex(range ['x', 0])), false);
-    P_literal(result^.value(0))^.append(newRealLiteral(oex(range ['x', 1])), false);
-    P_literal(result^.value(1))^.append(newRealLiteral(oey(range ['y', 0])), false);
-    P_literal(result^.value(1))^.append(newRealLiteral(oey(range ['y', 1])), false);
+    P_listLiteral(result^.value(0))^.append(newRealLiteral(oex(range ['x', 0])), false);
+    P_listLiteral(result^.value(0))^.append(newRealLiteral(oex(range ['x', 1])), false);
+    P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range ['y', 0])), false);
+    P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range ['y', 1])), false);
   end;
 
 PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
@@ -1383,7 +1383,7 @@ PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
       end;
   end;
 
-FUNCTION T_plot.getAxisStyle: P_literal;
+FUNCTION T_plot.getAxisStyle: P_listLiteral;
   begin
     result:=newListLiteral;
     result^.append(newIntLiteral(axisStyle ['x']), false);
@@ -1406,7 +1406,7 @@ PROCEDURE T_plot.setLogscale(CONST logX, logY: boolean);
       preserveAspect:=false;
   end;
 
-FUNCTION T_plot.getLogscale: P_literal;
+FUNCTION T_plot.getLogscale: P_listLiteral;
   begin
     result:=newListLiteral;
     result^.append(newBoolLiteral(logscale ['x']), false);
@@ -1418,7 +1418,7 @@ PROCEDURE T_plot.setPreserveAspect(CONST flag: boolean);
     preserveAspect:=(logscale ['x'] = logscale ['y']) and flag;
   end;
 
-FUNCTION T_plot.getPreserveAspect: P_literal;
+FUNCTION T_plot.getPreserveAspect: P_boolLiteral;
   begin
     result:=newBoolLiteral(preserveAspect);
   end;
@@ -1916,21 +1916,21 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       end;
   end;
 
-FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
       rowId, i, iMax: longint;
-      X, Y: P_literal;
+      X, Y: P_listLiteral;
 
   FUNCTION isValidExpression(CONST p:P_literal; VAR recycler:T_tokenRecycler):boolean;
     VAR s:P_subrule;
-        par:T_literal;
+        par:T_realLiteral;
         res:P_literal;
     begin
       if p^.literalType<>lt_expression then exit(false);
-      s:=P_literal(p)^.getExpressionValue;
-      par.createReal(random);
-      res:=s^.directEvaluateUnary(@par,P_literal(s),0,recycler);
+      s:=P_expressionLiteral(p)^.value;
+      par.create(random);
+      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),0,recycler);
       if res=nil then begin
         raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;
@@ -1949,7 +1949,7 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
       if (params^.value(params^.size-1)^.literalType = lt_string) then begin
-        options:=params^.value(params^.size-1)^.getStringValue;
+        options:=P_stringLiteral(params^.value(params^.size-1))^.value;
         sizeWithoutOptions:=params^.size-1;
       end else begin
         options:='';
@@ -1958,10 +1958,10 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
       if (sizeWithoutOptions = 1) and
          (params^.value(0)^.literalType = lt_list) then begin
         rowId:=activePlot.addRow(options);
-        X:=P_literal(params^.value(0));
+        X:=P_listLiteral(params^.value(0));
         for i:=0 to X^.size-1 do
           if (X^.value(i)^.literalType in [lt_intList, lt_realList, lt_numList]) then begin
-            Y:=P_literal(X^.value(i));
+            Y:=P_listLiteral(X^.value(i));
             if Y^.size = 2
             then activePlot.row[rowId].addSample(fReal(Y^.value(0)), fReal(Y^.value(1)))
             else activePlot.row[rowId].addSample(Nan, Nan);
@@ -1971,7 +1971,7 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
                   (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) then
         begin
         rowId:=activePlot.addRow(options);
-        X:=P_literal(params^.value(0));
+        X:=P_listLiteral(params^.value(0));
         for i:=0 to X^.size-1 do
           activePlot.row[rowId].addSample(i, fReal(X^.value(i)));
         result:=newVoidLiteral;
@@ -1980,8 +1980,8 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
               (params^.value(0)^.literalType in [lt_intList, lt_realList, lt_numList]) and
               (params^.value(1)^.literalType in [lt_intList, lt_realList, lt_numList]) then begin
         rowId:=activePlot.addRow(options);
-        X:=P_literal(params^.value(0));
-        Y:=P_literal(params^.value(1));
+        X:=P_listLiteral(params^.value(0));
+        Y:=P_listLiteral(params^.value(1));
         iMax:=Min(X^.size, Y^.size);
         for i:=0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         result:=newVoidLiteral;
@@ -1999,7 +1999,7 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
         rowId:=activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           nil,
-          P_literal(params^.value(0)),
+          P_expressionLiteral(params^.value(0)),
           fReal(params^.value(1)),
           fReal(params^.value(2)),
           round(fReal(params^.value(3))),
@@ -2018,8 +2018,8 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
         if not(isValidExpression(params^.value(1),recycler)) then begin recycler.destroy; system.LeaveCriticalsection(plotCS); exit(nil); end;
         rowId:=activePlot.addRow(options);
         activePlot.row[rowId].setRules(
-          P_literal(params^.value(0)),
-          P_literal(params^.value(1)),
+          P_expressionLiteral(params^.value(0)),
+          P_expressionLiteral(params^.value(1)),
           fReal(params^.value(2)),
           fReal(params^.value(3)),
           round(fReal(params^.value(4))),
@@ -2034,7 +2034,7 @@ FUNCTION addPlot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation):
     system.LeaveCriticalsection(plotCS);
   end;
 
-FUNCTION plot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     system.EnterCriticalsection(plotCS);
     activePlot.Clear;
@@ -2044,16 +2044,16 @@ FUNCTION plot(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_
     system.LeaveCriticalsection(plotCS);
   end;
 
-FUNCTION setAutoscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_booleanList) and
-      (P_literal(params^.value(0))^.size = 2) then begin
+      (P_listLiteral(params^.value(0))^.size = 2) then begin
       system.EnterCriticalsection(plotCS);
       activePlot.setAutoscale(
-        params^.value(0)^.value(0)^.getBoolValue,
-        params^.value(0)^.value(1)^.getBoolValue);
+        P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
+        P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else
@@ -2062,21 +2062,21 @@ FUNCTION setAutoscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocat
         tokenLocation);
   end;
 
-FUNCTION getAutoscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=activePlot.getAutoscale;
   end;
 
-FUNCTION setLogscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_booleanList) and
-      (P_literal(params^.value(0))^.size = 2) then begin
+      (P_listLiteral(params^.value(0))^.size = 2) then begin
       system.EnterCriticalsection(plotCS);
-      activePlot.setLogscale(
-        params^.value(0)^.value(0)^.getBoolValue,
-        params^.value(0)^.value(1)^.getBoolValue);
+      activePlot.setLogscale(P_boolLiteral(
+        P_listLiteral(params^.value(0))^.value(0))^.value,
+        P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else
@@ -2085,12 +2085,12 @@ FUNCTION setLogscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocati
         tokenLocation);
   end;
 
-FUNCTION getLogscale(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=activePlot.getLogscale;
   end;
 
-FUNCTION setPlotRange(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     x, y: P_literal;
     x0, y0, x1, y1: double;
@@ -2098,16 +2098,16 @@ FUNCTION setPlotRange(CONST params: P_literal; CONST tokenLocation: T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_list) and
-      (P_literal(params^.value(0))^.size = 2) then begin
-      x:=P_literal(params^.value(0))^.value(0);
-      y:=P_literal(params^.value(0))^.value(1);
+      (P_listLiteral(params^.value(0))^.size = 2) then begin
+      x:=P_listLiteral(params^.value(0))^.value(0);
+      y:=P_listLiteral(params^.value(0))^.value(1);
       if (x^.literalType in [lt_intList, lt_realList, lt_numList]) and
-        (P_literal(x)^.size = 2) and (y^.literalType in
-        [lt_intList, lt_realList, lt_numList]) and (P_literal(y)^.size = 2) then begin
-        x0:=fReal(P_literal(x)^.value(0));
-        x1:=fReal(P_literal(x)^.value(1));
-        y0:=fReal(P_literal(y)^.value(0));
-        y1:=fReal(P_literal(y)^.value(1));
+        (P_listLiteral(x)^.size = 2) and (y^.literalType in
+        [lt_intList, lt_realList, lt_numList]) and (P_listLiteral(y)^.size = 2) then begin
+        x0:=fReal(P_listLiteral(x)^.value(0));
+        x1:=fReal(P_listLiteral(x)^.value(1));
+        y0:=fReal(P_listLiteral(y)^.value(0));
+        y1:=fReal(P_listLiteral(y)^.value(1));
         if not (IsNan(x0)) and not (IsInfinite(x0)) and not (IsNan(x1)) and  not (IsInfinite(x1)) and not (IsNan(y0)) and not (IsInfinite(y0)) and  not (IsNan(y1)) and not (IsInfinite(y1)) then begin
           system.EnterCriticalsection(plotCS);
           activePlot.setRange(x0, y0, x1, y1);
@@ -2118,49 +2118,49 @@ FUNCTION setPlotRange(CONST params: P_literal; CONST tokenLocation: T_tokenLocat
     end else raiseError(el3_evalError, 'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
   end;
 
-FUNCTION getPlotRange(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=activePlot.getRange;
   end;
 
-FUNCTION setAxisStyle(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_intList) and
-      (P_literal(params^.value(0))^.size = 2) then begin
+      (P_listLiteral(params^.value(0))^.size = 2) then begin
       system.EnterCriticalsection(plotCS);
       activePlot.setAxisStyle(
-        params^.value(0)^.value(0)^.getIntValue,
-        params^.value(0)^.value(1)^.getIntValue);
+        P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
+        P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else raiseError(el3_evalError, 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
   end;
 
-FUNCTION getAxisStyle(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=activePlot.getAxisStyle;
   end;
 
-FUNCTION setPreserveAspect(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_boolean) then begin
       system.EnterCriticalsection(plotCS);
-      activePlot.setPreserveAspect(params^.value(0)^.getBoolValue);
+      activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
       result:=newVoidLiteral;
       system.LeaveCriticalsection(plotCS);
     end else raiseError(el3_evalError,'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
 
-FUNCTION getPreserveAspect(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
     result:=activePlot.getPreserveAspect;
   end;
 
-FUNCTION renderToFile_impl(CONST params: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     plotImage, storeImage: TImage;
     filename: ansistring;
@@ -2175,10 +2175,10 @@ FUNCTION renderToFile_impl(CONST params: P_literal; CONST tokenLocation: T_token
       ((params^.size = 3) or (params^.size = 4) and
       (params^.value(3)^.literalType = lt_int)) then begin
       system.EnterCriticalsection(plotCS);
-      filename:=params^.value(0)^.getStringValue;
-      Width:=params^.value(1)^.getIntValue;
-      Height:=params^.value(2)^.getIntValue;
-      if params^.size>3 then supersampling:=params^.value(3)^.getIntValue
+      filename:=P_stringLiteral(params^.value(0))^.value;
+      Width:=P_intLiteral(params^.value(1))^.value;
+      Height:=P_intLiteral(params^.value(2))^.value;
+      if params^.size>3 then supersampling:=P_intLiteral(params^.value(3))^.value
                         else supersampling:=1;
       if (filename = '') or (Width<1) or (Height<1) or (supersampling<1) then begin
         raiseError(el3_evalError,

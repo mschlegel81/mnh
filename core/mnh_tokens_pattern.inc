@@ -4,7 +4,7 @@
     sig:array of record
           id               :ansistring;
           restrictionType  :T_tokenType;
-          restrictionScalar:P_literal;
+          restrictionScalar:P_scalarLiteral;
           restrictionIdx   :longint;
           restrictionId    :ansistring;
         end;
@@ -16,12 +16,12 @@
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
     FUNCTION appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tokenType):longint;
-    FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_literal):longint;
+    FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
-    FUNCTION matches(VAR par:T_literal; CONST selfPointerProvided:boolean):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -68,7 +68,7 @@ FUNCTION T_pattern.appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tok
     end;
   end;
 
-FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_literal):longint;
+FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
   begin
     result:=length(sig);
     setLength(sig,result+1);
@@ -136,7 +136,7 @@ FUNCTION T_pattern.matchesNilPattern:boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par:T_literal; CONST selfPointerProvided:boolean):boolean;
+FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
   VAR i:longint;
       L:P_literal;
   begin
@@ -145,11 +145,33 @@ FUNCTION T_pattern.matches(VAR par:T_literal; CONST selfPointerProvided:boolean)
       L:=par.value(i);
       with sig[i] do case restrictionType of
         tt_typeCheckScalar..tt_typeCheckEmptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
-        tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) or not(L^.isKeyValueList) then exit(false) ;
-        tt_comparatorEq..tt_comparatorGrt,tt_comparatorListEq:
-          if restrictionIdx<0
-          then begin if not(L^.isInRelationTo(restrictionType,restrictionScalar^        )) then exit(false); end
-          else begin if not(L^.isInRelationTo(restrictionType,par.value(restrictionIdx)^)) then exit(false); end;
+        tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) or not(P_listLiteral(L)^.isKeyValueList) then exit(false) ;
+        tt_comparatorEq..tt_comparatorGrt:
+          if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
+            if restrictionIdx<0 then begin
+              if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))
+              then exit(false);
+            end else begin
+              if not((par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
+                 and P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx))))
+              then exit(false);
+            end;
+          end else exit(false);
+        tt_comparatorListEq:
+          if restrictionIdx>=0 then begin
+            if (par.value(restrictionIdx)^.literalType <> L^.literalType) then exit(false);
+            if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
+              if not(par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
+              or not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx)) ))
+              then exit(false);
+            end else begin
+              L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation);
+              if not(L^.literalType=lt_boolean) or not(P_boolLiteral(L)^.value) then begin
+                disposeLiteral(L);
+                exit(false);
+              end else disposeLiteral(L);
+            end;
+          end else exit(false);
       end;
     end;
     result:=selfPointerProvided or not(containsSelfPointer);
@@ -211,7 +233,7 @@ FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
                      and (sig[i].restrictionIdx  = p.sig[i].restrictionIdx )
                      and ((sig[i].restrictionScalar =nil) and (p.sig[i].restrictionScalar =nil)
                        or (sig[i].restrictionScalar<>nil) and (p.sig[i].restrictionScalar<>nil)
-                       and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar^));
+                       and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar));
   end;
 
 PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);

@@ -81,8 +81,7 @@ TYPE
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
-  T_literalType = (
-    lt_error,
+  T_literalType = (lt_error,
     lt_boolean,
     lt_int,
     lt_real,
@@ -96,6 +95,7 @@ TYPE
     lt_stringList,
     lt_emptyList,
     lt_flatList,
+    lt_uncheckedList,
     lt_listWithError,
     lt_void);
 
@@ -198,8 +198,9 @@ CONST
     'stringList',
     'emptyList',
     'flatList',
+    'UNCHECKED LIST!',
     'list(containing error)',
-    'void');
+    'void-type');
 
   C_tokenInfoString: array[T_tokenType] of string = (
     'literal',
