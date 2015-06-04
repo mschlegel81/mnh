@@ -82,7 +82,7 @@ PROCEDURE parseCmdLine;
   begin
     setLength(parameters,0);
     for i:=1 to paramCount do begin
-    if fileToInterpret='' then begin 
+    if fileToInterpret='' then begin
         if      paramstr(i)='+echo' then echo:=e_forcedOn
         else if paramstr(i)='-echo' then echo:=e_forcedOff
         else if paramstr(i)='+time' then time:=t_forcedOn
