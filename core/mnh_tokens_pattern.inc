@@ -144,8 +144,7 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:bool
     for i:=0 to length(sig)-1 do begin
       L:=par.value(i);
       with sig[i] do case restrictionType of
-        tt_typeCheckScalar..tt_typeCheckEmptyList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
-        tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) or not(P_listLiteral(L)^.isKeyValueList) then exit(false) ;
+        tt_typeCheckScalar..tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
         tt_comparatorEq..tt_comparatorGrt:
           if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
             if restrictionIdx<0 then begin

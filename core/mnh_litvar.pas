@@ -229,7 +229,7 @@ TYPE
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
-    FUNCTION isKeyValueList: boolean;
+    FUNCTION isKeyValuePair: boolean;
     FUNCTION clone:P_listLiteral;
     //from T_literal:
     DESTRUCTOR destroy; virtual;
@@ -470,7 +470,7 @@ DESTRUCTOR T_listLiteral.destroy;
   begin
     for i:=0 to length(element)-1 do if element [i]<>nil then disposeLiteral(element[i]);
     setLength(element, 0);
-    strictType:=lt_uncheckedList;
+    strictType:=lt_emptyList;
     nextAppendIsRange:=false;
   end;
 //==================================================================:DESTRUCTORS
@@ -483,12 +483,7 @@ FUNCTION T_intLiteral       .literalType: T_literalType; begin result:=lt_int;  
 FUNCTION T_realLiteral      .literalType: T_literalType; begin result:=lt_real;       end;
 FUNCTION T_stringLiteral    .literalType: T_literalType; begin result:=lt_string;     end;
 FUNCTION T_expressionLiteral.literalType: T_literalType; begin result:=lt_expression; end;
-FUNCTION T_listLiteral      .literalType: T_literalType;
-  begin
-    if strictType<>lt_uncheckedList then exit(strictType);
-    writeln('Still needing a type-check.');
-    result:=strictType;
-  end;
+FUNCTION T_listLiteral      .literalType: T_literalType; begin result:=strictType; end;
 //================================================================:?.literalType
 //?.value:======================================================================
 FUNCTION T_intLiteral       .value: int64;      begin result:=val; end;
@@ -1303,54 +1298,61 @@ PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;
     case strictType of
-      lt_list,lt_uncheckedList: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
+      lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
       lt_booleanList  : case L^.literalType of
   	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  						lt_list..lt_flatList: strictType:=lt_list;
   	                    lt_boolean: begin end;
   						else strictType:=lt_flatList;
   	                  end;
       lt_intList      : case L^.literalType of
   	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  						lt_list..lt_flatList: strictType:=lt_list;
   	                    lt_int: begin end;
   						lt_real: strictType:=lt_numList;
   						else strictType:=lt_flatList;
   	                  end;
       lt_realList     : case L^.literalType of
   	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
+  						lt_list..lt_flatList: strictType:=lt_list;
   	                    lt_real: begin end;
   						lt_int: strictType:=lt_numList;
   						else strictType:=lt_flatList;
   	                  end;
-      lt_numList      : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
-  	                    lt_int,lt_real: begin end;
-  						else strictType:=lt_flatList;
-  	                  end;
-      lt_stringList   : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
-  	                    lt_string: begin end;
-  						else strictType:=lt_flatList;
-  	                  end;
-      lt_emptyList    : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-                          lt_uncheckedList: strictType:=lt_uncheckedList;
-  						lt_boolean: strictType:=lt_booleanList;
-                          lt_int: strictType:=lt_intList;
-                          lt_real: strictType:=lt_realList;
-                          lt_string: strictType:=lt_stringList;
-                          lt_expression: strictType:=lt_flatList;
-                          lt_list..lt_flatList: strictType:=lt_list;
-  	                  end;
-      lt_flatList     : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_uncheckedList: strictType:=lt_list;
-  	                    else begin end;
-  	                  end;
+      lt_numList      :
+        case L^.literalType of
+  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  	  lt_list..lt_flatList: strictType:=lt_list;
+  	  lt_int,lt_real: begin end;
+  	  else strictType:=lt_flatList;
+  	end;
+      lt_stringList   :
+        case L^.literalType of
+  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  	  lt_list..lt_flatList:              strictType:=lt_list;
+  	  lt_string: begin end;
+  	  else                               strictType:=lt_flatList;
+  	end;
+      lt_emptyList    :
+        case L^.literalType of
+  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+          lt_boolean:                        strictType:=lt_booleanList;
+          lt_int:                            strictType:=lt_intList;
+          lt_real:                           strictType:=lt_realList;
+          lt_string:                         strictType:=lt_stringList;
+          lt_expression:                     strictType:=lt_flatList;
+          lt_list..lt_flatList: if P_listLiteral(L)^.isKeyValuePair
+                                then strictType:=lt_keyValueList
+                                else strictType:=lt_list;
+  	end;
+      lt_keyValueList:
+        if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then strictType:=lt_list;
+      lt_flatList     :
+        case L^.literalType of
+  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  	  lt_list..lt_flatList:              strictType:=lt_list;
+  	  else begin end;
+  	end;
       lt_listWithError: begin end;
     end;
   end;
@@ -1584,15 +1586,10 @@ PROCEDURE T_listLiteral.unique;
   end;
 
 
-FUNCTION T_listLiteral.isKeyValueList: boolean;
-  VAR i: longint;
+FUNCTION T_listLiteral.isKeyValuePair: boolean;
   begin
-    if (literalType<>lt_list) or (length(element)<=0) then exit(length(element)=0);
-    for i:=0 to length(element)-1 do if not(
-        (element [i]^.literalType in C_validListTypes) and
-        (P_listLiteral(element [i])^.size = 2) and
-        (P_listLiteral(element [i])^.value(0)^.literalType = lt_string)) then exit(false);
-    result:=true;
+    result:=(length(element)=2)
+        and (element[0]^.literalType=lt_string);
   end;
 
 FUNCTION T_listLiteral.clone:P_listLiteral;
@@ -1932,7 +1929,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             P_listLiteral(result)^.append(P_listLiteral(LHS)^.element [i], true);
           exit(result);
         end;
-        lt_string: if P_listLiteral(LHS)^.isKeyValueList then begin
+        lt_string: if LHS^.literalType=lt_keyValueList then begin
           key:=P_stringLiteral(RHS)^.value;
           for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
           if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then begin
@@ -1942,7 +1939,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           end;
           exit(newListLiteral);
         end else exit(newErrorLiteralRaising('Operator % with a string as second operand can only be applied to key-value-lists!', tokenLocation));
-        lt_stringList: if P_listLiteral(LHS)^.isKeyValueList then begin
+        lt_stringList: if LHS^.literalType=lt_keyValueList then begin
           result:=newListLiteral;
           for j:=0 to P_listLiteral(RHS)^.size-1 do begin
             key:=P_stringLiteral(P_listLiteral(RHS)^.element [j])^.value;

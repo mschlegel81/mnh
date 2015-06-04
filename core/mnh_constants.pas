@@ -81,7 +81,8 @@ TYPE
     //special: [E]nd [O]f [L]ine
     tt_eol);
 
-  T_literalType = (lt_error,
+  T_literalType = (
+    lt_error,
     lt_boolean,
     lt_int,
     lt_real,
@@ -94,8 +95,8 @@ TYPE
     lt_numList,
     lt_stringList,
     lt_emptyList,
+    lt_keyValueList,
     lt_flatList,
-    lt_uncheckedList,
     lt_listWithError,
     lt_void);
 
@@ -125,9 +126,9 @@ CONST
     {tt_typeCheckNumeric}      [lt_int, lt_real],
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
-    {tt_typeCheckNonemptyList} [lt_list..lt_stringList, lt_flatList],
+    {tt_typeCheckNonemptyList} [lt_list..lt_stringList, lt_keyValueList, lt_flatList],
     {tt_typeCheckEmptyList}    [lt_emptyList],
-    {tt_typeCheckKeyValueList} [lt_list, lt_emptyList]);
+    {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
 
   C_tokenString: array[T_tokenType] of ansistring = ('','',
     //identifier and resolved identifiers
@@ -197,10 +198,10 @@ CONST
     'numericList',
     'stringList',
     'emptyList',
+    'keyValueList',
     'flatList',
-    'UNCHECKED LIST!',
     'list(containing error)',
-    'void-type');
+    'void');
 
   C_tokenInfoString: array[T_tokenType] of string = (
     'literal',

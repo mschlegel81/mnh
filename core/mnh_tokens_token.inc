@@ -1083,8 +1083,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     VAR checkResult:boolean;
     begin
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
-      if checkResult and (first^.next^.tokType=tt_typeCheckKeyValueList) then
-        checkResult:=checkResult and P_listLiteral(first^.data)^.isKeyValueList;
       first^.next:=recycler.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
