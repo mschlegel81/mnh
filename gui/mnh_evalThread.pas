@@ -170,13 +170,11 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
     if path<>mainPackageProvider.getPath then begin
       setMainPackagePath(path);
       mainPackageProvider.setPath(path);
-      if mainPackageProvider.fileHasChanged then begin
-        mainPackageProvider.load;
-        L.Clear;
-        LL:=mainPackageProvider.getLines;
-        for i:=0 to length(LL)-1 do L.Append(LL[i]);
-        setLength(LL,0);
-      end;
+      mainPackageProvider.load;
+      L.Clear;
+      LL:=mainPackageProvider.getLines;
+      for i:=0 to length(LL)-1 do L.Append(LL[i]);
+      setLength(LL,0);
       getMainPackage^.clear;
     end;
   end;
