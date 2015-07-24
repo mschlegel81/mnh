@@ -79,7 +79,7 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 <br>A neat example demonstrating the usefulnes of this feature is calculation of a running sum of a numeric list:<code>
   runningSum(L:numericList)->begin
     local sum:=0;
-    each(element,L,sum:=sum+element);
+    each(element,L,sum+=element);
   end;
 </code>This function makes use of the fact that the assignment-operator returns the value its right hand side.<br>
 Note, that parallel processing via <code>pEach</code> is disabled within Begin-End-Blocks. Occuring <code>pEach</code>-statements will silently be converted

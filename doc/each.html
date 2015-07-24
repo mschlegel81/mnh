@@ -21,7 +21,7 @@ The general syntax is: <br>
   pEach(id,list,aggregator,body)</code><br>
 Where <code>id</code> is an identifier,<br> 
 <code>list</code> is a list or an expression returning a list,<br> 
-<code>aggregator</code> (optional) is a partial expression both starting and ending with a binary operator and<br>
+<code>aggregator</code> (optional) is a full aggregator expression or a binary operator and<br>
 <code>body</code> is an expression or list of expressions.
 
 <h4><a name="construction">List construction</a></h4>
@@ -38,28 +38,35 @@ To aggregate a list, use an aggregator but no body.<br>
 Restriction: the list must not be empty!<br>
 Simple example: a function returing the sum of the argument:<br>
 <code>  sum([]):=0;
-  sum(L<>[])->each(e,L,+);</code><br>
-More complex aggregator: join a list of strings using a line break as separator:<code>
-  join([])->"";
-  join(L:stringList)->each(e,L,&"\n"&);</code><br>
+  sum(L<>[])->each(e,L,+);
+</code><br>
 For later use: factorial<code>
   fak(n<1)->1;
   fak(n)->each(i,[1..n],*);
-</code>
+</code><br>
 
+A full aggregator is written as <code>aggregator(<i>expression</i>)</code>, where <i>expression</i> is a binary expression.<br>
+
+Full aggregator: join a list of strings using a line break as separator:<br>
+Here the aggregator expression takes the left hand side argument and the right hand side argument and concatenates them with an additional line break in between.
+<code>
+  join([])->"";
+  join(L:stringList)->each(e,L,aggregator({$x&"\n"&$y}));</code><br>
+
+  
 <h4><a name="consAgg">List construction and aggregation</a></h4>
-You can also use aggregator and body in the same each-/pEach clause:
+You can also use aggregator and body in the same each-/pEach clause.<br><br>
 Nested each: construct a cross product:<br>
 <code>  each(i,[0..9],each(j,[0..9],[i,j]))</code><br>
-This returns a nested list <code>[[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]</code>, which is probably one level deeper than intended.<br>
-<code>  each(i,[0..9],|,each(j,[0..9],[i,j]))</code><br>
-This returns a nested list <code>[[0,0],...,[0,9],[1,0],...,[1,9],...]</code>.<br>
+This returns a nested list <code>[[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]</code>,<br> which is probably one level deeper than intended.<br>
+<code>
+  each(i,[0..9],|,each(j,[0..9],[i,j]))</code><br>
+This returns a nested list <code>[[0,0],...,[0,9],[1,0],...,[1,9],...]</code>.<br><br>
 Compute Euler's number based on inverse factorials<code>
-  each(n,[0..20],1/fak(n))</code>
+  each(n,[0..20],+,1/fak(n))</code>
 
 <h4><a name="parallelization">Parallelization</a></h4>
 This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
-Note that pure functions do not work well with parallelized evaluations. This issue will be adressed in later versions.
 
 <div align="right"><hr> </font></div>
 </body>
