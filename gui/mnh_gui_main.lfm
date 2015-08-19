@@ -1139,14 +1139,6 @@ object MnhForm: TMnhForm
           Caption = 'Export (PNG)'
           OnClick = miExportPlotClick
         end
-        object miOpenPlot: TMenuItem
-          Caption = 'Open'
-          OnClick = miOpenPlotClick
-        end
-        object miSavePlot: TMenuItem
-          Caption = 'Save as...'
-          OnClick = miSavePlotClick
-        end
       end
       object miFileHistory0: TMenuItem
         Caption = 'New Item30'

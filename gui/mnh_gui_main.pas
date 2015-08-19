@@ -47,8 +47,6 @@ TYPE
     miLogscaleY: TMenuItem;
     submenuPlotOptions: TMenuItem;
     miExportPlot: TMenuItem;
-    miOpenPlot: TMenuItem;
-    miSavePlot: TMenuItem;
     MenuItem9: TMenuItem;
     miFileHistory6: TMenuItem;
     miFileHistory7: TMenuItem;
@@ -132,10 +130,8 @@ TYPE
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miOpenNppClick(Sender: TObject);
-    PROCEDURE miOpenPlotClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
-    PROCEDURE miSavePlotClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE miAntialiasingOffClick(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
@@ -771,23 +767,6 @@ begin
     SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
 end;
 
-PROCEDURE TMnhForm.miOpenPlotClick(Sender: TObject);
-begin
-  OpenDialog.Filter:='MNH-Plot|*.mnh_plot';
-  if OpenDialog.Execute then begin
-    OpenDialog.FileName:=ChangeFileExt(OpenDialog.FileName,'.mnh_plot');;
-    if FileExistsUTF8(OpenDialog.FileName) then begin
-      if not(activePlot.loadFromFile(OpenDialog.FileName))
-      then activePlot.setDefaults
-      else begin
-        if ad_evaluationRunning or plotSubsystem.rendering
-           then plotSubsystem.state:=pss_plotAfterCalculation
-           else doPlot();
-      end;
-    end;
-  end;
-end;
-
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.Execute then begin
@@ -804,15 +783,6 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
       ad_saveFile(ad_currentFile,InputEdit.Lines);
       if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
       SettingsForm.saveSettings;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miSavePlotClick(Sender: TObject);
-  begin
-    SaveDialog.Filter:='MNH-Plot|*.mnh_plot';
-    if SaveDialog.Execute then begin
-      SaveDialog.FileName:=ChangeFileExt(SaveDialog.FileName,'.mnh_plot');
-      activePlot.saveToFile(SaveDialog.FileName);
     end;
   end;
 

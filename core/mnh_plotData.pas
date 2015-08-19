@@ -2,7 +2,7 @@ UNIT mnh_plotData;
 
 INTERFACE
 
-USES myFiles, SysUtils, Math, mnh_litvar, mnh_tokens, mnh_constants,
+USES SysUtils, Math, mnh_litvar, mnh_tokens, mnh_constants,
   mnh_out_adapters, mnh_tokloc,
   mnh_funcs,
   Interfaces, ExtCtrls, Graphics, types;
@@ -45,7 +45,7 @@ TYPE
 
   { T_style }
 
-  T_style = object(T_serializable)
+  T_style = object
     //persistent:
     title: string;
     style: byte;
@@ -54,11 +54,6 @@ TYPE
     CONSTRUCTOR create(CONST index: byte);
     DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
-    FUNCTION loadFromFile(VAR F: T_File): boolean;
-      virtual; overload;
-    //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
-    PROCEDURE saveToFile(VAR F: T_File); virtual; overload;
-    //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
 
     FUNCTION getTColor: longint;
     FUNCTION getIntLineWidth(CONST scalingFactor: double): longint;
@@ -84,7 +79,7 @@ TYPE
     x, y, t: double;
   end;
 
-  T_sampleRow = object(T_serializable)
+  T_sampleRow = object
     //nonpersistent:
     computed: record  temp: array of T_sampleWithTime;
       xRule, yRule: P_expressionLiteral;
@@ -100,11 +95,6 @@ TYPE
     PROCEDURE computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
     PROCEDURE addSample(CONST x, y: double);
     DESTRUCTOR destroy;
-    FUNCTION loadFromFile(VAR F: T_File): boolean;
-      virtual; overload;
-    //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
-    PROCEDURE saveToFile(VAR F: T_File); virtual; overload;
-    //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
   end;
 
 { T_plot }
@@ -122,7 +112,7 @@ TYPE
     txt: ansistring;
   end;
 
-  T_plot = object(T_serializable)
+  T_plot = object
     //private
       //non-persistent:
       screenWidth, screenHeight: longint;
@@ -146,10 +136,6 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE addSampleRow(CONST sampleRow: T_sampleRow);
       PROCEDURE Clear;
-      FUNCTION loadFromFile(VAR F: T_File): boolean; virtual; overload;
-      //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
-      PROCEDURE saveToFile(VAR F: T_File); virtual; overload;
-      //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
       PROCEDURE setScreenSize(CONST Width, Height: longint);
       FUNCTION longtestYTic: ansistring;
       FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
@@ -475,37 +461,6 @@ DESTRUCTOR T_sampleRow.destroy;
     setLength(sample, 0);
   end;
 
-FUNCTION T_sampleRow.loadFromFile(VAR F: T_File): boolean;
-  VAR
-    i1, i: longint;
-  begin
-    if not (style.loadFromFile(F)) then
-      exit(false);
-    i1:=f.readLongint;
-    if i1<0 then
-      exit(false);
-    setLength(sample, i1);
-    for i:=0 to i1-1 do
-      begin
-      sample[i, 0]:=f.readDouble;
-      sample[i, 1]:=f.readDouble;
-      end;
-    result:=f.allOkay;
-  end;
-
-PROCEDURE T_sampleRow.saveToFile(VAR F: T_File);
-  VAR
-    i: longint;
-  begin
-    style.saveToFile(F);
-    f.writeLongint(length(sample));
-    for i:=0 to length(sample)-1 do
-      begin
-      f.writeDouble(sample[i, 0]);
-      f.writeDouble(sample[i, 1]);
-      end;
-  end;
-
 { T_style }
 
 CONST
@@ -702,29 +657,6 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
       style:=C_lineStyle_straight;
   end;
 
-FUNCTION T_style.loadFromFile(VAR F: T_File): boolean;
-  VAR
-    cc: T_colorChannel;
-  begin
-    title:=f.readAnsiString;
-    style:=f.readByte;
-    for cc:=cc_red to cc_blue do
-      color[cc]:=f.readByte;
-    styleModifier:=f.readDouble;
-    result:=f.allOkay;
-  end;
-
-PROCEDURE T_style.saveToFile(VAR F: T_File);
-  VAR
-    cc: T_colorChannel;
-  begin
-    f.writeAnsiString(title);
-    f.writeByte(style);
-    for cc:=cc_red to cc_blue do
-      f.writeByte(color [cc]);
-    f.writeDouble(styleModifier);
-  end;
-
 FUNCTION T_style.getTColor: longint;
   begin
     result:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
@@ -841,46 +773,6 @@ PROCEDURE T_plot.Clear;
   begin
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row, 0);
-  end;
-
-FUNCTION T_plot.loadFromFile(VAR F: T_File): boolean;
-  VAR axis: char;
-      i, iMax: longint;
-  begin
-    for axis:='x' to 'y' do begin
-      for i:=0 to 1 do range[axis, i]:=f.readDouble;
-      axisStyle[axis]:=f.readByte;
-      autoscale[axis]:=f.readBoolean;
-      logscale[axis]:=f.readBoolean;
-    end;
-    preserveAspect:=f.readBoolean;
-    iMax:=f.readLongint;
-    if not (F.allOkay) or (iMax<0) then exit(false);
-    Clear;
-    setLength(row, iMax);
-    result:=true;
-    for i:=0 to iMax-1 do begin
-      row[i].create(i);
-      result:=result and row [i].loadFromFile(f);
-    end;
-  end;
-
-PROCEDURE T_plot.saveToFile(VAR F: T_File);
-  VAR axis: char;
-      i: longint;
-  begin
-    for axis:='x' to 'y' do
-      begin
-      for i:=0 to 1 do
-        f.writeDouble(range [axis, i]);
-      f.writeByte(axisStyle [axis]);
-      f.writeBoolean(autoscale [axis]);
-      f.writeBoolean(logscale [axis]);
-      end;
-    f.writeBoolean(preserveAspect);
-    f.writeLongint(length(row));
-    for i:=0 to length(row)-1 do
-      row[i].saveToFile(f);
   end;
 
 PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
