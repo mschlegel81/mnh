@@ -29,3 +29,4 @@ regTest/passedTests.dat
 gui/lib/x86_64-win64/*
 demos/inputs/kjv.txt
 demos/inputs/unixdict.txt
+core/code_hash.inc
