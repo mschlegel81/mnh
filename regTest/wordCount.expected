@@ -1,6 +1,6 @@
 Reading file demos\inputs\kjv.txt
-Words total:    948104
-Distinct words: 15108
+Words total:    948069
+Distinct words: 15107
 Most frequent:
 word       count %
   "the"    74518 7.86

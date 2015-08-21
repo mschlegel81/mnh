@@ -1,7 +1,6 @@
-memoized
-fibNStep(i>=k,k)->each(j,[1..k],+,fibNStep(i-j,k));
+memoized private
+fibNStep(i>=k,k>=1)->each(j,[1..k],+,fibNStep(i-j,k));
 fibNStep(i   ,k)->1;
-fib(i)->fibNStep(i,2);
 
 //*Solves the "Fibonacci n-step" task from <a href="http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences') and
