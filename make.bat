@@ -117,7 +117,7 @@
 
 :cleanup
 @%delp%
-@del bin32\*.lfm bin32\*.res test\*.exe bin32\*.exe gui\*.exe *.exe gui\lib\i386-win32\*.lfm *.png demos\*.png packages\*.png regtest\*.last demos\inputs\*.txt
+@del bin32\*.lfm bin32\*.res test\*.exe bin32\*.exe gui\*.exe *.exe gui\lib\i386-win32\*.lfm gui\lib\x86_64-win64\*.lfm *.png demos\*.png packages\*.png regtest\*.last demos\inputs\*.txt
 @goto loop
 
 :loop
