@@ -1,0 +1,17 @@
+private change(amount,set<>[])->
+amount<=0 ? 1 : //there is only one way to give out 0 cents
+begin
+  local restSet:=set%(set<=amount); //only work with coins >= amount
+  local coin:=head(restSet); //the current coin is the first (i.e. largest) of the remaining coins
+  size(restSet)=1
+    ? (amount mod coin = 0 ? 1 : 0)
+    : (each(i,[amount div coin..0],+,
+               change(amount-i*coin,tail(restSet)))
+      );
+end;
+
+//*See  http://rosettacode.org/wiki/Count_the_coins
+main->printf("There are %X% ways to make a dollar from coins\n"&
+             "  and %X% ways to make a euro from coins.",
+             change(100,[100,50,25,10,5,1]),
+             change(100,[100,50,20,10,5,2,1]));

@@ -1,0 +1,13 @@
+private sumOfDigits(n:int)->each(digit,n div 10^[0..18] mod 10,+);
+private isHarshadNumber(n:int)->n mod sumOfDigits(n) = 0;
+private mutable lastHarshad:=0;
+private synchronized nextHarshad->begin
+  local n:=lastHarshad+1;
+  while(not(isHarshadNumber(n)),n+=1);
+  lastHarshad:=n;
+end;
+//*See http://rosettacode.org/wiki/Harshad_or_Niven_series
+main->begin
+  printf("%I%",each(i,[1..20], nextHarshad));
+  print("The first Harshad Number >",(lastHarshad:=1000)," is ",nextHarshad);
+end;
