@@ -36,6 +36,7 @@
 [ "demos/ludic.mnh",           "",                        false,         false,        true],
 [ "demos/magicSquare.mnh",     "",                        false,         false,        false],
 //script name                            output                                  delete output? use plotting? long running?
+[ "demos/maze.mnh",                      "",                                     false,         false,        false],
 [ "demos/monteCarloPi.mnh",              "",                                     false,         false,        true],
 [ "demos/pascal.mnh",                    "",                                     false,         false,        false],
 [ "demos/pernicousNumbers.mnh",          "",                                     false,         false,        false],

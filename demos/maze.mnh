@@ -1,0 +1,44 @@
+private scramble(List<>[])->List%sortPerm(random(size(List)));
+private scramble([])->[];
+private neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
+private neighbors(width,height,x,y)->
+  scramble(
+    each(p,[x>0        ? [x-1,y] : void,
+            y>0        ? [x,y-1] : void,
+            x<width-1  ? [x+1,y] : void,
+            y<height-1 ? [x,y+1] : void],
+         p%0+p%1*width));
+
+private unvisitedNeighbor(width,height,currentIndex,visited)->
+  head(each(next,neighbors(width,height,currentIndex),next in visited ? void : next));
+
+private randomUnvisitedCell(width,height,visited)->
+  head(scramble(each(i,[0..width*height-1],i in visited ? void : i)));
+
+private makeMaze(width,height)->
+begin
+  local visited:=[];
+  local position:=randomUnvisitedCell(width,height,visited);
+
+  while(not(position==[]),begin
+    visited|=position;
+    local continue:=true;
+    while(continue,begin
+      local next:=unvisitedNeighbor(width,height,position,visited);
+      next==[] ? continue:=false : begin
+        position:=next;
+        visited|=next;
+      end;
+    end);
+    position:=randomUnvisitedCell(width,height,visited);
+  end);
+
+  local visitPairs:=each(i,[0..size(visited)-2],sort(visited%[i,i+1]));
+  each(j,[0..height-1],
+       each(i,[0..width-1],&,[i+(j-1)*width,i+j*width] in visitPairs ? "+   " : "+---")&"+",   //wall [i,j]->[i,j-1];
+       each(i,[0..width-1],&,[(i-1)+j*width,i+j*width] in visitPairs ? "    " : "|   ")&"|")  //wall [i,j]->[i-1,j]
+     |(each(i,[0..width-1],&,"+---")&"+");
+end;
+
+//*See http://rosettacode.org/wiki/Maze_generation
+main->printf("%X%",makeMaze(20,20));
