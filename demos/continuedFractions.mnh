@@ -1,0 +1,22 @@
+private continuedFraction(a,b)->begin
+  local A:=a:expression ? a : {$n*0+(a)};
+  local B:=b:expression ? b : {$n*0+(b)};
+
+  local resultNum:=0;
+  local resultTxt:="...";
+  each(n,[100..1],
+    resultNum       :=B(n)  /(  A(n)  +  resultNum  ),
+    n<=5 ? resultTxt:=B(n)&"/("&A(n)&"+"&resultTxt&")" : void,
+      void);
+  [A(0)&"+"&resultTxt,
+   A(0)  +  resultNum];
+end;
+
+//*See http://rosettacode.org/wiki/Continued_fraction
+main->begin
+  local data:=[continuedFraction(1,1),
+               continuedFraction({$n=0?1:2 }, 1           ),
+               continuedFraction({$n=0?2:$n},{$n=1?1:$n-1}),
+               continuedFraction({$n=0?3:6 },{(2*$n-1)^2} )];
+  printf("%X%\t=\t%0.############%",data%%0,data%%1);
+end;

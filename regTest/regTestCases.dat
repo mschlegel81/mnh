@@ -13,6 +13,7 @@
 [ "demos/stringFib.mnh",       "",                        false,         false,        false],
 [ "demos/concatInts.mnh",      "",                        false,         false,        false],
 [ "demos/clock.mnh",           "",                        false,         false,        false],
+[ "demos/continuedFractions.mnh","",                      false,         false,        false],
 [ "demos/countTheCoins.mnh",   "",                        false,         false,        false],
 [ "demos/dice7fromDice5.mnh",  "",                        false,         false,        true],
 [ "demos/digitSquareSum.mnh",  "",                        false,         false,        true],
