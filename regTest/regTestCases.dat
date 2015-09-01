@@ -5,6 +5,7 @@
 [ "demos/99bottles.mnh",       "",                        false,         false,        false],
 [ "demos/ackermann.mnh",       "",                        false,         false,        true],
 [ "demos/aks.mnh",             "",                        false,         false,        false],
+[ "demos/aliquotSequence.mnh", "",                        false,         false,        false],
 [ "demos/anagram.mnh",         "",                        false,         false,        true],
 [ "demos/balancedBrackets.mnh","",                        false,         false,        false],
 [ "demos/bestShuffle.mnh",     "",                        false,         false,        false],
