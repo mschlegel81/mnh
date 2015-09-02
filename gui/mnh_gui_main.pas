@@ -324,8 +324,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
 PROCEDURE T_guiOutAdapter.flushClear(VAR syn: TSynEdit);
   begin
     system.EnterCriticalsection(cs);
-    syn.ClearAll;
     clearMessages;
+    clearConsole;
     system.LeaveCriticalsection(cs);
   end;
 
@@ -636,7 +636,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
         startOfEvaluation;
         ad_evaluate(InputEdit.Lines);
         needEvaluation:=false;
-        doNotEvaluateBefore:=now+ONE_SECOND;
+        doNotEvaluateBefore:=now+0.1*ONE_SECOND;
       end else needEvaluation:=true;
     end;
   end;
@@ -714,7 +714,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
       startOfEvaluation;
       ad_evaluate(InputEdit.Lines);
       needEvaluation:=false;
-      doNotEvaluateBefore:=now+ONE_SECOND;
+      doNotEvaluateBefore:=now+0.1*ONE_SECOND;
     end else needEvaluation:=true;
   end;
 
@@ -993,7 +993,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
        not(plotSubsystem.rendering) and
        not(now<plotSubsystem.renderNotBefore) then doPlot();
 
-    if flag then doNotEvaluateBefore:=now+ONE_SECOND else
+    if flag then doNotEvaluateBefore:=now+0.1*ONE_SECOND else
     if needEvaluation and (now>doNotEvaluateBefore) then begin
       ad_evaluate(InputEdit.Lines);
       needEvaluation:=false;
@@ -1010,6 +1010,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
     i:=round((now-updateStart)*24*60*60*1000);
     if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
+
   end;
 
 PROCEDURE TMnhForm.processSettings;
