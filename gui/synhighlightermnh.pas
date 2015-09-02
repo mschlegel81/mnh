@@ -55,9 +55,6 @@ TYPE
     fLineNumber: integer;
 
     markedWord:string;
-    markedLine,
-    markedCol:longint;
-    atMarkedToken:boolean;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
@@ -80,7 +77,6 @@ TYPE
     PROCEDURE SetRange(value: Pointer); override;
     PROCEDURE SetLine(CONST NewValue: string; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
-    FUNCTION setMarkedLine(CONST i,j:longint):boolean;
   end;
 
 IMPLEMENTATION
@@ -131,7 +127,6 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkStacktrace      ].Foreground:=$00FF0000;
 
     markedWord:='';
-    markedLine:=-1;
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
@@ -164,20 +159,12 @@ FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
     markedWord:=s;
   end;
 
-FUNCTION TSynMnhSyn.setMarkedLine(CONST i,j:longint):boolean;
-  begin
-    result:=(i<>markedLine) or (j<>markedCol);
-    markedLine:=i;
-    markedCol:=j;
-  end;
-
 PROCEDURE TSynMnhSyn.Next;
   VAR
     localId: shortString;
     i: longint;
     runStart:longint;
   begin
-    atMarkedToken:=false;
     runStart:=run;
 
     isMarked:=false;
@@ -339,7 +326,6 @@ PROCEDURE TSynMnhSyn.Next;
         inc(Run);
       end;
     end;
-    atMarkedToken:=(LineIndex=markedLine) and ((markedCol<0) or (runStart<=markedCol) and (markedCol<run));
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
@@ -375,19 +361,12 @@ FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenID];
-    if not(atMarkedToken) then begin
-      if specialLineCase in [1..3] then with C_specialHeads[specialLineCase] do begin
-        if backgroundColor<>maxLongint then result.background:=backgroundColor;
-        if foregroundColor<>maxLongint then result.Foreground:=foregroundColor;
-      end;
-    end else begin
-      result.Background := $0000FFFF;
+    if specialLineCase in [1..3] then with C_specialHeads[specialLineCase] do begin
+      if backgroundColor<>maxLongint then result.background:=backgroundColor;
+      if foregroundColor<>maxLongint then result.Foreground:=foregroundColor;
     end;
     if isMarked then result.FrameColor:=$00888888
-    else begin
-      if atMarkedToken then result.FrameColor:=$00888888
-                       else result.FrameColor:=clNone;
-    end;
+                else result.FrameColor:=clNone;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;

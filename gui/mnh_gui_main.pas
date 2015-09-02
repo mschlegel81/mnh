@@ -425,11 +425,11 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.startOfEvaluation;
   begin
+    flushThroughput;
     autosizingEnabled:=true;
     MnhForm.doConditionalPlotReset;
     errorThroughput.clear;
     MnhForm.OutputEdit.Lines.Clear;
-    if MnhForm.inputHighlighter.setMarkedLine(-1,-1) then MnhForm.Repaint;
   end;
 
 { TMnhForm }
