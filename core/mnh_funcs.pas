@@ -827,7 +827,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end else raiseNotApplicableError('exec',params,tokenLocation);
   end;
 
-FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST functionName:ansistring; CONST doAsynch:boolean):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       i:longint;
@@ -842,10 +842,20 @@ FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
           cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
       end;
-      runCommandAsync(executable,
-                      cmdLinePar);
+      runCommandAsyncOrPipeless(executable,
+                                cmdLinePar,doAsynch);
       result:=newBoolLiteral(true);
-    end else raiseNotApplicableError('execAsync',params,tokenLocation);
+    end else raiseNotApplicableError(functionName,params,tokenLocation);
+  end;
+
+FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=execAsyncOrPipeless(params,tokenLocation,'execAsync',true);
+  end;
+
+FUNCTION execPipeless_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=execAsyncOrPipeless(params,tokenLocation,'execPipeless',false);
   end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -1478,6 +1488,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'repeat'        ,@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec'          ,@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execAsync'     ,@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'execPipeless'   ,@execPipeless_impl,'execPipeless(programPath:string,parameters ...);#Executes the specified program, waiting for exit and returning true');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'tokenSplit'    ,@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath'        ,@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');

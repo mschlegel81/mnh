@@ -48,7 +48,7 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_arrayOfString;
 
-FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_arrayOfString): boolean;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
 PROCEDURE ensurePath(path:ansistring);
 
 IMPLEMENTATION
@@ -266,14 +266,15 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_a
     SysUtils.findClose(info);
   end;
 
-FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_arrayOfString): boolean;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
   VAR tempProcess: TProcess;
-       i: longint;
+      i: longint;
   begin
     result := true;
     try
       tempProcess := TProcess.create(nil);
       tempProcess.Executable := executable;
+      if not asynch then tempProcess.Options:=tempProcess.Options + [poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.Parameters.Add(parameters [i]);
       tempProcess.Execute;
       tempProcess.Free;
