@@ -189,7 +189,7 @@ PROCEDURE TSynMnhSyn.Next;
         localId := '';
         while (length(localId)<5) and (fLine [i]<>#0) do begin
           localId := localId+fLine [i];
-          Inc(i);
+          inc(i);
         end;
         specialLineCase:=5;
         while (specialLineCase>0) and (C_specialHeads[specialLineCase].head<>localId) do dec(specialLineCase);
@@ -217,27 +217,27 @@ PROCEDURE TSynMnhSyn.Next;
     case fLine [Run] of
       #0: fTokenID := tkNull;
       ';': begin
-        Inc(run);
+        inc(run);
         fTokenID := tkDefault;
         end;
       '0'..'9': begin
         while fLine [run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
-          Inc(run);
+          inc(run);
         fTokenId := tkNonStringLiteral;
         end;
       '$': begin
-        Inc(run);
+        inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
-          Inc(run);
+          inc(run);
         fTokenID := tkDollarIdentifier;
         end;
       'a'..'z', 'A'..'Z': begin
         localId := fLine [run];
-        Inc(run);
+        inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', C_ID_QUALIFY_CHARACTER] do
           begin
           localId := localId+fLine [run];
-          Inc(run);
+          inc(run);
           end;
         if (localId = C_tokenString[tt_operatorXor]   ) or
            (localId = C_tokenString[tt_operatorOr]    ) or
@@ -269,29 +269,29 @@ PROCEDURE TSynMnhSyn.Next;
         isMarked:=(localId=markedWord);
       end;
       '|', '^', '?', '+', '&', '%', '*', '=', '<', '>' ,'-', '@': begin
-        Inc(run);
+        inc(run);
         fTokenID := tkOperator;
       end;
       '/': begin
-        Inc(run);
+        inc(run);
         if fLine [run] = '/' then begin
-          Inc(run);
+          inc(run);
           if      fLine[run]='!' then fTokenID:=tkSpecialComment
           else if fLine[run]='*' then fTokenID:=tkDocComment
                                  else fTokenID:=tkComment;
-          while fLine [run]<>#0 do Inc(run);
+          while fLine [run]<>#0 do inc(run);
         end
         else fTokenId := tkOperator;
       end;
       ':': begin
-        Inc(run);
+        inc(run);
         case fLine [run] of
           'b', 'e', 'i', 'l', 'n', 's', 'r', 'k': begin
             localId := ':';
             i:=run;
             while fLine [i] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
               localId := localId+fLine [i];
-              Inc(i);
+              inc(i);
             end;
             if (localId=C_tokenString[tt_typeCheckScalar      ]) or
                (localId=C_tokenString[tt_typeCheckList        ]) or
@@ -312,31 +312,31 @@ PROCEDURE TSynMnhSyn.Next;
             end
             else begin
               fTokenID := tkOperator;
-              Inc(run);
+              inc(run);
             end;
           end;
           else fTokenID := tkOperator;
         end;
       end;
       '"': begin
-        Inc(run);
+        inc(run);
         while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
-          Inc(run);
+          inc(run);
         if (fLine [run] = '"') then
-          Inc(run);
+          inc(run);
         fTokenId := tkString;
       end;
       '''': begin
-        Inc(run);
+        inc(run);
         while (fLine [run]<>#0) and ((fLine [run]<>'''') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
-          Inc(run);
+          inc(run);
         if (fLine [run] = '''') then
-          Inc(run);
+          inc(run);
         fTokenId := tkString;
       end;
       else begin
         fTokenID := tkDefault;
-        Inc(Run);
+        inc(Run);
       end;
     end;
     atMarkedToken:=(LineIndex=markedLine) and ((markedCol<0) or (runStart<=markedCol) and (markedCol<run));

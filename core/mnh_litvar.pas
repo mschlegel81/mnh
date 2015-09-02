@@ -385,26 +385,26 @@ FUNCTION parseNumber(CONST input: ansistring; CONST suppressOutput: boolean; OUT
       begin
       i:=1;
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do
-        Inc(i);
+        inc(i);
       parsedLength:=i;
       //Only digits on indexes [1..i]; accept decimal point and following digts
       if (i<length(input)) and (input [i+1] = '.') then
         begin
-        Inc(i);
+        inc(i);
         if (i<length(input)) and (input [i+1] = '.') then
-          Dec(i);
+          dec(i);
         end;
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do
-        Inc(i);
+        inc(i);
       //Accept exponent marker and following exponent
       if (i<length(input)) and (input [i+1] in ['e', 'E']) then
         begin
-        Inc(i);
+        inc(i);
         if (i<length(input)) and (input [i+1] in ['+', '-']) then
-          Inc(i);
+          inc(i);
         end;
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do
-        Inc(i);
+        inc(i);
       if i>parsedLength then
         begin
         parsedLength:=i;
@@ -1054,7 +1054,7 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 //====================================================================:?.operate
 //?.hash:=======================================================================
 FUNCTION T_literal    .hash: longint; begin result:=-1; end;
-FUNCTION T_boolLiteral.hash: longint; begin result:=longint(lt_boolean); if val then Inc(result); end;
+FUNCTION T_boolLiteral.hash: longint; begin result:=longint(lt_boolean); if val then inc(result); end;
 FUNCTION T_intLiteral .hash: longint; begin result:=longint(lt_int) xor longint(val); end;
 FUNCTION T_realLiteral.hash: longint;
   begin
@@ -1388,12 +1388,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       i1:=P_intLiteral(L)^.val;
       while (i0<i1) and (errorLevel<el3_evalError) do
         begin
-        Inc(i0);
+        inc(i0);
         append(newIntLiteral(i0), false);
         end;
       while (i0>i1) and (errorLevel<el3_evalError) do
         begin
-        Dec(i0);
+        dec(i0);
         append(newIntLiteral(i0), false);
         end;
       end
@@ -1405,12 +1405,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       c1:=P_stringLiteral(L)^.val [1];
       while c0<c1 do
         begin
-        Inc(c0);
+        inc(c0);
         append(newStringLiteral(c0), false);
         end;
       while c0>c1 do
         begin
-        Dec(c0);
+        dec(c0);
         append(newStringLiteral(c0), false);
         end;
       end
@@ -1440,14 +1440,14 @@ PROCEDURE T_listLiteral.sort;
       while i<length(element) do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-          if element [j0]^.leqForSorting(element [j1])  then begin temp[k]:=element [j0]; Inc(k); Inc(j0); end
-                                                        else begin temp[k]:=element [j1]; Inc(k); Inc(j1); end;
-        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; Inc(k); Inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; Inc(k); Inc(j1); end;
-        Inc(i, scale+scale);
+          if element [j0]^.leqForSorting(element [j1])  then begin temp[k]:=element [j0]; inc(k); inc(j0); end
+                                                        else begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        inc(i, scale+scale);
       end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
-      Inc(scale, scale);
+      inc(scale, scale);
       if (scale<length(element)) then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
@@ -1456,14 +1456,14 @@ PROCEDURE T_listLiteral.sort;
         while i<length(element) do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-            if temp [j0]^.leqForSorting(temp [j1])        then begin element[k]:=temp [j0]; Inc(k); Inc(j0); end
-                                                          else begin element[k]:=temp [j1]; Inc(k); Inc(j1); end;
-          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; Inc(k); Inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; Inc(k); Inc(j1); end;
-          Inc(i, scale+scale);
+            if temp [j0]^.leqForSorting(temp [j1])        then begin element[k]:=temp [j0]; inc(k); inc(j0); end
+                                                          else begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
-        Inc(scale, scale);
+        inc(scale, scale);
       end else for k:=0 to length(element)-1 do element[k]:=temp [k];
     end;
     setLength(temp, 0);
@@ -1485,14 +1485,14 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral);
       while (i<length(element)) and (errorLevel<el3_evalError) do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-          if isLeq(element [j0],element [j1])           then begin temp[k]:=element [j0]; Inc(k); Inc(j0); end
-                                                        else begin temp[k]:=element [j1]; Inc(k); Inc(j1); end;
-        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; Inc(k); Inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; Inc(k); Inc(j1); end;
-        Inc(i, scale+scale);
+          if isLeq(element [j0],element [j1])           then begin temp[k]:=element [j0]; inc(k); inc(j0); end
+                                                        else begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        inc(i, scale+scale);
       end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
-      Inc(scale, scale);
+      inc(scale, scale);
       if (scale<length(element)) and (errorLevel<el3_evalError) then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
@@ -1501,14 +1501,14 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral);
         while (i<length(element)) and (errorLevel<el3_evalError) do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-            if isLeq(temp [j0],temp [j1])                 then begin element[k]:=temp [j0]; Inc(k); Inc(j0); end
-                                                          else begin element[k]:=temp [j1]; Inc(k); Inc(j1); end;
-          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; Inc(k); Inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; Inc(k); Inc(j1); end;
-          Inc(i, scale+scale);
+            if isLeq(temp [j0],temp [j1])                 then begin element[k]:=temp [j0]; inc(k); inc(j0); end
+                                                          else begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
-        Inc(scale, scale);
+        inc(scale, scale);
       end else for k:=0 to length(element)-1 do element[k]:=temp [k];
     end;
     setLength(temp, 0);
@@ -1538,27 +1538,27 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
       while i<length(temp1) do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
-          if temp1 [j0].v^.leqForSorting(temp1 [j1].v) then begin temp2[k]:=temp1 [j0]; Inc(k); Inc(j0); end
-                                                       else begin temp2[k]:=temp1 [j1]; Inc(k); Inc(j1); end;
-        while (j0<i+scale) and (j0<length(temp1))        do begin temp2[k]:=temp1 [j0]; Inc(k); Inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp2[k]:=temp1 [j1]; Inc(k); Inc(j1); end;
-        Inc(i, scale+scale);
+          if temp1 [j0].v^.leqForSorting(temp1 [j1].v) then begin temp2[k]:=temp1 [j0]; inc(k); inc(j0); end
+                                                       else begin temp2[k]:=temp1 [j1]; inc(k); inc(j1); end;
+        while (j0<i+scale) and (j0<length(temp1))        do begin temp2[k]:=temp1 [j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp2[k]:=temp1 [j1]; inc(k); inc(j1); end;
+        inc(i, scale+scale);
       end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
-      Inc(scale, scale);
+      inc(scale, scale);
       if (scale<length(temp1)) then begin
         i:=0;
         while i<length(temp1) do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
-            if temp2 [j0].v^.leqForSorting(temp2 [j1].v) then begin temp1[k]:=temp2 [j0]; Inc(k); Inc(j0); end
-                                                         else begin temp1[k]:=temp2 [j1]; Inc(k); Inc(j1); end;
-          while (j0<i+scale)  and (j0<length(temp1))       do begin temp1[k]:=temp2 [j0]; Inc(k); Inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp1[k]:=temp2 [j1]; Inc(k); Inc(j1); end;
-          Inc(i, scale+scale);
+            if temp2 [j0].v^.leqForSorting(temp2 [j1].v) then begin temp1[k]:=temp2 [j0]; inc(k); inc(j0); end
+                                                         else begin temp1[k]:=temp2 [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale)  and (j0<length(temp1))       do begin temp1[k]:=temp2 [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(temp1))  do begin temp1[k]:=temp2 [j1]; inc(k); inc(j1); end;
+          inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
-        Inc(scale, scale);
+        inc(scale, scale);
       end else for k:=0 to length(temp1)-1 do temp1[k]:=temp2 [k];
     end;
     setLength(temp2, 0);
@@ -1579,7 +1579,7 @@ PROCEDURE T_listLiteral.unique;
         (element [j]^.leqForSorting(element [i])) then disposeLiteral(element [j])
       else
         begin
-        Inc(i);
+        inc(i);
         element[i]:=element [j];
         end;
     setLength(element, i+1);
@@ -1621,7 +1621,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             while result and (i<length(P_listLiteral(LHS)^.element)) do begin
               result:=result and equals(P_listLiteral(LHS)^.element [i],
                 P_listLiteral(RHS)^.element [i]);
-              Inc(i);
+              inc(i);
             end;
           end else exit(false);
         else exit(false);
@@ -1636,7 +1636,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
         i:=0;
         while (i<length(P_listLiteral(RHS)^.element)) and not (result) do begin
           result:=result or equals(LHS, P_listLiteral(RHS)^.element [i]);
-          Inc(i);
+          inc(i);
         end;
       end;
     end;
@@ -1947,7 +1947,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then begin
               P_listLiteral(result)^.append(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [1], true);
               i:=length(P_listLiteral(LHS)^.element);
-            end else Inc(i);
+            end else inc(i);
           end;
           exit(result);
         end else exit(newErrorLiteralRaising('Operator % with a stringList as second operand can only be applied to key-value-lists!', tokenLocation));

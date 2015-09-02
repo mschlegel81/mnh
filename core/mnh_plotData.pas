@@ -314,26 +314,26 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
         if refineTemp[i].t<tempCopy[j].t then
           begin
           computed.temp[k]:=refineTemp[i];
-          Inc(i);
-          Inc(k);
+          inc(i);
+          inc(k);
           end
         else
           begin
           computed.temp[k]:=tempCopy[j];
-          Inc(j);
-          Inc(k);
+          inc(j);
+          inc(k);
           end;
       while (i<length(refineTemp)) do
         begin
         computed.temp[k]:=refineTemp[i];
-        Inc(i);
-        Inc(k);
+        inc(i);
+        inc(k);
         end;
       while (j<length(tempCopy)) do
         begin
         computed.temp[k]:=tempCopy[j];
-        Inc(j);
-        Inc(k);
+        inc(j);
+        inc(k);
         end;
       setLength(tempCopy, 0);
       setLength(refineTemp, 0);
@@ -666,7 +666,7 @@ FUNCTION T_style.getIntLineWidth(CONST scalingFactor: double): longint;
   begin
     result:=trunc(styleModifier*scalingFactor);
     if (random<frac(styleModifier*scalingFactor)) then
-      Inc(result);
+      inc(result);
     if result<0 then
       result:=0;
   end;
@@ -1077,7 +1077,7 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
             else
               exit;
             end;
-          Inc(i);
+          inc(i);
         until false;
         end;
     end;
@@ -1625,7 +1625,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
                 target.FillRect(lastX, lastY, x, y);
                 end;
               end;
-            Inc(i, 2);
+            inc(i, 2);
             end;
           end;
         if row [rowId].style.wantDot then

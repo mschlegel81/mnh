@@ -183,13 +183,13 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
       while (i<=length(input)) and (doubleQuoted and (input [i]<>'"') or  not (doubleQuoted) and (input [i]<>'''')) do
       if (input [i] = '\') then begin
         if i<length(input) then case input [i+1] of
-          '\': begin                            result := result+'\';                  Inc(i, 2); end;
-          't': begin                            result := result+C_tabChar;            Inc(i, 2); end;
-          'n': begin                            result := result+C_lineBreakChar;      Inc(i, 2); end;
-          'r': begin                            result := result+C_carriageReturnChar; Inc(i, 2); end;
-          '"': if       doubleQuoted then begin result := result+'"';                  Inc(i, 2); end
+          '\': begin                            result := result+'\';                  inc(i, 2); end;
+          't': begin                            result := result+C_tabChar;            inc(i, 2); end;
+          'n': begin                            result := result+C_lineBreakChar;      inc(i, 2); end;
+          'r': begin                            result := result+C_carriageReturnChar; inc(i, 2); end;
+          '"': if       doubleQuoted then begin result := result+'"';                  inc(i, 2); end
                                      else begin parsedLength := 0; exit(''); end;
-          '''': if not(doubleQuoted) then begin result := result+'''';                 Inc(i, 2); end
+          '''': if not(doubleQuoted) then begin result := result+'''';                 inc(i, 2); end
                                      else begin parsedLength := 0; exit(''); end;
           else begin
             parsedLength := 0;
@@ -202,7 +202,7 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
           exit('');
         end;
         result := result+input [i];
-        Inc(i);
+        inc(i);
       end;
       parsedLength := i;
       if i>length(input) then parsedLength := 0;
@@ -221,10 +221,10 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
     i := 2;
     while result and (i<=length(s)) do
       if (s [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) then
-        Inc(i)
+        inc(i)
       else if (s [i] = '.') and dotAllowed then
         begin
-        Inc(i);
+        inc(i);
         dotAllowed := false;
         end
       else

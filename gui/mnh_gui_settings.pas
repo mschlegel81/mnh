@@ -260,7 +260,7 @@ FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
       begin
       polishHistory;
       i := 0;
-      while (i<length(fileHistory)) and (fileHistory [i]<>fileInEditor) do Inc(i);
+      while (i<length(fileHistory)) and (fileHistory [i]<>fileInEditor) do inc(i);
       if (i>=length(fileHistory)) then
         begin
         i := length(fileHistory)-1;
@@ -271,7 +271,7 @@ FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
         tmp := fileHistory [i];
         fileHistory[i] := fileHistory [i-1];
         fileHistory[i-1] := tmp;
-        Dec(i);
+        dec(i);
         end;
       result := true;
       end

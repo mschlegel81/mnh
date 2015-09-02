@@ -70,7 +70,7 @@ VAR secondaryPackages:array of P_package;
     pendingTasks:T_taskQueue;
 
 FUNCTION guessPackageForToken(CONST token:T_token):P_package;
-  VAR providerPath:AnsiString;
+  VAR providerPath:ansistring;
       packId:string;
       i:longint;
   begin

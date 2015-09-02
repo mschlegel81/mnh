@@ -223,8 +223,8 @@ FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
         while (i<=length(textToWrite)) and (j<length(block)) do
           begin
           block[j] := textToWrite [i];
-          Inc(i);
-          Inc(j);
+          inc(i);
+          inc(j);
           end;
         blockwrite(handle, block, j);
       end;
@@ -324,7 +324,7 @@ PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
     setLength(lineData, length(value));
     for i := 0 to length(value)-1 do
       lineData[i] := value [i];
-    Inc(version);
+    inc(version);
     repeat
       lock := 0
     until lock = 0;
@@ -338,7 +338,7 @@ PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock := ThreadID until lock = ThreadID;
     cleanCount := value.Count;
-    while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do Dec(cleanCount);
+    while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do dec(cleanCount);
     if length(lineData)<>cleanCount then
       begin
       setLength(lineData, cleanCount);
@@ -350,7 +350,7 @@ PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
       lineData[i] := value [i];
 
       end;
-    if changed then Inc(version);
+    if changed then inc(version);
     repeat lock := 0 until lock = 0;
   end;
 
@@ -363,7 +363,7 @@ PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
     until lock = ThreadID;
     setLength(lineData, 1);
     lineData[0] := value;
-    Inc(version);
+    inc(version);
     repeat
       lock := 0
     until lock = 0;
@@ -378,7 +378,7 @@ PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);
     until lock = ThreadID;
     setLength(lineData, length(lineData)+1);
     lineData[length(lineData)-1] := value;
-    Inc(version);
+    inc(version);
     repeat
       lock := 0
     until lock = 0;
@@ -427,13 +427,13 @@ PROCEDURE T_codeProvider.load;
       setLength(lineData, length(L));
       for i := 0 to length(L)-1 do lineData[i] := L [i];
       FileAge(filepath, syncedFileAge);
-      Inc(version);
+      inc(version);
       fileVersion := version;
       i := length(lineData);
       while (i>0) and (trim(lineData [i-1]) = '') do
         begin
         setLength(lineData, i-1);
-        Dec(i);
+        dec(i);
         end;
       end;
     repeat lock := 0 until lock = 0;

@@ -783,14 +783,14 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         while tempProcess.Running and (errorLevel<el3_evalError) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-          if n>0 then Inc(BytesRead, n)
+          if n>0 then inc(BytesRead, n)
                  else Sleep(10);
         end;
         if tempProcess.Running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-          if n>0 then Inc(BytesRead, n);
+          if n>0 then inc(BytesRead, n);
         until n<=0;
         result := (tempProcess.ExitStatus = 0);
       except

@@ -58,7 +58,7 @@ DESTRUCTOR T_cache.destroy;
   begin
     Clear;
     i := 0;
-    while (i<length(allCaches)) and (allCaches [i]<>@self) do Inc(i);
+    while (i<length(allCaches)) and (allCaches [i]<>@self) do inc(i);
     if (i<length(allCaches)) then begin
       allCaches[i] := allCaches [length(allCaches)-1];
       setLength(allCaches, length(allCaches)-1);
@@ -75,7 +75,7 @@ PROCEDURE T_cache.polishBin(CONST binIdx:longint);
       if (data[i].useCount<>0) then begin
         if i<>j then data[j] := data[i];
         data[j].useCount := data[j].useCount shr 1;
-        Inc(j);
+        inc(j);
       end else begin
         disposeLiteral(data[i].key);
         disposeLiteral(data[i].value);
@@ -102,7 +102,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST binIdx:longint; CONST valu
   begin
     with cached[binIdx] do begin
       i := 0;
-      while (i<length(data)) and not (key^.equals(data[i].key)) do Inc(i);
+      while (i<length(data)) and not (key^.equals(data[i].key)) do inc(i);
       if (i<length(data))
       then exit
       else setLength(data, i+1);
@@ -121,10 +121,10 @@ FUNCTION T_cache.get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
   begin
     with cached[binIdx] do begin
       i := 0;
-      while (i<length(data)) and not (key^.equals(data[i].key)) do Inc(i);
+      while (i<length(data)) and not (key^.equals(data[i].key)) do inc(i);
       if i>=length(data) then result:=nil
       else begin
-        Inc(data[i].useCount);
+        inc(data[i].useCount);
         result:=data[i].value;
       end;
     end;
