@@ -1,5 +1,5 @@
-./packages/basic.mnh@26: And(L:booleanList)->trueCount(L)=size(L);
-./packages/basic.mnh@31: Or(L:booleanList)->trueCount(L)>0;
+./packages/basic.mnh@27: And(L:booleanList)->trueCount(L)=size(L);
+./packages/basic.mnh@32: Or(L:booleanList)->trueCount(L)>0;
 ./packages/bool.mnh@57: main->main('trueCount($A|$B|$C)=1');
 ./packages/fileUtil.mnh@11: private containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
 ./packages/fileUtil.mnh@12: private containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};

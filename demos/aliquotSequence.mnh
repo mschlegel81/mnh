@@ -9,14 +9,14 @@ private classify(n:int)->
   begin
     local seq:=[n];
     local k:=dividerSum(n);
-    while(size(seq)<=32 and not(k in seq),begin
+    while(size(seq)<=16 and not(k in seq),begin
       seq|=k;
       k:=dividerSum(k);
     end);
     [k=head(seq)
      ? (size(seq)=1 ? "perfect" :
         size(seq)=2 ? "amicable" :
-        size(seq)&"-social")
+        "social")
      : (k=trailing(seq)
         ? (k=0 ? "terminating" : "aspiring")
         : (k in seq ? "cyclic" : "non-terminating"))

@@ -10,6 +10,7 @@ sum(L:numericList)->each(n,L,+);
 
 //*The running sum of the empty list is <code>[]</code>
 runningSum([])->[];
+//*Returns the running sum of all elements in <code>L</code>
 runningSum(L)->begin
   local sum:=0;
   each(e,L,sum+=e);
@@ -62,6 +63,8 @@ minus    (A:list,B:list)->A%not(each(a,A,a in B));
 indexes(A:list)->[0..size(A)-1];
 //*Returns <code>A</code> with reversed order of elements
 reverse(A:list)->A%[size(A)-1..0];
+//*Returns <code>A</code> transposed
+transpose(A:list)->each(i,[0..max(each(a,A,size(a)))-1],A%%i);
 //-----------------------------------------:List operations
 
 //*Ludolf's Number (commonly known as pi)
