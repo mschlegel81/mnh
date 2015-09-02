@@ -27,9 +27,7 @@ TYPE
     miAntiAliasing4: TMenuItem;
     miAntiAliasing5: TMenuItem;
     miAutoReset: TMenuItem;
-    errorStringGrid: TStringGrid;
     Panel1: TPanel;
-    SplitterH: TSplitter;
     submenuPlotGrid: TMenuItem;
     MenuItem17: TMenuItem;
     miXTics: TMenuItem;
@@ -69,7 +67,6 @@ TYPE
     miSaveAs: TMenuItem;
     OpenDialog: TOpenDialog;
     inputHighlighter,outputHighlighter:TSynMnhSyn;
-    ErrorGroupBox: TGroupBox;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
     submenuEditorAppearance: TMenuItem;
@@ -91,7 +88,6 @@ TYPE
     EditorTabSheet: TTabSheet;
     PlotTabSheet: TTabSheet;
     UpdateTimeTimer: TTimer;
-    PROCEDURE errorStringGridClick(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -213,22 +209,29 @@ VAR errorThroughput:specialize G_safeArray<T_storedError>;
 
 PROCEDURE writeDeclEcho(CONST s:ansistring);
   begin
-    output.append(C_DeclEchoHead+' '+s);
+    output.append(C_specialHeads[1].head+' '+s);
   end;
 
 PROCEDURE writeExprEcho(CONST s:ansistring);
   begin
-    output.append(C_ExprEchoHead+' '+s);
+    output.append(C_specialHeads[2].head+' '+s);
   end;
 
 PROCEDURE writeExprOut (CONST s:ansistring);
   begin
-    output.append(C_ExprOutHead+' '+s);
+    output.append(C_specialHeads[3].head+' '+s);
   end;
 
 PROCEDURE writePrint   (CONST list:T_arrayOfString);
   begin
     output.appendAll(list);
+  end;
+
+PROCEDURE writeError(CONST err:T_storedError);
+  begin
+    if err.errorLevel=elX_stateInfo
+    then output.append(C_specialHeads[5].head+ansistring(err.errorLocation)+' '+err.errorMessage)
+    else output.append(C_specialHeads[4].head+C_errorLevelTxt[err.errorLevel]+' '+ansistring(err.errorLocation)+' '+err.errorMessage)
   end;
 
 PROCEDURE clearPrint();
@@ -258,12 +261,6 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       needRepositioningOfHelp:boolean=false;
   begin
     if autosizingEnabled then begin
-      if errorStringGrid.RowCount=0
-      then temp:=0
-      else temp:=round(Width/3);
-      needRepositioningOfHelp:=temp<>ErrorGroupBox.Width;
-      ErrorGroupBox.Width:=temp;
-
       scrollbarHeight     :=InputEdit.Height-InputEdit.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .Lines.Count;
       idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.Lines.Count+1);
@@ -321,25 +318,8 @@ FUNCTION TMnhForm.flushThroughput:boolean;
       result:=true;
     end;
     //--------------------------------------------------------------------------
-    r0:=errorStringGrid.RowCount;
     errorThroughput.lock;
-    errorStringGrid.RowCount:=r0+errorThroughput.size;
-    for i:=0 to errorThroughput.size-1 do with errorThroughput[i] do begin
-      if i>=errorStringGrid.RowCount then errorStringGrid.RowCount:=i+1;
-      errorStringGrid.Cells[0,i+r0]:=C_errorLevelTxt[errorLevel];
-      errorStringGrid.Cells[1,i+r0]:=errorMessage;
-      if errorLocation.provider<>nil then try
-        if errorLocation.provider=@mainPackageProvider
-          then errorStringGrid.Cells[2,i+r0]:='#'
-          else errorStringGrid.Cells[2,i+r0]:='@'+errorLocation.provider^.filename;
-        errorStringGrid.Cells[3,i+r0]:=':'+IntToStr(errorLocation.line);
-        errorStringGrid.Cells[4,i+r0]:=','+IntToStr(errorLocation.column);
-      except
-        errorStringGrid.Cells[3,i+r0]:='';
-        errorStringGrid.Cells[4,i+r0]:='';
-      end;
-    end;
-    if errorThroughput.size>0 then errorStringGrid.AutoSizeColumns;
+    for i:=0 to errorThroughput.size-1 do writeError(errorThroughput[i]);
     errorThroughput.clear;
     errorThroughput.unlock;
   end;
@@ -450,7 +430,6 @@ PROCEDURE TMnhForm.startOfEvaluation;
     MnhForm.doConditionalPlotReset;
     errorThroughput.clear;
     MnhForm.OutputEdit.Lines.Clear;
-    MnhForm.errorStringGrid.RowCount:=0;
     if MnhForm.inputHighlighter.setMarkedLine(-1,-1) then MnhForm.Repaint;
   end;
 
@@ -498,17 +477,6 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     end;
     SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
-  end;
-
-PROCEDURE TMnhForm.errorStringGridClick(Sender: TObject);
-  VAR row:longint;
-  begin
-    row:=errorStringGrid.Selection.Top;
-    if (row>=0) and (row<errorStringGrid.RowCount) and (errorStringGrid.Cells[2,row]='#') then begin
-      if inputHighlighter.setMarkedLine(StrToIntDef(copy(errorStringGrid.Cells[3,row],2,20),0)-1,
-                                        StrToIntDef(copy(errorStringGrid.Cells[4,row],2,20),0)-1)
-      then Repaint;
-    end;
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);

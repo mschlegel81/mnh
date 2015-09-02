@@ -243,7 +243,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     end;
     if length(subrules)<=0 then exit;
     result:=result+'rule '+id+C_lineBreakChar+
-      'in '+subrules[0]^.declaredAt.provider^.getPath;
+      'in '+subrules[0]^.declaredAt.filename;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
   end;
 

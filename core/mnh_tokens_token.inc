@@ -422,7 +422,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
     blob.active:=false;
     lines:=provider^.getLines;
     setLength(result,0);
-    location.provider:=provider;
+    location.filename:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;

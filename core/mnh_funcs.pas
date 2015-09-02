@@ -956,9 +956,9 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    if (tokenLocation.provider=nil) or
-       (tokenLocation.provider^.getPath='') then result:=newStringLiteral('<Unknown>')
-                                            else result:=newStringLiteral(tokenLocation.provider^.getPath);
+    if (tokenLocation.filename='?') or
+       (tokenLocation.filename='') then result:=newStringLiteral('<Unknown>')
+                                   else result:=newStringLiteral(tokenLocation.filename);
   end;
 
 FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;

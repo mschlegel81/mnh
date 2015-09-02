@@ -70,16 +70,16 @@ VAR secondaryPackages:array of P_package;
     pendingTasks:T_taskQueue;
 
 FUNCTION guessPackageForToken(CONST token:T_token):P_package;
-  VAR provider:P_codeProvider;
+  VAR providerPath:AnsiString;
       packId:string;
       i:longint;
   begin
-    provider:=token.location.provider;
-    if provider=mainPackage.codeProvider then exit(@mainPackage);
+    providerPath:=token.location.filename;
+    if providerPath=mainPackage.codeProvider^.getPath then exit(@mainPackage);
     for i:=0 to length(secondaryPackages)-1 do
-      if provider=secondaryPackages[i]^.codeProvider then exit(secondaryPackages[i]);
-    if provider=nil then exit(@mainPackage);
-    packId:=provider^.id;
+      if providerPath=secondaryPackages[i]^.codeProvider^.getPath then exit(secondaryPackages[i]);
+    if (providerPath='?') or (providerPath='') then exit(@mainPackage);
+    packId:=filenameToPackageId(providerPath);
     if packId=mainPackageProvider.id then exit(@mainPackage);
     if packId=mainPackage.codeProvider^.id then exit(@mainPackage);
     for i:=0 to length(mainPackage.packageUses)-1 do
@@ -708,7 +708,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   begin
     try
       copyOfLine:=line;
-      lineLocation.provider:=mainPackage.codeProvider;
+      lineLocation.filename:=mainPackage.codeProvider^.getPath;
       lineLocation.line:=0;
       lineLocation.column:=1;
       if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin

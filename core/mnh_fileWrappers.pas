@@ -43,6 +43,7 @@ FUNCTION fileLines(CONST Name: ansistring; CONST firstIdx,lastIdx:longint; OUT a
 FUNCTION writeFile(CONST Name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_arrayOfString): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
+FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
 PROCEDURE setMainPackagePath(CONST path: ansistring);
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
@@ -288,6 +289,15 @@ FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_array
     end;
   end;
 
+FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
+  VAR i:longint;
+  begin
+    result:=ExtractFileName(filenameOrPath);
+    i := 1;
+    while (i<=length(result)) and (result [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do inc(i);
+    result := copy(result, 1, i-1);
+  end;
+
 { T_codeProvider }
 
 FUNCTION T_codeProvider.getLines: T_arrayOfString;
@@ -400,7 +410,7 @@ PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
 
 FUNCTION T_codeProvider.getPath: ansistring;
   begin
-    result := filepath;
+    result := ExpandFileName(filepath);
   end;
 
 PROCEDURE T_codeProvider.load;
@@ -474,14 +484,8 @@ FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
   end;
 
 FUNCTION T_codeProvider.id: ansistring;
-  VAR
-    i: longint;
   begin
-    result := filename;
-    i := 1;
-    while (i<=length(result)) and (result [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do
-      Inc(i);
-    result := copy(result, 1, i-1);
+    result:=filenameToPackageId(filepath);
   end;
 
 PROCEDURE T_codeProvider.Clear;

@@ -7,10 +7,18 @@ INTERFACE
 USES
   SysUtils, Classes, FileUtil, Controls, Graphics,
   SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litvar,mnh_constants;
+
 CONST
-  C_DeclEchoHead = #10+' in>';
-  C_ExprEchoHead = #10+'_in>';
-  C_ExprOutHead  = #10+'out>';
+  C_specialHeads: array [1..5] of record
+    head:string[5];
+    backgroundColor:longint;
+    foregroundColor:longint;
+  end =
+    ((head:#10+' in>';backgroundColor:$00D7D7D7; foregroundColor:maxlongint),
+     (head:#10+'_in>';backgroundColor:$00EBEBEB; foregroundColor:maxlongint),
+     (head:#10+'out>';backgroundColor:$00F5F5F5; foregroundColor:maxlongint),
+     (head:#10+'!! >';backgroundColor:$00F5F5F5; foregroundColor:maxlongint),
+     (head:#10+' > >';backgroundColor:$00F5F5F5; foregroundColor:maxlongint));
 
 TYPE
   TtkTokenKind = (
@@ -26,16 +34,16 @@ TYPE
     tkNonStringLiteral,
     tkString,
     tkModifier,
-    tkNull);
+    tkNull,
+    tkError,
+    tkStacktrace);
 
 TYPE
   { TSynMnhSyn }
 
   TSynMnhSyn = class(TSynCustomHighlighter)
   private
-    isDeclInput: boolean;
-    isExprInput: boolean;
-    isOutput:    boolean;
+    specialLineCase:byte;
     isMarked:    boolean;
     defaultToPrint:boolean;
 
@@ -94,20 +102,17 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkString          ]:=TSynHighlighterAttributes.create('String');
     styleTable[tkModifier        ]:=TSynHighlighterAttributes.create('Modifier');
     styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
+    styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
+    styleTable[tkStacktrace      ]:=TSynHighlighterAttributes.create('Stacktrace');
 
     styleTable[tkComment         ].style:=[fsItalic];
     styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
     styleTable[tkSpecialComment  ].style:=[fsItalic,fsBold,fsUnderline];
-  //styleTable[tkDefault         ].style:=[];
     styleTable[tkDollarIdentifier].style:=[fsItalic];
-  //styleTable[tkUserRule        ].style:=[];
     styleTable[tkBultinRule      ].style:=[fsBold];
     styleTable[tkSpecialRule     ].style:=[fsBold];
     styleTable[tkOperator        ].style:=[fsBold];
-  //styleTable[tkNonStringLiteral].style:=[];
-  //styleTable[tkString          ].style:=[];
     styleTable[tkModifier        ].style:=[fsBold];
-  //styleTable[tkNull            ].style:=[];
 
     styleTable[tkComment         ].Foreground:=$00999999;
     styleTable[tkDocComment      ].foreground:=$00999999;
@@ -122,6 +127,8 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkString          ].foreground:=$00008800;
     styleTable[tkModifier        ].foreground:=$000088FF;
     styleTable[tkNull            ].foreground:=$00000000;
+    styleTable[tkError           ].Foreground:=$000000FF; styleTable[tkError].Background:=$0000FFFF;
+    styleTable[tkStacktrace      ].Foreground:=$00FF0000;
 
     markedWord:='';
     markedLine:=-1;
@@ -144,14 +151,12 @@ FUNCTION TSynMnhSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttribut
 PROCEDURE TSynMnhSyn.SetLine(CONST NewValue: string; LineNumber: integer);
   begin
     inherited;
-    isDeclInput := false;
-    isExprInput := false;
-    isOutput := false;
+    specialLineCase:=0;
     fLine := PChar(NewValue);
     Run := 0;
     fLineNumber := LineNumber;
     Next;
-  end; { SetLine }
+  end;
 
 FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
   begin
@@ -182,26 +187,24 @@ PROCEDURE TSynMnhSyn.Next;
       if (run = 0) and (fLine [0] = #10) then begin
         i := 0;
         localId := '';
-        while (length(localId)<length(C_ExprOutHead)) and (fLine [i]<>#0) do begin
+        while (length(localId)<5) and (fLine [i]<>#0) do begin
           localId := localId+fLine [i];
           Inc(i);
         end;
-        if localId = C_DeclEchoHead then begin
-          isDeclInput := true;
-          run := i+1;
-          exit;
-        end else if localId = C_ExprEchoHead then begin
-          isExprInput := true;
-          run := i+1;
-          exit;
-        end else if localId = C_ExprOutHead then begin
-          isOutput := true;
-          run := i+1;
+        specialLineCase:=5;
+        while (specialLineCase>0) and (C_specialHeads[specialLineCase].head<>localId) do dec(specialLineCase);
+        if specialLineCase>0 then begin
+          run:=i+1;
+          if specialLineCase>=4 then begin
+            if specialLineCase=4 then fTokenID:=tkError
+                                 else fTokenID:=tkStacktrace;
+            while (fLine[run]<>#0) do inc(run);
+          end;
           exit;
         end;
       end;
 
-      if not(isDeclInput) and not(isExprInput) and not(isOutput) then begin
+      if (specialLineCase=0) then begin
         if fLine[run]=#0 then fTokenID := tkNull
         else begin
           while (fLine[run]<>#0) do inc(run);
@@ -370,21 +373,21 @@ FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
-  VAR bg: longint;
   begin
     result := styleTable [fTokenID];
     if not(atMarkedToken) then begin
-      bg := 255;
-      if isDeclInput then bg := bg-40;
-      if isExprInput then bg := bg-20;
-      if isOutput    then bg := bg-10;
-      if isMarked    then bg := bg-30;
-      result.Background := (bg or (bg shl 8) or (bg shl 16));
+      if specialLineCase in [1..3] then with C_specialHeads[specialLineCase] do begin
+        if backgroundColor<>maxLongint then result.background:=backgroundColor;
+        if foregroundColor<>maxLongint then result.Foreground:=foregroundColor;
+      end;
     end else begin
-      result.Background:=$00BBBBFF;
+      result.Background := $0000FFFF;
     end;
     if isMarked then result.FrameColor:=$00888888
-                else result.FrameColor:=clNone;
+    else begin
+      if atMarkedToken then result.FrameColor:=$00888888
+                       else result.FrameColor:=clNone;
+    end;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;
@@ -399,9 +402,7 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
-    isDeclInput := false;
-    isExprInput := false;
-    isOutput := false;
+    specialLineCase:=0;
     isMarked:=false;
   end;
 
