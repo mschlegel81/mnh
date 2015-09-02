@@ -53,8 +53,8 @@ true xor false = true
 'x'!=7 = false
 'x'>=7 = false
 'x'<=7 = false
-Ev.Error: Operator + is not supported for types int and string @opTest.mnh:15,4
-AbortState: stack: tt_procedureBlockBegin @opTest.mnh:6,7
-AbortState: expr.: tt_literal @opTest.mnh:15,5
-AbortState: expr.: tt_semicolon @opTest.mnh:15,8
-AbortState: expr.: tt_procedureBlockEnd @opTest.mnh:16,1
+Ev.Error: Operator + is not supported for types int and string @regTest/opTest.mnh:15,4
+AbortState: stack: tt_procedureBlockBegin @regTest/opTest.mnh:6,7
+AbortState: expr.: tt_literal @regTest/opTest.mnh:15,5
+AbortState: expr.: tt_semicolon @regTest/opTest.mnh:15,8
+AbortState: expr.: tt_procedureBlockEnd @regTest/opTest.mnh:16,1

@@ -45,7 +45,6 @@ FUNCTION writeFileLines(CONST Name: ansistring; CONST textToWrite: T_arrayOfStri
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
-PROCEDURE setMainPackagePath(CONST path: ansistring);
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_arrayOfString;
 
@@ -53,7 +52,6 @@ FUNCTION runCommandAsync(CONST executable: ansistring; CONST parameters: T_array
 PROCEDURE ensurePath(path:ansistring);
 
 IMPLEMENTATION
-VAR mainPackagePath: ansistring;
 PROCEDURE ensurePath(path:ansistring);
   VAR newDir:string;
       ensuredDir:string;
@@ -77,11 +75,6 @@ PROCEDURE ensurePath(path:ansistring);
                        else ensuredDir:=ensuredDir+DirectorySeparator+newDir;
       CreateDir(ensuredDir);
     end;
-  end;
-
-PROCEDURE setMainPackagePath(CONST path: ansistring);
-  begin
-    mainPackagePath := expandFileName(extractFilePath(path));
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
@@ -117,9 +110,9 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 
   begin
     result := '';
-    recursePath(expandFileName(extractFilePath(rootPath)));
-    if result = '' then recursePath(expandFileName(extractFilePath(ParamStr(0))));
-    if result = '' then recursePath(expandFileName(''));
+    recursePath(extractRelativePath(expandFileName(''),extractFilePath(rootPath)));
+    if result = '' then recursePath(extractRelativePath(expandFileName(''),extractFilePath(ParamStr(0))));
+    if result = '' then recursePath(extractRelativePath(expandFileName(''),''));
   end;
 
 FUNCTION locateSources: T_arrayOfString;
@@ -131,7 +124,7 @@ FUNCTION locateSources: T_arrayOfString;
           if (info.Name<>'.') and (info.Name<>'..') then
             recursePath(path+info.Name+DirectorySeparator);
         end else if uppercase(extractFileExt(info.Name)) = SCRIPT_EXTENSION then
-          appendIfNew(result,ExpandFileName(path+info.Name));
+          appendIfNew(result,extractRelativePath(expandFileName(''),path+info.Name));
       until (findNext(info)<>0);
       SysUtils.findClose(info);
     end;
@@ -410,7 +403,7 @@ PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
 
 FUNCTION T_codeProvider.getPath: ansistring;
   begin
-    result := ExpandFileName(filepath);
+    result := extractRelativePath(expandFileName(''),filepath);
   end;
 
 PROCEDURE T_codeProvider.load;
@@ -496,8 +489,5 @@ PROCEDURE T_codeProvider.Clear;
     fileVersion := 0;
     syncedFileAge := 0;
   end;
-
-INITIALIZATION
-  setMainPackagePath('');
 
 end.

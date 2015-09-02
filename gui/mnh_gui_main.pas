@@ -296,7 +296,6 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
 
 FUNCTION TMnhForm.flushThroughput:boolean;
   VAR i:longint;
-      r0:longint;
   begin
     result:=false;
     //--------------------------------------------------------------------------

@@ -112,7 +112,6 @@ FUNCTION main(p:pointer):ptrint;
 
 PROCEDURE ad_clearFile;
   begin
-    setMainPackagePath('');
     if evaluationState.value=es_running then haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.clear;
@@ -166,7 +165,6 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
   begin
     ad_haltEvaluation;
     if path<>mainPackageProvider.getPath then begin
-      setMainPackagePath(path);
       mainPackageProvider.setPath(path);
       mainPackageProvider.load;
       L.Clear;
@@ -181,7 +179,6 @@ PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
   begin
     L.SaveToFile(path);
     if path<>mainPackageProvider.getPath then begin
-      setMainPackagePath(path);
       mainPackageProvider.setPath(path);
     end;
     mainPackageProvider.setLines(L);
