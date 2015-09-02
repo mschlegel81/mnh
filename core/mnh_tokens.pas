@@ -631,10 +631,18 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
 
 PROCEDURE T_package.printHelpOnMain;
   VAR mainRule:P_rule;
+      docText:T_arrayOfString;
+      i:longint;
   begin
     if not(packageRules.containsKey('main',mainRule))
     then writeln('The package contains no main rule')
-    else writeln(mainRule^.getDocTxt);
+    else begin
+      docText:=split(mainRule^.getDocTxt,C_lineBreakChar);
+      for i:=0 to 1 do writeln(docText[i]);
+      dropFirst(docText,2);
+      docText:=formatTabs(docText);
+      for i:=0 to length(docText)-1 do writeln(docText[i]);
+    end;
   end;
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);

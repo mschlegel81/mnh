@@ -570,10 +570,10 @@ PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);
 
 FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
   begin
-    result:='@Line '+IntToStr(declaredAt.line)+': ';
+    result:='@Line '+IntToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+ruleId+pattern.toString+';';
-    if comment<>'' then result:=result+'//'+comment;
+    if comment<>'' then result:=result+C_tabChar+'//'+comment;
   end;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;

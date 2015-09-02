@@ -59,7 +59,6 @@ TYPE
     miFileHistory3: TMenuItem;
     miFileHistory4: TMenuItem;
     miFileHistory5: TMenuItem;
-    miOpenNpp: TMenuItem;
     miHaltEvalutaion: TMenuItem;
     miEvalModeDirect: TMenuItem;
     miEvaluateNow: TMenuItem;
@@ -129,7 +128,6 @@ TYPE
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
-    PROCEDURE miOpenNppClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
@@ -363,8 +361,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
       end;
       if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
         PopupNotifier1.Title:=underCursor.tokenText;
-        PopupNotifier1.Text:=replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar);
-        miOpenNpp.Enabled:=underCursor.declaredInFile<>'';
+        PopupNotifier1.Text:=replaceAll(replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar),C_tabChar,' ');
         if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
       end;
     end;
@@ -760,12 +757,6 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
       if SettingsForm.setFileInEditor(OpenDialog.FileName) then processFileHistory;
     end;
   end;
-
-PROCEDURE TMnhForm.miOpenNppClick(Sender: TObject);
-begin
-  if underCursor.declaredInFile<>'' then
-    SettingsForm.canOpenFile(underCursor.declaredInFile,underCursor.declaredInLine);
-end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin

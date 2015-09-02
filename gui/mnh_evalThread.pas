@@ -6,8 +6,6 @@ TYPE
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
-    declaredInLine:longint;
-    declaredInFile:ansistring;
   end;
 
 PROCEDURE ad_clearFile;
@@ -207,13 +205,10 @@ PROCEDURE ad_killEvaluationLoopSoftly;
   end;
 
 FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_tokenInfo;
-VAR token:T_token;
-    loc:T_tokenLocation;
+  VAR token:T_token;
   begin
     result.tokenText:='';
     result.tokenExplanation:='';
-    result.declaredInFile:='';
-    result.declaredInLine:=-1;
     if evaluationState.value<>es_running then begin
       token:=getTokenAt(line,column);
       result.tokenText:=token.txt;
@@ -221,14 +216,7 @@ VAR token:T_token;
       if (token.tokType=tt_intrinsicRulePointer) then begin
         result.tokenExplanation:=intrinsicRuleExplanationMap.get(token.txt);
       end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
-        loc:=P_rule(token.data)^.getLocationOfDeclaration;
-        result.declaredInLine:=loc.line;
-        if loc.provider<>nil then result.declaredInFile:=loc.provider^.getPath
-                             else result.declaredInFile:='?';
-        result.tokenExplanation:=result.tokenExplanation+'#@Line '+IntToStr(loc.line);
-        if trim(result.declaredInFile)<>'' then
-          result.tokenExplanation:=result.tokenExplanation+'#in '+result.declaredInFile;
-        result.tokenExplanation:=result.tokenExplanation+P_rule(token.data)^.getSubRuleHeaders;
+        result.tokenExplanation:=P_rule(token.data)^.getDocTxt;
       end else if (token.tokType=tt_identifier) then begin
         if token.txt='USE' then begin
           result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'

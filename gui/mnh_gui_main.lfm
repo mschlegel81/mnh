@@ -1127,12 +1127,6 @@ object MnhForm: TMnhForm
         ShortCut = 49235
         OnClick = miSaveAsClick
       end
-      object miOpenNpp: TMenuItem
-        Caption = 'Open externally'
-        Enabled = False
-        ShortCut = 113
-        OnClick = miOpenNppClick
-      end
       object MenuItem9: TMenuItem
         Caption = 'Plot'
         object miExportPlot: TMenuItem
