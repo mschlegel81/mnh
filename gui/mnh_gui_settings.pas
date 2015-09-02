@@ -16,13 +16,10 @@ TYPE
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;
-    NotepadFileNameEdit: TFileNameEdit;
     EditorFontDialog: TFontDialog;
-    Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     PageControl1: TPageControl;
-    TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
@@ -50,7 +47,6 @@ TYPE
 
     PROPERTY fontSize: longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName: string;
-    FUNCTION canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
     PROCEDURE saveSettings;
     PROCEDURE setFileContents(CONST Data: TStrings);
     PROCEDURE getFileContents(CONST Data: TStrings);
@@ -81,10 +77,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   begin
     if fileExists(settingsFileName) then begin
       ff.createToRead(settingsFileName);
-
-      NotepadFileNameEdit.FileName := ff.readAnsiString;
-      if (trim(NotepadFileNameEdit.Filename)='') or not(FileExistsUTF8(NotepadFileNameEdit.Filename))
-      then NotepadFileNameEdit.Filename := NOTEPAD_PATH.value;
 
       setFontSize(ff.readLongint);
       editorFontname := ff.readAnsiString;
@@ -164,15 +156,14 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
-    if EditorFontDialog.Execute then
-      begin
+    if EditorFontDialog.Execute then begin
       setFontSize(EditorFontDialog.Font.Size);
       editorFontname := EditorFontDialog.Font.Name;
 
       FontButton.Font.Name := editorFontname;
       FontButton.Font.Size := getFontSize;
       FontButton.Caption := editorFontname;
-      end;
+    end;
   end;
 
 PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
@@ -196,35 +187,12 @@ FUNCTION TSettingsForm.getEditorFontName: string;
     result := editorFontname;
   end;
 
-FUNCTION TSettingsForm.canOpenFile(CONST filename: ansistring; CONST lineNumber: longint): boolean;
-  VAR par: T_arrayOfString;
-  begin
-    if (trim(NotepadFileNameEdit.Filename)<>'') and not
-      (FileExistsUTF8(NotepadFileNameEdit.Filename)) then
-      NotepadFileNameEdit.Filename := NOTEPAD_PATH.value;
-    if (trim(NotepadFileNameEdit.Filename)<>'') then
-      begin
-      setLength(par, 1);
-      par[0] := filename;
-      if lineNumber>0 then
-        begin
-        setLength(par, 2);
-        par[1] := '-n'+IntToStr(lineNumber);
-        end;
-      result := runCommandAsync(NotepadFileNameEdit.FileName, par);
-      end
-    else
-      result := false;
-  end;
-
 PROCEDURE TSettingsForm.saveSettings;
   VAR
     ff: T_file;
     i: longint;
   begin
     ff.createToWrite(settingsFileName);
-
-    ff.writeAnsiString(NotepadFileNameEdit.FileName);
 
     ff.writeLongint(getFontSize);
     ff.writeAnsiString(editorFontname);

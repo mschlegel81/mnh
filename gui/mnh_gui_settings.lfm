@@ -15,36 +15,10 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     Align = alClient
     TabIndex = 0
     TabOrder = 0
-    object TabSheet1: TTabSheet
-      Caption = 'external programs'
-      ClientHeight = 212
-      ClientWidth = 312
-      object Label1: TLabel
-        Left = 8
-        Height = 15
-        Top = 8
-        Width = 65
-        Caption = 'Notepad++:'
-        ParentColor = False
-      end
-      object NotepadFileNameEdit: TFileNameEdit
-        Left = 80
-        Height = 23
-        Top = 8
-        Width = 208
-        FilterIndex = 0
-        HideDirectories = False
-        ButtonWidth = 23
-        NumGlyphs = 1
-        Anchors = [akTop, akLeft, akRight]
-        MaxLength = 0
-        TabOrder = 0
-      end
-    end
     object TabSheet2: TTabSheet
       Caption = 'display'
       ClientHeight = 212
