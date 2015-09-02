@@ -6,6 +6,7 @@
   P_subrule=^T_subrule;
   T_subrule=object
     private
+      comment:ansistring;
       called:boolean;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
@@ -35,6 +36,8 @@
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE complainAboutUncalled(CONST ruleId:ansistring);
+      FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
+      FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
   end;
 
 {$endif}
@@ -563,6 +566,21 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);
   begin
     if (typ=srt_normal_private) and not(called) then raiseError(el2_warning,'Unused private subrule '+ruleId+pattern.toString,declaredAt);
+  end;
+
+FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
+  begin
+    result:='@Line '+IntToStr(declaredAt.line)+': ';
+    if typ=srt_normal_private then result:=result+'private ';
+    result:=result+ruleId+pattern.toString+';';
+    if comment<>'' then result:=result+'//'+comment;
+  end;
+
+FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
+  begin
+    result:='<tr><td>@Line '+IntToStr(declaredAt.line)+': ';
+    if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
+    result:=result+'<code>'+ruleId+pattern.toString+'</code></td></tr>';
   end;
 
 {$endif}

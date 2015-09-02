@@ -1365,8 +1365,8 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
       setLength(keys,0);
     end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
   end;
-  
-FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;  
+
+FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: string;
         driveType:longint;
@@ -1382,12 +1382,12 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK] then begin
         result:=newListLiteral;
       end else exit(newVoidLiteral);
-      
+
       infoPair:=newListLiteral;
       infoPair^.append(newStringLiteral('drive'),false);
       infoPair^.append(newStringLiteral( drive ),false);
       P_listLiteral(result)^.append(infoPair,false);
-      
+
       infoPair:=newListLiteral;
       infoPair^.append(newStringLiteral('type'),false);
       case driveType of
@@ -1402,19 +1402,19 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       GetVolumeInformation(PChar(DriveLetter),
         Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
-      SetString(DriveLetter, Buf, StrLen(Buf));   
-      
+      SetString(DriveLetter, Buf, StrLen(Buf));
+
       infoPair:=newListLiteral;
       infoPair^.append(newStringLiteral('serial'),false);
       infoPair^.append(newIntLiteral(VolumeSerialNumber),false);
       P_listLiteral(result)^.append(infoPair,false);
-      
+
       infoPair:=newListLiteral;
       infoPair^.append(newStringLiteral('label'),false);
       infoPair^.append(newStringLiteral(DriveLetter),false);
       P_listLiteral(result)^.append(infoPair,false);
     end;
-  
+
   VAR c:char;
   begin
     result:=nil;
@@ -1501,7 +1501,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
-  
+
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');

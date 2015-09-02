@@ -24,6 +24,8 @@
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       PROCEDURE complainAboutUncalled;
+      FUNCTION getDocTxt:ansistring;
+      FUNCTION getDocHtml:ansistring;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -229,6 +231,40 @@ PROCEDURE T_rule.complainAboutUncalled;
   VAR i:longint;
   begin
     for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id);
+  end;
+
+FUNCTION T_rule.getDocTxt:ansistring;
+  VAR i:longint;
+  begin
+    case ruleType of
+      rt_memoized     : result:='memoized ';
+      rt_mutable      : result:='mutable ';
+      rt_synchronized : result:='synchronized ';
+    end;
+    if length(subrules)<=0 then exit;
+    result:=result+' rule '+id+C_lineBreakChar+
+      'in '+subrules[0]^.declaredAt.provider^.getPath;
+    for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
+  end;
+
+FUNCTION T_rule.getDocHtml:ansistring;
+  VAR anyPublic:boolean=false;
+      i:longint;
+  begin
+    result:='<table><tr class="ruleHead"><td>';
+    case ruleType of
+      rt_memoized     : result:=result+'<i>memoized </i>';
+      rt_mutable      : result:=result+'<i>mutable </i>';
+      rt_synchronized : result:=result+'<i>synchronized </i>';
+    end;
+    if id = 'main' then result:=result+'<b>'+id+'</b>' else result:=result+id;
+    result:=result+'</td></tr>';
+    for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin
+      anyPublic:=true;
+      result:=result+subrules[i]^.getDocHtml(id);
+    end;
+    result:=result+'</table>';
+    if not(anyPublic) then result:='';
   end;
 
 {$endif}

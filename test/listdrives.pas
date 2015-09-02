@@ -1,11 +1,11 @@
-program listdevices;
- 
+PROGRAM listdevices;
+
 {$ifdef fpc}{$mode delphi}{$endif}
 {$apptype console}
- 
-uses
+
+USES
   Windows;
- 
+
 FUNCTION getVolumeLabel(CONST DriveChar: Char): string;
   VAR
     NotUsed:     DWORD;
@@ -17,9 +17,9 @@ FUNCTION getVolumeLabel(CONST DriveChar: Char): string;
       GetVolumeInformation(PChar(DriveChar + ':\'),
       Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
       VolumeFlags, nil, 0);
-   
+
       writeln(VolumeSerialNumber,' ',VolumeFlags);
-      SetString(Result, Buf, StrLen(Buf));   
+      SetString(result, Buf, StrLen(Buf));
   end;
 
 FUNCTION getVolumeType(CONST drive:char):string;
@@ -35,12 +35,12 @@ FUNCTION getVolumeType(CONST drive:char):string;
       else result:='';
     end;
   end;
-  
-  
-var
+
+
+VAR
   Drive: Char;
-  
-  OldMode: Word; 
+
+  OldMode: word;
 begin
   writeln(DRIVE_REMOVABLE);
   writeln(DRIVE_FIXED);
@@ -51,20 +51,20 @@ begin
 
   WriteLn('The following drives were found in this computer:');
   WriteLn('');
- 
+
   // Empty Floppy or Zip drives can generate a Windows error.
   // We disable system errors during the listing.
   // Note that another way to skip these errors would be to use DEVICE_IO_CONTROL.
   OldMode := SetErrorMode(SEM_FAILCRITICALERRORS);
-  try 
- 
+  try
+
     // Search all drive letters
     for Drive := 'A' to 'Z' do
     begin
       writeln(drive,' ',getVolumeType(drive),' "',getVolumeLabel(drive),'"');
-//    
+//
 //      DriveLetter := Drive + ':\';
-// 
+//
 //      case GetDriveType(PChar(DriveLetter)) of
 //       DRIVE_REMOVABLE: WriteLn(DriveLetter, ' removable "', getVolumeLabel(Drive),'"');
 //       DRIVE_FIXED:     WriteLn(DriveLetter, ' fixed     "', getVolumeLabel(Drive),'"');
@@ -73,9 +73,9 @@ begin
 //       DRIVE_RAMDISK:   WriteLn(DriveLetter, ' RAM disk  "', getVolumeLabel(Drive),'"');
 //      end;
     end;
- 
+
   finally
     // Restores previous Windows error mode.
-    SetErrorMode(OldMode); 
+    SetErrorMode(OldMode);
   end;
 end.

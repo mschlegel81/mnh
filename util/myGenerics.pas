@@ -56,6 +56,7 @@ TYPE
   T_arrayOfString=array of ansistring;
   OPERATOR :=(x:ansistring):T_arrayOfString;
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
+  PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:string);
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);
   { G_stringKeyMap }
 TYPE
@@ -155,6 +156,17 @@ PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
   begin
     setLength(x,length(x)+1);
     x[length(x)-1]:=y;
+  end;
+
+PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:string);
+  VAR i:longint;
+  begin
+    i:=0;
+    while (i<length(x)) and (x[i]<>y) do inc(i);
+    if i>=length(x) then begin
+      setLength(x,length(x)+1);
+      x[length(x)-1]:=y;
+    end;
   end;
 
 PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);

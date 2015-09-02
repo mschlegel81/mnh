@@ -13,57 +13,45 @@ TYPE
     FUNCTION toHtml: string;
   end;
 
-  { T_userFunctionDocumentation }
-  T_userFunctionDocumentation = object
-    isMemoized: boolean;
-    id: ansistring;
-    subrules: array of record
-      isPrivate,isSynchronized,isMutable: boolean;
-      pattern, comment: ansistring;
-    end;
-    CONSTRUCTOR create(ruleId: ansistring);
-    DESTRUCTOR destroy;
-    PROCEDURE addSubRule(privateSubrule,sync,mut: boolean; pat, comment: ansistring);
-    FUNCTION toHtml: ansistring;
-    FUNCTION printHelpText(sourceName:ansistring):boolean;
-  end;
-
   P_userPackageDocumentation = ^T_userPackageDocumentation;
 
   { T_userPackageDocumentation }
 
   T_userPackageDocumentation = object
-    lastComment: ansistring;
-
     uid: ansistring;
     id: ansistring;
     docFileName: ansistring;
     rawUses: T_arrayOfString;
     usesPackage, usedByPackage: array of P_userPackageDocumentation;
-    rules: array of T_userFunctionDocumentation;
+    rulesDoc: array of ansistring;
+    isExecutable:boolean;
     CONSTRUCTOR create(path, Name: ansistring);
     DESTRUCTOR destroy;
     PROCEDURE addUses(OtherUid: ansistring);
     PROCEDURE addUsed(other: P_userPackageDocumentation);
     PROCEDURE resolveUses;
     FUNCTION toHtml: ansistring;
-    PROCEDURE addComment(CONST s: ansistring);
-    PROCEDURE addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate, isSynchronized, isMutable: boolean);
+    PROCEDURE addRuleDoc(CONST htmlDoc:ansistring);
     FUNCTION getHref: ansistring;
-    FUNCTION isExecutable: boolean;
-    PROCEDURE printHelpText;
   end;
 
 PROCEDURE writeUserPackageDocumentations;
-PROCEDURE writeUserPackageHelpText;
 PROCEDURE documentBuiltIns;
+PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
 
+PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
+  begin
+    setLength(packages,length(packages)+1);
+    packages[length(packages)-1]:=doc;
+  end;
+
 PROCEDURE locateHtml;
   CONST primary = 'doc';
-    secondary = '..'+DirectorySeparator+'doc';
+    VAR secondary:string;
   begin
+    secondary:=ExtractFilePath(paramstr(0))+DirectorySeparator+primary;
     if DirectoryExists(primary) then htmlRoot:=primary
     else if DirectoryExists(secondary) then htmlRoot:=secondary
     else htmlRoot:='';
@@ -93,7 +81,7 @@ FUNCTION prettyHtml(s: ansistring): ansistring;
 
 CONSTRUCTOR T_userPackageDocumentation.create(path, Name: ansistring);
   begin
-    lastComment:='';
+    isExecutable:=false;
     id:=Name;
     uid:=ExpandFileName(path);
     docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
@@ -101,19 +89,15 @@ CONSTRUCTOR T_userPackageDocumentation.create(path, Name: ansistring);
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
-    setLength(rules, 0);
-    setLength(packages, length(packages)+1);
-    packages[length(packages)-1]:=@self;
+    setLength(rulesDoc, 0);
   end;
 
 DESTRUCTOR T_userPackageDocumentation.destroy;
-  VAR i: longint;
   begin
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
-    for i:=0 to length(rules)-1 do rules[i].destroy;
-    setLength(rules, 0);
+    setLength(rulesDoc, 0);
   end;
 
 PROCEDURE T_userPackageDocumentation.addUses(OtherUid: ansistring);
@@ -185,120 +169,20 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
       '<tr class="oben"><td>Path: </td><td><a href="file:///'+replaceAll(uid,'\','/')+'"><code>'+uid+'</code></a></td></tr>'+
       '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
       '<tr class="oben"><td>Publishes: </td><td>';
-    for i:=0 to length(rules)-1 do result:=result+rules [i].toHtml;
+    for i:=0 to length(rulesDoc)-1 do result:=result+rulesDoc[i];
     result:=result+'</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+
       getUsed+'</td></tr></table>';
   end;
 
-PROCEDURE T_userPackageDocumentation.addComment(CONST s: ansistring);
+PROCEDURE T_userPackageDocumentation.addRuleDoc(CONST htmlDoc:ansistring);
   begin
-    if lastComment = '' then lastComment:=s
-    else lastComment:=lastComment+' '+s;
-  end;
-
-PROCEDURE T_userPackageDocumentation.addSubRule(CONST subruleId, pattern: ansistring; CONST isMemoized, isPrivate, isSynchronized, isMutable:boolean);
-  VAR ruleIdx: longint;
-  begin
-    if isPrivate then begin
-      lastComment:='';
-      exit;
-    end;
-    ruleIdx:=0;
-    while (ruleIdx<length(rules)) and (rules [ruleIdx].id<>subruleId) do Inc(ruleIdx);
-    if ruleIdx>=length(rules) then begin
-      setLength(rules, ruleIdx+1);
-      rules[ruleIdx].create(subruleId);
-    end;
-    if isMemoized then rules[ruleIdx].isMemoized:=true;
-    rules[ruleIdx].addSubRule(isPrivate or isMutable,isSynchronized, isMutable, pattern, lastComment);
-    lastComment:='';
+    setLength(rulesDoc,length(rulesDoc)+1);
+    rulesDoc[length(rulesDoc)-1]:=htmlDoc;
   end;
 
 FUNCTION T_userPackageDocumentation.getHref: ansistring;
   begin
     result:='<a href="#'+docFileName+'"><code>'+id+'</code></a>';
-  end;
-
-FUNCTION T_userPackageDocumentation.isExecutable: boolean;
-  VAR i: longint;
-  begin
-    result:=false;
-    for i:=0 to length(rules)-1 do if rules [i].id = 'main' then exit(true);
-  end;
-
-PROCEDURE T_userPackageDocumentation.printHelpText;
-  VAR i:longint;
-  begin
-    for i:=0 to length(rules)-1 do rules[i].printHelpText(uid);
-  end;
-
-{ T_userFunctionDocumentation }
-
-CONSTRUCTOR T_userFunctionDocumentation.create(ruleId: ansistring);
-  begin
-    id:=ruleId;
-    setLength(subrules, 0);
-  end;
-
-DESTRUCTOR T_userFunctionDocumentation.destroy;
-  begin
-    setLength(subrules, 0);
-  end;
-
-PROCEDURE T_userFunctionDocumentation.addSubRule(privateSubrule,sync,mut: boolean; pat, comment: ansistring);
-  begin
-    setLength(subrules, length(subrules)+1);
-    subrules[length(subrules)-1].isPrivate:=privateSubrule;
-    subrules[length(subrules)-1].isSynchronized:=sync;
-    subrules[length(subrules)-1].isMutable:=mut;
-    subrules[length(subrules)-1].pattern:=pat;
-    subrules[length(subrules)-1].comment:=comment;
-  end;
-
-FUNCTION T_userFunctionDocumentation.toHtml: ansistring;
-  VAR i: longint;
-      anyPublic:boolean=false;
-  begin
-    result:='<table><tr class="ruleHead"><td>';
-    if isMemoized then result:=result+'<i>memoized </i>';
-    if id = 'main' then result:=result+'<b>'+id+'</b>'
-    else result:=result+id;
-    result:=result+'</td></tr>';
-    for i:=0 to length(subrules)-1 do with subrules [i] do begin
-      if not(isPrivate) then anyPublic:=true;
-      result:=result+'<tr><td>';
-      if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
-      result:=result+'<code>';
-      if isPrivate then result:=result+'<i>private </i>';
-      if isMutable then result:=result+'<i>mutable </i>';
-      if isSynchronized then result:=result+'<i>synchronized </i>';
-      result:=result+id+pattern+'</code></td></tr>';
-    end;
-    result:=result+'</table>';
-    if not(anyPublic) then result:='';
-  end;
-
-FUNCTION T_userFunctionDocumentation.printHelpText(sourceName:ansistring):boolean;
-  FUNCTION noHtml(s:string):string;
-    FUNCTION removeTag(s:string; tag:string):string;
-      begin result:=replaceAll(replaceAll(s,'<'+tag+'>',''),'</'+tag+'>',''); end;
-    begin
-      result:=removeTag(s,'code');
-      result:=removeTag(result,'i');
-      result:=removeTag(result,'b');
-      result:=removeTag(result,'u');
-      result:=replaceAll(result,'</a>','');
-      result:=replaceAll(result,'<a href="','');
-      result:=replaceAll(result,'">',' ');
-    end;
-  VAR i:longint;
-  begin
-    if id<>'main' then exit(false);
-    writeln('main functions in ',sourceName);
-    for i:=0 to length(subrules)-1 do with subrules[i] do begin
-      if comment<>'' then writeln('  ',noHtml(comment),':');
-      writeln('    ',id,pattern);
-    end;
   end;
 
 CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
@@ -316,17 +200,6 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
 FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
   begin
     result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
-  end;
-
-PROCEDURE writeUserPackageHelpText;
-  VAR i:longint;
-  begin
-    writeln;
-    for i:=0 to length(packages)-1 do begin
-      packages[i]^.printHelpText;
-      dispose(packages[i],destroy);
-    end;
-    setLength(packages,0);
   end;
 
 PROCEDURE writeUserPackageDocumentations;

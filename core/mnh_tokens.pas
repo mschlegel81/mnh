@@ -20,14 +20,18 @@ TYPE
 
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
 
+  T_packageReference=object
+    id,path:ansistring;
+    pack:P_package;
+    CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation);
+    DESTRUCTOR destroy;
+  end;
+
   { T_package }
   T_package=object
     private
       packageRules,importedRules:T_ruleMap;
-      packageUses:array of record
-        id:ansistring;
-        pack:P_package;
-      end;
+      packageUses:array of T_packageReference;
       ready:boolean;
       codeProvider:P_codeProvider;
       loadedVersion:longint;
@@ -42,6 +46,8 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
+      FUNCTION getDoc:P_userPackageDocumentation;
+      PROCEDURE printHelpOnMain;
   end;
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
@@ -136,52 +142,51 @@ PROCEDURE finalizePackages;
     packagesAreFinalized:=true;
   end;
 
-FUNCTION loadPackage(CONST packageId:ansistring; CONST tokenLocation:T_tokenLocation; VAR recycler:T_tokenRecycler):P_package;
+PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLocation; VAR recycler:T_tokenRecycler);
   VAR i:longint;
-      newSourceName:ansistring;
       newSource:P_codeProvider=nil;
   begin
     for i:=0 to length(secondaryPackages)-1 do
-      if secondaryPackages[i]^.codeProvider^.id = packageId then begin
+      if secondaryPackages[i]^.codeProvider^.id = pack.id then begin
         if secondaryPackages[i]^.ready then begin
           if secondaryPackages[i]^.needReload then begin
             secondaryPackages[i]^.clear;
             secondaryPackages[i]^.load(lu_forImport,recycler);
           end;
-          exit(secondaryPackages[i]);
+          pack.pack:=secondaryPackages[i];
+          exit;
         end else begin
-          raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+packageId+'"',tokenLocation);
-          exit(nil);
+          raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+pack.id+'"',tokenLocation);
+          exit;
         end;
       end;
-
-
-    if tokenLocation.provider<>nil
-    then newSourceName:=locateSource(tokenLocation.provider^.getPath,packageId)
-    else newSourceName:=locateSource(''                             ,packageId);
-    if newSourceName<>'' then begin
-      new(newSource,create(newSourceName));
-      new(result,create(newSource));
-      setLength(secondaryPackages,length(secondaryPackages)+1);
-      secondaryPackages[length(secondaryPackages)-1]:=result;
-      result^.load(lu_forImport,recycler);
-    end else begin
-      raiseError(el4_parsingError,'Cannot locate package for id "'+packageId+'"',tokenLocation);
-      result:=nil;
-    end;
+    new(newSource,create(pack.path));
+    new(pack.pack,create(newSource));
+    setLength(secondaryPackages,length(secondaryPackages)+1);
+    secondaryPackages[length(secondaryPackages)-1]:=pack.pack;
+    pack.pack^.load(lu_forImport,recycler);
   end;
+
+CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation);
+  begin
+    id:=packId;
+    path:=locateSource(root,id);
+    if path='' then raiseError(el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
+    pack:=nil;
+  end;
+
+DESTRUCTOR T_packageReference.destroy;
+  begin
+    id:='';
+    path:='';
+    pack:=nil;
+  end;
+
 
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler);
   VAR isFirstLine:boolean=true;
-      doc:P_userPackageDocumentation;
       batchMode:boolean=false;
-
-  PROCEDURE pseudoLoadPackage(id:ansistring);
-    VAR newSourceName:ansistring;
-    begin
-      newSourceName:=locateSource(codeProvider^.getPath,id);
-      if newSourceName<>'' then doc^.addUses(newSourceName);
-    end;
+      lastComment:ansistring;
 
   PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
@@ -206,21 +211,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
             while (i<length(packageUses)) and (packageUses[i].id<>newId) do inc(i);
             if i<length(packageUses) then for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1]
                                      else setLength(packageUses,length(packageUses)+1);
-            with packageUses[length(packageUses)-1] do begin
-              id:=first^.txt;
-              pack:=nil;
-            end;
+            packageUses[length(packageUses)-1].create(codeProvider^.getPath,first^.txt,first^.location);
           end else if first^.tokType<>tt_separatorComma then begin
             raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
             exit;
           end;
           temp:=first; first:=recycler.disposeToken(temp);
         end;
-        if usecase=lu_forDocGeneration then begin
-          for i:=0 to length(packageUses)-1 do pseudoLoadPackage(packageUses[i].id);
-          setLength(packageUses,0);
-        end else begin
-          for i:=0 to length(packageUses)-1 do with packageUses[i] do pack:=loadPackage(id,locationForErrorFeedback,recycler);
+        if usecase<>lu_forDocGeneration then begin
+          for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,recycler);
           i:=0;
           while i<length(packageUses) do begin
             if packageUses[i].pack=nil then begin
@@ -375,13 +374,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsSynchronized,ruleDeclarationStart);
           if errorLevel<el3_evalError then begin
             new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
+            subRule^.comment:=lastComment; lastComment:='';
             if ruleGroup^.ruleType=rt_mutable
             then begin
               ruleGroup^.setMutableValue(subRule^.getInlineValue);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subrule);
             first:=nil;
-            if usecase=lu_forDocGeneration then doc^.addSubRule(ruleId,subRule^.pattern.toString,ruleIsMemoized,ruleIsPrivate,ruleIsSynchronized,ruleIsMutable);
           end else if errorLevel<el5_systemError then
             recycler.cascadeDisposeToken(first)
           else
@@ -435,7 +434,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
            (currentToken.tokType=tt_eol) then begin
           if      currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
           else if currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
-          else if (usecase=lu_forDocGeneration) and (currentToken.txt<>'') then doc^.addComment(currentToken.txt);
+          else if (currentToken.txt<>'') then lastComment:=currentToken.txt;
           if batchMode then hadBatchModeParts:=true;
         end;
       until (currentTokenIndex>=length(fileTokens)) or
@@ -445,7 +444,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
-    if usecase=lu_forDocGeneration then new(doc,create(codeProvider^.getPath,codeProvider^.id));
     clear;
     loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
     fileTokens:=tokenizeAll(codeProvider,@self);
@@ -617,6 +615,27 @@ PROCEDURE T_package.complainAboutUncalled;
     setLength(ruleList,0);
   end;
 
+FUNCTION T_package.getDoc:P_userPackageDocumentation;
+  VAR ruleList:array of P_rule;
+      i:longint;
+  begin
+    new(result,create(codeProvider^.getPath,codeProvider^.id));
+    ruleList:=packageRules.valueSet;
+    for i:=0 to length(ruleList)-1 do begin
+      result^.addRuleDoc(ruleList[i]^.getDocHtml);
+      if ruleList[i]^.id='main' then result^.isExecutable:=true;
+    end;
+    setLength(ruleList,0);
+    for i:=0 to length(packageUses)-1 do result^.addUses(packageUses[i].path);
+  end;
+
+PROCEDURE T_package.printHelpOnMain;
+  VAR mainRule:P_rule;
+  begin
+    if not(packageRules.containsKey('main',mainRule))
+    then writeln('The package contains no main rule')
+    else writeln(mainRule^.getDocTxt);
+  end;
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
   VAR t:P_token;
@@ -667,7 +686,7 @@ PROCEDURE printMainPackageDocText;
   begin
     mainPackageProvider.load;
     reloadMainPackage(lu_forDocGeneration);
-    writeUserPackageHelpText;
+    mainPackage.printHelpOnMain;
   end;
 
 FUNCTION getMainPackage: P_package;
@@ -710,6 +729,7 @@ PROCEDURE findAndDocumentAllPackages;
       new(provider,create(sourceNames[i]));
       p.create(provider);
       p.load(lu_forDocGeneration,recycler);
+      addPackageDoc(p.getDoc);
       p.destroy;
     end;
     writeUserPackageDocumentations;

@@ -117,29 +117,28 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   begin
     result := '';
     recursePath(expandFileName(extractFilePath(rootPath)));
+    if result = '' then recursePath(expandFileName(extractFilePath(ParamStr(0))));
     if result = '' then recursePath(expandFileName(''));
   end;
 
 FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
-    VAR
-      info: TSearchRec;
+    VAR info: TSearchRec;
     begin
       if findFirst(path+'*', faAnyFile, info) = 0 then repeat
         if (info.attr and faDirectory) = faDirectory then begin
           if (info.Name<>'.') and (info.Name<>'..') then
             recursePath(path+info.Name+DirectorySeparator);
         end else if uppercase(extractFileExt(info.Name)) = SCRIPT_EXTENSION then
-          append(result,path+info.Name);
+          appendIfNew(result,ExpandFileName(path+info.Name));
       until (findNext(info)<>0);
       SysUtils.findClose(info);
     end;
 
   begin
-    setLength(result, 0);  recursePath('');
-    if length(result) = 0 then recursePath('..'+DirectorySeparator);
-    if length(result) = 0 then
-      recursePath('..'+DirectorySeparator+'..'+DirectorySeparator);
+    setLength(result, 0);
+    recursePath('');
+    recursePath(ExtractFilePath(ParamStr(0)));
   end;
 
 
