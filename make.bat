@@ -6,7 +6,6 @@
 @set delp=C:\lazarus32\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin32 gui\lib\i386-win32 gui\lib\x86_64-win64 gui
 @set fpc32=C:\lazarus32\fpc\2.6.4\bin\i386-win32\fpc
 @set fpc64=c:\lazarus64\fpc\2.6.4\bin\x86_64-win64\fpc.exe
-@rem @set optimize=-O2 -CX -XX -Scghi2
 @set optimize=-O3 -CX -XX -Si
 @set debug=-g -gl -Si -ddebugMode
 @set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scgh -Fucore -Fuutil -Ficore
@@ -109,7 +108,10 @@
 @goto loop
 
 :smartbuild
-@if not exist mnh_light.exe call make 64o
+@if exist mnh_light.exe goto smartbuildSkipCompile
+@%delp%
+@%fpc64% consoles\mnh_console.pas -o.\mnh_light.exe %optimize% %guiOpt64%
+:smartbuildSkipCompile
 @move mnh_light.exe temp.exe
 @temp.exe make_mnh.mnh
 @del temp.exe

@@ -88,7 +88,7 @@ main->splitFileName(executor)%"filename" = "temp.exe"
     execAsync('cmd',['/C','make.bat','64o','32o']);
     make_notepad_xml;
     local allFine:=each(exe,binaries,and,runTestWhenExists(exe));
-    allFine ? execAsync('cmd',['/C','make','distro'])
+    allFine ? execPipeless('cmd',['/C','make','distro'])
             : print('Some errors ocurred. Skipping distro packaging');
   end
 : print('Sorry... this program is intended to be run from a temporary copy of mnh');
