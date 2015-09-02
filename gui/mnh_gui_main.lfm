@@ -37,49 +37,21 @@ object MnhForm: TMnhForm
       Caption = 'Editor'
       ClientHeight = 297
       ClientWidth = 471
-      object ErrorGroupBox: TGroupBox
-        Left = 390
-        Height = 297
-        Top = 0
-        Width = 81
-        Align = alRight
-        Caption = 'Errors'
-        ClientHeight = 279
-        ClientWidth = 77
-        TabOrder = 0
-        object errorStringGrid: TStringGrid
-          Left = 0
-          Height = 279
-          Top = 0
-          Width = 77
-          Align = alClient
-          ColCount = 0
-          DefaultRowHeight = 15
-          FixedCols = 0
-          FixedRows = 0
-          GridLineWidth = 0
-          Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect, goSmoothScroll]
-          RowCount = 0
-          TabAdvance = aaDown
-          TabOrder = 0
-          OnClick = errorStringGridClick
-        end
-      end
       object Panel1: TPanel
         Left = 0
         Height = 297
         Top = 0
-        Width = 385
+        Width = 471
         Align = alClient
         BevelOuter = bvNone
         ClientHeight = 297
-        ClientWidth = 385
-        TabOrder = 1
+        ClientWidth = 471
+        TabOrder = 0
         inline InputEdit: TSynEdit
           Left = 0
           Height = 150
           Top = 0
-          Width = 385
+          Width = 471
           Align = alTop
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -570,7 +542,7 @@ object MnhForm: TMnhForm
           Left = 0
           Height = 5
           Top = 150
-          Width = 385
+          Width = 471
           Align = alTop
           OnMoved = Splitter1Moved
           ResizeAnchor = akTop
@@ -579,7 +551,7 @@ object MnhForm: TMnhForm
           Left = 0
           Height = 142
           Top = 155
-          Width = 385
+          Width = 471
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -1069,15 +1041,6 @@ object MnhForm: TMnhForm
             end
           end
         end
-      end
-      object SplitterH: TSplitter
-        Left = 385
-        Height = 297
-        Top = 0
-        Width = 5
-        Align = alRight
-        OnMoved = SplitterHMoved
-        ResizeAnchor = akRight
       end
     end
     object PlotTabSheet: TTabSheet
