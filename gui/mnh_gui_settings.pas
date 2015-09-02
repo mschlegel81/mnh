@@ -11,6 +11,12 @@ USES
 TYPE
 
   { TSettingsForm }
+  T_outputBehaviour= record
+    doEchoInput: boolean;
+    doEchoDeclaration: boolean;
+    doShowExpressionOut: boolean;
+  end;
+
 
   TSettingsForm = class(TForm)
     FontButton: TButton;
@@ -35,10 +41,7 @@ TYPE
     mainForm: record  top, left, Width, Height: longint;
       isFullscreen: boolean;
     end;
-    outputBehaviour: record  doEchoInput: boolean;
-      doEchoDeclaration: boolean;
-      doShowExpressionOut: boolean;
-    end;
+    outputBehaviour:T_outputBehaviour;
     instantEvaluation: boolean;
     resetPlotOnEvaluation: boolean;
 

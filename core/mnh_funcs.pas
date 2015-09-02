@@ -50,7 +50,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     system.EnterCriticalSection(print_cs);
-    mnh_out_adapters.clearConsole();
+    mnh_out_adapters.outAdapter^.clearConsole();
     system.LeaveCriticalsection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -68,7 +68,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.EnterCriticalSection(print_cs);
-    writePrint(split(stringToPrint));
+    outAdapter^.printOut(formatTabs(split(stringToPrint)));
     system.LeaveCriticalsection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -1231,7 +1231,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       system.EnterCriticalSection(print_cs);
-      writePrint(reSplit(resultString));
+      outAdapter^.printOut(formatTabs(reSplit(resultString)));
       system.LeaveCriticalsection(print_cs);
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);

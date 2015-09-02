@@ -8,7 +8,7 @@
 @set fpc64=c:\lazarus64\fpc\2.6.4\bin\x86_64-win64\fpc.exe
 @rem @set optimize=-O2 -CX -XX -Scghi2
 @set optimize=-O3 -CX -XX -Si
-@set debug=-g -glh -Si -ddebugMode
+@set debug=-g -gl -Si -ddebugMode
 @set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scgh -Fucore -Fuutil -Ficore
 @set guiOpt32=-FuC:\lazarus32\components\synedit\units\i386-win32\win32     -FuC:\lazarus32\lcl\units\i386-win32\win32     -FuC:\lazarus32\lcl\units\i386-win32     -FuC:\lazarus32\components\lazutils\lib\i386-win32     -FuC:\lazarus32\packager\units\i386-win32     %guiOpt%
 @set guiOpt64=-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64 -FuC:\lazarus64\components\lazutils\lib\x86_64-win64 -FuC:\lazarus64\packager\units\x86_64-win64 %guiOpt% -dversion64bit

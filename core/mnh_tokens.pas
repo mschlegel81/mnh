@@ -408,14 +408,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken<>nil then begin
         predigest(assignmentToken,@self,recycler);
-        writeDeclEcho(tokensToString(first));
+        outAdapter^.writeEcho(eld_echoDeclaration, tokensToString(first));
         parseRule;
       end else begin
         if (usecase=lu_forDirectExecution) or (batchMode) then begin
           predigest(first,@self,recycler);
-          writeExprEcho(tokensToString(first));
+          outAdapter^.writeEcho(ele_echoInput, tokensToString(first));
           reduceExpression(first,0,recycler);
-          if first<>nil then writeExprOut(tokensToString(first));
+          if first<>nil then outAdapter^.writeEcho(elo_echoOutput, tokensToString(first));
         end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
       end;
       if first<>nil then recycler.cascadeDisposeToken(first);

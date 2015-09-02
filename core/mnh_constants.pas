@@ -296,7 +296,13 @@ CONST
     'There is nothing plausible to parse, e.g. a comment');
 
 TYPE
-  T_errorLevel = (el0_allOkay,
+  T_messageTypeOrErrorLevel = (
+    elc_clearConsole,
+    elp_printline,
+    ele_echoInput,
+    eld_echoDeclaration,
+    elo_echoOutput,
+    el0_allOkay,
     el1_note,
     el2_warning,
     el3_evalError,
@@ -310,7 +316,13 @@ CONST
   ALL_PARAMETERS_TOKEN_TEXT='$params';
   ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
   REMAINING_PARAMETERS_IDX=ALL_PARAMETERS_PAR_IDX-1;
-  C_errorLevelTxt: array[T_errorLevel] of string = ('          ',
+  C_errorLevelTxt: array[T_messageTypeOrErrorLevel] of string = (
+    '',//cls
+    '',//out
+    ' in>',//echo input
+    '_in>',//echo declaration
+    'out>',//echo output
+    '          ', //el0
     'Note    : ',
     'Warning : ',
     'Ev.Error: ',

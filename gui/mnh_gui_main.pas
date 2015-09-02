@@ -174,7 +174,6 @@ TYPE
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     PROCEDURE autosizeBlocks(CONST forceOutputFocus:boolean);
-    FUNCTION flushThroughput:boolean;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
 
@@ -189,14 +188,31 @@ TYPE
     { public declarations }
   end;
 
+  { T_guiOutAdapter }
+
+  T_guiOutAdapter=object(T_abstractOutAdapter)
+    outputBehaviour:T_outputBehaviour;
+    storedMessages:array of T_storedMessage;
+    cs:TRTLCriticalSection;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE clearConsole; virtual;
+    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual;
+    PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
+    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
+    PROCEDURE appendSingleMessage(CONST message:T_storedMessage);
+    PROCEDURE clearMessages;
+    FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
+    PROCEDURE flushClear(VAR syn:TSynEdit);
+    PROCEDURE loadSettings;
+  end;
+
 VAR
   MnhForm: TMnhForm;
 
 PROCEDURE lateInitialization;
 IMPLEMENTATION
-VAR errorThroughput:specialize G_safeArray<T_storedError>;
-    output         :specialize G_safeArray<ansistring>;
-    wantClear      :specialize G_safeVar<boolean>;
+VAR guiOutAdapter: T_guiOutAdapter;
     plotSubsystem:record
       rendering:boolean;
       mouseUpTriggersPlot:boolean;
@@ -207,48 +223,159 @@ VAR errorThroughput:specialize G_safeArray<T_storedError>;
 
 {$R *.lfm}
 
-PROCEDURE writeDeclEcho(CONST s:ansistring);
+{ T_guiOutAdapter }
+
+CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    output.append(C_specialHeads[1].head+' '+s);
+    system.InitCriticalSection(cs);
+    setLength(storedMessages,0);
   end;
 
-PROCEDURE writeExprEcho(CONST s:ansistring);
+DESTRUCTOR T_guiOutAdapter.destroy;
   begin
-    output.append(C_specialHeads[2].head+' '+s);
+    system.DoneCriticalsection(cs);
+    clearMessages;
   end;
 
-PROCEDURE writeExprOut (CONST s:ansistring);
+PROCEDURE T_guiOutAdapter.clearConsole;
+  VAR msg:T_storedMessage;
   begin
-    output.append(C_specialHeads[3].head+' '+s);
+    system.EnterCriticalsection(cs);
+    clearMessages;
+    msg.messageType:=elc_clearConsole;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
   end;
 
-PROCEDURE writePrint   (CONST list:T_arrayOfString);
+PROCEDURE T_guiOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; CONST s: ansistring);
+  VAR msg:T_storedMessage;
   begin
-    output.appendAll(list);
+    case mt of
+      elo_echoOutput     : if not(outputBehaviour.doShowExpressionOut) then exit;
+      eld_echoDeclaration: if not(outputBehaviour.doEchoDeclaration) then exit;
+      ele_echoInput      : if not(outputBehaviour.doEchoInput) then exit;
+    end;
+    system.EnterCriticalsection(cs);
+    msg.messageType:=mt;
+    msg.simpleMessage:=s;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
   end;
 
-PROCEDURE writeError(CONST err:T_storedError);
+PROCEDURE T_guiOutAdapter.printOut(CONST s: T_arrayOfString);
+  VAR msg:T_storedMessage;
   begin
-    if err.errorLevel=elX_stateInfo
-    then output.append(C_specialHeads[5].head+ansistring(err.errorLocation)+' '+err.errorMessage)
-    else output.append(C_specialHeads[4].head+C_errorLevelTxt[err.errorLevel]+' '+ansistring(err.errorLocation)+' '+err.errorMessage)
+    system.EnterCriticalsection(cs);
+    msg.messageType:=elp_printline;
+    msg.multiMessage:=s;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
   end;
 
-PROCEDURE clearPrint();
-  begin
-    wantClear.value:=true;
-    output.clear;
-  end;
-
-
-PROCEDURE logError(CONST error:T_storedError);
+PROCEDURE T_guiOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+  VAR msg:T_storedMessage;
   begin
     {$ifdef debugMode}
-    mnh_out_adapters.plainStdErrOut(error);
+    consoleOutAdapter.errorOut(level,errorMessage,errorLocation);
     {$endif}
-    if error.errorLevel<el2_warning then exit;
-    errorThroughput.append(error);
+    if level<el2_warning then exit;
+    system.EnterCriticalsection(cs);
+    msg.messageType:=level;
+    msg.simpleMessage:=errorMessage;
+    msg.location:=errorLocation;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
   end;
+
+PROCEDURE T_guiOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+  begin
+    setLength(storedMessages,length(storedMessages)+1);
+    storedMessages[length(storedMessages)-1]:=message;
+  end;
+
+PROCEDURE T_guiOutAdapter.clearMessages;
+  begin
+    setLength(storedMessages,0);
+  end;
+
+FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
+  VAR i,j:longint;
+  begin
+    system.EnterCriticalsection(cs);
+    result:=length(storedMessages)>0;
+    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
+      elc_clearConsole: syn.ClearAll;
+      elp_printline: for j:=0 to length(multiMessage)-1 do syn.Lines.Append(multiMessage[j]);
+      ele_echoInput:       syn.Lines.Append(C_specialHeads[2].head+' '+simpleMessage);
+      eld_echoDeclaration: syn.Lines.Append(C_specialHeads[1].head+' '+simpleMessage);
+      elo_echoOutput:      syn.Lines.Append(C_specialHeads[3].head+' '+simpleMessage);
+      el0_allOkay,
+      el1_note,
+      el2_warning,
+      el3_evalError,
+      el4_parsingError,
+      el5_systemError: syn.Lines.append(C_specialHeads[4].head+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+      elX_stateInfo:   syn.Lines.append(C_specialHeads[5].head+ansistring(location)+' '+simpleMessage);
+    end;
+    clearMessages;
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_guiOutAdapter.flushClear(VAR syn: TSynEdit);
+  begin
+    system.EnterCriticalsection(cs);
+    syn.ClearAll;
+    clearMessages;
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_guiOutAdapter.loadSettings;
+  begin
+    outputBehaviour:=SettingsForm.outputBehaviour;
+  end;
+
+//PROCEDURE writeDeclEcho(CONST s:ansistring);
+//  begin
+//    output.append(C_specialHeads[1].head+' '+s);
+//  end;
+//
+//PROCEDURE writeExprEcho(CONST s:ansistring);
+//  begin
+//    output.append(C_specialHeads[2].head+' '+s);
+//  end;
+//
+//PROCEDURE writeExprOut (CONST s:ansistring);
+//  begin
+//    output.append(C_specialHeads[3].head+' '+s);
+//  end;
+//
+//PROCEDURE writePrint   (CONST list:T_arrayOfString);
+//  begin
+//    output.appendAll(list);
+//  end;
+//
+//PROCEDURE writeError(CONST err:T_storedError);
+//  begin
+//    if err.errorLevel=elX_stateInfo
+//    then output.append(C_specialHeads[5].head+ansistring(err.errorLocation)+' '+err.errorMessage)
+//    else output.append(C_specialHeads[4].head+C_errorLevelTxt[err.errorLevel]+' '+ansistring(err.errorLocation)+' '+err.errorMessage)
+//  end;
+
+//PROCEDURE clearPrint();
+//  begin
+//    wantClear.value:=true;
+//    output.clear;
+//  end;
+
+
+//PROCEDURE logError(CONST error:T_storedError);
+//  begin
+//    {$ifdef debugMode}
+//    mnh_out_adapters.plainStdErrOut(error);
+//    {$endif}
+//    if error.errorLevel<el2_warning then exit;
+//    errorThroughput.append(error);
+//  end;
 
 PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
   CONST SAMPLE_TEXT='1!gPQ|';
@@ -292,35 +419,6 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       end;
       if PopupNotifier1.Visible and needRepositioningOfHelp then positionHelpNotifier;
     end;
-  end;
-
-FUNCTION TMnhForm.flushThroughput:boolean;
-  VAR i:longint;
-  begin
-    result:=false;
-    //--------------------------------------------------------------------------
-    if wantClear.value then begin
-      wantClear.value:=false;
-      OutputEdit.ClearAll;
-      result:=true;
-    end;
-    //--------------------------------------------------------------------------
-    if output.size>0 then begin
-      OutputEdit.BeginUpdate();
-      output.lock;
-      for i:=0 to output.size-1 do OutputEdit.Lines.Append(output[i]);
-      output.clear;
-      output.unlock;
-      OutputEdit.ExecuteCommand(ecEditorBottom,' ',nil);
-      OutputEdit.ExecuteCommand(ecLineStart,' ',nil);
-      OutputEdit.EndUpdate;
-      result:=true;
-    end;
-    //--------------------------------------------------------------------------
-    errorThroughput.lock;
-    for i:=0 to errorThroughput.size-1 do writeError(errorThroughput[i]);
-    errorThroughput.clear;
-    errorThroughput.unlock;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
@@ -425,11 +523,10 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.startOfEvaluation;
   begin
-    flushThroughput;
+    guiOutAdapter.flushClear(OutputEdit);
     autosizingEnabled:=true;
-    MnhForm.doConditionalPlotReset;
-    errorThroughput.clear;
-    MnhForm.OutputEdit.Lines.Clear;
+    doConditionalPlotReset;
+    OutputEdit.Lines.Clear;
   end;
 
 { TMnhForm }
@@ -458,12 +555,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.Lines.Append('       at: '+{$I %TIME%});
     OutputEdit.Lines.Append('       with FPC'+{$I %FPCVERSION%});
     OutputEdit.Lines.Append('       for '+{$I %FPCTARGET%});
-    mnh_out_adapters.errorOut:=@logError;
-    mnh_out_adapters.inputDeclEcho:=@writeDeclEcho;
-    mnh_out_adapters.inputExprEcho:=@writeExprEcho;
-    mnh_out_adapters.exprOut      :=@writeExprOut;
-    mnh_out_adapters.printOut     :=@writePrint;
-    mnh_out_adapters.clearConsole :=@clearPrint;
+    outAdapter:=@guiOutAdapter;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -597,11 +689,8 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
-      with SettingsForm.outputBehaviour do begin
-        doEchoDeclaration:=miDeclarationEcho.Checked;
-        if doEchoDeclaration then mnh_out_adapters.inputDeclEcho:=@writeDeclEcho
-                             else mnh_out_adapters.inputDeclEcho:=nil;
-      end;
+      with SettingsForm.outputBehaviour do doEchoDeclaration:=miDeclarationEcho.Checked;
+      guiOutAdapter.loadSettings;
     end;
   end;
 
@@ -652,11 +741,8 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
-      with SettingsForm.outputBehaviour do begin
-        doEchoInput:=miExpressionEcho.Checked;
-        if doEchoInput then mnh_out_adapters.inputExprEcho:=@writeExprEcho
-                       else mnh_out_adapters.inputExprEcho:=nil;
-      end;
+      with SettingsForm.outputBehaviour do doEchoInput:=miExpressionEcho.Checked;
+      guiOutAdapter.loadSettings;
     end;
   end;
 
@@ -664,11 +750,8 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
-      with SettingsForm.outputBehaviour do begin
-        doShowExpressionOut:=miExpressionResult.Checked;
-        if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
-                               else mnh_out_adapters.exprOut:=nil;
-      end;
+      with SettingsForm.outputBehaviour do doShowExpressionOut:=miExpressionResult.Checked;
+      guiOutAdapter.loadSettings;
     end;
   end;
 
@@ -902,7 +985,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //------------------------------------------------------------:progress time
-    autosizeBlocks(flushThroughput or flag);
+    autosizeBlocks(guiOutAdapter.flushToGui(OutputEdit) or flag);
 
     if ((plotSubsystem.state=pss_plotAfterCalculation) or
         (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
@@ -952,14 +1035,9 @@ PROCEDURE TMnhForm.processSettings;
 
     with SettingsForm.outputBehaviour do begin
       miDeclarationEcho.Checked:=doEchoDeclaration;
-      if doEchoDeclaration   then mnh_out_adapters.inputDeclEcho:=@writeDeclEcho
-                             else mnh_out_adapters.inputDeclEcho:=nil;
       miExpressionEcho.Checked:=doEchoInput;
-      if doEchoInput         then mnh_out_adapters.inputExprEcho:=@writeExprEcho
-                             else mnh_out_adapters.inputExprEcho:=nil;
       miExpressionResult.Checked:=doShowExpressionOut;
-      if doShowExpressionOut then mnh_out_adapters.exprOut:=@writeExprOut
-                             else mnh_out_adapters.exprOut:=nil;
+      guiOutAdapter.loadSettings;
     end;
     if not(settingsHaveBeenProcessed) then begin
       if SettingsForm.mainForm.isFullscreen then WindowState:=wsMaximized;
@@ -1142,9 +1220,6 @@ PROCEDURE lateInitialization;
     plotSubsystem.renderNotBefore:=now;
     plotSubsystem.state:=pss_neutral;
     plotSubsystem.rendering:=false;
-    errorThroughput.clear;
-
-
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,
       'ask(q:string);#Asks the user question q and returns the user input#'+
       'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
@@ -1159,12 +1234,9 @@ PROCEDURE lateInitialization;
   end;
 
 INITIALIZATION
-  output.create;
-  wantClear.create(false);
-  errorThroughput.create();
+  guiOutAdapter.create;
+
 FINALIZATION
-  output.destroy;
-  wantClear.destroy;
-  errorThroughput.destroy;
+  guiOutAdapter.destroy;
 end.
 

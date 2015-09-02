@@ -6,19 +6,10 @@ PROCEDURE parseCmdLine;
 VAR displayTime:boolean=false;
 IMPLEMENTATION
 //by command line parameters:---------------
-VAR minErrorLevel:T_errorLevel=el2_warning;
-    fileToInterpret:ansistring='';
+VAR fileToInterpret:ansistring='';
     parameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
 //---------------:by command line parameters
-
-PROCEDURE inputDeclEcho(CONST s:ansistring); begin writeln('in_>',s); end;
-PROCEDURE inputExprEcho(CONST s:ansistring); begin writeln('in >',s); end;
-PROCEDURE exprOut      (CONST s:ansistring); begin writeln('OUT>',s); end;
-PROCEDURE filteredStdErrOut(CONST error:T_storedError);
-  begin
-    with error do if errorLevel>=minErrorLevel then writeln(stdErr,C_errorLevelTxt[errorLevel],errorMessage,' @',ansistring(errorLocation));
-  end;
 
 PROCEDURE parseCmdLine;
   PROCEDURE makeAndShowDoc;
@@ -94,12 +85,12 @@ PROCEDURE parseCmdLine;
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
           pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
-          if (pel<0) or (pel>ord(el5_systemError)) then begin
+          if (pel<0) or (pel>5) then begin
             writeln('Invalid minimum error level given!');
             writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramstr(i),4,length(paramstr(i))-3));
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
             halt;
-          end else minErrorLevel:=T_errorLevel(pel);
+          end else consoleOutAdapter.minErrorLevel:=T_messageTypeOrErrorLevel(ord(el0_allOkay)+ pel);
         end else begin
           if fileExists(paramstr(i)) then fileToInterpret:=paramStr(i) else begin
             writeln('Invalid filename given!');
@@ -115,17 +106,12 @@ PROCEDURE parseCmdLine;
     end;
     //-----------------------------------------------------
     if (echo=e_forcedOn) or (echo=e_default) and (fileToInterpret='') then begin
-      mnh_out_adapters.inputDeclEcho:=@inputDeclEcho;
-      mnh_out_adapters.inputExprEcho:=@inputExprEcho;
-      mnh_out_adapters.exprOut      :=@exprOut;
+      consoleOutAdapter.echoOn:=true;
     end else begin
-      mnh_out_adapters.inputDeclEcho:=nil;
-      mnh_out_adapters.inputExprEcho:=nil;
-      mnh_out_adapters.exprOut      :=nil;
+      consoleOutAdapter.echoOn:=false;
     end;
-	displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileToInterpret=''));
+    displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileToInterpret=''));
 
-    mnh_out_adapters.errorOut:=@filteredStdErrOut;
     if fileToInterpret<>'' then fileMode;
     if wantHelpDisplay then begin
       displayHelp;
