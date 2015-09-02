@@ -1,6 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient,FileUtil;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -631,8 +631,8 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
       system.EnterCriticalSection(file_cs);
-      ok:=writeFile(P_stringLiteral(params^.value(0))^.value,
-                    P_stringLiteral(params^.value(1))^.value);
+      ok:=mnh_fileWrappers.writeFile(P_stringLiteral(params^.value(0))^.value,
+                                     P_stringLiteral(params^.value(1))^.value);
       system.LeaveCriticalsection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -1365,6 +1365,64 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
       setLength(keys,0);
     end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
   end;
+  
+FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;  
+  FUNCTION infoForLetter(CONST drive:char):P_literal;
+    VAR DriveLetter: string;
+        driveType:longint;
+        NotUsed:     DWORD;
+        VolumeFlags: DWORD;
+        VolumeInfo:  array[0..MAX_PATH] of Char;
+        VolumeSerialNumber: DWORD;
+        Buf: array [0..MAX_PATH] of Char;
+        infoPair:P_listLiteral;
+    begin
+      DriveLetter := Drive + ':\';
+      driveType:=GetDriveType(PChar(DriveLetter));
+      if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK] then begin
+        result:=newListLiteral;
+      end else exit(newVoidLiteral);
+      
+      infoPair:=newListLiteral;
+      infoPair^.append(newStringLiteral('drive'),false);
+      infoPair^.append(newStringLiteral( drive ),false);
+      P_listLiteral(result)^.append(infoPair,false);
+      
+      infoPair:=newListLiteral;
+      infoPair^.append(newStringLiteral('type'),false);
+      case driveType of
+        DRIVE_REMOVABLE: infoPair^.append(newStringLiteral('removable'),false);
+        DRIVE_FIXED:     infoPair^.append(newStringLiteral('fixed'    ),false);
+        DRIVE_REMOTE:    infoPair^.append(newStringLiteral('network'  ),false);
+        DRIVE_CDROM:     infoPair^.append(newStringLiteral('CD_ROM'   ),false);
+        DRIVE_RAMDISK:   infoPair^.append(newStringLiteral('RAM_disk' ),false);
+      end;
+      P_listLiteral(result)^.append(infoPair,false);
+
+      GetVolumeInformation(PChar(DriveLetter),
+        Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
+        VolumeFlags, nil, 0);
+      SetString(DriveLetter, Buf, StrLen(Buf));   
+      
+      infoPair:=newListLiteral;
+      infoPair^.append(newStringLiteral('serial'),false);
+      infoPair^.append(newIntLiteral(VolumeSerialNumber),false);
+      P_listLiteral(result)^.append(infoPair,false);
+      
+      infoPair:=newListLiteral;
+      infoPair^.append(newStringLiteral('label'),false);
+      infoPair^.append(newStringLiteral(DriveLetter),false);
+      P_listLiteral(result)^.append(infoPair,false);
+    end;
+  
+  VAR c:char;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      result:=newListLiteral;
+      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false);
+    end else raiseNotApplicableError('driveInfo',params,tokenLocation);
+  end;
 
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
@@ -1442,7 +1500,8 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setErrorlevel',@setErrorlevel_imp,'setErrorlevel(level:int);#Sets the errorlevel returned by the interpreter');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
-
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
+  
 FINALIZATION
   {$ifdef debugMode}
   writeln(stdErr,'Finalizing mnh_funcs');
