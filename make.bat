@@ -67,6 +67,7 @@
  
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
+@mnh_light.exe make_mnh.mnh updateXml
 @mkdir distro\packages
 @mkdir distro\demos
 @mkdir distro\demos\inputs

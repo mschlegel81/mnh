@@ -1,7 +1,7 @@
 UNIT mnh_funcs;
 INTERFACE
 USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,
-     myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows,RegExpr;
+     myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -9,7 +9,7 @@ VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
 
-PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
 
@@ -18,7 +18,7 @@ IMPLEMENTATION
 VAR print_cs:system.TRTLCriticalSection;
     file_cs :system.TRTLCriticalSection;
 //------------------------------------------------------------:Critical sections
-PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring);
+PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
   PROCEDURE registerImp(CONST regName:ansistring);
     VAR oldExplanation:ansistring;
     begin
@@ -28,7 +28,7 @@ PROCEDURE registerRule(CONST namespace,name:ansistring; CONST ptr:T_intFuncCallb
     end;
 
   begin
-    registerImp(name);
+    if not(fullNameOnly) then registerImp(name);
     registerImp(namespace+C_ID_QUALIFY_CHARACTER+name);
   end;
 

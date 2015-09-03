@@ -1,6 +1,7 @@
 USE fileUtil, regTest;
 
-make_notepad_xml->writeFile('mnh_for_notepad.xml',
+//*Update mnh_for_notepad.xml with current builtin functions
+main('updateXml')->writeFile('mnh_for_notepad.xml',
 //!BLOB START
 <NotepadPlus>
     <UserLang name="MNH" ext="mnh" udlVersion="2.1">
@@ -91,7 +92,6 @@ main->splitFileName(executor)%"filename" = "temp.exe"
     main('updateHash');
     each(exe,binaries,deleteFile(exe));
     execAsync('cmd',['/C','make.bat','64o','32o']);
-    make_notepad_xml;
     local allFine:=each(exe,binaries,and,runTestWhenExists(exe));
     allFine ? execPipeless('cmd',['/C','make','distro'])
             : print('Some errors ocurred. Skipping distro packaging');
