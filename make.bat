@@ -1,5 +1,6 @@
 :start
 @if "%1"=="help" goto help
+@mnh_light.exe make_mnh.mnh updateHash
 @if "%1"=="" %0 32o 32d 64o 64d
 @if "%1"=="all" %0 32o 32d 64o 64d distro
 

@@ -78,13 +78,18 @@ runTestWhenExists(exe)->begin
   regTest.main(exe);
 end;
 
+//*Only updates core/code_hash.inc
+main('updateHash')->begin
+  deleteFile('core/code_hash.inc');
+  local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
+  writeFile('core/code_hash.inc',format("writeln('"&codeHash&"');"));
+end;
+
 binaries:=['mnh.exe','mnh_light.exe','bin32/mnh.exe','bin32/mnh_light.exe'];
 main->splitFileName(executor)%"filename" = "temp.exe"
 ? begin
-    deleteFile('core/code_hash.inc');
+    main('updateHash');
     each(exe,binaries,deleteFile(exe));
-    local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
-    writeFile('core/code_hash.inc',format("writeln('"&codeHash&"');"));
     execAsync('cmd',['/C','make.bat','64o','32o']);
     make_notepad_xml;
     local allFine:=each(exe,binaries,and,runTestWhenExists(exe));
