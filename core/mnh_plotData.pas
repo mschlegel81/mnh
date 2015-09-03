@@ -1237,9 +1237,7 @@ PROCEDURE T_plot.setAutoscale(CONST autoX, autoY: boolean);
 
 FUNCTION T_plot.getAutoscale: P_listLiteral;
   begin
-    result:=newListLiteral;
-    result^.append(newBoolLiteral(autoscale ['x']), false);
-    result^.append(newBoolLiteral(autoscale ['y']), false);
+    result:=newListLiteral^.appendBool(autoscale ['x'])^.appendBool(autoscale ['y']);
   end;
 
 PROCEDURE T_plot.setRange(CONST x0, y0, x1, y1: double);
@@ -1254,13 +1252,15 @@ PROCEDURE T_plot.setRange(CONST x0, y0, x1, y1: double);
 
 FUNCTION T_plot.getRange: P_listLiteral;
   begin
-    result:=newListLiteral;
-    result^.append(newListLiteral, false);
-    result^.append(newListLiteral, false);
-    P_listLiteral(result^.value(0))^.append(newRealLiteral(oex(range ['x', 0])), false);
-    P_listLiteral(result^.value(0))^.append(newRealLiteral(oex(range ['x', 1])), false);
-    P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range ['y', 0])), false);
-    P_listLiteral(result^.value(1))^.append(newRealLiteral(oey(range ['y', 1])), false);
+    result:=newListLiteral^.
+      append(
+        newListLiteral^.
+        appendReal(oex(range ['x', 0]))^.
+        appendReal(oex(range ['x', 1])),false)^.
+      append(
+        newListLiteral^.
+        appendReal(oey(range ['y', 0]))^.
+        appendReal(oey(range ['y', 1])),false);
   end;
 
 PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
@@ -1277,9 +1277,7 @@ PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
 
 FUNCTION T_plot.getAxisStyle: P_listLiteral;
   begin
-    result:=newListLiteral;
-    result^.append(newIntLiteral(axisStyle ['x']), false);
-    result^.append(newIntLiteral(axisStyle ['y']), false);
+    result:=newListLiteral^.appendInt(axisStyle ['x'])^.appendInt(axisStyle ['y']);
   end;
 
 PROCEDURE T_plot.setLogscale(CONST logX, logY: boolean);
@@ -1300,9 +1298,7 @@ PROCEDURE T_plot.setLogscale(CONST logX, logY: boolean);
 
 FUNCTION T_plot.getLogscale: P_listLiteral;
   begin
-    result:=newListLiteral;
-    result^.append(newBoolLiteral(logscale ['x']), false);
-    result^.append(newBoolLiteral(logscale ['y']), false);
+    result:=newListLiteral^.appendBool(logscale ['x'])^.appendBool(logscale ['y']);
   end;
 
 PROCEDURE T_plot.setPreserveAspect(CONST flag: boolean);

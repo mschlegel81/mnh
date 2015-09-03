@@ -209,8 +209,12 @@ TYPE
   public
     CONSTRUCTOR create;
     FUNCTION toParameterListString(CONST isFinalized: boolean): ansistring;
-    PROCEDURE append(CONST L: P_literal; CONST incRefs: boolean);
-    PROCEDURE appendAll(CONST L: P_listLiteral);
+    FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_listLiteral;
+    FUNCTION appendString(CONST s:ansistring):P_listLiteral;
+    FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
+    FUNCTION appendInt   (CONST i:int64):P_listLiteral;
+    FUNCTION appendReal  (CONST r:T_myFloat):P_listLiteral;
+    FUNCTION appendAll(CONST L: P_listLiteral):P_listLiteral;
     PROCEDURE appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation);
     PROCEDURE setRangeAppend;
     FUNCTION size: longint;
@@ -1287,8 +1291,9 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean):P_listLiteral;
   begin
+    result:=@self;
     if L = nil then begin
       raiseError(el3_evalError, 'Trying to append NIL literal to list', C_nilTokenLocation);
       exit;
@@ -1357,10 +1362,31 @@ PROCEDURE T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean);
     end;
   end;
 
-PROCEDURE T_listLiteral.appendAll(CONST L: P_listLiteral);
+FUNCTION T_listLiteral.appendString(CONST s: ansistring):P_listLiteral;
+  begin
+    result:=append(newStringLiteral(s),false);
+  end;
+
+FUNCTION T_listLiteral.appendBool(CONST b: boolean):P_listLiteral;
+  begin
+    result:=append(newBoolLiteral(b),false);
+  end;
+
+FUNCTION T_listLiteral.appendInt(CONST i: int64):P_listLiteral;
+  begin
+    result:=append(newIntLiteral(i),false);
+  end;
+
+FUNCTION T_listLiteral.appendReal(CONST r: T_myFloat):P_listLiteral;
+  begin
+    result:=append(newRealLiteral(r),false);
+  end;
+
+FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral):P_listLiteral;
   VAR i: longint;
   begin
     for i:=0 to length(L^.element)-1 do append(L^.element [i], true);
+    result:=@self;
   end;
 
 PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
@@ -1389,12 +1415,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       while (i0<i1) and (errorLevel<el3_evalError) do
         begin
         inc(i0);
-        append(newIntLiteral(i0), false);
+        appendInt(i0);
         end;
       while (i0>i1) and (errorLevel<el3_evalError) do
         begin
         dec(i0);
-        append(newIntLiteral(i0), false);
+        appendInt(i0);
         end;
       end
     else if (last^.literalType = lt_string) and
@@ -1406,12 +1432,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       while c0<c1 do
         begin
         inc(c0);
-        append(newStringLiteral(c0), false);
+        appendString(c0);
         end;
       while c0>c1 do
         begin
         dec(c0);
-        append(newStringLiteral(c0), false);
+        appendString(c0);
         end;
       end
     else begin
@@ -1563,7 +1589,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
     end;
     setLength(temp2, 0);
     result:=newListLiteral;
-    for i:=0 to length(temp1)-1 do result^.append(newIntLiteral(temp1 [i].index), false);
+    for i:=0 to length(temp1)-1 do result^.appendInt(temp1 [i].index);
     setLength(temp1, 0);
   end;
 

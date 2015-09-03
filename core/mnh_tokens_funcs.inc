@@ -250,12 +250,8 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       t:double;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
-    VAR aid:P_listLiteral;
     begin
-      aid:=newListLiteral;
-      aid^.append(newStringLiteral(el0),false);
-      aid^.append(el1,false);
-      P_listLiteral(result)^.append(aid,false);
+      P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false),false);
     end;
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
@@ -420,7 +416,7 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     VAR i:longint;
     begin
       result:=newListLiteral;
-      for i:=0 to length(subrule^.pattern.sig)-1 do result^.append(newStringLiteral(subrule^.pattern.sig[i].id),false);
+      for i:=0 to length(subrule^.pattern.sig)-1 do result^.appendString(subrule^.pattern.sig[i].id);
     end;
 
   begin

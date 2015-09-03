@@ -1,6 +1,7 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows;
+USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,
+     myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows,RegExpr;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -167,7 +168,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       count:=P_intLiteral(params^.value(0))^.value;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do P_listLiteral(result)^.append(newRealLiteral(random),false);
+        for i:=1 to count do P_listLiteral(result)^.appendReal(random);
         exit(result);
       end;
     end;
@@ -270,7 +271,7 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         lt_stringList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newIntLiteral(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),false);
+            P_listLiteral(result)^.appendInt(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
         end;
         else raiseNotApplicableError('length',params,tokenLocation);
       end;
@@ -370,12 +371,10 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
-          P_listLiteral(result)^.append(
-            newStringLiteral(
+          P_listLiteral(result)^.appendString(
               copy(safeString(i),
                    safeStart(i),
-                   safeLen(i))),
-            false);
+                   safeLen(i)));
       end;
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
@@ -417,11 +416,11 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=newListLiteral;
       rest:=s^.value;
       while sp0>0 do begin
-        result^.append(newStringLiteral(copy(rest,1,sp0-1)),false);
+        result^.appendString(copy(rest,1,sp0-1));
         rest:=copy(rest,sp1,length(rest));
         firstSplitterPos(rest,sp0,sp1);
       end;
-      result^.append(newStringLiteral(rest),false);
+      result^.appendString(rest);
     end;
 
   FUNCTION splitRecurse(CONST p:P_literal):P_Literal;
@@ -551,11 +550,11 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
-      for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
+      for i:=0 to length(found)-1 do result^.appendString(UTF8Encode(found[i]));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
-        for i:=0 to length(found)-1 do result^.append(newStringLiteral(UTF8Encode(found[i])),false);
+        for i:=0 to length(found)-1 do result^.appendString(UTF8Encode(found[i]));
       end;
     end;
   end;
@@ -607,7 +606,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
       system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
-      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
+      for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else if (params<>nil) and (params^.size=3) and
                 (params^.value(0)^.literalType=lt_string) and
@@ -619,7 +618,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
                    P_intLiteral   (params^.value(2))^.value,accessed);
       system.LeaveCriticalsection(file_cs);
       result:=newListLiteral;
-      for i:=0 to length(L)-1 do P_listLiteral(result)^.append(newStringLiteral(L[i]),false);
+      for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileLines',params,tokenLocation);
   end;
@@ -713,10 +712,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     else begin
       result:=newListLiteral;
       for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-        P_listLiteral(result)^.append(
-          newStringLiteral(modify(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value)),
-          false
-        );
+        P_listLiteral(result)^.appendString(modify(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -822,7 +818,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
                  cmdLinePar,
                  output);
       result:=newListLiteral;
-      for i:=0 to output.Count-1 do P_listLiteral(result)^.append(newStringLiteral(output[i]),false);
+      for i:=0 to output.Count-1 do P_listLiteral(result)^.appendString(output[i]);
       output.Free;
     end else raiseNotApplicableError('exec',params,tokenLocation);
   end;
@@ -864,7 +860,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
   PROCEDURE stepToken;
     begin
-      P_listLiteral(result)^.append(newStringLiteral(copy(stringToSplit,i0,i1-i0)),false);
+      P_listLiteral(result)^.appendString(copy(stringToSplit,i0,i1-i0));
       i0:=i1;
     end;
 
@@ -1008,12 +1004,12 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
          lt_intList: begin
            result:=newListLiteral;
            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-             P_listLiteral(result)^.append(newBoolLiteral(false),false);
+             P_listLiteral(result)^.appendBool(false);
          end;
          else begin
            result:=newListLiteral;
            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-             P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
+             P_listLiteral(result)^.appendBool((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value));
          end;
        end;
     end else raiseNotApplicableError('isNan',params,tokenLocation);
@@ -1031,12 +1027,12 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         lt_intList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newBoolLiteral(false),false);
+            P_listLiteral(result)^.appendBool(false);
         end;
         else begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(newBoolLiteral((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.value(0)))^.value)),false);
+            P_listLiteral(result)^.appendBool((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsInfinite(P_realLiteral(P_listLiteral(params^.value(0)))^.value));
         end;
       end;
     end else raiseNotApplicableError('isInfinite',params,tokenLocation);
@@ -1074,7 +1070,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       else begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-          P_listLiteral(result)^.append(newBoolLiteral(inRange(P_listLiteral(params^.value(0))^.value(i))),false);
+          P_listLiteral(result)^.appendBool(inRange(P_listLiteral(params^.value(0))^.value(i)));
       end;
     end else raiseNotApplicableError('isInRange',params,tokenLocation);
   end;
@@ -1083,10 +1079,10 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
     VAR aid:P_listLiteral;
     begin
-      aid:=newListLiteral;
-      aid^.append(newStringLiteral(el0),false);
-      aid^.append(newStringLiteral(el1),false);
-      P_listLiteral(result)^.append(aid,false);
+      P_listLiteral(result)^.append(
+        newListLiteral^.
+        appendString(el0)^.
+        appendString(el1),false);
     end;
 
   VAR name:string;
@@ -1229,7 +1225,7 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       if resultIsList or (length(resultString)<>1) then begin
         result:=newListLiteral;
-        for k:=0 to length(resultString)-1 do P_listLiteral(result)^.append(newStringLiteral(resultString[k]),false);
+        for k:=0 to length(resultString)-1 do P_listLiteral(result)^.appendString(resultString[k]);
       end else result:=newStringLiteral(join(formatTabs(split(resultString[0])),C_lineBreakChar));
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
@@ -1300,12 +1296,11 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       attributeList:P_listLiteral;
 
   PROCEDURE appendKeyValuePair(CONST key:string; CONST value:P_literal);
-    VAR subList:P_listLiteral;
     begin
-      subList:=newListLiteral;
-      subList^.append(newStringLiteral(key),false);
-      subList^.append(value,false);
-      resultAsList^.append(subList,false);
+      resultAsList^.append(
+        newListLiteral^.
+        appendString(key)^.
+        append(value,false),false);
     end;
 
   begin
@@ -1318,11 +1313,11 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         if size>=0 then appendKeyValuePair('size',newIntLiteral(size));
         if time<>-1 then appendKeyValuePair('time',newRealLiteral(time));
         attributeList:=newListLiteral;
-        if isArchive   then attributeList^.append(newStringLiteral('archive'  ),false);
-        if isDirectory then attributeList^.append(newStringLiteral('directory'),false);
-        if isReadOnly  then attributeList^.append(newStringLiteral('readonly' ),false);
-        if isSystem    then attributeList^.append(newStringLiteral('system'   ),false);
-        if isHidden    then attributeList^.append(newStringLiteral('hidden'   ),false);
+        if isArchive   then attributeList^.appendString('archive'  );
+        if isDirectory then attributeList^.appendString('directory');
+        if isReadOnly  then attributeList^.appendString('readonly' );
+        if isSystem    then attributeList^.appendString('system'   );
+        if isHidden    then attributeList^.appendString('hidden'   );
         appendKeyValuePair('attributes',attributeList);
       end;
       result:=resultAsList;
@@ -1371,7 +1366,7 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params=nil) or (params^.size=0) then begin
       keys:=intrinsicRuleExplanationMap.keySet;
       result:=newListLiteral;
-      for i:=0 to length(keys)-1 do P_listLiteral(result)^.append(newStringLiteral(keys[i]),false);
+      for i:=0 to length(keys)-1 do P_listLiteral(result)^.appendString(keys[i]);
       setLength(keys,0);
     end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
   end;
@@ -1393,19 +1388,16 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         result:=newListLiteral;
       end else exit(newVoidLiteral);
 
-      infoPair:=newListLiteral;
-      infoPair^.append(newStringLiteral('drive'),false);
-      infoPair^.append(newStringLiteral( drive ),false);
-      P_listLiteral(result)^.append(infoPair,false);
+      P_listLiteral(result)^.append(newListLiteral^.appendString('drive')^.appendString( drive ),false);
 
       infoPair:=newListLiteral;
-      infoPair^.append(newStringLiteral('type'),false);
+      infoPair^.appendString('type');
       case driveType of
-        DRIVE_REMOVABLE: infoPair^.append(newStringLiteral('removable'),false);
-        DRIVE_FIXED:     infoPair^.append(newStringLiteral('fixed'    ),false);
-        DRIVE_REMOTE:    infoPair^.append(newStringLiteral('network'  ),false);
-        DRIVE_CDROM:     infoPair^.append(newStringLiteral('CD_ROM'   ),false);
-        DRIVE_RAMDISK:   infoPair^.append(newStringLiteral('RAM_disk' ),false);
+        DRIVE_REMOVABLE: infoPair^.appendString('removable');
+        DRIVE_FIXED:     infoPair^.appendString('fixed'    );
+        DRIVE_REMOTE:    infoPair^.appendString('network'  );
+        DRIVE_CDROM:     infoPair^.appendString('CD_ROM'   );
+        DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
       end;
       P_listLiteral(result)^.append(infoPair,false);
 
@@ -1414,15 +1406,15 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         VolumeFlags, nil, 0);
       SetString(DriveLetter, Buf, StrLen(Buf));
 
-      infoPair:=newListLiteral;
-      infoPair^.append(newStringLiteral('serial'),false);
-      infoPair^.append(newIntLiteral(VolumeSerialNumber),false);
-      P_listLiteral(result)^.append(infoPair,false);
+      P_listLiteral(result)^.append(
+        newListLiteral^.
+        appendString('serial')^.
+        appendInt(VolumeSerialNumber),false);
 
-      infoPair:=newListLiteral;
-      infoPair^.append(newStringLiteral('label'),false);
-      infoPair^.append(newStringLiteral(DriveLetter),false);
-      P_listLiteral(result)^.append(infoPair,false);
+      P_listLiteral(result)^.append(
+        newListLiteral^.
+        appendString('label')^.
+        appendString(DriveLetter),false);
     end;
 
   VAR c:char;

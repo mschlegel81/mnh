@@ -656,7 +656,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 
     parametersForMain:=newListLiteral;
     parametersForMain^.rereference;
-    for i:=0 to length(parameters)-1 do parametersForMain^.append(newStringLiteral(parameters[i]),false);
+    for i:=0 to length(parameters)-1 do parametersForMain^.appendString(parameters[i]);
 
     mainPackage.load(lu_forCallingMain,recycler);
     if not(mainPackage.ready) or (errorLevel>=el3_evalError) then begin
