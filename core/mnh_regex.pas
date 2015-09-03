@@ -1,7 +1,7 @@
 UNIT mnh_regex;
 INTERFACE
 USES RegExpr,Classes,mnh_litvar,mnh_funcs,mnh_constants,mnh_tokloc,sysutils,mnh_out_adapters;
-CONST REGEX_NAMESPACE='regex';
+
 IMPLEMENTATION
 TYPE T_triplet=record
        x,y,z:ansistring;
@@ -46,7 +46,7 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:TRegExpr;
     begin
-      regex:=TRegExpr.Create;
+      regex:=TRegExpr.create;
       regex.Expression:=trip.x;
       regex.InputString:=trip.y;
       try
@@ -63,13 +63,13 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(REGEX_NAMESPACE+'matches',params,tokenLocation)
+      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation)
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(params^.value(0),params^.value(1),nil,0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(regexMatches(triplet(params^.value(0),params^.value(1),nil,i)));
       end;
-    end else raiseNotApplicableError(REGEX_NAMESPACE+'matches',params,tokenLocation);
+    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation);
   end;
 
 FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -77,7 +77,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
     VAR regex:TRegExpr;
         i:longint;
     begin
-      regex:=TRegExpr.Create;
+      regex:=TRegExpr.create;
       regex.Expression:=trip.x;
       regex.InputString:=trip.y;
       result:=newListLiteral;
@@ -102,13 +102,13 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(REGEX_NAMESPACE+'matchComposite',params,tokenLocation)
+      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation)
       else if i1=0 then result:=regexMatchComposite(triplet(params^.value(0),params^.value(1),nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(0),params^.value(1),nil,i)),false);
       end;
-    end else raiseNotApplicableError(REGEX_NAMESPACE+'matchComposite',params,tokenLocation);
+    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation);
   end;
 
 FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -117,9 +117,9 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         i:longint;
         pieces : TStrings;
     begin
-      regex:=TRegExpr.Create;
+      regex:=TRegExpr.create;
       regex.Expression:=trip.x;
-      pieces:=TStringList.Create;
+      pieces:=TStringList.create;
       try
         regex.Split(trip.y,pieces);
       except
@@ -138,20 +138,20 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(REGEX_NAMESPACE+'split',params,tokenLocation)
+      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation)
       else if i1=0 then result:=regexSplit(triplet(params^.value(0),params^.value(1),nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(0),params^.value(1),nil,i)),false);
       end;
-    end else raiseNotApplicableError(REGEX_NAMESPACE+'split',params,tokenLocation);
+    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation);
   end;
 
 FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:TRegExpr;
     begin
-      regex:=TRegExpr.Create;
+      regex:=TRegExpr.create;
       regex.Expression:=trip.x;
       try
         result:=regex.Replace(trip.y,trip.z,false);
@@ -168,13 +168,13 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
       i1:=listSize(params^.value(0),params^.value(1),params^.value(2));
-      if i1<0 then raiseNotApplicableError(REGEX_NAMESPACE+'replace',params,tokenLocation)
+      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation)
       else if i1=0 then result:=newStringLiteral(regexReplace(triplet(params^.value(0),params^.value(1),params^.value(2),0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.appendString(regexReplace(triplet(params^.value(0),params^.value(1),params^.value(2),i)));
       end;
-    end else raiseNotApplicableError(REGEX_NAMESPACE+'replace',params,tokenLocation);
+    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation);
   end;
 
 INITIALIZATION

@@ -10,7 +10,7 @@ TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
 
 CONST
-  PLOT_NAMESPACE='plot';
+
   C_lineStyle_none = 0;
   C_lineStyle_straight = 1;
   C_lineStyle_stepLeft = 2;

@@ -1,12 +1,23 @@
 UNIT mnh_constants;
 
 INTERFACE
+TYPE
+  T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
+               MATH_NAMESPACE           ,
+               STRINGS_NAMESPACE        ,
+               LIST_NAMESPACE           ,
+               REGEX_NAMESPACE          ,
+               SYSTEM_BUILTIN_NAMESPACE ,
+               PLOT_NAMESPACE);
+
+
 CONST
   SCRIPT_EXTENSION='.MNH';
-  DEFAULT_BUILTIN_NAMESPACE='mnh';
-  SYSTEM_BUILTIN_NAMESPACE='system';
+  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','plot');
   C_ID_QUALIFY_CHARACTER='.';
-  FUNCTION isQualified(CONST s:string):boolean;
+
+FUNCTION isQualified(CONST s:string):boolean;
+
 CONST
   LOGO:array[0..6] of string=(' ___      ___ ___   ___ ___   ___ ',
                               '|   \    /   |   \ |   |   | |   |  ______',
@@ -336,10 +347,18 @@ CONST
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';
   SPECIAL_COMMENT_BLOB_END='//!BLOB END';
 
+FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
     result:=pos(C_ID_QUALIFY_CHARACTER,s)>0;
+  end;
+
+FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
+  VAR n:T_namespace;
+  begin
+    for n:=Low(T_namespace) to High(T_namespace) do if id=C_namespaceString[n] then exit(true);
+    result:=false;
   end;
 
 end.

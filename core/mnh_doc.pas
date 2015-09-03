@@ -255,29 +255,43 @@ PROCEDURE documentBuiltIns;
     htmlResult = '\builtin.html';
 
   VAR ids: T_arrayOfString;
-    i, j: longint;
-    tmp: ansistring;
-    doc: T_intrinsicFunctionDocumentation;
+      i,j: longint;
+      n: T_namespace;
+      tmp: ansistring;
+      swapTmp: T_intrinsicFunctionDocumentation;
 
-    inFile, outFile: Text;
+      doc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
+      inFile, outFile: Text;
+
+  FUNCTION namespace(CONST id:ansistring):T_namespace;
+    VAR useId:ansistring;
+        n:T_namespace;
+    begin
+      if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
+      for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
+    end;
+
   begin
-    if not(FileExists(htmlRoot+htmlHead)) or not(FileExists(htmlRoot+htmlFoot)) then
-      exit;
-
+    if not(FileExists(htmlRoot+htmlHead)) or not(FileExists(htmlRoot+htmlFoot)) then exit;
+    //Prepare and sort data:-------------------------------------------------------------
+    for n:=Low(T_namespace) to High(T_namespace) do setLength(doc[n],0);
     ids:=intrinsicRuleExplanationMap.keySet;
-    j:=0;
     for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
-      ids[j]:=ids[i]; inc(j);
+      n:=namespace(ids[i]);
+      j:=length(doc[n]);
+      setLength(doc[n],j+1);
+      doc[n][j].create(ids[i]);
     end;
-    setLength(ids,j);
+    setLength(ids,0);
 
-    for i:=1 to length(ids)-1 do for j:=0 to i-1 do
-    if ids [i]<ids [j] then begin
-      tmp:=ids [i]; ids[i]:=ids [j]; ids[j]:=tmp;
+    for n:=Low(T_namespace) to High(T_namespace) do
+    for i:=1 to length(doc[n])-1 do for j:=0 to i-1 do
+    if doc[n][i].id < doc[n][j].id then begin
+      swapTmp:=doc[n][i]; doc[n][i]:=doc[n][j]; doc[n][j]:=swapTmp;
     end;
-
+    //-------------------------------------------------------------:Prepare and sort data
+    //Write Header:----------------------------------------------------------------------
     assign(outFile, htmlRoot+htmlResult); rewrite(outfile);
-
     assign(inFile, htmlRoot+htmlHead); reset(inFile);
     while not(EOF(inFile)) do
       begin
@@ -285,19 +299,25 @@ PROCEDURE documentBuiltIns;
       writeln(outFile, tmp);
       end;
     close(inFile);
+    //----------------------------------------------------------------------:Write Header
+    writeln(outFile, '<div align="right"><hr></div><br><div>');
+    for n:=Low(T_namespace) to High(T_namespace) do for i:=0 to length(doc[n])-1 do
+      writeln(outFile, '<a href="#', doc[n][i].id, '">', doc[n][i].id, '</a> &nbsp; ');
+    writeln(outFile, '</div><br><div align="right"><hr></div>');
+    for n:=Low(T_namespace) to High(T_namespace) do
+      writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
 
-    writeln(outFile, '<br><div>');
-    for i:=0 to length(ids)-1 do
-      writeln(outFile, '<a href="#', ids [i], '">', ids [i], '</a> &nbsp; ');
-    writeln(outFile, '</div>');
 
-    for i:=0 to length(ids)-1 do
-      begin
-      doc.create(ids [i]);
-      writeln(outFile, doc.toHtml);
-      doc.destroy;
+    for n:=Low(T_namespace) to High(T_namespace) do begin
+      writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
+      for i:=0 to length(doc[n])-1 do begin
+        writeln(outFile, doc[n][i].toHtml);
+        doc[n][i].destroy;
       end;
+      setLength(doc[n],0);
 
+    end;
+    //Write Footer:----------------------------------------------------------------------
     assign(inFile, htmlRoot+htmlFoot); reset(inFile);
     while not(EOF(inFile)) do
       begin
@@ -306,7 +326,7 @@ PROCEDURE documentBuiltIns;
       end;
     close(inFile);
     close(outFile);
-
+    //----------------------------------------------------------------------:Write Footer
   end;
 
 INITIALIZATION

@@ -87,7 +87,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
         end
       else
         result := '';
-      if UpperCase(result) = uppercase(DEFAULT_BUILTIN_NAMESPACE) then
+      if isReservedNamespace( LowerCase(result)) then
         result := '';
     end;
 

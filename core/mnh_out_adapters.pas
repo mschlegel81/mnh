@@ -127,7 +127,7 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
-    echoOn:=true;
+    echoOn:=false;
     minErrorLevel:=el2_warning;
   end;
 
