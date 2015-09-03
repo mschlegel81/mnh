@@ -1077,7 +1077,6 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
 FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
-    VAR aid:P_listLiteral;
     begin
       P_listLiteral(result)^.append(
         newListLiteral^.

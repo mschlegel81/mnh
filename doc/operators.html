@@ -20,24 +20,36 @@
 <h3><a href="#typecheckOps"> Type check operators</a></h3>
 <h3><a href="#assignmentOps"> Assignment operators</a></h3>
 <h3><a href="#cStyleOps"> C-Style operators</a></h3>
-<div align="right"><font color="#a0a0a0"><hr> </div>
+<div align="right"><hr> </div>
 
 <h3><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
 All of those operators apart from <code>==</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
-[x0,x1,...] o  y          -> [x0 o y , x1 o y , ...]
- x          o [y0,y1,...] -> [x  o y0, x  o y1, ...]
-[x0,x1,...] o [y0,y1,...] -> [x0 o y0, x0 o y1, ...]
+<!--mnh_code:-->
+[x0,x1,...] +  y          -> [x0 + y , x1 + y , ...]
+ x          + [y0,y1,...] -> [x  + y0, x  + y1, ...]
+[x0,x1,...] + [y0,y1,...] -> [x0 + y0, x0 + y1, ...]
+<!--:mnh_code-->
 </code>The last one will work if (and only if) both operators have the same number of list elements.<br>
 While this is handy in most situations, there are some counter intutive consequences:<ul>
   <li> Lazy evaluation cannot be implemented <br>because <code>false and X</code> will yield <code>false</code> only if X is a scalar.
        If on the other hand X is a list of booleans, the result of this operation will be a list of booleans (all false). Consequently X always must be evaluated to determine the result.</li>
-  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>[1,2]=[1,2] -> [true,true]</code>.<br>
-       As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are equal, e.g. <code>[1,2]==[1,2] -> true</code>.
+  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>
+<!--mnh_code:-->  
+  [1,2]=[1,2] -> [true,true]
+<!--:mnh_code-->
+</code><br>
+       As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are equal, e.g. <code>
+<!--mnh_code:-->  
+  [1,2]==[1,2] -> true
+<!--:mnh_code-->
+</code>
   </li>
   </ul>
 For expression-literals, all operators will be used to expand the expression to a new expression-literal:<code>
-{expr} o X -> {(expr o X)}
+<!--mnh_code:-->
+{expr} + X -> {(expr + X)}
+<!--:mnh_code-->
 </code>
 
 <h4><a name="#arithOps"> Arithmetic operators</a></h4>
@@ -46,7 +58,28 @@ For expression-literals, all operators will be used to expand the expression to 
 This is the common addition operator, which also doubles as an unary "neutral" operator.<br> As in many modern languages, the operator is overloaded for string concatenation. 
 In contrast to languages as C or Java, it does not allow for concatenation of non-strings and strings.<br>
 If both operands are integers, the result will be an integer. <br>
-If both operands are numeric and at least one of them is real, the result will be a real number.
+If both operands are numeric and at least one of them is real, the result will be a real number.<br>
+Examples:<code>
+<!--mnh_code:-->
+_in> 1+5
+out> 6
+
+_in> [1,2.4,3]+5
+out> [6,7.4,8]
+
+_in> 1+[5,6.2,7]
+out> [6,7.2,8]
+
+_in> [1.5,2,3]+[5,6,7.106]
+out> [6.5,8,10.106]
+
+_in> "a"+"b"
+out> "ab"
+
+_in> [1,2,3]+[5, 6]
+<!--:mnh_code-->
+<span class="red">!! >Ev.Error:  :?,? Invalid list lengths 3 and 2 given for operator +</span>
+</code>
 </td></tr>
 <tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td> 
 This is the common subtraction operator, which also doubles as unary negation.<br>

@@ -202,13 +202,12 @@ FUNCTION toHtmlCode(VAR line:ansistring):ansistring;
 PROCEDURE polishFile(CONST name:ansistring);
   CONST CODE_START_TAG='<!--mnh_code:-->';
         CODE_END_TAG  ='<!--:mnh_code-->';
-        DISABLED_CODE_START_TAG='<!-- mnh_code: -->';
-        DISABLED_CODE_END_TAG  ='<!-- :mnh_code -->';
+        DISABLED_LINE_TAG='<!-- dropme -->';
   VAR f:T_codeProvider;
       L:T_arrayOfString;
       formatted:ansistring;
       changed:boolean=false;
-      i:longint;
+      i,j:longint;
       codeBlock:boolean=false;
   begin
     if not(FileExists(name)) then exit;
@@ -217,12 +216,12 @@ PROCEDURE polishFile(CONST name:ansistring);
     for i:=0 to length(L)-1 do begin
       if not(codeBlock) and (trim(L[i])=CODE_START_TAG) then begin
         codeBlock:=true;
-        L[i]:=DISABLED_CODE_START_TAG;
+        L[i]:=DISABLED_LINE_TAG;
         changed:=true;
       end else if codeBlock then begin
         if trim(L[i])=CODE_END_TAG then begin
           codeBlock:=false;
-          L[i]:=DISABLED_CODE_END_TAG;
+          L[i]:=DISABLED_LINE_TAG;
           changed:=true;
         end else begin
           formatted:=toHtmlCode(L[i]);
@@ -233,6 +232,13 @@ PROCEDURE polishFile(CONST name:ansistring);
     end;
     if changed then begin
       writeln('file ',name,' was modified');
+      j:=0;
+      for i:=0 to length(L)-1 do begin
+        if i<>j then L[j]:=L[i];
+        if L[i]<>DISABLED_LINE_TAG then inc(j);
+      end;
+      setLength(L,j);
+
       f.setLines(L);
       f.save;
     end;
