@@ -8,7 +8,7 @@
 <body>
 <h2 align="center"><a href="index.html">MNH 5</a> - Packages</h3>
 <div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
-<div align="right"><hr> </font></div>
+<div align="right"><hr> </div>
 <h3><a href="#usage">Usage</a></h3>
 <ul>
   <li><h4><a href="#defining">Defining a package</a></h4></li>
@@ -19,7 +19,7 @@
 </ul>  
 <h3><a href="#defined">Currently defined packages</a></h3>
 
-<div align="right"><hr> </font></div>
+<div align="right"><hr> </div>
 
 <h3><a name="usage">Usage</a></h3>
 Packages form the major means to structure your implementation so that parts of it can be reused.<br>
