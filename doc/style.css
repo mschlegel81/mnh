@@ -20,3 +20,9 @@ table { display: inline-table}
 .oben    { vertical-align:top}
 .red {color:#FF0000}
 .ruleHead  { vertical-align:top; background-color: #DDDDDD}
+.identifier{color:#0000FF}
+.builtin{color:#0000FF;font-weight:bold}
+.modifier{color:#FF8800;font-weight:bold}
+.stringLiteral{color:#008800}
+.literal{color:#FF0000}
+.operator{color:#000088;font-weight:bold}

@@ -742,6 +742,7 @@ PROCEDURE findAndDocumentAllPackages;
     end;
     writeUserPackageDocumentations;
     documentBuiltIns;
+    polishExistingHtmlFiles;
     recycler.destroy;
   end;
 

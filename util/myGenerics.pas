@@ -81,6 +81,7 @@ TYPE
       CONSTRUCTOR create();
       DESTRUCTOR destroy;
       FUNCTION containsKey(CONST key:ansistring; OUT value:VALUE_TYPE):boolean;
+      FUNCTION containsKey(CONST key:ansistring):boolean;
       FUNCTION get(CONST key:ansistring):VALUE_TYPE;
       PROCEDURE put(CONST key:ansistring; CONST value:VALUE_TYPE);
       PROCEDURE dropKey(CONST key:ansistring);
@@ -888,6 +889,17 @@ FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
     if (j<length(bucket[i])) then begin
       value:=bucket[i][j].value;
+      result:=true;
+    end else result:=false;
+  end;
+
+FUNCTION G_stringKeyMap.containsKey(CONST key:ansistring):boolean;
+  VAR i,j:longint;
+  begin
+    i:=hashOfAnsiString(key) and bitMask;
+    j:=0;
+    while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
+    if (j<length(bucket[i])) then begin
       result:=true;
     end else result:=false;
   end;

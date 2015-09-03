@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants;
+USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litvar, mnh_fileWrappers;
 VAR htmlRoot: string;
 TYPE
 
@@ -37,9 +37,219 @@ TYPE
 
 PROCEDURE writeUserPackageDocumentations;
 PROCEDURE documentBuiltIns;
+PROCEDURE polishExistingHtmlFiles;
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
+
+FUNCTION toHtmlCode(VAR line:ansistring):ansistring;
+  VAR parsedLength:longint=0;
+  FUNCTION span(CONST sc,txt:ansistring):ansistring;
+    begin
+      result:='<span class="'+sc+'">'+txt+'</span>';
+    end;
+
+  FUNCTION leadingIdLength(CONST allowQualified:boolean):longint;
+    VAR i:longint;
+    begin
+      i:=1;
+      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_ID_QUALIFY_CHARACTER]) do begin
+        inc(i);
+        if line[i]=C_ID_QUALIFY_CHARACTER then begin
+          if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
+            exit(i-1);
+          end else if not(allowQualified) then begin
+            exit(length(line));
+          end;
+        end;
+      end;
+      result:=i;
+    end;
+
+  FUNCTION takeFromLine(CONST len:longint):ansistring;
+    begin
+      result:=copy(line,1,len);
+      line:=copy(line,len+1,length(line)+len-1);
+    end;
+
+  PROCEDURE removeLeadingBlanks();
+    VAR i:longint;
+    begin
+      i:=1;
+      while (i<=length(line)) and (line[i] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(i);
+      if i>1 then result:=result+takeFromLine(i-1);
+    end;
+
+  VAR id:ansistring;
+  begin
+    result:='';
+    while length(line)>0 do begin
+      parsedLength:=0;
+      removeLeadingBlanks;
+      if length(line)<1 then exit(result);
+      case line[1] of
+        '0'..'9': begin
+          parseNumber(line,true,parsedLength);
+          if parsedLength<=0 then begin result:=result+line; line:=''; end
+                             else result:=result+span('literal', takeFromLine(parsedLength));
+        end;
+        '"','''': begin
+          id:=unescapeString(line,parsedLength);
+          if parsedLength=0 then begin result:=result+line; line:=''; end
+          else result:=result+span('stringLiteral', takeFromLine(parsedLength));
+        end;
+        '$': result:=result+span('identifier', takeFromLine(leadingIdLength(false)));
+        'a'..'z','A'..'Z':
+          if copy(line,1,3)='in>' then result:=result+takeFromLine(3)
+          else if copy(line,1,4)='out>' then result:=result+takeFromLine(4)
+          else begin
+            id:=takeFromLine(leadingIdLength(true));
+            if      (id=C_tokenString[tt_operatorXor]   )
+                 or (id=C_tokenString[tt_operatorOr]    )
+                 or (id=C_tokenString[tt_operatorMod]   )
+                 or (id=C_tokenString[tt_operatorIn]    )
+                 or (id=C_tokenString[tt_operatorDivInt])
+                 or (id=C_tokenString[tt_operatorAnd]   ) then result:=result+span('operator',id)
+            else if (id=C_tokenString[tt_modifier_private]     )
+                 or (id=C_tokenString[tt_modifier_memoized]    )
+                 or (id=C_tokenString[tt_modifier_mutable]     )
+                 or (id=C_tokenString[tt_modifier_synchronized])
+                 or (id=C_tokenString[tt_modifier_local]       ) then result:=result+span('modifier',id)
+            else if (id=C_tokenString[tt_procedureBlockBegin]  )
+                 or (id=C_tokenString[tt_procedureBlockEnd]    )
+                 or (id=C_tokenString[tt_procedureBlockWhile]  )
+                 or (id=C_tokenString[tt_each]                 )
+                 or (id=C_tokenString[tt_parallelEach]         )
+                 or (id=C_tokenString[tt_aggregatorConstructor]) then result:=result+span('builtin',id)
+            else if (id=C_boolText[true] )
+                 or (id=C_boolText[false])
+                 or (id='Nan'            )
+                 or (id='Inf'            )
+                 or (id='void'           ) then result:=result+span('literal',id)
+          else begin
+            if intrinsicRuleMap.containsKey(id) then result:=result+span('builtin',id)
+                                                else result:=result+span('identifier',id);
+          end;
+        end;
+        ';',')','}','(','{',',',']','[': result:=result+takeFromLine(1);
+        '@','^','?': result:=result+span('operator',takeFromLine(1));
+        '|': if startsWith(line,'|=') then result:=result+span('operator',takeFromLine(2))
+                                      else result:=result+span('operator',takeFromLine(1));
+        '+': if startsWith(line,C_tokenString[tt_cso_assignPlus])
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '&': if startsWith(line,C_tokenString[tt_cso_assignStrConcat])
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '-': if startsWith(line,'->') or startsWith(line,C_tokenString[tt_cso_assignMinus])
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '*': if startsWith(line,'**') or startsWith(line,C_tokenString[tt_cso_assignMult])
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '>': if startsWith(line,'>=')
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '!': if startsWith(line,'!=')
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '=': if startsWith(line,'==')
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '<': if startsWith(line,'<>') or startsWith(line,'<=')
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '/': if startsWith(line,'//') then begin //comments
+               parsedLength:=2;
+               while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
+               result:=result+span('comment',takeFromLine(parsedLength));
+             end else if startsWith(line,C_tokenString[tt_cso_assignDiv])
+             then result:=result+span('operator',takeFromLine(2))
+             else result:=result+span('operator',takeFromLine(1));
+        '%': if      startsWith(line,'%%%%') then result:=result+span('operator',takeFromLine(4))
+             else if startsWith(line,'%%%') then  result:=result+span('operator',takeFromLine(3))
+             else if startsWith(line,'%%') then   result:=result+span('operator',takeFromLine(2))
+             else                                 result:=result+span('operator',takeFromLine(1));
+        '.': if startsWith(line,C_tokenString[tt_optionalParameters]) then result:=result+span('operator',takeFromLine(3))
+             else if startsWith(line,C_tokenString[tt_separatorCnt]) then result:=result+span('operator',takeFromLine(2))
+             else result:=result+takeFromLine(length(line));
+        ':': if startsWith(line,':=') then result:=result+span('operator',takeFromLine(2))
+             else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r','k']) then begin
+               id:=takeFromLine(leadingIdLength(true));
+               if (id=C_tokenString[tt_typeCheckBoolList  ])
+               or (id=C_tokenString[tt_typeCheckBoolean   ])
+               or (id=C_tokenString[tt_typeCheckExpression])
+               or (id=C_tokenString[tt_typeCheckIntList   ])
+               or (id=C_tokenString[tt_typeCheckInt       ])
+               or (id=C_tokenString[tt_typeCheckList      ])
+               or (id=C_tokenString[tt_typeCheckNumList   ])
+               or (id=C_tokenString[tt_typeCheckNumeric   ])
+               or (id=C_tokenString[tt_typeCheckStringList])
+               or (id=C_tokenString[tt_typeCheckScalar    ])
+               or (id=C_tokenString[tt_typeCheckString    ])
+               or (id=C_tokenString[tt_typeCheckRealList  ])
+               or (id=C_tokenString[tt_typeCheckReal      ])
+               or (id=C_tokenString[tt_typeCheckKeyValueList]) then result:=result+span('operator',id)
+               else result:=result+span('operator',takeFromLine(1));
+             end else result:=result+span('operator',takeFromLine(1));
+        else begin
+          result:=result+takeFromLine(length(line));
+        end;
+      end;
+    end;
+  end;
+
+PROCEDURE polishFile(CONST name:ansistring);
+  CONST CODE_START_TAG='<!--mnh_code:-->';
+        CODE_END_TAG  ='<!--:mnh_code-->';
+        DISABLED_CODE_START_TAG='<!-- mnh_code: -->';
+        DISABLED_CODE_END_TAG  ='<!-- :mnh_code -->';
+  VAR f:T_codeProvider;
+      L:T_arrayOfString;
+      formatted:ansistring;
+      changed:boolean=false;
+      i:longint;
+      codeBlock:boolean=false;
+  begin
+    if not(FileExists(name)) then exit;
+    f.create(name);
+    L:=f.getLines;
+    for i:=0 to length(L)-1 do begin
+      if not(codeBlock) and (trim(L[i])=CODE_START_TAG) then begin
+        codeBlock:=true;
+        L[i]:=DISABLED_CODE_START_TAG;
+        changed:=true;
+      end else if codeBlock then begin
+        if trim(L[i])=CODE_END_TAG then begin
+          codeBlock:=false;
+          L[i]:=DISABLED_CODE_END_TAG;
+          changed:=true;
+        end else begin
+          formatted:=toHtmlCode(L[i]);
+          L[i]:=formatted;
+          changed:=true;
+        end;
+      end;
+    end;
+    if changed then begin
+      writeln('file ',name,' was modified');
+      f.setLines(L);
+      f.save;
+    end;
+    f.destroy;
+  end;
+
+PROCEDURE polishExistingHtmlFiles;
+  begin
+    polishFile(htmlRoot+'/builtin.html');
+    polishFile(htmlRoot+'/each.html');
+    polishFile(htmlRoot+'/functions.html');
+    polishFile(htmlRoot+'/index.html');
+    polishFile(htmlRoot+'/operators.html');
+    polishFile(htmlRoot+'/packages.html');
+    polishFile(htmlRoot+'/quickstart.html');
+    polishFile(htmlRoot+'/types.html');
+  end;
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
   begin
@@ -204,8 +414,8 @@ FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
 
 PROCEDURE writeUserPackageDocumentations;
   CONST htmlHead = '\packages.head';
-    htmlFoot = '\packages.foot';
-    htmlResult = '\packages.html';
+        htmlFoot = '\packages.foot';
+        htmlResult = '\packages.html';
 
   VAR i: longint;
     tmp: ansistring;
@@ -246,13 +456,12 @@ PROCEDURE writeUserPackageDocumentations;
       end;
     close(inFile);
     close(outFile);
-
   end;
 
 PROCEDURE documentBuiltIns;
   CONST htmlHead = '\builtin.head';
-    htmlFoot = '\builtin.foot';
-    htmlResult = '\builtin.html';
+        htmlFoot = '\builtin.foot';
+        htmlResult = '\builtin.html';
 
   VAR ids: T_arrayOfString;
       i,j: longint;
