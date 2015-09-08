@@ -25,7 +25,7 @@ regTest/*.log.1
 doc/builtin.html
 doc/packages.html
 regTest/passedTests.dat
-
+*.html
 gui/lib/x86_64-win64/*
 demos/inputs/kjv.txt
 demos/inputs/unixdict.txt
