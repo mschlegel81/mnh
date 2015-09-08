@@ -64,10 +64,10 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
       if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation)
-      else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(params^.value(0),params^.value(1),nil,0)))
+      else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(params^.value(1),params^.value(0),nil,0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(regexMatches(triplet(params^.value(0),params^.value(1),nil,i)));
+        for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(regexMatches(triplet(params^.value(1),params^.value(0),nil,i)));
       end;
     end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation);
   end;
@@ -103,10 +103,10 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
       if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation)
-      else if i1=0 then result:=regexMatchComposite(triplet(params^.value(0),params^.value(1),nil,0))
+      else if i1=0 then result:=regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(0),params^.value(1),nil,i)),false);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
     end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation);
   end;
@@ -139,10 +139,10 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
       if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation)
-      else if i1=0 then result:=regexSplit(triplet(params^.value(0),params^.value(1),nil,0))
+      else if i1=0 then result:=regexSplit(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(0),params^.value(1),nil,i)),false);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
     end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation);
   end;
@@ -169,18 +169,18 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     if (params<>nil) and (params^.size=3) then begin
       i1:=listSize(params^.value(0),params^.value(1),params^.value(2));
       if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation)
-      else if i1=0 then result:=newStringLiteral(regexReplace(triplet(params^.value(0),params^.value(1),params^.value(2),0)))
+      else if i1=0 then result:=newStringLiteral(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),0)))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.appendString(regexReplace(triplet(params^.value(0),params^.value(1),params^.value(2),i)));
+        for i:=0 to i1-1 do P_listLiteral(result)^.appendString(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),i)));
       end;
     end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation);
   end;
 
 INITIALIZATION
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(regex,searchString); //returns true if string/-list searchString matches string/-list regex#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(regex,searchString); //returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(regex,searchString); //splits the string/-list searchString using string/-list regex#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(regex,searchString,replaceString); //replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#;If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(searchString,regex); //returns true if string/-list searchString matches string/-list regex#;If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(searchString,regex); //returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#;If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(searchString,regex); //splits the string/-list searchString using string/-list regex#;If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(searchString,regex,replaceString); //replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#;If lists are given they must have equal sizes.',true);
 
 end.
