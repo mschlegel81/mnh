@@ -26,3 +26,4 @@ table { display: inline-table}
 .stringLiteral{color:#008800}
 .literal{color:#FF0000}
 .operator{color:#000088;font-weight:bold}
+.comment{color:#666666;font-style:italic}
