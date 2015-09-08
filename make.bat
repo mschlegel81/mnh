@@ -24,7 +24,7 @@
 @if "%1"=="clean" goto cleanup
 @if "%1"=="smartbuild" goto smartbuild
 @goto help
- 
+
 :64bitOpt
 @echo --------------------- building optimized 64 bit binaries ---------------------------
 @%fpc64% gui\mnh_gui.lpr          -o.\mnh.exe      %optimize% %guiOpt64% -dfullversion
@@ -34,7 +34,7 @@
 @del *.lfm *.res *.obj
 @echo ------------------------------------------------------------------------------------
 @goto loop
- 
+
 :32bitOpt
 @echo --------------------- building optimized 32 bit binaries ---------------------------
 @%fpc32% gui\mnh_gui.lpr          -obin32\mnh.exe     %optimize% %guiOpt32% -dfullversion
@@ -44,7 +44,7 @@
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------
 @goto loop
- 
+
 :64bitDeb
 @echo ------------------ building 64 bit binaries with debug info ------------------------
 @%fpc64% gui\mnh_gui.lpr          -o.\mnh_debug.exe     %debug% %guiOpt64% -dfullversion
@@ -54,7 +54,7 @@
 @del *.lfm *.res *.obj
 @echo ------------------------------------------------------------------------------------
 @goto loop
- 
+
 :32bitDeb
 @echo ------------------ building 32 bit binaries with debug info ------------------------
 @%fpc32% gui\mnh_gui.lpr          -obin32\mnh_debug.exe     %debug% %guiOpt32% -dfullversion
@@ -64,7 +64,7 @@
 @del bin32\*.lfm bin32\*.res
 @echo ------------------------------------------------------------------------------------
 @goto loop
- 
+
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
 @mnh_light.exe make_mnh.mnh updateXml
@@ -117,7 +117,7 @@
 @move mnh_light.exe temp.exe
 @temp.exe make_mnh.mnh
 @del temp.exe
-@goto loop
+@goto end
 
 :cleanup
 @%delp%
