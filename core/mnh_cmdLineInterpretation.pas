@@ -6,9 +6,10 @@ PROCEDURE parseCmdLine;
 VAR displayTime:boolean=false;
 IMPLEMENTATION
 //by command line parameters:---------------
-VAR fileToInterpret:ansistring='';
+VAR fileOrCommandToInterpret:ansistring='';
     parameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
+    directExecutionMode:boolean=false;
 //---------------:by command line parameters
 
 PROCEDURE parseCmdLine;
@@ -38,7 +39,7 @@ PROCEDURE parseCmdLine;
       writeln('Target CPU : ',{$I %FPCTARGET%});
       writeln;
       writeln('Accepted parameters: ');
-      writeln('  [-h/-version] [+echo/-echo] [-el#] [-det] [filename [parameters]]');
+      writeln('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');
       writeln('  filename: if present the file is interpreted; parameters are passed if present');
       writeln('            if not present, interactive mode is entered');
       writeln('  +echo   : force echo on (default for interactive mode)');
@@ -49,21 +50,33 @@ PROCEDURE parseCmdLine;
       writeln('  -h      : display this help and quit');
       writeln('  -det    : force deterministic "random" numbers');
       writeln('  -version: show version info and exit');
+      writeln('  -cmd    : directly execute the following command');
       writeln('  -doc    : regenerate and show documentation');
     end;
 
   PROCEDURE fileMode;
     VAR startTime:double;
     begin
-	  startTime:=now;
-      mainPackageProvider.setPath(fileToInterpret);
+      startTime:=now;
+      mainPackageProvider.setPath(fileOrCommandToInterpret);
       if wantHelpDisplay then begin
         displayHelp;
         printMainPackageDocText;
         halt;
       end;
       callMainInMain(parameters);
-    if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
+      if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
+      mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
+    end;
+
+  PROCEDURE doDirect;
+    VAR startTime:double;
+    begin
+      startTime:=now;
+      mainPackageProvider.clear;
+      mainPackageProvider.appendLine(fileOrCommandToInterpret);
+      reloadMainPackage(lu_forDirectExecution);
+      if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
       mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
     end;
 
@@ -73,12 +86,13 @@ PROCEDURE parseCmdLine;
   begin
     setLength(parameters,0);
     for i:=1 to paramCount do begin
-    if fileToInterpret='' then begin
+    if (fileOrCommandToInterpret='') or directExecutionMode then begin
         if      paramstr(i)='+echo' then echo:=e_forcedOn
         else if paramstr(i)='-echo' then echo:=e_forcedOff
         else if paramstr(i)='+time' then time:=t_forcedOn
         else if paramstr(i)='-time' then time:=t_forcedOff
         else if paramstr(i)='-det'  then randseed:=0
+        else if paramstr(i)='-cmd'  then directExecutionMode:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},{$I %FPCTARGET%}); {$include code_hash.inc} halt; end
@@ -91,28 +105,33 @@ PROCEDURE parseCmdLine;
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
             halt;
           end else consoleOutAdapter.minErrorLevel:=T_messageTypeOrErrorLevel(ord(el0_allOkay)+ pel);
+        end else if directExecutionMode then begin
+          fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
-          if fileExists(paramstr(i)) then fileToInterpret:=paramStr(i) else begin
+          if fileExists(paramstr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
             writeln('Invalid filename given!');
             writeln('Parameter: ',paramStr(i));
             writeln('File does not exist.');
             halt;
           end;
         end;
-	  end else begin
+      end else begin
         setLength(parameters,length(parameters)+1);
         parameters[length(parameters)-1]:=paramStr(i);
-	  end;
+      end;
     end;
     //-----------------------------------------------------
-    if (echo=e_forcedOn) or (echo=e_default) and (fileToInterpret='') then begin
+    if (echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode) then begin
       consoleOutAdapter.echoOn:=true;
     end else begin
       consoleOutAdapter.echoOn:=false;
     end;
-    displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileToInterpret=''));
+    displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
 
-    if fileToInterpret<>'' then fileMode;
+    if fileOrCommandToInterpret<>'' then begin
+       if directExecutionMode then doDirect
+                              else fileMode;
+    end;
     if wantHelpDisplay then begin
       displayHelp;
       halt;
