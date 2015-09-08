@@ -75,7 +75,7 @@
 @mkdir distro\regTest
 @copy packages\*.mnh distro\packages
 @copy demos\*.mnh distro\demos
-@copy doc\* distro\doc
+@copy doc\html_template.txt distro\doc
 @copy mnh_for_notepad.xml distro\
 @copy regTest\*.mnh distro\regTest\
 @copy regTest\*.expected distro\regTest\
