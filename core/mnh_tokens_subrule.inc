@@ -580,7 +580,7 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
   begin
     result:='<tr><td>@Line '+IntToStr(declaredAt.line)+': ';
     if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
-    result:=result+'<code>'+ruleId+pattern.toString+'</code></td></tr>';
+    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
   end;
 
 {$endif}

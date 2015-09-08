@@ -5,9 +5,9 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
-  Graphics, Dialogs, ExtCtrls, Menus, StdCtrls, ComCtrls, Grids, PopupNotifier,
-  SynHighlighterMnh, mnh_fileWrappers, mnh_gui_settings, mnh_tokloc,
-  mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants, myGenerics,
+  Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
+  SynHighlighterMnh, mnh_gui_settings, mnh_tokloc,
+  mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
 CONST ONE_SECOND=1/(24*60*60);
@@ -190,18 +190,9 @@ TYPE
 
   { T_guiOutAdapter }
 
-  T_guiOutAdapter=object(T_abstractOutAdapter)
-    outputBehaviour:T_outputBehaviour;
-    storedMessages:array of T_storedMessage;
-    cs:TRTLCriticalSection;
+  T_guiOutAdapter=object(T_collectingOutAdapter)
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE clearConsole; virtual;
-    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual;
-    PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
-    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
-    PROCEDURE appendSingleMessage(CONST message:T_storedMessage);
-    PROCEDURE clearMessages;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
     PROCEDURE flushClear(VAR syn:TSynEdit);
     PROCEDURE loadSettings;
@@ -227,75 +218,12 @@ VAR guiOutAdapter: T_guiOutAdapter;
 
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    system.InitCriticalSection(cs);
-    setLength(storedMessages,0);
+    inherited create;
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
   begin
-    system.DoneCriticalsection(cs);
-    clearMessages;
-  end;
-
-PROCEDURE T_guiOutAdapter.clearConsole;
-  VAR msg:T_storedMessage;
-  begin
-    system.EnterCriticalsection(cs);
-    clearMessages;
-    msg.messageType:=elc_clearConsole;
-    appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_guiOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; CONST s: ansistring);
-  VAR msg:T_storedMessage;
-  begin
-    case mt of
-      elo_echoOutput     : if not(outputBehaviour.doShowExpressionOut) then exit;
-      eld_echoDeclaration: if not(outputBehaviour.doEchoDeclaration) then exit;
-      ele_echoInput      : if not(outputBehaviour.doEchoInput) then exit;
-    end;
-    system.EnterCriticalsection(cs);
-    msg.messageType:=mt;
-    msg.simpleMessage:=s;
-    appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_guiOutAdapter.printOut(CONST s: T_arrayOfString);
-  VAR msg:T_storedMessage;
-  begin
-    system.EnterCriticalsection(cs);
-    msg.messageType:=elp_printline;
-    msg.multiMessage:=s;
-    appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_guiOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-  VAR msg:T_storedMessage;
-  begin
-    {$ifdef debugMode}
-    consoleOutAdapter.errorOut(level,errorMessage,errorLocation);
-    {$endif}
-    if level<el2_warning then exit;
-    system.EnterCriticalsection(cs);
-    msg.messageType:=level;
-    msg.simpleMessage:=errorMessage;
-    msg.location:=errorLocation;
-    appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
-  end;
-
-PROCEDURE T_guiOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
-  begin
-    setLength(storedMessages,length(storedMessages)+1);
-    storedMessages[length(storedMessages)-1]:=message;
-  end;
-
-PROCEDURE T_guiOutAdapter.clearMessages;
-  begin
-    setLength(storedMessages,0);
+    inherited destroy;
   end;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
@@ -333,49 +261,6 @@ PROCEDURE T_guiOutAdapter.loadSettings;
   begin
     outputBehaviour:=SettingsForm.outputBehaviour;
   end;
-
-//PROCEDURE writeDeclEcho(CONST s:ansistring);
-//  begin
-//    output.append(C_specialHeads[1].head+' '+s);
-//  end;
-//
-//PROCEDURE writeExprEcho(CONST s:ansistring);
-//  begin
-//    output.append(C_specialHeads[2].head+' '+s);
-//  end;
-//
-//PROCEDURE writeExprOut (CONST s:ansistring);
-//  begin
-//    output.append(C_specialHeads[3].head+' '+s);
-//  end;
-//
-//PROCEDURE writePrint   (CONST list:T_arrayOfString);
-//  begin
-//    output.appendAll(list);
-//  end;
-//
-//PROCEDURE writeError(CONST err:T_storedError);
-//  begin
-//    if err.errorLevel=elX_stateInfo
-//    then output.append(C_specialHeads[5].head+ansistring(err.errorLocation)+' '+err.errorMessage)
-//    else output.append(C_specialHeads[4].head+C_errorLevelTxt[err.errorLevel]+' '+ansistring(err.errorLocation)+' '+err.errorMessage)
-//  end;
-
-//PROCEDURE clearPrint();
-//  begin
-//    wantClear.value:=true;
-//    output.clear;
-//  end;
-
-
-//PROCEDURE logError(CONST error:T_storedError);
-//  begin
-//    {$ifdef debugMode}
-//    mnh_out_adapters.plainStdErrOut(error);
-//    {$endif}
-//    if error.errorLevel<el2_warning then exit;
-//    errorThroughput.append(error);
-//  end;
 
 PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
   CONST SAMPLE_TEXT='1!gPQ|';

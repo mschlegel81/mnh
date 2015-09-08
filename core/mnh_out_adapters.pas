@@ -2,23 +2,25 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES myStringutil, mnh_constants, mnh_tokLoc, myGenerics,mySys;
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
 
 TYPE
-  P_storedMessage = ^T_storedMessage;
   T_storedMessage = record
     messageType : T_messageTypeOrErrorLevel;
     simpleMessage: ansistring;
     multiMessage: T_arrayOfString;
     location: T_tokenLocation;
-    next,prev: P_storedMessage;
   end;
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
+
+  { T_abstractOutAdapter }
+
   T_abstractOutAdapter = object
+    CONSTRUCTOR create;
     PROCEDURE clearConsole; virtual; abstract;
     PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
@@ -39,6 +41,27 @@ TYPE
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
   end;
+
+  T_outputBehaviour= record
+    doEchoInput: boolean;
+    doEchoDeclaration: boolean;
+    doShowExpressionOut: boolean;
+  end;
+
+  T_collectingOutAdapter=object(T_abstractOutAdapter)
+    outputBehaviour:T_outputBehaviour;
+    storedMessages:array of T_storedMessage;
+    cs:TRTLCriticalSection;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE clearConsole; virtual;
+    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual;
+    PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
+    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
+    PROCEDURE appendSingleMessage(CONST message:T_storedMessage);
+    PROCEDURE clearMessages;
+  end;
+
 
 
 VAR
@@ -123,6 +146,12 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
                                 else halt(systemErrorlevel.value);
   end;
 
+{ T_abstractOutAdapter }
+
+CONSTRUCTOR T_abstractOutAdapter.create;
+  begin
+  end;
+
 { T_consoleOutAdapter }
 
 CONSTRUCTOR T_consoleOutAdapter.create;
@@ -160,6 +189,80 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel;
             ansistring(errorLocation));
 
   end;
+
+CONSTRUCTOR T_collectingOutAdapter.create;
+  begin
+    system.InitCriticalSection(cs);
+    setLength(storedMessages,0);
+  end;
+
+DESTRUCTOR T_collectingOutAdapter.destroy;
+  begin
+    system.DoneCriticalsection(cs);
+    clearMessages;
+  end;
+
+PROCEDURE T_collectingOutAdapter.clearConsole;
+  VAR msg:T_storedMessage;
+  begin
+    system.EnterCriticalsection(cs);
+    clearMessages;
+    msg.messageType:=elc_clearConsole;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; CONST s: ansistring);
+  VAR msg:T_storedMessage;
+  begin
+    case mt of
+      elo_echoOutput     : if not(outputBehaviour.doShowExpressionOut) then exit;
+      eld_echoDeclaration: if not(outputBehaviour.doEchoDeclaration) then exit;
+      ele_echoInput      : if not(outputBehaviour.doEchoInput) then exit;
+    end;
+    system.EnterCriticalsection(cs);
+    msg.messageType:=mt;
+    msg.simpleMessage:=s;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
+  VAR msg:T_storedMessage;
+  begin
+    system.EnterCriticalsection(cs);
+    msg.messageType:=elp_printline;
+    msg.multiMessage:=s;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+  VAR msg:T_storedMessage;
+  begin
+    {$ifdef debugMode}
+    consoleOutAdapter.errorOut(level,errorMessage,errorLocation);
+    {$endif}
+    if level<el2_warning then exit;
+    system.EnterCriticalsection(cs);
+    msg.messageType:=level;
+    msg.simpleMessage:=errorMessage;
+    msg.location:=errorLocation;
+    appendSingleMessage(msg);
+    system.LeaveCriticalsection(cs);
+  end;
+
+PROCEDURE T_collectingOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+  begin
+    setLength(storedMessages,length(storedMessages)+1);
+    storedMessages[length(storedMessages)-1]:=message;
+  end;
+
+PROCEDURE T_collectingOutAdapter.clearMessages;
+  begin
+    setLength(storedMessages,0);
+  end;
+
 
 INITIALIZATION
   consoleOutAdapter.create;

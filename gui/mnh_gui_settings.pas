@@ -6,17 +6,11 @@ INTERFACE
 
 USES
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_fileWrappers, mnh_funcs, myGenerics, mySys;
+  StdCtrls, EditBtn, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters;
 
 TYPE
 
   { TSettingsForm }
-  T_outputBehaviour= record
-    doEchoInput: boolean;
-    doEchoDeclaration: boolean;
-    doShowExpressionOut: boolean;
-  end;
-
 
   TSettingsForm = class(TForm)
     FontButton: TButton;

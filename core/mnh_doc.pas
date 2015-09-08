@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litvar, mnh_fileWrappers;
+USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litvar;
 VAR htmlRoot: string;
 TYPE
 
@@ -35,14 +35,16 @@ TYPE
     FUNCTION getHref: ansistring;
   end;
 
-PROCEDURE writeUserPackageDocumentations;
-PROCEDURE documentBuiltIns;
-PROCEDURE polishExistingHtmlFiles;
+
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
+FUNCTION toHtmlCode(line:ansistring):ansistring;
+PROCEDURE makeHtmlFromTemplate;
+
+
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
 
-FUNCTION toHtmlCode(VAR line:ansistring):ansistring;
+FUNCTION toHtmlCode(line:ansistring):ansistring;
   VAR parsedLength:longint=0;
   FUNCTION span(CONST sc,txt:ansistring):ansistring;
     begin
@@ -199,98 +201,10 @@ FUNCTION toHtmlCode(VAR line:ansistring):ansistring;
     end;
   end;
 
-PROCEDURE polishFile(CONST name:ansistring);
-  CONST CODE_START_TAG='<!--mnh_code:-->';
-        CODE_END_TAG  ='<!--:mnh_code-->';
-        DISABLED_LINE_TAG='<!-- dropme -->';
-  VAR f:T_codeProvider;
-      L:T_arrayOfString;
-      formatted:ansistring;
-      changed:boolean=false;
-      i,j:longint;
-      codeBlock:boolean=false;
-  begin
-    if not(FileExists(name)) then exit;
-    f.create(name);
-    L:=f.getLines;
-    for i:=0 to length(L)-1 do begin
-      if not(codeBlock) and (trim(L[i])=CODE_START_TAG) then begin
-        codeBlock:=true;
-        L[i]:=DISABLED_LINE_TAG;
-        changed:=true;
-      end else if codeBlock then begin
-        if trim(L[i])=CODE_END_TAG then begin
-          codeBlock:=false;
-          L[i]:=DISABLED_LINE_TAG;
-          changed:=true;
-        end else begin
-          formatted:=toHtmlCode(L[i]);
-          L[i]:=formatted;
-          changed:=true;
-        end;
-      end;
-    end;
-    if changed then begin
-      writeln('file ',name,' was modified');
-      j:=0;
-      for i:=0 to length(L)-1 do begin
-        if i<>j then L[j]:=L[i];
-        if L[i]<>DISABLED_LINE_TAG then inc(j);
-      end;
-      setLength(L,j);
-
-      f.setLines(L);
-      f.save;
-    end;
-    f.destroy;
-  end;
-
-PROCEDURE polishExistingHtmlFiles;
-  begin
-    polishFile(htmlRoot+'/builtin.html');
-    polishFile(htmlRoot+'/each.html');
-    polishFile(htmlRoot+'/functions.html');
-    polishFile(htmlRoot+'/index.html');
-    polishFile(htmlRoot+'/operators.html');
-    polishFile(htmlRoot+'/packages.html');
-    polishFile(htmlRoot+'/quickstart.html');
-    polishFile(htmlRoot+'/types.html');
-  end;
-
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
   begin
     setLength(packages,length(packages)+1);
     packages[length(packages)-1]:=doc;
-  end;
-
-PROCEDURE locateHtml;
-  CONST primary = 'doc';
-    VAR secondary:string;
-  begin
-    secondary:=ExtractFilePath(paramstr(0))+DirectorySeparator+primary;
-    if DirectoryExists(primary) then htmlRoot:=primary
-    else if DirectoryExists(secondary) then htmlRoot:=secondary
-    else htmlRoot:='';
-  end;
-
-FUNCTION prettyHtml(s: ansistring): ansistring;
-  VAR Lines: T_arrayOfString;
-    i: longint;
-  begin
-    setLength(Lines, 0);
-    while pos('#', s)>0 do begin
-      append(Lines, copy(s, 1, pos('#', s)-1));
-      s:=copy(s, pos('#', s)+1, length(s));
-    end;
-    append(Lines,s);
-
-    result:='';
-    for i:=0 to length(Lines)-1 do
-      begin
-      if i>0 then result:=result+'<br>';
-      if pos(';', Lines [i])>0 then result:=result+'<code>'+Lines [i]+'</code>'
-      else result:=result+Lines [i];
-      end;
   end;
 
 { T_userPackageDocumentation }
@@ -414,134 +328,223 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
+  FUNCTION prettyHtml(s: ansistring): ansistring;
+    VAR Lines: T_arrayOfString;
+      i: longint;
+    begin
+      setLength(Lines, 0);
+      while pos('#', s)>0 do begin
+        append(Lines, copy(s, 1, pos('#', s)-1));
+        s:=copy(s, pos('#', s)+1, length(s));
+      end;
+      append(Lines,s);
+
+      result:='';
+      for i:=0 to length(Lines)-1 do
+        begin
+        if i>0 then result:=result+'<br>';
+        if pos(';', Lines [i])>0 then result:=result+'<code>'+toHtmlCode(Lines [i])+'</code>'
+        else result:=result+Lines [i];
+        end;
+    end;
+
   begin
     result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
   end;
 
-PROCEDURE writeUserPackageDocumentations;
-  CONST htmlHead = '\packages.head';
-        htmlFoot = '\packages.foot';
-        htmlResult = '\packages.html';
+PROCEDURE makeHtmlFromTemplate;
+  PROCEDURE writeUserPackageDocumentations(VAR outFile:Text);
+    VAR i: longint;
+    begin
+      for i:=0 to length(packages)-1 do packages[i]^.resolveUses;
+      Write(outfile, '<table>');
+      for i:=0 to length(packages)-1 do
+        begin
+        if odd(i) then Write(outfile, '<tr>')
+        else Write(outfile, '<tr class="ruleHead">');
+        Write(outfile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
+        if packages [i]^.isExecutable then
+          Write(outfile, '<td>executable</td>') else Write(outfile, '<td>&nbsp;</td>');
+        writeln(outfile, '</tr>');
+        end;
+      Write(outfile, '</table>');
 
-  VAR i: longint;
-    tmp: ansistring;
-    inFile, outFile: Text;
+      for i:=0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
+      for i:=0 to length(packages)-1 do dispose(packages [i], destroy);
+      setLength(packages, 0);
+    end;
+
+  PROCEDURE documentBuiltIns(VAR outFile:text);
+    VAR ids: T_arrayOfString;
+        i,j: longint;
+        n: T_namespace;
+        swapTmp: T_intrinsicFunctionDocumentation;
+
+        doc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
+
+    FUNCTION namespace(CONST id:ansistring):T_namespace;
+      VAR useId:ansistring;
+          n:T_namespace;
+      begin
+        if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
+        for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
+      end;
+
+    begin
+      //Prepare and sort data:-------------------------------------------------------------
+      for n:=Low(T_namespace) to High(T_namespace) do setLength(doc[n],0);
+      ids:=intrinsicRuleExplanationMap.keySet;
+      for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
+        n:=namespace(ids[i]);
+        j:=length(doc[n]);
+        setLength(doc[n],j+1);
+        doc[n][j].create(ids[i]);
+      end;
+      setLength(ids,0);
+
+      for n:=Low(T_namespace) to High(T_namespace) do
+      for i:=1 to length(doc[n])-1 do for j:=0 to i-1 do
+      if doc[n][i].id < doc[n][j].id then begin
+        swapTmp:=doc[n][i]; doc[n][i]:=doc[n][j]; doc[n][j]:=swapTmp;
+      end;
+      //-------------------------------------------------------------:Prepare and sort data
+      writeln(outFile, '<div align="right"><hr></div><br><div>');
+      for n:=Low(T_namespace) to High(T_namespace) do for i:=0 to length(doc[n])-1 do
+        writeln(outFile, '<a href="#', doc[n][i].id, '">', doc[n][i].id, '</a> &nbsp; ');
+      writeln(outFile, '</div><br><div align="right"><hr></div>');
+      for n:=Low(T_namespace) to High(T_namespace) do
+        writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
+
+      for n:=Low(T_namespace) to High(T_namespace) do begin
+        writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
+        for i:=0 to length(doc[n])-1 do begin
+          writeln(outFile, doc[n][i].toHtml);
+          doc[n][i].destroy;
+        end;
+        setLength(doc[n],0);
+      end;
+    end;
+
+  CONST TEMPLATE_NAME_SUFFIX='\html_template.txt';
+  TYPE T_include=record
+         includeTag:ansistring;
+         content:T_arrayOfString;
+       end;
+
+  VAR templateFile:text;
+      txt:ansistring;
+      outFile:record
+        handle:text;
+        isOpen:boolean;
+      end;
+      includes:array of T_include;
+      context:record
+        mode:(none,beautifying,definingInclude);
+        include:T_include;
+      end;
+
+  FUNCTION contextEnds(CONST txt:ansistring) :boolean;
+    CONST END_CONTEXT_CMD='<!--end-->';
+    begin
+      if trim(txt)=END_CONTEXT_CMD then begin
+        if context.mode=definingInclude then begin
+          setLength(includes,length(includes)+1);
+          includes[length(includes)-1]:=context.include;
+        end;
+        context.mode:=none;
+        exit(true);
+        result:=true;
+      end else result:=false;
+    end;
+
+  FUNCTION handleCommand(cmd:ansistring):boolean;
+    FUNCTION commandParameter(CONST txt:ansistring):ansistring;
+      VAR i:longint;
+      begin
+        result:='';
+        i:=1;
+        while (i<=length(txt)) and (txt[i]<>' ') do inc(i);
+        while (i<=length(txt)) and (txt[i]<>'-') do begin
+          result:=result+txt[i];
+          inc(i);
+        end;
+        result:=trim(result);
+      end;
+
+    CONST FILE_SWITCH_PREFIX  ='<!--file ';
+          START_INCLUDE_PREFIX='<!--begin ';
+          START_BEAUTIFY_CMD  ='<!--mnh-->';
+          BUILTIN_DOC_CMD     ='<!--BUILTIN-->';
+          PACKAGE_DOC_CMD     ='<!--USERPKG-->';
+
+    VAR i,j:longint;
+        cmdParam:ansistring;
+    begin
+      cmd:=trim(cmd);
+      if not(startsWith(cmd,'<!--')) then exit(false);
+      cmdParam:=commandParameter(cmd);
+      if startsWith(cmd,FILE_SWITCH_PREFIX) then begin
+        with outFile do begin
+          if isOpen then close(handle);
+          assign(handle,htmlRoot+'\'+cmdParam);
+          rewrite(handle);
+          isOpen:=true;
+        end;
+        exit(true);
+      end;
+      if cmd=BUILTIN_DOC_CMD then begin
+        documentBuiltIns(outFile.handle);
+        exit(true);
+      end;
+      if cmd=PACKAGE_DOC_CMD then begin
+        writeUserPackageDocumentations(outFile.handle);
+        exit(true);
+      end;
+      if cmd=START_BEAUTIFY_CMD then begin
+        context.mode:=beautifying;
+        exit(true);
+      end;
+      if startsWith(cmd,START_INCLUDE_PREFIX) then begin
+        context.mode:=definingInclude;
+        context.include.includeTag:='<!--'+cmdParam+'-->';
+        setLength(context.include.content,0);
+        exit(true);
+      end;
+      for i:=0 to length(includes)-1 do if includes[i].includeTag=cmd then begin
+        with outFile do if isOpen then for j:=0 to length(includes[i].content)-1 do writeln(handle,includes[i].content[j]);
+        exit(true);
+      end;
+      result:=false;
+    end;
+
   begin
-    for i:=0 to length(packages)-1 do packages[i]^.resolveUses;
-    assign(outFile, htmlRoot+htmlResult); rewrite(outfile);
+    outFile.isOpen:=false;
+    setLength(includes,0);
+    context.mode:=none;
 
-    assign(inFile, htmlRoot+htmlHead); reset(inFile);
-    while not(EOF(inFile)) do
-      begin
-      readln(inFile, tmp);
-      writeln(outFile, tmp);
+    assign(templateFile, htmlRoot+TEMPLATE_NAME_SUFFIX);
+    reset(templateFile);
+    while not(EOF(templateFile)) do begin
+      readln(templateFile, txt);
+      case context.mode of
+        none:            if not(handleCommand(txt)) and outFile.isOpen then writeln(outFile.handle,txt);
+        beautifying:     if not(contextEnds(txt))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(txt));
+        definingInclude: if not(contextEnds(txt))   and outFile.isOpen then append(context.include.content,txt);
       end;
-    close(inFile);
-
-    Write(outfile, '<table>');
-    for i:=0 to length(packages)-1 do
-      begin
-      if odd(i) then Write(outfile, '<tr>')
-      else Write(outfile, '<tr class="ruleHead">');
-      Write(outfile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
-      if packages [i]^.isExecutable then
-        Write(outfile, '<td>executable</td>') else Write(outfile, '<td>&nbsp;</td>');
-      writeln(outfile, '</tr>');
-      end;
-    Write(outfile, '</table>');
-
-    for i:=0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
-    for i:=0 to length(packages)-1 do dispose(packages [i], destroy);
-    setLength(packages, 0);
-
-    assign(inFile, htmlRoot+htmlFoot); reset(inFile);
-    while not(EOF(inFile)) do
-      begin
-      readln(inFile, tmp);
-      writeln(outFile, tmp);
-      end;
-    close(inFile);
-    close(outFile);
+    end;
+    close(templateFile);
+    with outFile do if isOpen then close(handle);
   end;
 
-PROCEDURE documentBuiltIns;
-  CONST htmlHead = '\builtin.head';
-        htmlFoot = '\builtin.foot';
-        htmlResult = '\builtin.html';
 
-  VAR ids: T_arrayOfString;
-      i,j: longint;
-      n: T_namespace;
-      tmp: ansistring;
-      swapTmp: T_intrinsicFunctionDocumentation;
-
-      doc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
-      inFile, outFile: Text;
-
-  FUNCTION namespace(CONST id:ansistring):T_namespace;
-    VAR useId:ansistring;
-        n:T_namespace;
-    begin
-      if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
-      for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
-    end;
-
+PROCEDURE locateHtml;
+  CONST primary = 'doc';
+    VAR secondary:string;
   begin
-    if not(FileExists(htmlRoot+htmlHead)) or not(FileExists(htmlRoot+htmlFoot)) then exit;
-    //Prepare and sort data:-------------------------------------------------------------
-    for n:=Low(T_namespace) to High(T_namespace) do setLength(doc[n],0);
-    ids:=intrinsicRuleExplanationMap.keySet;
-    for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
-      n:=namespace(ids[i]);
-      j:=length(doc[n]);
-      setLength(doc[n],j+1);
-      doc[n][j].create(ids[i]);
-    end;
-    setLength(ids,0);
-
-    for n:=Low(T_namespace) to High(T_namespace) do
-    for i:=1 to length(doc[n])-1 do for j:=0 to i-1 do
-    if doc[n][i].id < doc[n][j].id then begin
-      swapTmp:=doc[n][i]; doc[n][i]:=doc[n][j]; doc[n][j]:=swapTmp;
-    end;
-    //-------------------------------------------------------------:Prepare and sort data
-    //Write Header:----------------------------------------------------------------------
-    assign(outFile, htmlRoot+htmlResult); rewrite(outfile);
-    assign(inFile, htmlRoot+htmlHead); reset(inFile);
-    while not(EOF(inFile)) do
-      begin
-      readln(inFile, tmp);
-      writeln(outFile, tmp);
-      end;
-    close(inFile);
-    //----------------------------------------------------------------------:Write Header
-    writeln(outFile, '<div align="right"><hr></div><br><div>');
-    for n:=Low(T_namespace) to High(T_namespace) do for i:=0 to length(doc[n])-1 do
-      writeln(outFile, '<a href="#', doc[n][i].id, '">', doc[n][i].id, '</a> &nbsp; ');
-    writeln(outFile, '</div><br><div align="right"><hr></div>');
-    for n:=Low(T_namespace) to High(T_namespace) do
-      writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
-
-
-    for n:=Low(T_namespace) to High(T_namespace) do begin
-      writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
-      for i:=0 to length(doc[n])-1 do begin
-        writeln(outFile, doc[n][i].toHtml);
-        doc[n][i].destroy;
-      end;
-      setLength(doc[n],0);
-
-    end;
-    //Write Footer:----------------------------------------------------------------------
-    assign(inFile, htmlRoot+htmlFoot); reset(inFile);
-    while not(EOF(inFile)) do
-      begin
-      readln(inFile, tmp);
-      writeln(outFile, tmp);
-      end;
-    close(inFile);
-    close(outFile);
-    //----------------------------------------------------------------------:Write Footer
+    secondary:=ExtractFilePath(paramstr(0))+DirectorySeparator+primary;
+    if DirectoryExists(primary) then htmlRoot:=primary
+    else if DirectoryExists(secondary) then htmlRoot:=secondary
+    else htmlRoot:='';
   end;
 
 INITIALIZATION

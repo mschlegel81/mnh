@@ -1,0 +1,717 @@
+<!--file style.css-->
+body {
+  padding-left: 1em;
+  font-family: Georgia, "Times New Roman",
+        Times, serif;
+  color: black;
+  background-color: #EEEEEE}
+h1 {
+  font-family: Helvetica, Geneva, Arial,
+        SunSans-Regular, sans-serif }
+code { font-family: Courier-New, Courier; white-space: pre }
+a:link {
+  color: #0000FF }
+a:visited {
+  color: #000066 }
+address {
+  margin-top: 1em;
+  padding-top: 1em;
+  border-top: thin dotted }
+table { display: inline-table}
+.oben    { vertical-align:top}
+.red {color:#FF0000}
+.ruleHead  { vertical-align:top; background-color: #DDDDDD}
+.identifier{color:#0000FF}
+.builtin{color:#0000FF;font-weight:bold}
+.modifier{color:#FF8800;font-weight:bold}
+.stringLiteral{color:#008800}
+.literal{color:#FF0000}
+.operator{color:#000088;font-weight:bold}
+.comment{color:#666666;font-style:italic}
+<!--file index.html-->
+<!--begin commonHead-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
+<html><head><link rel="stylesheet" href="style.css" type="text/css"><META http-equiv="Content-Type" content="text/html; charset=ASCII">
+<!--end-->
+<!--commonHead-->
+<title>MNH 5</title>
+</head>
+<body>
+<h2 align="center">MNH 5</h2>
+<div align="right"> <hr> </div>
+<h4><a href="quickstart.html">Quick start</a></h4>
+<h4><a href="types.html">Types</a></h4>
+<h4><a href="operators.html">Operators</a></h4>
+<h4><a href="functions.html">Function definitions</a></h4>
+<h4><a href="each.html">Special constructs: <code>each</code> and <code>pEach</code></a></h4>
+<h4><a href="builtin.html">Built-in Functions</a></h4>
+<h4><a href="packages.html">User packages</a></h4>
+<tr bgcolor="#FFFACD">
+<!--begin commonFoot-->
+<div align="right"> <hr> </div> </body> </html>
+<!--end-->
+<!--commonFoot-->
+<!--file packages.html-->
+<!--commonHead-->
+<title>MNH 5 - Packages</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Packages</h3>
+<div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
+<div align="right"><hr> </div>
+<h3><a href="#usage">Usage</a></h3>
+<ul>
+  <li><h4><a href="#defining">Defining a package</a></h4></li>
+  <li><h4><a href="#importing">Importing a package</a></h4></li>
+  <li><h4><a href="#executables">Executable packages</a></h4></li>
+  <li><h4><a href="#comments">Comments</a></h4></li>
+  <li><h4><a href="#batchmode">Batch mode</a></h4></li>  
+</ul>  
+<h3><a href="#defined">Currently defined packages</a></h3>
+
+<div align="right"><hr> </div>
+
+<h3><a name="usage">Usage</a></h3>
+Packages form the major means to structure your implementation so that parts of it can be reused.<br>
+Each package is a collection of functions and expressions; each input to MNH is a package.<br>
+Expressions in a package will only be executed in interactive mode.<br>
+For details on how to define functions, see <a href="functions.html">MNH5 - Functions</a>
+<h4><a name="defining">Defining a package</a></h4>
+To define a package, just create a file with the extension <code>.mnh</code> (or even simpler: start typing in interactive mode). The following restrictions apply:
+<ul>
+  <li>The filenmae (without extension) should be a valid identifier, i.e. it should start with a letter.<br>This is because the filename wihtout extension will be interpreted as the package-identifier.
+  <br>Packages violating this convention cannot be imported by other packages.</li>
+  <li>The package must be in the search paths of importing packages (see <a href="#importing">Importing a package</a>).
+  <li>The filename must not be any of the built-in pseudo packages' identifiers.</li>
+</ul>
+
+<h4><a name="importing">Importing a package</a></h4>
+To import a package, start your package with a <i>use clause</i>, e.g.:<code>
+<!--mnh-->
+  USE basic;
+<!--end-->
+</code>
+This will import the first package with a filename <code>basic.mnh</code> in the following folders:<ul>
+  <li> The same folder as the importing package, or its subfolders </li>
+  <li> The current executable's folders, or its subfolders </li>
+  <li> The current working directory, or its subfolders </li>
+</ul>
+Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.<code>
+<!--mnh-->
+   basic.sum([1,2,6]);
+<!--end-->
+</code>
+<h4><a name="executables">Executable packages</a></h4> 
+A package is <i>executable</i> if it contains a rule called <code>main</code>.
+Executable packages can be executed from the command line. If called as<code>  
+  mnh_console </code><i>packageName</i><code>.mnh
+</code>the nullary main function will be executed. If additional parameters are given, the respective n-ary main rule will be executed, e.g.<code>
+  mnh_console </code><i>packageName</i><code>.mnh </code><i>parameter_1<code> </code> parameter_2</i><br>
+All input parameters will be passed as strings; consequently they must be converted to other types (e.g. using <code>softCast</code>) as needed.
+
+<h4><a name="comments">Comments</a></h4> 
+A comment is any string starting with <code>//</code> and ending with the following line break.<br>
+A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment. 
+They will be shown here (if the page is regenerated).<br>
+Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
+<code>  mnh_console -h </code><i>packageName</i><code>.mnh</code>
+
+<h4><a name="batchmode">Batch mode</a></h4> 
+By default only the main rule is actually evaluated when a script is interpreted; in interactive mode on the other hand every statement is interpreted.<br>
+To enable <i>batch mode</i>, use the special (pseuco-)comment <code>//!BATCH ON</code>. Batch mode can be disabled again using <code>//!BATCH OFF</code>.
+
+<h3><a name="defined">Currently defined packages</a></h3>
+<!--USERPKG-->
+<!--commonFoot-->
+<!--file builtin.html-->
+<!--commonHead-->
+<title>MNH 5 - Built-in functions</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Built-in functions</h3>
+<div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
+
+<table border="0" align="center">
+<!--BUILTIN-->
+</table>
+<!--commonFoot-->
+<!--file operators.html-->
+<!--commonHead-->
+<title>MNH 5 - Operators</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Operators</h3>
+<div align="right"><hr> </div>
+<h3><a href="#scalarOps"> Scalar operators</a></h3>
+<ul>
+  <li><h4><a href="#arithOps"> Arithmetic operators</a></h4></li>
+  <li><h4><a href="#compOps"> Comparators </a></h4></li>
+  <li><h4><a href="#logOps"> Logical operators </a></h4></li>
+  <li><h4><a href="#stringOps"> String concatenation</a></h4></li>
+</ul>
+<h3><a href="#listOps"> List operators </a></h3>
+<h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
+<h3><a href="#typecheckOps"> Type check operators</a></h3>
+<h3><a href="#assignmentOps"> Assignment operators</a></h3>
+<h3><a href="#cStyleOps"> C-Style operators</a></h3>
+<div align="right"><hr> </div>
+
+<h3><a name="scalarOps"> Scalar operators<a></h3>
+Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
+All of those operators apart from <code>==</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
+[<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span>  <span class="identifier">y</span>          <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>]
+ <span class="identifier">x</span>          <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
+[<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
+</code>The last one will work if (and only if) both operators have the same number of list elements.<br>
+While this is handy in most situations, there are some counter intutive consequences:<ul>
+  <li> Lazy evaluation cannot be implemented <br>because <code>false and X</code> will yield <code>false</code> only if X is a scalar.
+       If on the other hand X is a list of booleans, the result of this operation will be a list of booleans (all false). Consequently X always must be evaluated to determine the result.</li>
+  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>
+<!--mnh-->
+  [1,2]=[1,2] -> [true,true]
+<!--end-->
+</code>
+       As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are equal, e.g. <code>
+<!--mnh-->
+  [1,2]==[1,2] -> true
+<!--end-->
+</code>
+  </li>
+  </ul>
+For expression-literals, all operators will be used to expand the expression to a new expression-literal:<code>
+{<span class="identifier">expr</span>} <span class="operator">o</span> <span class="identifier">X</span> <span class="operator">-></span> {(<span class="identifier">expr</span> <span class="operator">o</span> <span class="identifier">X</span>)}
+</code>
+
+<h4><a name="#arithOps"> Arithmetic operators</a></h4>
+<table border="0">
+<tr><td><code>+</code></td><td><h5>Addition</h5></td></tr><tr><td></td><td> 
+This is the common addition operator, which also doubles as an unary "neutral" operator.<br> As in many modern languages, the operator is overloaded for string concatenation. 
+In contrast to languages as C or Java, it does not allow for concatenation of non-strings and strings.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.<br>
+Examples:<code>
+<!--mnh-->
+ in> 1+5
+out> 6
+
+ in> [1, 2.4, 3]+5
+out> [6, 7.4, 8]
+
+ in> 1+[5,6.2,7]
+out> [6, 7.2, 8]
+
+ in> [1.5, 2, 3]+[5, 6, 7.106]
+out> [6.5, 8, 10.106]
+
+ in> "a"+"b"
+out> "ab"
+
+ in> [1,2,3]+[5,6]
+<!--end-->
+<span class="red">!! >Ev.Error:  :?,? Invalid list lengths 3 and 2 given for operator +</span>
+</code>
+</td></tr>
+<tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td> 
+This is the common subtraction operator, which also doubles as unary negation.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.
+</td></tr>
+<tr><td><code>*</code></td><td><h5>Multiplication</h5></td></tr><tr><td></td><td> 
+This is the common multiplication operator.<br>
+If both operands are integers, the result will be an integer. <br>
+If both operands are numeric and at least one of them is real, the result will be a real number.
+</td></tr>
+<tr><td><code>/</code></td><td><h5>Real division</h5></td></tr><tr><td></td><td> 
+This is the common division operator.<br>
+If both operands are numeric the result is a real number.
+</td></tr>
+<tr><td><code>**</code>, <code>^</code></td><td><h5>Potentiation</h5></td></tr><tr><td></td><td> 
+This is the potentiation operator.<br>
+The result type will be the simplest possible type possible for representing the analytic result.<br>
+Examples: <code> 
+<!--mnh-->
+ in> 2^2
+out> 4 //The result is an integer
+ in> 2^-2
+out> 0.25 //The result is a real number
+<!--end-->
+</code>
+</td></tr>
+<tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td> 
+Inspired by Pascal.
+</td></tr>
+<tr><td><code>mod</code></td><td><h5>Integer modulo</h5></td></tr><tr><td></td><td> 
+Inspired by Pascal.
+</td></tr>
+</table>
+
+<h4><a name="compOps"> Comparators</a></h4>
+Comparators are implemented, so that they return a boolean or a list of booleans for most cases, the only exception being comparison of lists of incompatible sizes.<br>
+Consequently all comparators <code>o</code> must be read as<code>
+x o y -> [x and y are naively comparable] and (x o y)</code><br>
+As a further consequence, the following expressions will return the same result only if x and y are comparable:<code>
+<!--mnh-->
+x > y
+not(x<=y)
+<!--end-->
+</code><br>
+Comparators can be used as in mathematical notation, e.g. <code>
+<!--mnh-->
+x < y < z
+<!--end-->
+</code> is identical to <code>
+<!--mnh-->
+x < y and y < z
+<!--end-->
+</code>
+For comparators in function definitions see <a href="functions.html">MNH5 - Function definitions</a>.
+<br>
+<table border="0">
+<tr><td><code>= </code></td><td><h5>Scalar equals</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and equal (e.g. <code>3 = 3.0</code>). </td></tr>
+<tr><td><code>==</code></td><td><h5>List equals</h5></td></tr><tr><td></td><td>
+Returns a scalar boolean.<br>Returns true if the comparands are comparable, have the same number of list elements and all list elements are equal.<br>
+<code>
+<!--mnh-->
+[x0,x1,...] == [y0,y1,...]  ->  x0 == y0 and x1 == y1 and ...
+<!--end-->
+</code>
+</td></tr>
+<tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and not equal.</td></tr>
+<tr><td><code>> </code></td><td><h5>Greater than</h5></td></tr><tr><td></td><td> 
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand.</td></tr>
+<tr><td><code>< </code></td><td><h5>Lesser than</h5></td></tr><tr><td></td><td> 
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand.</td></tr>
+<tr><td><code>>=</code></td><td><h5>Greater-or-equal</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is greater than the right hand operand or both comparands are equal.</td></tr>
+<tr><td><code><=</code></td><td><h5>Lesser-or-equal</h5></td></tr><tr><td></td><td>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and the left hand comparand is lesser than the right hand operand or both comparands are equal.</td></tr>
+</table>
+
+<h4><a name="logOps">Logical operators</a></h4>
+<table border="0">
+<tr><td><code>and</code></td><td><h5>Logical or bitwise and</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>or</code></td><td><h5>Logical or bitwise or</h5></td></tr><tr><td></td><td> </td></tr>
+<tr><td><code>xor</code></td><td><h5>Logical or bitwise exclusive-or</h5></td></tr><tr><td></td><td> </td></tr>
+</table>
+
+<h4><a name="stringOps"> String concatenation</a></h4>
+The <code>&</code>-operator for string concatenation (inspired from Excel) was introduced as the preferred method to concatenate strings.<br>
+<table border="0">
+<tr><td><code>&</code></td><td><h5>String concatenation</h5></td></tr><tr><td></td><td> </td></tr>
+</table>
+<h3><a name="listOps"> List operators</a></h3>
+<table border="0">
+<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td> 
+The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
+  <span class="identifier">x</span> <span class="operator">|</span> <span class="identifier">y</span> <span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
+  <span class="identifier">x</span> <span class="operator">|</span>[<span class="identifier">y</span>]<span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
+ [<span class="identifier">x</span>]<span class="operator">|</span> <span class="identifier">y</span> <span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
+ [<span class="identifier">x</span>]<span class="operator">|</span>[<span class="identifier">y</span>]<span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
+</code>
+However the result does not have to be a flat list; e.g.<code>
+  <span class="identifier">x</span> <span class="operator">|</span>[[<span class="identifier">y</span>]]<span class="operator">-></span>[<span class="identifier">x</span>,[<span class="identifier">y</span>]];
+</code>
+</td></tr>
+
+<tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td> 
+The in-operator (inspired by SQL) tests, if the left hand side operand is contained in the right hand side operand.<br>
+For obvious reasons the right hand side operands must be a list.<br>
+<code>
+<span class="identifier">x</span> <span class="operator">in</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> <span class="identifier">x</span><span class="operator">==</span><span class="identifier">y0</span> <span class="operator">or</span> <span class="identifier">x</span><span class="operator">==</span><span class="identifier">y1</span> <span class="operator">or</span> <span class="operator">...</span>;
+</code> or, if you are already famliar with the <a href="each.html">each-construct</a>:<code>
+<span class="identifier">x</span> <span class="operator">in</span> <span class="identifier">Y</span> <span class="operator">-></span> <span class="builtin">each</span>(<span class="identifier">y</span>,<span class="identifier">Y</span>,<span class="operator">or</span>,<span class="identifier">x</span><span class="operator">==</span><span class="identifier">y</span>);
+</code>
+</td></tr>
+<tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td> 
+The extraction operator can be used to access list items by their index (starting with 0) or by a boolean mask. The right hand operand must be an integer, a list of integers or a list of booleans with the same
+number of elements as the left hand side operand:<code>
+  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span><span class="literal">0</span> <span class="operator">-></span> <span class="stringLiteral">"a"</span>;
+  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span>[<span class="literal">true</span>,<span class="literal">false</span>,<span class="literal">true</span>] <span class="operator">-></span> [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"c"</span>];
+  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span>[<span class="literal">2</span>,<span class="literal">1</span>,<span class="literal">0</span>] <span class="operator">-></span> [<span class="stringLiteral">"c"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"a"</span>];
+</code>
+Another possible use of the extraction-operator is access to Key-Value lists, i.e. nested lists of the form <code>[["key1",value1],["key2",value2],...]</code>. You can use the key as right hand side operand to obtain the 
+corresponding value (or the first of such if there are more than one):<code>
+  [[<span class="stringLiteral">"a"</span>,<span class="literal">1</span>],[<span class="stringLiteral">"b"</span>,<span class="literal">2</span>]]<span class="operator">%</span><span class="stringLiteral">"a"</span> <span class="operator">-></span> <span class="literal">1</span>;
+</code>
+</td></tr>
+<tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 2 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+</code>
+</td></tr>
+
+<tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 3 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+</code>
+</td></tr>
+
+<tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> 
+The level 4 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
+  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+</code>
+</td></tr>
+
+<tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td> 
+The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>
+The following calls are equivalent:<code>
+  <span class="identifier">f</span>(<span class="literal">1</span>,<span class="literal">2</span>,<span class="literal">3</span>,<span class="literal">4</span>,<span class="literal">5</span>);
+  <span class="identifier">f</span><span class="operator">@</span>[<span class="literal">1</span>,<span class="literal">2</span>,<span class="literal">3</span>,<span class="literal">4</span>,<span class="literal">5</span>];
+  <span class="identifier">f</span><span class="operator">@</span>[<span class="literal">1</span><span class="operator">..</span><span class="literal">5</span>];
+</code>
+</td></tr>
+</table>
+
+<h3><a name="iifOps"> The ternary inline-if operator</a></h3>
+The ternary inline-if operator is inspired by C and it's successors.<br>Syntax is <code>B ? X : Y</code>, where <code>B</code> is a boolean scalar, <code>X</code> is the result if <code>B</code> evaluates to true and <code>Y</code> is 
+the result if <code>B</code> evaluates to false.<br>
+Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed.<br>
+Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
+
+<h3><a name="typecheckOps"> Type check operators</a></h3>
+Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. <br>Syntactically type checks are unary operators in postfix notation.
+<br>The following type checks are defined:<code>
+<span class="operator">:scalar</span>
+<span class="operator">:list</span>
+<span class="operator">:boolean</span>
+<span class="operator">:booleanList</span>
+<span class="operator">:int</span>
+<span class="operator">:intList</span>
+<span class="operator">:real</span>
+<span class="operator">:realList</span>
+<span class="operator">:string</span>
+<span class="operator">:stringList</span>
+<span class="operator">:numeric</span>
+<span class="operator">:numericList</span>
+<span class="operator">:expression</span>
+</code><br>
+Example: Test if 3 is an integer<code>
+  3:int</code>
+
+<h3><a name="assignmentOps"> Assignment operators</a></h3>
+For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs with side effects.
+<br>For details on user defined functions see <a href="functions.html">MNH5 - Function definitions</a>.<br>
+<table border="0">
+<tr><td><code>-></code></td><td><h5>Declaration operator</h5></td></tr><tr><td></td><td>
+Declares a function, returning nothing.</td></tr>
+<tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
+Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
+It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:<code>
+  mutable last_x_in_f:=void;
+  f(x)->print('Last x was: ',last_x_in_f) and
+        print('This x is : ',last_x_in_f:=x);
+</code> </td></tr>
+</table>
+
+<h3><a name="cStyleOps"> C-Style operators</a></h3>
+The following C-Style operators are supported: <ul>
+  <li> <code>+=</code> Adds the right-hand-side to the left-hand-side and returns the new value. </li>
+  <li> <code>-=</code> Subtracts the right-hand-side from the left-hand-side and returns the new value. </li>
+  <li> <code>*=</code> Multiplies the right-hand-side with the left-hand-side and returns the new value. </li>
+  <li> <code>/=</code> Divides the right-hand-side by the left-hand-side and returns the new value. </li>
+  <li> <code>&=</code> String-Concatenates the right-hand-side with the left-hand-side and returns the new value. </li>
+  <li> <code>|=</code> Append the left-hand-side to the right-hand-side and returns the new value. </li>
+</ul>
+While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
+the latter 2 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
+
+<!--commonFoot-->
+<!--file functions.html-->
+<!--commonHead-->
+<title>MNH 5 - Functions</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Functions</h3>
+<div align="right"><hr> </div>
+<h3><a     href="#declarations">Declarations</a></h3>
+<h3><a     href="#assignments">Assignments</a></h3>
+<h3><a     href="#restrictions">Parameter restrictions</a></h3>
+<h3><a     href="#variadic">Variadic functions</a></h3>
+<h3><a     href="#beginEnd">Begin-End-Blocks</a></h3>
+<h3><a     href="#modifiers">Modifiers</a></h3><ul>
+<li><h4><a href="#privateMod">private</a></h4></li>
+<li><h4><a href="#memoizedMod">memoized</a></h4></li>
+<li><h4><a href="#synchronizedMod">synchronized</a></h4></li>
+<li><h4><a href="#mutableMod">mutable</a></h4></li></ul>
+<li><h4><a href="#localMod">local</a></h4></li></ul>
+<div align="right"><hr> </div>
+<h3><a name="declarations">Declarations</a></h3>
+A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
+The declaration may be preceded by <a href="#modifiers">modifiers</a>, the pattern may be empty (producing a nullary function).<br>
+<i>Patterns</i> form a means for case distinction. They may also serve to make the function "somewhat typesafe". The most primitive pattern element is just an identifier, without any restrictions:<code>
+  f(x)->sin(1/x);</code><br>
+Patterns may consist of any number of elements:<code>
+  g(a,b,c,d,e,f,g)->a+b*c/d^e-f*g;</code><br>
+Please have a look at <a href="#restrictions">Parameter restrictions</a> for more sophisticated patterns.
+
+<h3><a name="assignments">Assignments</a></h3>
+An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>ruleBody</i>.<br>
+As you can see it is identical to the declaration prototype apart from the assignment operator. Behaviour is only almost identical: An assignment is evaluated "<i>on declaration</i>", while a declaration is evaluated only when it 
+is called. This is important when you take side effects into account. A reasonable example would be:<code>
+  pi:=4*arctan(1);</code><br>
+This defines pi and is evaluated only once. 
+
+<h3><a name="restrictions">Parameter restrictions</a></h3>
+Parameter restrictions fall in three categories:<ul>
+  <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>)
+  <li> Comparison with a literal (see <a href="operators.html#compOps"> Comparators</a>)
+  <li> Comparison with another parameter
+</ul>
+Apart from the type checks defined as unary operator there are two type checks which look like comparisons:<ul>
+  <li> <code>x=[]</code> matches, if x is an empty list
+  <li> <code>x<>[]</code> matches, if x is a list but not empty
+</ul>
+If a rule has several subrules (i.e. there are several declarations with the same ID), the subrules are tested in order of their declaration and the first matching subrule will be applied.<br>
+Example: <code>
+  fib(i<=1)->1;                      //recursion terminates
+  fib(i:int)->fib(i-1)+fib(i-2);     //recursion step
+  fib(I:intList)->each(i,I,fib(i));  //vectorization
+</code> 
+There is a shorthand for tests on equality: the first comparand can be omitted:<br>
+<code>  f(x=1)...;  </code> is eqivalent to <code>f(x)...;</code><br>
+<code>  f(x=y,y)...;</code> is eqivalent to <code>f(y,y)...;</code><br>
+<code>  f(x=[])...; </code> is eqivalent to <code>f([])...;</code><br>
+
+<h3><a name="variadic">Variadic functions</a></h3>
+Variadic functions can be defined using three dots (<code>...</code>) as last parameter in the function head.
+This allows the function to accept any number of additional parameters.<br>
+The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>. An example for a variadic recursive function, printing out all parameters in a separate line wold be:<code>
+  multiPrint->void;
+  multiPrint(x,...)->print(x) | multiPrint@...;</code>
+
+<h3><a name="beginEnd">Begin-End-Blocks</a></h3>
+  
+<i>Begin-End-Blocks</i> are a means to program in a prodedural manner. It looks as follows <code>
+  begin
+    <i>statement</i>
+    <i>...</i>
+    <i>statement</i>
+    <i>result statement</i>
+  end;  
+</code> The last statement provides a result which is returned from the block. The other statements are executed before and only have an effect if they
+have side effects. <br> Identifiers occuring as the left hand side of an assignment will be created in the current scope if (and only if) they
+are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be found in any surrounding scope.
+<br>A neat example demonstrating the usefulnes of this feature is calculation of a running sum of a numeric list:<code>
+  runningSum(L:numericList)->begin
+    local sum:=0;
+    each(element,L,sum+=element);
+  end;
+</code>This function makes use of the fact that the assignment-operator returns the value its right hand side.<br>
+Note, that parallel processing via <code>pEach</code> is disabled within Begin-End-Blocks. Occuring <code>pEach</code>-statements will silently be converted
+to <code>each</code>-statements.
+    
+<h3><a name="modifiers">Modifiers</a></h3>
+<h4><a name="privateMod">private</a></h4>
+The <i>private modifier</i> can be used to hide a subrule from importing packages.
+Inside of the package containing the modified subrule it is usable as any other rule.
+
+<h4><a name="memoizedMod">memoized</a></h4>
+The <i>memoized modifier</i> enables caching for the complete rule; if one subrule of a rule is marked as memoized, then the complete rule is memoized.
+<br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
+map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
+Used appropriately, caching results in enormous speedup. <br>
+Note that memoized functions do not work well with parallelized evaluations. This issue might be adressed in later versions.
+
+<h4><a name="synchronizedMod">synchronized</a></h4>
+The <i>synchronized modifier</i> protects a rule against parallel execution.<br>
+This is desirable for functions with side effects, such as printing or modifying a <a href="#mutableMod">mutable</a> value.
+
+<h4><a name="mutableMod">mutable</a></h4>
+The <i>mutable modifier</i> allows for a rule to be mutable. The following restrictions apply:<ul>
+  <li> A mutable rule also is private per definition </li>
+  <li> A mutable rule also is not memoized per definition </li>
+  <li> A mutable rule must have exactly one subrule </li>
+  <li> A mutable rule must be nullary </li>
+</ul>
+Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
+
+<h4><a name="localMod">local</a></h4>
+The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>. 
+It is only allowed in this context. Local variables always are mutable.
+<!--commonFoot-->
+<!--file types.html-->
+<!--commonHead-->
+<title>MNH 5 - Types</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Types</h3>
+<div align="right"><hr> </div>
+<h3>      <a href="#intro">Introduction</a></h3>
+<h3>      <a href="#scalars">Scalar types</a></h3><ul>
+  <li><h4><a href="#booleans">Booleans</a></h4></li>
+  <li><h4><a href="#integers">Integers</a></h4></li>
+  <li><h4><a href="#reals">Reals</a></h4></li>
+  <li><h4><a href="#strings">Strings</a></h4></li>
+  <li><h4><a href="#expressions">Expressions</a></h4></li>
+  <li><h4><a href="#void">void</a></h4></li>
+  <li><h4><a href="#errors">Errors</a></h4></li>
+</ul>
+<h3>      <a href="#lists">List types</a></h3>
+<div align="right"><font color="#a0a0a0"><hr> </div>
+<h3><a name="intro">Introduction</a></h3>
+MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
+This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
+
+<h3><a name="scalars">Scalar types</a></h3>
+<h4><a name="booleans">Booleans</a></h4>
+Booleans are the simplest type. There are only two possible values:<code>true</code> and <code>false</code>.<br>
+To directly input a boolean, use the reserved words <code>true</code> and <code>false</code>.
+
+<h4><a name="integers">Integers</a></h4>
+Integers are internally represented as 64bit two-complement integer numbers. Consequently the smallest possible integer is -9223372036854775808 and the largest possible integer is 9223372036854775807.<br>
+Note that no overflow-checking is employed.<br>
+Together with reals, integers form the class of <i>numeric</i> values.<br>
+To directly input an integer, write a number only containing of digits, without a decimal point.
+
+<h4><a name="reals">Reals</a></h4>
+Reals are internally represented as 80bit <i>extended precision</i> floating point numbers.<br>
+Together with integers, reals form the class of <i>numeric</i> values.<br>
+To directly input a real, write a number containing of digits and a decimal point and/or an exponent, e.g. <code>1.2E-2</code>.
+
+<h4><a name="strings">Strings</a></h4>
+Strings are internally represented as ANSI-Strings, without length limitation.<br>
+You can alternatively use <code>'</code> or <code>"</code> as string delimiters. Within strings the following escape-sequences are defined:<ul>
+<li><code>\n  </code> Line break</li>
+<li><code>\r  </code> Carriage return</li>
+<li><code>\t  </code> Tabulator</li>
+<li><code>\\  </code> Backslash</li>
+<li><code>\"  </code> The delimiter (if it was <code>"</code>)</li>
+<li><code>\'  </code> The delimiter (if it was <code>'</code>)</li>
+</ul>
+Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are delimited by the special comments
+<code>//!BLOB START</code> and <code>//!BLOB END</code>. An example:<code>
+  print(
+  //!BLOB START
+  This is a simple text...
+       with a \ which would have to be escaped otherwise.
+    And indentations of course.
+  //!BLOB END
+  );
+</code>
+
+<h4><a name="expressions">Expressions</a></h4>
+Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
+Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
+Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
+If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
+Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
+  f(a,b)->{a+b*$x}</code> will return a linear scalar function.<br>
+Expressions allow for anonymous recursion via the <code>$self</code> pseudo-literal, e.g. (Fibonacci numbers again):<code>
+  fib:={$i<=1 ? 1 : $self($i-1)+$self($i-2)};
+</code>
+
+<h4><a name="void">void</a></h4>
+The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="each.html">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
+each(i,[2..7*7],(i>2 and i mod 2=0) or
+                (i>3 and i mod 3=0) or
+                (i>5 and i mod 5=0) or
+                (i>7 and i mod 7=0) ? void : i);
+</code> 
+For usual operators, <code>void</code> behaves as neutral element. <br>
+It cannot be passed as a function argument.
+  
+<h4><a name="errors">Errors</a></h4>
+Errors are no functional literals. They form a fallback for cases, where a literal result was expected but none could be provided (e.g. when invoking an operator with incompatible operands).<br>
+You should see them rarely and when you see them they should have a corresponding error message.<br>
+There is no way to directly write an error-literal.
+
+<h3><a name="lists">List types</a></h3>
+Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
+  ["a",true,4.6]</code><br>
+This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors. 
+It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.
+
+<!--commonFoot-->
+<!--file quickstart.html-->
+<!--commonHead-->
+<title>MNH 5 - Quick start</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Quickstart</h3>
+<div align="right"><hr> </div>
+MNH5 comes in 2 flavours (for each compilation target):<ul>
+  <li> <b>mnh</b>: a GUI version with plotting support
+  <li> <b>mnh_light</b>: a slimmed down console version without plotting support (for the cases where size matters)
+</ul>
+
+You can just start an executable of any flavour and start typing. Most of the inputs will result in understandable outputs (the exception being infinite loops, 
+fork bombs and other "pathologic" examples).<br>
+<br>
+The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
+1+2;
+</code> Or an assignment<code>
+x:=1;
+</code> Or a declaration<code>
+f(x)->sin(x);
+
+<!--commonFoot-->
+<!--file each.html-->
+<!--commonHead-->
+<title>MNH 5 - each and pEach</title>
+</head>
+<body>
+<h2 align="center"><a href="index.html">MNH 5</a> - each and pEach</h3>
+<div align="right"><hr> </div>
+<h4><a href="#syntax">Syntax</a></h4>
+<h4><a href="#construction">List construction</a></h4>
+<h4><a href="#aggregation">List aggregation</a></h4>
+<h4><a href="#consAgg">List construction and aggregation</a></h4>
+<h4><a href="#parallelization">Parallelization</a></h4>
+
+<div align="right"><hr> </div>
+<h4><a name="syntax">Syntax</a></h4>
+The general syntax is: <br>
+<code>   each(id,list,aggregator,body)
+  pEach(id,list,aggregator,body)</code><br>
+Where <code>id</code> is an identifier,<br> 
+<code>list</code> is a list or an expression returning a list,<br> 
+<code>aggregator</code> (optional) is a full aggregator expression or a binary operator and<br>
+<code>body</code> is an expression or list of expressions.
+
+<h4><a name="construction">List construction</a></h4>
+To construct a list, ommit the aggregator. The body part is mandatory.<br>
+Simple example: return the input list<br>
+<code>  each(i,[0..3],i) </code> (returns <code>[0..3]</code>)<br>
+Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<br>
+<code>  each(i,[0..3],f(i)) </code> (returns <code>[f(0),f(1),f(2),f(3)]</code>)<br>
+More complex: a function returning the intersection of sets A and B<br>
+<code>  intersect(A:list,B:list) -> A%each(a,A,a in B)</code>
+
+<h4><a name="aggregation">List aggregation</a></h4>
+To aggregate a list, use an aggregator but no body.<br>
+Restriction: the list must not be empty!<br>
+Simple example: a function returing the sum of the argument:<br>
+<code>  sum([]):=0;
+  sum(L<>[])->each(e,L,+);
+</code><br>
+For later use: factorial<code>
+  fak(n<1)->1;
+  fak(n)->each(i,[1..n],*);
+</code><br>
+
+A full aggregator is written as <code>aggregator(<i>expression</i>)</code>, where <i>expression</i> is a binary expression.<br>
+
+Full aggregator: join a list of strings using a line break as separator:<br>
+Here the aggregator expression takes the left hand side argument and the right hand side argument and concatenates them with an additional line break in between.
+<code>
+  join([])->"";
+  join(L:stringList)->each(e,L,aggregator({$x&"\n"&$y}));</code><br>
+
+  
+<h4><a name="consAgg">List construction and aggregation</a></h4>
+You can also use aggregator and body in the same each-/pEach clause.<br><br>
+Nested each: construct a cross product:<br>
+<code>  each(i,[0..9],each(j,[0..9],[i,j]))</code><br>
+This returns a nested list <code>[[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]</code>,<br> which is probably one level deeper than intended.<br>
+<code>
+  each(i,[0..9],|,each(j,[0..9],[i,j]))</code><br>
+This returns a nested list <code>[[0,0],...,[0,9],[1,0],...,[1,9],...]</code>.<br><br>
+Compute Euler's number based on inverse factorials<code>
+  each(n,[0..20],+,1/fak(n))</code>
+
+<h4><a name="parallelization">Parallelization</a></h4>
+This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
+
+<!--commonFoot-->

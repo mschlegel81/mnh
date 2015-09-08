@@ -2,7 +2,7 @@ UNIT mnh_litvar;
 
 INTERFACE
 
-USES mnh_constants, mnh_out_adapters, SysUtils, Math, myStringutil, mnh_tokloc, mnh_fileWrappers;
+USES mnh_constants, mnh_out_adapters, SysUtils, Math, myStringutil, mnh_tokloc;
 CONST
   C_boolText: array[false..true] of string = ('false', 'true');
 

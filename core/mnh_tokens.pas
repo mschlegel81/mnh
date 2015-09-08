@@ -50,6 +50,8 @@ TYPE
       PROCEDURE printHelpOnMain;
   end;
 
+FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
+
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 PROCEDURE printMainPackageDocText;
@@ -740,10 +742,40 @@ PROCEDURE findAndDocumentAllPackages;
       addPackageDoc(p.getDoc);
       p.destroy;
     end;
-    writeUserPackageDocumentations;
-    documentBuiltIns;
-    polishExistingHtmlFiles;
+    makeHtmlFromTemplate;
     recycler.destroy;
+  end;
+
+FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
+  VAR previousAdapter:P_abstractOutAdapter;
+      tempAdapter:T_collectingOutAdapter;
+      i,j:longint;
+
+  begin
+    //set-up:-----------------------------------------------------
+    previousAdapter:=outAdapter;
+    tempAdapter.create;
+    with tempAdapter.outputBehaviour do begin
+      doEchoDeclaration:=false;
+      doEchoInput:=false;
+      doShowExpressionOut:=true;
+    end;
+    outAdapter:=@tempAdapter;
+    //-----------------------------------------------------:set-up
+    mainPackageProvider.clear;
+    mainPackageProvider.appendLine(command);
+    reloadMainPackage(lu_forDirectExecution);
+    result:='';
+    for i:=0 to length(tempAdapter.storedMessages)-1 do with tempAdapter.storedMessages[i] do case messageType of
+      elo_echoOutput: result:=result+'out>'+simpleMessage+C_lineBreakChar;
+      elp_printline : for j:=0 to length(multiMessage)-1 do result:=result+multiMessage[j]+C_lineBreakChar;
+    end;
+    //set-down:---------------------------------------------------
+    clearErrors;
+    tempAdapter.clearMessages;
+    outAdapter:=previousAdapter;
+    tempAdapter.destroy;
+    //---------------------------------------------------:set-down
   end;
 
 {$undef include_implementation}
