@@ -305,13 +305,17 @@ The <code>&</code>-operator for string concatenation (inspired from Excel) was i
 <table border="0">
 <tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td> 
 The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
-  <span class="identifier">x</span> <span class="operator">|</span> <span class="identifier">y</span> <span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
-  <span class="identifier">x</span> <span class="operator">|</span>[<span class="identifier">y</span>]<span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
- [<span class="identifier">x</span>]<span class="operator">|</span> <span class="identifier">y</span> <span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
- [<span class="identifier">x</span>]<span class="operator">|</span>[<span class="identifier">y</span>]<span class="operator">-></span> [<span class="identifier">x</span>,<span class="identifier">y</span>];
+<!--mnh-->
+   x | y -> [x,y];
+   x |[y]-> [x,y];
+  [x]| y -> [x,y];
+  [x]|[y]-> [x,y];
+<!--end-->
 </code>
 However the result does not have to be a flat list; e.g.<code>
-  <span class="identifier">x</span> <span class="operator">|</span>[[<span class="identifier">y</span>]]<span class="operator">-></span>[<span class="identifier">x</span>,[<span class="identifier">y</span>]];
+<!--mnh-->
+  x |[[y]] -> [x,[y]];
+<!--end-->
 </code>
 </td></tr>
 
@@ -319,47 +323,63 @@ However the result does not have to be a flat list; e.g.<code>
 The in-operator (inspired by SQL) tests, if the left hand side operand is contained in the right hand side operand.<br>
 For obvious reasons the right hand side operands must be a list.<br>
 <code>
-<span class="identifier">x</span> <span class="operator">in</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> <span class="identifier">x</span><span class="operator">==</span><span class="identifier">y0</span> <span class="operator">or</span> <span class="identifier">x</span><span class="operator">==</span><span class="identifier">y1</span> <span class="operator">or</span> <span class="operator">...</span>;
+<!--mnh-->
+x in [y0,y1,...] -> x==y0 or x==y1 or ...;
+<!--end-->
 </code> or, if you are already famliar with the <a href="each.html">each-construct</a>:<code>
-<span class="identifier">x</span> <span class="operator">in</span> <span class="identifier">Y</span> <span class="operator">-></span> <span class="builtin">each</span>(<span class="identifier">y</span>,<span class="identifier">Y</span>,<span class="operator">or</span>,<span class="identifier">x</span><span class="operator">==</span><span class="identifier">y</span>);
+<!--mnh-->
+x in Y -> each(y,Y,or,x==y);
+<!--end-->
 </code>
 </td></tr>
 <tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td> 
 The extraction operator can be used to access list items by their index (starting with 0) or by a boolean mask. The right hand operand must be an integer, a list of integers or a list of booleans with the same
 number of elements as the left hand side operand:<code>
-  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span><span class="literal">0</span> <span class="operator">-></span> <span class="stringLiteral">"a"</span>;
-  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span>[<span class="literal">true</span>,<span class="literal">false</span>,<span class="literal">true</span>] <span class="operator">-></span> [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"c"</span>];
-  [<span class="stringLiteral">"a"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"c"</span>]<span class="operator">%</span>[<span class="literal">2</span>,<span class="literal">1</span>,<span class="literal">0</span>] <span class="operator">-></span> [<span class="stringLiteral">"c"</span>,<span class="stringLiteral">"b"</span>,<span class="stringLiteral">"a"</span>];
+<!--mnh-->
+  ["a","b","c"]%0                 -> "a";
+  ["a","b","c"]%[true,false,true] -> ["a","c"];
+  ["a","b","c"]%[2,1,0]           -> ["c","b","a"];
+<!--end-->
 </code>
 Another possible use of the extraction-operator is access to Key-Value lists, i.e. nested lists of the form <code>[["key1",value1],["key2",value2],...]</code>. You can use the key as right hand side operand to obtain the 
 corresponding value (or the first of such if there are more than one):<code>
-  [[<span class="stringLiteral">"a"</span>,<span class="literal">1</span>],[<span class="stringLiteral">"b"</span>,<span class="literal">2</span>]]<span class="operator">%</span><span class="stringLiteral">"a"</span> <span class="operator">-></span> <span class="literal">1</span>;
+<!--mnh-->
+  [["a",1],["b",2]]%"a" -> 1;
+<!--end-->
 </code>
 </td></tr>
 <tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td> 
 The level 2 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+<!--mnh-->
+  [X0,X1,X2,...]%%Y -> [X0%Y,X1%Y,X2%Y,...]
+<!--end-->
 </code>
 </td></tr>
 
 <tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td> 
 The level 3 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+<!--mnh-->
+  [X0,X1,X2,...]%%%Y -> [X0%%Y,X1%%Y,X2%%Y,...]
+<!--end-->
 </code>
 </td></tr>
 
 <tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td> 
 The level 4 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-  [<span class="identifier">X0</span>,<span class="identifier">X1</span>,<span class="identifier">X2</span>,<span class="operator">...</span>]<span class="operator">%%%%</span><span class="identifier">Y</span> <span class="operator">-></span> [<span class="identifier">X0</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="identifier">X1</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="identifier">X2</span><span class="operator">%%%</span><span class="identifier">Y</span>,<span class="operator">...</span>]
+<!--mnh-->
+  [X0,X1,X2,...]%%%%Y -> [X0%%%Y,X1%%%Y,X2%%%Y,...]
+<!--end-->
 </code>
 </td></tr>
 
 <tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td> 
 The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>
 The following calls are equivalent:<code>
-  <span class="identifier">f</span>(<span class="literal">1</span>,<span class="literal">2</span>,<span class="literal">3</span>,<span class="literal">4</span>,<span class="literal">5</span>);
-  <span class="identifier">f</span><span class="operator">@</span>[<span class="literal">1</span>,<span class="literal">2</span>,<span class="literal">3</span>,<span class="literal">4</span>,<span class="literal">5</span>];
-  <span class="identifier">f</span><span class="operator">@</span>[<span class="literal">1</span><span class="operator">..</span><span class="literal">5</span>];
+<!--mnh-->
+  f(1,2,3,4,5);
+  f@[1,2,3,4,5];
+  f@[1..5];
+<!--end-->
 </code>
 </td></tr>
 </table>
@@ -373,22 +393,47 @@ Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</c
 <h3><a name="typecheckOps"> Type check operators</a></h3>
 Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. <br>Syntactically type checks are unary operators in postfix notation.
 <br>The following type checks are defined:<code>
-<span class="operator">:scalar</span>
-<span class="operator">:list</span>
-<span class="operator">:boolean</span>
-<span class="operator">:booleanList</span>
-<span class="operator">:int</span>
-<span class="operator">:intList</span>
-<span class="operator">:real</span>
-<span class="operator">:realList</span>
-<span class="operator">:string</span>
-<span class="operator">:stringList</span>
-<span class="operator">:numeric</span>
-<span class="operator">:numericList</span>
-<span class="operator">:expression</span>
+<!--mnh-->
+  :scalar
+  :list
+  :boolean
+  :booleanList
+  :int
+  :intList
+  :real
+  :realList
+  :string
+  :stringList
+  :numeric
+  :numericList
+  :expression
+<!--end-->
 </code><br>
-Example: Test if 3 is an integer<code>
-  3:int</code>
+Examples: <code>
+<!--mnh-->
+   in> checkedType(x)->
+         (x:scalar      ? 'scalar'      : void)|
+         (x:list        ? 'list'        : void)|
+         (x:boolean     ? 'boolean'     : void)|
+         (x:booleanList ? 'booleanList' : void)|
+         (x:int         ? 'int'         : void)|
+         (x:intList     ? 'intList'     : void)|
+         (x:real        ? 'real'        : void)|
+         (x:realList    ? 'realList'    : void)|
+         (x:string      ? 'string'      : void)|
+         (x:stringList  ? 'stringList'  : void)|
+         (x:numeric     ? 'numeric'     : void)|
+         (x:numericList ? 'numericList' : void)|
+         (x:expression  ? 'expression'  : void);
+  
+   in> checkedType(3)
+  out> ["scalar","int","numeric"]
+   in> checkedType([1, 2.4, 5])
+  out> ["list","numericList"]
+   in> checkedType(["A", true, 5])
+  out> ["list"]
+<!--end-->
+</code>
 
 <h3><a name="assignmentOps"> Assignment operators</a></h3>
 For sake of completeness we also list the assignment operator and declaration operator here, even though they are not implemented as operators but as special constructs with side effects.
@@ -399,9 +444,11 @@ Declares a function, returning nothing.</td></tr>
 <tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
 Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
 It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:<code>
+<!--mnh-->
   mutable last_x_in_f:=void;
   f(x)->print('Last x was: ',last_x_in_f) and
         print('This x is : ',last_x_in_f:=x);
+<!--end-->
 </code> </td></tr>
 </table>
 
@@ -441,16 +488,26 @@ the latter 2 additionally allow for specific optimizations, making e.g. the oper
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
 The declaration may be preceded by <a href="#modifiers">modifiers</a>, the pattern may be empty (producing a nullary function).<br>
 <i>Patterns</i> form a means for case distinction. They may also serve to make the function "somewhat typesafe". The most primitive pattern element is just an identifier, without any restrictions:<code>
-  f(x)->sin(1/x);</code><br>
+<!--mnh-->
+  f(x)->sin(1/x);
+<!--end-->
+</code>
 Patterns may consist of any number of elements:<code>
-  g(a,b,c,d,e,f,g)->a+b*c/d^e-f*g;</code><br>
+<!--mnh-->
+  g(a,b,c,d,e,f,g)->a+b*c/d^e-f*g;
+  randomDigit->floor(random*10);
+<!--end-->
+</code>
 Please have a look at <a href="#restrictions">Parameter restrictions</a> for more sophisticated patterns.
 
 <h3><a name="assignments">Assignments</a></h3>
 An assignment follows the prototype <i>ruleId(pattern)</i><code>:=</code><i>ruleBody</i>.<br>
 As you can see it is identical to the declaration prototype apart from the assignment operator. Behaviour is only almost identical: An assignment is evaluated "<i>on declaration</i>", while a declaration is evaluated only when it 
 is called. This is important when you take side effects into account. A reasonable example would be:<code>
-  pi:=4*arctan(1);</code><br>
+<!--mnh-->
+  pi:=4*arctan(1);
+<!--end-->
+</code>
 This defines pi and is evaluated only once. 
 
 <h3><a name="restrictions">Parameter restrictions</a></h3>
@@ -465,9 +522,11 @@ Apart from the type checks defined as unary operator there are two type checks w
 </ul>
 If a rule has several subrules (i.e. there are several declarations with the same ID), the subrules are tested in order of their declaration and the first matching subrule will be applied.<br>
 Example: <code>
+<!--mnh-->
   fib(i<=1)->1;                      //recursion terminates
   fib(i:int)->fib(i-1)+fib(i-2);     //recursion step
   fib(I:intList)->each(i,I,fib(i));  //vectorization
+<!--end-->
 </code> 
 There is a shorthand for tests on equality: the first comparand can be omitted:<br>
 <code>  f(x=1)...;  </code> is eqivalent to <code>f(x)...;</code><br>
@@ -478,9 +537,11 @@ There is a shorthand for tests on equality: the first comparand can be omitted:<
 Variadic functions can be defined using three dots (<code>...</code>) as last parameter in the function head.
 This allows the function to accept any number of additional parameters.<br>
 The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>. An example for a variadic recursive function, printing out all parameters in a separate line wold be:<code>
+<!--mnh-->
   multiPrint->void;
-  multiPrint(x,...)->print(x) | multiPrint@...;</code>
-
+  multiPrint(x,...)->print(x) | multiPrint@...;
+<!--end-->
+</code>
 <h3><a name="beginEnd">Begin-End-Blocks</a></h3>
   
 <i>Begin-End-Blocks</i> are a means to program in a prodedural manner. It looks as follows <code>
@@ -494,10 +555,12 @@ The trailing anonymous parameters can be referenced inside the function body by 
 have side effects. <br> Identifiers occuring as the left hand side of an assignment will be created in the current scope if (and only if) they
 are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be found in any surrounding scope.
 <br>A neat example demonstrating the usefulnes of this feature is calculation of a running sum of a numeric list:<code>
+<!--mnh-->
   runningSum(L:numericList)->begin
     local sum:=0;
     each(element,L,sum+=element);
   end;
+<!--end-->
 </code>This function makes use of the fact that the assignment-operator returns the value its right hand side.<br>
 Note, that parallel processing via <code>pEach</code> is disabled within Begin-End-Blocks. Occuring <code>pEach</code>-statements will silently be converted
 to <code>each</code>-statements.
@@ -549,15 +612,15 @@ It is only allowed in this context. Local variables always are mutable.
   <li><h4><a href="#errors">Errors</a></h4></li>
 </ul>
 <h3>      <a href="#lists">List types</a></h3>
-<div align="right"><font color="#a0a0a0"><hr> </div>
+<div align="right"><hr> </div>
 <h3><a name="intro">Introduction</a></h3>
 MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
 This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
 
 <h3><a name="scalars">Scalar types</a></h3>
 <h4><a name="booleans">Booleans</a></h4>
-Booleans are the simplest type. There are only two possible values:<code>true</code> and <code>false</code>.<br>
-To directly input a boolean, use the reserved words <code>true</code> and <code>false</code>.
+Booleans are the simplest type. There are only two possible values:<code><span class="literal">true</span></code> and <code><span class="literal">false</span></code>.<br>
+To directly input a boolean, use the reserved words <code><span class="literal">true</span></code> and <code><span class="literal">false</span></code>.
 
 <h4><a name="integers">Integers</a></h4>
 Integers are internally represented as 64bit two-complement integer numbers. Consequently the smallest possible integer is -9223372036854775808 and the largest possible integer is 9223372036854775807.<br>
@@ -566,7 +629,7 @@ Together with reals, integers form the class of <i>numeric</i> values.<br>
 To directly input an integer, write a number only containing of digits, without a decimal point.
 
 <h4><a name="reals">Reals</a></h4>
-Reals are internally represented as 80bit <i>extended precision</i> floating point numbers.<br>
+Reals are internally represented as 80bit <i>extended precision</i> floating point numbers in 32bit flavours of mnh and as ordinary 64bit double precision floating point numbers in 64bit flavours.<br>
 Together with integers, reals form the class of <i>numeric</i> values.<br>
 To directly input a real, write a number containing of digits and a decimal point and/or an exponent, e.g. <code>1.2E-2</code>.
 
@@ -582,6 +645,7 @@ You can alternatively use <code>'</code> or <code>"</code> as string delimiters.
 </ul>
 Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are delimited by the special comments
 <code>//!BLOB START</code> and <code>//!BLOB END</code>. An example:<code>
+<!--mnh-->
   print(
   //!BLOB START
   This is a simple text...
@@ -589,6 +653,7 @@ Alternatively strings can be written as "blobs", i.e. as a text block preserving
     And indentations of course.
   //!BLOB END
   );
+<!--end-->
 </code>
 
 <h4><a name="expressions">Expressions</a></h4>
@@ -597,17 +662,25 @@ Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin
 Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
 If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
 Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
-  f(a,b)->{a+b*$x}</code> will return a linear scalar function.<br>
+<!--mnh-->
+  f(a,b)->{a+b*$x}
+<!--end-->
+</code> will return a linear scalar function.<br>
 Expressions allow for anonymous recursion via the <code>$self</code> pseudo-literal, e.g. (Fibonacci numbers again):<code>
+<!--mnh-->
   fib:={$i<=1 ? 1 : $self($i-1)+$self($i-2)};
+<!--end-->
 </code>
 
 <h4><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="each.html">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
-each(i,[2..7*7],(i>2 and i mod 2=0) or
-                (i>3 and i mod 3=0) or
-                (i>5 and i mod 5=0) or
-                (i>7 and i mod 7=0) ? void : i);
+<!--mnh-->
+ in> each(i,[2..7*7],(i>2 and i mod 2=0) or
+                     (i>3 and i mod 3=0) or
+                     (i>5 and i mod 5=0) or
+                     (i>7 and i mod 7=0) ? void : i);                
+out> [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47]  
+<!--end-->
 </code> 
 For usual operators, <code>void</code> behaves as neutral element. <br>
 It cannot be passed as a function argument.
@@ -619,7 +692,10 @@ There is no way to directly write an error-literal.
 
 <h3><a name="lists">List types</a></h3>
 Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
-  ["a",true,4.6]</code><br>
+<!--mnh-->
+  ["a",true,4.6]
+<!--end-->
+</code>
 This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors. 
 It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.
 
