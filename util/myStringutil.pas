@@ -1,7 +1,7 @@
 UNIT myStringutil;
 
 INTERFACE
-USES sysutils,  myGenerics;
+USES strutils, sysutils,  myGenerics;
 
 CONST
   C_lineBreakChar = chr(13);
@@ -11,7 +11,7 @@ CONST
 
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
 FUNCTION isBlank(CONST s: ansistring): boolean;
-FUNCTION replaceAll(original, lookFor, replaceBy: ansistring): ansistring; inline;
+FUNCTION replaceAll(CONST original, lookFor, replaceBy: ansistring): ansistring; inline;
 FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT isValid: boolean): ansistring; inline;
 FUNCTION replaceOne(CONST original, lookFor, replaceBy: ansistring): ansistring; inline;
 FUNCTION escapeString(CONST s: ansistring): ansistring;
@@ -115,40 +115,53 @@ FUNCTION replaceOne(CONST original, lookFor, replaceBy: ansistring): ansistring;
       result := original;
   end;
 
-FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT isValid: boolean): ansistring; inline;
-  VAR
-    p: longint;
+FUNCTION replaceAll(CONST original, lookFor, replaceBy: ansistring): ansistring; inline;
+  FUNCTION anyOfLookFor(CONST c:char):boolean;
+    VAR k:longint;
+    begin
+      for k:=1 to length(lookFor) do if lookFor[k]=c then exit(true);
+      result:=false;
+    end;
+
+  VAR i:longint;
   begin
-    if pos(lookFor, replaceBy)>0 then
-      begin
-      isValid := false;
-      exit(replaceAll(original, lookFor, replaceBy));
-      end
-    else
-      isValid := true;
-    result := original;
-    p := pos(lookFor, result);
-    while p>0 do
-      begin
-      result := copy(result, 1, p-1)+replaceBy+
-        copy(result, p+length(lookFor), length(result));
-      p := pos(lookFor, result);
-      end;
+    if length(original)>65536 then begin
+      i:=round(length(original)*0.49);
+      while (i<=length(original)) and anyOfLookFor(original[i]) do inc(i);
+      result:=replaceAll(copy(original,1,                 i-1),lookFor,replaceBy)+
+              replaceAll(copy(original,i,length(original)+1-i),lookFor,replaceBy);
+    end else result:=AnsiReplaceStr(original,lookFor,replaceBy);
   end;
 
-FUNCTION replaceAll(original, lookFor, replaceBy: ansistring): ansistring; inline;
-  VAR
-    p: longint;
+FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT isValid: boolean): ansistring; inline;
+  FUNCTION anyOfLookFor(CONST c:char):boolean;
+    VAR k:longint;
+    begin
+      for k:=1 to length(lookFor) do if lookFor[k]=c then exit(true);
+      result:=false;
+    end;
+
+  VAR prev:ansistring;
+      i:longint;
   begin
-    result := '';
-    p := pos(lookFor, original);
-    while p>0 do
-      begin
-      result := result+copy(original, 1, p-1)+replaceBy;
-      original := copy(original, p+length(lookFor), length(original));
-      p := pos(lookFor, original);
-      end;
-    result := result+original;
+    if pos(lookFor, replaceBy)>0 then begin
+      isValid := false;
+      exit(replaceAll(original, lookFor, replaceBy));
+    end else isValid := true;
+    if length(original)>65536 then begin
+      i:=round(length(original)*0.49);
+      while (i<=length(original)) and anyOfLookFor(original[i]) do inc(i);
+      result:=replaceAll(
+              replaceRecursively(copy(original,1,                 i-1),lookFor,replaceBy,isValid)+
+              replaceRecursively(copy(original,i,length(original)+1-i),lookFor,replaceBy,isValid),
+                                                                       lookFor,replaceBy);
+    end else begin
+      result:=original;
+      repeat
+        prev:=result;
+        result:=AnsiReplaceStr(prev,lookFor,replaceBy);
+      until prev=result;
+    end;
   end;
 
 FUNCTION escapeString(CONST s: ansistring): ansistring;
