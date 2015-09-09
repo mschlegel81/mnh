@@ -38,7 +38,7 @@ shorten(s:string,subLength)->begin
       workString:=replace(workString,subStrings%bestIdx,alphabetChar);
       local oldLen:=length(result)=0 ? 2^62 : length(result);
       result:='replace('&escape(workString)&','&
-              'copy('&escape(each(c,alphabetOut ,&))&',[0..'&(size(alphabetOut )-1)&']*1,1),'&
+              'copy('&escape(each(c,alphabetOut ,&))&',[0..'&(size(alphabetOut )-1)&'],1),'&
               'copy('&escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
       length(result)>=oldLen ? proceed:=false : void;
       void;
@@ -49,4 +49,7 @@ end;
 
 //*For regression test
 main->main(myPath);
+//*Shorten the given input file
 main(filename)->shorten(fileContents(filename));
+//*Shorten multiple input files:
+main(filename,...)->printf("writeFile('%X%',%X%);",$params, pEach(p,$params,shortenSilently(fileContents(p))));
