@@ -67,38 +67,8 @@
 
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
-@mkdir distro\packages
-@mkdir distro\demos
-@mkdir distro\demos\inputs
-@mkdir distro\doc
-@mkdir distro\regTest
-@copy packages\*.mnh distro\packages
-@copy demos\*.mnh distro\demos
-@copy doc\html_template.txt distro\doc
-@copy npp_xml.mnh distro\
-@copy regTest\*.mnh distro\regTest\
-@copy regTest\*.expected distro\regTest\
-@copy regTest\regTestCases.dat distro\regTest\
-@copy regTest\t.bat distro\regTest\
-@copy doTests_distro.bat distro\doTests.bat
-@cd distro
-@copy ..\mnh.exe .
-@copy ..\mnh_light.exe .
-@del ..\versions\mnh5_%mydate%_*.7z
-@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win64R.7z
-@del /Q *.exe
-@copy ..\bin32\mnh.exe .
-@copy ..\bin32\mnh_light.exe .
-@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32R.7z
-@rmdir /S /Q regTest
-@del doTests.bat
-@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win32.7z
-@del /Q *.exe
-@copy ..\mnh.exe .
-@copy ..\mnh_light.exe .
-@%sevenZip% a -mx=9 ..\versions\mnh5_%mydate%_win64.7z
-@cd ..
-@rmdir /S /Q distro
+@del versions\mnh5_%mydate%.7z
+@%sevenZip% a -mx=9 versions\mnh5_%mydate%.7z @distro.list
 @echo -----------------------------------------------------------------------------------
 @goto loop
 

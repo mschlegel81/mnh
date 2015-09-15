@@ -1,0 +1,20 @@
+exeList:=['mnh.exe'            ,'bin32\\mnh.exe',
+          'mnh_light.exe'      ,'bin32\\mnh_light.exe',
+          'mnh_debug.exe'      ,'bin32\\mnh_debug.exe',
+          'mnh_light_debug.exe','bin32\\mnh_light_debug.exe'];
+
+main(scriptName,...)->begin
+  local times:=0;
+  each(script,$params,times+=
+  each(exe,exeList,time({execPipeless(exe,['-det',script])})%'time'));
+  print('\t64bit\t32bit',
+        '\nfull\t',times%0,'\t',times%1,
+        '\nlight\t',times%2,'\t',times%3,
+        '\nfull debug\t',times%4,'\t',times%5,
+        '\nlight debug\t',times%6,'\t',times%7);
+  print('Fastest: ',exeList%(argMin(times)));
+  print('Slowest: ',exeList%(argMax(times)));
+  print('Debug/Optimized: \t',each(x,times%[4..7],+)   /each(x,times%[0..3]   ,+)*100,'%',
+        '\nFull/Light: \t'   ,each(x,times%[0,1,4,5],+)/each(x,times%[2,3,6,7],+)*100,'%',
+        '\n64bit/32bit: \t'  ,each(x,times%[0,2,4,6],+)/each(x,times%[1,3,5,7],+)*100,'%');
+end;

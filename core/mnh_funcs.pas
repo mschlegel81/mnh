@@ -1505,16 +1505,10 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
 
 FINALIZATION
-  {$ifdef debugMode}
-  writeln(stdErr,'Finalizing mnh_funcs');
-  {$endif}
   intrinsicRuleMap.destroy;
   intrinsicRuleExplanationMap.destroy;
   //Critical sections:------------------------------------------------------------
   system.DoneCriticalsection(print_cs);
   system.DoneCriticalsection(file_cs);
   //------------------------------------------------------------:Critical sections
-  {$ifdef debugMode}
-  writeln(stdErr,'mnh_funcs finalized');
-  {$endif}
 end.

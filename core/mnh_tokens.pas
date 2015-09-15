@@ -794,10 +794,7 @@ INITIALIZATION
   {$include mnh_tokens_funcs.inc}
 
 FINALIZATION
-  {$ifdef debugMode} writeln(stdErr,'Finalizing mnh_tokens: pending tasks');  {$endif}
   pendingTasks.destroy;
-  {$ifdef debugMode} writeln(stdErr,'Finalizing mnh_tokens: packages'); {$endif}
   finalizePackages;
-  {$ifdef debugMode} writeln(stdErr,'mnh_tokens finalized'); {$endif}
 
 end.

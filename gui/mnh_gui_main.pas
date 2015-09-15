@@ -182,7 +182,7 @@ TYPE
     PROCEDURE pushSettingsToPlotContainer(CONST plotImmediately:boolean);
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
-    PROCEDURE startOfEvaluation;
+    PROCEDURE doStartEvaluation;
     { private declarations }
   public
     { public declarations }
@@ -232,7 +232,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     system.EnterCriticalsection(cs);
     result:=length(storedMessages)>0;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-      elc_clearConsole: syn.ClearAll;
+      elc_clearConsole: syn.Lines.Clear;
       elp_printline: for j:=0 to length(multiMessage)-1 do syn.Lines.Append(multiMessage[j]);
       ele_echoInput:       syn.Lines.Append(C_specialHeads[2].head+' '+simpleMessage);
       eld_echoDeclaration: syn.Lines.Append(C_specialHeads[1].head+' '+simpleMessage);
@@ -406,12 +406,15 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end else if SettingsForm.polishHistory then processFileHistory;
   end;
 
-PROCEDURE TMnhForm.startOfEvaluation;
+PROCEDURE TMnhForm.doStartEvaluation;
   begin
+    needEvaluation:=false;
+    doNotEvaluateBefore:=now+0.1*ONE_SECOND;
     guiOutAdapter.flushClear(OutputEdit);
+    UpdateTimeTimerTimer(self);
+    UpdateTimeTimer.Interval:=200;
     autosizingEnabled:=true;
     doConditionalPlotReset;
-    OutputEdit.Lines.Clear;
   end;
 
 { TMnhForm }
@@ -518,10 +521,8 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>doNotEvaluateBefore then begin
-        startOfEvaluation;
+        doStartEvaluation;
         ad_evaluate(InputEdit.Lines);
-        needEvaluation:=false;
-        doNotEvaluateBefore:=now+0.1*ONE_SECOND;
       end else needEvaluation:=true;
     end;
   end;
@@ -545,7 +546,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
   begin
     askForm.initWithQuestion('Please give command line parameters');
     askForm.ShowModal;
-    startOfEvaluation;
+    doStartEvaluation;
     ad_callMain(InputEdit.Lines,askForm.getLastAnswerReleasing);
   end;
 
@@ -596,10 +597,8 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>doNotEvaluateBefore then begin
-      startOfEvaluation;
+      doStartEvaluation;
       ad_evaluate(InputEdit.Lines);
-      needEvaluation:=false;
-      doNotEvaluateBefore:=now+0.1*ONE_SECOND;
     end else needEvaluation:=true;
   end;
 
@@ -854,11 +853,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //Halt/Run enabled states:--------------------------------------------------
     flag:=ad_evaluationRunning;
     if flag<>miHaltEvalutaion.Enabled then begin miHaltEvalutaion.Enabled:=flag; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
-    flag:=not(flag);
-    if flag<>miEvaluateNow.Enabled then begin
-      miEvaluateNow.Enabled:=flag;
-      miCallMain.Enabled:=flag;
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+    if not(flag)<>miEvaluateNow.Enabled then begin
+      miEvaluateNow.Enabled:=not(flag);
+      miCallMain.Enabled:=not(flag);
     end;
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
@@ -879,9 +876,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
        not(now<plotSubsystem.renderNotBefore) then doPlot();
 
     if flag then doNotEvaluateBefore:=now+0.1*ONE_SECOND else
-    if needEvaluation and (now>doNotEvaluateBefore) then begin
+    if needEvaluation and not(ad_evaluationRunning) and (now>doNotEvaluateBefore) then begin
+      doStartEvaluation;
       ad_evaluate(InputEdit.Lines);
-      needEvaluation:=false;
     end;
 
     //paint marks:--------------------------------------------------------------

@@ -54,15 +54,12 @@ DESTRUCTOR T_rule.destroy;
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
     if ruleType=rt_memoized then begin
-      {$ifdef debugMode} writeln(stdErr,'Destroying cache of rule '+id); {$endif}
       dispose(cache,destroy);
-      {$ifdef debugMode} writeln(stdErr,'Destroying critical section of rule '+id); {$endif}
       system.DoneCriticalsection(rule_cs);
     end else if ruleType in [rt_mutable,rt_synchronized] then begin
       system.DoneCriticalsection(rule_cs);
     end;
     if ruleType=rt_mutable then namedValue.destroy;
-    {$ifdef debugMode} writeln(stdErr,'Rule '+id+' destroyed'); {$endif}
     ruleType:=rt_normal;
     id:='';
   end;

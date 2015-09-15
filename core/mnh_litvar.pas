@@ -2105,15 +2105,9 @@ INITIALIZATION
   randomize;
 
 FINALIZATION
-  {$ifdef debugMode}
-  writeln(stdErr,'Finalizing mnh_litvar');
-  {$endif}
   boolLit[false].destroy;
   boolLit[true].destroy;
   errLit.destroy;
   voidLit.destroy;
   for i:=-127 to 128 do intLit[i].destroy;
-  {$ifdef debugMode}
-  writeln(stdErr,'mnh_litvar finalized');
-  {$endif}
 end.

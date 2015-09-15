@@ -95,7 +95,9 @@ PROCEDURE parseCmdLine;
         else if paramstr(i)='-cmd'  then directExecutionMode:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
-        else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},{$I %FPCTARGET%}); {$include code_hash.inc} halt; end
+        else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
+                                                                     {$ifdef debugMode}  'D'{$else}'O'{$endif},
+                                                                     {$I %FPCTARGET%}); {$include code_hash.inc} halt; end
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
           pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);

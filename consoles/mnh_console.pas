@@ -44,5 +44,4 @@ PROCEDURE interactiveMode;
 begin
   parseCmdLine;
   interactiveMode;
-  {$ifdef debugMode} writeln(stdErr,'mnh_console.pas - quit'); {$endif}
 end.
