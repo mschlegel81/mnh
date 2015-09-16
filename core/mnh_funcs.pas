@@ -583,6 +583,15 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
+FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=newBoolLiteral(DirectoryExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
+    end else raiseNotApplicableError('folderExists',params,tokenLocation);
+  end;
+
+
 FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR accessed:boolean;
   begin
@@ -1425,6 +1434,19 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end else raiseNotApplicableError('driveInfo',params,tokenLocation);
   end;
 
+FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR e:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      e:=getEnvironment;
+      result:=newListLiteral;
+      for i:=0 to length(e)-1 do P_listLiteral(result)^.appendString(e[i]);
+      setLength(e,0);
+    end else raiseNotApplicableError('getEnv',params,tokenLocation);
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1469,6 +1491,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files'         ,@files_impl       ,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders'       ,@folders_impl     ,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists'    ,@fileExists_impl  ,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'folderExists'    ,@folderExists_impl  ,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents'  ,@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileLines'     ,@fileLines_impl   ,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
                                                          'fileLines(filename:string,firstIdx:int,lastIdx:int);#Returns the specified range of lines or the empty list if no line was found in the range. Indexes are inclusive and start with 0.');
@@ -1503,6 +1526,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables.');
 
 FINALIZATION
   intrinsicRuleMap.destroy;
