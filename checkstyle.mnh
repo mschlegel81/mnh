@@ -10,7 +10,14 @@ fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language)
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
 trimBottom(S:stringList)->trailing(S)="" ? trimBottom(leading(S)) : S;
 fixMnhFileLines(S:stringList)->trimBottom(trimRight(S));
+isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z]+');
 
+checkConsistency(fileList)->begin
+  local all:=unique(flatten(each(file,fileList,each(tok,tokenSplit(fileContents(file),'pascal'),isIdentifier(tok) ? tok : void))));
+  local allUp:=unique(upper(all));
+  each(x,allUp,trueCount(upper(all)=x)>1 ? print('Inconsistent spelling: ',all%(upper(all)=x)) : void);
+  void;
+end;
 
 mutable readOnly:=true;
 memoized printOnce(text)->print(text);
@@ -28,6 +35,10 @@ fix(filename,oldLines,newLines          )->printOnce(filename)|
                                                             : writeFileLines(filename,newLines)));
 
 //*Check all files, writing out potential fixes
-main("check")->                each(s,recFiles(".","*.pas,*.inc,*.mnh"),fix(s));
+main("check")->begin
+  each(s,recFiles(".","*.pas,*.inc"),fix(s));
+  checkConsistency(recFiles(".","*.pas,*.inc"));
+end;
+  
 //*Fix all files, writing out potential fixes
-main("fix")->(readOnly:=false)|each(s,recFiles(".","*.pas,*.inc,*.mnh"),fix(s));
+main("fix")->(readOnly:=false)|each(s,recFiles(".","*.pas,*.inc"),fix(s));
