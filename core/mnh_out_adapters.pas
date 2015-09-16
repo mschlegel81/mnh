@@ -6,6 +6,7 @@ USES mnh_constants, mnh_tokLoc, myGenerics,mySys;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
+  NO_PARAMETERLESS_MAIN_MESSAGE = 'Cannot apply user defined rule main to parameter list ()';
 
 TYPE
   T_storedMessage = record
@@ -78,6 +79,7 @@ PROCEDURE setDefaultCallbacks;
 PROCEDURE haltWithAdaptedSystemErrorLevel;
 VAR
   hasHaltMessage: boolean = false;
+  hasNoParameterlessMainMessage: boolean = false;
   systemErrorlevel: specialize G_safeVar<longint>;
 
 
@@ -88,6 +90,7 @@ PROCEDURE clearErrors;
   begin
     maxErrorLevel := el0_allOkay;
     hasHaltMessage := false;
+    hasNoParameterlessMainMessage := false;
     errorCount:=0;
   end;
 
@@ -101,6 +104,7 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
       errorCount:=0;
     end;
     if errorMessage = HALT_MESSAGE then hasHaltMessage := true;
+    if errorMessage = NO_PARAMETERLESS_MAIN_MESSAGE then hasNoParameterlessMainMessage := true;
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 

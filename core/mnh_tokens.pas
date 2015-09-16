@@ -684,7 +684,12 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
         P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
       end;
       //:special handling if main returns an expression
-      mainPackage.complainAboutUncalled;
+      if hasNoParameterlessMainMessage then begin
+        outAdapter^.printOut('');
+        outAdapter^.printOut('Try one of the following:');
+        outAdapter^.printOut('');
+        printMainPackageDocText;
+      end;
     end;
     recycler.cascadeDisposeToken(t);
     recycler.destroy;
