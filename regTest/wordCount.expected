@@ -53,4 +53,3 @@ word       count %
   "king"    3035 0.32
   "israel"  2816 0.3
   "you"     2814 0.3
-Warning : Unused private subrule filesWords(pattern) @demos/wordCount.mnh:26,1

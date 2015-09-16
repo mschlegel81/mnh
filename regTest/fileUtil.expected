@@ -6,6 +6,3 @@
 ./packages/fileUtil.mnh@28: main->main('packages/*.mnh','trueCount');
 ./packages/primes.mnh@22: trueCount(n mod primes(sqrt(n))=0)=0;
 ./packages/primes.mnh@26: pEach(n,N,n in cached_primes ? true : trueCount((n mod cached_primes)=0)=0);
-Warning : Unused private subrule containsCaseSensitive(lookFor) @packages/fileUtil.mnh:11,1
-Warning : Unused private subrule findInFiles([], F:expression) @packages/fileUtil.mnh:20,1
-Warning : Unused private subrule findInLines(filename:string, [], F) @packages/fileUtil.mnh:23,1
