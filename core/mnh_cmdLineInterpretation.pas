@@ -54,6 +54,16 @@ PROCEDURE parseCmdLine;
       writeln('  -doc    : regenerate and show documentation');
     end;
 
+  PROCEDURE tryToRunSetup;
+    CONST setupFile='setup.mnh';
+    begin
+      if not(FileExists(setupFile)) then exit;
+      consoleOutAdapter.echoOn:=false;
+      mainPackageProvider.setPath(setupFile);
+      setLength(parameters,0);
+      callMainInMain(parameters);
+    end;
+
   PROCEDURE fileMode;
     VAR startTime:double;
     begin
@@ -138,6 +148,7 @@ PROCEDURE parseCmdLine;
       displayHelp;
       halt;
     end;
+    tryToRunSetup;
   end;
 
 end.

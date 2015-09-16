@@ -1,7 +1,7 @@
 packages\*.mnh
 demos\*.mnh
 doc\html_template.txt
-firstStart.mnh
+setup.mnh
 mnh.exe
 regTest\*.expected
 regTest\*.mnh

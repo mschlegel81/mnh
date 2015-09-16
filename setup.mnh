@@ -120,10 +120,19 @@ ftype mnh.script="#" %%1 %%*
 end;
 
 main->begin
+  local reply:=
   ask('This script ('&myPath&') creates\n'&
       '  - MNH Highlighting for Notepad++\n'&
       '  - file associations\n'&
       '  - the html documentation\n'&
       'and deletes itself afterwards.\n'& 
-      'Do you want to run it now?',['Yes','No'])='Yes' ? main('run') : void;
+      'Do you want to run it?',['Yes','No','Maybe later',"Later but don't ask me again"]);
+  reply='Yes' ? main('run') : 
+  reply='No' ? deleteFile(myPath) :
+  reply="Later but don't ask me again" ? begin
+    myPath='setup.mnh' ? begin
+      writeFile('setup_.mnh',fileContents(myPath));
+      deleteFile(myPath);
+    end : void;
+  end : void;
 end;

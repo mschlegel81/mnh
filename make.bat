@@ -67,8 +67,13 @@
 
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
-@del versions\mnh5_%mydate%.7z
-@%sevenZip% a -mx=9 versions\mnh5_%mydate%.7z @distro.list
+@del versions\mnh5_%mydate%*.7z
+@%sevenZip% a -mx=9 versions\mnh5_%mydate%_64bit.7z @distro.list
+@move mnh.exe mnh64.exe
+@move bin32\mnh.exe mnh.exe
+@%sevenZip% a -mx=9 versions\mnh5_%mydate%_32bit.7z @distro.list
+@move mnh.exe bin32\mnh.exe
+@move mnh64.exe mnh.exe
 @echo -----------------------------------------------------------------------------------
 @goto loop
 
