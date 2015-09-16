@@ -4,11 +4,11 @@ UNIT mnh_gui_main;
 INTERFACE
 
 USES
-  Classes, SysUtils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
+  Classes, sysutils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
-  SynHighlighterMnh, mnh_gui_settings, mnh_tokloc,
+  SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litvar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
 CONST ONE_SECOND=1/(24*60*60);
 
@@ -91,14 +91,14 @@ TYPE
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
-    PROCEDURE FormKeyPress(Sender: TObject; VAR Key: char);
+    PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
-    PROCEDURE InputEditKeyDown(Sender: TObject; VAR Key: word;
+    PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
+      Y: integer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
@@ -140,23 +140,23 @@ TYPE
     PROCEDURE miYFinerGridClick(Sender: TObject);
     PROCEDURE miYGridClick(Sender: TObject);
     PROCEDURE miYTicsClick(Sender: TObject);
-    PROCEDURE OutputEditKeyDown(Sender: TObject; VAR Key: word;
+    PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
+      Y: integer);
     PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE plotImageMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: Integer);
+      Y: integer);
     PROCEDURE plotImageMouseUp(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction
       );
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE SplitterHMoved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
-      SourceValue: string; VAR SourceStart, SourceEnd: TPoint;
+      sourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
@@ -229,32 +229,32 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-      elc_clearConsole: syn.Lines.Clear;
-      elp_printline: for j:=0 to length(multiMessage)-1 do syn.Lines.Append(multiMessage[j]);
-      ele_echoInput:       syn.Lines.Append(C_specialHeads[2].head+' '+simpleMessage);
-      eld_echoDeclaration: syn.Lines.Append(C_specialHeads[1].head+' '+simpleMessage);
-      elo_echoOutput:      syn.Lines.Append(C_specialHeads[3].head+' '+simpleMessage);
+      elc_clearConsole: syn.lines.clear;
+      elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+      ele_echoInput:       syn.lines.append(C_specialHeads[2].head+' '+simpleMessage);
+      eld_echoDeclaration: syn.lines.append(C_specialHeads[1].head+' '+simpleMessage);
+      elo_echoOutput:      syn.lines.append(C_specialHeads[3].head+' '+simpleMessage);
       el0_allOkay,
       el1_note,
       el2_warning,
       el3_evalError,
       el4_parsingError,
-      el5_systemError: syn.Lines.append(C_specialHeads[4].head+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
-      elX_stateInfo:   syn.Lines.append(C_specialHeads[5].head+ansistring(location)+' '+simpleMessage);
+      el5_systemError: syn.lines.append(C_specialHeads[4].head+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+      elX_stateInfo:   syn.lines.append(C_specialHeads[5].head+ansistring(location)+' '+simpleMessage);
     end;
     clearMessages;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_guiOutAdapter.flushClear(VAR syn: TSynEdit);
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     clearMessages;
     clearConsole;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_guiOutAdapter.loadSettings;
@@ -273,14 +273,14 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       needRepositioningOfHelp:boolean=false;
   begin
     if autosizingEnabled then begin
-      scrollbarHeight     :=InputEdit.Height-InputEdit.ClientHeight;
-      idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .Lines.Count;
-      idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.Lines.Count+1);
-      availableTotalHeight:=InputEdit.Height+OutputEdit.Height;
+      scrollbarHeight     :=InputEdit.height-InputEdit.ClientHeight;
+      idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .lines.count;
+      idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
+      availableTotalHeight:=InputEdit.height+OutputEdit.height;
       inputFocus:=not(forceOutputFocus or OutputEdit.Focused);
 
       //Are both editors large enough?
-      if (InputEdit.Height>=idealInputHeight) and (OutputEdit.Height>=idealOutputHeight) then exit;
+      if (InputEdit.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
       if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
         //There is enough room for both
         if inputFocus then idealInputHeight:=availableTotalHeight-idealOutputHeight;
@@ -296,10 +296,10 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
         end;
       end;
 
-      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.Height*0.8);
-      if idealInputHeight<>InputEdit.Height then begin
+      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.height*0.8);
+      if idealInputHeight<>InputEdit.height then begin
         if UpdateTimeTimer.Interval>200 then UpdateTimeTimer.Interval:=200;
-        InputEdit.Height:=idealInputHeight;
+        InputEdit.height:=idealInputHeight;
         needRepositioningOfHelp:=true;
       end;
       if PopupNotifier1.Visible and needRepositioningOfHelp then positionHelpNotifier;
@@ -308,22 +308,22 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   begin
-    PopupNotifier1.ShowAtPos(left+InputEdit.Width-PopupNotifier1.vNotifierForm.Width,
-                             ClientToScreen(Point(left,OutputEdit.Top)).y);
+    PopupNotifier1.ShowAtPos(left+InputEdit.width-PopupNotifier1.vNotifierForm.width,
+                             ClientToScreen(point(left,OutputEdit.top)).y);
     InputEdit.SetFocus;
   end;
 
 PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
   begin
-    if (caret.y>0) and (caret.y<=lines.Count) then begin
+    if (caret.y>0) and (caret.y<=lines.count) then begin
       underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
       if isIdentifier(underCursor.tokenText,true) and
          (inputHighlighter.setMarkedWord(underCursor.tokenText) and outputHighlighter.setMarkedWord(underCursor.tokenText)) then begin
         needMarkPaint:=true;
       end;
-      if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.Title) then begin
-        PopupNotifier1.Title:=underCursor.tokenText;
-        PopupNotifier1.Text:=replaceAll(replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar),C_tabChar,' ');
+      if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) then begin
+        PopupNotifier1.title:=underCursor.tokenText;
+        PopupNotifier1.text:=replaceAll(replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar),C_tabChar,' ');
         if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
       end;
     end;
@@ -340,7 +340,7 @@ PROCEDURE TMnhForm.doPlot;
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    activePlot.setScreenSize(PlotTabSheet.Width,PlotTabSheet.Height);
+    activePlot.setScreenSize(PlotTabSheet.width,PlotTabSheet.height);
     activePlot.renderPlot(plotImage,factor);
     plotSubsystem.rendering:=false;
   end;
@@ -395,13 +395,13 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   VAR mr:integer;
   begin
-    if FileExists(SettingsForm.fileHistory[historyIdx]) then begin
-      if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+    if fileExists(SettingsForm.fileHistory[historyIdx]) then begin
+      if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+        if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
         if mr=mrCancel then exit;
       end;
-      ad_setFile(SettingsForm.fileHistory[historyIdx],InputEdit.Lines);
+      ad_setFile(SettingsForm.fileHistory[historyIdx],InputEdit.lines);
       if SettingsForm.setFileInEditor(SettingsForm.fileHistory[historyIdx]) then processFileHistory;
     end else if SettingsForm.polishHistory then processFileHistory;
   end;
@@ -426,8 +426,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     needMarkPaint:=false;
     doNotEvaluateBefore:=now;
     doNotMarkWordBefore:=now;
-    OpenDialog.FileName:=paramstr(0);
-    SaveDialog.FileName:=paramstr(0);
+    OpenDialog.fileName:=paramStr(0);
+    SaveDialog.fileName:=paramStr(0);
     inputHighlighter:=TSynMnhSyn.create(nil,false);
     outputHighlighter:=TSynMnhSyn.create(nil,true);
     InputEdit.Highlighter:=inputHighlighter;
@@ -438,24 +438,24 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       ' at: '+{$I %TIME%}+
       ' with FPC'+{$I %FPCVERSION%}+
       ' for '+{$I %FPCTARGET%};
-    for i:=0 to length(LOGO)-1 do OutputEdit.Lines.Append(LOGO[i]);
-    OutputEdit.Lines.Append('       compiled on: '+{$I %DATE%});
-    OutputEdit.Lines.Append('       at: '+{$I %TIME%});
-    OutputEdit.Lines.Append('       with FPC'+{$I %FPCVERSION%});
-    OutputEdit.Lines.Append('       for '+{$I %FPCTARGET%});
+    for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
+    OutputEdit.lines.append('       compiled on: '+{$I %DATE%});
+    OutputEdit.lines.append('       at: '+{$I %TIME%});
+    OutputEdit.lines.append('       with FPC'+{$I %FPCVERSION%});
+    OutputEdit.lines.append('       for '+{$I %FPCTARGET%});
     outAdapter:=@guiOutAdapter;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR mr:integer;
   begin
-    if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+    if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
       mr:=closeDialogForm.showOnQuit;
-      if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
       if mr=mrCancel then CloseAction:=caNone;
     end;
     SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
-    if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.Lines);
+    if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.lines);
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -466,7 +466,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     ad_killEvaluationLoopSoftly;
   end;
 
-PROCEDURE TMnhForm.FormKeyPress(Sender: TObject; VAR Key: char);
+PROCEDURE TMnhForm.FormKeyPress(Sender: TObject; VAR key: char);
 begin
   if (PageControl.ActivePageIndex=1) and (key in ['+','-']) then begin
     if key='+' then activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
@@ -497,14 +497,14 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     VAR mr:integer;
     begin
       mr:=closeDialogForm.showOnOutOfSync;
-      if mr=mrOK then begin
+      if mr=mrOk then begin
         InputEdit.BeginUpdate();
-        ad_doReload(InputEdit.Lines);
+        ad_doReload(InputEdit.lines);
         InputEdit.EndUpdate;
         UpdateTimeTimer.Interval:=200;
         OutputEdit.ClearAll;
       end else if mr=mrCancel then begin
-        InputEdit.Lines.SaveToFile(ad_currentFile);
+        InputEdit.lines.saveToFile(ad_currentFile);
       end;
     end;
 
@@ -522,24 +522,24 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>doNotEvaluateBefore then begin
         doStartEvaluation;
-        ad_evaluate(InputEdit.Lines);
+        ad_evaluate(InputEdit.lines);
       end else needEvaluation:=true;
     end;
   end;
 
-PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR Key: word;
+PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    setUnderCursor(InputEdit.Lines,InputEdit.CaretXY);
+    setUnderCursor(InputEdit.lines,InputEdit.CaretXY);
   end;
 
 PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+  Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(InputEdit.Lines,InputEdit.PixelsToRowColumn(point));
+    setUnderCursor(InputEdit.lines,InputEdit.PixelsToRowColumn(point));
   end;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
@@ -547,15 +547,15 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     askForm.initWithQuestion('Please give command line parameters');
     askForm.ShowModal;
     doStartEvaluation;
-    ad_callMain(InputEdit.Lines,askForm.getLastAnswerReleasing);
+    ad_callMain(InputEdit.lines,askForm.getLastAnswerReleasing);
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   VAR mr:integer;
   begin
-    if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+    if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
       mr:=closeDialogForm.showOnLoad;
-      if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+      if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
       if mr=mrCancel then exit;
     end;
     ad_clearFile;
@@ -598,7 +598,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>doNotEvaluateBefore then begin
       doStartEvaluation;
-      ad_evaluate(InputEdit.Lines);
+      ad_evaluate(InputEdit.lines);
     end else needEvaluation:=true;
   end;
 
@@ -607,17 +607,17 @@ PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
       rect:TRect;
   begin
     SaveDialog.Filter:='Portable network graphics (PNG)|*.png';
-    if SaveDialog.Execute then begin
-      storeImage:=TImage.create(Self);
-      storeImage.SetInitialBounds(0,0,PlotTabSheet.Width,PlotTabSheet.Height);
-      rect.Top:=0;
-      rect.Left:=0;
-      rect.Right:=PlotTabSheet.Width;
-      rect.Bottom:=PlotTabSheet.Height;
+    if SaveDialog.execute then begin
+      storeImage:=TImage.create(self);
+      storeImage.SetInitialBounds(0,0,PlotTabSheet.width,PlotTabSheet.height);
+      rect.top:=0;
+      rect.left:=0;
+      rect.Right:=PlotTabSheet.width;
+      rect.Bottom:=PlotTabSheet.height;
       storeImage.Canvas.CopyRect(rect,plotImage.Canvas,rect);
-      SaveDialog.FileName:=ChangeFileExt(SaveDialog.FileName,'.png');
-      storeImage.Picture.PNG.SaveToFile(SaveDialog.FileName);
-      storeImage.Free;
+      SaveDialog.fileName:=ChangeFileExt(SaveDialog.fileName,'.png');
+      storeImage.Picture.PNG.saveToFile(SaveDialog.fileName);
+      storeImage.free;
     end;
   end;
 
@@ -665,7 +665,7 @@ end;
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
     findAndDocumentAllPackages;
-    OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
+    OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
   end;
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
@@ -679,24 +679,24 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
   VAR mr:integer;
   begin
-    OpenDialog.Title:='Open file';
-    if OpenDialog.Execute and FileExists(OpenDialog.FileName)
+    OpenDialog.title:='Open file';
+    if OpenDialog.execute and fileExists(OpenDialog.fileName)
     then begin
-      if (ad_currentFile<>'') and (ad_needSave(InputEdit.Lines)) then begin
+      if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOK then MnhForm.InputEdit.Lines.SaveToFile(ad_currentFile);
+        if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
         if mr=mrCancel then exit;
       end;
-      ad_setFile(OpenDialog.FileName,InputEdit.Lines);
-      if SettingsForm.setFileInEditor(OpenDialog.FileName) then processFileHistory;
+      ad_setFile(OpenDialog.fileName,InputEdit.lines);
+      if SettingsForm.setFileInEditor(OpenDialog.fileName) then processFileHistory;
     end;
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
-    if SaveDialog.Execute then begin
-      ad_saveFile(SaveDialog.FileName,InputEdit.Lines);
-      if SettingsForm.setFileInEditor(SaveDialog.FileName) then processFileHistory;
+    if SaveDialog.execute then begin
+      ad_saveFile(SaveDialog.fileName,InputEdit.lines);
+      if SettingsForm.setFileInEditor(SaveDialog.fileName) then processFileHistory;
       SettingsForm.saveSettings;
     end;
   end;
@@ -705,7 +705,7 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
     if ad_currentFile='' then miSaveAsClick(Sender)
     else begin
-      ad_saveFile(ad_currentFile,InputEdit.Lines);
+      ad_saveFile(ad_currentFile,InputEdit.lines);
       if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
       SettingsForm.saveSettings;
     end;
@@ -717,20 +717,20 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
     processSettings;
   end;
 
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR Key: word;
+PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    setUnderCursor(OutputEdit.Lines,OutputEdit.CaretXY);
+    setUnderCursor(OutputEdit.lines,OutputEdit.CaretXY);
   end;
 
 
 PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+  Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(OutputEdit.Lines,OutputEdit.PixelsToRowColumn(point));
+    setUnderCursor(OutputEdit.lines,OutputEdit.PixelsToRowColumn(point));
   end;
 
 PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
@@ -751,7 +751,7 @@ begin
 end;
 
 PROCEDURE TMnhForm.plotImageMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
+  Shift: TShiftState; X, Y: integer);
 begin
   if ssLeft in Shift then begin
     plotSubsystem.lastMouseX:=x;
@@ -760,7 +760,7 @@ begin
 end;
 
 PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: Integer);
+  Y: integer);
   VAR p:T_point;
   begin
     p:=activePlot.screenToReal(x,y);
@@ -775,7 +775,7 @@ PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
     end;
   end;
 
-PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
@@ -803,7 +803,7 @@ PROCEDURE TMnhForm.SplitterHMoved(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
-  SourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+  sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
   Shift: TShiftState);
   begin
     if (pos('.',value)>0) then begin
@@ -817,21 +817,21 @@ PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
   VAR i:longint;
       s:string;
   begin
-    SynCompletion.ItemList.Clear;
+    SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
     for i:=0 to completionList.size-1 do
-      if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.Add(completionList[i]);
+      if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.add(completionList[i]);
   end;
 
 PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   VAR i:longint;
       s:string;
   begin
-    SynCompletion.ItemList.Clear;
+    SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
     for i:=0 to completionList.size-1 do
-      if pos(s,completionList[i])=1 then SynCompletion.ItemList.Add(completionList[i]);
-    if SynCompletion.ItemList.Count>0 then APosition:=0 else APosition:=-1;
+      if pos(s,completionList[i])=1 then SynCompletion.ItemList.add(completionList[i]);
+    if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
@@ -878,7 +878,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if flag then doNotEvaluateBefore:=now+0.1*ONE_SECOND else
     if needEvaluation and not(ad_evaluationRunning) and (now>doNotEvaluateBefore) then begin
       doStartEvaluation;
-      ad_evaluate(InputEdit.Lines);
+      ad_evaluate(InputEdit.lines);
     end;
 
     //paint marks:--------------------------------------------------------------
@@ -899,12 +899,12 @@ PROCEDURE TMnhForm.processSettings;
   begin
     if not(settingsHaveBeenProcessed) then begin
       InputEdit.BeginUpdate();
-      SettingsForm.getFileContents(InputEdit.Lines);
+      SettingsForm.getFileContents(InputEdit.lines);
       InputEdit.EndUpdate();
     end;
 
     InputEdit.Font.name:=SettingsForm.getEditorFontName;
-    InputEdit.Font.Size:=SettingsForm.fontSize;
+    InputEdit.Font.size:=SettingsForm.fontSize;
     if SettingsForm.AntialiasCheckbox.Checked
     then InputEdit.Font.Quality:=fqCleartypeNatural
     else InputEdit.Font.Quality:=fqNonAntialiased;
@@ -931,7 +931,7 @@ PROCEDURE TMnhForm.processSettings;
     if ad_currentFile<>SettingsForm.getFileInEditor then begin
       if SettingsForm.getFileInEditor=''
       then ad_clearFile
-      else ad_setFile(SettingsForm.getFileInEditor,InputEdit.Lines);
+      else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
     end;
     if not(settingsHaveBeenProcessed) then processFileHistory;
 
@@ -958,10 +958,10 @@ PROCEDURE TMnhForm.processFileHistory;
   begin
     for i:=0 to 9 do if SettingsForm.fileHistory[i]='' then begin
       historyMenuItem(i).Enabled:=false;
-      historyMenuItem(i).Caption:=IntToStr(i)+': <no file>';
+      historyMenuItem(i).Caption:=intToStr(i)+': <no file>';
     end else begin
       historyMenuItem(i).Enabled:=true;
-      historyMenuItem(i).Caption:=IntToStr(i)+': '+SettingsForm.fileHistory[i];
+      historyMenuItem(i).Caption:=intToStr(i)+': '+SettingsForm.fileHistory[i];
     end;
   end;
 
@@ -1057,8 +1057,8 @@ FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P
 
 FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    activePlot.setScreenSize(MnhForm.PlotTabSheet.Width,
-                             MnhForm.PlotTabSheet.Height);
+    activePlot.setScreenSize(MnhForm.PlotTabSheet.width,
+                             MnhForm.PlotTabSheet.height);
     result:=mnh_plotData.addPlot(params,tokenLocation);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;

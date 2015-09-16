@@ -48,7 +48,11 @@ shorten(s:string,subLength)->begin
 end;
 
 //*For regression test
-main->main(myPath);
+main->begin
+  local input:=fileContents(myPath);
+  local shortCmd:=expression(shorten(input));
+  print('Can reconstruct correctly : ',shortCmd()=input);
+end;
 //*Shorten the given input file
 main(filename)->shorten(fileContents(filename));
 //*Shorten multiple input files:

@@ -15,8 +15,8 @@ TYPE
       PROCEDURE readBuffer;
     public
 
-    CONSTRUCTOR createToRead (filename:string);
-    CONSTRUCTOR createToWrite(filename:string);
+    CONSTRUCTOR createToRead (fileName:string);
+    CONSTRUCTOR createToWrite(fileName:string);
     DESTRUCTOR  destroy;
     FUNCTION    allOkay:boolean;
 
@@ -43,26 +43,26 @@ TYPE
     PROCEDURE writeExtended(x:extended);
     FUNCTION   readExtended  :extended;
 
-    PROCEDURE writeShortstring(x:shortstring);
-    FUNCTION   readShortstring  :shortstring;
+    PROCEDURE writeShortstring(x:shortString);
+    FUNCTION   readShortstring  :shortString;
     PROCEDURE writeAnsiString (x:ansistring);
     FUNCTION   readAnsiString   :ansistring;
-    PROCEDURE writeBuf(p:pbyte; psize:longint);
-    PROCEDURE readBuf (p:pbyte; psize:longint);
+    PROCEDURE writeBuf(p:PByte; pSize:longint);
+    PROCEDURE readBuf (p:PByte; pSize:longint);
   end;
 
   T_serializable=object
     CONSTRUCTOR notReallyAConstructor;
-    FUNCTION  loadFromFile(filename:string):boolean;                 overload; //liest die Inhalte des Objektes aus der Datei mit dem übergebenen Namen und gibt true zurück gdw. kein Fehler auftrat
-    PROCEDURE saveToFile(filename:string);                           overload; //schreibt die Inhalte des Objektes in die Datei mit dem übergebenen Namen
-    FUNCTION  loadFromFile(VAR F:T_File):boolean; virtual; abstract; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
-    PROCEDURE saveToFile(VAR F:T_File);           virtual; abstract; overload; //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
+    FUNCTION  loadFromFile(fileName:string):boolean;                 overload; //liest die Inhalte des Objektes aus der Datei mit dem übergebenen Namen und gibt true zurück gdw. kein Fehler auftrat
+    PROCEDURE saveToFile(fileName:string);                           overload; //schreibt die Inhalte des Objektes in die Datei mit dem übergebenen Namen
+    FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual; abstract; overload; //liest die Inhalte des Objektes aus einer bereits geöffneten Datei und gibt true zurück gdw. kein Fehler auftrat
+    PROCEDURE saveToFile(VAR F:T_file);           virtual; abstract; overload; //schreibt die Inhalte des Objektes in eine bereits geöffnete Datei
 
   end;
 
 
-PROCEDURE pack(filename:ansistring);
-PROCEDURE pack(fileList,outfile:ansistring);
+PROCEDURE pack(fileName:ansistring);
+PROCEDURE pack(fileList,outFile:ansistring);
 PROCEDURE unpack(packedFile:ansistring);
 FUNCTION execute(call:ansistring):longint;
 
@@ -73,23 +73,23 @@ FUNCTION execute(call:ansistring):longint;
     try
     tempProcess :=TProcess.create(nil);
     tempProcess.CommandLine :=call;
-    tempProcess.options:=tempProcess.options+[powaitonexit];
+    tempProcess.options:=tempProcess.options+[poWaitOnExit];
     tempProcess.execute;
     result:=tempProcess.exitStatus;
-    tempProcess.Free;
+    tempProcess.free;
     except result:=-1001 end;
   end;
 
-PROCEDURE pack(fileList,outfile:ansistring);
+PROCEDURE pack(fileList,outFile:ansistring);
   begin
     if fileExists('7z.exe') then
-      execute('7z.exe a '+outfile+' -mx=9 '+filelist);
+      execute('7z.exe a '+outFile+' -mx=9 '+fileList);
 
   end;
 
-PROCEDURE pack(filename:ansistring);
+PROCEDURE pack(fileName:ansistring);
   begin
-    pack(filename,filename+'.7z');
+    pack(fileName,fileName+'.7z');
   end;
 
 PROCEDURE unpack(packedFile:ansistring);
@@ -111,28 +111,28 @@ PROCEDURE T_file.readBuffer;
   VAR actuallyRead:longint;
   begin
     if readmode and stateOkay then begin
-      blockread(handle,buffer[bufFill],buffersize-bufFill,actuallyRead);
+      blockread(handle,buffer[bufFill],bufferSize-bufFill,actuallyRead);
       bufFill:=bufFill+actuallyRead;
     end;
   end;
 
-CONSTRUCTOR T_file.createToRead (filename:string);
+CONSTRUCTOR T_file.createToRead (fileName:string);
   begin
     readMode:=true;
     bufFill:=0;
-    if fileExists(filename) then begin
-      assign(handle,filename);
+    if fileExists(fileName) then begin
+      assign(handle,fileName);
       reset(handle);
       readBuffer;
       stateOkay:=true;
     end else stateOkay:=false;
   end;
 
-CONSTRUCTOR T_file.createToWrite(filename:string);
+CONSTRUCTOR T_file.createToWrite(fileName:string);
   begin
     try
       readMode:=false;
-      assign(handle,filename);
+      assign(handle,fileName);
       rewrite(handle);
       bufFill:=0;
       stateOkay:=true;
@@ -152,7 +152,7 @@ FUNCTION    T_file.allOkay:boolean;
 
 {$define macro_genericWrite:=
   begin
-    if bufFill+sizeOf(x)>buffersize then flushBuffer;
+    if bufFill+sizeOf(x)>bufferSize then flushBuffer;
     if stateOkay then move(x,buffer[bufFill],sizeOf(x));
     inc(bufFill,sizeOf(x));
   end}
@@ -188,14 +188,14 @@ FUNCTION  T_file. readDouble    :double   ; macro_genericRead;
 PROCEDURE T_file.writeExtended(x:extended); macro_genericWrite;
 FUNCTION  T_file. readExtended  :extended ; macro_genericRead;
 
-PROCEDURE T_file.writeShortstring(x:shortstring);
+PROCEDURE T_file.writeShortstring(x:shortString);
   VAR i:longint;
   begin
     writeByte(length(x));
     for i:=1 to length(x) do writeChar(x[i]);
   end;
 
-FUNCTION  T_file. readShortstring  :shortstring;
+FUNCTION  T_file. readShortstring  :shortString;
   VAR i:longint;
       charsToRead:byte;
   begin
@@ -233,22 +233,22 @@ FUNCTION  T_file.readBoolean:boolean;
     stateOkay:=stateOkay and (b in [0,255]);
   end;
 
-PROCEDURE T_file.writeBuf(p:PByte; psize:longint);
+PROCEDURE T_file.writeBuf(p:PByte; pSize:longint);
   begin
     if not(readMode) then begin
       flushBuffer;                 //write all that is stored in buffer
-      blockwrite(handle,p^,psize); //write bytes from pointer
+      blockwrite(handle,p^,pSize); //write bytes from pointer
     end;
   end;
 
-PROCEDURE T_file.readBuf (p:PByte; psize:longint);
+PROCEDURE T_file.readBuf (p:PByte; pSize:longint);
   VAR actuallyRead:longint;
   begin
     if readmode then begin
       if bufFill>=pSize then begin //if buffer contains enough data...
         move(buffer[0],p^,pSize);                    //move data from buffer to pointer
-        move(buffer[psize],buffer[0],bufFill-psize); //buffer shift
-        dec(bufFill,psize);                          //decrement buffer-fill
+        move(buffer[pSize],buffer[0],bufFill-pSize); //buffer shift
+        dec(bufFill,pSize);                          //decrement buffer-fill
       end else begin               //if buffer contains less than necessary...
         move(buffer[0],p^,bufFill);                                //read first bytes from buffer
         blockread(handle,(p+bufFill)^,pSize-bufFill,actuallyRead); //read remaining bytes from file
@@ -259,20 +259,20 @@ PROCEDURE T_file.readBuf (p:PByte; psize:longint);
   end;
 
 CONSTRUCTOR T_serializable.notReallyAConstructor; begin end;
-FUNCTION    T_serializable.loadFromFile(filename:string):boolean;
-  VAR ff:T_File;
+FUNCTION    T_serializable.loadFromFile(fileName:string):boolean;
+  VAR ff:T_file;
   begin
-    if fileExists(filename) then begin
-      ff.createToRead(filename);
+    if fileExists(fileName) then begin
+      ff.createToRead(fileName);
       result:=loadFromFile(ff);
       ff.destroy;
     end else result:=false;
   end;
 
-PROCEDURE T_serializable.saveToFile(filename:string);
-  VAR ff:T_File;
+PROCEDURE T_serializable.saveToFile(fileName:string);
+  VAR ff:T_file;
   begin
-    ff.createToWrite(filename);
+    ff.createToWrite(fileName);
     saveToFile(ff);
     ff.destroy;
   end;

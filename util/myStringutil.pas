@@ -32,7 +32,7 @@ IMPLEMENTATION
 
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
   VAR matrix: array of T_arrayOfString;
-      i, j, maxJ, maxLength, dotpos: longint;
+      i, j, maxJ, maxLength, dotPos: longint;
 
   FUNCTION isNumeric(s: ansistring): boolean;
     VAR i: longint;
@@ -68,15 +68,15 @@ FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
     end;
     //expand columns to equal size:
     for j := 0 to maxJ do begin
-      dotpos := 0;
+      dotPos := 0;
       for i := 0 to length(matrix)-1 do
         if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) and
-          (posOfDot(matrix [i] [j])>dotpos) then
-          dotpos := posOfDot(matrix [i] [j]);
+          (posOfDot(matrix [i] [j])>dotPos) then
+          dotPos := posOfDot(matrix [i] [j]);
       if dotPos>0 then
         for i := 0 to length(matrix)-1 do
           if (length(matrix [i])>j) and (isNumeric(matrix [i] [j])) then
-            while posOfDot(matrix [i] [j])<dotpos do
+            while posOfDot(matrix [i] [j])<dotPos do
               matrix[i][j] := ' '+matrix [i] [j];
 
       maxLength := 0;
@@ -90,7 +90,7 @@ FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
     end;
 
     //join matrix to result;
-    for i:=0 to length(matrix)-1 do result[i]:=TrimRight(join(matrix[i],''));
+    for i:=0 to length(matrix)-1 do result[i]:=trimRight(join(matrix[i],''));
   end;
 
 FUNCTION isBlank(CONST s: ansistring): boolean;
@@ -317,7 +317,7 @@ FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
   begin
     if (length(formatString)>=1) and (formatString[1] in ['X','x','I','i']) then begin
       if length(formatString)>1
-      then targetLength:=StrToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData))
+      then targetLength:=strToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData))
       else targetLength:=length(stringData);
       result:=stringData;
       if length(result)>targetLength
@@ -340,28 +340,28 @@ FUNCTION isTimeFormat(CONST s:ansistring):boolean;
 FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:extended):ansistring;
   VAR i,destLen:longint;
   begin
-    result:=FormatFloat(formatString,value);
+    result:=formatFloat(formatString,value);
     i:=1;
     while (i<length(formatString)) and (formatString[i]='#') do begin
       formatString[i]:='0';
       inc(i);
     end;
-    destLen:=length(FormatFloat(formatString,value));
+    destLen:=length(formatFloat(formatString,value));
     while length(result)<destLen do result:=' '+result;
-    destLen:=length(FormatFloat(replaceAll(formatString,'#','0'),value));
+    destLen:=length(formatFloat(replaceAll(formatString,'#','0'),value));
     while length(result)<destLen do result:=result+' ';
   end;
 
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
   begin
     if (length(formatString)>0) and (formatString[1] in ['X','x','I','i'])
-    then exit(myFormat(formatString,IntToStr(intData)));
+    then exit(myFormat(formatString,intToStr(intData)));
     try
       if isTimeFormat(formatString)
       then DateTimeToString(result,formatString,intData)
       else result:=fixedFormatFloat(formatString,intData);
     except
-      result:=myFormat(formatString,IntToStr(intData));
+      result:=myFormat(formatString,intToStr(intData));
     end;
   end;
 

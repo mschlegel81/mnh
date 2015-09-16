@@ -2,8 +2,8 @@ UNIT mnh_plotData;
 
 INTERFACE
 
-USES SysUtils, Math, mnh_litvar, mnh_tokens, mnh_constants,
-  mnh_out_adapters, mnh_tokloc,
+USES sysutils, math, mnh_litVar, mnh_tokens, mnh_constants,
+  mnh_out_adapters, mnh_tokLoc,
   mnh_funcs,
   Interfaces, ExtCtrls, Graphics, types;
 TYPE
@@ -27,17 +27,17 @@ CONST
 
   C_styleName: array[0..9] of record
       idx: byte;
-      Name: array[0..1] of string;
-    end = ((idx: C_lineStyle_straight; Name: ('line', 'l')),
-    (idx: C_lineStyle_stepLeft; Name: ('stepLeft', '')),
-    (idx: C_lineStyle_stepRight; Name: ('stepRight', '')),
-    (idx: C_lineStyle_filled; Name: ('fill', 'f')),
-    (idx: C_lineStyle_bar; Name: ('bar', '')),
-    (idx: C_lineStyle_box; Name: ('box', '')),
-    (idx: C_symbolStyle_dot; Name: ('dot', '.')),
-    (idx: C_symbolStyle_plus; Name: ('plus', '+')),
-    (idx: C_symbolStyle_cross; Name: ('cross', 'x')),
-    (idx: C_symbolStyle_impulse; Name: ('impulse', 'i')));
+      name: array[0..1] of string;
+    end = ((idx: C_lineStyle_straight; name: ('line', 'l')),
+    (idx: C_lineStyle_stepLeft; name: ('stepLeft', '')),
+    (idx: C_lineStyle_stepRight; name: ('stepRight', '')),
+    (idx: C_lineStyle_filled; name: ('fill', 'f')),
+    (idx: C_lineStyle_bar; name: ('bar', '')),
+    (idx: C_lineStyle_box; name: ('box', '')),
+    (idx: C_symbolStyle_dot; name: ('dot', '.')),
+    (idx: C_symbolStyle_plus; name: ('plus', '+')),
+    (idx: C_symbolStyle_cross; name: ('cross', 'x')),
+    (idx: C_symbolStyle_impulse; name: ('impulse', 'i')));
 
 TYPE
   T_point = array[0..1] of double;
@@ -135,8 +135,8 @@ TYPE
       PROCEDURE setDefaults;
       DESTRUCTOR destroy;
       PROCEDURE addSampleRow(CONST sampleRow: T_sampleRow);
-      PROCEDURE Clear;
-      PROCEDURE setScreenSize(CONST Width, Height: longint);
+      PROCEDURE clear;
+      PROCEDURE setScreenSize(CONST width, height: longint);
       FUNCTION longtestYTic: ansistring;
       FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
       FUNCTION addRow(CONST styleOptions: string): longint;
@@ -182,14 +182,14 @@ IMPLEMENTATION
 
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
-    if x = nil then result:=NAN else case X^.literalType of
+    if x = nil then result:=Nan else case X^.literalType of
         lt_real: begin
           result:=P_realLiteral(x)^.value;
           if IsInfinite(result) then
-            result:=NaN;
+            result:=Nan;
           end;
         lt_int: result:=P_intLiteral(x)^.value;
-      else result:=NaN;
+      else result:=Nan;
         end;
   end;
 
@@ -217,20 +217,20 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
       begin
       x:=sample[i, 0];
       if logX and (x<=1E-100) then
-        x:=NaN;
+        x:=Nan;
       y:=sample[i, 1];
       if logY and (y<=1E-100) then
-        y:=NaN;
-      if IsNan(box['x', 0]) or (not (IsNan(x)) and not (IsInfinite(x)) and
+        y:=Nan;
+      if isNan(box['x', 0]) or (not (isNan(x)) and not (IsInfinite(x)) and
         (x<box['x', 0])) then
         box['x', 0]:=x;
-      if IsNan(box['x', 1]) or (not (IsNan(x)) and not (IsInfinite(x)) and
+      if isNan(box['x', 1]) or (not (isNan(x)) and not (IsInfinite(x)) and
         (x>box['x', 1])) then
         box['x', 1]:=x;
-      if IsNan(box['y', 0]) or (not (IsNan(y)) and not (IsInfinite(y)) and
+      if isNan(box['y', 0]) or (not (isNan(y)) and not (IsInfinite(y)) and
         (y<box['y', 0])) then
         box['y', 0]:=y;
-      if IsNan(box['y', 1]) or (not (IsNan(y)) and not (IsInfinite(y)) and
+      if isNan(box['y', 1]) or (not (isNan(y)) and not (IsInfinite(y)) and
         (y>box['y', 1])) then
         box['y', 1]:=y;
       end;
@@ -358,7 +358,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
           (p1[1]>activePlot.screenHeight) and  (p2[1]>activePlot.screenHeight) then exit(0);
         end;
       result:=sqr(p0[0]-2*p1[0]+p2[0])+sqr(p0[1]-2*p1[1]+p2[1]);
-      if IsNan(result) or IsInfinite(result) then
+      if isNan(result) or IsInfinite(result) then
         result:=0;
     end;
 
@@ -372,11 +372,11 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
         for i:=0 to length(temp)-1 do
           begin
           if IsInfinite(temp[i].x) then
-            sample[i, 0]:=NaN
+            sample[i, 0]:=Nan
           else
             sample[i, 0]:=temp[i].x;
           if IsInfinite(temp[i].y) then
-            sample[i, 1]:=NaN
+            sample[i, 1]:=Nan
           else
             sample[i, 1]:=temp[i].y;
           end;
@@ -447,11 +447,11 @@ PROCEDURE T_sampleRow.addSample(CONST x, y: double);
   begin
     setLength(sample, length(sample)+1);
     if IsInfinite(x) then
-      sample[length(sample)-1, 0]:=NaN
+      sample[length(sample)-1, 0]:=Nan
     else
       sample[length(sample)-1, 0]:=x;
     if IsInfinite(y) then
-      sample[length(sample)-1, 1]:=NaN
+      sample[length(sample)-1, 1]:=Nan
     else
       sample[length(sample)-1, 1]:=y;
   end;
@@ -465,15 +465,15 @@ DESTRUCTOR T_sampleRow.destroy;
 
 CONST
   C_defaultColor: array[0..5] of record
-      Name: string;
+      name: string;
       color: array[T_colorChannel] of byte
     end =
-    ((Name: 'black'; color: (0, 0, 0)),
-    (Name: 'red'; color: (255, 0, 0)),
-    (Name: 'blue'; color: (0, 0, 255)),
-    (Name: 'green'; color: (0, 128, 0)),
-    (Name: 'purple'; color: (192, 0, 192)),
-    (Name: 'orange'; color: (255, 96, 0)));
+    ((name: 'black'; color: (0, 0, 0)),
+    (name: 'red'; color: (255, 0, 0)),
+    (name: 'blue'; color: (0, 0, 255)),
+    (name: 'green'; color: (0, 128, 0)),
+    (name: 'purple'; color: (192, 0, 192)),
+    (name: 'orange'; color: (255, 96, 0)));
 
 CONSTRUCTOR T_style.create(CONST index: byte);
   begin
@@ -548,7 +548,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
     begin
       result:=false;
       for i:=0 to length(C_defaultColor)-1 do
-        if colorOption = C_defaultColor[i].Name then
+        if colorOption = C_defaultColor[i].name then
           begin
           color:=C_defaultColor[i].color;
           result:=true;
@@ -619,7 +619,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
     mightBeColor: boolean;
   begin
     style:=0;
-    options:=Trim(styleString);
+    options:=trim(styleString);
     repeat
       sp:=pos(' ', options);
       if sp<=0 then
@@ -633,15 +633,15 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         options:=trim(copy(options, sp+1, length(options)));
         end;
       mightBeColor:=true;
-      size:=StrToFloatDef(part, NaN);
-      if not (IsNan(size)) then
+      size:=strToFloatDef(part, Nan);
+      if not (isNan(size)) then
         begin
         styleModifier:=size;
         mightBeColor:=false;
         end;
       for i:=0 to length(C_styleName)-1 do
         with C_styleName[i] do
-          if (part = Name[0]) or (part = Name[1]) then
+          if (part = name[0]) or (part = name[1]) then
             begin
             if idx in[C_lineStyle_box, C_lineStyle_bar, C_lineStyle_straight,
               C_lineStyle_stepRight, C_lineStyle_stepLeft] then
@@ -754,12 +754,12 @@ PROCEDURE T_plot.setDefaults;
       autoscale[axis]:=true;
     end;
     preserveAspect:=true;
-    Clear;
+    clear;
   end;
 
 DESTRUCTOR T_plot.destroy;
   begin
-    Clear;
+    clear;
   end;
 
 PROCEDURE T_plot.addSampleRow(CONST sampleRow: T_sampleRow);
@@ -768,14 +768,14 @@ PROCEDURE T_plot.addSampleRow(CONST sampleRow: T_sampleRow);
     row[length(row)-1]:=sampleRow;
   end;
 
-PROCEDURE T_plot.Clear;
+PROCEDURE T_plot.clear;
   VAR i: longint;
   begin
     for i:=0 to length(row)-1 do row[i].destroy;
     setLength(row, 0);
   end;
 
-PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
+PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
 
   PROCEDURE getRanges;
     VAR
@@ -793,7 +793,7 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
       for axis:='x' to 'y' do
         for i:=0 to 1 do
           begin
-          if isNAN(boundingBox [axis, i]) then
+          if isNan(boundingBox [axis, i]) then
             boundingBox[axis, i]:=range [axis, i]
           else if logscale [axis] then
             boundingBox[axis, i]:=ln(boundingBox [axis, i])/ln(10);
@@ -870,7 +870,7 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
         screenPos: double;
       begin
         screenPos:=realToScreen(axis, realPos);
-        if not (IsNan(screenPos)) and not (IsInfinite(screenPos)) and  not (screenPos<0) and not ((axis = 'y') and
+        if not (isNan(screenPos)) and not (IsInfinite(screenPos)) and  not (screenPos<0) and not ((axis = 'y') and
           (screenPos>screenHeight)) and not ((axis = 'x') and
           (screenPos>screenWidth)) then
           begin
@@ -916,16 +916,16 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
           exit('0');
         if (scale>=-3) and (scale<0) then
           begin
-          result:=IntToStr(value);
+          result:=intToStr(value);
           while length(result)<-scale do
             result:='0'+result;
           exit(copy(result, 1, length(result)+scale)+'.'+
             copy(result, length(result)+1+scale, -scale));
           end
         else if (scale>=0) and (scale<3) then
-          exit(IntToStr(value)+suf [scale])
+          exit(intToStr(value)+suf [scale])
         else
-          exit(IntToStr(value)+'E'+IntToStr(scale));
+          exit(intToStr(value)+'E'+intToStr(scale));
       end;
 
     FUNCTION tooManyTotalTics: boolean;
@@ -1083,12 +1083,12 @@ PROCEDURE T_plot.setScreenSize(CONST Width, Height: longint);
     end;
 
   begin
-    screenWidth:=Width;
-    screenHeight:=Height;
+    screenWidth:=width;
+    screenHeight:=height;
     if not wantTics('y') then
       xOffset:=0;
     if not wantTics('x') then
-      yOffset:=Height;
+      yOffset:=height;
     getRanges;
     initTics('x');
     initTics('y');
@@ -1129,7 +1129,7 @@ FUNCTION T_plot.addRow(CONST styleOptions: string): longint;
     result:=length(row);
     setLength(row, result+1);
     row[result].create(result);
-    if Trim(styleOptions)<>'' then
+    if trim(styleOptions)<>'' then
       row[result].style.parseStyle(styleOptions);
   end;
 
@@ -1175,7 +1175,7 @@ FUNCTION T_plot.est_curvature(CONST s0, s1, s2: T_point): double;
     p1:=realToScreen(s1);
     p2:=realToScreen(s2);
     result:=sqr(p0 [0]-2*p1 [0]+p2 [0])+sqr(p0 [1]-2*p1 [1]+p2 [1]);
-    if IsNan(result) or IsInfinite(result) then
+    if isNan(result) or IsInfinite(result) then
       result:=0;
   end;
 
@@ -1185,7 +1185,7 @@ FUNCTION T_plot.olx(CONST x: double): double;
       begin
       if x<1E-324 then exit(-324);
       result:=ln(x)/ln(10);
-      if IsNan(result) or IsInfinite(result) then
+      if isNan(result) or IsInfinite(result) then
         result:=-324;
       end
     else
@@ -1206,7 +1206,7 @@ FUNCTION T_plot.oly(CONST y: double): double;
       begin
       if y<1E-324 then exit(-324);
       result:=ln(y)/ln(10);
-      if IsNan(result) or IsInfinite(result) then
+      if isNan(result) or IsInfinite(result) then
         result:=-324;
       end
     else
@@ -1223,9 +1223,9 @@ FUNCTION T_plot.oey(CONST y: double): double;
 
 FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
   begin
-    result:=not (IsNan(sample [0])) and not (IsInfinite(sample [0])) and
+    result:=not (isNan(sample [0])) and not (IsInfinite(sample [0])) and
       (not (logscale ['x']) or (sample [0]>=1E-100)) and not
-      (IsNan(sample [1])) and not (IsInfinite(sample [1])) and
+      (isNan(sample [1])) and not (IsInfinite(sample [1])) and
       (not (logscale ['y']) or (sample [1]>=1E-100));
   end;
 
@@ -1326,15 +1326,15 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     range['y', 0]:=(range ['y', 0]-holdY)*factor+holdY;
     range['y', 1]:=(range ['y', 1]-holdY)*factor+holdY;
 
-    rectA.Top:=0;
-    rectA.Left:=0;
-    rectA.Right:=plotImage.Width;
-    rectA.Bottom:=plotImage.Height;
+    rectA.top:=0;
+    rectA.left:=0;
+    rectA.Right:=plotImage.width;
+    rectA.Bottom:=plotImage.height;
 
-    rectB.Top:=round((-pixelY)*factor+pixelY);
-    rectB.Left:=round((-pixelX)*factor+pixelX);
-    rectB.Right:=round((plotImage.Width-pixelX)*factor+pixelX);
-    rectB.Bottom:=round((plotImage.Height-pixelY)*factor+pixelY);
+    rectB.top:=round((-pixelY)*factor+pixelY);
+    rectB.left:=round((-pixelX)*factor+pixelX);
+    rectB.Right:=round((plotImage.width-pixelX)*factor+pixelX);
+    rectB.Bottom:=round((plotImage.height-pixelY)*factor+pixelY);
 
     plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
   end;
@@ -1352,15 +1352,15 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     range['y', 0]:=range ['y', 0]+worldDY;
     range['y', 1]:=range ['y', 1]+worldDY;
 
-    rectA.Top:=0;
-    rectA.Left:=0;
-    rectA.Right:=plotImage.Width;
-    rectA.Bottom:=plotImage.Height;
+    rectA.top:=0;
+    rectA.left:=0;
+    rectA.Right:=plotImage.width;
+    rectA.Bottom:=plotImage.height;
 
-    rectB.Top:=0+pixelDY;
-    rectB.Left:=0+pixelDX;
-    rectB.Right:=plotImage.Width+pixelDX;
-    rectB.Bottom:=plotImage.Height+pixelDY;
+    rectB.top:=0+pixelDY;
+    rectB.left:=0+pixelDX;
+    rectB.Right:=plotImage.width+pixelDX;
+    rectB.Bottom:=plotImage.height+pixelDY;
 
     plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
   end;
@@ -1415,44 +1415,44 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
 
     begin
       //Clear:------------------------------------------------------------------
-      target.Brush.Style:=bsSolid;
-      target.Brush.Color:=clWhite;
-      target.Pen.Style:=psClear;
+      target.Brush.style:=bsSolid;
+      target.Brush.color:=clWhite;
+      target.Pen.style:=psClear;
       target.Pen.EndCap:=pecSquare;
-      target.FillRect(0, 0, target.Width-1, target.Height-1);
-      target.Clear;
+      target.FillRect(0, 0, target.width-1, target.height-1);
+      target.clear;
       //------------------------------------------------------------------:Clear
       //coordinate grid:========================================================
-      target.Pen.Style:=psSolid;
-      target.Pen.Width:=scalingFactor;
+      target.Pen.style:=psSolid;
+      target.Pen.width:=scalingFactor;
       //minor grid:-------------------------------------------------------------
-      target.Pen.Color:=$DDDDDD;
+      target.Pen.color:=$DDDDDD;
       if (axisStyle ['y'] and C_finerGrid) = C_finerGrid then
         for i:=0 to length(tic ['y'])-1 do with tic ['y'] [i] do if not (major) then
               begin
               y:=round(pos*scalingFactor);
-              target.Line(0, y, screenWidth*scalingFactor, y);
+              target.line(0, y, screenWidth*scalingFactor, y);
               end;
       if (axisStyle ['x'] and C_finerGrid) = C_finerGrid then
         for i:=0 to length(tic ['x'])-1 do with tic ['x'] [i] do if not (major) then
               begin
               x:=round(pos*scalingFactor);
-              target.Line(x, 0, x, screenHeight*scalingFactor);
+              target.line(x, 0, x, screenHeight*scalingFactor);
               end;
       //-------------------------------------------------------------:minor grid
       //major grid:-------------------------------------------------------------
-      target.Pen.Color:=$BBBBBB;
+      target.Pen.color:=$BBBBBB;
       if (axisStyle ['y'] and C_grid) = C_grid then
         for i:=0 to length(tic ['y'])-1 do with tic ['y'] [i] do if major then
               begin
               y:=round(pos*scalingFactor);
-              target.Line(0, y, screenWidth*scalingFactor, y);
+              target.line(0, y, screenWidth*scalingFactor, y);
               end;
       if (axisStyle ['x'] and C_grid) = C_grid then
         for i:=0 to length(tic ['x'])-1 do with tic ['x'] [i] do if major then
               begin
               x:=round(pos*scalingFactor);
-              target.Line(x, 0, x, screenHeight*scalingFactor);
+              target.line(x, 0, x, screenHeight*scalingFactor);
               end;
       //-------------------------------------------------------------:major grid
       //========================================================:coordinate grid
@@ -1463,8 +1463,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         yBaseLine:=round(realToScreen('y', 0)*scalingFactor);
       if yBaseLine<0 then
         yBaseLine:=0
-      else if yBaseLine>=target.Height then
-        yBaseLine:=target.Height-1;
+      else if yBaseLine>=target.height then
+        yBaseLine:=target.height-1;
       for rowId:=0 to length(row)-1 do
         begin
         rowColor:=row [rowId].style.getTColor;
@@ -1472,9 +1472,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
 
         if row [rowId].style.wantStraightLines then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1502,9 +1502,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end
         else if row [rowId].style.wantLeftSteps then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1533,9 +1533,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end
         else if row [rowId].style.wantRightSteps then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1564,9 +1564,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end
         else if row [rowId].style.wantBars then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecRound;
 
           lastWasValid:=false;
@@ -1583,11 +1583,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
                 begin
                 drawPatternRect(round(lastX*0.95+x*0.05), lastY,
                   round(lastX*0.05+x*0.95), lastY);
-                target.Line(round(lastX*0.95+x*0.05), yBaseLine,
+                target.line(round(lastX*0.95+x*0.05), yBaseLine,
                   round(lastX*0.95+x*0.05), lastY);
-                target.Line(round(lastX*0.95+x*0.05), lastY,
+                target.line(round(lastX*0.95+x*0.05), lastY,
                   round(lastX*0.05+x*0.95), lastY);
-                target.Line(round(lastX*0.05+x*0.95), yBaseLine,
+                target.line(round(lastX*0.05+x*0.95), yBaseLine,
                   round(lastX*0.05+x*0.95), lastY);
                 end;
               lastX:=x;
@@ -1599,9 +1599,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end
         else if row [rowId].style.wantBoxes then
           begin
-          target.Pen.Style:=psClear;
-          target.Brush.Style:=bsSolid;
-          target.Brush.Color:=rowColor;
+          target.Pen.style:=psClear;
+          target.Brush.style:=bsSolid;
+          target.Brush.color:=rowColor;
           lastWasValid:=false;
           i:=0;
           while i+1<length(row [rowId].sample) do
@@ -1626,9 +1626,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end;
         if row [rowId].style.wantDot then
           begin
-          target.Pen.Style:=psClear;
-          target.Brush.Style:=bsSolid;
-          target.Brush.Color:=rowColor;
+          target.Pen.style:=psClear;
+          target.Brush.style:=bsSolid;
+          target.Brush.color:=rowColor;
           symSize:=row [rowId].style.getSymbolWidth*scalingFactor;
 
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1648,9 +1648,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end;
         if row [rowId].style.wantPlus then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecSquare;
           symSize:=row [rowId].style.getSymbolWidth*scalingFactor;
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1660,11 +1660,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             if currentIsValid then
               begin
               sample:=realToScreen(sample);
-              target.Line(round(sample [0]*scalingFactor-symSize),
+              target.line(round(sample [0]*scalingFactor-symSize),
                 round(sample [1]*scalingFactor),
                 round(sample [0]*scalingFactor+symSize),
                 round(sample [1]*scalingFactor));
-              target.Line(round(sample [0]*scalingFactor), round(
+              target.line(round(sample [0]*scalingFactor), round(
                 sample [1]*scalingFactor-symSize),
                 round(sample [0]*scalingFactor),
                 round(sample [1]*scalingFactor+symSize));
@@ -1673,9 +1673,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end;
         if row [rowId].style.wantCross then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecSquare;
           symSize:=row [rowId].style.getSymbolRad*scalingFactor;
           for i:=0 to length(row [rowId].sample)-1 do
@@ -1685,11 +1685,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             if currentIsValid then
               begin
               sample:=realToScreen(sample);
-              target.Line(round(sample [0]*scalingFactor-symSize),
+              target.line(round(sample [0]*scalingFactor-symSize),
                 round(sample [1]*scalingFactor-symSize),
                 round(sample [0]*scalingFactor+symSize),
                 round(sample [1]*scalingFactor+symSize));
-              target.Line(round(sample [0]*scalingFactor+symSize),
+              target.line(round(sample [0]*scalingFactor+symSize),
                 round(sample [1]*scalingFactor-symSize),
                 round(sample [0]*scalingFactor-symSize),
                 round(sample [1]*scalingFactor+symSize));
@@ -1698,9 +1698,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end;
         if row [rowId].style.wantImpulses then
           begin
-          target.Pen.Style:=psSolid;
-          target.Pen.Color:=rowColor;
-          target.Pen.Width:=row [rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.style:=psSolid;
+          target.Pen.color:=rowColor;
+          target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecSquare;
           for i:=0 to length(row [rowId].sample)-1 do
             begin
@@ -1709,7 +1709,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             if currentIsValid then
               begin
               sample:=realToScreen(sample);
-              target.Line(round(sample [0]*scalingFactor), yBaseLine,
+              target.line(round(sample [0]*scalingFactor), yBaseLine,
                 round(sample [0]*scalingFactor),
                 round(sample [1]*scalingFactor));
               end;
@@ -1719,14 +1719,14 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       //===============================================================:row data
     end;
 
-  PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST Factor: double);
+  PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
     VAR
       ARect: TRect;
       X, Y: integer;
     begin
-      X:=Round(Source.Width*Factor);
-      Y:=Round(Source.Height*Factor);
-      Arect:=Rect(0, 0, X, Y);
+      X:=round(Source.width*factor);
+      Y:=round(Source.height*factor);
+      ARect:=Rect(0, 0, X, Y);
       dest.Canvas.AntialiasingMode:=amOn;
       dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
     end;
@@ -1737,10 +1737,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
     begin
       //coordinate system:======================================================
       //clear border:-----------------------------------------------------------
-      target.Brush.Style:=bsSolid;
-      target.Brush.Color:=clWhite;
-      target.Pen.Style:=psClear;
-      target.Pen.Width:=1;
+      target.Brush.style:=bsSolid;
+      target.Brush.color:=clWhite;
+      target.Pen.style:=psClear;
+      target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
 
       if wantTics('y') then
@@ -1750,14 +1750,14 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           screenWidth, screenHeight);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
-      target.Pen.Style:=psSolid;
-      target.Pen.Color:=clBlack;
-      target.Pen.Width:=1;
+      target.Pen.style:=psSolid;
+      target.Pen.color:=clBlack;
+      target.Pen.width:=1;
       if wantTics('y') then
-        target.Line(xOffset, 0,
+        target.line(xOffset, 0,
           xOffset, yOffset);
       if wantTics('x') then
-        target.Line(screenWidth, yOffset,
+        target.line(screenWidth, yOffset,
           xOffset, yOffset);
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
@@ -1765,7 +1765,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           with tic ['y'] [i] do if major then
               begin
               y:=round(pos);
-              target.Line(xOffset-5, y, xOffset, y);
+              target.line(xOffset-5, y, xOffset, y);
               target.TextOut(xOffset-5-target.TextWidth(txt), y-
                 target.TextHeight(txt) shr 1, txt);
               end;
@@ -1773,7 +1773,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           with tic ['x'] [i] do if major then
               begin
               x:=round(pos);
-              target.Line(x, yOffset+5, x, yOffset);
+              target.line(x, yOffset+5, x, yOffset);
               target.TextOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
               end;
       //-------------------------------------------------------------------:tics
@@ -1799,7 +1799,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         screenHeight*supersampling);
       drawGridAndRows(renderImage.Canvas, supersampling);
       scale(renderImage, plotImage, 1/supersampling);
-      renderImage.Free;
+      renderImage.free;
       drawCoordSys(plotImage.Canvas);
       end;
   end;
@@ -1833,7 +1833,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
   VAR recycler:T_tokenRecycler;
 
   begin
-    system.EnterCriticalsection(plotCS);
+    system.enterCriticalSection(plotCS);
     result:=nil;
     if (params<>nil) and (params^.size>=1) then begin
       if (params^.value(params^.size-1)^.literalType = lt_string) then begin
@@ -1881,7 +1881,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         recycler.create;
         if not(isValidExpression(params^.value(0),recycler)) then begin
           recycler.destroy;
-          system.LeaveCriticalsection(plotCS);
+          system.leaveCriticalSection(plotCS);
           exit(nil);
         end;
         rowId:=activePlot.addRow(options);
@@ -1902,8 +1902,8 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
                   (params^.value(3)^.literalType in [lt_int, lt_real]) and
                   (params^.value(4)^.literalType = lt_int) then begin
         recycler.create;
-        if not(isValidExpression(params^.value(0),recycler)) then begin recycler.destroy; system.LeaveCriticalsection(plotCS); exit(nil); end;
-        if not(isValidExpression(params^.value(1),recycler)) then begin recycler.destroy; system.LeaveCriticalsection(plotCS); exit(nil); end;
+        if not(isValidExpression(params^.value(0),recycler)) then begin recycler.destroy; system.leaveCriticalSection(plotCS); exit(nil); end;
+        if not(isValidExpression(params^.value(1),recycler)) then begin recycler.destroy; system.leaveCriticalSection(plotCS); exit(nil); end;
         rowId:=activePlot.addRow(options);
         activePlot.row[rowId].setRules(
           P_expressionLiteral(params^.value(0)),
@@ -1919,17 +1919,17 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
                                                 params^.toParameterListString(true),
                                                 tokenLocation);
     end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
-    system.LeaveCriticalsection(plotCS);
+    system.leaveCriticalSection(plotCS);
   end;
 
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
-    system.EnterCriticalsection(plotCS);
-    activePlot.Clear;
+    system.enterCriticalSection(plotCS);
+    activePlot.clear;
     if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation);
-    system.LeaveCriticalsection(plotCS);
+    system.leaveCriticalSection(plotCS);
   end;
 
 FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -1938,12 +1938,12 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_booleanList) and
       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      system.EnterCriticalsection(plotCS);
+      system.enterCriticalSection(plotCS);
       activePlot.setAutoscale(
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
-      system.LeaveCriticalsection(plotCS);
+      system.leaveCriticalSection(plotCS);
     end else
       raiseError(el3_evalError,
         'Function setPlotAutoscale expects a list of 2 booleans as parameter.',
@@ -1961,12 +1961,12 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_booleanList) and
       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      system.EnterCriticalsection(plotCS);
+      system.enterCriticalSection(plotCS);
       activePlot.setLogscale(P_boolLiteral(
         P_listLiteral(params^.value(0))^.value(0))^.value,
         P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
-      system.LeaveCriticalsection(plotCS);
+      system.leaveCriticalSection(plotCS);
     end else
       raiseError(el3_evalError,
         'Function setPlotLogscale expects a list of 2 booleans as parameter.',
@@ -1996,11 +1996,11 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         x1:=fReal(P_listLiteral(x)^.value(1));
         y0:=fReal(P_listLiteral(y)^.value(0));
         y1:=fReal(P_listLiteral(y)^.value(1));
-        if not (IsNan(x0)) and not (IsInfinite(x0)) and not (IsNan(x1)) and  not (IsInfinite(x1)) and not (IsNan(y0)) and not (IsInfinite(y0)) and  not (IsNan(y1)) and not (IsInfinite(y1)) then begin
-          system.EnterCriticalsection(plotCS);
+        if not (isNan(x0)) and not (IsInfinite(x0)) and not (isNan(x1)) and  not (IsInfinite(x1)) and not (isNan(y0)) and not (IsInfinite(y0)) and  not (isNan(y1)) and not (IsInfinite(y1)) then begin
+          system.enterCriticalSection(plotCS);
           activePlot.setRange(x0, y0, x1, y1);
           result:=newVoidLiteral;
-          system.LeaveCriticalsection(plotCS);
+          system.leaveCriticalSection(plotCS);
         end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
       end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
     end else raiseError(el3_evalError, 'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
@@ -2017,12 +2017,12 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_intList) and
       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      system.EnterCriticalsection(plotCS);
+      system.enterCriticalSection(plotCS);
       activePlot.setAxisStyle(
         P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value,
         P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
-      system.LeaveCriticalsection(plotCS);
+      system.leaveCriticalSection(plotCS);
     end else raiseError(el3_evalError, 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
   end;
 
@@ -2036,10 +2036,10 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_boolean) then begin
-      system.EnterCriticalsection(plotCS);
+      system.enterCriticalSection(plotCS);
       activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
       result:=newVoidLiteral;
-      system.LeaveCriticalsection(plotCS);
+      system.leaveCriticalSection(plotCS);
     end else raiseError(el3_evalError,'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
 
@@ -2051,8 +2051,8 @@ FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
 FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   VAR
     plotImage, storeImage: TImage;
-    filename: ansistring;
-    Width, Height, supersampling: longint;
+    fileName: ansistring;
+    width, height, supersampling: longint;
     rect: TRect;
   begin
     result:=nil;
@@ -2062,38 +2062,38 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       (params^.value(2)^.literalType = lt_int) and
       ((params^.size = 3) or (params^.size = 4) and
       (params^.value(3)^.literalType = lt_int)) then begin
-      system.EnterCriticalsection(plotCS);
-      filename:=P_stringLiteral(params^.value(0))^.value;
-      Width:=P_intLiteral(params^.value(1))^.value;
-      Height:=P_intLiteral(params^.value(2))^.value;
+      system.enterCriticalSection(plotCS);
+      fileName:=P_stringLiteral(params^.value(0))^.value;
+      width:=P_intLiteral(params^.value(1))^.value;
+      height:=P_intLiteral(params^.value(2))^.value;
       if params^.size>3 then supersampling:=P_intLiteral(params^.value(3))^.value
                         else supersampling:=1;
-      if (filename = '') or (Width<1) or (Height<1) or (supersampling<1) then begin
+      if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
         raiseError(el3_evalError,
           'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
           tokenLocation);
-        system.LeaveCriticalsection(plotCS);
+        system.leaveCriticalSection(plotCS);
         exit(nil);
       end;
 
       plotImage:=TImage.create(nil);
-      plotImage.SetInitialBounds(0, 0, Width, Height);
-      activePlot.setScreenSize(Width, Height);
+      plotImage.SetInitialBounds(0, 0, width, height);
+      activePlot.setScreenSize(width, height);
       activePlot.renderPlot(plotImage, supersampling);
 
       storeImage:=TImage.create(plotImage);
-      storeImage.SetInitialBounds(0, 0, Width, Height);
-      rect.Top:=0;
-      rect.Left:=0;
-      rect.Right:=Width;
-      rect.Bottom:=Height;
+      storeImage.SetInitialBounds(0, 0, width, height);
+      rect.top:=0;
+      rect.left:=0;
+      rect.Right:=width;
+      rect.Bottom:=height;
       storeImage.Canvas.CopyRect(rect, plotImage.Canvas, rect);
-      storeImage.Picture.PNG.SaveToFile(ChangeFileExt(filename, '.png'));
-      storeImage.Free;
+      storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      storeImage.free;
 
-      plotImage.Free;
+      plotImage.free;
       result:=newVoidLiteral;
-      system.LeaveCriticalsection(plotCS);
+      system.leaveCriticalSection(plotCS);
     end else
       raiseError(el3_evalError,
         'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
@@ -2152,8 +2152,8 @@ INITIALIZATION
     exOverflow, exUnderflow, exPrecision]);
 
 FINALIZATION
-  EnterCriticalsection(plotCS);
+  enterCriticalSection(plotCS);
   activePlot.destroy;
-  LeaveCriticalsection(plotCS);
+  leaveCriticalSection(plotCS);
   DoneCriticalsection(plotCS);
 end.

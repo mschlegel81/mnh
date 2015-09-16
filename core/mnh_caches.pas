@@ -2,7 +2,7 @@ UNIT mnh_caches;
 
 INTERFACE
 
-USES mnh_litvar, mnh_out_adapters, SysUtils, mnh_constants;
+USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants;
 CONST CACHE_MOD   = 2047; //must be 2^n-1 because of bitwise operation used instead of mod
       POLISH_FREQ = 32;
 
@@ -29,7 +29,7 @@ TYPE
     FUNCTION getBinIdx(CONST key: P_listLiteral):longint;
     PROCEDURE put(CONST key: P_listLiteral; CONST binIdx:longint; CONST value: P_literal);
     FUNCTION get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
-    PROCEDURE Clear;
+    PROCEDURE clear;
   end;
 
 PROCEDURE clearAllCaches;
@@ -43,7 +43,7 @@ PROCEDURE clearAllCaches;
   VAR i: longint;
   begin
     for i := 0 to length(allCaches)-1 do
-      allCaches[i]^.Clear;
+      allCaches[i]^.clear;
   end;
 
 CONSTRUCTOR T_cache.create();
@@ -56,7 +56,7 @@ CONSTRUCTOR T_cache.create();
 DESTRUCTOR T_cache.destroy;
   VAR i: longint;
   begin
-    Clear;
+    clear;
     i := 0;
     while (i<length(allCaches)) and (allCaches [i]<>@self) do inc(i);
     if (i<length(allCaches)) then begin
@@ -130,7 +130,7 @@ FUNCTION T_cache.get(CONST key: P_listLiteral; CONST binIdx:longint): P_literal;
     end;
   end;
 
-PROCEDURE T_cache.Clear;
+PROCEDURE T_cache.clear;
   VAR i, j: longint;
   begin
     for i := 0 to CACHE_MOD do with cached[i] do begin

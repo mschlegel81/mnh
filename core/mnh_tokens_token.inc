@@ -1,9 +1,9 @@
 {$ifdef include_interface}
   P_token=^T_token;
   T_token=packed object
-    next    :P_Token;
+    next    :P_token;
     location:T_tokenLocation;
-    txt     :shortstring;
+    txt     :shortString;
     tokType :T_tokenType;
     data    :pointer;
 
@@ -80,14 +80,14 @@ PROCEDURE T_token.define(CONST original:T_token);
     else if (tokType in [tt_list_constructor,tt_parList_constructor]) then data:=P_listLiteral(original.data)^.clone;
   end;
 
-PROCEDURE T_Token.undefine;
+PROCEDURE T_token.undefine;
   begin
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
       else data:=nil;
     end;
-    tokType:=tt_eol;
+    tokType:=tt_EOL;
     location:=C_nilTokenLocation;
   end;
 
@@ -197,7 +197,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     removeLeadingBlanks;
     result.location:=lineLocation;
     result.txt:='';
-    result.tokType:=tt_eol;
+    result.tokType:=tt_EOL;
     result.data:=nil;
     result.next:=nil;
     if length(line)<1 then exit(result);
@@ -330,7 +330,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       '/': if startsWith(line,'//') then begin //comments
              parsedLength:=2;
              while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
-             result.tokType:=tt_eol;
+             result.tokType:=tt_EOL;
              if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
              else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_ON)  then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_ON
              else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF
@@ -422,7 +422,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
     blob.active:=false;
     lines:=provider^.getLines;
     setLength(result,0);
-    location.filename:=provider^.getPath;
+    location.fileName:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;
@@ -440,7 +440,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
         end;
       end else while not(isBlank(lines[lineIndex])) and (errorLevel<el3_evalError) do begin
         next:=firstToken(lines[lineIndex],location,inPackage,true);
-        if (next.tokType<>tt_eol) or (next.txt<>'') then begin
+        if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
           if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
             active:=true;
             start:=location;
@@ -602,21 +602,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
   PROCEDURE initTokTypes; inline;
     begin
       if length(stack)>0 then cTokType[-1]:=stack[length(stack)-1]^.tokType
-                         else cTokType[-1]:=tt_eol;
+                         else cTokType[-1]:=tt_EOL;
       if first<>nil then begin
         cTokType[0]:=first^.tokType;
         if first^.next<>nil then begin
           cTokType[1]:=first^.next^.tokType;
           if first^.next^.next<>nil then cTokType[2]:=first^.next^.next^.tokType
-                                    else cTokType[2]:=tt_eol;
+                                    else cTokType[2]:=tt_EOL;
         end else begin
-          cTokType[1]:=tt_eol;
-          cTokType[2]:=tt_eol;
+          cTokType[1]:=tt_EOL;
+          cTokType[2]:=tt_EOL;
         end;
       end else begin
-        cTokType[0]:=tt_eol;
-        cTokType[1]:=tt_eol;
-        cTokType[2]:=tt_eol;
+        cTokType[0]:=tt_EOL;
+        cTokType[1]:=tt_EOL;
+        cTokType[2]:=tt_EOL;
       end;
     end;
 
@@ -1179,7 +1179,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       t:=first;
       i:=0;
       while (t<>nil) and (i<8) do begin
-        psx('expr.: '+GetEnumName(TypeInfo(T_tokenType),ord(t^.tokType)),t^.location);
+        psx('expr.: '+getEnumName(TypeInfo(T_tokenType),ord(t^.tokType)),t^.location);
         t:=t^.next;
         inc(i);
       end;
@@ -1305,9 +1305,9 @@ end}
             COMMON_SEMICOLON_HANDLING;
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
-            tt_separatorComma: if cTokType[2]<>tt_eol then begin
+            tt_separatorComma: if cTokType[2]<>tt_EOL then begin
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
-              P_literal(first^.data)^.reReference; //rereference literal to prevent destruction
+              P_literal(first^.data)^.rereference; //rereference literal to prevent destruction
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               stack_popLink;
@@ -1327,7 +1327,7 @@ end}
               stack_popLink;
               applyMutation;
             end;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack_popLink;
               applyMutation;
             end;
@@ -1344,7 +1344,7 @@ end}
               stack_popLink;
               applyLocalAssignment(cTokType[-1]);
             end;
-            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_eol,tt_expBraceClose,tt_listBraceClose: begin
+            tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_expBraceClose,tt_listBraceClose: begin
               stack_popLink;
               applyLocalAssignment(cTokType[-1]);
             end;
@@ -1431,9 +1431,9 @@ end}
     {$ifndef debugMode}
     except
       on EOutOfMemory do begin
-        raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+IntToStr(callDepth),C_nilTokenLocation);
+        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end;
     end;
     {$endif}

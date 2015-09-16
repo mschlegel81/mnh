@@ -1,7 +1,7 @@
 UNIT mnh_tokens;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringutil,typinfo,  //utilities
-     mnh_litvar, mnh_fileWrappers, mnh_tokLoc, //types
+     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_regex; //even more specific
 
@@ -76,7 +76,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
       packId:string;
       i:longint;
   begin
-    providerPath:=token.location.filename;
+    providerPath:=token.location.fileName;
     if providerPath=mainPackage.codeProvider^.getPath then exit(@mainPackage);
     for i:=0 to length(secondaryPackages)-1 do
       if providerPath=secondaryPackages[i]^.codeProvider^.getPath then exit(secondaryPackages[i]);
@@ -375,13 +375,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if errorLevel<el3_evalError then begin
           ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsSynchronized,ruleDeclarationStart);
           if errorLevel<el3_evalError then begin
-            new(subrule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
+            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
             subRule^.comment:=lastComment; lastComment:='';
             if ruleGroup^.ruleType=rt_mutable
             then begin
               ruleGroup^.setMutableValue(subRule^.getInlineValue);
               dispose(subRule,destroy);
-            end else ruleGroup^.addOrReplaceSubRule(subrule);
+            end else ruleGroup^.addOrReplaceSubRule(subRule);
             first:=nil;
           end else if errorLevel<el5_systemError then
             recycler.cascadeDisposeToken(first)
@@ -433,14 +433,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       repeat
         inc(currentTokenIndex);
         if (currentTokenIndex<length(fileTokens)) and
-           (currentToken.tokType=tt_eol) then begin
+           (currentToken.tokType=tt_EOL) then begin
           if      currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
           else if currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
           else if (currentToken.txt<>'') then lastComment:=currentToken.txt;
           if batchMode then hadBatchModeParts:=true;
         end;
       until (currentTokenIndex>=length(fileTokens)) or
-            (currentToken.tokType<>tt_eol);
+            (currentToken.tokType<>tt_EOL);
     end;
 
   VAR localIdStack:T_idStack;
@@ -710,7 +710,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
   begin
     try
       copyOfLine:=line;
-      lineLocation.filename:=mainPackage.codeProvider^.getPath;
+      lineLocation.fileName:=mainPackage.codeProvider^.getPath;
       lineLocation.line:=0;
       lineLocation.column:=1;
       if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
@@ -722,7 +722,7 @@ FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
         result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
     except
       result.create;
-      result.define(C_nilTokenLocation,'ERR',tt_eol);
+      result.define(C_nilTokenLocation,'ERR',tt_EOL);
     end;
   end;
 

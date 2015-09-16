@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,classes,mnh_constants,mnh_tokloc,mnh_funcs,mnh_litvar;
+USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_docRun,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -15,7 +15,7 @@ PROCEDURE ad_haltEvaluation;
 PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
 PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
 FUNCTION ad_currentFile:string;
-FUNCTION ad_evaluationRunning:Boolean;
+FUNCTION ad_evaluationRunning:boolean;
 PROCEDURE ad_killEvaluationLoopSoftly;
 FUNCTION ad_getTokenInfo(CONST line:ansistring; CONST column:longint):T_tokenInfo;
 FUNCTION ad_needReload:boolean;
@@ -131,7 +131,7 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
   VAR sp:longint;
   begin
     setLength(parametersForMainCall,0);
-    params:=Trim(params);
+    params:=trim(params);
     while params<>'' do begin
       sp:=pos(' ',params);
       if sp<=0 then begin
@@ -167,9 +167,9 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
     if path<>mainPackageProvider.getPath then begin
       mainPackageProvider.setPath(path);
       mainPackageProvider.load;
-      L.Clear;
+      L.clear;
       LL:=mainPackageProvider.getLines;
-      for i:=0 to length(LL)-1 do L.Append(LL[i]);
+      for i:=0 to length(LL)-1 do L.append(LL[i]);
       setLength(LL,0);
       getMainPackage^.clear;
     end;
@@ -177,7 +177,7 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
 
 PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
   begin
-    L.SaveToFile(path);
+    L.saveToFile(path);
     if path<>mainPackageProvider.getPath then begin
       mainPackageProvider.setPath(path);
     end;
@@ -190,7 +190,7 @@ FUNCTION ad_currentFile: string;
     result:=mainPackageProvider.getPath;
   end;
 
-FUNCTION ad_evaluationRunning: Boolean;
+FUNCTION ad_evaluationRunning: boolean;
   begin
     result:=evaluationState.value=es_running;
   end;
@@ -225,7 +225,7 @@ FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_token
         else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
         else if (token.txt='void') then result.tokenExplanation:='void literal'
         else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
-        else if (pos('.',token.txt)>0) or (pos('E',UpperCase(token.txt))>0) then result.tokenExplanation:='real literal'
+        else if (pos('.',token.txt)>0) or (pos('E',uppercase(token.txt))>0) then result.tokenExplanation:='real literal'
         else result.tokenExplanation:='integer literal';
       end;
     end;
@@ -247,10 +247,10 @@ PROCEDURE ad_doReload(CONST L: TStrings);
       i:longint;
   begin
     ad_haltEvaluation;
-    L.Clear;
+    L.clear;
     mainPackageProvider.load;
     lines:=mainPackageProvider.getLines;
-    for i:=0 to length(lines)-1 do L.Append(lines[i]);
+    for i:=0 to length(lines)-1 do L.append(lines[i]);
   end;
 
 PROCEDURE initIntrinsicRuleList;

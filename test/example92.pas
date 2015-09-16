@@ -7,9 +7,9 @@ PROGRAM example92;
 USES sysutils;
 
 VAR
-  I : Integer;
+  I : integer;
 
 begin
-  For I:=1 to GetEnvironmentVariableCount do
-    Writeln(i:3,' : ',GetEnvironmentString(i));
+  for I:=1 to GetEnvironmentVariableCount do
+    writeln(i:3,' : ',GetEnvironmentString(i));
 end.

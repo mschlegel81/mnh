@@ -5,7 +5,7 @@ UNIT mnh_gui_settings;
 INTERFACE
 
 USES
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, EditBtn, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters;
 
 TYPE
@@ -32,7 +32,7 @@ TYPE
     PROCEDURE setFontSize(value: longint);
   public
     { public declarations }
-    mainForm: record  top, left, Width, Height: longint;
+    mainForm: record  top, left, width, height: longint;
       isFullscreen: boolean;
     end;
     outputBehaviour:T_outputBehaviour;
@@ -45,9 +45,9 @@ TYPE
     PROPERTY fontSize: longint read getFontSize write setFontSize;
     FUNCTION getEditorFontName: string;
     PROCEDURE saveSettings;
-    PROCEDURE setFileContents(CONST Data: TStrings);
-    PROCEDURE getFileContents(CONST Data: TStrings);
-    FUNCTION setFileInEditor(CONST filename: ansistring): boolean;
+    PROCEDURE setFileContents(CONST data: TStrings);
+    PROCEDURE getFileContents(CONST data: TStrings);
+    FUNCTION setFileInEditor(CONST fileName: ansistring): boolean;
     FUNCTION getFileInEditor: ansistring;
     FUNCTION polishHistory: boolean;
   end;
@@ -61,7 +61,7 @@ IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
   begin
-    result := ExpandFileName(extractFilePath(ParamStr(0)))+'mnh_gui.settings';
+    result := expandFileName(extractFilePath(paramStr(0)))+'mnh_gui.settings';
   end;
 
 { TSettingsForm }
@@ -77,14 +77,14 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
 
       setFontSize(ff.readLongint);
       editorFontname := ff.readAnsiString;
-      EditorFontDialog.Font.Name := editorFontname;
+      EditorFontDialog.Font.name := editorFontname;
 
       AntialiasCheckbox.Checked := ff.readBoolean;
       with mainForm do begin
         top := ff.readLongint;
         left := ff.readLongint;
-        Width := ff.readLongint;
-        Height := ff.readLongint;
+        width := ff.readLongint;
+        height := ff.readLongint;
         isFullscreen := ff.readBoolean;
       end;
       with outputBehaviour do begin
@@ -107,7 +107,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         end else setLength(fileContents, 0);
       end;
       ff.destroy;
-      if not (FileExists(fileInEditor)) then
+      if not (fileExists(fileInEditor)) then
         fileInEditor := '';
     end else begin
       for i := 0 to 9 do fileHistory[i] := '';
@@ -116,8 +116,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       with mainForm do begin
         top := 0;
         left := 0;
-        Width := 480;
-        Height := 480;
+        width := 480;
+        height := 480;
         isFullscreen := false;
       end;
       with outputBehaviour do begin
@@ -129,36 +129,36 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       resetPlotOnEvaluation := false;
       fileInEditor := '';
     end;
-    FontButton.Font.Name := editorFontname;
-    FontButton.Font.Size := getFontSize;
+    FontButton.Font.name := editorFontname;
+    FontButton.Font.size := getFontSize;
     FontButton.Caption := editorFontname;
     with mainForm do begin
       if top<0 then
         top := 0;
       if left<0 then
         left := 0;
-      if Height>Screen.Height-top then
-        Height := screen.Height-top;
-      if Width>screen.Width-left then
-        Width := screen.Width-left;
-      if (Height<0) or (Width<0) then
+      if height>screen.height-top then
+        height := screen.height-top;
+      if width>screen.width-left then
+        width := screen.width-left;
+      if (height<0) or (width<0) then
         begin
         top := 0;
         left := 0;
-        Width := 480;
-        Height := 480;
+        width := 480;
+        height := 480;
         end;
     end;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
   begin
-    if EditorFontDialog.Execute then begin
-      setFontSize(EditorFontDialog.Font.Size);
-      editorFontname := EditorFontDialog.Font.Name;
+    if EditorFontDialog.execute then begin
+      setFontSize(EditorFontDialog.Font.size);
+      editorFontname := EditorFontDialog.Font.name;
 
-      FontButton.Font.Name := editorFontname;
-      FontButton.Font.Size := getFontSize;
+      FontButton.Font.name := editorFontname;
+      FontButton.Font.size := getFontSize;
       FontButton.Caption := editorFontname;
     end;
   end;
@@ -170,13 +170,13 @@ PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
 
 FUNCTION TSettingsForm.getFontSize: longint;
   begin
-    result := StrToInt64Def(Trim(FontSizeEdit.Text), 12);
+    result := StrToInt64Def(trim(FontSizeEdit.text), 12);
   end;
 
 PROCEDURE TSettingsForm.setFontSize(value: longint);
   begin
-    FontSizeEdit.Text := IntToStr(value);
-    EditorFontDialog.Font.Size := value;
+    FontSizeEdit.text := intToStr(value);
+    EditorFontDialog.Font.size := value;
   end;
 
 FUNCTION TSettingsForm.getEditorFontName: string;
@@ -199,8 +199,8 @@ PROCEDURE TSettingsForm.saveSettings;
       begin
       ff.writeLongint(top);
       ff.writeLongint(left);
-      ff.writeLongint(Width);
-      ff.writeLongint(Height);
+      ff.writeLongint(width);
+      ff.writeLongint(height);
       ff.writeBoolean(isFullscreen);
       end;
     with outputBehaviour do
@@ -223,7 +223,7 @@ PROCEDURE TSettingsForm.saveSettings;
     ff.destroy;
   end;
 
-PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);
+PROCEDURE TSettingsForm.setFileContents(CONST data: TStrings);
   VAR
     i: longint;
   begin
@@ -232,23 +232,23 @@ PROCEDURE TSettingsForm.setFileContents(CONST Data: TStrings);
       setLength(fileContents, 0);
       exit;
       end;
-    setLength(fileContents, Data.Count);
-    for i := 0 to Data.Count-1 do
-      fileContents[i] := Data [i];
+    setLength(fileContents, data.count);
+    for i := 0 to data.count-1 do
+      fileContents[i] := data [i];
   end;
 
-PROCEDURE TSettingsForm.getFileContents(CONST Data: TStrings);
+PROCEDURE TSettingsForm.getFileContents(CONST data: TStrings);
   VAR
     i: longint;
   begin
     if fileInEditor<>'' then
       exit;
-    Data.Clear;
+    data.clear;
     for i := 0 to length(fileContents)-1 do
-      Data.Append(fileContents [i]);
+      data.append(fileContents [i]);
   end;
 
-FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
+FUNCTION TSettingsForm.setFileInEditor(CONST fileName: ansistring): boolean;
   VAR
     i: longint;
     tmp: ansistring;
@@ -273,7 +273,7 @@ FUNCTION TSettingsForm.setFileInEditor(CONST filename: ansistring): boolean;
       result := true;
       end
     else result := polishHistory;
-    fileInEditor := filename;
+    fileInEditor := fileName;
   end;
 
 FUNCTION TSettingsForm.getFileInEditor: ansistring;
@@ -286,7 +286,7 @@ FUNCTION TSettingsForm.polishHistory: boolean;
   begin
     result := false;
     for i := 0 to length(fileHistory)-1 do
-      if (fileHistory [i]<>'') and not(FileExists(fileHistory [i])) then
+      if (fileHistory [i]<>'') and not(fileExists(fileHistory [i])) then
         begin
         for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
         fileHistory[length(fileHistory)-1] := '';

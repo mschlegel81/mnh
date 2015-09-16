@@ -1,7 +1,7 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,mygenerics,mnh_constants,mnh_litvar,math,mnh_out_adapters,mnh_tokloc,mnh_fileWrappers,
-     myStringutil,classes,process,mySys,fphttpclient,FileUtil,windows;
+USES sysutils,myGenerics,mnh_constants,mnh_litVar,math,mnh_out_adapters,mnh_tokLoc,mnh_fileWrappers,
+     myStringutil,Classes,process,mySys,fphttpclient,FileUtil,windows;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -50,9 +50,9 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
 
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    system.EnterCriticalSection(print_cs);
+    system.enterCriticalSection(print_cs);
     mnh_out_adapters.outAdapter^.clearConsole();
-    system.LeaveCriticalsection(print_cs);
+    system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
 
@@ -68,9 +68,9 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
-    system.EnterCriticalSection(print_cs);
+    system.enterCriticalSection(print_cs);
     outAdapter^.printOut(formatTabs(split(stringToPrint)));
-    system.LeaveCriticalsection(print_cs);
+    system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
 
@@ -423,7 +423,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result^.appendString(rest);
     end;
 
-  FUNCTION splitRecurse(CONST p:P_literal):P_Literal;
+  FUNCTION splitRecurse(CONST p:P_literal):P_literal;
     VAR i:longint;
     begin
       case p^.literalType of
@@ -579,7 +579,7 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(FileExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
+      result:=newBoolLiteral(fileExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
@@ -588,9 +588,9 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      system.EnterCriticalSection(file_cs);
+      system.enterCriticalSection(file_cs);
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
-      system.LeaveCriticalsection(file_cs);
+      system.leaveCriticalSection(file_cs);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
@@ -602,9 +602,9 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      system.EnterCriticalSection(file_cs);
+      system.enterCriticalSection(file_cs);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
-      system.LeaveCriticalsection(file_cs);
+      system.leaveCriticalSection(file_cs);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -612,11 +612,11 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
                 (params^.value(0)^.literalType=lt_string) and
                 (params^.value(1)^.literalType=lt_int) and
                 (params^.value(2)^.literalType=lt_int) then begin
-      system.EnterCriticalSection(file_cs);
+      system.enterCriticalSection(file_cs);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,
                    P_intLiteral   (params^.value(1))^.value,
                    P_intLiteral   (params^.value(2))^.value,accessed);
-      system.LeaveCriticalsection(file_cs);
+      system.leaveCriticalSection(file_cs);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -629,10 +629,10 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
-      system.EnterCriticalSection(file_cs);
+      system.enterCriticalSection(file_cs);
       ok:=mnh_fileWrappers.writeFile(P_stringLiteral(params^.value(0))^.value,
                                      P_stringLiteral(params^.value(1))^.value);
-      system.LeaveCriticalsection(file_cs);
+      system.leaveCriticalSection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
@@ -648,9 +648,9 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
                                           and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
       setLength(L,P_listLiteral(params^.value(1))^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      system.EnterCriticalSection(file_cs);
+      system.enterCriticalSection(file_cs);
       ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L);
-      system.LeaveCriticalsection(file_cs);
+      system.leaveCriticalSection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
@@ -768,35 +768,35 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       memStream := TMemoryStream.create;
       BytesRead := 0;
       tempProcess := TProcess.create(nil);
-      tempProcess.Executable := executable;
+      tempProcess.executable := executable;
       for n := 0 to length(parameters)-1 do
-        tempProcess.Parameters.Add(parameters [n]);
-      tempProcess.Options := [poUsePipes, poStderrToOutPut];
+        tempProcess.parameters.add(parameters [n]);
+      tempProcess.options := [poUsePipes, poStderrToOutPut];
       tempProcess.ShowWindow := swoHIDE;
       try
-        tempProcess.Execute;
+        tempProcess.execute;
         tempProcess.CloseInput;
-        while tempProcess.Running and (errorLevel<el3_evalError) do begin
+        while tempProcess.running and (errorLevel<el3_evalError) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n)
-                 else Sleep(10);
+                 else sleep(10);
         end;
-        if tempProcess.Running then tempProcess.Terminate(999);
+        if tempProcess.running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.Output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
-        result := (tempProcess.ExitStatus = 0);
+        result := (tempProcess.exitStatus = 0);
       except
         result := false;
       end;
-      tempProcess.Free;
+      tempProcess.free;
       memStream.SetSize(BytesRead);
       output := TStringList.create;
       output.LoadFromStream(memStream);
-      memStream.Free;
+      memStream.free;
     end;
 
   VAR executable:ansistring;
@@ -818,8 +818,8 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
                  cmdLinePar,
                  output);
       result:=newListLiteral;
-      for i:=0 to output.Count-1 do P_listLiteral(result)^.appendString(output[i]);
-      output.Free;
+      for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(output[i]);
+      output.free;
     end else raiseNotApplicableError('exec',params,tokenLocation);
   end;
 
@@ -874,20 +874,20 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
   PROCEDURE setLanguage(name:string);
     begin
-      if trim(UpperCase(name))='MNH' then begin
+      if trim(uppercase(name))='MNH' then begin
         doubleQuoteString:=true;
         singleQuoteString:=true;
         escapeStringDelimiter:=true;
         curlyBracketsDelimitOneToken:=true;
         cStyleComments:=true;
         dollarVariables:=true;
-      end else if trim(UpperCase(name))='JAVA' then begin
+      end else if trim(uppercase(name))='JAVA' then begin
         doubleQuoteString:=true;
         singleQuoteString:=true;
         escapeStringDelimiter:=true;
         curlyBracketsDelimitOneToken:=false;
         cStyleComments:=true;
-      end else if trim(UpperCase(name))='PASCAL' then begin
+      end else if trim(uppercase(name))='PASCAL' then begin
         doubleQuoteString:=false;
         singleQuoteString:=true;
         escapeStringDelimiter:=false;
@@ -946,7 +946,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           //symbols, etc.
           t:=tt_literal;
           i1:=i0;
-          for t:=tt_literal to tt_eol do begin
+          for t:=tt_literal to tt_EOL do begin
             if (C_tokenString[t]<>'') and
                (copy(stringToSplit,i0,length(C_tokenString[t]))=C_tokenString[t]) and
                (i0+length(C_tokenString[t])>i1)
@@ -962,14 +962,14 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    if (tokenLocation.filename='?') or
-       (tokenLocation.filename='') then result:=newStringLiteral('<Unknown>')
-                                   else result:=newStringLiteral(tokenLocation.filename);
+    if (tokenLocation.fileName='?') or
+       (tokenLocation.fileName='') then result:=newStringLiteral('<Unknown>')
+                                   else result:=newStringLiteral(tokenLocation.fileName);
   end;
 
 FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    result:=newStringLiteral(ParamStr(0));
+    result:=newStringLiteral(paramStr(0));
   end;
 
 FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -999,7 +999,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
        case params^.value(0)^.literalType of
-         lt_real: exit(newBoolLiteral(IsNan(P_realLiteral(params^.value(0))^.value)));
+         lt_real: exit(newBoolLiteral(isNan(P_realLiteral(params^.value(0))^.value)));
          lt_int:  exit(newBoolLiteral(false));
          lt_intList: begin
            result:=newListLiteral;
@@ -1009,7 +1009,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
          else begin
            result:=newListLiteral;
            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-             P_listLiteral(result)^.appendBool((P_listLiteral(params^.value(0))^.literalType=lt_real) and IsNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value));
+             P_listLiteral(result)^.appendBool((P_listLiteral(params^.value(0))^.literalType=lt_real) and isNan(P_realLiteral(P_listLiteral(params^.value(0)))^.value));
          end;
        end;
     end else raiseNotApplicableError('isNan',params,tokenLocation);
@@ -1046,7 +1046,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     begin
       if l^.literalType=lt_real then begin
         r:=P_realLiteral(l)^.value;
-        result:=not(IsNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
+        result:=not(isNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
       end else begin
         i:=P_intLiteral(l)^.value;
         result:=(r0<=i) and (i<=r1);
@@ -1092,11 +1092,11 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       result:=newListLiteral;
       name:=P_stringLiteral(params^.value(0))^.value;
       appendPair(result,'input',name);
-      appendPair(result,'expanded',ExpandFileName(name));
-      appendPair(result,'relative',ExtractRelativepath(ExpandFileName(''),name));
+      appendPair(result,'expanded',expandFileName(name));
+      appendPair(result,'relative',extractRelativePath(expandFileName(''),name));
       appendPair(result,'directory',ExtractFileDir(name));
-      appendPair(result,'filename',ExtractFileName(name));
-      appendPair(result,'extension',ExtractFileExt(name));
+      appendPair(result,'filename',extractFileName(name));
+      appendPair(result,'extension',extractFileExt(name));
     end else raiseNotApplicableError('splitFileName',params,tokenLocation);
   end;
 
@@ -1235,9 +1235,9 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
-      system.EnterCriticalSection(print_cs);
+      system.enterCriticalSection(print_cs);
       outAdapter^.printOut(formatTabs(reSplit(resultString)));
-      system.LeaveCriticalsection(print_cs);
+      system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);
   end;
@@ -1333,7 +1333,7 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       except
         On E : Exception do begin
           resultText:='';
-          raiseError(el5_systemError,'httpGet failed with:'+E.Message,tokenLocation);
+          raiseError(el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
         end;
       end;
       result:=newStringLiteral(resultText);
@@ -1374,14 +1374,14 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: string;
         driveType:longint;
-        NotUsed:     DWORD;
-        VolumeFlags: DWORD;
-        VolumeInfo:  array[0..MAX_PATH] of Char;
-        VolumeSerialNumber: DWORD;
-        Buf: array [0..MAX_PATH] of Char;
+        NotUsed:     dword;
+        VolumeFlags: dword;
+        VolumeInfo:  array[0..MAX_PATH] of char;
+        VolumeSerialNumber: dword;
+        Buf: array [0..MAX_PATH] of char;
         infoPair:P_listLiteral;
     begin
-      DriveLetter := Drive + ':\';
+      DriveLetter := drive + ':\';
       driveType:=GetDriveType(PChar(DriveLetter));
       if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK] then begin
         result:=newListLiteral;

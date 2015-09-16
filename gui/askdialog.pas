@@ -5,8 +5,8 @@ UNIT askDialog;
 INTERFACE
 
 USES
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters,myGenerics;
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics;
 TYPE
 
   { TaskForm }
@@ -14,7 +14,7 @@ TYPE
   TaskForm = class(TForm)
     ComboBox1: TComboBox;
     Label1: TLabel;
-    PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR Key: word; Shift: TShiftState);
+    PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
   private
@@ -41,11 +41,11 @@ VAR cs:TRTLCriticalSection;
 
 { TaskForm }
 
-PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR Key: word; Shift: TShiftState);
+PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key = 13) and (not(rejectNonmatchingInput) or (ComboBox1.ItemIndex>=0)) then
       begin
-      lastAnswer := ComboBox1.Text;
+      lastAnswer := ComboBox1.text;
       ModalResult := mrOk;
       end;
   end;
@@ -65,11 +65,11 @@ PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
     lock;
     rejectNonmatchingInput := false;
     lastAnswer := '';
-    ComboBox1.Items.Clear;
+    ComboBox1.Items.clear;
     Caption := question;
     Label1.Caption:=question;
     ComboBox1.AutoComplete := false;
-    ComboBox1.Text := '';
+    ComboBox1.text := '';
     displayPending := true;
   end;
 
@@ -79,19 +79,19 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     lock;
     rejectNonmatchingInput := true;
     lastAnswer := '';
-    ComboBox1.Items.Clear;
+    ComboBox1.Items.clear;
     Caption := question;
     Label1.Caption:=question;
     if length(options) = 0 then exit;
-    for i := 0 to length(options)-1 do ComboBox1.Items.Add(options [i]);
+    for i := 0 to length(options)-1 do ComboBox1.Items.add(options [i]);
     ComboBox1.AutoComplete := true;
-    ComboBox1.Text := '';
+    ComboBox1.text := '';
     displayPending := true;
   end;
 
 PROCEDURE TaskForm.lock;
   begin
-    while Showing or (ownerThread<>0) do sleep(1);
+    while showing or (ownerThread<>0) do sleep(1);
     ownerThread := ThreadID;
   end;
 
@@ -109,21 +109,21 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
     result := nil;
     if (params<>nil) and (params^.size = 1) and
       (params^.value(0)^.literalType = lt_string) then begin
-      system.EnterCriticalsection(cs);
+      system.enterCriticalSection(cs);
       askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
-      system.LeaveCriticalsection(cs);
+      system.leaveCriticalSection(cs);
     end
     else if (params<>nil) and (params^.size = 2) and
       (params^.value(0)^.literalType = lt_string) and
       (params^.value(1)^.literalType = lt_stringList) then begin
-      system.EnterCriticalsection(cs);
+      system.enterCriticalSection(cs);
       setLength(opt, P_listLiteral(params^.value(1))^.size);
       for i := 0 to length(opt)-1 do
         opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
-      system.LeaveCriticalsection(cs);
+      system.leaveCriticalSection(cs);
     end
     else raiseNotApplicableError('ask', params, tokenLocation);
   end;

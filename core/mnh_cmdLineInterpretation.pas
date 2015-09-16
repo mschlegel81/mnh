@@ -16,7 +16,7 @@ PROCEDURE parseCmdLine;
   PROCEDURE makeAndShowDoc;
     begin
       findAndDocumentAllPackages;
-      OpenURL('file:///'+replaceAll(ExpandFileName(htmlRoot+'\index.html'),'\','/'));
+      OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
     end;
 
   PROCEDURE displayVersionInfo;
@@ -87,12 +87,12 @@ PROCEDURE parseCmdLine;
     setLength(parameters,0);
     for i:=1 to paramCount do begin
     if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if      paramstr(i)='+echo' then echo:=e_forcedOn
-        else if paramstr(i)='-echo' then echo:=e_forcedOff
-        else if paramstr(i)='+time' then time:=t_forcedOn
-        else if paramstr(i)='-time' then time:=t_forcedOff
-        else if paramstr(i)='-det'  then randseed:=0
-        else if paramstr(i)='-cmd'  then directExecutionMode:=true
+        if      paramStr(i)='+echo' then echo:=e_forcedOn
+        else if paramStr(i)='-echo' then echo:=e_forcedOff
+        else if paramStr(i)='+time' then time:=t_forcedOn
+        else if paramStr(i)='-time' then time:=t_forcedOff
+        else if paramStr(i)='-det'  then randseed:=0
+        else if paramStr(i)='-cmd'  then directExecutionMode:=true
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
@@ -100,17 +100,17 @@ PROCEDURE parseCmdLine;
                                                                      {$I %FPCTARGET%}); {$include code_hash.inc} halt; end
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
-          pel:=strToIntDef(copy(paramstr(i),4,length(paramstr(i))-3),-1);
+          pel:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
           if (pel<0) or (pel>5) then begin
             writeln('Invalid minimum error level given!');
-            writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramstr(i),4,length(paramstr(i))-3));
+            writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
             halt;
           end else consoleOutAdapter.minErrorLevel:=T_messageTypeOrErrorLevel(ord(el0_allOkay)+ pel);
         end else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
-          if fileExists(paramstr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
+          if fileExists(paramStr(i)) then fileOrCommandToInterpret:=paramStr(i) else begin
             writeln('Invalid filename given!');
             writeln('Parameter: ',paramStr(i));
             writeln('File does not exist.');

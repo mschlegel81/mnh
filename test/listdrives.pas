@@ -4,15 +4,15 @@ PROGRAM listdevices;
 {$apptype console}
 
 USES
-  Windows;
+  windows;
 
-FUNCTION getVolumeLabel(CONST DriveChar: Char): string;
+FUNCTION getVolumeLabel(CONST DriveChar: char): string;
   VAR
-    NotUsed:     DWORD;
-    VolumeFlags: DWORD;
-    VolumeInfo:  array[0..MAX_PATH] of Char;
-    VolumeSerialNumber: DWORD;
-    Buf: array [0..MAX_PATH] of Char;
+    NotUsed:     dword;
+    VolumeFlags: dword;
+    VolumeInfo:  array[0..MAX_PATH] of char;
+    VolumeSerialNumber: dword;
+    Buf: array [0..MAX_PATH] of char;
   begin
       GetVolumeInformation(PChar(DriveChar + ':\'),
       Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
@@ -25,7 +25,7 @@ FUNCTION getVolumeLabel(CONST DriveChar: Char): string;
 FUNCTION getVolumeType(CONST drive:char):string;
   VAR DriveLetter: string;
   begin
-    DriveLetter := Drive + ':\';
+    DriveLetter := drive + ':\';
     case GetDriveType(PChar(DriveLetter)) of
       DRIVE_REMOVABLE: result:='removable';
       DRIVE_FIXED:     result:='fixed';
@@ -38,7 +38,7 @@ FUNCTION getVolumeType(CONST drive:char):string;
 
 
 VAR
-  Drive: Char;
+  drive: char;
 
   OldMode: word;
 begin
@@ -49,8 +49,8 @@ begin
   writeln(DRIVE_RAMDISK);
 
 
-  WriteLn('The following drives were found in this computer:');
-  WriteLn('');
+  writeln('The following drives were found in this computer:');
+  writeln('');
 
   // Empty Floppy or Zip drives can generate a Windows error.
   // We disable system errors during the listing.
@@ -59,7 +59,7 @@ begin
   try
 
     // Search all drive letters
-    for Drive := 'A' to 'Z' do
+    for drive := 'A' to 'Z' do
     begin
       writeln(drive,' ',getVolumeType(drive),' "',getVolumeLabel(drive),'"');
 //

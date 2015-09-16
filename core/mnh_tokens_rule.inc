@@ -15,7 +15,7 @@
       CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
-      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_Token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
@@ -66,19 +66,19 @@ DESTRUCTOR T_rule.destroy;
 
 FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
-    EnterCriticalsection(rule_cs);
+    enterCriticalSection(rule_cs);
     cache^.put(P_listLiteral(param^.value(0)),
                cache^.getBinIdx(P_listLiteral(param^.value(0))),
                param^.value(1));
-    LeaveCriticalsection(rule_cs);
+    leaveCriticalSection(rule_cs);
     result:=param^.value(1);
     result^.rereference;
   end;
 
-FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_Token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
+FUNCTION T_rule.replaces(CONST param: P_listLiteral; OUT firstRep,lastRep: P_token; CONST callDepth: word; CONST includePrivateRules: boolean; VAR recycler:T_tokenRecycler): boolean;
 {$define CLEAN_EXIT:=
 if param=nil then disposeLiteral(useParam);
-system.LeaveCriticalSection(rule_cs);
+system.leaveCriticalSection(rule_cs);
 exit}
   VAR i:longint;
       lit:P_literal;
@@ -129,7 +129,7 @@ exit}
           end;
           lastRep:=firstRep^.last;
           if (errorLevel>=el3_evalError) then begin
-            if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+IntToStr(callDepth),C_nilTokenLocation);
+            if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
@@ -142,10 +142,10 @@ exit}
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
           if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
           else begin
-            system.EnterCriticalSection(rule_cs);
+            system.enterCriticalSection(rule_cs);
             reduceExpression(firstRep,callDepth+1,recycler);
             lastRep:=firstRep^.last;
-            system.LeaveCriticalSection(rule_cs);
+            system.leaveCriticalSection(rule_cs);
           end;
           exit(true);
         end;
@@ -154,9 +154,9 @@ exit}
       rt_mutable: begin
         result:=includePrivateRules and ((param=nil) or (param^.size=0));
         if result then begin
-          system.EnterCriticalSection(rule_cs);
+          system.enterCriticalSection(rule_cs);
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,namedValue.getValue);
-          system.LeaveCriticalsection(rule_cs);
+          system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
         end;
       end;
@@ -176,7 +176,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
     if (length(subrules)>0) and (ruleType=rt_mutable) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
-    if (ruleType=rt_memoized) then cache^.Clear;
+    if (ruleType=rt_memoized) then cache^.clear;
   end;
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
@@ -196,18 +196,18 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
   begin
     if (ruleType=rt_mutable) then begin
-      system.EnterCriticalSection(rule_cs);
+      system.enterCriticalSection(rule_cs);
       namedValue.setValue(value);
-      system.LeaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   begin
     if (ruleType=rt_mutable) then begin
-      system.EnterCriticalSection(rule_cs);
+      system.enterCriticalSection(rule_cs);
       result:=namedValue.mutate(mutation,RHS,location);
-      system.LeaveCriticalSection(rule_cs);
+      system.leaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
   end;
 
@@ -240,7 +240,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     end;
     if length(subrules)<=0 then exit;
     result:=result+'rule '+id+C_lineBreakChar+
-      'in '+subrules[0]^.declaredAt.filename;
+      'in '+subrules[0]^.declaredAt.fileName;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
   end;
 

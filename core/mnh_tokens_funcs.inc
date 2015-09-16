@@ -258,7 +258,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR tempRecycler:T_tokenRecycler;
     begin
       tempRecycler.create;
-      profiler.Start;
+      profiler.start;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempRecycler);
       t:=profiler.Elapsed;
       tempRecycler.destroy;
@@ -271,7 +271,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       tempRecycler.create;
       first:=tempRecycler.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=tempRecycler.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      profiler.Start;
+      profiler.start;
       reduceExpression(first,0,tempRecycler);
       t:=profiler.Elapsed;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
@@ -286,10 +286,10 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       profiler := TEpikTimer.create(nil);
-      profiler.Clear;
+      profiler.clear;
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
                         else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
-      profiler.Free;
+      profiler.free;
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
@@ -329,20 +329,20 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     begin
       loc:=location;
       next:=firstToken(s,loc,nil,true);
-      while (next.tokType=tt_eol) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
-      if next.tokType=tt_eol then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
+      while (next.tokType=tt_EOL) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
+      if next.tokType=tt_EOL then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
       recycler.create;
       first:=recycler.newToken(next);
       last:=first;
       repeat
         loc:=location;
         next:=firstToken(s,loc,nil,true);
-        while (next.tokType=tt_eol) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
-        if next.tokType<>tt_eol then begin
+        while (next.tokType=tt_EOL) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
+        if next.tokType<>tt_EOL then begin
           last^.next:=recycler.newToken(next);
           last:=last^.next;
         end;
-      until (next.tokType in [tt_eol,tt_semicolon]) or (errorLevel>=el3_evalError);
+      until (next.tokType in [tt_EOL,tt_semicolon]) or (errorLevel>=el3_evalError);
       if errorLevel>=el3_evalError then begin
         recycler.cascadeDisposeToken(first);
         recycler.destroy;
@@ -370,7 +370,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         exit(newErrorLiteral);
       end;
       result:=P_expressionLiteral(first^.data);
-      first^.tokType:=tt_eol;
+      first^.tokType:=tt_EOL;
       first^.data:=nil;
       recycler.disposeToken(first);
       recycler.destroy;
@@ -412,11 +412,11 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   end;
 
 FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  FUNCTION getNames(CONST subrule:P_subrule):P_listLiteral;
+  FUNCTION getNames(CONST subRule:P_subrule):P_listLiteral;
     VAR i:longint;
     begin
       result:=newListLiteral;
-      for i:=0 to length(subrule^.pattern.sig)-1 do result^.appendString(subrule^.pattern.sig[i].id);
+      for i:=0 to length(subRule^.pattern.sig)-1 do result^.appendString(subRule^.pattern.sig[i].id);
     end;
 
   begin

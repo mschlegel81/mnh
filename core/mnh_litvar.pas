@@ -1,8 +1,8 @@
-UNIT mnh_litvar;
+UNIT mnh_litVar;
 
 INTERFACE
 
-USES mnh_constants, mnh_out_adapters, SysUtils, Math, myStringutil, mnh_tokloc;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringutil, mnh_tokLoc;
 CONST
   C_boolText: array[false..true] of string = ('false', 'true');
 
@@ -295,7 +295,7 @@ VAR
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
     if l = nil then begin
-      writeln(stderr, 'disposing NIL literal ?!?');
+      writeln(stdErr, 'disposing NIL literal ?!?');
       exit;
     end;
     if l^.unreference<=0 then dispose(l, destroy);
@@ -373,8 +373,8 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
   begin
     result:=FloatToStr(x);
-    if (pos('E', UpperCase(result))<=0) and //occurs in exponents
-      (pos('N', UpperCase(result))<=0) and //occurs in "Nan or Inf"
+    if (pos('E', uppercase(result))<=0) and //occurs in exponents
+      (pos('N', uppercase(result))<=0) and //occurs in "Nan or Inf"
       (pos('.', result)<=0) then
       result:=result+'.0';
   end;
@@ -414,7 +414,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST suppressOutput: boolean; OUT
         parsedLength:=i;
         if suppressOutput then
           exit(nil);
-        result:=newRealLiteral(StrToFloatDef(copy(input, 1, parsedLength), NAN));
+        result:=newRealLiteral(strToFloatDef(copy(input, 1, parsedLength), Nan));
         end
       else
         begin
@@ -535,7 +535,7 @@ FUNCTION T_listLiteral.tail(CONST headSize:longint):P_listLiteral;
     for i:=iMin to length(element)-1 do result^.append(element[i],true);
   end;
 
-FUNCTION T_listLiteral.trailing:P_Literal;
+FUNCTION T_listLiteral.trailing:P_literal;
   begin
     if length(element)=0
     then result:=@self
@@ -555,7 +555,7 @@ FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
 FUNCTION T_literal          .toString: ansistring; begin result:='<ERR>';                      end;
 FUNCTION T_voidLiteral      .toString: ansistring; begin result :='void';                        end;
 FUNCTION T_boolLiteral      .toString: ansistring; begin result:=C_boolText[val];              end;
-FUNCTION T_intLiteral       .toString: ansistring; begin result:=IntToStr(val);                end;
+FUNCTION T_intLiteral       .toString: ansistring; begin result:=intToStr(val);                end;
 FUNCTION T_realLiteral      .toString: ansistring; begin result:=myFloatToStr(val);            end;
 FUNCTION T_stringLiteral    .toString: ansistring; begin result:=escapeString(val);            end;
 FUNCTION T_expressionLiteral.toString: ansistring; begin result:=subruleToStringCallback(val); end;
@@ -1073,7 +1073,7 @@ FUNCTION T_stringLiteral.hash: longint;
   begin
     {$Q-}
     result:=longint(lt_string)+length(val);
-    for i:=1 to length(val) do result:=result*31+Ord(val[i]);
+    for i:=1 to length(val) do result:=result*31+ord(val[i]);
     {$Q+}
   end;
 
@@ -1084,7 +1084,7 @@ FUNCTION T_expressionLiteral.hash: longint;
     {$Q-}
     s:= toString;
     result:=longint(lt_expression)+length(s);
-    for i:=1 to length(s) do result:=result*31+Ord(s[i]);
+    for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}
   end;
 
@@ -1111,7 +1111,7 @@ FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
   begin
     result:=(@self = other)
            or (other^.literalType = lt_real) and ((P_realLiteral(other)^.value = val)
-                                               or IsNan(P_realLiteral(other)^.value) and isNan(val)
+                                               or isNan(P_realLiteral(other)^.value) and isNan(val)
                                                or IsInfinite(P_realLiteral(other)^.value) and IsInfinite(val));
   end;
 
@@ -1137,19 +1137,19 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
   end;
 //=====================================================================:?.equals
 //?.leqForSorting:==============================================================
-FUNCTION T_literal.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
   begin
     result:=literalType<=other^.literalType;
   end;
 
-FUNCTION T_boolLiteral.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if other^.literalType = lt_boolean
     then result:=value<=P_boolLiteral(other)^.value
     else result:=(literalType<=other^.literalType);
   end;
 
-FUNCTION T_intLiteral.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_int:  result:=val<=P_intLiteral(other)^.val;
@@ -1157,7 +1157,7 @@ FUNCTION T_intLiteral.leqForSorting(CONST other: P_Literal): boolean;
     else result:=(literalType<=other^.literalType); end;
   end;
 
-FUNCTION T_realLiteral.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
       lt_int:  result:=val<=P_intLiteral(other)^.val;
@@ -1165,14 +1165,14 @@ FUNCTION T_realLiteral.leqForSorting(CONST other: P_Literal): boolean;
     else result:=(literalType<=other^.literalType);  end;
   end;
 
-FUNCTION T_stringLiteral.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType = lt_string)
     then result:=val<=P_stringLiteral(other)^.val
     else result:=(literalType<=other^.literalType);
   end;
 
-FUNCTION T_expressionLiteral.leqForSorting(CONST other: P_Literal): boolean;
+FUNCTION T_expressionLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     if (other^.literalType = lt_expression)
     then result:=toString<=other^.toString
@@ -1213,8 +1213,8 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
         exit(result)
       else
         disposeLiteral(result);
-    otherVal:=unescapeString(SysUtils.trim(value), len);
-    if len = length(SysUtils.trim(value)) then
+    otherVal:=unescapeString(sysutils.trim(value), len);
+    if len = length(sysutils.trim(value)) then
       exit(newStringLiteral(otherVal));
     result:=@self;
     rereference;
@@ -1223,7 +1223,7 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
 FUNCTION T_stringLiteral.trim: P_stringLiteral;
   VAR rs: ansistring;
   begin
-    rs:=SysUtils.trim(val);
+    rs:=sysutils.trim(val);
     if rs = val then begin
       result:=@self;
       rereference;
@@ -1233,7 +1233,7 @@ FUNCTION T_stringLiteral.trim: P_stringLiteral;
 FUNCTION T_stringLiteral.trimLeft: P_stringLiteral;
   VAR rs: ansistring;
   begin
-    rs:=SysUtils.TrimLeft(val);
+    rs:=sysutils.trimLeft(val);
     if rs = val then begin
       result:=@self;
       rereference;
@@ -1243,7 +1243,7 @@ FUNCTION T_stringLiteral.trimLeft: P_stringLiteral;
 FUNCTION T_stringLiteral.trimRight: P_stringLiteral;
   VAR rs: ansistring;
   begin
-    rs:=SysUtils.TrimRight(val);
+    rs:=sysutils.trimRight(val);
     if rs = val then begin
       result:=@self;
       rereference;
@@ -1723,7 +1723,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
               end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
             end;
           end;
@@ -1750,7 +1750,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
               end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
             end;
             lt_booleanList..lt_flatList: begin
@@ -1770,7 +1770,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 end
               else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
               end;
           end;
@@ -1849,7 +1849,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
               end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
             end;
           end;
@@ -1885,7 +1885,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
               end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
             end;
             lt_booleanList..lt_flatList: begin
@@ -1910,7 +1910,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 exit(result);
               end else
                 exit(newErrorLiteralRaising('Invalid list lengths '+
-                  IntToStr(i)+' and '+IntToStr(i1)+' given for operator '+
+                  intToStr(i)+' and '+intToStr(i1)+' given for operator '+
                   C_tokenString [op], tokenLocation));
             end;
           end;

@@ -5,7 +5,7 @@ VAR f:text;
     line:string;
 
 begin
-  assign(f,paramstr(1));
+  assign(f,paramStr(1));
   reset(f);
   while not(eof(f)) do begin
     readln(f,line);

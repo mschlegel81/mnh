@@ -1,6 +1,6 @@
 UNIT mnh_regex;
 INTERFACE
-USES RegExpr,Classes,mnh_litvar,mnh_funcs,mnh_constants,mnh_tokloc,sysutils,mnh_out_adapters;
+USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_tokLoc,sysutils,mnh_out_adapters;
 
 IMPLEMENTATION
 TYPE T_triplet=record
@@ -47,16 +47,16 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     VAR regex:TRegExpr;
     begin
       regex:=TRegExpr.create;
-      regex.Expression:=trip.x;
+      regex.expression:=trip.x;
       regex.InputString:=trip.y;
       try
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.Message,tokenLocation);
+          raiseError(el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.Free;
+      regex.free;
     end;
   VAR i,i1:longint;
   begin
@@ -78,7 +78,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
         i:longint;
     begin
       regex:=TRegExpr.create;
-      regex.Expression:=trip.x;
+      regex.expression:=trip.x;
       regex.InputString:=trip.y;
       result:=newListLiteral;
       try
@@ -91,10 +91,10 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
         end;
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.Message,tokenLocation);
+          raiseError(el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.Free;
+      regex.free;
     end;
 
   VAR i,i1:longint;
@@ -118,19 +118,19 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         pieces : TStrings;
     begin
       regex:=TRegExpr.create;
-      regex.Expression:=trip.x;
+      regex.expression:=trip.x;
       pieces:=TStringList.create;
       try
-        regex.Split(trip.y,pieces);
+        regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.Message,tokenLocation);
+          raiseError(el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.Free;
+      regex.free;
       result:=newListLiteral;
-      for i:=0 to pieces.Count-1 do result^.appendString(pieces[i]);
-      pieces.Free;
+      for i:=0 to pieces.count-1 do result^.appendString(pieces[i]);
+      pieces.free;
     end;
 
   VAR i,i1:longint;
@@ -152,15 +152,15 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     VAR regex:TRegExpr;
     begin
       regex:=TRegExpr.create;
-      regex.Expression:=trip.x;
+      regex.expression:=trip.x;
       try
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.Message,tokenLocation);
+          raiseError(el5_systemError,e.message,tokenLocation);
         end;
       end;
-      regex.Free;
+      regex.free;
     end;
 
   VAR i,i1:longint;

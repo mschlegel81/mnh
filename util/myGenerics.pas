@@ -38,7 +38,7 @@ TYPE
     private
       TYPE INDEXED_ENTRY=record index:longint; value:ENTRY_TYPE; end;
       VAR map:array of array of INDEXED_ENTRY;
-      hashmask:longint;
+      hashMask:longint;
       entryCount:longint;
       FUNCTION indexInMap(CONST mapIdx,searchIdx:longint):longint;
       PROCEDURE rehash(CONST grow:boolean);
@@ -207,60 +207,60 @@ CONSTRUCTOR G_safeArray.create;
 
 FUNCTION G_safeArray.getValue(index: longint): ENTRY_TYPE;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     result:=data[index];
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeArray.setValue(index: longint; newValue: ENTRY_TYPE);
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     if index=length(data) then append(newValue)
                           else data[index]:=newValue;
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeArray.clear;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     setLength(data,0);
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 FUNCTION G_safeArray.size: longint;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     result:=length(data);
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeArray.append(CONST newValue: ENTRY_TYPE);
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     setLength(data,length(data)+1);
     data[length(data)-1]:=newValue;
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeArray.appendAll(CONST newValue: ENTRY_TYPE_ARRAY);
   VAR i,i0:longint;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     i0:=length(data);
     setLength(data,i0+length(newValue));
     for i:=0 to length(newValue)-1 do data[i0+i]:=newValue[i];
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 
 PROCEDURE G_safeArray.lock;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeArray.unlock;
   begin
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 DESTRUCTOR G_safeArray.destroy;
@@ -300,26 +300,26 @@ CONSTRUCTOR G_safeVar.create(CONST intialValue: ENTRY_TYPE);
 
 FUNCTION G_safeVar.getValue: ENTRY_TYPE;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     result:=v;
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeVar.setValue(newValue: ENTRY_TYPE);
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
     v:=newValue;
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeVar.lock;
   begin
-    system.EnterCriticalsection(saveCS);
+    system.enterCriticalSection(saveCS);
   end;
 
 PROCEDURE G_safeVar.unlock;
   begin
-    system.LeaveCriticalsection(saveCS);
+    system.leaveCriticalSection(saveCS);
   end;
 
 DESTRUCTOR G_safeVar.destroy;
@@ -339,7 +339,7 @@ FUNCTION G_list.contains(CONST value:ENTRY_TYPE):boolean;
 FUNCTION G_list.indexOf(CONST value:ENTRY_TYPE):longint;
   VAR i0,i1:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     i0:=0;
     i1:=sortedUntilIndex-1;
     while i1>=i0 do begin
@@ -347,80 +347,80 @@ FUNCTION G_list.indexOf(CONST value:ENTRY_TYPE):longint;
       if      entry[result]<value then i0:=result+1
       else if entry[result]>value then i1:=result-1
       else begin
-        system.LeaveCriticalsection(cs);
+        system.leaveCriticalSection(cs);
         exit(result);
       end;
     end;
     for i0:=sortedUntilIndex to length(entry)-1 do
       if entry[i0]=value then begin
-        system.LeaveCriticalsection(cs);
+        system.leaveCriticalSection(cs);
         exit(i0);
       end;
     result:=-1;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.add(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     i:=length(entry);
     setLength(entry,i+1);
     entry[i]:=value;
     isUnique:=false;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.remIndex(CONST index:longint);
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     if (index>=0) and (index<length(entry)) then begin
       if index<sortedUntilIndex then dec(sortedUntilIndex);
       for i:=index to length(entry)-2 do entry[i]:=entry[i+1];
       setLength(entry,length(entry)-1);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.remValue(CONST value:ENTRY_TYPE);
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     i:=indexOf(value);
     while i>=0 do begin
       remIndex(i);
       i:=indexOf(value);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.remValues(CONST values:ENTRY_TYPE_ARRAY);
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     for i:=0 to length(values)-1 do remValue(values[i]);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.addArr(CONST values:ENTRY_TYPE_ARRAY);
   VAR i,i0:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     i0:=length(entry);
     setLength(entry,length(entry)+length(values));
     for i:=0 to length(values)-1 do entry[i0+i]:=values[i];
-    isunique:=false;
-    system.LeaveCriticalsection(cs);
+    isUnique:=false;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.clear;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     setLength(entry,0);
     sortedUntilIndex:=0;
     isUnique:=true;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.sort;
@@ -428,7 +428,7 @@ PROCEDURE G_list.sort;
       i,j0,j1,k:longint;
       temp     :ENTRY_TYPE_ARRAY;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     if sortedUntilIndex<length(entry) then begin
       scale:=1;
       setLength(temp,length(entry)-sortedUntilIndex);
@@ -486,13 +486,13 @@ PROCEDURE G_list.sort;
       while (j1<length(temp))     do begin entry[k]:=temp[j1]; inc(k); inc(j1); end;
       sortedUntilIndex:=length(entry);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_list.unique;
   VAR i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     if not(isUnique) then begin
       sort;
       j:=1;
@@ -503,30 +503,30 @@ PROCEDURE G_list.unique;
       sortedUntilIndex:=length(entry);
     end;
     isUnique:=true;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_list.size:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     result:=length(entry);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_list.getEntry(CONST index:longint):ENTRY_TYPE;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     result:=entry[index];
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_list.elementArray:ENTRY_TYPE_ARRAY;
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     setLength(result,length(entry));
     for i:=0 to length(result)-1 do result[i]:=entry[i];
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 
@@ -767,7 +767,7 @@ PROCEDURE G_sparseArray.rehash(CONST grow:boolean);
       oldLen:=length(map);
       setLength(map,oldLen+oldLen);
       hashMask:=(oldLen+oldLen)-1;
-      for i:=0 to oldlen-1 do begin
+      for i:=0 to oldLen-1 do begin
         j0:=0;
         setLength(map[i+oldLen],length(map[i])); j1:=0;
         for k:=0 to length(map[i])-1 do begin
@@ -858,12 +858,12 @@ CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
 PROCEDURE G_stringKeyMap.clear;
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,1);
     bitMask:=0;
     entryCount:=0;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR G_stringKeyMap.create;
@@ -874,10 +874,10 @@ CONSTRUCTOR G_stringKeyMap.create;
 DESTRUCTOR G_stringKeyMap.destroy;
   VAR i:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,0);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
     system.DoneCriticalsection(cs);
   end;
 
@@ -912,7 +912,7 @@ FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
 PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
   VAR i,j,h:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     h:=hashOfAnsiString(key);
     i:=h and bitMask;
     j:=0;
@@ -927,13 +927,13 @@ PROCEDURE G_stringKeyMap.put(CONST key: ansistring; CONST value: VALUE_TYPE);
     end else begin
       bucket[i][j].value:=value;
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
   VAR i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     i:=hashOfAnsiString(key) and bitMask;
     j:=0;
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
@@ -946,13 +946,13 @@ PROCEDURE G_stringKeyMap.dropKey(CONST key: ansistring);
       dec(entryCount);
       if entryCount<0.4*length(bucket)*rebalanceFac then rehash(false);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
   VAR i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     for i:=0 to length(bucket)-1 do begin
       j:=length(bucket[i]);
       if j>0 then begin
@@ -960,17 +960,17 @@ FUNCTION G_stringKeyMap.dropAny: VALUE_TYPE;
         result:=bucket[i][j].value;
         setLength(bucket[i],j);
         dec(entryCount);
-        system.LeaveCriticalsection(cs);
+        system.leaveCriticalSection(cs);
         exit(result);
       end;
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
   VAR k,i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -978,13 +978,13 @@ FUNCTION G_stringKeyMap.keySet: T_arrayOfString;
       result[k]:=bucket[i][j].key;
       inc(k);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
   VAR k,i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -992,13 +992,13 @@ FUNCTION G_stringKeyMap.valueSet: VALUE_TYPE_ARRAY;
       result[k]:=bucket[i][j].value;
       inc(k);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.entrySet: KEY_VALUE_LIST;
   VAR k,i,j:longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     setLength(result,entryCount);
     k:=0;
     for i:=0 to length(bucket)-1 do
@@ -1006,14 +1006,14 @@ FUNCTION G_stringKeyMap.entrySet: KEY_VALUE_LIST;
       result[k]:=bucket[i][j];
       inc(k);
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.size: longint;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     result:=entryCount;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 end.

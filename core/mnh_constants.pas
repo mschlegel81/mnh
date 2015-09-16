@@ -90,7 +90,7 @@ TYPE
     tt_procedureBlockEnd,
     tt_procedureBlockWhile,
     //special: [E]nd [O]f [L]ine
-    tt_eol);
+    tt_EOL);
 
   T_literalType = (
     lt_error,
@@ -357,7 +357,7 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
   VAR n:T_namespace;
   begin
-    for n:=Low(T_namespace) to High(T_namespace) do if id=C_namespaceString[n] then exit(true);
+    for n:=Low(T_namespace) to high(T_namespace) do if id=C_namespaceString[n] then exit(true);
     result:=false;
   end;
 

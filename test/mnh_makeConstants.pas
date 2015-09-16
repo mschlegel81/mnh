@@ -1,7 +1,7 @@
 PROGRAM mnh_makeConstants;
 
 USES
-  mnh_constants, SysUtils;
+  mnh_constants, sysutils;
   PROCEDURE tokList;
     TYPE
       info = record
@@ -15,7 +15,7 @@ USES
       i, j: longint;
     begin
       setLength(l, 0);
-      for t := tt_literal to tt_eol do
+      for t := tt_literal to tt_EOL do
         if C_tokenString [t]<>'' then
           begin
           setLength(l, length(l)+1);

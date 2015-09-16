@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES SysUtils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litvar;
+USES sysutils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litVar;
 VAR htmlRoot: string;
 TYPE
 
@@ -25,7 +25,7 @@ TYPE
     usesPackage, usedByPackage: array of P_userPackageDocumentation;
     rulesDoc: array of ansistring;
     isExecutable:boolean;
-    CONSTRUCTOR create(path, Name: ansistring);
+    CONSTRUCTOR create(path, name: ansistring);
     DESTRUCTOR destroy;
     PROCEDURE addUses(OtherUid: ansistring);
     PROCEDURE addUsed(other: P_userPackageDocumentation);
@@ -209,11 +209,11 @@ PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 
 { T_userPackageDocumentation }
 
-CONSTRUCTOR T_userPackageDocumentation.create(path, Name: ansistring);
+CONSTRUCTOR T_userPackageDocumentation.create(path, name: ansistring);
   begin
     isExecutable:=false;
-    id:=Name;
-    uid:=ExpandFileName(path);
+    id:=name;
+    uid:=expandFileName(path);
     docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
       '/', '_'), '.', '_');
     setLength(rawUses, 0);
@@ -329,22 +329,22 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
 
 FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
   FUNCTION prettyHtml(s: ansistring): ansistring;
-    VAR Lines: T_arrayOfString;
+    VAR lines: T_arrayOfString;
       i: longint;
     begin
-      setLength(Lines, 0);
+      setLength(lines, 0);
       while pos('#', s)>0 do begin
-        append(Lines, copy(s, 1, pos('#', s)-1));
+        append(lines, copy(s, 1, pos('#', s)-1));
         s:=copy(s, pos('#', s)+1, length(s));
       end;
-      append(Lines,s);
+      append(lines,s);
 
       result:='';
-      for i:=0 to length(Lines)-1 do
+      for i:=0 to length(lines)-1 do
         begin
         if i>0 then result:=result+'<br>';
-        if pos(';', Lines [i])>0 then result:=result+'<code>'+toHtmlCode(Lines [i])+'</code>'
-        else result:=result+Lines [i];
+        if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i])+'</code>'
+        else result:=result+lines [i];
         end;
     end;
 
@@ -353,21 +353,21 @@ FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
   end;
 
 PROCEDURE makeHtmlFromTemplate;
-  PROCEDURE writeUserPackageDocumentations(VAR outFile:Text);
+  PROCEDURE writeUserPackageDocumentations(VAR outFile:text);
     VAR i: longint;
     begin
       for i:=0 to length(packages)-1 do packages[i]^.resolveUses;
-      Write(outfile, '<table>');
+      write(outFile, '<table>');
       for i:=0 to length(packages)-1 do
         begin
-        if odd(i) then Write(outfile, '<tr>')
-        else Write(outfile, '<tr class="ruleHead">');
-        Write(outfile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
+        if odd(i) then write(outFile, '<tr>')
+        else write(outFile, '<tr class="ruleHead">');
+        write(outFile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
         if packages [i]^.isExecutable then
-          Write(outfile, '<td>executable</td>') else Write(outfile, '<td>&nbsp;</td>');
-        writeln(outfile, '</tr>');
+          write(outFile, '<td>executable</td>') else write(outFile, '<td>&nbsp;</td>');
+        writeln(outFile, '</tr>');
         end;
-      Write(outfile, '</table>');
+      write(outFile, '</table>');
 
       for i:=0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
       for i:=0 to length(packages)-1 do dispose(packages [i], destroy);
@@ -392,7 +392,7 @@ PROCEDURE makeHtmlFromTemplate;
 
     begin
       //Prepare and sort data:-------------------------------------------------------------
-      for n:=Low(T_namespace) to High(T_namespace) do setLength(doc[n],0);
+      for n:=Low(T_namespace) to high(T_namespace) do setLength(doc[n],0);
       ids:=intrinsicRuleExplanationMap.keySet;
       for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
         n:=namespace(ids[i]);
@@ -402,20 +402,20 @@ PROCEDURE makeHtmlFromTemplate;
       end;
       setLength(ids,0);
 
-      for n:=Low(T_namespace) to High(T_namespace) do
+      for n:=Low(T_namespace) to high(T_namespace) do
       for i:=1 to length(doc[n])-1 do for j:=0 to i-1 do
       if doc[n][i].id < doc[n][j].id then begin
         swapTmp:=doc[n][i]; doc[n][i]:=doc[n][j]; doc[n][j]:=swapTmp;
       end;
       //-------------------------------------------------------------:Prepare and sort data
       writeln(outFile, '<div align="right"><hr></div><br><div>');
-      for n:=Low(T_namespace) to High(T_namespace) do for i:=0 to length(doc[n])-1 do
+      for n:=Low(T_namespace) to high(T_namespace) do for i:=0 to length(doc[n])-1 do
         writeln(outFile, '<a href="#', doc[n][i].id, '">', doc[n][i].id, '</a> &nbsp; ');
       writeln(outFile, '</div><br><div align="right"><hr></div>');
-      for n:=Low(T_namespace) to High(T_namespace) do
+      for n:=Low(T_namespace) to high(T_namespace) do
         writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
 
-      for n:=Low(T_namespace) to High(T_namespace) do begin
+      for n:=Low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
         for i:=0 to length(doc[n])-1 do begin
           writeln(outFile, doc[n][i].toHtml);
@@ -524,7 +524,7 @@ PROCEDURE makeHtmlFromTemplate;
 
     assign(templateFile, htmlRoot+TEMPLATE_NAME_SUFFIX);
     reset(templateFile);
-    while not(EOF(templateFile)) do begin
+    while not(eof(templateFile)) do begin
       readln(templateFile, txt);
       case context.mode of
         none:            if not(handleCommand(txt)) and outFile.isOpen then writeln(outFile.handle,txt);
@@ -541,7 +541,7 @@ PROCEDURE locateHtml;
   CONST primary = 'doc';
     VAR secondary:string;
   begin
-    secondary:=ExtractFilePath(paramstr(0))+DirectorySeparator+primary;
+    secondary:=extractFilePath(paramStr(0))+DirectorySeparator+primary;
     if DirectoryExists(primary) then htmlRoot:=primary
     else if DirectoryExists(secondary) then htmlRoot:=secondary
     else htmlRoot:='';

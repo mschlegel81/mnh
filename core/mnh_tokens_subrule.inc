@@ -22,9 +22,9 @@
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
       PROCEDURE constructExpression(CONST rep:P_token; VAR recycler:T_tokenRecycler);
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
-      CONSTRUCTOR createFromInline (CONST rep:P_Token; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       DESTRUCTOR destroy;
@@ -52,7 +52,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
         token:=t^;
-        t^.tokType:=tt_eol; t:=recycler.disposeToken(t);
+        t^.tokType:=tt_EOL; t:=recycler.disposeToken(t);
         token.next:=nil;
         if token.tokType=tt_optionalParameters then begin
           parIdx:=REMAINING_PARAMETERS_IDX;
@@ -80,7 +80,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
     end;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
   begin
     called:=false;
     if isPrivate then typ:=srt_normal_private
@@ -93,7 +93,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_Token; CONST declA
     if needEmbrace then embrace;
   end;
 
-CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_Token; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR recycler:T_tokenRecycler);
   begin
     called:=false;
     typ:=srt_inline_for_each;
@@ -230,7 +230,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR recycler:T_tokenRecycler);
   VAR t:P_token;
   begin
     called:=false;
@@ -245,7 +245,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_Token; VAR recycler:T_tokenRe
       setLength(expression,length(expression)+1);
       with expression[length(expression)-1] do begin
         token:=t^;
-        t^.tokType:=tt_eol;
+        t^.tokType:=tt_EOL;
         t:=recycler.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
@@ -570,7 +570,7 @@ PROCEDURE T_subrule.complainAboutUncalled(CONST ruleId:ansistring);
 
 FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
   begin
-    result:='@Line '+IntToStr(declaredAt.line)+': '+C_tabChar;
+    result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+ruleId+pattern.toString+';';
     if comment<>'' then result:=result+C_tabChar+'//'+comment;
@@ -578,7 +578,7 @@ FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
   begin
-    result:='<tr><td>@Line '+IntToStr(declaredAt.line)+': ';
+    result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
     if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
     result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
   end;

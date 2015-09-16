@@ -205,11 +205,11 @@ DESTRUCTOR T_collectingOutAdapter.destroy;
 PROCEDURE T_collectingOutAdapter.clearConsole;
   VAR msg:T_storedMessage;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     clearMessages;
     msg.messageType:=elc_clearConsole;
     appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; CONST s: ansistring);
@@ -220,21 +220,21 @@ PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; 
       eld_echoDeclaration: if not(outputBehaviour.doEchoDeclaration) then exit;
       ele_echoInput      : if not(outputBehaviour.doEchoInput) then exit;
     end;
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     msg.messageType:=mt;
     msg.simpleMessage:=s;
     appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR msg:T_storedMessage;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     msg.messageType:=elp_printline;
     msg.multiMessage:=s;
     appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -244,12 +244,12 @@ PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel
     consoleOutAdapter.errorOut(level,errorMessage,errorLocation);
     {$endif}
     if level<el2_warning then exit;
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     msg.messageType:=level;
     msg.simpleMessage:=errorMessage;
     msg.location:=errorLocation;
     appendSingleMessage(msg);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_collectingOutAdapter.appendSingleMessage(CONST message: T_storedMessage);

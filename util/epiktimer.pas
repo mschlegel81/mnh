@@ -66,11 +66,11 @@ INTERFACE
 
 USES
 {$IFDEF Windows}
-  Windows,
+  windows,
 {$ELSE}
   unix, unixutil, baseunix,
 {$ENDIF}
-  Classes, SysUtils, dateutils;
+  Classes, sysutils, dateutils;
 
 CONST
   DefaultSystemTicksPerSecond = 1000000; //Divisor for microsecond resolution
@@ -80,7 +80,7 @@ CONST
 
 TYPE
 
-  TickType = Int64; // Global declaration for all tick processing routines
+  TickType = int64; // Global declaration for all tick processing routines
 
   FormatPrecision = 1..12; // Number of decimal places in elapsed text format
 
@@ -114,12 +114,12 @@ TYPE
 
   // Contains timebase overhead compensation factors in ticks for each timebase
   TimebaseCalibrationParameters = record
-    FreqCalibrated: Boolean; // Indicates that the tickfrequency has been calibrated
-    OverheadCalibrated: Boolean; // Indicates that all call overheads have been calibrated
-    TicksIterations: Integer; // number of iterations to use when measuring ticks overhead
-    SleepIterations: Integer; // number of iterations to use when measuring SystemSleep overhead
-    FreqIterations: Integer;  // number of iterations to use when measuring ticks frequency
-    FrequencyGateTimeMS: Integer;  // gate time to use when measuring ticks frequency
+    FreqCalibrated: boolean; // Indicates that the tickfrequency has been calibrated
+    OverheadCalibrated: boolean; // Indicates that all call overheads have been calibrated
+    TicksIterations: integer; // number of iterations to use when measuring ticks overhead
+    SleepIterations: integer; // number of iterations to use when measuring SystemSleep overhead
+    FreqIterations: integer;  // number of iterations to use when measuring ticks frequency
+    FrequencyGateTimeMS: integer;  // gate time to use when measuring ticks frequency
    end;
 
   // This record defines the Timebase context
@@ -133,7 +133,7 @@ TYPE
 
   TimeBaseSelector = ^TimebaseData;
 
-  (*  * * * * * * * * * * Timebase Correlation  * * * * * * * * * * *)
+  (*  * * * * * * * * * * Timebase correlation  * * * * * * * * * * *)
 
   // The TimeBaseCorrelation record stores snapshot samples of both the system
   // ticks (the source of known accuracy) and the hardware tick source (the
@@ -164,7 +164,7 @@ TYPE
 
   CorrelationModes=(Manual, OnTimebaseSelect, OnGetElapsed);
 
-  (* * * * * * * * * * * Timer Data record structure  * * * * * * * * * * *)
+  (* * * * * * * * * * * Timer data record structure  * * * * * * * * * * *)
 
   // This is the timer data context. There is an internal declaration of this
   // record and overloaded methods if you only want to use the component for a
@@ -176,26 +176,26 @@ TYPE
   // and hardware timers in the same application.
 
   TimerData = record
-    Running:Boolean; // Timer is currently running
+    running:boolean; // Timer is currently running
     TimebaseUsed:TimeBaseSelector; // keeps timer aligned with the source that started it.
-    StartTime:TickType; // Ticks sample when timer was started
+    startTime:TickType; // Ticks sample when timer was started
     TotalTicks:TickType; // Total ticks... for snapshotting and pausing
   end;
 
   TEpikTimer= class(TComponent)
     private
       BuiltInTimer:TimerData; // Used to provide a single built-in timer;
-      FHWTickSupportAvailable:Boolean; // True if hardware tick support is available
-      FHWCapabilityDataAvailable:Boolean; // True if hardware tick support is available
+      FHWTickSupportAvailable:boolean; // True if hardware tick support is available
+      FHWCapabilityDataAvailable:boolean; // True if hardware tick support is available
       FHWTicks:TimeBaseData;     // The hardware timebase
       FSystemTicks:TimeBaseData; // The system timebase
       FSelectedTimebase:TimeBaseSelector; // Pointer to selected database
 
       FTimeBaseSource: TickSources; // use hardware or system timebase
-      FWantDays: Boolean; // true if days are to be displayed in string returns
-      FWantMS: Boolean; // True to display milliseconds in string formatted calls
+      FWantDays: boolean; // true if days are to be displayed in string returns
+      FWantMS: boolean; // True to display milliseconds in string formatted calls
       FSPrecision: FormatPrecision; // number of digits to display in string calls
-      FMicrosecondSystemClockAvailable:Boolean; // true if system has microsecond clock
+      FMicrosecondSystemClockAvailable:boolean; // true if system has microsecond clock
 
       StartupCorrelationSample:TimebaseCorrelationData; // Starting ticks correlation snapshot
       UpdatedCorrelationSample:TimebaseCorrelationData; // Snapshot of last correlation sample
@@ -218,64 +218,64 @@ TYPE
       // no CPU overhead and only require about 25 bytes of memory.
 
       // Stops and resets the timer
-      PROCEDURE Clear; overload;// Call this routine to use the built-in timer record
-      PROCEDURE Clear(VAR T:TimerData); overload; // pass your TimerData record to this one
+      PROCEDURE clear; overload;// Call this routine to use the built-in timer record
+      PROCEDURE clear(VAR T:TimerData); overload; // pass your TimerData record to this one
 
       //Start or resume a stopped timer
-      PROCEDURE Start; overload;
-      PROCEDURE Start(VAR T:TimerData); overload;
+      PROCEDURE start; overload;
+      PROCEDURE start(VAR T:TimerData); overload;
 
       //Stop or pause a timer
       PROCEDURE Stop; overload;
       PROCEDURE Stop(VAR T:TimerData); overload;
 
       //Return elapsed time in seconds as an extended type
-      FUNCTION Elapsed:Extended; overload;
-      FUNCTION Elapsed(VAR T: TimerData):Extended; overload;
+      FUNCTION Elapsed:extended; overload;
+      FUNCTION Elapsed(VAR T: TimerData):extended; overload;
 
       //Return a string in Day:Hour:Minute:Second format. Milliseconds can be
       //optionally appended via the WantMilliseconds property
-      FUNCTION ElapsedDHMS:String; overload;
-      FUNCTION ElapsedDHMS(VAR T: TimerData):String; overload;
+      FUNCTION ElapsedDHMS:string; overload;
+      FUNCTION ElapsedDHMS(VAR T: TimerData):string; overload;
 
       //Return a string in the format of seconds.milliseconds
-      FUNCTION ElapsedStr:String; overload;
-      FUNCTION ElapsedStr(VAR T:TimerData):String; overload;
+      FUNCTION ElapsedStr:string; overload;
+      FUNCTION ElapsedStr(VAR T:TimerData):string; overload;
 
-      FUNCTION WallClockTime:String; // Return time of day string from system time
+      FUNCTION WallClockTime:string; // Return time of day string from system time
 
       //Overhead compensated system sleep to provide a best possible precision delay
-      FUNCTION SystemSleep(Milliseconds: Integer):integer; Virtual;
+      FUNCTION SystemSleep(Milliseconds: integer):integer; virtual;
 
       //Diagnostic taps for development and fine grained timebase adjustment
-      property HWTimebase: TimeBaseData read FHWTicks write FHWTicks; // The hardware timebase
-      property SysTimebase: TimebaseData read FSystemTicks write FSystemTicks;
+      PROPERTY HWTimebase: TimeBaseData read FHWTicks write FHWTicks; // The hardware timebase
+      PROPERTY SysTimebase: TimebaseData read FSystemTicks write FSystemTicks;
       FUNCTION GetHardwareTicks:TickType; // return raw tick value from hardware source
       FUNCTION GetSystemTicks:Ticktype;   // Return system tick value(in microseconds of Epoch time)
       FUNCTION GetTimebaseCorrelation:TickType;
-      FUNCTION CalibrateCallOverheads(VAR TimeBase:TimebaseData) : Integer; Virtual;
-      FUNCTION CalibrateTickFrequency(VAR TimeBase:TimebaseData): Integer; Virtual;
+      FUNCTION CalibrateCallOverheads(VAR TimeBase:TimebaseData) : integer; virtual;
+      FUNCTION CalibrateTickFrequency(VAR TimeBase:TimebaseData): integer; virtual;
 
-      property MicrosecondSystemClockAvailable:Boolean read FMicrosecondSystemClockAvailable;
-      property SelectedTimebase:TimebaseSelector read FSelectedTimebase write FSelectedTimebase;
-      property HWTickSupportAvailable:Boolean read FHWTickSupportAvailable;
-      property HWCapabilityDataAvailable:Boolean read FHWCapabilityDataAvailable;
+      PROPERTY MicrosecondSystemClockAvailable:boolean read FMicrosecondSystemClockAvailable;
+      PROPERTY SelectedTimebase:TimebaseSelector read FSelectedTimebase write FSelectedTimebase;
+      PROPERTY HWTickSupportAvailable:boolean read FHWTickSupportAvailable;
+      PROPERTY HWCapabilityDataAvailable:boolean read FHWCapabilityDataAvailable;
       PROCEDURE CorrelateTimebases; // Manually call to do timebase correlation snapshot and update
 
-      CONSTRUCTOR create(AOwner:TComponent); Override;
-      DESTRUCTOR destroy; Override;
+      CONSTRUCTOR create(AOwner:TComponent); override;
+      DESTRUCTOR destroy; override;
     Published
-      property StringPrecision: FormatPrecision read FSPrecision write FSPrecision;
-      property WantMilliseconds: Boolean read FWantMS write FWantMS;
-      property WantDays: Boolean read FWantDays write FWantDays;
-      property TimebaseSource: TickSources read FTimeBaseSource write SetTimebaseSource;
-      property CorrelationMode:CorrelationModes read FCorrelationMode write FCorrelationMode;
+      PROPERTY StringPrecision: FormatPrecision read FSPrecision write FSPrecision;
+      PROPERTY WantMilliseconds: boolean read FWantMS write FWantMS;
+      PROPERTY WantDays: boolean read FWantDays write FWantDays;
+      PROPERTY TimebaseSource: TickSources read FTimeBaseSource write SetTimebaseSource;
+      PROPERTY CorrelationMode:CorrelationModes read FCorrelationMode write FCorrelationMode;
   end;
 
 
 IMPLEMENTATION
 
-(* * * * * * * * * * * * * * Timebase Section  * * * * * * * * * * * * *)
+(* * * * * * * * * * * * * * Timebase section  * * * * * * * * * * * * *)
 //
 // There are two tick sources defined in this section. The first uses a hardware
 // source which, in this case, is the Pentium's internal 64 Time Stamp Counter.
@@ -308,7 +308,7 @@ CONST
   MilliPerSec = 1000;
 
 
-(* * * * * * * * Start of i386 Hardware specific code  * * * * * * *)
+(* * * * * * * * start of i386 Hardware specific code  * * * * * * *)
 
 {$IFDEF CPUI386}
 // Some references for this section can be found at:
@@ -317,42 +317,42 @@ CONST
 //     http://www.sandpile.org/ia32/msr.htm
 
 // Pentium specific... push and pop the flags and check for CPUID availability
-FUNCTION HasHardwareCapabilityData: Boolean;
+FUNCTION HasHardwareCapabilityData: boolean;
 begin
   asm
    PUSHFD
    POP    EAX
    MOV    EDX,EAX
-   XOR    EAX,$200000
+   xor    EAX,$200000
    PUSH   EAX
    POPFD
    PUSHFD
    POP    EAX
-   XOR    EAX,EDX
-   JZ     @EXIT
+   xor    EAX,EDX
+   JZ     @exit
    MOV    AL,true
-   @EXIT:
+   @exit:
   end;
 end;
 
-FUNCTION HasHardwareTickCounter: Boolean;
+FUNCTION HasHardwareTickCounter: boolean;
   VAR FeatureFlags: Longword;
   begin
     FeatureFlags:=0;
     asm
       PUSH   EBX
-      XOR    EAX,EAX
+      xor    EAX,EAX
       DW     $A20F
       POP    EBX
       CMP    EAX,1
-      JL     @EXIT
-      XOR    EAX,EAX
+      JL     @exit
+      xor    EAX,EAX
       MOV    EAX,1
       PUSH   EBX
       DW     $A20F
       MOV    FEATUREFLAGS,EDX
       POP    EBX
-      @EXIT:
+      @exit:
     end;
     result := (FeatureFlags and $10) <> 0;
   end;
@@ -368,8 +368,8 @@ FUNCTION HardwareTicks: TickType; assembler; asm DW 0310FH end;
 // will work but there won't be any error compensation for long
 // term accuracy.
 {$ELSE} // add other architectures and hardware specific tick sources here
-FUNCTION HasHardwareCapabilityData: Boolean; begin result:=false end;
-FUNCTION HasHardwareTickCounter: Boolean; begin result:=false end;
+FUNCTION HasHardwareCapabilityData: boolean; begin result:=false end;
+FUNCTION HasHardwareTickCounter: boolean; begin result:=false end;
 FUNCTION HardwareTicks:TickType; begin result:=0 end;
 {$ENDIF}
 
@@ -400,7 +400,7 @@ begin
               fpgettimeofday(@t,nil);
               // Build a 64 bit microsecond tick from the seconds and microsecond longints
               result := (TickType(t.tv_sec) * NanoPerMilli) + t.tv_usec;
-              Exit;
+              exit;
             end;
             i := ts.tv_sec;
             i := (i*MilliPerSec) + ts.tv_nsec div NanoPerMilli;
@@ -420,9 +420,9 @@ begin
 {$ENDIF WINDOWS}
 end;
 
-FUNCTION TEpikTimer.SystemSleep(Milliseconds: Integer): integer;
+FUNCTION TEpikTimer.SystemSleep(Milliseconds: integer): integer;
 begin
-  Sleep(Milliseconds);
+  sleep(Milliseconds);
   result := 0;
 end;
 
@@ -471,68 +471,68 @@ begin
   FSelectedTimebase^ := AValue;
 end;
 
-(* * * * * * * * * * Time measurement core routines * * * * * * * * * *)
+(* * * * * * * * * * time measurement core routines * * * * * * * * * *)
 
-PROCEDURE TEpikTimer.Clear(VAR T: TimerData);
+PROCEDURE TEpikTimer.clear(VAR T: TimerData);
 begin
   with T do
     begin
-      Running:=false; StartTime:=0; TotalTicks:=0; TimeBaseUsed:=FSelectedTimebase
+      running:=false; startTime:=0; TotalTicks:=0; TimeBaseUsed:=FSelectedTimebase
     end;
 end;
 
-PROCEDURE TEpikTimer.Start(VAR T: TimerData);
+PROCEDURE TEpikTimer.start(VAR T: TimerData);
 begin
   if not T.running then
     with FSelectedTimebase^ do
     begin
-      T.StartTime:=Ticks()-TicksOverhead;
+      T.startTime:=Ticks()-TicksOverhead;
       T.TimebaseUsed:=FSelectedTimebase;
-      T.Running:=true
+      T.running:=true
     end
 end;
 
 PROCEDURE TEpikTimer.Stop(VAR T: TimerData);
   VAR CurTicks:TickType;
 begin
-  if T.Running then
+  if T.running then
     with T.TimebaseUsed^ do
     begin
       CurTicks:=Ticks()-TicksOverhead; // Back out the call overhead
-      T.TotalTicks:=(CurTicks - T.Starttime)+T.TotalTicks; T.Running:=false
+      T.TotalTicks:=(CurTicks - T.startTime)+T.TotalTicks; T.running:=false
     end
 end;
 
-FUNCTION TEpikTimer.Elapsed(VAR T: TimerData): Extended;
+FUNCTION TEpikTimer.Elapsed(VAR T: TimerData): extended;
 VAR
   CurTicks: TickType;
 begin
   with T.TimebaseUsed^ do
-    if T.Running then
+    if T.running then
       begin
 
         CurTicks:=Ticks()-TicksOverhead; // Back out the call overhead
         if CorrelationMode>OnTimebaseSelect then CorrelateTimebases;
 
-        result := ((CurTicks - T.Starttime)+T.TotalTicks) / TicksFrequency
+        result := ((CurTicks - T.startTime)+T.TotalTicks) / TicksFrequency
       end
     else result := T.TotalTicks / TicksFrequency;
 end;
 
-(* * * * * * * * * * Output formatting routines  * * * * * * * * * *)
+(* * * * * * * * * * output formatting routines  * * * * * * * * * *)
 
-FUNCTION TEpikTimer.ElapsedDHMS(VAR T: TimerData): String;
+FUNCTION TEpikTimer.ElapsedDHMS(VAR T: TimerData): string;
 VAR
-  Tmp, MS: extended;
-  D, H, M, S: Integer;
+  tmp, MS: extended;
+  D, H, M, S: integer;
   P, SM: string;
 begin
-  Tmp := Elapsed(T);
-  P := inttostr(FSPrecision);
-  MS := frac(Tmp); SM:=format('%0.'+P+'f',[MS]); delete(SM,1,1);
-  D := trunc(Tmp / 86400); Tmp:=Trunc(tmp) mod 86400;
-  H := trunc(Tmp / 3600); Tmp:=Trunc(Tmp) mod 3600;
-  M := Trunc(Tmp / 60); S:=(trunc(Tmp) mod 60);
+  tmp := Elapsed(T);
+  P := intToStr(FSPrecision);
+  MS := frac(tmp); SM:=format('%0.'+P+'f',[MS]); delete(SM,1,1);
+  D := trunc(tmp / 86400); tmp:=trunc(tmp) mod 86400;
+  H := trunc(tmp / 3600); tmp:=trunc(tmp) mod 3600;
+  M := trunc(tmp / 60); S:=(trunc(tmp) mod 60);
   if FWantDays then
     result := format('%2.3d:%2.2d:%2.2d:%2.2d',[D,H,M,S])
   else
@@ -540,12 +540,12 @@ begin
   if FWantMS then result:=result+SM;
 end;
 
-FUNCTION TEpikTimer.ElapsedStr(VAR T: TimerData): String;
+FUNCTION TEpikTimer.ElapsedStr(VAR T: TimerData): string;
 begin
-  result := format('%.'+inttostr(FSPrecision)+'f',[Elapsed(T)]);
+  result := format('%.'+intToStr(FSPrecision)+'f',[Elapsed(T)]);
 end;
 
-FUNCTION TEpikTimer.WallClockTime: String;
+FUNCTION TEpikTimer.WallClockTime: string;
 VAR
   Y, D, M, hour, min, sec, ms, us: word;
 {$IFNDEF Windows}
@@ -553,7 +553,7 @@ VAR
 {$ENDIF}
 begin
 {$IFDEF Windows}
-  DecodeDatetime(Now, Y, D, M, Hour, min, Sec, ms);
+  DecodeDatetime(now, Y, D, M, hour, min, Sec, ms);
   us:=0;
 {$ELSE}
   // "Now" doesn't report milliseconds on Linux... appears to be broken.
@@ -565,20 +565,20 @@ begin
 {$ENDIF}
   result:='';
   if FWantDays then
-    result := Format('%4.4d/%2.2d/%2.2d-',[Y,M,D]);
-  result := result + Format('%2.2d:%2.2d:%2.2d',[hour,min,sec]);
+    result := format('%4.4d/%2.2d/%2.2d-',[Y,M,D]);
+  result := result + format('%2.2d:%2.2d:%2.2d',[hour,min,sec]);
   if FWantMS then
-    result := result + Format('.%3.3d%3.3d',[ms,us])
+    result := result + format('.%3.3d%3.3d',[ms,us])
 end;
 
 (* * * Overloaded methods to use the component's internal timer data * * *)
 
-PROCEDURE TEpikTimer.Clear; begin Clear(BuiltInTimer) end;
-PROCEDURE TEpikTimer.Start; begin Start(BuiltInTimer) end;
+PROCEDURE TEpikTimer.clear; begin clear(BuiltInTimer) end;
+PROCEDURE TEpikTimer.start; begin start(BuiltInTimer) end;
 PROCEDURE TEpikTimer.Stop;  begin Stop(BuiltInTimer) end;
-FUNCTION  TEpikTimer.Elapsed: Extended; begin result:=Elapsed(BuiltInTimer) end;
-FUNCTION  TEpikTimer.ElapsedStr: String; begin result:=ElapsedStr(BuiltInTimer) end;
-FUNCTION  TEpikTimer.ElapsedDHMS: String; begin result:=ElapsedDHMS(BuiltInTimer) end;
+FUNCTION  TEpikTimer.Elapsed: extended; begin result:=Elapsed(BuiltInTimer) end;
+FUNCTION  TEpikTimer.ElapsedStr: string; begin result:=ElapsedStr(BuiltInTimer) end;
+FUNCTION  TEpikTimer.ElapsedDHMS: string; begin result:=ElapsedDHMS(BuiltInTimer) end;
 
 (* * * * * * * * * * Timebase calibration section  * * * * * * * * * *)
 
@@ -587,8 +587,8 @@ FUNCTION  TEpikTimer.ElapsedDHMS: String; begin result:=ElapsedDHMS(BuiltInTimer
 // timebase source. These have to be unique as the output of this measurement
 // is measured in "ticks"... which are different periods for each timebase.
 
-FUNCTION TEpikTimer.CalibrateCallOverheads(VAR TimeBase: TimebaseData): Integer;
-VAR i:Integer; St,Fin,Total:TickType;
+FUNCTION TEpikTimer.CalibrateCallOverheads(VAR TimeBase: TimebaseData): integer;
+VAR i:integer; St,Fin,Total:TickType;
 begin
   with Timebase, Timebase.CalibrationParms do
   begin
@@ -600,7 +600,7 @@ begin
       end;
     TicksOverhead:=Total div TicksIterations;
     Total:=0;
-    For I:=1 to SleepIterations do
+    for I:=1 to SleepIterations do
     begin
       St:=Ticks();
       if SystemSleep(0)<>0 then exit;
@@ -622,17 +622,17 @@ end;
 // time reference which, in this case, is nanosleep. There is a *lot* of jitter
 // in a nanosleep call so an attempt is made to compensate for some of it here.
 
-FUNCTION TEpikTimer.CalibrateTickFrequency(VAR TimeBase: TimebaseData): Integer;
+FUNCTION TEpikTimer.CalibrateTickFrequency(VAR TimeBase: TimebaseData): integer;
 VAR
-  i: Integer;
+  i: integer;
   Total, SS, SE: TickType;
-  ElapsedTicks, SampleTime: Extended;
+  ElapsedTicks, SampleTime: extended;
 begin
   with Timebase, Timebase.CalibrationParms do
   begin
     result:=1; //maintain unitialized default in case something goes wrong.
     Total:=0;
-    For i:=1 to FreqIterations do
+    for i:=1 to FreqIterations do
       begin
         SS:=Ticks();
         SystemSleep(FrequencyGateTimeMS);
@@ -643,7 +643,7 @@ begin
     ElapsedTicks:=Total div FreqIterations;
     SampleTime:=FrequencyGateTimeMS;
 
-    TicksFrequency:=Trunc( ElapsedTicks / (SampleTime / MilliPerSec));
+    TicksFrequency:=trunc( ElapsedTicks / (SampleTime / MilliPerSec));
 
     FreqCalibrated:=true;
   end;
@@ -676,7 +676,7 @@ end;
 
 FUNCTION TEpikTimer.GetTimebaseCorrelation: TickType;
 VAR
-  HWDiff, SysDiff, Corrected: Extended;
+  HWDiff, SysDiff, Corrected: extended;
 begin
   if HWtickSupportAvailable then
     begin
@@ -776,7 +776,7 @@ begin
   CorrelationMode := OnTimebaseSelect;
   // Default is the safe, cross-platform but less precise system timebase
   TimebaseSource  := SystemTimebase;
-  Clear(BuiltInTimer)
+  clear(BuiltInTimer)
 end;
 
 DESTRUCTOR TEpikTimer.destroy;

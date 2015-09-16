@@ -17,7 +17,7 @@ FUNCTION getEnvironment:T_arrayOfString;
   VAR i:longint;
   begin
     setLength(result,0);
-    For i:=1 to GetEnvironmentVariableCount do append(result,GetEnvironmentString(i));
+    for i:=1 to GetEnvironmentVariableCount do append(result,GetEnvironmentString(i));
   end;
 
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
@@ -26,21 +26,21 @@ FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
     FUNCTION deeper:ansistring;
       begin
         if (pos('?',path)>=0) or (pos('*',path)>=0)
-        then result:=ExtractFileDir(path)+DirectorySeparator+info.Name+DirectorySeparator
-        else result:=path+info.Name+DirectorySeparator;
+        then result:=ExtractFileDir(path)+DirectorySeparator+info.name+DirectorySeparator
+        else result:=path+info.name+DirectorySeparator;
       end;
 
     begin
       if (result='') and (findFirst(path+searchPattern, faAnyFile, info) = 0) then result:=path+info.name;
-      SysUtils.findClose(info);
+      sysutils.findClose(info);
 
       if findFirst(path+'*', faDirectory, info) = 0 then repeat
-        if ((info.attr and faDirectory) = faDirectory) and
-           (info.Name<>'.') and
-           (info.Name<>'..')
+        if ((info.Attr and faDirectory) = faDirectory) and
+           (info.name<>'.') and
+           (info.name<>'..')
         then recursePath(deeper);
       until (findNext(info)<>0) or (result<>'');
-      SysUtils.findClose(info);
+      sysutils.findClose(info);
     end;
 
   begin
@@ -53,12 +53,12 @@ PROCEDURE clearConsole;
   begin
     try
       tempProcess := TProcess.create(nil);
-      tempProcess.Options:=tempProcess.Options+[poWaitOnExit];
-      tempProcess.Executable := CMD_PATH.value;
-      tempProcess.Parameters.Add('/C');
-      tempProcess.Parameters.Add('cls');
-      tempProcess.Execute;
-      tempProcess.Free;
+      tempProcess.options:=tempProcess.options+[poWaitOnExit];
+      tempProcess.executable := CMD_PATH.value;
+      tempProcess.parameters.add('/C');
+      tempProcess.parameters.add('cls');
+      tempProcess.execute;
+      tempProcess.free;
     except
     end;
   end;
@@ -77,7 +77,7 @@ PROCEDURE getFileInfo(CONST filePath:string;
       isSystem,
       isHidden:boolean);
   VAR f:file of byte;
-      attr:word;
+      Attr:word;
       ft:longint;
   begin
     time:=-1;
@@ -88,7 +88,7 @@ PROCEDURE getFileInfo(CONST filePath:string;
     isReadOnly :=false;
     isSystem   :=false;
     isHidden   :=false;
-    if DirectoryExists(filePath) or FileExists(filePath) then begin
+    if DirectoryExists(filePath) or fileExists(filePath) then begin
       isExistent:=true;
       ft:=fileAge(filePath);
       if ft<>-1 then time:=FileDateToDateTime(ft);
@@ -100,7 +100,7 @@ PROCEDURE getFileInfo(CONST filePath:string;
       isReadOnly :=(Attr and readonly )<>0;
       isSystem   :=(Attr and sysfile  )<>0;
       isHidden   :=(Attr and hidden   )<>0;
-      if FileExists(filePath) then try
+      if fileExists(filePath) then try
         reset (F);
         size:=FileSize(F);
         close (F);

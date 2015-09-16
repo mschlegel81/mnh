@@ -32,7 +32,7 @@
     DESTRUCTOR destroy;
     FUNCTION  enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
-    PROCEDURE activeDeqeue(CONST calldepth:word; VAR recycler:T_tokenRecycler);
+    PROCEDURE activeDeqeue(CONST callDepth:word; VAR recycler:T_tokenRecycler);
   end;
 
 {$endif}
@@ -66,7 +66,7 @@ PROCEDURE ensurePoolThreads;
   begin
     if (poolThreadsRunning<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) then begin
       InterLockedIncrement(poolThreadsRunning);
-      BeginThread(@threadPoolThread);
+      beginThread(@threadPoolThread);
     end;
   end;
 
@@ -144,7 +144,7 @@ FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycl
   begin
     new(result,createTask(expr,x,recycler));
     if result^.state=fts_pending then begin
-      system.EnterCriticalsection(cs);
+      system.enterCriticalSection(cs);
       if first=nil then begin
         queuedCount:=1;
         first:=result;
@@ -155,13 +155,13 @@ FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycl
         last:=result;
       end;
       ensurePoolThreads;
-      system.LeaveCriticalsection(cs);
+      system.leaveCriticalSection(cs);
     end;
   end;
 
 FUNCTION  T_taskQueue.dequeue:P_futureTask;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     if first=nil then result:=nil
     else begin
       dec(queuedCount);
@@ -169,14 +169,14 @@ FUNCTION  T_taskQueue.dequeue:P_futureTask;
       first:=first^.next;
       result^.state:=fts_evaluating;
     end;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.activeDeqeue(CONST calldepth:word; VAR recycler:T_tokenRecycler);
+PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth:word; VAR recycler:T_tokenRecycler);
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(calldepth,recycler);
+    if task<>nil then task^.evaluate(callDepth,recycler);
   end;
 
 {$endif}

@@ -1,12 +1,12 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil;
+USES mnh_funcs, sysutils, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;
   begin
     writeln(' ?> ', question);
-    Write(' !> '); readln(result);
+    write(' !> '); readln(result);
   end;
 
 FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansistring;
@@ -33,7 +33,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
     for i:=0 to length(questionLines)-1 do writeln(' ?> ',questionLines[i]);
     for i := 0 to length(options)-1 do writeln('  [', i, '] ', options [i]);
     repeat
-      Write(' !> '); readln(result);
+      write(' !> '); readln(result);
       i := stringIdx(result);
       if i<0 then writeln('Invalid anwer. Please give one of the options above.');
     until i>=0;
@@ -46,11 +46,11 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
   begin
     result := nil;
     if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_string) then result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value)) else if (params<>nil) and (params^.size = 2) and (params^.value(0)^.literalType = lt_string) and (params^.value(1)^.literalType = lt_stringList) then begin
-      system.EnterCriticalsection(cs);
+      system.enterCriticalSection(cs);
       setLength(opt, P_listLiteral(params^.value(1))^.size);
       for i := 0 to length(opt)-1 do opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value, opt));
-      system.LeaveCriticalsection(cs);
+      system.leaveCriticalSection(cs);
     end
     else raiseNotApplicableError('ask', params, tokenLocation);
   end;
