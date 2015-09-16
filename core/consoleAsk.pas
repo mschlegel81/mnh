@@ -1,6 +1,6 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters, myGenerics;
+USES mnh_funcs, SysUtils, mnh_litVar, mnh_tokloc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;
@@ -26,10 +26,11 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
         if result=-1 then result:=j else result:=-2;
       end;
     end;
-
+  VAR questionLines:T_arrayOfString;
   begin
     if length(options) = 0 then exit('');
-    writeln(' ?> ', question);
+    questionLines:=formatTabs(split(question));
+    for i:=0 to length(questionLines)-1 do writeln(' ?> ',questionLines[i]);
     for i := 0 to length(options)-1 do writeln('  [', i, '] ', options [i]);
     repeat
       Write(' !> '); readln(result);
