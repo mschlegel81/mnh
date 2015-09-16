@@ -12,7 +12,6 @@
 @set guiOpt=-Fugui -l -dLCL -dLCLwin32 -MObjFPC -Scgh -Fucore -Fuutil -Ficore
 @set guiOpt32=-FuC:\lazarus32\components\synedit\units\i386-win32\win32     -FuC:\lazarus32\lcl\units\i386-win32\win32     -FuC:\lazarus32\lcl\units\i386-win32     -FuC:\lazarus32\components\lazutils\lib\i386-win32     -FuC:\lazarus32\packager\units\i386-win32     %guiOpt%
 @set guiOpt64=-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64\win32 -FuC:\lazarus64\lcl\units\x86_64-win64 -FuC:\lazarus64\components\lazutils\lib\x86_64-win64 -FuC:\lazarus64\packager\units\x86_64-win64 %guiOpt% -dversion64bit
-@set sevenZip="c:\Program Files\7-Zip\7z.exe"
 @For /f "tokens=1-3 delims=/. " %%a in ('date /t') do @(set mydate=%%c%%b%%a)
 @%delp%
 
@@ -67,13 +66,9 @@
 
 :pack
 @echo ---------------------------------- packaging ---------------------------------------
-@del versions\mnh5_%mydate%*.7z
-@%sevenZip% a -mx=9 versions\mnh5_%mydate%_64bit.7z @distro.list
-@move mnh.exe mnh64.exe
-@move bin32\mnh.exe mnh.exe
-@%sevenZip% a -mx=9 versions\mnh5_%mydate%_32bit.7z @distro.list
-@move mnh.exe bin32\mnh.exe
-@move mnh64.exe mnh.exe
+copy mnh.exe tmp.exe
+tmp.exe makeDistro.mnh
+del tmp.exe
 @echo -----------------------------------------------------------------------------------
 @goto loop
 
