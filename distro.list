@@ -1,11 +1,8 @@
 packages\*.mnh
 demos\*.mnh
 doc\html_template.txt
-npp_xml.mnh
+firstStart.mnh
 mnh.exe
-mnh_light.exe
-bin32\mnh.exe
-bin32\mnh_light.exe
 regTest\*.expected
 regTest\*.mnh
 regTest\regTestCases.dat
