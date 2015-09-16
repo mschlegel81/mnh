@@ -8,9 +8,10 @@ TYPE
 
   T_intrinsicFunctionDocumentation = object
     id, description: ansistring;
+    example:T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
-    FUNCTION toHtml: string;
+    FUNCTION toHtml: T_arrayOfString;
   end;
 
   P_userPackageDocumentation = ^T_userPackageDocumentation;
@@ -319,15 +320,17 @@ CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
     id:=funcName;
     description:=intrinsicRuleExplanationMap.get(id);
+    setLength(example,0);
   end;
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
     id:='';
     description:='';
+    setLength(example,0);
   end;
 
-FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
+FUNCTION T_intrinsicFunctionDocumentation.toHtml: T_arrayOfString;
   FUNCTION prettyHtml(s: ansistring): ansistring;
     VAR lines: T_arrayOfString;
       i: longint;
@@ -345,11 +348,16 @@ FUNCTION T_intrinsicFunctionDocumentation.toHtml: string;
         if i>0 then result:=result+'<br>';
         if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i])+'</code>'
         else result:=result+lines [i];
-        end;
+      end;
     end;
 
   begin
     result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
+    if length(example)>0 then begin
+      append(result,'<br>Examples:<code>');
+      append(result,example);
+      append(result,'</code>');
+    end;
   end;
 
 PROCEDURE makeHtmlFromTemplate;
@@ -374,13 +382,13 @@ PROCEDURE makeHtmlFromTemplate;
       setLength(packages, 0);
     end;
 
-  PROCEDURE documentBuiltIns(VAR outFile:text);
+  VAR builtInDoc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
+
+  PROCEDURE prepareBuiltInDocs;
     VAR ids: T_arrayOfString;
         i,j: longint;
         n: T_namespace;
         swapTmp: T_intrinsicFunctionDocumentation;
-
-        doc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
 
     FUNCTION namespace(CONST id:ansistring):T_namespace;
       VAR useId:ansistring;
@@ -389,39 +397,47 @@ PROCEDURE makeHtmlFromTemplate;
         if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
         for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
       end;
-
     begin
       //Prepare and sort data:-------------------------------------------------------------
-      for n:=Low(T_namespace) to high(T_namespace) do setLength(doc[n],0);
+      for n:=Low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
       ids:=intrinsicRuleExplanationMap.keySet;
       for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
         n:=namespace(ids[i]);
-        j:=length(doc[n]);
-        setLength(doc[n],j+1);
-        doc[n][j].create(ids[i]);
+        j:=length(builtInDoc[n]);
+        setLength(builtInDoc[n],j+1);
+        builtInDoc[n][j].create(ids[i]);
       end;
       setLength(ids,0);
 
       for n:=Low(T_namespace) to high(T_namespace) do
-      for i:=1 to length(doc[n])-1 do for j:=0 to i-1 do
-      if doc[n][i].id < doc[n][j].id then begin
-        swapTmp:=doc[n][i]; doc[n][i]:=doc[n][j]; doc[n][j]:=swapTmp;
+      for i:=1 to length(builtInDoc[n])-1 do for j:=0 to i-1 do
+      if builtInDoc[n][i].id < builtInDoc[n][j].id then begin
+        swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
       end;
       //-------------------------------------------------------------:Prepare and sort data
+    end;
+
+  PROCEDURE documentBuiltIns(VAR outFile:text);
+    VAR htmlDoc: T_arrayOfString;
+        i,j: longint;
+        n: T_namespace;
+    begin
       writeln(outFile, '<div align="right"><hr></div><br><div>');
-      for n:=Low(T_namespace) to high(T_namespace) do for i:=0 to length(doc[n])-1 do
-        writeln(outFile, '<a href="#', doc[n][i].id, '">', doc[n][i].id, '</a> &nbsp; ');
+      for n:=Low(T_namespace) to high(T_namespace) do for i:=0 to length(builtInDoc[n])-1 do
+        writeln(outFile, '<a href="#', builtInDoc[n][i].id, '">', builtInDoc[n][i].id, '</a> &nbsp; ');
       writeln(outFile, '</div><br><div align="right"><hr></div>');
       for n:=Low(T_namespace) to high(T_namespace) do
         writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
 
       for n:=Low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
-        for i:=0 to length(doc[n])-1 do begin
-          writeln(outFile, doc[n][i].toHtml);
-          doc[n][i].destroy;
+        for i:=0 to length(builtInDoc[n])-1 do begin
+          htmlDoc:=builtInDoc[n][i].toHtml;
+          for j:=0 to length(htmlDoc)-1 do writeln(outFile,htmlDoc[j]);
+          setLength(htmlDoc,0);
+          builtInDoc[n][i].destroy;
         end;
-        setLength(doc[n],0);
+        setLength(builtInDoc[n],0);
       end;
     end;
 
@@ -439,17 +455,24 @@ PROCEDURE makeHtmlFromTemplate;
       end;
       includes:array of T_include;
       context:record
-        mode:(none,beautifying,definingInclude);
+        mode:(none,beautifying,definingInclude,definingExample);
         include:T_include;
       end;
 
   FUNCTION contextEnds(CONST txt:ansistring) :boolean;
     CONST END_CONTEXT_CMD='<!--end-->';
+    VAR ns:T_namespace;
+        i:longint;
     begin
       if trim(txt)=END_CONTEXT_CMD then begin
-        if context.mode=definingInclude then begin
+        if context.mode = definingInclude then begin
           setLength(includes,length(includes)+1);
           includes[length(includes)-1]:=context.include;
+        end else if context.mode = definingExample then begin
+          for ns:=Low(T_namespace) to high(T_namespace) do
+          for i:=0 to length(builtInDoc[ns])-1 do
+            if   builtInDoc[ns][i].id      =context.include.includeTag
+            then builtInDoc[ns][i].example:=context.include.content;
         end;
         context.mode:=none;
         exit(true);
@@ -473,6 +496,7 @@ PROCEDURE makeHtmlFromTemplate;
 
     CONST FILE_SWITCH_PREFIX  ='<!--file ';
           START_INCLUDE_PREFIX='<!--begin ';
+          START_EXAMPLE_PREFIX='<!--example ';
           START_BEAUTIFY_CMD  ='<!--mnh-->';
           BUILTIN_DOC_CMD     ='<!--BUILTIN-->';
           PACKAGE_DOC_CMD     ='<!--USERPKG-->';
@@ -510,6 +534,12 @@ PROCEDURE makeHtmlFromTemplate;
         setLength(context.include.content,0);
         exit(true);
       end;
+      if startsWith(cmd,START_EXAMPLE_PREFIX) then begin
+        context.mode:=definingExample;
+        context.include.includeTag:=cmdParam;
+        setLength(context.include.content,0);
+        exit(true);
+      end;
       for i:=0 to length(includes)-1 do if includes[i].includeTag=cmd then begin
         with outFile do if isOpen then for j:=0 to length(includes[i].content)-1 do writeln(handle,includes[i].content[j]);
         exit(true);
@@ -518,6 +548,7 @@ PROCEDURE makeHtmlFromTemplate;
     end;
 
   begin
+    prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
@@ -529,7 +560,8 @@ PROCEDURE makeHtmlFromTemplate;
       case context.mode of
         none:            if not(handleCommand(txt)) and outFile.isOpen then writeln(outFile.handle,txt);
         beautifying:     if not(contextEnds(txt))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(txt));
-        definingInclude: if not(contextEnds(txt))   and outFile.isOpen then append(context.include.content,txt);
+        definingInclude: if not(contextEnds(txt))   then append(context.include.content,txt);
+        definingExample: if not(contextEnds(txt))   then append(context.include.content,toHtmlCode(txt))
       end;
     end;
     close(templateFile);

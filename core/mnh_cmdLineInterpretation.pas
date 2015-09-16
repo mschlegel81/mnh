@@ -15,6 +15,7 @@ VAR fileOrCommandToInterpret:ansistring='';
 PROCEDURE parseCmdLine;
   PROCEDURE makeAndShowDoc;
     begin
+      consoleOutAdapter.echoOn:=false;
       findAndDocumentAllPackages;
       OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
     end;

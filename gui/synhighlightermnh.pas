@@ -163,10 +163,7 @@ PROCEDURE TSynMnhSyn.next;
   VAR
     localId: shortString;
     i: longint;
-    runStart:longint;
   begin
-    runStart:=run;
-
     isMarked:=false;
     fTokenId := tkDefault;
     fTokenPos := Run;

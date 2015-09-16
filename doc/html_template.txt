@@ -132,6 +132,78 @@ To enable <i>batch mode</i>, use the special (pseuco-)comment <code>//!BATCH ON<
 <div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
 
 <table border="0" align="center">
+<!--example mnh.arity-->
+ in> arity({3});
+out> 0
+ in> arity({sin($x)/$x});
+out> 1
+ in> arity({sin($x)/$y});
+out> 2
+     //For variadic functions only the non-optional parameters are counted:
+ in> arity({printf('%X%%X%',$a,...)});
+out> 1
+<!--end-->
+<!--example mnh.expression-->
+ in> expression("$x-$x^2+$x^3")
+out> {($x-$x^2+$x^3)}
+ in> expression("")
+!! >Ev.Error:  :1,1 The parsed expression appears to be empty
+<!--end-->
+<!--example mnh.not-->
+ in> not(true)
+out> false
+ in> not([true, false, true])
+out> [false,true,false]
+ in> not({$x})
+out> {not($x)}
+<!--end-->
+<!--example mnh.parameterNames-->
+ in> parameterNames({3})
+out> []
+ in> parameterNames({sin($x)/$x})
+out> ["$x"]
+ in> parameterNames({sin($x)/$y})
+out> ["$x","$y"]
+     //For variadic functions only the non-optional parameters are counted:     
+ in> parameterNames({printf("%X%%X%", $a, ...)})
+out> ["$a"]
+<!--end-->
+<!--example mnh.ord-->
+ in> ord(3)
+out> 3
+ in> ord(true)
+out> 1
+ in> ord(false)
+out> 0
+ in> ord("A")
+out> 65
+ in> ord("abc")
+out> -1
+ in> ord(2.1)
+!! >Ev.Error:  :6,1 ord can only be applied to booleans, ints and strings
+<!--end-->
+<!--example mnh.softCast-->
+ in> softCast("A")
+out> "A"
+ in> softCast('"B"')
+out> "B"
+ in> softCast(3)
+out> 3
+ in> softCast([1, "2", "true", "'TEXT'", "1.5", "2,6"])
+out> [1,2,true,"TEXT",1.5,"2,6"]
+<!--end-->
+<!--example mnh.splitFileName-->
+ in> splitFileName("../test.txt")
+out> [["input","../test.txt"],["expanded","D:\\dev\\test.txt"],["relative","../test.txt"],["directory",".."],["filename","test.txt"],["extension",".txt"]]
+<!--end-->
+<!--example mnh.string-->
+ in> string('a')
+out> "a"
+ in> string(234)
+out> "234"
+ in> string([1, 2.6, "a", true, {$x}])
+out> '[1,2.6,"a",true,{$x}]'
+<!--end-->
 <!--BUILTIN-->
 </table>
 <!--commonFoot-->
