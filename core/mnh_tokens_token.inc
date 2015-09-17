@@ -413,22 +413,23 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
       next:T_token;
       lines:T_arrayOfString;
       blob:record
-        active:boolean;
+        level :longint; //0 for "There is no blob"
         text  :ansistring;
         start :T_tokenLocation;
       end;
 
   begin
-    blob.active:=false;
+    blob.level:=0;
     lines:=provider^.getLines;
     setLength(result,0);
     location.fileName:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;
-      if blob.active then begin
-        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_END then begin
-          blob.active:=false;
+      if blob.level>0 then begin
+        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_END then dec(blob.level);
+        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_BEGIN then inc(blob.level);
+        if blob.level=0 then begin
           next.create;
           next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
           setLength(result,length(result)+1);
@@ -442,7 +443,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
         next:=firstToken(lines[lineIndex],location,inPackage,true);
         if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
           if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
-            active:=true;
+            level:=1;
             start:=location;
             text:=C_carriageReturnChar;
             lines[lineIndex]:='';
