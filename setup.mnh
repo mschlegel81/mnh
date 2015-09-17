@@ -66,7 +66,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <WordsStyle name="DELIMITERS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />',
   '        </Styles>',
   '    </UserLang>'];
-  
+
     fileExists(notePadConfigFolder&"/userDefineLang.xml")
     ? begin
         local ignoreBlock:=false;
@@ -91,9 +91,9 @@ main('run')->begin
   writeNppUserLang(appdataFolder&"/Notepad++");
   writeNppUserLang(appdataFolder&"/Roaming/Notepad++");
   writeNppUserLang(appdataFolder&"/Local/Notepad++");
-  
+
   writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat')%'expanded'&'", "", "", "runas", 1']);
-  
+
   writeFile('install.bat',replace(
 //!BLOB START
 @echo off
@@ -116,7 +116,7 @@ ftype mnh.script="#" %%1 %%*
   execPipeless('cmd',['/c','install.bat']);
   deleteFile('install.bat');
   deleteFile('getadmin.vbs');
-  deleteFile(myPath);  
+  deleteFile(myPath);
 end;
 
 main->begin
@@ -125,9 +125,9 @@ main->begin
       '  - MNH Highlighting for Notepad++\n'&
       '  - file associations\n'&
       '  - the html documentation\n'&
-      'and deletes itself afterwards.\n'& 
+      'and deletes itself afterwards.\n'&
       'Do you want to run it?',['Yes','No','Maybe later',"Later but don't ask me again"]);
-  reply='Yes' ? main('run') : 
+  reply='Yes' ? main('run') :
   reply='No' ? deleteFile(myPath) :
   reply="Later but don't ask me again" ? begin
     myPath='setup.mnh' ? begin

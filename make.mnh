@@ -3,6 +3,7 @@ USE fileUtil, regTest, checkstyle;
 memoized hashChanged->begin
   local oldFile:=fileContents('core/code_hash.inc');
   deleteFile('core/code_hash.inc');
+  checkstyle.main('fix');
   local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
   local newFile:=format("writeln('"&codeHash&"');");
   writeFile('core/code_hash.inc',newFile);
@@ -105,7 +106,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <WordsStyle name="DELIMITERS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />',
   '        </Styles>',
   '    </UserLang>'];
-  
+
     fileExists(notePadConfigFolder&"/userDefineLang.xml")
     ? begin
         local ignoreBlock:=false;
@@ -130,9 +131,9 @@ main('run')->begin
   writeNppUserLang(appdataFolder&"/Notepad++");
   writeNppUserLang(appdataFolder&"/Roaming/Notepad++");
   writeNppUserLang(appdataFolder&"/Local/Notepad++");
-  
+
   writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat')%'expanded'&'", "", "", "runas", 1']);
-  
+
   writeFile('install.bat',replace(
 //!BLOB START
 @echo off
@@ -155,7 +156,7 @@ ftype mnh.script="#" %%1 %%*
   execPipeless('cmd',['/c','install.bat']);
   deleteFile('install.bat');
   deleteFile('getadmin.vbs');
-  deleteFile(myPath);  
+  deleteFile(myPath);
 end;
 
 main->begin
@@ -164,9 +165,9 @@ main->begin
       '  - MNH Highlighting for Notepad++\n'&
       '  - file associations\n'&
       '  - the html documentation\n'&
-      'and deletes itself afterwards.\n'& 
+      'and deletes itself afterwards.\n'&
       'Do you want to run it?',['Yes','No','Maybe later',"Later but don't ask me again"]);
-  reply='Yes' ? main('run') : 
+  reply='Yes' ? main('run') :
   reply='No' ? deleteFile(myPath) :
   reply="Later but don't ask me again" ? begin
     myPath='setup.mnh' ? begin
@@ -232,13 +233,13 @@ each(f,allFolders('.'),
 each(file,
      files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
-  
+
 //*First clean then make distro
 main('clean','distro')->main('clean')|main('distro');
 
 //*Tests all files
 main('test')->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],
-  begin 
-    ensureBin(bin64,full,debug); 
-    regTest.main(binName(bin64,full,debug)); 
+  begin
+    ensureBin(bin64,full,debug);
+    regTest.main(binName(bin64,full,debug));
   end)));
