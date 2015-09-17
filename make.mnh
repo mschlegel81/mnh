@@ -78,10 +78,9 @@ each(f,allFolders('.'),
          deleteDir(f);
        end
      : void)|
-each(file,files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png'),
-  begin
-    print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!');
-  end);
+each(file,
+     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css'),
+     print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   
 //*First clean then make distro
 main('clean','distro')->main('clean')|main('distro');

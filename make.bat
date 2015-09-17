@@ -3,5 +3,7 @@
   C:\lazarus64\fpc\2.6.4\bin\x86_64-win64\delp . core util test consoles bin32 gui\lib\i386-win32 gui\lib\x86_64-win64 gui)
 move mnh_light.exe mnh_temp.exe
 mnh_temp.exe make.mnh %*
-@if not exist mnh_light.exe (move mnh_temp.exe mnh_light.exe) else (del mnh_temp.exe)
-@if "%1"=="clean" (del mnh_light.exe)
+@if not exist mnh_light.exe (
+  @if "%1"=="clean" (del mnh_temp.exe) else (move mnh_temp.exe mnh_light.exe)
+) else (del mnh_temp.exe)
+
