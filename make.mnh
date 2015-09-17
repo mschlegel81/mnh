@@ -1,0 +1,87 @@
+USE fileUtil, regTest, checkstyle;
+
+memoized ensureHash->begin
+  deleteFile('core/code_hash.inc');
+  local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
+  writeFile('core/code_hash.inc',format("writeln('"&codeHash&"');"));
+end;
+
+private allFolders(base)->flatten(base,each(subFolder,folders(base&'/*'),allFolders(subFolder)));
+
+private binName(bin64,full,debug)->(bin64 ? '.\\' : 'bin32\\') & 'mnh' & (full ? '' : '_light') & (debug ? '_debug' : '') & '.exe';
+
+private build(bin64,full,debug)->begin
+  ensureHash;
+  local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
+                        : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
+  local parameters:=
+       (full ? 'gui\\mnh_gui.lpr' : 'consoles\\mnh_console.pas')|
+       ('-o'&binName(bin64,full,debug))|
+       (debug ? ['-g','-gl','-Si','-ddebugMode']
+              : ['-O3','-CX','-XX','-Si']) |
+       ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore'] |
+       (bin64 ? ['-FuC:\\lazarus64\\components\\synedit\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64','-FuC:\\lazarus64\\components\\lazutils\\lib\\x86_64-win64','-FuC:\\lazarus64\\packager\\units\\x86_64-win64','-dversion64bit']
+              : ['-FuC:\\lazarus32\\components\\synedit\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32'  ,'-FuC:\\lazarus32\\components\\lazutils\\lib\\i386-win32'  ,'-FuC:\\lazarus32\\packager\\units\\i386-win32']);
+  execPipeless(compiler,parameters);
+  execPipeless('C:\\lazarus64\\fpc\\2.6.4\\bin\\x86_64-win64\\delp',['.','core','util','test','consoles','bin32','gui\\lib\\i386-win32','gui\\lib\\x86_64-win64','gui']);
+  each(file,
+       files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
+       print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  void;
+end;
+
+private ensureBin(bin64,full,debug)->fileExists(binName(bin64,full,debug)) ? void : build(bin64,full,debug);
+
+private compress(suffix)->regTest.main('mnh.exe') and regTest.main('mnh_light.exe') ? begin
+  writeFile('distro.list',
+//!BLOB START
+packages\*.mnh
+demos\*.mnh
+doc\html_template.txt
+setup.mnh
+mnh.exe
+mnh_light.exe
+regTest\*.expected
+regTest\*.mnh
+regTest\regTestCases.dat
+regTest\t.bat
+doTests.bat
+//!BLOB END
+  );
+  execPipeless("c:/Program Files/7-Zip/7z.exe",['a','-mx=9',format('versions/mnh5_%yyyymmdd%_%X%.7z',systime,suffix),'@distro.list']);
+  deleteFile('distro.list');
+end : ask('Regression test failed! Distro will not be created!');
+
+private movePairs:=[['mnh.exe','mnh64.exe'],
+                    ['mnh_light.exe','mnh64_light.exe'],
+                    ['bin32/mnh.exe','mnh.exe'],
+                    ['bin32/mnh_light.exe','mnh_light.exe']];
+
+//*Make distro 7z - including build and regTest if needed
+main('distro')->begin
+  each(bin64,[false,true],each(full,[false,true],build(bin64,full,false)));
+  compress('64bit');
+  each(pair,movePairs,moveFile@pair);
+  compress('32bit');
+  each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+end;
+
+//*Build - ignoring potentially existing executables
+main->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],build(bin64,full,debug))));
+
+//*Deletes all nppBackup folders, temporary object files, executables and png-files
+main('clean')->
+each(f,allFolders('.'),
+     splitFileName(f)%'filename'="nppBackup"
+     ? begin
+         print('Deleting ',f);
+         deleteDir(f);
+       end
+     : void)|
+each(file,files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png'),
+  begin
+    print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!');
+  end);
+  
+//*First clean then make distro
+main('clean','distro')->main('clean')|main('distro');
