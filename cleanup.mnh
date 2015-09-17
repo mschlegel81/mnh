@@ -1,0 +1,15 @@
+allFolders(base)->flatten(base,each(subFolder,folders(base&'/*'),allFolders(subFolder)));
+
+//*Deletes all nppBackup folders
+main->
+each(f,allFolders('.'),
+     splitFileName(f)%'filename'="nppBackup"
+     ? begin
+         print('Deleting ',f);
+         deleteDir(f);
+       end
+     : void)|
+each(file,files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png'),
+  begin
+    print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!');
+  end);
