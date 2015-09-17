@@ -231,7 +231,7 @@ each(f,allFolders('.'),
        end
      : void)|
 each(file,
-     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css'),
+     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css')|files('doTests.bat')|files('setup.mnh'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
 //*First clean then make distro
