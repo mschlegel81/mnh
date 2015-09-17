@@ -449,33 +449,32 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
-  registerRule(MATH_NAMESPACE,'sqrt'          ,@sqrt_imp      ,'sqrt(n);#Returns the square root of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sin'           ,@sin_imp       ,'sin(n);#Returns the sine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arcsin'        ,@arcsin_imp    ,'arcsin(n);#Returns the arcsine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'cos'           ,@cos_imp       ,'cos(n);#Returns the cosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arccos'        ,@arccos_imp    ,'arccos(n);#Returns the arccosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'tan'           ,@tan_imp       ,'tan(n);#Returns the tangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arctan'        ,@arctan_imp    ,'tan(n);#Returns the arctangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'exp'           ,@exp_imp       ,'exp(n);#Returns the exponential of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ln'            ,@ln_imp        ,'ln(n);#Returns the natural logarithm of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqrt',@sqrt_imp,'sqrt(n);#Returns the square root of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sin',@sin_imp,'sin(n);#Returns the sine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,'arcsin(n);#Returns the arcsine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'cos',@cos_imp,'cos(n);#Returns the cosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,'arccos(n);#Returns the arccosine of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'tan',@tan_imp,'tan(n);#Returns the tangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,'arctan(n);#Returns the arctangent of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'exp',@exp_imp,'exp(n);#Returns the exponential of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ln',@ln_imp,'ln(n);#Returns the natural logarithm of numeric or expression parameter n');
   //Unary Boolean -> boolean
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not'           ,@not_imp       ,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
   //Unary Numeric -> same (i.e. I -> I, R -> R)
-  registerRule(MATH_NAMESPACE,'abs'           ,@abs_imp       ,'abs(n);#Returns the absolute value of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sqr'           ,@sqr_imp       ,'sqr(n);#Returns the square of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'abs',@abs_imp,'abs(n);#Returns the absolute value of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,'sqr(n);#Returns the square of numeric or expression parameter n');
   //Unary Numeric -> Integer
-  registerRule(MATH_NAMESPACE,'sign'          ,@sign_imp      ,'sign(n);#Returns the sign of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ceil'          ,@ceil_imp      ,'ceil(x);#Returns the smallest integer >=x#ceil(x,k);#Does the same but with k digits precision');
-  registerRule(MATH_NAMESPACE,'floor'         ,@floor_imp     ,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'sign',@sign_imp,'sign(n);#Returns the sign of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'ceil',@ceil_imp,'ceil(x);#Returns the smallest integer >=x#ceil(x,k);#Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
   //round might be binary...
-  registerRule(MATH_NAMESPACE,'round'         ,@round_imp     ,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
-
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time'          ,@time_imp      ,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-                                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep'         ,@sleep_imp     ,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression'    ,@expression_imp,'expression(S:string);#Returns an expression parsed from S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp     ,'arity(e:expression);#Returns the arity of expression e');
+  registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+                                                         'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mainParams'    ,@mainParams_imp,'mainParams;#Returns the parameters passed to the program');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mainParams',@mainParams_imp,'mainParams;#Returns the parameters passed to the program');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
 {$endif}

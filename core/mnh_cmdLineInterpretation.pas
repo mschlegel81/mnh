@@ -58,7 +58,7 @@ PROCEDURE parseCmdLine;
   PROCEDURE tryToRunSetup;
     CONST setupFile='setup.mnh';
     begin
-      if not(FileExists(setupFile)) then exit;
+      if not(fileExists(setupFile)) then exit;
       consoleOutAdapter.echoOn:=false;
       mainPackageProvider.setPath(setupFile);
       setLength(parameters,0);
