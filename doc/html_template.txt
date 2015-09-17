@@ -156,6 +156,8 @@ out> false
 out> [false,true,false]
  in> not({$x})
 out> {not($x)}
+ in> not(7)
+out> -8
 <!--end-->
 <!--example mnh.parameterNames-->
  in> parameterNames({3})
@@ -203,6 +205,117 @@ out> "a"
 out> "234"
  in> string([1, 2.6, "a", true, {$x}])
 out> '[1,2.6,"a",true,{$x}]'
+<!--end-->
+<!--example math.abs-->
+ in> abs(-0.92)
+out> 0.92
+ in> abs(3)
+out> 3
+ in> abs({1+$x})
+out> {abs(1+$x)}
+<!--end-->
+<!--example math.arccos-->
+ in> arccos(-0.92)
+out> 2.73887681200913
+     //Out of function domain
+ in> arccos(3)
+out> Nan
+ in> arccos({1+$x})
+out> {arccos(1+$x)}
+<!--end-->
+<!--example math.arcsin-->
+ in> arcsin(-0.92)
+out> -1.16808048521424
+     //Out of function domain
+ in> arcsin(3)
+out> Nan
+ in> arcsin({1+$x})
+out> {arcsin(1+$x)}
+<!--end-->
+<!--example math.tan-->
+ in> tan(-0.92)
+out> -1.31326369932025
+ in> tan(3)
+out> -0.142546543074278
+ in> tan({1+$x})
+out> {tan(1+$x)}
+ in> tan(2*arctan(1))
+out> 1.63317787283838E16
+<!--end-->
+<!--example math.arctan-->
+ in> arctan(-0.92)
+out> -0.74375558429886
+ in> pi:=4*arctan(1)
+ in> pi
+out> 3.14159265358979
+ in> arctan({$x})
+out> {arctan($x)}
+<!--example math.argMax-->
+ in> argMax(sin([0..10]))
+out> 8
+ in> argMax([1, 3, 3, 0, 2])
+out> 1
+<!--example math.argMin-->
+ in> argMin(sin([0..10]))
+out> 5
+ in> argMin([1, 3, 3, 0, 2])
+out> 3
+<!--example math.ceil-->
+ in> ceil(20/3)
+out> 7
+ in> ceil([0..3]/3)
+out> [0,1,1,1]
+ in> ceil([0..3]/3, 2)
+out> [0.0,0.34,0.67,1.0]
+ in> ceil(20/3, [-1..3])
+out> [10.0,7.0,6.7,6.67,6.667]
+<!--example math.floor-->
+ in> floor(20/3)
+out> 6
+ in> floor([0..3]/3)
+out> [0,0,0,1]
+ in> floor([0..3]/3, 2)
+out> [0.0,0.33,0.66,1.0]
+ in> floor(20/3, [-1..3])
+out> [0.0,6.0,6.6,6.66,6.666]
+<!--example math.round-->
+ in> round(20/3)
+out> 7
+     //Numbers with ambiguous rounding result are rounded towards even numbers
+ in> round([0.5, 1.5, 2.5, 3.5])
+out> [0,2,2,4]
+ in> round([0..3]/3, 2)
+out> [0.0,0.33,0.67,1.0]
+ in> round(20/3, [-1..3])
+out> [10.0,7.0,6.7,6.67,6.667]
+<!--example math.isInRange-->
+ in> isInRange(7, 0, 10)
+out> true
+     //You can use infinite ranges
+ in> isInRange(7, 0.3,  Inf)
+out> true
+     //The first argument can be a list
+ in> isInRange([0..9]/10, 0.3, 0.57)
+out> [false,false,false,true,true,true,false,false,false,false]
+<!--example math.isInfinite-->
+ in> isInfinite(Nan)
+out> false
+ in> isInfinite(+Inf)
+out> true
+ in> isInfinite(-Inf)
+out> true
+ in> isInfinite([-3.4344, Nan, +Inf])
+out> [false,false,true]
+<!--end-->
+<!--example math.isNan-->
+ in> isNan(Nan)
+out> true
+ in> isNan(+Inf)
+out> false
+ in> isNan(-Inf)
+out> false
+ in> isNan([-3.4344, Nan, +Inf])
+out> [false,true,false]
 <!--end-->
 <!--BUILTIN-->
 </table>
