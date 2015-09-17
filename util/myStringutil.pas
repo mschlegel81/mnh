@@ -4,8 +4,8 @@ INTERFACE
 USES strutils, sysutils,  myGenerics;
 
 CONST
-  C_lineBreakChar = chr(13);
-  C_carriageReturnChar = chr(10);
+  C_lineBreakChar = chr(10);
+  C_carriageReturnChar = chr(13);
   C_tabChar = chr(9);
   BLANK_TEXT = '';
 
