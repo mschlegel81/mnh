@@ -1,34 +1,32 @@
-See http://rosettacode.org/wiki/Sierpinski_triangle
-                                 #
-                                # #
-                               #   #
-                              # # # #
-                             #       #
-                            # #     # #
-                           #   #   #   #
-                          # # # # # # # #
-                         #               #
-                        # #             # #
-                       #   #           #   #
-                      # # # #         # # # #
-                     #       #       #       #
-                    # #     # #     # #     # #
-                   #   #   #   #   #   #   #   #
-                  # # # # # # # # # # # # # # # #
-                 #                               #
-                # #                             # #
-               #   #                           #   #
-              # # # #                         # # # #
-             #       #                       #       #
-            # #     # #                     # #     # #
-           #   #   #   #                   #   #   #   #
-          # # # # # # # #                 # # # # # # # #
-         #               #               #               #
-        # #             # #             # #             # #
-       #   #           #   #           #   #           #   #
-      # # # #         # # # #         # # # #         # # # #
-     #       #       #       #       #       #       #       #
-    # #     # #     # #     # #     # #     # #     # #     # #
-   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-Please open and execute in GUI-flavor of MNH5 for the graphical version
+                               A
+                              A A
+                             A   A
+                            A A A A
+                           A       A
+                          A A     A A
+                         A   A   A   A
+                        A A A A A A A A
+                       A               A
+                      A A             A A
+                     A   A           A   A
+                    A A A A         A A A A
+                   A       A       A       A
+                  A A     A A     A A     A A
+                 A   A   A   A   A   A   A   A
+                A A A A A A A A A A A A A A A A
+               A                               A
+              A A                             A A
+             A   A                           A   A
+            A A A A                         A A A A
+           A       A                       A       A
+          A A     A A                     A A     A A
+         A   A   A   A                   A   A   A   A
+        A A A A A A A A                 A A A A A A A A
+       A               A               A               A
+      A A             A A             A A             A A
+     A   A           A   A           A   A           A   A
+    A A A A         A A A A         A A A A         A A A A
+   A       A       A       A       A       A       A       A
+  A A     A A     A A     A A     A A     A A     A A     A A
+ A   A   A   A   A   A   A   A   A   A   A   A   A   A   A   A
+A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
