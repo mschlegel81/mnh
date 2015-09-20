@@ -3,11 +3,17 @@ USE fileUtil, regTest, checkstyle;
 memoized hashChanged->begin
   local oldFile:=fileContents('core/code_hash.inc');
   deleteFile('core/code_hash.inc');
-  checkstyle.main('fix');
   local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
   local newFile:=format("writeln('"&codeHash&"');");
   writeFile('core/code_hash.inc',newFile);
-  not(oldFile==newFile);
+  oldFile==newFile ? false : begin
+    checkstyle.main('fix');
+    deleteFile('core/code_hash.inc');
+    codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
+    newFile:=format("writeln('"&codeHash&"');");
+    writeFile('core/code_hash.inc',newFile);
+    true;
+  end;
 end;
 
 private allFolders(base)->flatten(base,each(subFolder,folders(base&'/*'),allFolders(subFolder)));
@@ -38,7 +44,6 @@ private ensureBin(bin64,full,debug)->fileExists(binName(bin64,full,debug)) ? voi
 private compress(suffix)->regTest.main('mnh.exe') and regTest.main('mnh_light.exe') ? begin
   fileExists('setup.mnh') ? void : writeFile('setup.mnh',
 //!BLOB START
-
 writeNppUserLang(notePadConfigFolder)->
   folderExists(notePadConfigFolder) ? begin
     local xmlOpeningTag:='<NotepadPlus>';
@@ -123,34 +128,18 @@ writeNppUserLang(notePadConfigFolder)->
     true;
   end : false;
 
-
 main('run')->begin
   execAsync('mnh',['-doc']);
-
   local appdataFolder:=head(each(e,getEnv,split(upper(e),'=')%0="APPDATA" ? split(e,'=')%1 : void));
   writeNppUserLang(appdataFolder&"/Notepad++");
   writeNppUserLang(appdataFolder&"/Roaming/Notepad++");
   writeNppUserLang(appdataFolder&"/Local/Notepad++");
-
   writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat')%'expanded'&'", "", "", "runas", 1']);
-
   writeFile('install.bat',replace(
 //!BLOB START
-@echo off
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-if '%errorlevel%' NEQ '0' (
-    echo Requesting administrative privileges...
-    goto UACPrompt
-) else ( goto gotAdmin )
-:UACPrompt
-    "getadmin.vbs"
-    exit /B
-:gotAdmin
-    if exist "getadmin.vbs" ( del "getadmin.vbs" )
-    pushd "%CD%"
-    CD /D "%~dp0"
-assoc .mnh=mnh.script
-ftype mnh.script="#" %%1 %%*
+@assoc .mnh=mnh.script
+@ftype mnh.script="#" %%1 %%*
+@if "%errorlevel%" NEQ "0" getadmin.vbs
 //!BLOB END
   ,'#',executor));
   execPipeless('cmd',['/c','install.bat']);
