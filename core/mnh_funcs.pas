@@ -575,6 +575,19 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else raiseNotApplicableError('folders',params,tokenLocation);
   end;
 
+FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR resultList:TStringList;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      resultList:=FindAllDirectories(P_stringLiteral(params^.value(0))^.value);
+      result:=newListLiteral;
+      for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(resultList[i]);
+      resultList.free;
+    end else raiseNotApplicableError('allFolders',params,tokenLocation);
+  end;
+
 FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
@@ -1500,6 +1513,7 @@ INITIALIZATION
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(searchPattern:string);#Returns a list of all folders below a given root directory');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
