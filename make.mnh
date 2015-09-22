@@ -24,7 +24,7 @@ private build(bin64,full,debug)->hashChanged or not(fileExists(binName(bin64,ful
   local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
                         : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
   local parameters:=
-       (full ? 'gui\\mnh_gui.lpr' : 'consoles\\mnh_console.pas')|
+       (full ? ['gui\\mnh_gui.lpr','-dfullVersion'] : 'consoles\\mnh_console.pas')|
        ('-o'&binName(bin64,full,debug))|
        (debug ? ['-g','-gl','-Si','-ddebugMode']
               : ['-O3','-CX','-XX','-Si']) |
