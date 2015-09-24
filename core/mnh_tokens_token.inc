@@ -594,7 +594,8 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
   end;
 
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
-  VAR stack:array of P_token;
+  VAR stateHistory:T_rolloverState;
+      stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
       tt:T_tokenType;
@@ -1162,29 +1163,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       else stack_push_push;
     end;
 
-  PROCEDURE writeInterpreterState;
-    VAR i,j:longint;
-        t:P_token;
-    PROCEDURE psx(CONST s:string; CONST loc:T_tokenLocation);
-      begin raiseError(elX_stateInfo,s,loc); end;
-
+  FUNCTION stateToString:ansistring;
+    VAR i:longint;
+        idLike:boolean=false;
     begin
-      if length(stack)>8 then begin
-        j:=length(stack)-8;
-        psx('stack: ...',C_nilTokenLocation);
-      end else begin
-        j:=0;
-        if length(stack)=0 then psx('stack: <empty>',C_nilTokenLocation);
-      end;
-      for i:=j to length(stack)-1 do psx('stack: '+getEnumName(TypeInfo(T_tokenType),ord(stack[i]^.tokType)),stack[i]^.location);
-      t:=first;
-      i:=0;
-      while (t<>nil) and (i<8) do begin
-        psx('expr.: '+getEnumName(TypeInfo(T_tokenType),ord(t^.tokType)),t^.location);
-        t:=t^.next;
-        inc(i);
-      end;
-      if t<>nil then psx('expr.: ...',C_nilTokenLocation);
+      result:='';
+      for i:=0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
+      result:=result+tokensToString(first);
     end;
 
 {$MACRO ON}
@@ -1208,11 +1193,13 @@ end else begin
 end}
 
   begin
+    if wantStateHistory then stateHistory.create;
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
+      if wantStateHistory then stateHistory.addLine(stateToString);
       //writeln(tokensToString(first));
       //writeln('                                           ',cTokType[-1],' ] ',cTokType[0],' | ',cTokType[1]);
       case cTokType[0] of
@@ -1438,8 +1425,12 @@ end}
       end;
     end;
     {$endif}
-    if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
-    or (callDepth=0) and (first<>nil) and (first^.next<>nil) then writeInterpreterState;
+    if wantStateHistory then begin
+      if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
+      or (callDepth=0) and (first<>nil) and (first^.next<>nil) then
+        stateHistory.raiseStateMessage;
+      stateHistory.destroy;
+    end;
 
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)

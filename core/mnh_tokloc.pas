@@ -26,7 +26,8 @@ FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
 
 OPERATOR := (x: T_tokenLocation): ansistring;
   begin
-    result:=x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
+    if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
+    result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
   end;
 
 

@@ -16,6 +16,19 @@ TYPE
     location: T_tokenLocation;
   end;
 
+  { T_rolloverState }
+
+  T_rolloverState = object
+    txt:array[0..31] of ansistring;
+    offset:byte;
+
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE clear;
+    PROCEDURE addLine(CONST lineText:ansistring);
+    PROCEDURE raiseStateMessage;
+  end;
+
   P_abstractOutAdapter = ^T_abstractOutAdapter;
 
   { T_abstractOutAdapter }
@@ -69,6 +82,7 @@ VAR
   outAdapter:P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
   maxErrorLevel: T_messageTypeOrErrorLevel;
+  wantStateHistory: boolean=false;
 
 PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -113,19 +127,6 @@ FUNCTION errorLevel: T_messageTypeOrErrorLevel;
     if hasHaltMessage then result:=el5_systemError else result := maxErrorLevel;
   end;
 
-//PROCEDURE plainConsoleOut(CONST s: T_arrayOfString);
-//  VAR i:longint;
-//  begin
-//    for i:=0 to length(s)-1 do writeln(s[i]);
-//  end;
-
-//PROCEDURE plainStdErrOut(CONST error: T_storedError);
-//  begin
-//    with error do
-//      writeln(stdErr, C_errorLevelTxt[errorLevel], errorMessage, ' @',
-//        ansistring(errorLocation));
-//  end;
-
 PROCEDURE haltEvaluation;
   begin
     raiseError(el5_systemError, HALT_MESSAGE, C_nilTokenLocation);
@@ -150,10 +151,47 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
                                 else halt(systemErrorlevel.value);
   end;
 
+{ T_rolloverState }
+
+CONSTRUCTOR T_rolloverState.create;
+  begin
+    clear;
+  end;
+
+DESTRUCTOR T_rolloverState.destroy;
+  begin
+    clear;
+  end;
+
+PROCEDURE T_rolloverState.clear;
+  VAR i:longint;
+  begin
+    for i:=0 to length(txt)-1 do txt[i]:='';
+    offset:=0;
+  end;
+
+PROCEDURE T_rolloverState.addLine(CONST lineText: ansistring);
+  begin
+    if (lineText='') or (lineText=txt[(offset+32) and 31]) then exit;
+    txt[offset]:=lineText;
+    offset:=(offset+1) mod length(txt);
+  end;
+
+PROCEDURE T_rolloverState.raiseStateMessage;
+  VAR i,j:longint;
+  begin
+    raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
+    for i:=0 to length(txt)-1 do begin
+      j:=(offset+i) and 31;
+      if txt[j]<>'' then raiseError(elX_stateInfo,txt[j],C_nilTokenLocation);
+    end;
+  end;
+
 { T_abstractOutAdapter }
 
 CONSTRUCTOR T_abstractOutAdapter.create;
   begin
+    wantStateHistory:=false;
   end;
 
 { T_consoleOutAdapter }
@@ -189,9 +227,8 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
     if level<minErrorLevel then exit;
-    writeln(stdErr, C_errorLevelTxt[errorLevel], errorMessage, ' @',
+    writeln(stdErr, C_errorLevelTxt[errorLevel], errorMessage, ' ',
             ansistring(errorLocation));
-
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;
