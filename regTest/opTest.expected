@@ -53,4 +53,3 @@ true xor false = true
 'x'!=7 = false
 'x'>=7 = false
 'x'<=7 = false
-Ev.Error: Operator + is not supported for types int and string @regTest/opTest.mnh:15,4

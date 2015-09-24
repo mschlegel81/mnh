@@ -12,5 +12,4 @@ main->begin
   each(op,comparator,testOperator(op,3,3.0));
   each(op,comparator,testOperator(op,3,[5,3,8]));
   each(op,comparator,testOperator(op,"'x'",7));
-  5+'a';
 end;
