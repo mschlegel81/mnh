@@ -29,6 +29,7 @@
 [ "demos/hamming.mnh",         "",                        false,         false,        false],
 [ "demos/harshad.mnh",         "",                        false,         false,        false],
 [ "demos/hereDoc.mnh",         "",                        false,         false,        false],
+[ "demos/helloWorld.mnh",      "",                        false,         false,        false],
 [ "demos/hofstadterConway.mnh","",                        false,         false,        true],
 [ "demos/huffmann.mnh",        "",                        false,         false,        true],
 [ "demos/josephus.mnh",        "",                        false,         false,        false],
