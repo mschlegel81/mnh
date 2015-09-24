@@ -497,7 +497,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier: begin
+        tt_identifier: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
             inPackage^.resolveRuleId(t^,true);
@@ -560,6 +560,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
       bracketLevel:longint=0;
       inlineSubRule:P_subrule;
   begin
+    predigest(rep,nil,recycler);
     if (rep^.tokType<>tt_expBraceOpen) then begin
       raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
