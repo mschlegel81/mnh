@@ -12,6 +12,7 @@ TYPE
 
 
 CONST
+  ONE_SECOND=1/(24*60*60);
   SCRIPT_EXTENSION='.MNH';
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','plot');
   C_ID_QUALIFY_CHARACTER='.';

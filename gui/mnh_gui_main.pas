@@ -10,8 +10,6 @@ USES
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
 
-CONST ONE_SECOND=1/(24*60*60);
-
 TYPE
 
   { TMnhForm }
