@@ -39,8 +39,6 @@ private build(bin64,full,debug)->hashChanged or not(fileExists(binName(bin64,ful
   void;
 end : print('Unneccessary build of ',binName(bin64,full,debug),' skipped');
 
-private ensureBin(bin64,full,debug)->fileExists(binName(bin64,full,debug)) ? void : build(bin64,full,debug);
-
 private compress(suffix)->regTest.main('mnh.exe') and regTest.main('mnh_light.exe') ? begin
   fileExists('setup.mnh') ? void : writeFile('setup.mnh',
 //!BLOB START
@@ -229,6 +227,6 @@ main('clean','distro')->main('clean')|main('distro');
 //*Tests all files
 main('test')->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],
   begin
-    ensureBin(bin64,full,debug);
+    build(bin64,full,debug);
     regTest.main(binName(bin64,full,debug));
   end)));

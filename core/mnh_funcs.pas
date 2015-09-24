@@ -35,7 +35,7 @@ PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in function ['+functionName+'] cannot be applied to parameters ';
+    complaintText:='Built in function '+functionName+' cannot be applied to parameters ';
     if params=nil then complaintText:=complaintText+'()'
                   else complaintText:=complaintText+params^.toParameterListString(true);
     raiseError(el3_evalError,complaintText,tokenLocation);
@@ -44,7 +44,7 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
-    complaintText:='Built in function ['+functionName+'] cannot be applied to type '+C_typeString[typ]+messageTail;
+    complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
     raiseError(el3_evalError,complaintText,tokenLocation);
   end;
 
@@ -550,11 +550,11 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
-      for i:=0 to length(found)-1 do result^.appendString(UTF8Encode(found[i]));
+      for i:=0 to length(found)-1 do result^.appendString(found[i]);
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
-        for i:=0 to length(found)-1 do result^.appendString(UTF8Encode(found[i]));
+        for i:=0 to length(found)-1 do result^.appendString(found[i]);
       end;
     end;
   end;
@@ -562,7 +562,7 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
 FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList]) then begin
       result:=filesOrDirs_impl(params^.value(0),true);
     end else raiseNotApplicableError('files',params,tokenLocation);
   end;
@@ -570,7 +570,7 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList]) then begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList]) then begin
       result:=filesOrDirs_impl(params^.value(0),false);
     end else raiseNotApplicableError('folders',params,tokenLocation);
   end;
@@ -581,10 +581,13 @@ FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      resultList:=FindAllDirectories(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
-      for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(resultList[i]);
-      resultList.free;
+      if DirectoryExists(P_stringLiteral(params^.value(0))^.value) then begin
+        P_listLiteral(result)^.append(params^.value(0),true);
+        resultList:=FindAllDirectories(P_stringLiteral(params^.value(0))^.value);
+        for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(resultList[i]);
+        resultList.free;
+      end;
     end else raiseNotApplicableError('allFolders',params,tokenLocation);
   end;
 
@@ -592,7 +595,7 @@ FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(fileExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
+      result:=newBoolLiteral(fileExists(P_stringLiteral(params^.value(0))^.value));
     end else raiseNotApplicableError('fileExists',params,tokenLocation);
   end;
 
@@ -600,7 +603,7 @@ FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DirectoryExists(UTF8Decode(P_stringLiteral(params^.value(0))^.value)));
+      result:=newBoolLiteral(DirectoryExists(P_stringLiteral(params^.value(0))^.value));
     end else raiseNotApplicableError('folderExists',params,tokenLocation);
   end;
 
@@ -1279,7 +1282,7 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteFileUTF8(P_stringLiteral(params^.value(0))^.value));
+      result:=newBoolLiteral(DeleteFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value)));
     end else raiseNotApplicableError('deleteFile',params,tokenLocation);
   end;
 
@@ -1308,8 +1311,8 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
       ensurePath(P_stringLiteral(params^.value(1))^.value);
       result:=newBoolLiteral(
-      FileUtil.RenameFileUTF8(P_stringLiteral(params^.value(0))^.value,
-                              P_stringLiteral(params^.value(1))^.value));
+      FileUtil.RenameFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value),
+                              UTF8Encode(P_stringLiteral(params^.value(1))^.value)));
     end else raiseNotApplicableError('moveFile',params,tokenLocation);
   end;
 
@@ -1370,6 +1373,19 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       end;
       result:=newStringLiteral(resultText);
     end else raiseNotApplicableError('httpGet',params,tokenLocation);
+  end;
+
+FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      result:=newVoidLiteral;
+      sysutils.Beep;
+    end else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int) then begin
+      result:=newVoidLiteral;
+      windows.Beep(P_intLiteral(params^.value(0))^.value,
+                   P_intLiteral(params^.value(1))^.value);
+    end else raiseNotApplicableError('beep',params,tokenLocation);
   end;
 
 FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -1513,7 +1529,7 @@ INITIALIZATION
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(searchPattern:string);#Returns a list of all folders below a given root directory');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(searchPattern:string);#Returns a list of all folders below and including a given root directory');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
@@ -1536,6 +1552,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'isInRange',@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime',@systime_imp,'sytime;#Returns the current time as a real number');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep',@beep_imp,'beep;#Makes a beep#beep(freq:int,duration:int);#Makes a beep of given frequency and duration');
 
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');

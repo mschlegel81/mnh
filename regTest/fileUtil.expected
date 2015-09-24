@@ -1,8 +1,8 @@
 ./packages/basic.mnh@27: And(L:booleanList)->trueCount(L)=size(L);
 ./packages/basic.mnh@32: Or(L:booleanList)->trueCount(L)>0;
 ./packages/bool.mnh@57: main->main('trueCount($A|$B|$C)=1');
-./packages/fileUtil.mnh@11: private containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
-./packages/fileUtil.mnh@12: private containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
-./packages/fileUtil.mnh@28: main->main('packages/*.mnh','trueCount');
+./packages/fileUtil.mnh@6: private containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
+./packages/fileUtil.mnh@7: private containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
+./packages/fileUtil.mnh@23: main->main('packages/*.mnh','trueCount');
 ./packages/primes.mnh@22: trueCount(n mod primes(sqrt(n))=0)=0;
 ./packages/primes.mnh@26: pEach(n,N,n in cached_primes ? true : trueCount((n mod cached_primes)=0)=0);

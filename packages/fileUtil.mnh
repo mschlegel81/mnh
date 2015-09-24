@@ -1,10 +1,5 @@
-//*"no folder" has no subfolders
-recFolders([])->[];
-//*recursively finds all folders
-recFolders(F)->flatten(F,pEach(subFolder,folders(F&"/*"),recFolders(subFolder)));
-
 //*recursively finds all files
-recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,recFolders(rootFolder),pEach(pat,searchPatterns,files(folder&"/"&pat))));
+recFiles(rootFolder,searchPatterns:stringList)->flatten(each(folder,allFolders(rootFolder),pEach(pat,searchPatterns,files(folder&"/"&pat))));
 //*recursively finds all files; searchPattern may be delimited by ; or ,
 recFiles(rootFolder,searchPattern:string)->recFiles(rootFolder,trim(split(searchPattern,[";",","])));
 
