@@ -59,6 +59,7 @@ TYPE
   PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:string);
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);
   PROCEDURE dropFirst(VAR x:T_arrayOfString; CONST dropCount:longint);
+  FUNCTION C_EMPTY_STRING_ARRAY:T_arrayOfString;
   { G_stringKeyMap }
 TYPE
   GENERIC G_stringKeyMap<VALUE_TYPE>=object
@@ -187,6 +188,8 @@ PROCEDURE dropFirst(VAR x:T_arrayOfString; CONST dropCount:longint);
     for i:=0 to length(x)-dc-1 do x[i]:=x[i+dc];
     setLength(x,length(x)-dc);
   end;
+
+FUNCTION C_EMPTY_STRING_ARRAY:T_arrayOfString; begin setLength(result,0); end;
 
 FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
   VAR i:longint;

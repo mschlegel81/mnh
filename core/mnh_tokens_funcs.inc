@@ -426,17 +426,6 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end else raiseNotApplicableError('parameterNames',params,tokenLocation);
   end;
 
-FUNCTION mainParams_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      result:=parametersForMain;
-      if result<>nil
-      then result^.rereference
-      else result:=newListLiteral;
-    end else raiseNotApplicableError('mainParams',params,tokenLocation);
-  end;
-
 FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
@@ -475,6 +464,5 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mainParams',@mainParams_imp,'mainParams;#Returns the parameters passed to the program');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
 {$endif}

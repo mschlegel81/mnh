@@ -332,8 +332,6 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
              while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
              result.tokType:=tt_EOL;
              if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
-             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_ON)  then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_ON
-             else if startsWith(line,SPECIAL_COMMENT_BATCH_STYLE_OFF) then result.txt:=SPECIAL_COMMENT_BATCH_STYLE_OFF
              else if startsWith(line,SPECIAL_COMMENT_BLOB_BEGIN)  then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
              else if startsWith(line,SPECIAL_COMMENT_BLOB_END) then result.txt:=SPECIAL_COMMENT_BLOB_END;
            end else if startsWith(line,C_tokenString[tt_cso_assignDiv]) then begin

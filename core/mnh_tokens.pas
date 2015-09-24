@@ -35,11 +35,10 @@ TYPE
       ready:boolean;
       codeProvider:P_codeProvider;
       loadedVersion:longint;
-      hadBatchModeParts:boolean;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
-      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler);
+      PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler; CONST mainParameters:T_arrayOfString);
       PROCEDURE clear;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
@@ -67,7 +66,6 @@ IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR secondaryPackages:array of P_package;
     mainPackage      :T_package;
-    parametersForMain:P_listLiteral=nil;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
 
@@ -109,7 +107,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     clearAllCaches;
     clearErrors;
     recycler.create;
-    mainPackage.load(usecase,recycler);
+    mainPackage.load(usecase,recycler,C_EMPTY_STRING_ARRAY);
     //housekeeping:-------------------------------------------------------------
     clearAllCaches;
     used.create;
@@ -151,10 +149,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
     for i:=0 to length(secondaryPackages)-1 do
       if secondaryPackages[i]^.codeProvider^.id = pack.id then begin
         if secondaryPackages[i]^.ready then begin
-          if secondaryPackages[i]^.needReload then begin
-            secondaryPackages[i]^.clear;
-            secondaryPackages[i]^.load(lu_forImport,recycler);
-          end;
+          if secondaryPackages[i]^.needReload then secondaryPackages[i]^.load(lu_forImport,recycler,C_EMPTY_STRING_ARRAY);
           pack.pack:=secondaryPackages[i];
           exit;
         end else begin
@@ -166,7 +161,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
     new(pack.pack,create(newSource));
     setLength(secondaryPackages,length(secondaryPackages)+1);
     secondaryPackages[length(secondaryPackages)-1]:=pack.pack;
-    pack.pack^.load(lu_forImport,recycler);
+    pack.pack^.load(lu_forImport,recycler,C_EMPTY_STRING_ARRAY);
   end;
 
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation);
@@ -185,9 +180,8 @@ DESTRUCTOR T_packageReference.destroy;
   end;
 
 
-PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler);
+PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler; CONST mainParameters:T_arrayOfString);
   VAR isFirstLine:boolean=true;
-      batchMode:boolean=false;
       lastComment:ansistring;
 
   PROCEDURE interpret(VAR first:P_token);
@@ -413,7 +407,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         outAdapter^.writeEcho(eld_echoDeclaration, tokensToString(first));
         parseRule;
       end else begin
-        if (usecase=lu_forDirectExecution) or (batchMode) then begin
+        if (usecase=lu_forDirectExecution) then begin
           predigest(first,@self,recycler);
           outAdapter^.writeEcho(ele_echoInput, tokensToString(first));
           reduceExpression(first,0,recycler);
@@ -434,13 +428,49 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         inc(currentTokenIndex);
         if (currentTokenIndex<length(fileTokens)) and
            (currentToken.tokType=tt_EOL) then begin
-          if      currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_ON  then batchMode:=(usecase<>lu_forDocGeneration)
-          else if currentToken.txt=SPECIAL_COMMENT_BATCH_STYLE_OFF then batchMode:=false
-          else if (currentToken.txt<>'') then lastComment:=currentToken.txt;
-          if batchMode then hadBatchModeParts:=true;
+          if (currentToken.txt<>'') then lastComment:=currentToken.txt;
         end;
       until (currentTokenIndex>=length(fileTokens)) or
             (currentToken.tokType<>tt_EOL);
+    end;
+
+  PROCEDURE executeMain;
+    VAR mainRule:P_rule;
+        parametersForMain:P_listLiteral=nil;
+        t:P_token;
+        i:longint;
+    begin
+      if not(ready) or (errorLevel>=el3_evalError) then begin
+        raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
+        recycler.destroy;
+        exit;
+      end;
+      if not(packageRules.containsKey('main',mainRule)) then begin
+        raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(codeProvider));
+      end else begin
+        t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_localUserRulePointer,mainRule);
+        parametersForMain:=newListLiteral;
+        parametersForMain^.rereference;
+        for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
+        t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
+        reduceExpression(t,0,recycler);
+        //special handling if main returns an expression:
+        if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
+           (P_literal(t^.data)^.literalType=lt_expression) then begin
+          P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
+        end;
+        //:special handling if main returns an expression
+        if hasNoParameterlessMainMessage then begin
+          outAdapter^.printOut('');
+          outAdapter^.printOut('Try one of the following:');
+          outAdapter^.printOut('');
+          printMainPackageDocText;
+        end;
+        recycler.cascadeDisposeToken(t);
+      end;
+      disposeLiteral(parametersForMain);
+      parametersForMain:=nil;
+
     end;
 
   VAR localIdStack:T_idStack;
@@ -507,8 +537,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     if length(fileTokens)>0
     then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens[length(fileTokens)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
-    clearErrors;
     if usecase=lu_forDirectExecution then complainAboutUncalled;
+    if usecase=lu_forCallingMain then executeMain;
+//    clearErrors;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
@@ -534,7 +565,6 @@ PROCEDURE T_package.clear;
     end;
     packageRules.clear;
     importedRules.clear;
-    hadBatchModeParts:=false;
     setLength(packageUses,0);
     ready:=false;
   end;
@@ -648,53 +678,12 @@ PROCEDURE T_package.printHelpOnMain;
   end;
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
-  VAR t:P_token;
-      i:longint;
-      mainRule:P_rule;
-      recycler:T_tokenRecycler;
+  VAR recycler:T_tokenRecycler;
   begin
     clearErrors;
     recycler.create;
-
-    parametersForMain:=newListLiteral;
-    parametersForMain^.rereference;
-    for i:=0 to length(parameters)-1 do parametersForMain^.appendString(parameters[i]);
-
-    mainPackage.load(lu_forCallingMain,recycler);
-    if not(mainPackage.ready) or (errorLevel>=el3_evalError) then begin
-      raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(@mainPackageProvider));
-      recycler.destroy;
-      exit;
-    end;
-
-    t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_identifier);
-
-    if not(mainPackage.packageRules.containsKey('main',mainRule)) then begin
-      if mainPackage.hadBatchModeParts
-      then raiseError(el1_note     ,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider))
-      else raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(@mainPackageProvider));
-    end else begin
-      t^.tokType:=tt_localUserRulePointer;
-      t^.data:=mainRule;
-      t^.next:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
-      reduceExpression(t,0,recycler);
-      //special handling if main returns an expression:
-      if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
-         (P_literal(t^.data)^.literalType=lt_expression) then begin
-        P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
-      end;
-      //:special handling if main returns an expression
-      if hasNoParameterlessMainMessage then begin
-        outAdapter^.printOut('');
-        outAdapter^.printOut('Try one of the following:');
-        outAdapter^.printOut('');
-        printMainPackageDocText;
-      end;
-    end;
-    recycler.cascadeDisposeToken(t);
+    mainPackage.load(lu_forCallingMain,recycler,parameters);
     recycler.destroy;
-    disposeLiteral(parametersForMain);
-    parametersForMain:=nil;
   end;
 
 PROCEDURE printMainPackageDocText;
@@ -743,7 +732,7 @@ PROCEDURE findAndDocumentAllPackages;
     for i:=0 to length(sourceNames)-1 do begin
       new(provider,create(sourceNames[i]));
       p.create(provider);
-      p.load(lu_forDocGeneration,recycler);
+      p.load(lu_forDocGeneration,recycler,C_EMPTY_STRING_ARRAY);
       addPackageDoc(p.getDoc);
       p.destroy;
     end;
