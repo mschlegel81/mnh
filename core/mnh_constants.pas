@@ -1,6 +1,6 @@
 UNIT mnh_constants;
-
 INTERFACE
+USES myGenerics,myStringutil;
 TYPE
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
@@ -9,9 +9,19 @@ TYPE
                REGEX_NAMESPACE          ,
                SYSTEM_BUILTIN_NAMESPACE ,
                PLOT_NAMESPACE);
-
+  T_reservedWordClass=(rwc_not_reserved,
+                       rwc_specialLiteral,
+                       rwc_specialConstruct,
+                       rwc_operator,
+                       rwc_procedureDelimiter,
+                       rwc_modifier);
 
 CONST
+  C_voidText= 'void';
+  C_nanText = 'Nan';
+  C_infText = 'Inf';
+  C_boolText: array[false..true] of string = ('false', 'true');
+
   ONE_SECOND=1/(24*60*60);
   SCRIPT_EXTENSION='.MNH';
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','plot');
@@ -50,6 +60,7 @@ TYPE
     tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
     //logical operators
     tt_operatorAnd, tt_operatorOr, tt_operatorXor,
+    tt_operatorLazyAnd, tt_operatorLazyOr,
     //arthmetical operators
     tt_operatorPlus, tt_operatorMinus, tt_operatorMult,
     tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
@@ -119,6 +130,7 @@ CONST
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
     (6, 6, 6, 6, 6, 6, 6, //comparators
     8, 9, 9,             //logical operators
+    8, 9,                //lazy logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
     5,                   //special: string concatenation
@@ -158,6 +170,7 @@ CONST
     '=', '<>', '<=', '>=', '<', '>', '==',
     //logical operators
     'and', 'or', 'xor',
+    'and', 'or',
     //arthmetical operators
     '+', '-', '*', '/', 'div', 'mod', '^',
     //partially evaluated operators
@@ -213,99 +226,12 @@ CONST
     'keyValueList',
     'flatList',
     'list(containing error)',
-    'void');
+    C_voidText);
 
-  C_tokenInfoString: array[T_tokenType] of string = (
-    'literal',
-    '',  //'aggregator',
-    'identifier',
-    'parameter identifier',
+  C_ruleTypeString: array[tt_localUserRulePointer..tt_intrinsicRulePointer] of string = (
     'user function (local)',
     'user function (imported)',
-    'built in function',
-    '',  //'put cache value',
-    '',  //'local variable reference',
-    'aggregator-construcor: aggregator#can be used for constructing aggregators to be used in conjunction with each or pEach',
-    'special built in function: each#can be used for constructing and/or aggregating lists',
-    'special built in function: pEach#can be used for constructing and/or aggregating lists#parallel equivalent to each',
-    'round opening bracket',
-    'round closing bracket',
-    '',  //'parameter list constructor',
-    '',  //'parameter list',
-    'square opening bracket#for list construction',
-    'square closing bracket#for list construction',
-    '',  //'list constructor',
-    'curly opening bracket#for inline expressions',
-    'curly closing bracket#for inline expressions',
-    'colon#separator',
-    'counter#separator; only valid when constructing lists',
-    'comparator equals',
-    'comparator not-equal',
-    'comparator lesser-or-equal',
-    'comparator greater-or-equal',
-    'comparator lesser',
-    'comparator greater',
-    'comparator list-equal',
-    'logical operator and#may be applied to integers or booleans',
-    'logical operator or#may be applied to integers or booleans',
-    'locical operator xor#exclusive or; may be applied to integers or booleans',
-    'operator plus#binary or unary operator',
-    'operator minus#binary or unary operator',
-    'operator mult',
-    'operator division#always yields a real number',
-    'operator division#applies only to integers; returns integers',
-    'operator modulo#applies only to integers; returns integers',
-    'operator potentiation',
-    '',  //'unaryOpPlus',
-    '',  //'unaryOpMinus',
-    'operator string concatenation#applies to all types; returns strings',
-    'operator extract (Level 0)',
-    'operator extract (Level 1)',
-    'operator extract (Level 2)',
-    'operator extract (Level 3)',
-    'concatenation operator#applies to all types; returns lists',
-    'in operator#used for determining whether a list contains a specific element',
-    'ternary inline-if-operator#Completed by corresponding :',
-    'ternary inline-if-operator#Completed by corresponding ?',
-    'list-to-parameter-list prefix operator#Mutates a list to a parameter list',
-    'declaration operator',
-    'assignment operator',
-    '',  //'mutate/assign operator',
-    '',  //'mutate/new local operator',
-    '',  //'mutate/ex. local operator',
-    'add-mutate/ex. local operator',
-    'subtract-mutate/ex. local operator',
-    'multiply-mutate/ex. local operator',
-    'divie-mutate/ex. local operator',
-    'concat-mutate/ex. local operator',
-    'append-mutate/ex. local operator',
-    'type check: scalar#matches to all primitive (i.e. non-list) types',
-    'type check: list#matches to all list types',
-    'type check: boolean#matches to primitive booleans',
-    'type check: boolean list#matches to flat lists of booleans',
-    'type check: integer#matches to primitive integers',
-    'type check: integer list#matches to flat lists of integers',
-    'type check: real#matches to primitive reals',
-    'type check: real list#matches to flat lists of reals',
-    'type check: string#matches to primitive strings',
-    'type check: string list#matches to flat lists of strings',
-    'type check: numeric#matches to scalar integers and reals',
-    'type check: numeric list#matches to flat lists containing only integers and reals',
-    'type check: expression#matches to expressions',
-    'type check: nonempty list#matches to all non-empty lists',
-    'type check: empty list#matches only to the empty list',
-    'type check: key-value-list#matches (nonempty) key-value lists',
-    'semicolon#marks the end of a statement, assignment or declaration',
-    'optional parameters#can be used inside a pattern declaration to denote further optional parameters',
-    'private modifier#hides the subrule from all importing packages',
-    'memoized modifier#enables caching for the rule#Note: caching affects all rules with the same id in the same package',
-    'mutable modifier#makes the rule mutable, i.e. the value may be redefined at evaluation-time',
-    'synchronized modifier#makes the rule synchronized, i.e. only one instance of the rule is evaluated at any time',
-    'local modifier#allows for the declaration of local variables inside of procedure blocks',
-    'marks the begin of a procedure block',
-    'marks the end of a procedure block',
-    'denotes the beginning of a (head controlled) loop',
-    'There is nothing plausible to parse, e.g. a comment');
+    'built in function');
 
 TYPE
   T_messageTypeOrErrorLevel = (
@@ -345,8 +271,11 @@ CONST
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';
   SPECIAL_COMMENT_BLOB_END='//!BLOB END';
+  SPECIAL_COMMENT_LAZYBOOL_ON='//!LAZY BOOLEAN ON';
+  SPECIAL_COMMENT_LAZYBOOL_OFF='//!LAZY BOOLEAN OFF';
 
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
+FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
 IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
@@ -358,6 +287,59 @@ FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
   begin
     for n:=Low(T_namespace) to high(T_namespace) do if id=C_namespaceString[n] then exit(true);
     result:=false;
+  end;
+
+FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
+  VAR tt:T_tokenType;
+  begin
+    result:=rwc_not_reserved;
+    if (wordText=C_voidText) or
+       (wordText=C_nanText) or
+       (wordText=C_infText) or
+       (wordText=C_boolText[true]) or
+       (wordText=C_boolText[false]) then exit(rwc_specialLiteral);
+    if (wordText=C_tokenString[tt_each]) or
+       (wordText=C_tokenString[tt_parallelEach]) or
+       (wordText=C_tokenString[tt_aggregatorConstructor]) or
+       (wordText=C_tokenString[tt_procedureBlockWhile]) then exit(rwc_specialConstruct);
+    for tt:=tt_comparatorEq to tt_listToParameterList do
+      if wordText=C_tokenString[tt] then exit(rwc_operator);
+    for tt:=tt_procedureBlockBegin to tt_procedureBlockEnd do
+      if wordText=C_tokenString[tt] then exit(rwc_procedureDelimiter);
+    for tt:=tt_modifier_private to tt_modifier_local do
+      if wordText=C_tokenString[tt] then exit(rwc_modifier);
+  end;
+
+FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
+  VAR tt:T_tokenType;
+      rwc:T_reservedWordClass;
+      subList:T_listOfString;
+  begin
+    result.create;
+    case clazz of
+      rwc_specialLiteral: begin
+        result.add(C_voidText);
+        result.add(C_nanText);
+        result.add(C_infText);
+        result.add(C_boolText[true]);
+        result.add(C_boolText[false]);
+      end;
+      rwc_specialConstruct: begin
+        result.add(C_tokenString[tt_each]);
+        result.add(C_tokenString[tt_parallelEach]);
+        result.add(C_tokenString[tt_aggregatorConstructor]);
+        result.add(C_tokenString[tt_procedureBlockWhile]);
+      end;
+      rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);
+      rwc_procedureDelimiter: for tt:=tt_procedureBlockBegin to tt_procedureBlockEnd do result.add(C_tokenString[tt]);
+      rwc_modifier: for tt:=tt_modifier_private to tt_modifier_local do result.add(C_tokenString[tt]);
+      else for rwc:=rwc_specialLiteral to rwc_modifier do begin
+        subList:=reservedWordsByClass(rwc);
+        result.addAll(subList.elementArray);
+        subList.destroy;
+      end;
+    end;
+    result.unique;
   end;
 
 end.

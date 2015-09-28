@@ -126,9 +126,9 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
                  or (id=C_tokenString[tt_aggregatorConstructor]) then result:=result+span('builtin',id)
             else if (id=C_boolText[true] )
                  or (id=C_boolText[false])
-                 or (id='Nan'            )
-                 or (id='Inf'            )
-                 or (id='void'           ) then result:=result+span('literal',id)
+                 or (id=C_nanText        )
+                 or (id=C_infText        )
+                 or (id=C_voidText       ) then result:=result+span('literal',id)
           else begin
             if intrinsicRuleMap.containsKey(id) then result:=result+span('builtin',id)
                                                 else result:=result+span('identifier',id);

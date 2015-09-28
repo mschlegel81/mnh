@@ -44,9 +44,9 @@ FUNCTION main(p:pointer):ptrint;
     begin
       completionList.clear;
       completionList.add(C_tokenString[tt_modifier_memoized]);
-      completionList.add('Nan');
-      completionList.add('Inf');
-      completionList.add('void');
+      completionList.add(C_nanText);
+      completionList.add(C_infText);
+      completionList.add(C_voidText);
       completionList.add(C_tokenString[tt_aggregatorConstructor]);
       completionList.add(C_tokenString[tt_operatorXor]   );
       completionList.add(C_tokenString[tt_operatorOr]    );
@@ -65,8 +65,8 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add(C_tokenString[tt_parallelEach]     );
       completionList.add(C_boolText[true]);
       completionList.add(C_boolText[false]);
-      completionList.addArr(userRules.elementArray);
-      completionList.addArr(intrinsicRules.elementArray);
+      completionList.addAll(userRules.elementArray);
+      completionList.addAll(intrinsicRules.elementArray);
       completionList.unique;
     end;
 
@@ -209,7 +209,7 @@ FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_token
     if evaluationState.value<>es_running then begin
       token:=getTokenAt(line,column);
       result.tokenText:=token.txt;
-      result.tokenExplanation:=C_tokenInfoString[token.tokType];
+      result.tokenExplanation:='';//C_tokenInfoString[token.tokType];
       if (token.tokType=tt_intrinsicRulePointer) then begin
         result.tokenExplanation:=intrinsicRuleExplanationMap.get(token.txt);
       end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
@@ -220,10 +220,10 @@ FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_token
                                                           +'#As first token in a package, it marks the use-clause (importing packages)';
         end
       end else if (token.tokType=tt_literal) then begin
-        if (token.txt='true') or (token.txt='false') then result.tokenExplanation:='boolean literal'
-        else if (token.txt='Nan') then result.tokenExplanation:='numeric literal (Not-A-Number)'
-        else if (token.txt='Inf') then result.tokenExplanation:='numeric literal (Infinity)'
-        else if (token.txt='void') then result.tokenExplanation:='void literal'
+        if (token.txt=C_boolText[true]) or (token.txt=C_boolText[false]) then result.tokenExplanation:='boolean literal'
+        else if (token.txt=C_nanText) then result.tokenExplanation:='numeric literal (Not-A-Number)'
+        else if (token.txt=C_infText) then result.tokenExplanation:='numeric literal (Infinity)'
+        else if (token.txt=C_voidText) then result.tokenExplanation:='void literal'
         else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
         else if (pos('.',token.txt)>0) or (pos('E',uppercase(token.txt))>0) then result.tokenExplanation:='real literal'
         else result.tokenExplanation:='integer literal';

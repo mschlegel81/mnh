@@ -6,7 +6,8 @@ INTERFACE
 USES sysutils;
 TYPE
   GENERIC G_list<ENTRY_TYPE>=object
-    TYPE ENTRY_TYPE_ARRAY=array of ENTRY_TYPE;
+    TYPE
+      ENTRY_TYPE_ARRAY=array of ENTRY_TYPE;
     private VAR
       entry:ENTRY_TYPE_ARRAY;
       sortedUntilIndex:longint;
@@ -21,7 +22,7 @@ TYPE
       PROCEDURE remValue(CONST value:ENTRY_TYPE);
       PROCEDURE remValues(CONST values:ENTRY_TYPE_ARRAY);
       PROCEDURE remIndex(CONST index:longint);
-      PROCEDURE addArr(CONST values:ENTRY_TYPE_ARRAY);
+      PROCEDURE addAll(CONST values:ENTRY_TYPE_ARRAY);
       PROCEDURE clear;
       PROCEDURE sort;
       PROCEDURE unique;
@@ -406,7 +407,7 @@ PROCEDURE G_list.remValues(CONST values:ENTRY_TYPE_ARRAY);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE G_list.addArr(CONST values:ENTRY_TYPE_ARRAY);
+PROCEDURE G_list.addAll(CONST values:ENTRY_TYPE_ARRAY);
   VAR i,i0:longint;
   begin
     system.enterCriticalSection(cs);

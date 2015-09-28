@@ -231,9 +231,9 @@ PROCEDURE TSynMnhSyn.next;
            (localId = C_tokenString[tt_operatorAnd]   ) then fTokenId := tkOperator
         else if (localId = C_boolText[true]) or
                 (localId = C_boolText[false]) or
-                (localId = 'Nan') or
-                (localId = 'Inf') or
-                (localId = 'void')  then fTokenId := tkNonStringLiteral
+                (localId = C_nanText) or
+                (localId = C_infText) or
+                (localId = C_voidText) then fTokenId := tkNonStringLiteral
         else if (localId = C_tokenString[tt_modifier_private] ) or
                 (localId = C_tokenString[tt_modifier_memoized]) or
                 (localId = C_tokenString[tt_modifier_mutable] ) or

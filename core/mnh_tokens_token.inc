@@ -117,7 +117,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_parameterIdentifier,
       tt_blockLocalVariable: begin result:=txt; idLike:=true; end;
       tt_aggregatorExpressionLiteral,
-      tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result='void'); end;
+      tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result=C_voidText); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_literal(data)^.toString;
@@ -242,9 +242,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         else if id=C_tokenString[tt_aggregatorConstructor] then begin result.tokType:=tt_aggregatorConstructor; result.data:=nil; result.txt:=''; end
         else if id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
         else if id=C_boolText[false] then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
-        else if id='Nan'             then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
-        else if id='Inf'             then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
-        else if id='void'            then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newVoidLiteral; end
+        else if id=C_nanText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
+        else if id=C_infText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
+        else if id=C_voidText        then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newVoidLiteral; end
         else begin
           result.txt:=id;
           result.tokType:=tt_identifier;
@@ -509,7 +509,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
                   t^.txt:=t^.txt;
                   t^.next:=recycler.disposeToken(t^.next);
                 end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
-              end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_tokenInfoString[t^.tokType],t^.next^.location);
+              end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
             end else begin
               raiseError(el2_warning,'Cannot resolve identifier "'+t^.txt+'" using dynamic scoping (expecting a block-local variable for this identifier) as a fallback.',t^.location);
               t^.tokType:=t^.next^.tokType;

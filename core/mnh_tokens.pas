@@ -634,7 +634,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
       packageId:ansistring;
   begin
     userDefinedRules.clear;
-    userDefinedRules.addArr(packageRules.keySet);
+    userDefinedRules.addAll(packageRules.keySet);
     for i:=0 to length(packageUses)-1 do if (packageUses[i].pack<>nil) and packageUses[i].pack^.ready then begin
       packageId:=packageUses[i].id;
       ids:=packageUses[i].pack^.packageRules.keySet;

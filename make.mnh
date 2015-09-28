@@ -188,6 +188,7 @@ doTests.bat
 //!BLOB END
   );
   execPipeless("c:/Program Files/7-Zip/7z.exe",['a','-mx=9',format('versions/mnh5_%yyyymmdd%_%X%.7z',systime,suffix),'@distro.list']);
+  execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",['a','-mx=9',format('versions/mnh5_%yyyymmdd%_%X%.7z',systime,suffix),'@distro.list']);
   deleteFile('distro.list');
 end : ask('Regression test failed! Distro will not be created!');
 

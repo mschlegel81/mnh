@@ -3,8 +3,6 @@ UNIT mnh_litVar;
 INTERFACE
 
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringutil, mnh_tokLoc;
-CONST
-  C_boolText: array[false..true] of string = ('false', 'true');
 
 TYPE
   PP_literal = ^P_literal;
@@ -553,7 +551,7 @@ FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
   begin result:=head(length(element)-trailSize); end;
 //?.toString:===================================================================
 FUNCTION T_literal          .toString: ansistring; begin result:='<ERR>';                      end;
-FUNCTION T_voidLiteral      .toString: ansistring; begin result :='void';                        end;
+FUNCTION T_voidLiteral      .toString: ansistring; begin result:=C_voidText;                   end;
 FUNCTION T_boolLiteral      .toString: ansistring; begin result:=C_boolText[val];              end;
 FUNCTION T_intLiteral       .toString: ansistring; begin result:=intToStr(val);                end;
 FUNCTION T_realLiteral      .toString: ansistring; begin result:=myFloatToStr(val);            end;
