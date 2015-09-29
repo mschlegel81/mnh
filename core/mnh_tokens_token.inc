@@ -849,7 +849,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       if (aggregatorPresent<>no) and (itList^.size=0)
       then raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
-        if inParallel then begin
+        if inParallel and not(wantStateHistory) then begin
           initFutures;
           aggregateFutures(true);
         end else begin
@@ -1417,8 +1417,7 @@ end}
     {$endif}
     if wantStateHistory then begin
       if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
-      or (callDepth=0) and (first<>nil) and (first^.next<>nil) then
-        stateHistory.raiseStateMessage;
+      or (first<>nil) and (first^.next<>nil) then stateHistory.raiseStateMessage;
       stateHistory.destroy;
     end;
 
