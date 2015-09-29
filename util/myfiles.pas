@@ -60,45 +60,7 @@ TYPE
 
   end;
 
-
-PROCEDURE pack(fileName:ansistring);
-PROCEDURE pack(fileList,outFile:ansistring);
-PROCEDURE unpack(packedFile:ansistring);
-FUNCTION execute(call:ansistring):longint;
-
 IMPLEMENTATION
-FUNCTION execute(call:ansistring):longint;
-  VAR tempProcess:TProcess;
-  begin
-    try
-    tempProcess :=TProcess.create(nil);
-    tempProcess.CommandLine :=call;
-    tempProcess.options:=tempProcess.options+[poWaitOnExit];
-    tempProcess.execute;
-    result:=tempProcess.exitStatus;
-    tempProcess.free;
-    except result:=-1001 end;
-  end;
-
-PROCEDURE pack(fileList,outFile:ansistring);
-  begin
-    if fileExists('7z.exe') then
-      execute('7z.exe a '+outFile+' -mx=9 '+fileList);
-
-  end;
-
-PROCEDURE pack(fileName:ansistring);
-  begin
-    pack(fileName,fileName+'.7z');
-  end;
-
-PROCEDURE unpack(packedFile:ansistring);
-  begin
-    if fileExists('7z.exe') then begin
-      execute('7z.exe e '+packedFile+' -y');
-    end;
-  end;
-
 PROCEDURE T_file.flushBuffer;
   begin
     if not(readMode) and stateOkay then begin

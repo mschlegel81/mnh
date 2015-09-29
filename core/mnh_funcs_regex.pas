@@ -1,4 +1,4 @@
-UNIT mnh_regex;
+UNIT mnh_funcs_regex;
 INTERFACE
 USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_tokLoc,sysutils,mnh_out_adapters;
 

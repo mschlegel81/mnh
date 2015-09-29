@@ -1,0 +1,8 @@
+UNIT mnh_funcs_mnh;
+INTERFACE
+
+IMPLEMENTATION
+
+INITIALIZATION
+
+end.
