@@ -49,10 +49,11 @@ main(exe,...)->begin
   local currentExeInfo   := head(exec(exe,["-version"]));
   local currentExeHash   := head(exec(exe,["-codeHash"]));
   local currentExeCanPlot:= copy(currentExeInfo,5,4)="full";
+  local randomSample     := testFilter==['randomSample'];
   local quickTestsOnly   := testFilter==['quick'];
   local checkOnly        := testFilter==['checkOnly'];
-  local specific_tests   := not((testFilter==[]) or quickTestsOnly or checkOnly);
-  quickTestsOnly or checkOnly ? testFilter:=[] : void;
+  local specific_tests   := not((testFilter==[]) or quickTestsOnly or checkOnly or randomSample);
+  quickTestsOnly or checkOnly or randomSample ? testFilter:=[] : void;
   local testCases:=sort(each(case,
                    expression(fileContents('regTest/regTestCases.dat'))(),
                    (currentExeCanPlot   or not(case%3)) and
@@ -60,21 +61,26 @@ main(exe,...)->begin
                    ((testFilter==[]) ? true : each(f,testFilter,or,pos(f,case%0)>=0)) ? case%[0..2] : void));
   local FMT_STRING:="%X"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"% %####0.00%sec %X%";
 
+  //count already passed tests and remove them from the list
+  testCases:=each(test,testCases,
+    isMarkedAsPassed(test%0,currentExeHash) and not(specific_tests)
+    ? begin previouslyPassedTests+=1; void; end
+    : test);
+  randomSample and (size(testCases)>5) ? testCases:=testCases%unique(floor(random(5)*size(testCases))) : void;
+
   local first:=true;
   each(test,testCases, begin
-    isMarkedAsPassed(test%0,currentExeHash) and not(specific_tests)
-    ? previouslyPassedTests:=previouslyPassedTests+1
-    : checkOnly ? addFailedTest(test%0) :
-      begin
-        first and not(checkOnly)
-        ? print('---------------------------------------------------------\n',
-               'Starting test runs with executable ',exe,'\n',currentExeInfo,
-               '\n---------------------------------------------------------')
-        : void;
-        first:=false;
-        runTest@(exe|currentExeHash|test|FMT_STRING);
-        void;
-      end;
+    checkOnly ? addFailedTest(test%0) :
+    begin
+      first and not(checkOnly)
+      ? print('---------------------------------------------------------\n',
+             'Starting test runs with executable ',exe,'\n',currentExeInfo,
+             '\n---------------------------------------------------------')
+      : void;
+      first:=false;
+      runTest@(exe|currentExeHash|test|FMT_STRING);
+      void;
+    end;
   end);
   first ? setErrorlevel(1) : print(testsFailed);
   testsFailed<>'' ? setErrorlevel(2) : void;
