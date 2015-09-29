@@ -102,31 +102,31 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
     idLike:=false;
     case tokType of
       tt_each, tt_parallelEach: begin
-        idLike:=true;
         result:=C_tokenString[tokType];
         if txt<>'' then result:=result+'('+txt+',';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
-      tt_assignNewBlockLocal: begin result:='local '+txt+C_tokenString[tokType]; idLike:=true; end;
-      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: begin result:=txt+C_tokenString[tokType]; idLike:=true; end;
+      tt_aggregatorExpressionLiteral,
+      tt_literal            : result:=P_literal(data)^.toString;
+      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
+      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
+      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
+      tt_assignNewBlockLocal: result:=C_tokenString[tt_modifier_local]+' '+txt+C_tokenString[tokType];
+      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenString[tokType];
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
       tt_intrinsicRulePointer,
       tt_rulePutCacheValue,
       tt_parameterIdentifier,
-      tt_blockLocalVariable: begin result:=txt; idLike:=true; end;
-      tt_aggregatorExpressionLiteral,
-      tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result=C_voidText); end;
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
-      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
-      tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,tt_modifier_local,tt_procedureBlockBegin,
-      tt_separatorComma: result:=C_tokenString[tokType]+' ';
-      tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_procedureBlockEnd: begin result:=C_tokenString[tokType]; idLike:=true; end;
+      tt_blockLocalVariable: result:=txt;
       else result:=C_tokenString[tokType];
     end;
-    if idLike and lastWasIdLike then result:=' '+result;
+    if length(result)<1 then begin
+      idLike:=false; exit(result);
+    end;
+    if lastWasIdLike and (result[1] in ['a'..'z','A'..'Z','?',':','0'..'9']) then result:=' '+result;
+    idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']);
   end;
 
 FUNCTION T_token.singleTokenToString:ansistring;
@@ -1467,12 +1467,12 @@ end}
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
-        //tt_mutate, tt_assignNewBlockLocal, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
         tt_mutate: stack_push;
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
-          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon: applyRule(nil,first^.next);
+          tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
+          tt_typeCheckScalar..tt_typeCheckKeyValueList: applyRule(nil,first^.next);
         end;
         tt_procedureBlockWhile: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=recycler.disposeToken(first^.next);
