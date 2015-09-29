@@ -13,7 +13,6 @@ TYPE
                        rwc_specialLiteral,
                        rwc_specialConstruct,
                        rwc_operator,
-                       rwc_procedureDelimiter,
                        rwc_modifier);
 
 CONST
@@ -274,6 +273,7 @@ CONST
 
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
+FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
 IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
@@ -299,11 +299,11 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
     if (wordText=C_tokenString[tt_each]) or
        (wordText=C_tokenString[tt_parallelEach]) or
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
-       (wordText=C_tokenString[tt_procedureBlockWhile]) then exit(rwc_specialConstruct);
+       (wordText=C_tokenString[tt_procedureBlockWhile]) or
+       (wordText=C_tokenString[tt_procedureBlockBegin]) or
+       (wordText=C_tokenString[tt_procedureBlockEnd]) then exit(rwc_specialConstruct);
     for tt:=tt_comparatorEq to tt_listToParameterList do
       if wordText=C_tokenString[tt] then exit(rwc_operator);
-    for tt:=tt_procedureBlockBegin to tt_procedureBlockEnd do
-      if wordText=C_tokenString[tt] then exit(rwc_procedureDelimiter);
     for tt:=tt_modifier_private to tt_modifier_local do
       if wordText=C_tokenString[tt] then exit(rwc_modifier);
   end;
@@ -327,9 +327,10 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
         result.add(C_tokenString[tt_parallelEach]);
         result.add(C_tokenString[tt_aggregatorConstructor]);
         result.add(C_tokenString[tt_procedureBlockWhile]);
+        result.add(C_tokenString[tt_procedureBlockBegin]);
+        result.add(C_tokenString[tt_procedureBlockEnd]);
       end;
       rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);
-      rwc_procedureDelimiter: for tt:=tt_procedureBlockBegin to tt_procedureBlockEnd do result.add(C_tokenString[tt]);
       rwc_modifier: for tt:=tt_modifier_private to tt_modifier_local do result.add(C_tokenString[tt]);
       else for rwc:=rwc_specialLiteral to rwc_modifier do begin
         subList:=reservedWordsByClass(rwc);

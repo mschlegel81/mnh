@@ -1,4 +1,3 @@
-
 writeNppUserLang(notePadConfigFolder)->
   folderExists(notePadConfigFolder) ? begin
     local xmlOpeningTag:='<NotepadPlus>';
@@ -19,7 +18,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <Keywords name="Numbers, suffix2"></Keywords>',
   '            <Keywords name="Numbers, range"></Keywords>',
   '            <Keywords name="Operators1">:keyValueList :booleanList :numericList :stringList :expression :realList :boolean :intList :numeric :scalar :string :list :real %%%% :int %%% .. &lt;&gt; &lt;= &gt;= == %% -&gt; := , = &lt; &gt; + - * / ^ + - &amp; % | ? : @ ;</Keywords>',
-  '            <Keywords name="Operators2">and xor div mod or in</Keywords>',
+  '            <Keywords name="Operators2">and xor div mod or in AND OR</Keywords>',
   '            <Keywords name="Folders in code1, open"></Keywords>',
   '            <Keywords name="Folders in code1, middle"></Keywords>',
   '            <Keywords name="Folders in code1, close"></Keywords>',
@@ -83,34 +82,18 @@ writeNppUserLang(notePadConfigFolder)->
     true;
   end : false;
 
-
 main('run')->begin
   execAsync('mnh',['-doc']);
-
   local appdataFolder:=head(each(e,getEnv,split(upper(e),'=')%0="APPDATA" ? split(e,'=')%1 : void));
   writeNppUserLang(appdataFolder&"/Notepad++");
   writeNppUserLang(appdataFolder&"/Roaming/Notepad++");
   writeNppUserLang(appdataFolder&"/Local/Notepad++");
-
   writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat')%'expanded'&'", "", "", "runas", 1']);
-
   writeFile('install.bat',replace(
 //!BLOB START
-@echo off
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-if '%errorlevel%' NEQ '0' (
-    echo Requesting administrative privileges...
-    goto UACPrompt
-) else ( goto gotAdmin )
-:UACPrompt
-    "getadmin.vbs"
-    exit /B
-:gotAdmin
-    if exist "getadmin.vbs" ( del "getadmin.vbs" )
-    pushd "%CD%"
-    CD /D "%~dp0"
-assoc .mnh=mnh.script
-ftype mnh.script="#" %%1 %%*
+@assoc .mnh=mnh.script
+@ftype mnh.script="#" %%1 %%*
+@if "%errorlevel%" NEQ "0" getadmin.vbs
 //!BLOB END
   ,'#',executor));
   execPipeless('cmd',['/c','install.bat']);

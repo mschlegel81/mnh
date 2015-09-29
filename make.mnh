@@ -228,14 +228,14 @@ each(file,
 main('clean','distro')->main('clean')|main('distro');
 
 //*Tests all files
-main('test')->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],
+main('test')->each(bin64,[false,true],AND,each(full,[false,true],AND,each(debug,[false,true],AND,
   begin
     build(bin64,full,debug);
     regTest.main(binName(bin64,full,debug));
   end)));
 
 //*Tests some files - randomly
-main('quicktest')->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],
+main('quicktest')->each(bin64,[false,true],AND,each(full,[false,true],AND,each(debug,[false,true],AND,
   begin
     build(bin64,full,debug);
     regTest.main(binName(bin64,full,debug),'randomSample');

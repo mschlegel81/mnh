@@ -110,8 +110,7 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
             id:=takeFromLine(leadingIdLength(true));
             rwc:=isReservedWord(id);
             case rwc of
-              rwc_specialConstruct,
-              rwc_procedureDelimiter: result:=result+span('builtin',id);
+              rwc_specialConstruct  : result:=result+span('builtin',id);
               rwc_specialLiteral    : result:=result+span('literal',id);
               rwc_operator          : result:=result+span('operator',id);
               rwc_modifier          : result:=result+span('modifier',id);

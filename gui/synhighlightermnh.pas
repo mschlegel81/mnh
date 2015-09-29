@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   sysutils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litVar,mnh_constants;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litVar,mnh_constants,myGenerics;
 
 CONST
   C_specialHeads: array [1..5] of record
@@ -80,6 +80,10 @@ TYPE
   end;
 
 IMPLEMENTATION
+VAR modifierStrings:T_listOfString;
+    operatorStrings:T_listOfString;
+    specialLiteralStrings:T_listOfString;
+    specialConstructStrings:T_listOfString;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
   begin
@@ -223,29 +227,10 @@ PROCEDURE TSynMnhSyn.next;
           localId := localId+fLine [run];
           inc(run);
           end;
-        if (localId = C_tokenString[tt_operatorXor]   ) or
-           (localId = C_tokenString[tt_operatorOr]    ) or
-           (localId = C_tokenString[tt_operatorMod]   ) or
-           (localId = C_tokenString[tt_operatorIn]    ) or
-           (localId = C_tokenString[tt_operatorDivInt]) or
-           (localId = C_tokenString[tt_operatorAnd]   ) then fTokenId := tkOperator
-        else if (localId = C_boolText[true]) or
-                (localId = C_boolText[false]) or
-                (localId = C_nanText) or
-                (localId = C_infText) or
-                (localId = C_voidText) then fTokenId := tkNonStringLiteral
-        else if (localId = C_tokenString[tt_modifier_private] ) or
-                (localId = C_tokenString[tt_modifier_memoized]) or
-                (localId = C_tokenString[tt_modifier_mutable] ) or
-                (localId = C_tokenString[tt_modifier_synchronized]) or
-                (localId = C_tokenString[tt_modifier_local]) then fTokenId := tkModifier
-        else if (localId = C_tokenString[tt_aggregatorConstructor]) or
-                (localId = C_tokenString[tt_procedureBlockBegin]) or
-                (localId = C_tokenString[tt_procedureBlockEnd]) or
-                (localId = C_tokenString[tt_procedureBlockWhile] ) or
-                (localId = C_tokenString[tt_each]             ) or
-                (localId = C_tokenString[tt_parallelEach]     ) then
-          fTokenId := tkSpecialRule
+        if      operatorStrings        .contains(localId) then fTokenId := tkOperator
+        else if specialLiteralStrings  .contains(localId) then fTokenId := tkNonStringLiteral
+        else if modifierStrings        .contains(localId) then fTokenId := tkModifier
+        else if specialConstructStrings.contains(localId) then fTokenId := tkSpecialRule
         else
         if      userRules     .contains(localId) then fTokenId := tkUserRule
         else if intrinsicRules.contains(localId) then fTokenId := tkBultinRule
@@ -398,4 +383,14 @@ FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
     result := ['a'..'z', 'A'..'Z', C_ID_QUALIFY_CHARACTER, '_', '0'..'9'];
   end;
 
+INITIALIZATION
+  operatorStrings:=reservedWordsByClass(rwc_operator);
+  modifierStrings:=reservedWordsByClass(rwc_modifier);
+  specialConstructStrings:=reservedWordsByClass(rwc_specialConstruct);
+  specialLiteralStrings:=reservedWordsByClass(rwc_specialLiteral);
+FINALIZATION
+  operatorStrings.destroy;
+  modifierStrings.destroy;
+  specialConstructStrings.destroy;
+  specialLiteralStrings.destroy;
 end.

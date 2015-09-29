@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys;
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils;
 
 CONST
   HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
@@ -186,7 +186,7 @@ PROCEDURE T_rolloverState.raiseStateMessage;
       for i:=0 to length(txt)-2 do begin
         j :=(offset+i  ) and 31;
         j1:=(offset+i+1) and 31;
-        if (length(txt[j])>160) or (length(txt[j1])>160) then Continue;
+        if (length(txt[j])>160) or (length(txt[j1])>160) or (length(txt[j1])=0) then Continue;
         commonTailLength:=0;
         while (commonTailLength<length(txt[j ])) and
               (commonTailLength<length(txt[j1])) and
@@ -210,6 +210,7 @@ PROCEDURE T_rolloverState.raiseStateMessage;
     raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
     for i:=0 to length(txt)-1 do begin
       j:=(offset+i) and 31;
+      txt[j]:=trim(txt[j]);
       if txt[j]<>'' then raiseError(elX_stateInfo,txt[j],C_nilTokenLocation);
     end;
   end;
