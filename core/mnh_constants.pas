@@ -128,7 +128,7 @@ CONST
 
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
-    (6, 6, 6, 6, 6, 6, 6, //comparators
+   (6, 6, 6, 6, 6, 6, 6, //comparators
     8, 9, 9,             //logical operators
     8, 9,                //lazy logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
@@ -170,7 +170,7 @@ CONST
     '=', '<>', '<=', '>=', '<', '>', '==',
     //logical operators
     'and', 'or', 'xor',
-    'and', 'or',
+    'AND', 'OR',
     //arthmetical operators
     '+', '-', '*', '/', 'div', 'mod', '^',
     //partially evaluated operators
@@ -271,8 +271,6 @@ CONST
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';
   SPECIAL_COMMENT_BLOB_END='//!BLOB END';
-  SPECIAL_COMMENT_LAZYBOOL_ON='//!LAZY BOOLEAN ON';
-  SPECIAL_COMMENT_LAZYBOOL_OFF='//!LAZY BOOLEAN OFF';
 
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;

@@ -1020,7 +1020,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
+  PROCEDURE resolveInlineIf(CONST conditionLit:boolean); inline;
     VAR p,prev,tokenBeforeElse,lastThen:P_token;
         bracketLevel:longint=0;
     begin
@@ -1152,6 +1152,60 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       else stack_push_push;
     end;
 
+  PROCEDURE operator_and_literal_push; inline;
+    VAR p:P_token;
+        bracketLevel:longint=0;
+    begin
+      case cTokType[1] of
+        tt_operatorLazyAnd: if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
+          if (P_boolLiteral(first^.data)^.value) then begin
+            //true AND ... -> ...
+            first:=recycler.disposeToken(first); //drop true
+            first:=recycler.disposeToken(first); //drop AND
+            didSubstitution:=true;
+          end else begin
+            //false AND ... -> false
+            p:=first^.next;
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
+              case p^.tokType of
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+              end;
+              p:=recycler.disposeToken(p);
+            end;
+            first^.next:=p;
+            didSubstitution:=true;
+          end;
+        end else raiseError(el3_evalError,'Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
+          if (P_boolLiteral(first^.data)^.value) then begin
+            //true OR ... -> true
+            p:=first^.next;
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
+              case p^.tokType of
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+              end;
+              p:=recycler.disposeToken(p);
+            end;
+            first^.next:=p;
+            didSubstitution:=true;
+          end else begin
+            //false OR ... -> ...
+            first:=recycler.disposeToken(first); //drop false
+            first:=recycler.disposeToken(first); //drop OR
+            didSubstitution:=true;
+          end;
+        end else raiseError(el3_evalError,'Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        else begin
+          setLength(stack,length(stack)+2);
+          stack[length(stack)-2]:=first; first:=first^.next;
+          stack[length(stack)-1]:=first; first:=first^.next;
+          didSubstitution:=true;
+        end;
+      end;
+    end;
+
   FUNCTION stateToString:ansistring;
     VAR i:longint;
         idLike:boolean=false;
@@ -1165,7 +1219,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
 {$define COMMON_CASES:=
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
 tt_parList:  applyRule(first^.next,first^.next^.next);
-tt_comparatorEq..tt_operatorIn: stack_push_push;
+tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
 {$define COMMON_SEMICOLON_HANDLING:=
