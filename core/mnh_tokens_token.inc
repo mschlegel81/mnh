@@ -120,7 +120,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_literal            : begin result:=P_literal(data)^.toString; idLike:=(pos('n',result)>0) or (pos('e',result)>0) or (result=C_voidText); end;
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
-      tt_list_constructor   : result:=P_literal(data)^.toString;
+      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
       tt_modifier_memoized,tt_modifier_mutable,tt_modifier_private,tt_modifier_synchronized,tt_modifier_local,tt_procedureBlockBegin,
       tt_separatorComma: result:=C_tokenString[tokType]+' ';
       tt_operatorAnd,tt_operatorOr,tt_operatorXor,tt_operatorIn,tt_operatorDivInt,tt_operatorMod,tt_procedureBlockEnd: begin result:=C_tokenString[tokType]; idLike:=true; end;

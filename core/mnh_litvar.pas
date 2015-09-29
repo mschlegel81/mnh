@@ -237,6 +237,7 @@ TYPE
     DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
+    FUNCTION listConstructorToString:ansistring;
     FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
     FUNCTION hash: longint; virtual;
@@ -568,6 +569,20 @@ FUNCTION T_listLiteral      .toString: ansistring;
       result:=result+']';
     end;
   end;
+
+FUNCTION T_listLiteral.listConstructorToString:ansistring;
+  VAR i:longint;
+  begin
+    if length(element) = 0 then result:='['
+    else begin
+      result:='['+element[0]^.toString;
+      for i:=1 to length(element)-1 do
+        result:=result+','+element[i]^.toString;
+      if nextAppendIsRange then result:=result+'..'
+                           else result:=result+',';
+    end;
+  end;
+
 //===================================================================:?.toString
 FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansistring;
   VAR
@@ -578,7 +593,7 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     result:=element [0]^.toShorterString;
     for i:=1 to length(element)-1 do result:=result+','+element [i]^.toShorterString;
     if isFinalized then result:='('+result+')'
-    else result:='('+result+', ';
+    else result:='('+result+',';
   end;
 //?.toShorterString:============================================================
 FUNCTION T_literal.toShorterString: ansistring; begin result:=toString; end;
