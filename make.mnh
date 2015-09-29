@@ -39,7 +39,9 @@ private build(bin64,full,debug)->hashChanged or not(fileExists(binName(bin64,ful
   void;
 end : print('Unneccessary build of ',binName(bin64,full,debug),' skipped');
 
-private compress(suffix)->regTest.main('mnh.exe') and regTest.main('mnh_light.exe') ? begin
+private compress(suffix)->
+  (size(files('regTest/*.last'))=0 AND regTest.main('mnh.exe','randomSample') AND regTest.main('mnh_light.exe','randomSample')) OR
+  regTest.main('mnh.exe') AND regTest.main('mnh_light.exe') ? begin
   fileExists('setup.mnh') ? void : writeFile('setup.mnh',
 //!BLOB START
 writeNppUserLang(notePadConfigFolder)->
@@ -219,7 +221,7 @@ each(f,allFolders('.'),
        end
      : void)|
 each(file,
-     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css')|files('doTests.bat')|files('setup.mnh'),
+     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css')|files('doTests.bat')|files('setup.mnh')|files('regTest/*.last'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
 //*First clean then make distro
