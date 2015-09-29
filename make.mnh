@@ -1,43 +1,60 @@
 USE fileUtil, regTest, checkstyle;
 
+mutable private currentCodeHash:=0;
+private relevantFiles:=flatten(files(allFolders('.')&'\\*.pas'),each(f,files(allFolders('.')&'\\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));
+private getCurrentHash->each(filename,relevantFiles,+,hash(fileContents(filename)));
+private hashFileContents->"writeln(':"&currentCodeHash&"');";
+
 memoized hashChanged->begin
   local oldFile:=fileContents('core/code_hash.inc');
-  deleteFile('core/code_hash.inc');
-  local codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
-  local newFile:=format("writeln('"&codeHash&"');");
-  writeFile('core/code_hash.inc',newFile);
-  oldFile==newFile ? false : begin
+  currentCodeHash:=getCurrentHash;
+  oldFile==hashFileContents ? false : begin
     checkstyle.main('fix');
-    deleteFile('core/code_hash.inc');
-    codeHash:=each(filename,recFiles('.',['*.pas','*.inc']),+,hash(fileContents(filename)));
-    newFile:=format("writeln('"&codeHash&"');");
-    writeFile('core/code_hash.inc',newFile);
+    currentCodeHash:=getCurrentHash;
+    writeFile('core/code_hash.inc',hashFileContents);
     true;
   end;
 end;
 
-private allFolders(base)->flatten(base,each(subFolder,folders(base&'/*'),allFolders(subFolder)));
+private binName(FI:int)->((FI and 1)>0 ? '.\\' : 'bin32\\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
 
-private binName(bin64,full,debug)->(bin64 ? '.\\' : 'bin32\\') & 'mnh' & (full ? '' : '_light') & (debug ? '_debug' : '') & '.exe';
+private exeHasWrongVersion(FI:int)->begin
+  currentCodeHash==0 ? hashChanged : void;
+  local exeName:=binName(FI);
+  fileExists(exeName) ? begin
+    local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');
+    size(fullCodeHash)!=2 OR (fullCodeHash%1 != currentCodeHash);
+  end : true;
+end;
 
-private build(bin64,full,debug)->hashChanged or not(fileExists(binName(bin64,full,debug))) ? begin
-  local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
-                        : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
-  local parameters:=
-       (full ? ['gui\\mnh_gui.lpr','-dfullVersion'] : 'consoles\\mnh_console.pas')|
-       ('-o'&binName(bin64,full,debug))|
-       (debug ? ['-g','-gl','-Si','-ddebugMode']
-              : ['-O3','-CX','-XX','-Si']) |
-       ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore'] |
-       (bin64 ? ['-FuC:\\lazarus64\\components\\synedit\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64','-FuC:\\lazarus64\\components\\lazutils\\lib\\x86_64-win64','-FuC:\\lazarus64\\packager\\units\\x86_64-win64','-dversion64bit']
-              : ['-FuC:\\lazarus32\\components\\synedit\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32'  ,'-FuC:\\lazarus32\\components\\lazutils\\lib\\i386-win32'  ,'-FuC:\\lazarus32\\packager\\units\\i386-win32']);
-  execPipeless(compiler,parameters);
-  execPipeless('C:\\lazarus64\\fpc\\2.6.4\\bin\\x86_64-win64\\delp',['.','core','util','test','consoles','bin32','gui\\lib\\i386-win32','gui\\lib\\x86_64-win64','gui']);
-  each(file,
-       files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
-       print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+private mutable builtReady:=[0..7]<0;
+private synchronized waitForBuilt(FI:int)->while(not(builtReady%FI),sleep(0.1));
+
+private build(FI:int)->begin
+  hashChanged OR exeHasWrongVersion(FI) ? begin
+    local bin64:=(FI and 1)>0;
+    local full :=(FI and 2)>0;
+    local debug:=(FI and 4)>0;
+  
+    local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
+                          : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
+    local parameters:=
+         (full ? ['gui\\mnh_gui.lpr','-dfullVersion'] : 'consoles\\mnh_console.pas')|
+         ('-o'&binName(FI))|
+         (debug ? ['-g','-gl','-Si','-ddebugMode']
+                : ['-O3','-CX','-XX','-Si']) |
+         ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore'] |
+         (bin64 ? ['-FuC:\\lazarus64\\components\\synedit\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64','-FuC:\\lazarus64\\components\\lazutils\\lib\\x86_64-win64','-FuC:\\lazarus64\\packager\\units\\x86_64-win64','-dversion64bit']
+                : ['-FuC:\\lazarus32\\components\\synedit\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32'  ,'-FuC:\\lazarus32\\components\\lazutils\\lib\\i386-win32'  ,'-FuC:\\lazarus32\\packager\\units\\i386-win32']);
+    execPipeless(compiler,parameters);
+    execPipeless('C:\\lazarus64\\fpc\\2.6.4\\bin\\x86_64-win64\\delp',['.','core','util','test','consoles','bin32','gui\\lib\\i386-win32','gui\\lib\\x86_64-win64','gui']);
+    each(file,
+         files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
+         print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  end : void;
+  builtReady:=each(i,[0..7],FI=i ? true : builtReady%i);
   void;
-end : print('Unneccessary build of ',binName(bin64,full,debug),' skipped');
+end;
 
 private compress(suffix)->
   (size(files('regTest/*.last'))=0 AND regTest.main('mnh.exe','randomSample') AND regTest.main('mnh_light.exe','randomSample')) OR
@@ -200,16 +217,20 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
 
 //*Make distro 7z - including build and regTest if needed
-main('distro')->begin
-  each(bin64,[false,true],each(full,[false,true],build(bin64,full,false)));
-  compress('64bit');
-  each(pair,movePairs,moveFile@pair);
-  compress('32bit');
-  each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
-end;
+main('distro')->pEach(task,[{each(i,[3,1,2,0],build(i))},
+  {begin
+     waitForBuilt(1);
+     compress('64bit');
+     waitForBuilt(2);
+     each(pair,movePairs,moveFile@pair);
+     compress('32bit');
+     each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+  end}],task());
 
 //*Build - ignoring potentially existing executables
-main->each(bin64,[false,true],each(full,[false,true],each(debug,[false,true],build(bin64,full,debug))));
+main('build')->each(i,[0..7],build(i));
+//*Build - ignoring potentially existing executables
+main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->
@@ -224,19 +245,22 @@ each(file,
      files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css')|files('doTests.bat')|files('setup.mnh')|files('regTest/*.last'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
-//*First clean then make distro
-main('clean','distro')->main('clean')|main('distro');
-
 //*Tests all files
-main('test')->each(bin64,[false,true],AND,each(full,[false,true],AND,each(debug,[false,true],AND,
-  begin
-    build(bin64,full,debug);
-    regTest.main(binName(bin64,full,debug));
-  end)));
+main('test')->pEach(task,[
+  {begin each(i,[0..7],build(i)); true; end},
+  {each(i,[0..7],AND,begin
+     waitForBuilt(i);
+     regTest.main(binName(i));
+   end)}],AND,task());
+     
 
 //*Tests some files - randomly
-main('quicktest')->each(bin64,[false,true],AND,each(full,[false,true],AND,each(debug,[false,true],AND,
-  begin
-    build(bin64,full,debug);
-    regTest.main(binName(bin64,full,debug),'randomSample');
-  end)));
+main('quicktest')->pEach(task,[
+  {begin each(i,[0..7],build(i)); true; end},
+  {each(i,[0..7],AND,begin
+     waitForBuilt(i);
+     regTest.main(binName(i),'randomSample');
+   end)}],AND,task());
+
+//*Several steps in succession
+main(...)->each(p,...,main(p));
