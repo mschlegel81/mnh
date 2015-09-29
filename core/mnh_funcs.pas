@@ -1486,6 +1486,14 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else raiseNotApplicableError('getEnv',params,tokenLocation);
   end;
 
+FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then raiseError(el3_evalError,'Fail.',tokenLocation)
+    else if (params<>nil) and (params^.size=1) then raiseError(el3_evalError,params^.value(0)^.toString,tokenLocation)
+    else raiseNotApplicableError('fail',params,tokenLocation);
+    result:=nil;
+  end;
+
 INITIALIZATION
   //Critical sections:------------------------------------------------------------
   system.InitCriticalSection(print_cs);
@@ -1568,6 +1576,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');
 
 FINALIZATION
   intrinsicRuleMap.destroy;
