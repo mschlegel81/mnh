@@ -192,7 +192,7 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
 
   VAR id:ansistring;
-
+      tt:T_tokenType;
   begin
     removeLeadingBlanks;
     result.location:=lineLocation;
@@ -223,33 +223,24 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       'a'..'z','A'..'Z': begin
         id:=leadingId(true);
         parsedLength:=length(id);
-        if      id=C_tokenString[tt_operatorXor]           then result.tokType:=tt_operatorXor
-        else if id=C_tokenString[tt_operatorOr]            then result.tokType:=tt_operatorOr
-        else if id=C_tokenString[tt_operatorMod]           then result.tokType:=tt_operatorMod
-        else if id=C_tokenString[tt_operatorIn]            then result.tokType:=tt_operatorIn
-        else if id=C_tokenString[tt_operatorDivInt]        then result.tokType:=tt_operatorDivInt
-        else if id=C_tokenString[tt_operatorAnd]           then result.tokType:=tt_operatorAnd
-        else if id=C_tokenString[tt_modifier_private]      then result.tokType:=tt_modifier_private
-        else if id=C_tokenString[tt_modifier_memoized]     then result.tokType:=tt_modifier_memoized
-        else if id=C_tokenString[tt_modifier_mutable]      then result.tokType:=tt_modifier_mutable
-        else if id=C_tokenString[tt_modifier_synchronized] then result.tokType:=tt_modifier_synchronized
-        else if id=C_tokenString[tt_modifier_local]        then result.tokType:=tt_modifier_local
-        else if id=C_tokenString[tt_procedureBlockBegin]   then result.tokType:=tt_procedureBlockBegin
-        else if id=C_tokenString[tt_procedureBlockEnd]     then result.tokType:=tt_procedureBlockEnd
-        else if id=C_tokenString[tt_procedureBlockWhile]   then result.tokType:=tt_procedureBlockWhile
-        else if id=C_tokenString[tt_each]                  then begin result.tokType:=tt_each;                  result.data:=nil; result.txt:=''; end
-        else if id=C_tokenString[tt_parallelEach]          then begin result.tokType:=tt_parallelEach;          result.data:=nil; result.txt:=''; end
-        else if id=C_tokenString[tt_aggregatorConstructor] then begin result.tokType:=tt_aggregatorConstructor; result.data:=nil; result.txt:=''; end
-        else if id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
-        else if id=C_boolText[false] then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
-        else if id=C_nanText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
-        else if id=C_infText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
-        else if id=C_voidText        then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newVoidLiteral; end
-        else begin
-          result.txt:=id;
-          result.tokType:=tt_identifier;
-          result.data:=inPackage;
-          if not(inEvaluationLoop) then inPackage^.resolveRuleId(result,true);
+        result.tokType:=tt_identifier;
+        for tt:=low(T_tokenType) to high(T_tokenType) do
+        if id=C_tokenString[tt] then begin
+          result.tokType:=tt;
+          result.data:=nil;
+          result.txt:='';
+        end;
+        if result.tokType=tt_identifier then begin
+          if      id=C_boolText[true]  then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(true); end
+          else if id=C_boolText[false] then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newBoolLiteral(false); end
+          else if id=C_nanText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Nan); end
+          else if id=C_infText         then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newRealLiteral(Infinity); end
+          else if id=C_voidText        then begin result.tokType:=tt_literal; if inEvaluationLoop then result.data:=newVoidLiteral; end
+          else begin
+            result.txt:=id;
+            result.data:=inPackage;
+            if not(inEvaluationLoop) then inPackage^.resolveRuleId(result,true);
+          end;
         end;
       end;
       ';': begin parsedLength:=1; result.tokType:=tt_semicolon; end;

@@ -84,6 +84,7 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
     end;
 
   VAR id:ansistring;
+      rwc:T_reservedWordClass;
   begin
     result:='';
     while length(line)>0 do begin
@@ -107,33 +108,19 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
           else if copy(line,1,4)='out>' then result:=result+takeFromLine(4)
           else begin
             id:=takeFromLine(leadingIdLength(true));
-            if      (id=C_tokenString[tt_operatorXor]   )
-                 or (id=C_tokenString[tt_operatorOr]    )
-                 or (id=C_tokenString[tt_operatorMod]   )
-                 or (id=C_tokenString[tt_operatorIn]    )
-                 or (id=C_tokenString[tt_operatorDivInt])
-                 or (id=C_tokenString[tt_operatorAnd]   ) then result:=result+span('operator',id)
-            else if (id=C_tokenString[tt_modifier_private]     )
-                 or (id=C_tokenString[tt_modifier_memoized]    )
-                 or (id=C_tokenString[tt_modifier_mutable]     )
-                 or (id=C_tokenString[tt_modifier_synchronized])
-                 or (id=C_tokenString[tt_modifier_local]       ) then result:=result+span('modifier',id)
-            else if (id=C_tokenString[tt_procedureBlockBegin]  )
-                 or (id=C_tokenString[tt_procedureBlockEnd]    )
-                 or (id=C_tokenString[tt_procedureBlockWhile]  )
-                 or (id=C_tokenString[tt_each]                 )
-                 or (id=C_tokenString[tt_parallelEach]         )
-                 or (id=C_tokenString[tt_aggregatorConstructor]) then result:=result+span('builtin',id)
-            else if (id=C_boolText[true] )
-                 or (id=C_boolText[false])
-                 or (id=C_nanText        )
-                 or (id=C_infText        )
-                 or (id=C_voidText       ) then result:=result+span('literal',id)
-          else begin
-            if intrinsicRuleMap.containsKey(id) then result:=result+span('builtin',id)
-                                                else result:=result+span('identifier',id);
+            rwc:=isReservedWord(id);
+            case rwc of
+              rwc_specialConstruct,
+              rwc_procedureDelimiter: result:=result+span('builtin',id);
+              rwc_specialLiteral    : result:=result+span('literal',id);
+              rwc_operator          : result:=result+span('operator',id);
+              rwc_modifier          : result:=result+span('modifier',id);
+              else begin
+                if intrinsicRuleMap.containsKey(id) then result:=result+span('builtin',id)
+                                                    else result:=result+span('identifier',id);
+              end;
+            end;
           end;
-        end;
         ';',')','}','(','{',',',']','[': result:=result+takeFromLine(1);
         '@','^','?': result:=result+span('operator',takeFromLine(1));
         '|': if startsWith(line,'|=') then result:=result+span('operator',takeFromLine(2))
