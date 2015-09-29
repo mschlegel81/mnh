@@ -172,14 +172,41 @@ PROCEDURE T_rolloverState.clear;
 
 PROCEDURE T_rolloverState.addLine(CONST lineText: ansistring);
   begin
-    if (lineText='') or (lineText=txt[(offset+32) and 31]) then exit;
+    if (lineText='') or (lineText=txt[(offset+31) and 31]) then exit;
     txt[offset]:=lineText;
     offset:=(offset+1) mod length(txt);
   end;
 
 PROCEDURE T_rolloverState.raiseStateMessage;
-  VAR i,j:longint;
+  VAR i,j,j1,commonTailLength,lengthDiff:longint;
+      someChanges:boolean=true;
   begin
+    while someChanges do begin
+      someChanges:=false;
+      for i:=0 to length(txt)-2 do begin
+        j :=(offset+i  ) and 31;
+        j1:=(offset+i+1) and 31;
+        if (length(txt[j])>160) or (length(txt[j1])>160) then Continue;
+        commonTailLength:=0;
+        while (commonTailLength<length(txt[j ])) and
+              (commonTailLength<length(txt[j1])) and
+              (txt[j ][length(txt[j ])-commonTailLength]=
+               txt[j1][length(txt[j1])-commonTailLength]) do inc(commonTailLength);
+        lengthDiff:=length(txt[j1])-length(txt[j]);
+        if lengthDiff>0 then begin
+          txt[j]:=copy(txt[j],1,length(txt[j])-commonTailLength)+
+                  Space(lengthDiff)+
+                  copy(txt[j],length(txt[j])-commonTailLength+1,commonTailLength);
+          someChanges:=true;
+        end else if lengthDiff<0 then begin
+          txt[j1]:=copy(txt[j1],1,length(txt[j1])-commonTailLength)+
+                  Space(-lengthDiff)+
+                  copy(txt[j1],length(txt[j1])-commonTailLength+1,commonTailLength);
+          someChanges:=true;
+        end;
+      end;
+    end;
+
     raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
     for i:=0 to length(txt)-1 do begin
       j:=(offset+i) and 31;
