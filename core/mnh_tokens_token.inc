@@ -588,7 +588,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
-      tt:T_tokenType;
       cTokType:array[-1..2] of T_tokenType;
 
   PROCEDURE initTokTypes; inline;
@@ -1136,8 +1135,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
 
   PROCEDURE process_op_lit; inline;
     begin
-      if (tt in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[tt]>=C_opPrecedence[cTokType[-1]]) or
-         (tt in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
+      if (cTokType[1] in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]]) or
+         (cTokType[1] in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
         newLit:=resolveOperator(stack[length(stack)-2]^.data,
                                 stack[length(stack)-1]^.tokType,
@@ -1147,9 +1146,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         first^.data:=newLit; //store new literal in head
         stack_popDestroy; //pop operator from stack
         stack_popDestroy; //pop LHS-Literal from stack
-      end else if tt=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
-      else if tt in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
-      else if tt in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
+      end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
+      else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
+      else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else stack_push_push;
     end;
 
@@ -1207,8 +1206,7 @@ end}
             stack_popDestroy;
           end;
           tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
-            tt:=cTokType[1];
-            if (tt in [tt_comparatorEq..tt_comparatorListEq]) then begin
+            if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
               newLit:=resolveOperator(stack[length(stack)-2]^.data,
                                       stack[length(stack)-1]^.tokType,
@@ -1225,10 +1223,7 @@ end}
           tt_operatorAnd, tt_operatorOr, //operators with lazy evaluation ?
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
           tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorExtractL0, tt_operatorExtractL1,
-          tt_operatorExtractL2, tt_operatorExtractL3, tt_operatorConcat, tt_operatorIn: begin
-            tt:=cTokType[1];
-            process_op_lit;
-          end;
+          tt_operatorExtractL2, tt_operatorExtractL3, tt_operatorConcat, tt_operatorIn: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
