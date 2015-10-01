@@ -6,23 +6,26 @@ permutations(L:list)->unique(permutations([],L));
 private permutations(Head:list,[])->[Head];
 private permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
 
+private
 canSolve(set)->each(x,permutations(set),+,
                each(y,[x%0+x%1,x%0-x%1,x%0*x%1,x%0/x%1],+,
                each(z,[y  +x%2,y  -x%2,y  *x%2,y  /x%2],+,
             trueCount([z  +x%3,z  -x%3,z  *x%3,z  /x%3]=24))));
+private
 testSolution(s:string)->expression(s)()=24 ? s : void;
+private
 findSolution(set)->head(flatten(each(x,permutations(set),
                    each(op1,OPLIST,
                    each(op2,OPLIST,
                    each(op3,OPLIST,
                    testSolution('(('&x%0&op1&x%1&')'&op2&x%2&')'&op3&x%3)))))));
 
-getRiddle->getRiddle(randomSet);
-getRiddle(set)->getRiddle(set,canSolve(set));
-getRiddle(set,0)->getRiddle(randomSet);
-getRiddle(set,k)->set;
+private getRiddle->getRiddle(randomSet);
+private getRiddle(set)->getRiddle(set,canSolve(set));
+private getRiddle(set,0)->getRiddle(randomSet);
+private getRiddle(set,k)->set;
 
-isCorrectSolution(set,text)->
+private isCorrectSolution(set,text)->
     not(each(c,copy(text,[0..length(text)-1],1),and,c in (set&"") | OPLIST | [' ','(',')']))
   ? print('The input contains an invalid character.') and false
   : '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
@@ -34,16 +37,16 @@ isCorrectSolution(set,text)->
   ? print('The input does not evaluate to 24 but to ',expression(text)(),'.') and false
   : print('The solution is valid.') and true;
 
-playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
-playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&string(set)&'.'));
-playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another round?',['yes','no'])='yes' ? playARound : void)
-                                                      : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
-                                                         print('A possible solution would have been: ',findSolution(set)) |
-                                                        (ask('Another round?',['yes','no'])='yes' ? playARound : void));
-demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&string(set)&'.') |
-           print(' !> ',findSolution(set))|
-           print('The solution is valid.')|
-           print(' ?> Another round?\n !> no');
+private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
+private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&string(set)&'.'));
+private playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another round?',['yes','no'])='yes' ? playARound : void)
+                                                              : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
+                                                                 print('A possible solution would have been: ',findSolution(set)) |
+                                                                (ask('Another round?',['yes','no'])='yes' ? playARound : void));
+private demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&string(set)&'.') |
+                   print(' !> ',findSolution(set))|
+                   print('The solution is valid.')|
+                   print(' ?> Another round?\n !> no');
 
 //*Demo - mainly for reg-testing
 main->print('This is a demo - start with any argument to play.')|demo(getRiddle);
