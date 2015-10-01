@@ -4,5 +4,5 @@
 ./packages/fileUtil.mnh@6: private containsCaseSensitive  (lookFor)->{trueCount(pos(      lookFor ,      $lookIn )>=0)>0};
 ./packages/fileUtil.mnh@7: private containsCaseInsensitive(lookFor)->{trueCount(pos(upper(lookFor),upper($lookIn))>=0)>0};
 ./packages/fileUtil.mnh@23: main->main('packages/*.mnh','trueCount');
-./packages/primes.mnh@22: trueCount(n mod primes(sqrt(n))=0)=0;
-./packages/primes.mnh@26: pEach(n,N,n in cached_primes ? true : trueCount((n mod cached_primes)=0)=0);
+./packages/primes.mnh@30: trueCount(n mod primes(sqrt(n))=0)=0;
+./packages/primes.mnh@34: pEach(n,N,n in cached_primes ? true : trueCount((n mod cached_primes)=0)=0);

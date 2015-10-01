@@ -33,7 +33,7 @@ IMPLEMENTATION
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
   VAR matrix: array of T_arrayOfString;
       i, j, maxJ, maxLength, dotPos: longint;
-
+      anyTab:boolean=false;
   FUNCTION isNumeric(s: ansistring): boolean;
     VAR i: longint;
         hasDot, hasExpo: boolean;
@@ -57,6 +57,9 @@ FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
     end;
 
   begin
+    for i:=0 to length(s)-1 do anyTab:=anyTab or (pos(C_tabChar,s[i])>0);
+    if not(anyTab) then exit(s);
+
     result:=s;
     setLength(matrix,length(result));
     j := -1;

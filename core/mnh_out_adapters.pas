@@ -186,7 +186,7 @@ PROCEDURE T_rolloverState.raiseStateMessage;
       for i:=0 to length(txt)-2 do begin
         j :=(offset+i  ) and 31;
         j1:=(offset+i+1) and 31;
-        if (length(txt[j])>160) or (length(txt[j1])>160) or (length(txt[j1])=0) then Continue;
+        if (length(txt[j1])=0) then Continue;
         commonTailLength:=0;
         while (commonTailLength<length(txt[j ])) and
               (commonTailLength<length(txt[j1])) and
@@ -227,7 +227,7 @@ CONSTRUCTOR T_abstractOutAdapter.create;
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
     echoOn:=false;
-    minErrorLevel:=el2_warning;
+    minErrorLevel:=el3_evalError;
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;

@@ -1,17 +1,25 @@
 UNIT mySys;
 INTERFACE
-USES dos,myGenerics,sysutils,process;
+USES dos,myGenerics,sysutils,process,windows;
 
 FUNCTION getEnvironment:T_arrayOfString;
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
 PROCEDURE clearConsole;
 PROCEDURE getFileInfo(CONST filePath:string; OUT time:double; OUT size:int64; OUT isExistent, isArchive, isDirectory, isReadOnly, isSystem, isHidden:boolean);
+FUNCTION getNumberOfCPUs:longint;
 
 VAR CMD_PATH,
     SEVEN_ZIP_PATH,
     NOTEPAD_PATH:specialize G_lazyVar<ansistring>;
 
 IMPLEMENTATION
+
+FUNCTION getNumberOfCPUs:longint;
+VAR SystemInfo:SYSTEM_INFO;
+begin
+  getSystemInfo(SystemInfo);
+  result:=SystemInfo.dwNumberOfProcessors;
+end;
 
 FUNCTION getEnvironment:T_arrayOfString;
   VAR i:longint;
