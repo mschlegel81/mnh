@@ -3,16 +3,24 @@ mutable max_cached:=3;
 
 //*Return prime numbers <= n
 synchronized
-primes(n:int)->
-  n<=max_cached
-  ? cached_primes%(cached_primes<=n)
-  : begin
-      while(n>max_cached,begin
-        local candidates:=[max_cached+1..max_cached:=min(n,max_cached*max_cached)];
-        cached_primes|=candidates%each(p,cached_primes%(cached_primes<=sqrt(max_cached)),and,candidates mod p != 0);
-      end);
-      cached_primes%(cached_primes<=n);
-    end;
+primes(n:int)->begin
+  n>max_cached ? begin
+    local candidates:=[(max(cached_primes)+1) div 2..ceil(n/2)-1]*2+1; //only odd numbers as candidates
+    each(p,cached_primes,candidates:=candidates%(candidates mod p!=0)); //filter candidates using cached_primes
+    local lastPrime:=head(candidates);
+    candidates:=tail(candidates);
+    while(lastPrime^2<n,begin
+      cached_primes|=lastPrime;
+      candidates:=candidates%(candidates mod lastPrime!=0);
+      lastPrime :=head(candidates);
+      candidates:=tail(candidates);
+    end);
+    cached_primes|=lastPrime;
+    cached_primes|=candidates;
+    max_cached:=n;
+  end : void;
+  cached_primes%(cached_primes<=n);
+end;
 
 //*Return prime numbers <= floor(n)
 primes(n:real)->primes(floor(n));
