@@ -125,7 +125,9 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
     if length(result)<1 then begin
       idLike:=false; exit(result);
     end;
-    if lastWasIdLike and (result[1] in ['a'..'z','A'..'Z','?',':','0'..'9']) then result:=' '+result;
+    if lastWasIdLike and (result[1] in ['a'..'z','A'..'Z','?',':','0'..'9'])
+      or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse])
+    then result:=' '+result;
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']);
   end;
 
@@ -1237,10 +1239,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
   FUNCTION stateToString:ansistring;
     VAR i:longint;
         idLike:boolean=false;
+        p:P_token;
     begin
       result:='';
       for i:=0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
-      result:=result+tokensToString(first);
+      p:=first;
+      while p<>nil do begin
+        result:=result+p^.toString(idLike,idLike);
+        p:=p^.next;
+      end;
     end;
 
 {$MACRO ON}

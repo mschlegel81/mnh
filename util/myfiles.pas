@@ -1,6 +1,6 @@
 UNIT myFiles;
 INTERFACE
-USES {$ifdef UNIX}cmem,cthreads,{$endif}sysutils,process;
+USES sysutils;
 {$MACRO ON}
 CONST bufferSize=1000;
 TYPE

@@ -35,7 +35,7 @@ private build(FI:int)->begin
     local bin64:=(FI and 1)>0;
     local full :=(FI and 2)>0;
     local debug:=(FI and 4)>0;
-  
+
     local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
                           : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
     local parameters:=
@@ -136,7 +136,7 @@ writeNppUserLang(notePadConfigFolder)->
         each(l,fileLines(notePadConfigFolder&"/userDefineLang.xml"),begin
           trim(l)=xmlOpeningTag or trim(l)=xmlClosingTag ? void :
           pos('<UserLang name="MNH"',l)>0 ? begin ignoreBlock:=true; void; end :
-          trim(l)='</UserLang>' ? (ignoreBlock ? begin ignoreBlock:=false; void; end : print(l)) :
+          trim(l)='</UserLang>' ? (ignoreBlock ? begin ignoreBlock:=false; void; end : l) :
           ignoreBlock ? void : l;
         end);
         writeFileLines(notePadConfigFolder&"/userDefineLang.xml",xmlOpeningTag|oldLines|xmlLines|xmlClosingTag);
@@ -252,7 +252,7 @@ main('test')->pEach(task,[
      waitForBuilt(i);
      regTest.main(binName(i));
    end)}],AND,task());
-     
+
 
 //*Tests some files - randomly
 main('quicktest')->pEach(task,[
