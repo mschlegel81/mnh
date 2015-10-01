@@ -362,7 +362,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           exit;
         end;
 
-        if (usecase<>lu_forDocGeneration) or ruleIsMutable then begin
+        if (usecase=lu_forDocGeneration) then begin
+          recycler.cascadeDisposeToken(ruleBody);
+          ruleBody:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
+        end else begin
           rulePattern.toParameterIds(ruleBody);
           if evaluateBody then reduceExpression(ruleBody,0,recycler);
         end;
