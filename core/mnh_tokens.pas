@@ -65,7 +65,8 @@ VAR mainPackageProvider:T_codeProvider;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
-VAR secondaryPackages:array of P_package;
+VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
+    secondaryPackages:array of P_package;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;

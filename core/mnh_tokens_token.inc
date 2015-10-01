@@ -591,6 +591,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       newLit:P_literal;
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
+      maxFutureForwardInitialization:longint=16;
 
   PROCEDURE initTokTypes; inline;
     begin
@@ -823,13 +824,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     VAR future:array of P_futureTask;
         nextFuture:longint=0;
         initializedFutures:longint=0;
-    CONST STEP_TOL=64;
 
     PROCEDURE aggregateFutures(CONST finalizing:boolean);
+      VAR pendingCount:longint=0;
       begin
         while (nextFuture<initializedFutures)
           and (future[nextFuture]<>nil)
-          and ((pendingTasks.queuedCount>STEP_TOL) or
+          and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
                finalizing or
                (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
           while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,recycler);
@@ -841,12 +842,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if finalizing then begin
           finalizeAggregation;
           setLength(future,0);
+        end else begin
+          pendingCount:=nextFuture-initializedFutures;
+          if (pendingCount<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) then inc(maxFutureForwardInitialization,MAX_NUMBER_OF_SECONDARY_WORKER_THREADS);
         end;
       end;
 
     PROCEDURE initFutures;
       VAR i,j:longint;
       begin
+        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr]) then maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS*2;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
@@ -856,7 +861,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
-          if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>STEP_TOL) then aggregateFutures(false);
+          if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
       end;
 

@@ -38,7 +38,7 @@
 {$endif}
 {$ifdef include_implementation}
 VAR poolThreadsRunning:longint=0;
-    MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
+
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
   VAR sleepTime:longint;
