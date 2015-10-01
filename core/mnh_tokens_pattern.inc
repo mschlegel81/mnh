@@ -179,12 +179,16 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:bool
 FUNCTION T_pattern.toString:ansistring;
   FUNCTION trimLeadingEquals(CONST s:ansistring):ansistring;
     begin
-      if (length(s)>1) and (s[1]='=') then result:=copy(s,2,length(s)-1) else result:=s;
+      if (length(s)>1) and (s[1]='=') then begin
+        result:=copy(s,2,length(s)-1);
+        if (length(result)>1) and (result[1]='=')
+        then result:=copy(result,2,length(result)-1);
+      end else result:=s;
     end;
 
   VAR i:longint;
   begin
-    if length(sig)=0 then exit('');
+    if (length(sig)=0) and not(hasOptionals) then exit('');
     result:='(';
     for i:=0 to length(sig)-1 do with sig[i] do begin
       if i>0 then result:=result+', ';
@@ -212,12 +216,15 @@ FUNCTION T_pattern.toString:ansistring;
         tt_comparatorGeq,
         tt_comparatorLss,
         tt_comparatorGrt,
-        tt_comparatorListEq: if restrictionId='' then result:=result+id+C_tokenString[restrictionType]+restrictionScalar^.toString
-                                                 else result:=result+id+C_tokenString[restrictionType]+restrictionId;
+        tt_comparatorListEq: if restrictionId='' then result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionScalar^.toString)
+                                                 else result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionId);
         else result:=result+id;
       end;
     end;
-    if hasOptionals then result:=result+',...';
+    if hasOptionals then begin
+      if  length(sig)>0 then result:=result+',';
+      result:=result+'...';
+    end;
     result:=result+')';
   end;
 
