@@ -242,7 +242,14 @@ each(f,allFolders('.'),
        end
      : void)|
 each(file,
-     files(allFolders('.')&'/*.exe')|files(allFolders('.')&'/*.png')|files('doc/*.html')|files('doc/*.css')|files('doTests.bat')|files('setup.mnh')|files('regTest/*.last'),
+     files(allFolders('.')&'/*.exe')|
+     files(allFolders('.')&'/*.png')|
+     files('doc/*.html')|
+     files('doc/*.css')|
+     files('doTests.bat')|
+     files('setup.mnh')|
+     files('demos/input/*')|
+     files('regTest/*.last'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
 //*Tests all files

@@ -2,7 +2,7 @@ private txt:=split(replace(" 1KisC a ON list: twelve+) 2?3:@last 6;A3?2:@even-ON
 copy("ONMLKJHGFDCBA@?>=<;:/+*)('&%$#!",[0..30],1),
 copy("numMedberFd (Th', ')1%t  anBth is bo')  / >y =tl<ac(Ex+*e ofthe%ts ar.\"\n. \"&ue tr$en#em!at st",[0..30]*3,3)),"\n");
 
-private 
+private
 check(T:booleanList)->T==[false,
                           true,
                           trueCount(T%[7..12])=3,

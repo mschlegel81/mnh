@@ -3,13 +3,22 @@ USE hash;
 testDirectory:=replace(splitFileName(myPath)%"relative",
                        splitFileName(myPath)%"filename","");
 
-mutable passedTests:=fileExists('regTest/passedTests.dat') ? fileLines('regTest/passedTests.dat') : [];
-storePassedTests->writeFileLines('regTest/passedTests.dat',unique(flatten(
-  fileExists('regTest/passedTests.dat') ? fileLines('regTest/passedTests.dat') : [],
-   passedTests)));
+private PASSED_TESTS_STORE:='regTest/passedTests.dat';
 
-synchronized markAsPassed(case,exeHash)->begin passedTests:=passedTests | (exeHash & ":" & case & ":" & fileHash(case)); void; end;
-synchronized isMarkedAsPassed(case,exeHash)->(exeHash & ":" & case & ":" & fileHash(case)) in passedTests;
+restore->fileExists(PASSED_TESTS_STORE) ? expression(fileContents(PASSED_TESTS_STORE))() : [];
+
+mutable passedTests:=restore;
+
+storePassedTests->begin
+  fileExists(PASSED_TESTS_STORE) ? begin
+    local oldVal:=restore;
+    each(v,oldVal,v%[0,1] in passedTests%%[0,1] ? void : passedTests|=[v]);
+  end : void;
+  writeFile(PASSED_TESTS_STORE,replace(string(passedTests),'],[','],\n['));
+end;
+
+synchronized markAsPassed(case,exeHash,runTime)->begin passedTests|=[[exeHash,case,fileHash(case),runTime]]; void; end;
+synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,fileHash(case)] in passedTests%%[0..2];
 
 mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
@@ -32,7 +41,7 @@ runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)-
     expectedResultExists(scriptName)
     ? begin
         expectedResult(scriptName)==scriptOutput
-        ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeHash))
+        ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeHash,scriptTime))
         : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
                                                    addFailedTest(scriptName) &
                                                    storeResult(lastResultName(scriptName),scriptOutput));
@@ -40,6 +49,15 @@ runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)-
     : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName),scriptOutput));
   end;
 
+main('compare')->each(test,unique(passedTests%%[1,2]),begin
+  local times:=passedTests%(passedTests%%1 = test%0 and passedTests%%2 = test%1);
+  size(times)<=1 ? void : begin
+    times:=times%sortPerm(times%%3);
+    print(test%0,' ',test%1);
+    printf('%I30%\t%X%',times%%0,times%%3);
+  end;
+end);
+  
 main->main(executor);
 
 main(exe,...)->begin
@@ -106,3 +124,4 @@ main(exe,...)->begin
   checkOnly and testsFailed<>'' ? print(size(split(testsFailed,'\n')),' tests have not been passed or executed') : void;
   testsFailed='';
 end;
+

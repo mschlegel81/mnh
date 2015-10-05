@@ -843,15 +843,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           finalizeAggregation;
           setLength(future,0);
         end else begin
-          pendingCount:=nextFuture-initializedFutures;
-          if (pendingCount<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) then inc(maxFutureForwardInitialization,MAX_NUMBER_OF_SECONDARY_WORKER_THREADS);
+          if (nextFuture-initializedFutures<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) and
+             (maxFutureForwardInitialization<16*MAX_NUMBER_OF_SECONDARY_WORKER_THREADS)
+          then inc(maxFutureForwardInitialization,maxFutureForwardInitialization);
         end;
       end;
 
     PROCEDURE initFutures;
       VAR i,j:longint;
       begin
-        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr]) then maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS*2;
+        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
+        then maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS
+        else maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS*8;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
