@@ -248,7 +248,7 @@ each(file,
      files('doc/*.css')|
      files('doTests.bat')|
      files('setup.mnh')|
-     files('demos/input/*')|
+     files('demos/inputs/*')|
      files('regTest/*.last'),
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 

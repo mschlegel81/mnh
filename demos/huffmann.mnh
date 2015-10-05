@@ -1,8 +1,7 @@
 private default_dictionary->begin
   local result:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
   fileExists(result) ? result : begin
-    local dictContents:=split(httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'),'\r');
-    writeFileLines(result,dictContents);
+    writeFile(result,httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'));
     result;
   end;
 end;
