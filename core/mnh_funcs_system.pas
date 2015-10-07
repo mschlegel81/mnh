@@ -169,6 +169,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       tempProcess: TProcess;
       n: longint;
       BytesRead: longint;
+      sleepTime: longint = 1;
     begin
       memStream := TMemoryStream.create;
       BytesRead := 0;
@@ -184,8 +185,8 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         while tempProcess.running and (errorLevel<el3_evalError) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
-          if n>0 then inc(BytesRead, n)
-                 else sleep(10);
+          if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
+                 else begin inc(sleepTime); sleep(sleepTime); end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
