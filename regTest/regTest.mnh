@@ -57,7 +57,7 @@ main('compare')->each(test,unique(passedTests%%[1,2]),begin
     printf('%I30%\t%X%',times%%0,times%%3);
   end;
 end);
-  
+
 main->main(executor);
 
 main(exe,...)->begin
@@ -124,4 +124,3 @@ main(exe,...)->begin
   checkOnly and testsFailed<>'' ? print(size(split(testsFailed,'\n')),' tests have not been passed or executed') : void;
   testsFailed='';
 end;
-

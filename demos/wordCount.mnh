@@ -1,13 +1,4 @@
-//*Returns the path of unixdict.txt and ensures the file is existent.
-//*If the file is missing it is downloaded from http://www.puzzlers.org/pub/wordlists/unixdict.txt
-private default_input_path->begin
-  local result:=splitFileName(myPath)%"directory"&"\\inputs\\kjv.txt";
-  fileExists(result) ? result : begin
-    local text:=split(httpGet('http://www.ccel.org/ccel/bible/kjv.txt'),'\r');
-    writeFileLines(result,text);
-    result;
-  end;
-end;
+USE inputs;
 
 private IGNORE_CHARS:=["","!","\"","#","&","'","(",")",",","-",".","/","0","1","2","3","4","5","6","7","8","9",":",";","=","?","[","]","^","_","`","$","%","*","+","<",">","@","\\","{","|","}","Ã"];
 private cleanString(s:string)->lower(trim(replace(replace(s,IGNORE_CHARS," "),"  "," ")));
@@ -26,6 +17,6 @@ private analyze_B(total,hist)->print('Most frequent:') and print('word\tcount\t%
 private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));
 
 //*Displays a short info on words in kjv.txt
-main->analyze(fileWords(default_input_path));
+main->analyze(fileWords(inputs.kjv));
 //*Displays a short info on words in the given file or files matching a search pattern
 main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));

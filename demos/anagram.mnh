@@ -1,13 +1,4 @@
-//*Returns the path of unixdict.txt and ensures the file is existent.
-//*If the file is missing it is downloaded from http://www.puzzlers.org/pub/wordlists/unixdict.txt
-DEFAULT_DICTIONARY->begin
-  local result:=splitFileName(myPath)%"directory"&"\\inputs\\unixdict.txt";
-  fileExists(result) ? result : begin
-    local dictContents:=split(httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'),'\r');
-    writeFileLines(result,dictContents);
-    result;
-  end;
-end;
+USE inputs;
 
 private normalForm(s:string)->each(char,sort(copy(s,[0..length(s)-1],1)),&);
 
@@ -23,7 +14,7 @@ anagramsInDict(DICT)->size(DICT)>1000 ? pEach(subDict,splitDict(DICT),|,anagrams
 private orderListsBySize(L)->L%sortPerm(each(subList,L,size(subList)));
 
 //*Finds anagrams in unixdict.txt
-main->main(DEFAULT_DICTIONARY);
+main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary
 main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),print(each(el,set,aggregator({$x&", "&$y}))));

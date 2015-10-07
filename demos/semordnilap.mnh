@@ -1,10 +1,10 @@
-USE anagram;
+USE anagram,inputs;
 
 private a_is_b_reversed(a:string,b:string)->each(char,copy(b,[length(b)-1..0],1),&)=a;
 
 private findSemordnilaps->
   pEach(anagramGroup,
-        anagramsInDict(readDict(DEFAULT_DICTIONARY)),|,
+        anagramsInDict(readDict(inputs.dict)),|,
         each(i,[1..size(anagramGroup)-1],|,
         each(j,[0..i-1],a_is_b_reversed@(anagramGroup%[i,j]) ? anagramGroup%[i,j] : void)));
 

@@ -1,0 +1,11 @@
+kjv->begin
+  local result:=splitFileName(myPath)%"directory"&"\\kjv.txt";
+  fileExists(result) ? void : writeFile(result,httpGet('http://www.ccel.org/ccel/bible/kjv.txt'));
+  result;
+end;
+
+dict->begin
+  local result:=splitFileName(myPath)%"directory"&"\\unixdict.txt";
+  fileExists(result) ? void : writeFile(result,httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'));
+  result;
+end;
