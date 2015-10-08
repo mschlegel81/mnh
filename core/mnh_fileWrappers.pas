@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES sysutils,Classes,process,myGenerics,mnh_constants;
+USES sysutils,Classes,process,myGenerics,mnh_constants,myStringutil;
 TYPE
   P_codeProvider = ^T_codeProvider;
 
@@ -41,7 +41,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
-FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString): boolean;
+FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
@@ -137,17 +137,15 @@ FUNCTION locateSources: T_arrayOfString;
 
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-  VAR
-    handle: file of char;
-    block: array[0..1023] of char;
-    actuallyRead, i: longint;
+  VAR handle: file of char;
+      block: array[0..1023] of char;
+      actuallyRead, i: longint;
   begin
-    if trim(name) = '' then
-      begin
+    if trim(name) = '' then begin
       accessed := false;
       exit;
-      end;
-      try
+    end;
+    try
       accessed := true;
       assign(handle, name);
       reset(handle);
@@ -158,10 +156,10 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
           result := result+block [i];
       until actuallyRead<length(block);
       close(handle);
-      except
+    except
       accessed := false;
       result := '';
-      end;
+    end;
   end;
 
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
@@ -227,15 +225,58 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
     end;
   end;
 
-FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString): boolean;
-  VAR
-    handle: textFile;
-    i: longint;
+FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
+  VAR handle: textFile;
+      i: longint;
+      textLineEnding:string;
+
+  PROCEDURE findTextLineEnding;
+    FUNCTION currentTextLineEnding(): string;
+      VAR chandle: file of char;
+          block: array[0..1023] of char;
+          actuallyRead, i: longint;
+          content:ansistring='';
+          pr,pn:longint;
+      begin
+        try
+          assign(chandle, name);
+          reset(chandle);
+          content := '';
+          result :='';
+          repeat
+            blockread(chandle, block, length(block), actuallyRead);
+            for i := 0 to actuallyRead-1 do content := content+block [i];
+            pr:=pos(C_carriageReturnChar,content);
+            pn:=pos(C_lineBreakChar,content);
+            if (pn>0) and (pn<length(content)) or
+               (pr>0) and (pr<length(content)) then begin
+              if (pr<=0) and (pn>0) then result:=C_lineBreakChar
+              else if (pn<=0) and (pr>0) then result:=C_carriageReturnChar
+              else if (pr>0) and (pn=pr+1) then result:=C_carriageReturnChar+C_lineBreakChar
+              else if (pn>0) and (pr=pn+1) then result:=C_lineBreakChar+C_carriageReturnChar;
+           end;
+          until (actuallyRead<length(block)) or (result<>'');
+          close(chandle);
+        except
+          result :=LineEnding;
+        end;
+        content := '';
+        if result='' then result:=LineEnding;
+      end;
+
+    begin
+      if     lineSeparator<>'' then textLineEnding:=lineSeparator
+      else if fileExists(name) then textLineEnding:=currentTextLineEnding
+      else textLineEnding:=LineEnding;
+    end;
+
   begin
     if trim(name) = '' then exit(false);
     try
       ensurePath(name);
+      findTextLineEnding;
       assign(handle, name);
+      SetTextLineEnding(handle,textLineEnding);
       rewrite(handle);
       for i := 0 to length(textToWrite)-1 do
         writeln(handle, textToWrite [i]);
@@ -437,7 +478,7 @@ PROCEDURE T_codeProvider.save;
   begin
     while (lock<>0) and (lock<>ThreadID) do sleep(1);
     repeat lock := ThreadID until lock = ThreadID;
-    if (filePath<>'') and writeFileLines(filePath, lineData) then
+    if (filePath<>'') and writeFileLines(filePath, lineData,'') then
       begin
       fileAge(filePath, syncedFileAge);
       fileVersion := version;

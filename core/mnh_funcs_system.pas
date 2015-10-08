@@ -145,14 +145,19 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
   VAR ok:boolean;
       L:T_arrayOfString;
       i:longint;
+      sep:string;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
-                                          and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3)
+       and (params^.value(0)^.literalType=lt_string)
+       and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList])
+       and ((params^.size=2) or (params^.value(2)^.literalType=lt_string)) then begin
+      if params^.size=3 then sep:=P_stringLiteral(params^.value(2))^.value
+                        else sep:='';
       setLength(L,P_listLiteral(params^.value(1))^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       system.enterCriticalSection(file_cs);
-      ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L);
+      ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L,sep);
       system.leaveCriticalSection(file_cs);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -468,7 +473,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileLines',@fileLines_impl,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
                                                          'fileLines(filename:string,firstIdx:int,lastIdx:int);#Returns the specified range of lines or the empty list if no line was found in the range. Indexes are inclusive and start with 0.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file (using system-default line breaks) and returns true');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file and returns true#writeFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execAsync',@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execPipeless',@execPipeless_impl,'execPipeless(programPath:string,parameters ...);#Executes the specified program, waiting for exit and returning true');
