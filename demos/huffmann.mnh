@@ -1,17 +1,15 @@
 USE inputs;
 
-private mergeNodes(n1,n2)->[n1%0+n2%0,[n1%1,n2%1]];
-
-private huffman(L         )->size(L)<=1 ? codeSort(traverseBinaryTree("",L%0%1))
+private huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L%0%1).sort({length($x%0)>=length($y%0)})
                                         : huffman(L,sortPerm(L%%0)%[0,1]);
-private huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) | [mergeNodes(L%(mergeIdx%0),L%(mergeIdx%1))]);
+private huffman(L,mergeIdx)->huffman(L%(mergeIdx%0<>[0..size(L)-1]<>mergeIdx%1) | [mergeNodes@(L%(mergeIdx%[0,1]))]);
+private mergeNodes(n1,n2)->[n1%0+n2%0,[n1%1,n2%1]];
 
 private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
                                               traverseBinaryTree(codePrefix&1,T%1) ;
-private codeSort(L)->L%(sortPerm(each(code,L%%0,-length(code))));
 
-private deltaIndexes(L)->0|[1..size(L)-1]%(head(L,size(L)-1)<>tail(L))|size(L);
+private deltaIndexes(L)->0|[1..size(L)-1]%(leading(L)<>tail(L))|size(L);
 private histogram(words)->histogram(words,deltaIndexes(words));
 private histogram(words,IDX)->each(i,[0..size(IDX)-2],[(IDX%(i+1)-IDX%i),words%(IDX%i)]);
 

@@ -2,16 +2,20 @@ private unpack(s:string)->expression(replace(s,["{" ,","   ,"}"," "],
                                                ["['","','","']",","]))();
 private pack(L)->replace("#"&string(L)&"#",['"',"[","]","#{","}#"],
                                            ['' ,"{","}" ,"[","]" ]);
-private consolidate(s:string)->pack(consolidate(unpack(s)));
+private consolidate(s:string)->unpack(s).consolidate.pack;
 private consolidate(ListOfSets<>[])->
   size(ListOfSets)=1
   ? ListOfSets
   : consolidate(ListOfSets,unique(flatten(ListOfSets)));
 
-private consolidate(ListOfSets,consolidationPoints<>[])->consolidate(ListOfSets,tail(consolidationPoints),each(set,ListOfSets,head(consolidationPoints) in set));
-private consolidate(ListOfSets,[])->ListOfSets;
-private consolidate(ListOfSets,consolidationPoints,mask)->consolidate([unique(flatten(ListOfSets%mask))]|ListOfSets%not(mask),consolidationPoints);
-
+private consolidate(ListOfSets,consolidationPoints)->
+  consolidationPoints==[]
+  ? ListOfSets
+  : begin
+      local mask:=each(set,ListOfSets,consolidationPoints.head in set);
+      consolidate([flatten(ListOfSets%mask).unique]|ListOfSets%not(mask),consolidationPoints.tail);
+    end;
+  
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];
 
 //*See <a href="http://rosettacode.org/wiki/Set_consolidation">http://rosettacode.org/wiki/Set_consolidation</a>

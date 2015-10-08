@@ -1,17 +1,17 @@
 USE inputs;
 
-private normalForm(s:string)->each(char,sort(copy(s,[0..length(s)-1],1)),&);
+private normalForm(s:string)->each(char,s.copy([0..length(s)-1],1).sort,&);
 
 readDict(filename)->sort(pEach(word,fileLines(filename),[normalForm(word),word]));
 
-private duplicates(sortedList)->unique(tail(sortedList)%(head(sortedList,size(sortedList)-1)=tail(sortedList)));
+private duplicates(sortedList)->unique(tail(sortedList)%(leading(sortedList)=tail(sortedList)));
 private splitDict(DICT)->splitDict(DICT,size(DICT) div 2);
 private splitDict(DICT,i)->DICT%i%0 = DICT%(i-1)%0 ? splitDict(DICT,i+1) : [head(DICT,i),tail(DICT,i)];
 
 anagramsInDict(DICT)->size(DICT)>1000 ? pEach(subDict,splitDict(DICT),|,anagramsInDict(subDict))
                                       : pEach(m,duplicates(DICT%%0),DICT%(DICT%%0=m)%%1);
 
-private orderListsBySize(L)->L%sortPerm(each(subList,L,size(subList)));
+private orderListsBySize(L)->L%each(subList,L,size(subList)).sortPerm;
 
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);

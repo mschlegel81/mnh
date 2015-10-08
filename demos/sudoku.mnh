@@ -33,10 +33,20 @@ private loosenRandom(B)->begin
 end;
 
 private blacklist(B)->each(c,Connectivity,flatten(B%c));
-private solve(   Board                             )->solve(Board,blacklist(filterInt(Board)));
-private solve(   Board,blacklist                   )->solve(Board,blacklist,each(i,[0..80],dropSet(Board%i,blacklist%i)));
-private solve(oldBoard,blacklist,newBoard==oldBoard)->oldBoard;
-private solve(oldBoard,blacklist,newBoard          )->solve(newBoard);
+private solve(Board)->begin
+  local ints:=filterInt(Board);
+  local blacklist:=each(c,Connectivity,flatten(ints%c));
+  local newBoard:=each(i,[0..80],dropSet(Board%i,blacklist%i));
+  Board==newBoard ? Board : solve(newBoard);
+end;
+
+parseBoard(s:string)->parseBoard(s.replace('\r','').split('\n'));
+parseBoard(s:stringList)->begin
+  local result:=[];
+  each(line,s,each(char,copy(line,[0..8],1),result|=(char in ['1'..'9'] ? softCast(char) : [[1..9]])));
+  result;
+end;
+
 private canSolve(Board)->isSolved(solve(Board));
 
 private isSolved (B)->each(b,B,and,b:int);
@@ -83,6 +93,17 @@ main->begin
   print('----------------------------------');
 end;
 
+main('x')->
+parseBoard('9  76   8\n'&
+           '   23    \n'&
+           '      567\n'&
+           '         \n'&
+           ' 4      1\n'&
+           ' 5    2  \n'&
+           '    7    \n'&
+           ' 2 4   8 \n'&
+           '6859   1 \n').solve.printRiddle;
+
 //*Create one random riddle
 main("riddle")->printRiddle(randomRiddle);
 //*Create count random riddles in packed form
@@ -99,3 +120,4 @@ PREPARED:=["1h2e6d3c804h8f56g90307f7d3d5e4182f62h9"     ,"ag3f2e8h709a705g3h1080
            "149ag607h3d2f18g60859e7g4g8f7d1508g102g9"   ,"09c52g78h8h14h7h70402f3h5h4g9h6e18f5b6e1h9"];
 //*Create count random riddles from prepared ones
 main("lazy",count:string)->each(i,[1..softCast(count)],print("\n"&format2(scrambledRiddle(unpack(PREPARED%floor(random*(size(PREPARED)-1)))))));
+

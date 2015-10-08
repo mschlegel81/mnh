@@ -1,7 +1,7 @@
 USE inputs;
 
 private IGNORE_CHARS:=["","!","\"","#","&","'","(",")",",","-",".","/","0","1","2","3","4","5","6","7","8","9",":",";","=","?","[","]","^","_","`","$","%","*","+","<",">","@","\\","{","|","}","Ã"];
-private cleanString(s:string)->lower(trim(replace(replace(s,IGNORE_CHARS," "),"  "," ")));
+private cleanString(s:string)->s.replace(IGNORE_CHARS," ").replace("  "," ").trim.lower;
 private cleanSplit(s:string)->s='' ? void : split(s,' ');
 
 private fileWords(filename)->print('Reading file ',filename) and flatten(pEach(l,fileLines(filename),cleanSplit(cleanString(l))));
@@ -10,9 +10,18 @@ private deltaIndexes(L)->0|[1..size(L)-1]%(head(L,size(L)-1)<>tail(L))|size(L);
 private histogram(words)->histogram(words,deltaIndexes(words));
 private histogram(words,IDX)->pEach(i,[0..size(IDX)-2],[words%(IDX%i),(IDX%(i+1)-IDX%i)]);
 
-private analyze  (wordList  )->print('Words total:    ',size(wordList)) and analyze_A(size(wordList),histogram(sort(wordList)));
-private analyze_A(total,hist)->print('Distinct words: ',size(hist    )) and analyze_B(total,head(hist%sortPerm(-(hist%%1)),50));
-private analyze_B(total,hist)->print('Most frequent:') and print('word\tcount\t%\n', each(h,hist,aggregator({$x&"\n"&$y}),'  "'&(h%0)&'"\t'&(h%1)&'\t'&round(h%1/total*100,2)));
+private analyze(wordList)->begin
+  local total:=size(wordList);
+  local hist:=histogram(sort(wordList));
+  local top50:=head(hist%sortPerm(-(hist%%1)),50);
+  print('Words total:    ',total);
+  print('Distinct words: ',size(hist));
+  print('Most frequent:');
+  printf('%X%\t%X%\t%X%',
+    'word'|(top50%%0),
+    'count'|(top50%%1),
+    '%'|round(top50%%1/total*100,2));
+end;
 
 private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));
 

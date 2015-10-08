@@ -1,6 +1,6 @@
 private lengthLimit:=18;
 
-stringPlus(x:string,y:string)->begin
+plus(x:string,y:string)->begin
   local result:='';
   local maxLen:=max(length(x),length(y));
   local X:=repeat('0',maxLen-length(x))&x;
@@ -21,7 +21,7 @@ stringPlus(x:string,y:string)->begin
   result='' ? "0" : result;
 end;
 
-memoized stringFib(i:int)->i<=1 ? "1" : stringPlus(stringFib(i-1),stringFib(i-2));
+memoized stringFib(i:int)->i<=1 ? "1" : stringFib(i-1).plus(stringFib(i-2));
 
 //*Prints out the first 1000 Fibonacci-Numbers
-main->print(each(i,[1..1000],aggregator({$x&"\t\n"&$y}),stringFib(i)));
+main->printf('%I%\t',each(i,[1..1000],stringFib(i)));
