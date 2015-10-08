@@ -48,6 +48,7 @@ TYPE
       PROCEDURE complainAboutUncalled;
       FUNCTION getDoc:P_userPackageDocumentation;
       PROCEDURE printHelpOnMain;
+      FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
   end;
 
 FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
@@ -435,6 +436,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
            (currentToken.tokType=tt_EOL) then begin
           if (currentToken.txt<>'') then lastComment:=currentToken.txt;
         end;
+        if (currentTokenIndex<length(fileTokens)-1) and
+           (currentToken.tokType                   =tt_identifier) and
+           (fileTokens[currentTokenIndex+1].tokType=tt_identifier_pon) and
+           isImportedOrBuiltinPackage(currentToken.txt) then begin
+          inc(currentTokenIndex);
+          currentToken.txt:=fileTokens[currentTokenIndex-1].txt+'.'+currentToken.txt;
+          currentToken.tokType:=tt_identifier;
+        end;
       until (currentTokenIndex>=length(fileTokens)) or
             (currentToken.tokType<>tt_EOL);
     end;
@@ -481,6 +490,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
   VAR localIdStack:T_idStack;
       first,last:P_token;
       loadStartTime:double;
+
   begin
     loadStartTime:=now;
     clear;
@@ -598,17 +608,23 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_localUserRulePointer;
+      if token.tokType=tt_identifier_pon
+      then token.tokType:=tt_localUserRulePointer_pon
+      else token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_importedUserRulePointer;
+      if token.tokType=tt_identifier_pon
+      then token.tokType:=tt_importedUserRulePointer_pon
+      else token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
-      token.tokType:=tt_intrinsicRulePointer;
+      if token.tokType=tt_identifier_pon
+      then token.tokType:=tt_intrinsicRulePointer_pon
+      else token.tokType:=tt_intrinsicRulePointer;
       token.data:=intrinsicFuncPtr;
       exit;
     end;
@@ -688,6 +704,15 @@ PROCEDURE T_package.printHelpOnMain;
       docText:=formatTabs(docText);
       for i:=0 to length(docText)-1 do writeln(docText[i]);
     end;
+  end;
+
+FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
+  VAR ns:T_namespace;
+      i:longint;
+  begin
+    for ns:=low(T_namespace) to high(T_namespace) do if C_namespaceString[ns]=id then exit(true);
+    for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(true);
+    result:=false;
   end;
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);

@@ -44,6 +44,9 @@ TYPE
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer,
     tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue,
+    tt_identifier_pon,
+    tt_localUserRulePointer_pon,
+    tt_importedUserRulePointer_pon, tt_intrinsicRulePointer_pon,
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
@@ -155,7 +158,7 @@ CONST
 
   C_tokenString: array[T_tokenType] of ansistring = ('','',
     //identifier and resolved identifiers
-    '', '', '', '', '',
+    '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
     'each', 'pEach',

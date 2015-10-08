@@ -113,6 +113,10 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
       tt_assignNewBlockLocal: result:=C_tokenString[tt_modifier_local]+' '+txt+C_tokenString[tokType];
       tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenString[tokType];
+      tt_identifier_pon,
+      tt_localUserRulePointer_pon,
+      tt_importedUserRulePointer_pon,
+      tt_intrinsicRulePointer_pon: result:='.'+txt;
       tt_identifier,
       tt_localUserRulePointer,
       tt_importedUserRulePointer,
@@ -174,7 +178,6 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
             parsedLength:=i-1;
             exit(copy(line,1,i-1));
           end else if not(allowQualified) then begin
-            fail('No qualified is identifier accepted here. '+line);
             parsedLength:=i-1;
             exit(copy(line,1,i-1));
           end;
@@ -223,8 +226,9 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
-        id:=leadingId(true);
-        parsedLength:=length(id);
+        id:=leadingId(false);
+
+        //parsedLength:=length(id);
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
         if id=C_tokenString[tt] then begin
@@ -353,6 +357,13 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
            end else if startsWith(line,C_tokenString[tt_separatorCnt]) then begin
              parsedLength:=length(C_tokenString[tt_separatorCnt]);
              result.tokType:=tt_separatorCnt;
+           end else if (length(line)>=2) and (line[2] in ['a'..'z','A'..'Z']) then begin
+             id:=copy(leadingId(false),2,length(line));
+             parsedLength:=1+length(id);
+             result.txt:=id;
+             result.tokType:=tt_identifier_pon;
+             result.data:=inPackage;
+             if not(inEvaluationLoop) then inPackage^.resolveRuleId(result,true);
            end else fail('Cannot parse: '+line);
       ':': if startsWith(line,':=') then begin
              parsedLength:=2;
@@ -1171,6 +1182,46 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       didSubstitution:=true;
     end;
 
+  PROCEDURE pon_flip;
+    VAR newFunctionToken:P_token;
+        newParameterListToken:P_token;
+        oldSecond:P_token;
+    begin
+      //Assuming:
+      //cTokType[0]=tt_literal
+      //cTokType[1]=tt_???_pon
+      //cTokType[2]=may be (
+      //Transforms:
+      //  <Lit>.func     -> func(<Lit>)
+      //  <Lit>.func(... -> func(<Lit>,...
+      newFunctionToken:=recycler.newToken(first^.next);
+      with newFunctionToken^ do case tokType of
+                 tt_identifier_pon:
+        tokType:=tt_identifier;
+                 tt_importedUserRulePointer_pon:
+        tokType:=tt_importedUserRulePointer;
+                 tt_localUserRulePointer_pon:
+        tokType:=tt_localUserRulePointer;
+                 tt_intrinsicRulePointer_pon:
+        tokType:=tt_intrinsicRulePointer;
+        else raiseError(el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
+      end;
+      newParameterListToken:=recycler.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
+
+
+      first^.data:=nil; first^.tokType:=tt_identifier;
+      first^.next^.data:=nil;
+      oldSecond:=recycler.disposeToken(recycler.disposeToken(first));
+
+      first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
+
+      if cTokType[2]=tt_braceOpen then begin
+        newParameterListToken^.next:=recycler.disposeToken(oldSecond);
+        newParameterListToken^.tokType:=tt_parList_constructor;
+      end;
+      didSubstitution:=true;
+    end;
+
   PROCEDURE process_op_lit; inline;
     begin
       if (cTokType[1] in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]]) or
@@ -1187,6 +1238,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
+      else if cTokType[1] in [tt_identifier_pon,tt_localUserRulePointer_pon,tt_importedUserRulePointer_pon,tt_intrinsicRulePointer_pon] then pon_flip
       else stack_push_push;
     end;
 
@@ -1264,6 +1316,7 @@ tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParamet
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
+tt_identifier_pon,tt_importedUserRulePointer_pon,tt_localUserRulePointer_pon,tt_intrinsicRulePointer_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
@@ -1480,6 +1533,11 @@ end}
             if first^.tokType<>tt_identifier then didSubstitution:=true;
           end;
         end;
+        tt_identifier_pon: begin
+          if first^.data=nil then first^.data:=guessPackageForToken(first^);
+          P_package(first^.data)^.resolveRuleId(first^,false);
+          if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
+        end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
         (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
@@ -1493,9 +1551,11 @@ end}
           first^.next:=recycler.disposeToken(first^.next);
           resolveWhile;
         end;
-        tt_iifCheck: if (cTokType[-1]=tt_literal) and (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean) then begin
-          resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value);
-        end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean.',first^.location);
+        tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
+          if (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean)
+          then resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value)
+          else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack[length(stack)-1]^.data)^.literalType]+': '+stack[length(stack)-1]^.singleTokenToString,first^.location);
+        end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or (errorLevel>=el3_evalError);
     {$ifndef debugMode}

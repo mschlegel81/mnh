@@ -63,7 +63,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
           end else begin
-            if (token.tokType = tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
+            if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
             if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) and
                ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList,tt_listToParameterList])) //rule must not be followed by an opening bracket, indicating a call with parameters
             then begin
@@ -294,7 +294,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         result:=recycler.newToken(original.location,'',tt_literal,L);
         L^.rereference;
       end else begin
-        if (original.tokType=tt_identifier) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
+        if (original.tokType in [tt_identifier,tt_identifier_pon]) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
         result:=recycler.newToken(@original);
       end;
     end;
