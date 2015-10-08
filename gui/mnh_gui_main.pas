@@ -232,16 +232,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
       elc_clearConsole: syn.lines.clear;
       elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
-      ele_echoInput:       syn.lines.append(C_specialHeads[2].head+' '+simpleMessage);
-      eld_echoDeclaration: syn.lines.append(C_specialHeads[1].head+' '+simpleMessage);
-      elo_echoOutput:      syn.lines.append(C_specialHeads[3].head+' '+simpleMessage);
-      el0_allOkay,
-      el1_note,
-      el2_warning,
-      el3_evalError,
-      el4_parsingError,
-      el5_systemError: syn.lines.append(C_specialHeads[4].head+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
-      elX_stateInfo:   syn.lines.append(C_specialHeads[5].head+ansistring(location)+' '+simpleMessage);
+      ele_echoInput,
+      eld_echoDeclaration,
+      elo_echoOutput:      syn.lines.append(C_startOfHeader+C_errorLevelTxt[messageType]+C_startOfHeader+                         ' '+simpleMessage);
+      else                 syn.lines.append(C_startOfHeader+C_errorLevelTxt[messageType]+C_startOfHeader+' '+ansistring(location)+' '+simpleMessage);
     end;
     clearMessages;
     system.leaveCriticalSection(cs);

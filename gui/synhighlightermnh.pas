@@ -9,16 +9,22 @@ USES
   SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litVar,mnh_constants,myGenerics;
 
 CONST
-  C_specialHeads: array [1..5] of record
-    head:string[5];
+  C_startOfHeader=#01;
+
+  C_errLineCase:array[T_messageTypeOrErrorLevel] of record
     backgroundColor:longint;
     foregroundColor:longint;
-  end =
-    ((head:#10+' in>';backgroundColor:$00D7D7D7; foregroundColor:maxLongint),
-     (head:#10+'_in>';backgroundColor:$00EBEBEB; foregroundColor:maxLongint),
-     (head:#10+'out>';backgroundColor:$00F5F5F5; foregroundColor:maxLongint),
-     (head:#10+'!! >';backgroundColor:$00F5F5F5; foregroundColor:maxLongint),
-     (head:#10+' > >';backgroundColor:$00F5F5F5; foregroundColor:maxLongint));
+  end=((backgroundColor:maxLongint; foregroundColor:maxLongint),  //elc_clearConsole
+       (backgroundColor:maxLongint; foregroundColor:maxLongint),  //elp_printline,
+       (backgroundColor:$00EBEBEB;  foregroundColor:maxLongint),  //ele_echoInput,
+       (backgroundColor:$00D7D7D7;  foregroundColor:maxLongint),  //eld_echoDeclaration,
+       (backgroundColor:$00F5F5F5;  foregroundColor:maxLongint),  //elo_echoOutput,
+       (backgroundColor:maxLongint; foregroundColor:maxLongint),  //el0_allOkay,
+       (backgroundColor:maxLongint; foregroundColor:maxLongint),  //el1_note,
+       (backgroundColor:maxLongint; foregroundColor:maxLongint),  //el2_warning,
+       (backgroundColor:maxLongint; foregroundColor:$000000FF ),  //el3_evalError,
+       (backgroundColor:maxLongint; foregroundColor:$000000FF ),  //el4_parsingError,
+       (backgroundColor:$0000FFFF;  foregroundColor:$000000FF )); //el5_systemError
 
 TYPE
   TtkTokenKind = (
@@ -43,7 +49,7 @@ TYPE
 
   TSynMnhSyn = class(TSynCustomHighlighter)
   private
-    specialLineCase:byte;
+    specialLineCase:T_messageTypeOrErrorLevel;
     isMarked:    boolean;
     defaultToPrint:boolean;
 
@@ -150,7 +156,7 @@ FUNCTION TSynMnhSyn.GetDefaultAttribute(index: integer): TSynHighlighterAttribut
 PROCEDURE TSynMnhSyn.SetLine(CONST newValue: string; LineNumber: integer);
   begin
     inherited;
-    specialLineCase:=0;
+    specialLineCase:=elc_clearConsole;
     fLine := PChar(newValue);
     Run := 0;
     fLineNumber := LineNumber;
@@ -167,32 +173,33 @@ PROCEDURE TSynMnhSyn.next;
   VAR
     localId: shortString;
     i: longint;
+    lc:T_messageTypeOrErrorLevel;
   begin
     isMarked:=false;
     fTokenId := tkDefault;
     fTokenPos := Run;
     if defaultToPrint then begin
-      if (run = 0) and (fLine [0] = #10) then begin
+      if (run = 0) and (fLine [0] = C_startOfHeader) then begin
         i := 0;
         localId := '';
-        while (length(localId)<5) and (fLine [i]<>#0) do begin
+        inc(i); //skip C_startOfHeader character
+        while (fLine [i]<>C_startOfHeader) do begin
           localId := localId+fLine [i];
           inc(i);
         end;
-        specialLineCase:=5;
-        while (specialLineCase>0) and (C_specialHeads[specialLineCase].head<>localId) do dec(specialLineCase);
-        if specialLineCase>0 then begin
+        for lc:=low(T_messageTypeOrErrorLevel) to high(T_messageTypeOrErrorLevel) do
+          if C_errorLevelTxt[lc]=localId then specialLineCase:=lc;
+        if specialLineCase<>elc_clearConsole then begin
           run:=i+1;
-          if specialLineCase>=4 then begin
-            if specialLineCase=4 then fTokenId:=tkError
-                                 else fTokenId:=tkStacktrace;
+          if specialLineCase>=el3_evalError then begin
+            fTokenId:=tkError;
             while (fLine[run]<>#0) do inc(run);
           end;
           exit;
         end;
       end;
 
-      if (specialLineCase=0) then begin
+      if (specialLineCase=elc_clearConsole) then begin
         if fLine[run]=#0 then fTokenId := tkNull
         else begin
           while (fLine[run]<>#0) do inc(run);
@@ -343,7 +350,7 @@ FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
-    if specialLineCase in [1..3] then with C_specialHeads[specialLineCase] do begin
+    with C_errLineCase[specialLineCase] do begin
       if backgroundColor<>maxLongint then result.background:=backgroundColor;
       if foregroundColor<>maxLongint then result.foreground:=foregroundColor;
     end;
@@ -363,7 +370,7 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
-    specialLineCase:=0;
+    specialLineCase:=elc_clearConsole;
     isMarked:=false;
   end;
 

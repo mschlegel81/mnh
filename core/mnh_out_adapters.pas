@@ -16,18 +16,18 @@ TYPE
     location: T_tokenLocation;
   end;
 
-  { T_rolloverState }
-
-  T_rolloverState = object
-    txt:array[0..31] of ansistring;
-    offset:byte;
-
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE clear;
-    PROCEDURE addLine(CONST lineText:ansistring);
-    PROCEDURE raiseStateMessage;
-  end;
+  //{ T_rolloverState }
+  //
+  //T_rolloverState = object
+  //  txt:array[0..31] of ansistring;
+  //  offset:byte;
+  //
+  //  CONSTRUCTOR create;
+  //  DESTRUCTOR destroy;
+  //  PROCEDURE clear;
+  //  PROCEDURE addLine(CONST lineText:ansistring);
+  //  PROCEDURE raiseStateMessage;
+  //end;
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
 
@@ -82,7 +82,6 @@ VAR
   outAdapter:P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
   maxErrorLevel: T_messageTypeOrErrorLevel;
-  wantStateHistory: boolean=false;
 
 PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -112,8 +111,7 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
     InterLockedIncrement(errorCount); if (errorCount>20) and (thisErrorLevel<=maxErrorLevel) then exit;
-    if (thisErrorLevel > maxErrorLevel) or
-       (thisErrorLevel = elX_stateInfo) then begin
+    if (thisErrorLevel > maxErrorLevel) then begin
       maxErrorLevel := thisErrorLevel;
       errorCount:=0;
     end;
@@ -151,75 +149,74 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
                                 else halt(systemErrorlevel.value);
   end;
 
-{ T_rolloverState }
-
-CONSTRUCTOR T_rolloverState.create;
-  begin
-    clear;
-  end;
-
-DESTRUCTOR T_rolloverState.destroy;
-  begin
-    clear;
-  end;
-
-PROCEDURE T_rolloverState.clear;
-  VAR i:longint;
-  begin
-    for i:=0 to length(txt)-1 do txt[i]:='';
-    offset:=0;
-  end;
-
-PROCEDURE T_rolloverState.addLine(CONST lineText: ansistring);
-  begin
-    if (lineText='') or (lineText=txt[(offset+31) and 31]) then exit;
-    txt[offset]:=lineText;
-    offset:=(offset+1) mod length(txt);
-  end;
-
-PROCEDURE T_rolloverState.raiseStateMessage;
-  VAR i,j,j1,commonTailLength,lengthDiff:longint;
-      someChanges:boolean=true;
-  begin
-    while someChanges do begin
-      someChanges:=false;
-      for i:=0 to length(txt)-2 do begin
-        j :=(offset+i  ) and 31;
-        j1:=(offset+i+1) and 31;
-        if (length(txt[j1])=0) then Continue;
-        commonTailLength:=0;
-        while (commonTailLength<length(txt[j ])) and
-              (commonTailLength<length(txt[j1])) and
-              (txt[j ][length(txt[j ])-commonTailLength]=
-               txt[j1][length(txt[j1])-commonTailLength]) do inc(commonTailLength);
-        lengthDiff:=length(txt[j1])-length(txt[j]);
-        if lengthDiff>0 then begin
-          txt[j]:=copy(txt[j],1,length(txt[j])-commonTailLength)+
-                  Space(lengthDiff)+
-                  copy(txt[j],length(txt[j])-commonTailLength+1,commonTailLength);
-          someChanges:=true;
-        end else if lengthDiff<0 then begin
-          txt[j1]:=copy(txt[j1],1,length(txt[j1])-commonTailLength)+
-                  Space(-lengthDiff)+
-                  copy(txt[j1],length(txt[j1])-commonTailLength+1,commonTailLength);
-          someChanges:=true;
-        end;
-      end;
-    end;
-
-    raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
-    for i:=0 to length(txt)-1 do begin
-      j:=(offset+i) and 31;
-      txt[j]:=trim(txt[j]);
-      if txt[j]<>'' then raiseError(elX_stateInfo,txt[j],C_nilTokenLocation);
-    end;
-  end;
+//{ T_rolloverState }
+//
+//CONSTRUCTOR T_rolloverState.create;
+//  begin
+//    clear;
+//  end;
+//
+//DESTRUCTOR T_rolloverState.destroy;
+//  begin
+//    clear;
+//  end;
+//
+//PROCEDURE T_rolloverState.clear;
+//  VAR i:longint;
+//  begin
+//    for i:=0 to length(txt)-1 do txt[i]:='';
+//    offset:=0;
+//  end;
+//
+//PROCEDURE T_rolloverState.addLine(CONST lineText: ansistring);
+//  begin
+//    if (lineText='') or (lineText=txt[(offset+31) and 31]) then exit;
+//    txt[offset]:=lineText;
+//    offset:=(offset+1) mod length(txt);
+//  end;
+//
+//PROCEDURE T_rolloverState.raiseStateMessage;
+//  VAR i,j,j1,commonTailLength,lengthDiff:longint;
+//      someChanges:boolean=true;
+//  begin
+//    while someChanges do begin
+//      someChanges:=false;
+//      for i:=0 to length(txt)-2 do begin
+//        j :=(offset+i  ) and 31;
+//        j1:=(offset+i+1) and 31;
+//        if (length(txt[j1])=0) then Continue;
+//        commonTailLength:=0;
+//        while (commonTailLength<length(txt[j ])) and
+//              (commonTailLength<length(txt[j1])) and
+//              (txt[j ][length(txt[j ])-commonTailLength]=
+//               txt[j1][length(txt[j1])-commonTailLength]) do inc(commonTailLength);
+//        lengthDiff:=length(txt[j1])-length(txt[j]);
+//        if lengthDiff>0 then begin
+//          txt[j]:=copy(txt[j],1,length(txt[j])-commonTailLength)+
+//                  Space(lengthDiff)+
+//                  copy(txt[j],length(txt[j])-commonTailLength+1,commonTailLength);
+//          someChanges:=true;
+//        end else if lengthDiff<0 then begin
+//          txt[j1]:=copy(txt[j1],1,length(txt[j1])-commonTailLength)+
+//                  Space(-lengthDiff)+
+//                  copy(txt[j1],length(txt[j1])-commonTailLength+1,commonTailLength);
+//          someChanges:=true;
+//        end;
+//      end;
+//    end;
+//
+//    raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
+//    for i:=0 to length(txt)-1 do begin
+//      j:=(offset+i) and 31;
+//      txt[j]:=trim(txt[j]);
+//      if txt[j]<>'' then raiseError(elX_stateInfo,txt[j],C_nilTokenLocation);
+//    end;
+//  end;
 
 { T_abstractOutAdapter }
 
 CONSTRUCTOR T_abstractOutAdapter.create;
   begin
-    wantStateHistory:=false;
   end;
 
 { T_consoleOutAdapter }
@@ -255,8 +252,7 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
     if level<minErrorLevel then exit;
-    writeln(stdErr, C_errorLevelTxt[errorLevel], errorMessage, ' ',
-            ansistring(errorLocation));
+    writeln(stdErr, C_errorLevelTxt[errorLevel],ansistring(errorLocation),' ', errorMessage);
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;

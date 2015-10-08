@@ -452,10 +452,9 @@ FUNCTION T_subrule.toString:ansistring;
       result:=result+preparedBody[i].token.toString(prevIdLike,idLike);
       prevIdLike:=idLike;
     end;
-    if typ=srt_inline_for_literal then result:='{'+result+'}'
-    else begin
-      result:=pattern.toString+result;
-    end;
+    if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
+    else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
+    else result:=pattern.toString+result;
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer):string;
@@ -494,7 +493,8 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. '+
+        'The failed function is:'+toString,declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;

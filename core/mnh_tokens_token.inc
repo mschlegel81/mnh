@@ -597,8 +597,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
   end;
 
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
-  VAR stateHistory:T_rolloverState;
-      stack:array of P_token;
+  VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
@@ -837,7 +836,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         initializedFutures:longint=0;
 
     PROCEDURE aggregateFutures(CONST finalizing:boolean);
-      VAR pendingCount:longint=0;
       begin
         while (nextFuture<initializedFutures)
           and (future[nextFuture]<>nil)
@@ -897,7 +895,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       if (aggregatorPresent<>no) and (itList^.size=0)
       then raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
-        if inParallel and not(wantStateHistory) then begin
+        if inParallel then begin
           initFutures;
           aggregateFutures(true);
         end else begin
@@ -1303,6 +1301,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       result:='';
       for i:=0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
+      result:=result+' || ';
       p:=first;
       while p<>nil do begin
         result:=result+p^.toString(idLike,idLike);
@@ -1332,15 +1331,12 @@ end else begin
 end}
 
   begin
-    if wantStateHistory then stateHistory.create;
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      if wantStateHistory then stateHistory.addLine(stateToString);
-      //writeln(tokensToString(first));
-      //writeln('                                           ',cTokType[-1],' ] ',cTokType[0],' | ',cTokType[1]);
+      //writeln(stateToString);
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1567,12 +1563,6 @@ end}
       end;
     end;
     {$endif}
-    if wantStateHistory then begin
-      if (errorLevel>=el3_evalError) and (errorLevel<elX_stateInfo)
-      or (first<>nil) and (first^.next<>nil) then stateHistory.raiseStateMessage;
-      stateHistory.destroy;
-    end;
-
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
                    else raiseError(el0_allOkay,'Reduce expression done',first^.location);

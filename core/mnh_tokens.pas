@@ -556,13 +556,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     if usecase=lu_forDirectExecution then complainAboutUncalled;
     if usecase=lu_forCallingMain then executeMain;
-    if wantStateHistory then wantStateHistory:=false else
-      if (errorLevel>=el3_evalError) and (now-loadStartTime<ONE_SECOND) then begin
-        wantStateHistory:=true;
-        clearAllCaches;
-        clearErrors;
-        load(usecase,recycler,mainParameters);
-      end;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
