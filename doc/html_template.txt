@@ -42,8 +42,8 @@ table { display: inline-table}
 <h4><a href="quickstart.html">Quick start</a></h4>
 <h4><a href="types.html">Types</a></h4>
 <h4><a href="operators.html">Operators</a></h4>
-<h4><a href="functions.html">Function definitions</a></h4>
-<h4><a href="each.html">Special constructs: <code>each</code> and <code>pEach</code></a></h4>
+<h4><a href="functions.html">Functions</a></h4>
+<h4><a href="each.html"><code>each</code> and <code>pEach</code></a></h4>
 <h4><a href="builtin.html">Built-in Functions</a></h4>
 <h4><a href="packages.html">User packages</a></h4>
 <tr bgcolor="#FFFACD">
@@ -886,6 +886,7 @@ the latter 2 additionally allow for specific optimizations, making e.g. the oper
 <body>
 <h2 align="center"><a href="index.html">MNH 5</a> - Functions</h3>
 <div align="right"><hr> </div>
+<h3><a     href="#calls">Calls</a></h3>
 <h3><a     href="#declarations">Declarations</a></h3>
 <h3><a     href="#assignments">Assignments</a></h3>
 <h3><a     href="#restrictions">Parameter restrictions</a></h3>
@@ -895,9 +896,80 @@ the latter 2 additionally allow for specific optimizations, making e.g. the oper
 <li><h4><a href="#privateMod">private</a></h4></li>
 <li><h4><a href="#memoizedMod">memoized</a></h4></li>
 <li><h4><a href="#synchronizedMod">synchronized</a></h4></li>
-<li><h4><a href="#mutableMod">mutable</a></h4></li></ul>
+<li><h4><a href="#mutableMod">mutable</a></h4></li>
 <li><h4><a href="#localMod">local</a></h4></li></ul>
 <div align="right"><hr> </div>
+<h3><a name="calls">Calls</a></h3>
+To keep it short:<ul>
+<li><b>Calling convention</b><br>
+All variables are immutable or when they are not, they behave as immutable variables. Consequently all parameters are passed as references. Trying to assign values passed parameters will cause an error.
+<br>
+Every function <code>f</code> can be called with any number of parameters; matching parameters will lead to evaluation of some kind, mismatching parameters
+will lead to an error output.</li>
+<li><b>Omitting parameters</b><br>A nullary function can be calles with or without parameters, so the following statements will behave the same:<code>
+<!--mnh-->
+  someFunction;
+  someFunction();
+<!--end-->
+</code>
+If <code>someFunction</code> returns a nullary expression, consider the following:<code>
+<!--mnh-->
+   in> someFunction :={1+2*3};
+   in> someFunction;
+  out> {(1+2*3)}
+   in> someFunction();
+  out> {(1+2*3)}
+       //First evaluate someFunction then evaluate the returned expression
+   in> someFunction()();
+  out> 7           
+<!--end-->
+</code>
+If however <code>someOtherFunction</code> returns an unary expression the behaviour is slightly different:<code>
+<!--mnh-->
+   in> someOtherFunction:={$x/2};
+       //As above
+   in> someOtherFunction();
+  out> {($x/2)}
+       //As above, passing (1) as parameter list to the returned expression
+   in> someOtherFunction()(1);
+  out> 0.5
+       //Fallback behaviour: someOtherFunction cannot be applied to parameter list (1)
+       //  but the returned expression can, so it is interpreted as the previous call
+   in> someOtherFunction(1);
+  out> 0.5
+<!--end-->
+</code>
+</li><li><b>Visibility</b><br>
+Visibility is handled as in Pascal, i.e. a local function definition hides all imported functions with the same name. <br>
+If a function of the same name is defined in more than one used package, the definition in the last imported package hides previous definitions.<br>
+To access a "hidden" function, you can access it by fully qualifying it via <code><i>packageName</i>.<i>functionName</i></code>.<br>
+Example: Define a function returning the "square of a string", using the builtin function as a fallback:<code>
+<!--mnh-->
+  sqr(s:string):=string(math.sqr(softCast(s)));
+  sqr(x)->math.sqr(x);
+<!--end-->
+</code>
+</li>
+<li><b>Pseudo-Object-Notation</b><br>Even though MNH is not object oriented it supports <i>(Pseudo-)Object-Notation</i>. This means that for some function <code>f</code> the
+following statements are equivalent: <code>
+<!--mnh-->
+  f(x);
+  x.f;
+<!--end-->
+</code>
+This can improve readability a lot. For example consider the following equivalent statements:<code>
+<!--mnh-->
+  sort(trim(replace(fileLines('input.txt'),'x',' ')),{length($x)<=length($y)});
+  fileLines('input.txt').replace('x',' ').trim.sort({length($x)<=length($y)});
+<!--end-->
+</code>
+While the first one is virtually unreadable without bracket highlighting, the secon one quite clearly reads: "Read all lines from file 'input.txt', 
+then replace every ocurring 'x' by a space, then trim each line, then sort the lines by ascending length.".<br>
+This notation can be ambiguous however, since in <code>a.b</code> identifier <code>a</code> can either denote a package (so <code>a.b</code> is a fully qualified function) or
+a local function or variable (so <code>a.b</code> is interpreted as <code>b(a)</code>). This is resolved by favouring the first interpretation: if there is an imported package "a", it will be used.
+</li>
+</ul>
+
 <h3><a name="declarations">Declarations</a></h3>
 A function declaration follows the prototype <i>ruleId(pattern)</i><code>-></code><i>ruleBody</i>.<br>
 The declaration may be preceded by <a href="#modifiers">modifiers</a>, the pattern may be empty (producing a nullary function).<br>
@@ -922,8 +994,12 @@ is called. This is important when you take side effects into account. A reasonab
   pi:=4*arctan(1);
 <!--end-->
 </code>
-This defines pi and is evaluated only once.
-
+This defines pi and is evaluated only once.<br>
+A less reasonable example would be the following declaration - a "random" number which stays the same during evaluation:<code>
+<!--mnh-->
+  constantRandom:=random;
+<!--end-->
+</code>
 <h3><a name="restrictions">Parameter restrictions</a></h3>
 Parameter restrictions fall in three categories:<ul>
   <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>)
