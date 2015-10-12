@@ -6,7 +6,7 @@ memoized
 private hailLen(1  )->1;
 private hailLen(i>1)->1+((i and 1)=1 ? hailLen(3*i+1) : hailLen(i div 2));
 
-
+memoized
 private sizes->0|each(i,[1..100000],hailLen(i));
 
 //*Solves the "Hailstone" task from <a href="http://rosettacode.org/wiki/Hailstone_sequence">RosettaCode</a>

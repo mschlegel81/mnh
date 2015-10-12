@@ -1,12 +1,14 @@
-private oyako(a,b,c,perimeter)->a+b+c>perimeter
-                        ? [                       0,0]
-                        : [floor(perimeter/(a+b+c)),1]+
-                pEach(abc,[[ a-2*b+2*c, 2*a-b+2*c, 2*a-2*b+3*c],
-                           [ a+2*b+2*c, 2*a+b+2*c, 2*a+2*b+3*c],
-                           [-a+2*b+2*c,-2*a+b+2*c,-2*a+2*b+3*c]],+,oyako(abc%0,abc%1,abc%2,perimeter));
-format(x,y)-> x&" pythagorean triplets, "&y;
+private oyako(a,b,c,perimeter)->
+  a+b+c>perimeter
+  ? [                       0,0]
+  : [floor(perimeter/(a+b+c)),1]+
+    pEach(abc,[[ a-2*b+2*c, 2*a-b+2*c, 2*a-2*b+3*c, perimeter],
+               [ a+2*b+2*c, 2*a+b+2*c, 2*a+2*b+3*c, perimeter],
+               [-a+2*b+2*c,-2*a+b+2*c,-2*a+2*b+3*c, perimeter]],+,oyako@abc);
 
-private oyako(perimeter)->"In perimeter <="&perimeter&" there are "&format@oyako(3,4,5,perimeter)&" of which are primitive";
+private oyako(perimeter)->format@("In perimeter <=%I7% there are %I6% pythagorean triplets, %I5% of which are primitive"|perimeter|oyako(3,4,5,perimeter));
 
 //*See <a href="http://rosettacode.org/wiki/Pythagorean_triples">http://rosettacode.org/wiki/Pythagorean_triples</a>
-main->each(i,10^[1..6],print(oyako(i)));
+main('rosetta')->each(i,10^[1..6],print(oyako(i)));
+//*As above, but abridged for reg test
+main->each(i,10^[1..5],print(oyako(i)));

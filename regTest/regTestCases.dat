@@ -18,7 +18,6 @@
 [ "demos/countTheCoins.mnh",   "",                        false,         false,        false],
 [ "demos/dice7fromDice5.mnh",  "",                        false,         false,        true],
 [ "demos/digitSquareSum.mnh",  "",                        false,         false,        true],
-[ "demos/fibMaze.mnh",         "demos/fibMaze.png",       true,          true,         true],
 [ "demos/fibonacci.mnh",       "",                        false,         false,        false],
 [ "demos/fibonacciWord.mnh",   "",                        false,         false,        false],
 [ "demos/forkbombFib.mnh",     "",                        false,         false,        true],
