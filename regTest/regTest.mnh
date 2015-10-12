@@ -50,28 +50,28 @@ runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)-
   end;
 
 private average(L:numericList)->each(x,L,+)/size(L);
-  
+
 main('compare')->begin
   local averageTimePerTest :=each(testFile,unique(passedTests%%1),[testFile, average(passedTests%(passedTests%%1=testFile)%%3)]).sort({$x%1<=$y%1});
   print('All tests ordered by time:');
-  printf('%X%\t%I%s',averageTimePerTest%%0,round(averageTimePerTest%%1,3));
+  printf('%X%\t%I%s',averageTimePerTest%%0,round(averageTimePerTest%%1,4));
   print;
-  
+
   local timeVariancePerTest:=each(testFile,unique(passedTests%%1),[testFile, average(sqr(passedTests%(passedTests%%1=testFile)%%3 - averageTimePerTest%testFile))]);
-  printf@('Fastest test: %X%; average time: %0.00%s'| averageTimePerTest%(argMin(averageTimePerTest%%1)));
-  local testFile:=averageTimePerTest%(argMin(averageTimePerTest%%1))%0;  
+  printf@('Fastest test: %X%; average time: %0.0000%s'| averageTimePerTest%(argMin(averageTimePerTest%%1)));
+  local testFile:=averageTimePerTest%(argMin(averageTimePerTest%%1))%0;
   local relAvgTimePerBin:=(passedTests%(passedTests%%1=testFile)%%[0,3]).sort({$x%1<=$y%1});
   printf("%I20%\t%I%\ts",relAvgTimePerBin%%0,round(relAvgTimePerBin%%1,3));
   print;
-  
-  printf@('Slowest test: %X%; average time: %0.00%s'| averageTimePerTest%(argMax(averageTimePerTest%%1)));
-  local testFile:=averageTimePerTest%(argMax(averageTimePerTest%%1))%0;  
+
+  printf@('Slowest test: %X%; average time: %0.0000%s'| averageTimePerTest%(argMax(averageTimePerTest%%1)));
+  local testFile:=averageTimePerTest%(argMax(averageTimePerTest%%1))%0;
   local relAvgTimePerBin:=(passedTests%(passedTests%%1=testFile)%%[0,3]).sort({$x%1<=$y%1});
   printf("%I20%\t%I%\ts",relAvgTimePerBin%%0,round(relAvgTimePerBin%%1,3));
   print;
-  
-  local testFile:=timeVariancePerTest%(argMax(timeVariancePerTest%%1))%0;  
-  printf('Test with the largest variance: %X%; average time: %0.00%s',testFile,averageTimePerTest%testFile);
+
+  local testFile:=timeVariancePerTest%(argMax(timeVariancePerTest%%1))%0;
+  printf('Test with the largest variance: %X%; average time: %0.0000%s',testFile,averageTimePerTest%testFile);
   local relAvgTimePerBin:=(passedTests%(passedTests%%1=testFile)%%[0,3]).sort({$x%1<=$y%1});
   printf("%I20%\t%I%\ts",relAvgTimePerBin%%0,round(relAvgTimePerBin%%1,3));
   print;
