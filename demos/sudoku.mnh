@@ -1,123 +1,130 @@
-private oneElemListToScalar(L)->size(L)=1 ? L%0 : L;
-private dropSet(x:int,L)->x in L ? [] : x;
-private dropSet(X    ,L)->oneElemListToScalar(X%not(each(x,X,x in L)));
-private Connectivity:=each(i,[0..8],|,each(j,[0..8],
-                    unique(dropSet(flatten(i*9+[0..8], //indexes in the same row
-                                           [0..8]*9+j, //indexes in the same column
-                                           (i div 3)*27+(j div 3)*3+[0..2,9..11,18..20]),
-                                   [i*9+j])))); //indexes in the same block
-
-private scrambledRiddle(Board)->begin
-  local rowPerm:=each(i,3*sortPerm(random(3)),|,i+sortPerm(random(3)));
-  local colPerm:=each(i,3*sortPerm(random(3)),|,i+sortPerm(random(3)));
-  local numPerm:=1+sortPerm(random(9));
-  local cellPerm:=each(i,rowPerm,|,i*9+colPerm);
-  each(b,Board%each(i,rowPerm,|,i*9+colPerm),b:int?(numPerm%(b-1)):b);
-end;
-
-private filterInt(B)->each(b,B,b:int ? b : []);
-private randomFromList(L)->L%floor(random*(size(L)-1));
-
-private randomNonIntIndex(B)->randomFromList([0..80]%not(each(i,[0..80],(B%i):int)));
-private randomIntIndex   (B)->randomFromList([0..80]%   (each(i,[0..80],(B%i):int)));
-private difficulty       (B)->trueCount     (        not(each(i,[0..80],(B%i):int)));
-
-private restrictRandom(B)->begin
-  local idx:=randomNonIntIndex(B);
-  solve(each(j,[0..80],idx=j ? randomFromList(B%j) : B%j));
-end;
-
-private loosenRandom(B)->begin
-  local idx:=randomIntIndex(B);
-  each(j,[0..80],idx=j ? [1..9] : B%j);
-end;
-
-private blacklist(B)->each(c,Connectivity,flatten(B%c));
-private solve(Board)->begin
-  local ints:=filterInt(Board);
-  local blacklist:=each(c,Connectivity,flatten(ints%c));
-  local newBoard:=each(i,[0..80],dropSet(Board%i,blacklist%i));
-  Board==newBoard ? Board : solve(newBoard);
-end;
-
-parseBoard(s:string)->parseBoard(s.replace('\r','').split('\n'));
-parseBoard(s:stringList)->begin
-  local result:=[];
-  each(line,s,each(char,copy(line,[0..8],1),result|=(char in ['1'..'9'] ? softCast(char) : [[1..9]])));
-  result;
-end;
-
-private canSolve(Board)->isSolved(solve(Board));
-
-private isSolved (B)->each(b,B,and,b:int);
-private isInvalid(B)->each(b,B,or ,b==[]);
-
-private initialBoard:=solve(each(i,[0..80],i mod 10 = 0 ? (i div 10)+1 : [1..9]));
-private randomSolution->randomSolution(initialBoard,restrictRandom(initialBoard),10);
-private randomSolution(oldBoard,newBoard,retries                           )->randomSolution(oldBoard,newBoard,retries,isSolved(newBoard),isInvalid(newBoard));
-private randomSolution(oldBoard,newBoard,retries,solved=true ,invalid=false)->newBoard;
-private randomSolution(oldBoard,newBoard,retries,solved=false,invalid=false)->randomSolution(newBoard,restrictRandom(newBoard),retries);
-private randomSolution(oldBoard,newBoard,0      ,solved      ,invalid=true )->randomSolution;
-private randomSolution(oldBoard,newBoard,retries,solved      ,invalid=true )->randomSolution(oldBoard,restrictRandom(oldBoard),retries-1);
-
-
-
-private randomRiddle->randomRiddle(randomSolution);
-private randomRiddle(oldBoard                         )->randomRiddle(oldBoard,loosenRandom(oldBoard),    100);
-private randomRiddle(oldBoard,newBoard,retries        )->randomRiddle(oldBoard,newBoard              ,retries,canSolve(newBoard));
-private randomRiddle(oldBoard,newBoard,retries  ,true )->randomRiddle(newBoard,loosenRandom(newBoard),retries  );
-private randomRiddle(oldBoard,newBoard,retries>0,false)->randomRiddle(oldBoard,loosenRandom(oldBoard),retries-1);
-private randomRiddle(oldBoard,newBoard,retries=0,false)->             oldBoard;
-
-private format2(Board)->"=========#=========#=========\n"&
-                each(i,[0..8],aggregator({$x&"\n"&$y}),((i=3 or i=6)? "---------+---------+---------\n" : "")&
-                each(j,[0..8],&     ,((j=3 or j=6)? "|"                               : "")&
-                     " "&replace(string(Board%(i*9+j)),"[1,2,3,4,5,6,7,8,9]"," ")&" "))&
-                "\n=========#=========#=========\n";
-
-private pack(Board)->replace(each(b,Board,&,string(b)),
-                     ["[1,2,3,4,5,6,7,8,9]","000000000","00000000","0000000","000000","00000","0000","000","00"],
-                     ["0"                  ,"a"        ,"b"       ,"c"      ,"d"     ,"e"    ,"f"   ,"g"  ,"h"]);
-private memoized unpack(s:string)->each(c,copy(replace(s,["a".."h"],["b".."h","0"]&0),[0..80],1),c="0" ? [1..9] : softCast(c));
-
-private printRiddle  (B)->print(format2(B)) and print('Difficulty: ',difficulty(B)," '",pack(B),"'");
-
-//*For regression test
-main->begin
-  print('----------------------------------');
-  main('riddle');
-  print('----------------------------------');
-  main('4');
-  print('----------------------------------');
-  main("lazy",'4');
-  print('----------------------------------');
-end;
-
-main('x')->
-parseBoard('9  76   8\n'&
-           '   23    \n'&
-           '      567\n'&
-           '         \n'&
-           ' 4      1\n'&
-           ' 5    2  \n'&
-           '    7    \n'&
-           ' 2 4   8 \n'&
-           '6859   1 \n').solve.printRiddle;
-
-//*Create one random riddle
-main("riddle")->printRiddle(randomRiddle);
-//*Create count random riddles in packed form
-main(count:string)->each(l,each(i,[1..softCast(count)],pack(randomRiddle)),print(l));
+private drop(list:intList,toDrop:int)->list%(list!=toDrop);
+private drop(list:intList,toDrop:intList)->each(el,list,el in toDrop ? void : el);
 
 private
-PREPARED:=["1h2e6d3c804h8f56g90307f7d3d5e4182f62h9"     ,"ag3f2e8h709a705g3h1080265043c69h501f269g",
-           "04h32h69h7c3g1g9h8f7e4g541h307g52g1f6a0509" ,"ab9g2g5g6h3f7g108e5h74057e3093h72060804g10",
-           "17b2g4h3f921c9h5090703h2054f7d17b48f5f9"    ,"h9h3025f1f6b8024075c9017h5a50403e6018h8d9",
-           "1h3f502h704e69f5e6g4h52h3g78f208d3h1h5d4g9" ,"1g904c51g43g607g401a83e26f6403g2a037h2h9",
-           "1d3f601g45089d947h1h8g3e2h6h7g2g6e45e7e9"   ,"09d7026h4f5h6h98805e1g3b8b543c201h2g70309",
-           "0509ag104035h2e40907h302f8e6f1d52h7104f6f39","0785h9g2g78e809g3d6f2ah1h405e3f104h6g43209",
-           "e29065h6g70903h58e47e86c7ag9h101h2g37g8g9"  ,"c9062d4g50801d9h2346c1h8h5g206f7g105805c9",
-           "149ag607h3d2f18g60859e7g4g8f7d1508g102g9"   ,"09c52g78h8h14h7h70402f3h5h4g9h6e18f5b6e1h9"];
-//*Create count random riddles from prepared ones
-main("lazy",count:string)->each(i,[1..softCast(count)],print("\n"&format2(scrambledRiddle(unpack(PREPARED%floor(random*(size(PREPARED)-1)))))));
+COMPONENTS:=each(i,[0..8],i+[0..8]*9)|
+            each(i,[0..8],i*9+[0..8])|
+            each(i,[0..8],[0..80]%(i=([0..80] div 27)*3+[0..80] mod 9 div 3));
+
+private memoized connectedIdx(i:int)->sort(flatten(each(c,COMPONENTS,i in c ? drop(c,i) : void)));
+private memoized components(i)->each(c,COMPONENTS,i in c ? drop(c,i) : void);
+
+//*A board is solved when all components contain numbers [1..9]
+isSolved(Board)->each(c,COMPONENTS,AND,(Board%c).sort==[1..9]);
+//*A board is valid when all components may contain all numbers [1..9]
+isValid(Board)->each(cell,Board,AND,not(cell==[])) AND
+                each(c,COMPONENTS,AND,(Board%c).flatten.unique==[1..9]);
+//*A board's difficulty is given by the number of cells to fill
+difficulty(Board)->each(cell,Board,+,cell:int ? 0 : 1);
+
+initialBoard->begin
+  local values:=1+random(9).sortPerm;
+  local indexes:=[0..8]*9+random(9).sortPerm;
+  each(i,[0..80],i in indexes ? values%(indexes=i)%0 : [1..9]);
+end;
+  
+testBoard:=
+[[1..9],  5   ,[1..9],  9   ,[1..9],[1..9],  6   ,[1..9],  1   ,
+   6   ,  3   ,[1..9],  8   ,[1..9],  5   ,[1..9],  4   ,[1..9],
+ [1..9],[1..9],  7   ,[1..9],[1..9],[1..9],[1..9],[1..9],  9   ,
+   3   ,  6   ,[1..9],[1..9],[1..9],  4   ,[1..9],  1   ,[1..9],
+ [1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],
+ [1..9],  9   ,[1..9],  5   ,[1..9],[1..9],[1..9],  8   ,  4   ,
+   1   ,[1..9],[1..9],[1..9],[1..9],[1..9],  4   ,[1..9],[1..9],
+ [1..9],  8   ,[1..9],  3   ,[1..9],  9   ,[1..9],  6   ,  7   ,
+   9   ,[1..9],  3   ,[1..9],[1..9],  1   ,[1..9],  2   ,[1..9]];
+
+printBoard(B)->each(row,[0..8],print(row in [3,6] ? '---------+---------+---------\n' : '',
+               each(col,[0..8],&,begin
+                 local i:=col+9*row;
+                 (col in [3,6] ? '|' : '')&
+                 " "&((B%i) :int ? B%i : " ")&" ";
+               end)))|B;
+
+debugPrint(B)->printf@("%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%"|each(row,[0..8],B%(row+9*[0..8])));
+
+solve(B)->begin
+  local needRun:=isValid(B);
+  local Board:=B;
+  while(needRun,
+  begin
+    needRun:=false;
+    local intsOnly:=each(c,Board,c:int ? c : []);
+    Board:=each(i,[0..80],
+      (Board%i):int
+      ? Board%i
+      : begin
+          local newList:=drop(Board%i,flatten(intsOnly%connectedIdx(i)));
+          size(newList)=1
+          ? begin
+              needRun:=true;
+              newList%0;
+            end
+          : begin
+              local tmp:=drop(Board%i,flatten(Board%(components(i)%0)));
+              size(tmp)=1 ? begin needRun:=true; tmp%0; end : begin
+              tmp:=drop(Board%i,flatten(Board%(components(i)%1)));
+              size(tmp)=1 ? begin needRun:=true; tmp%0; end : begin
+              tmp:=drop(Board%i,flatten(Board%(components(i)%2)));
+              size(tmp)=1 ? begin needRun:=true; tmp%0; end : newList; end; end;
+            end;
+        end);
+  end);
+  Board;
+end;
+
+bruteForceSolve(B)->begin
+  local Board:=solve(B);
+  isSolved(Board) ? Board : begin
+    local firstListIdx:=min(81|each(i,[0..80],(Board%i):int ? void : i));
+    local candidates:=Board%firstListIdx;
+    local numberOfSolutions:=0;
+    local finalSolution:=void;
+    each(candidate,candidates,numberOfSolutions>1 ? void : begin
+      local newSolution:=bruteForceSolve(each(i,[0..80],i=firstListIdx ? candidate : Board%i));
+      isSolved(newSolution)
+      ? begin
+          finalSolution:=newSolution;
+          numberOfSolutions+=1;
+        end
+      : void;
+    end);
+    numberOfSolutions=1 ? finalSolution : initialBoard;
+  end;
+end;
+
+private restrictRandom(B)->begin
+  local listIndexes:=each(i,[0..80],(B%i):int ? void : i);
+  listIndexes==[] ? B : begin
+    local randomListIdx:=listIndexes%floor(random*size(listIndexes));
+    each(i,[0..80],i=randomListIdx ? (B%i)%floor(random*size(B%i)) : B%i);
+  end;
+end;
+
+randomSolution->begin
+  local foundSolution:=false;
+  local Board:=void;
+  while(not(foundSolution),begin
+    Board:=initialBoard.restrictRandom.solve;
+    while(isValid(Board) AND not(Board.isSolved),Board:=Board.restrictRandom.solve);
+    foundSolution:=Board.isSolved;
+  end);
+  Board;
+end;
+
+randomRiddle->begin
+  local riddle:=randomSolution;
+  each(undefIdx,sortPerm(random(81)),begin
+    local previousRiddle:=riddle;
+    riddle:=each(i,[0..80],i=undefIdx ? [1..9] : riddle%i);
+    riddle.solve.isSolved ? void : riddle:=previousRiddle;
+    void;
+  end);
+  print('Generated a riddle with difficulty: ',riddle.difficulty);
+  //intIdx:=each(i,[0..80],(riddle%i):int ? i : void);
+  riddle;
+end;
+
+//*For regression test: create a random riddle and print it out
+main->randomRiddle.printBoard;
 

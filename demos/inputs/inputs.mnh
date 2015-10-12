@@ -1,11 +1,7 @@
-kjv->begin
-  local result:=splitFileName(myPath)%"directory"&"\\kjv.txt";
-  fileExists(result) ? void : writeFile(result,httpGet('http://www.ccel.org/ccel/bible/kjv.txt'));
-  result;
+private ensureFile(path,URL)->fileExists(path) ? path : begin
+  writeFile(path,httpGet(URL));
+  path;
 end;
 
-dict->begin
-  local result:=splitFileName(myPath)%"directory"&"\\unixdict.txt";
-  fileExists(result) ? void : writeFile(result,httpGet('http://www.puzzlers.org/pub/wordlists/unixdict.txt'));
-  result;
-end;
+kjv ->ensureFile(splitFileName(myPath)%"directory"&"\\kjv.txt"     ,'http://www.ccel.org/ccel/bible/kjv.txt');
+dict->ensureFile(splitFileName(myPath)%"directory"&"\\unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');

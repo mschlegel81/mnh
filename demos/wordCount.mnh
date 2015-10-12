@@ -6,16 +6,19 @@ private cleanSplit(s:string)->s='' ? void : split(s,' ');
 
 private fileWords(filename)->print('Reading file ',filename) and flatten(pEach(l,fileLines(filename),cleanSplit(cleanString(l))));
 
-private deltaIndexes(L)->0|[1..size(L)-1]%(head(L,size(L)-1)<>tail(L))|size(L);
-private histogram(words)->histogram(words,deltaIndexes(words));
-private histogram(words,IDX)->pEach(i,[0..size(IDX)-2],[words%(IDX%i),(IDX%(i+1)-IDX%i)]);
+//converts a list L=[x,y,z,...] to a nested list [[x,count(x)],[y,count(y)],...]
+private histogram(L)->begin
+  local SL:=sort(L);
+  local deltaIndexes:=0|[1..size(SL)-1]%(leading(SL)<>tail(SL))|size(SL);
+  each(i,[0..size(deltaIndexes)-2],[SL%(deltaIndexes%i),(deltaIndexes%(i+1))-(deltaIndexes%(i))]);
+end;
 
 private analyze(wordList)->begin
   local total:=size(wordList);
-  local hist:=histogram(sort(wordList));
-  local top50:=head(hist%sortPerm(-(hist%%1)),50);
   print('Words total:    ',total);
+  local hist:=histogram(wordList);
   print('Distinct words: ',size(hist));
+  local top50:=head(hist.sort({$x%1>=$y%1}),50);
   print('Most frequent:');
   printf('%X%\t%X%\t%X%',
     'word'|(top50%%0),
