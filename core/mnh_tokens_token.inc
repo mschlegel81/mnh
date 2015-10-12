@@ -1194,8 +1194,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       //  <Lit>.func(... -> func(<Lit>,...
       newFunctionToken:=recycler.newToken(first^.next);
       with newFunctionToken^ do case tokType of
-                 tt_identifier_pon:
+                 tt_identifier_pon:begin
         tokType:=tt_identifier;
+          if newFunctionToken^.data=nil then newFunctionToken^.data:=guessPackageForToken(newFunctionToken^);
+          P_package(newFunctionToken^.data)^.resolveRuleId(newFunctionToken^,false);
+        end;
                  tt_importedUserRulePointer_pon:
         tokType:=tt_importedUserRulePointer;
                  tt_localUserRulePointer_pon:
@@ -1563,6 +1566,9 @@ end}
       end;
     end;
     {$endif}
+
+    if (errorLevel>=el3_evalError) and (first<>nil) then raiseError(el3_evalError,intToStr(callDepth)+' State: '+stateToString,first^.location);
+
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
                    else raiseError(el0_allOkay,'Reduce expression done',first^.location);
