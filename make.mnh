@@ -80,7 +80,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <Keywords name="Numbers, suffix1"></Keywords>',
   '            <Keywords name="Numbers, suffix2"></Keywords>',
   '            <Keywords name="Numbers, range"></Keywords>',
-  '            <Keywords name="Operators1">:keyValueList :booleanList :numericList :stringList :expression :realList :boolean :intList :numeric :scalar :string :list :real %%%% :int %%% .. &lt;&gt; &lt;= &gt;= == %% -&gt; := , = &lt; &gt; + - * / ^ + - &amp; % | ? : @ ;</Keywords>',
+  '            <Keywords name="Operators1">:keyValueList :booleanList :numericList :stringList :expression :realList :boolean :intList :numeric :scalar :string :list :real %%%% :int %%% &lt;&gt; &lt;= &gt;= == %% -&gt; := , = &lt; &gt; + - * / ^ + - &amp; % | ? : @ ;</Keywords>',
   '            <Keywords name="Operators2">and xor div mod or in AND OR</Keywords>',
   '            <Keywords name="Folders in code1, open"></Keywords>',
   '            <Keywords name="Folders in code1, middle"></Keywords>',
@@ -92,7 +92,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <Keywords name="Folders in comment, middle"></Keywords>',
   '            <Keywords name="Folders in comment, close"></Keywords>',
   '            <Keywords name="Keywords1">synchronized&#x000D;&#x000A;memoized&#x000D;&#x000A;private&#x000D;&#x000A;mutable&#x000D;&#x000A;local</Keywords>',
-  '            <Keywords name="Keywords2">'&each(func,sort(listBuiltin),aggregator({$x&'&#x000D;&#x000A;'&$y}))&'</Keywords>',
+  '            <Keywords name="Keywords2">'&each(func,each(f,listBuiltin,|,pos('.',f)>0 ? f : [f,"."&f]).sort({copy($x,pos('.',$x)+1,100)<=copy($y,pos('.',$y)+1,100)}),aggregator({$x&'&#x000D;&#x000A;'&$y}))&'</Keywords>',
   '            <Keywords name="Keywords3">true&#x000D;&#x000A;false&#x000D;&#x000A;Nan&#x000D;&#x000A;Inf&#x000D;&#x000A;void</Keywords>',
   '            <Keywords name="Keywords4">aggregator&#x000D;&#x000A;pEach&#x000D;&#x000A;begin&#x000D;&#x000A;while&#x000D;&#x000A;each&#x000D;&#x000A;end&#x000D;&#x000A;</Keywords>',
   '            <Keywords name="Keywords5">$</Keywords>',
@@ -186,8 +186,10 @@ end;
   );
   fileExists('doTests.bat') ? void : writeFile('doTests.bat',
 //!BLOB START
-@mnh.exe       regTest\regTest.mnh mnh.exe       %1 %2 %3 %4 %5 %6 %7 %8 %9
+@mnh.exe regTest\regTest.mnh mnh.exe %1 %2 %3 %4 %5 %6 %7 %8 %9
+@if "%1"=="compare" goto end
 @mnh_light.exe regTest\regTest.mnh mnh_light.exe %1 %2 %3 %4 %5 %6 %7 %8 %9
+:end
 //!BLOB END
   );
 
@@ -229,6 +231,7 @@ main('distro')->pEach(task,[{each(i,[3,1,2,0],build(i))},
 
 //*Build - ignoring potentially existing executables
 main('build')->each(i,[0..7],build(i));
+
 //*Build - ignoring potentially existing executables
 main->main('build');
 

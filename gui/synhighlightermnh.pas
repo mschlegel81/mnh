@@ -222,18 +222,16 @@ PROCEDURE TSynMnhSyn.next;
         end;
       '$': begin
         inc(run);
-        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do
-          inc(run);
+        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do inc(run);
         fTokenId := tkDollarIdentifier;
-        end;
+      end;
       'a'..'z', 'A'..'Z': begin
         localId := fLine [run];
         inc(run);
-        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9', C_ID_QUALIFY_CHARACTER] do
-          begin
+        while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
           localId := localId+fLine [run];
           inc(run);
-          end;
+        end;
         if      operatorStrings        .contains(localId) then fTokenId := tkOperator
         else if specialLiteralStrings  .contains(localId) then fTokenId := tkNonStringLiteral
         else if modifierStrings        .contains(localId) then fTokenId := tkModifier
@@ -244,7 +242,7 @@ PROCEDURE TSynMnhSyn.next;
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;
-      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>' ,'-', '@': begin
+      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>' ,'-', '@', '.': begin
         inc(run);
         fTokenId := tkOperator;
       end;
