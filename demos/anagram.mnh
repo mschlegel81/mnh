@@ -2,7 +2,7 @@ USE inputs;
 
 private normalForm(s:string)->each(char,s.copy([0..length(s)-1],1).sort,&);
 
-readDict(filename)->sort(pEach(word,fileLines(filename),[normalForm(word),word]));
+readDict(filename)->pEach(word,fileLines(filename),[normalForm(word),word]).sort;
 
 private duplicates(sortedList)->unique(tail(sortedList)%(leading(sortedList)=tail(sortedList)));
 private splitDict(DICT)->splitDict(DICT,size(DICT) div 2);
@@ -17,4 +17,4 @@ private orderListsBySize(L)->L%each(subList,L,size(subList)).sortPerm;
 main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary
-main(filename:string)->each(set,orderListsBySize(anagramsInDict(readDict(filename))),print(each(el,set,aggregator({$x&", "&$y}))));
+main(filename:string)->each(set,readDict(filename).anagramsInDict.orderListsBySize,print(each(el,set,aggregator({$x&", "&$y}))));
