@@ -24,9 +24,7 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
 fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
-trimBottom(S:stringList)->trailing(S)="" ? trimBottom(leading(S)) : S;
-fixMnhFileLines(S:stringList)->trimBottom(trimRight(S));
-isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z]+');
+isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z_]+');
 
 checkConsistency(fileList)->begin
   local all:=unique(flatten(pEach(file,fileList,pEach(tok,tokenSplit(fileContents(file),'pascal'),isIdentifier(tok) ? tok : void))));
@@ -35,14 +33,12 @@ checkConsistency(fileList)->begin
   void;
 end;
 
-allFiles:=recFiles(".","*.pas,*.inc,*.mnh");
+allFiles:=recFiles(".","*.pas,*.inc");
 pattern:='checkstyle: %X'&max(length(allFiles))&'% (%I5% lines) ';
 
 fix(filename,readOnly)->begin
   local oldLines:=fileLines(filename);
-  local newLines:=splitFileName(filename)%"extension"=".mnh"
-                  ? fixMnhFileLines(oldLines)
-                  : fixFileLines(oldLines);
+  local newLines:=fixFileLines(oldLines);
   local diffOut:=format(pattern,filename,size(oldLines));
   oldLines==newLines ? diffOut&=' ok' : begin
     readOnly ? diffOut&=' NOT OKAY:' : diffOut&=' FIXED:';
@@ -59,15 +55,6 @@ main("check")->begin
   checkConsistency(recFiles(".","*.pas,*.inc"));
 end;
 
-fileHasDosLineBreaks(fileName)->{$x=$y-1 or $x=$y=-1}@pos(['\r\n','\n'],fileContents(fileName));
 
 //*Fix all files, writing out fixes
-main("fix")->begin
-  pEach(s,allFiles,begin
-    fix(s,false);
-    fileHasDosLineBreaks(s) ? void : begin
-      print('Line breaks in file ',s,' changed');
-      writeFileLines(s,fileLines(s));
-    end;
-  end);
-end;
+main("fix")->pEach(s,allFiles,fix(s,false));
