@@ -50,4 +50,4 @@ main(fractions,n)->Fractran(printAll      ,parseFractions(fractions),rational(so
 //*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
 main('rosetta')->main(Conway_primes_algorithm,'2');
 //*As above but abridged for regression test
-main->Fractran(printAll,parseFractions(fractions),rational(softCast(n),1),30);
+main->Fractran(printAll,parseFractions(Conway_primes_algorithm),rational(2,1),30);

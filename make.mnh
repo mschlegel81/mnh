@@ -1,4 +1,4 @@
-USE fileUtil, regTest, checkstyle;
+USE regTest, checkstyle;
 
 mutable private currentCodeHash:=0;
 private relevantFiles:=flatten(files(allFolders('.')&'\\*.pas'),each(f,files(allFolders('.')&'\\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));

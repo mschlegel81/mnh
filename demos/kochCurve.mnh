@@ -18,7 +18,7 @@ private main_impl(filename:string,xRes:int,yRes:int)->
   plot.setPreserveAspect(true) and
   plot.setAxisStyle([0,0]) and
   plot.plot(kochCurve(7),"0.5") and
-  plot.renderToFile(filename,xRes,yRes,10) and print('File ',filename,' was generated.');
+  plot.renderToFile(filename,xRes,yRes,10);
 
 //*Plots a Koch Curve to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));

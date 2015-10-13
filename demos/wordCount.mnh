@@ -4,7 +4,7 @@ private IGNORE_CHARS:=["","!","\"","#","&","'","(",")",",","-",".","/","0","1","
 private cleanString(s:string)->s.replace(IGNORE_CHARS," ").replace("  "," ").trim.lower;
 private cleanSplit(s:string)->s='' ? void : split(s,' ');
 
-private fileWords(filename)->print('Reading file ',filename) and flatten(pEach(l,fileLines(filename),cleanSplit(cleanString(l))));
+private fileWords(filename)->pEach(l,fileLines(filename),cleanSplit(cleanString(l))).flatten;
 
 //converts a list L=[x,y,z,...] to a nested list [[x,count(x)],[y,count(y)],...]
 private histogram(L)->begin

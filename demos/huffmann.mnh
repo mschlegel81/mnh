@@ -18,7 +18,6 @@ private charactersInString     (s:string)->histogram(sort(copy(s,[0..length(s)-1
 
 //*Solves the "Huffman coding" task from <a href="http://rosettacode.org/wiki/Huffman_coding">RosettaCode</a>
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
-                       print('Analyzing file: ',filename) and
                        print(" code\tchar\n "&
                              each(e,huffman(charactersInFile(filename)),aggregator({$x&"\n "&$y}),
                                   e%0&"\t"&escape(e%1)));

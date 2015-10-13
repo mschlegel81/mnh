@@ -73,7 +73,6 @@
 [ "packages/combinatorics.mnh",  "",                          false,         false,        false],
 [ "packages/densityPlots.mnh",   "packages/densityPlots.png", true,          true,         true],
 [ "packages/enhanceBat.mnh",     "regTest/t.bat",             false,         false,        false],
-[ "packages/fileUtil.mnh",       "",                          false,         false,        false],
 [ "packages/lindenmayer.mnh",    "",                          false,         false,        false],
 [ "packages/primes.mnh",         "",                          false,         false,        false],
 [ "packages/shorten.mnh",        "",                          false,         false,        true],

@@ -1,5 +1,4 @@
 See http://rosettacode.org/wiki/Huffman_coding
-Analyzing file: demos/inputs\unixdict.txt
  code             char
  1101011100011100 "0"
  1101011100011101 "2"

@@ -1,4 +1,3 @@
-USE fileUtil;
 language:='Pascal';
 myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT','INTERFACE',
          'IMPLEMENTATION','INITIALIZATION','FINALIZATION','if','then','else','case','begin','end','repeat','until',
@@ -33,7 +32,7 @@ checkConsistency(fileList)->begin
   void;
 end;
 
-allFiles:=recFiles(".","*.pas,*.inc");
+allFiles:=(allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc');
 pattern:='checkstyle: %X'&max(length(allFiles))&'% (%I5% lines) ';
 
 fix(filename,readOnly)->begin

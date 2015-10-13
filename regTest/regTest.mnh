@@ -1,15 +1,13 @@
 USE hash;
 
-testDirectory:=replace(splitFileName(myPath)%"relative",
-                       splitFileName(myPath)%"filename","");
+private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
+private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
+private PASSED_TESTS_STORE:=TEST_DIRECTORY&'passedTests.dat';
+private TESTS_STORE       :=TEST_DIRECTORY&'regTestCases.dat';
 
-private PASSED_TESTS_STORE:='regTest/passedTests.dat';
-
-restore->fileExists(PASSED_TESTS_STORE) ? expression(fileContents(PASSED_TESTS_STORE))() : [];
-
+private restore->fileExists(PASSED_TESTS_STORE) ? expression(fileContents(PASSED_TESTS_STORE))() : [];
 mutable passedTests:=restore;
-
-storePassedTests->begin
+private storePassedTests->begin
   fileExists(PASSED_TESTS_STORE) ? begin
     local oldVal:=restore;
     each(v,oldVal,v%[0,1] in passedTests%%[0,1] ? void : passedTests|=[v]);
@@ -24,19 +22,19 @@ mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
 synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
 
-expectedResultName  (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
-lastResultName      (scriptname)->testDirectory&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
-expectedResultExists(scriptname)->fileExists(expectedResultName(scriptname));
-expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
-storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
+private expectedResultName  (scriptname)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
+private lastResultName      (scriptname)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
+private expectedResultExists(scriptname)->fileExists(expectedResultName(scriptname));
+private expectedResult      (scriptname)->fileLines (expectedResultName(scriptname));
+private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
 runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)->
   begin
     delOutputBefore and outputFileName<>''
-    ? deleteFile(outputFileName)
+    ? deleteFile(ROOT_DIRECTORY&outputFileName)
     : void;
     local startTime:=systime;
-    local scriptOutput:=exec(executor,["-det",scriptName]) | (outputFileName="" ? [] : fileHash(outputFileName));
+    local scriptOutput:=exec(executor,["-det",ROOT_DIRECTORY&scriptName]) | (outputFileName="" ? [] : fileHash(ROOT_DIRECTORY&outputFileName));
     local scriptTime:=(systime-startTime)*24*60*60;
     expectedResultExists(scriptName)
     ? begin
@@ -98,7 +96,7 @@ main(exe,...)->begin
   local specific_tests   := not((testFilter==[]) or checkOnly or randomSample);
   checkOnly or randomSample ? testFilter:=[] : void;
   local testCases:=sort(each(case,
-                   expression(fileContents('regTest/regTestCases.dat'))(),
+                   expression(fileContents(TESTS_STORE))(),
                    (currentExeCanPlot or not(case%3)) and
                    (testFilter==[] OR each(f,testFilter,OR,pos(f,case%0)>=0)) ? case%[0..2] : void));
 
@@ -134,10 +132,10 @@ main(exe,...)->begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
     storePassedTests;
     //displayUncoveredTests:--------------
-    local coveredTests:= replace(unique(expression(fileContents('regTest/regTestCases.dat'))()%%0),'\\','/');
+    local coveredTests:=(expression(fileContents(TESTS_STORE))()%%0).unique.splitFileName%%'expanded';
     first:=true;
     each(script,
-         replace(unique(files('demos/*.mnh')|files('packages/*.mnh')),'\\','/'),
+         (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName%%'expanded',
          script in coveredTests ? void : begin
            first ? begin
              first:=false;
@@ -146,6 +144,7 @@ main(exe,...)->begin
            print('  ',script);
          end);
     //--------------:displayUncoveredTests
+    first ? print('There are no scrips uncovered by tests') : void;
   end : void;
 
   checkOnly and testsFailed<>'' ? print(size(split(testsFailed,'\n')),' tests have not been passed or executed') : void;
