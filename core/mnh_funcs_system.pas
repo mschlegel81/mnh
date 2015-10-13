@@ -21,6 +21,23 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     raiseNotApplicableError('random',params,tokenLocation);
   end;
 
+FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  VAR i,count:longint;
+  begin
+     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then exit(newIntLiteral(random(P_intLiteral(params^.value(0))^.value)))
+     else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int) then begin
+      count:=P_intLiteral(params^.value(1))^.value;
+      if count>0 then begin
+        result:=newListLiteral;
+        for i:=1 to count do P_listLiteral(result)^.appendInt(random(P_intLiteral(params^.value(0))^.value));
+        exit(result);
+      end;
+    end;
+    result:=nil;
+    raiseNotApplicableError('intRandom',params,tokenLocation);
+  end;
+
+  
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
   VAR i,j:longint;
       found:T_arrayOfString;
@@ -473,6 +490,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 INITIALIZATION
   system.InitCriticalSection(file_cs);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(searchPattern:string);#Returns a list of all folders below and including a given root directory');

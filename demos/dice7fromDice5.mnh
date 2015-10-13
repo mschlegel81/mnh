@@ -1,4 +1,4 @@
-dice5->floor(random   *5);
+dice5->intRandom(5);
 dice7->dice7(dice5*5+dice5);
 dice7(n<21)->n mod 7;
 dice7(n   )->dice7;

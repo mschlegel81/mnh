@@ -12,5 +12,5 @@ private findSemordnilaps->
 main->begin
   local fullList:=findSemordnilaps;
   printf('Found %I% Semordnilaps',size(fullList));
-  printf('%X%\t%X%',['Examples:','','','',''],fullList%floor(size(fullList)*random(5)));
+  printf('%X%\t%X%',['Examples:','','','',''],fullList%intRandom(size(fullList),5));
 end;

@@ -1,4 +1,4 @@
-randomSet->floor(1+9*random(4));
+randomSet->1+intRandom(9,4);
 OPLIST:=['+','-','*','/'];
 
 private drop(L<>[],i:int)->L%([0..size(L)-1]<>i);

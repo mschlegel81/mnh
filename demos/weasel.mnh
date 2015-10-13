@@ -5,7 +5,7 @@ fitness(s:string)->each(delta,
                             ord(copy(s     ,[0..length(target)-1],1))),+);
 fitness(S:stringList)->each(s,S,fitness(s));
 CHARSET:=['A'..'Z',' '];
-randomCharacter->CHARSET%floor(random*size(CHARSET));
+randomCharacter->CHARSET%intRandom(size(CHARSET));
 
 mutate(s:string, mutateProb>0)->each(c,copy(s,[0..length(s)-1],1),&,
                                      random<mutateProb ? randomCharacter : c);

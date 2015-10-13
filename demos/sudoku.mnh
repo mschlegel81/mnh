@@ -96,8 +96,8 @@ end;
 private restrictRandom(B)->begin
   local listIndexes:=each(i,[0..80],(B%i):int ? void : i);
   listIndexes==[] ? B : begin
-    local randomListIdx:=listIndexes%floor(random*size(listIndexes));
-    each(i,[0..80],i=randomListIdx ? (B%i)%floor(random*size(B%i)) : B%i);
+    local randomListIdx:=listIndexes%intRandom(size(listIndexes));
+    each(i,[0..80],i=randomListIdx ? (B%i)%intRandom(size(B%i)) : B%i);
   end;
 end;
 
