@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys;
+     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringutil;
 IMPLEMENTATION
 VAR     file_cs :system.TRTLCriticalSection;
 
@@ -28,11 +28,11 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
-      for i:=0 to length(found)-1 do result^.appendString(found[i]);
+      for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
-        for i:=0 to length(found)-1 do result^.appendString(found[i]);
+        for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
       end;
     end;
   end;
@@ -63,7 +63,7 @@ FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       if DirectoryExists(P_stringLiteral(params^.value(0))^.value) then begin
         P_listLiteral(result)^.append(params^.value(0),true);
         resultList:=FindAllDirectories(P_stringLiteral(params^.value(0))^.value);
-        for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(resultList[i]);
+        for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(replaceAll(resultList[i],'\','/'));
         resultList.free;
       end;
     end else raiseNotApplicableError('allFolders',params,tokenLocation);
@@ -333,6 +333,8 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         append(value,false),false);
     end;
 
+  VAR i:longint;
+      tmpParam:P_listLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
@@ -351,6 +353,13 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         appendKeyValuePair('attributes',attributeList);
       end;
       result:=resultAsList;
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
+      result:=newListLiteral;
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
+        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true);
+        P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation),false);
+        disposeLiteral(tmpParam);
+      end;
     end else raiseNotApplicableError('fileInfo',params,tokenLocation);
   end;
 

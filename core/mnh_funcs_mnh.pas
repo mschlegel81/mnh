@@ -1,6 +1,6 @@
 UNIT mnh_funcs_mnh;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringutil;
 IMPLEMENTATION
 FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
@@ -58,17 +58,26 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
         appendString(el1),false);
     end;
   VAR name:string;
+      i:longint;
+      tmpParam:P_listLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=newListLiteral;
       name:=P_stringLiteral(params^.value(0))^.value;
       appendPair(result,'input',name);
-      appendPair(result,'expanded',expandFileName(name));
-      appendPair(result,'relative',extractRelativePath(expandFileName(''),name));
-      appendPair(result,'directory',ExtractFileDir(name));
-      appendPair(result,'filename',extractFileName(name));
-      appendPair(result,'extension',extractFileExt(name));
+      appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
+      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),name),'\','/'));
+      appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
+      appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
+      appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
+      result:=newListLiteral;
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
+        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true);
+        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation),false);
+        disposeLiteral(tmpParam);
+      end;
     end else raiseNotApplicableError('splitFileName',params,tokenLocation);
   end;
 
