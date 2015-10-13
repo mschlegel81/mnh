@@ -238,8 +238,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       else                 syn.lines.append(C_startOfHeader+C_errorLevelTxt[messageType]+C_startOfHeader+' '+ansistring(location)+' '+simpleMessage);
     end;
     clearMessages;
-    syn.ExecuteCommand(ecEditorBottom,' ',nil);
-    syn.ExecuteCommand(ecLineStart,' ',nil);
+    if result then begin
+      syn.ExecuteCommand(ecEditorBottom,' ',nil);
+      syn.ExecuteCommand(ecLineStart,' ',nil);
+    end;
     system.leaveCriticalSection(cs);
   end;
 
