@@ -48,4 +48,6 @@ main(fractions,n)->Fractran(printAll      ,parseFractions(fractions),rational(so
                    print('----------------------------------')|
                    Fractran(printPowersOf2,parseFractions(fractions),rational(softCast(n),1),428553);
 //*See <a href="http://rosettacode.org/wiki/Fractran">http://rosettacode.org/wiki/Fractran</a>
-main->main(Conway_primes_algorithm,'2');
+main('rosetta')->main(Conway_primes_algorithm,'2');
+//*As above but abridged for regression test
+main->Fractran(printAll,parseFractions(fractions),rational(softCast(n),1),30);

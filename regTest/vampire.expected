@@ -1,4 +1,3 @@
-See http://rosettacode.org/wiki/Vampire_number
 1260 is a vampire. It's fangs are: [60,21]
 1395 is a vampire. It's fangs are: [93,15]
 1435 is a vampire. It's fangs are: [41,35]
@@ -24,7 +23,3 @@ See http://rosettacode.org/wiki/Vampire_number
 125433 is a vampire. It's fangs are: [543,231]
 125460 is a vampire. It's fangs are: [615,204] or [510,246]
 125500 is a vampire. It's fangs are: [500,251]
------------------------------------------------
-16758243290880 is a vampire. It's fangs are: [8452080,1982736] or [7890480,2123856] or [6089832,2751840] or [5948208,2817360]
-24959017348650 is a vampire. It's fangs are: [8469153,2947050] or [8461530,2949705] or [6049395,4125870] or [6043950,4129587] or [5899410,4230765]
-14593825548650 is not a vampire.
