@@ -300,6 +300,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         rulePattern.create;
         if first^.tokType=tt_braceOpen then begin
           first:=recycler.disposeToken(first);
+          if (first<>nil) and (first^.tokType=tt_braceClose) then first:=recycler.disposeToken(first);
           while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
             if rulePattern.hasOptionals then raiseError(el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
             n  :=first^.next;
