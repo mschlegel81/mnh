@@ -68,7 +68,9 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       appendPair(result,'input',name);
       appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
       appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),name),'\','/'));
-      appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
+      if ExtractFileDir(name)=''
+      then appendPair(result,'directory','.')
+      else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
       appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
       appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
     end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin

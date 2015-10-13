@@ -3,5 +3,5 @@ private ensureFile(path,URL)->fileExists(path) ? path : begin
   path;
 end;
 
-kjv ->ensureFile(splitFileName(myPath)%"directory"&"\\kjv.txt"     ,'http://www.ccel.org/ccel/bible/kjv.txt');
-dict->ensureFile(splitFileName(myPath)%"directory"&"\\unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');
+kjv ->ensureFile(splitFileName(myPath)%"directory"&"/kjv.txt"     ,'http://www.ccel.org/ccel/bible/kjv.txt');
+dict->ensureFile(splitFileName(myPath)%"directory"&"/unixdict.txt",'http://www.puzzlers.org/pub/wordlists/unixdict.txt');

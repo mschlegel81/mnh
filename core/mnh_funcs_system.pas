@@ -37,7 +37,7 @@ FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     raiseNotApplicableError('intRandom',params,tokenLocation);
   end;
 
-  
+
 FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
   VAR i,j:longint;
       found:T_arrayOfString;

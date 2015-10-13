@@ -32,7 +32,7 @@ checkConsistency(fileList)->begin
   void;
 end;
 
-allFiles:=(allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc');
+allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
 pattern:='checkstyle: %X'&max(length(allFiles))&'% (%I5% lines) ';
 
 fix(filename,readOnly)->begin
@@ -51,7 +51,7 @@ end;
 main("check")->begin
   pEach(s,allFiles,fix(s,true));
   print('Checking spelling consistency in MNH sources');
-  checkConsistency(recFiles(".","*.pas,*.inc"));
+  checkConsistency(allFiles);
 end;
 
 
