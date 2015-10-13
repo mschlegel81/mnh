@@ -261,7 +261,7 @@ CONST
     ' in>',//echo input
     '_in>',//echo declaration
     'out>',//echo output
-    '          ', //el0
+    '', //el0
     'Note ',
     'Warning ',
     'Error ',

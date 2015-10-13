@@ -234,8 +234,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
       ele_echoInput,
       eld_echoDeclaration,
-      elo_echoOutput:      syn.lines.append(C_startOfHeader+C_errorLevelTxt[messageType]+C_startOfHeader+                         ' '+simpleMessage);
-      else                 syn.lines.append(C_startOfHeader+C_errorLevelTxt[messageType]+C_startOfHeader+' '+ansistring(location)+' '+simpleMessage);
+      elo_echoOutput:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
+      else                 syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
     end;
     clearMessages;
     if result then begin
