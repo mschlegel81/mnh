@@ -32,3 +32,4 @@ demos/inputs/unixdict.txt
 core/code_hash.inc
 doc/style.css
 setup.mnh
+doTests.bat
