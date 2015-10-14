@@ -16,19 +16,6 @@ TYPE
     location: T_tokenLocation;
   end;
 
-  //{ T_rolloverState }
-  //
-  //T_rolloverState = object
-  //  txt:array[0..31] of ansistring;
-  //  offset:byte;
-  //
-  //  CONSTRUCTOR create;
-  //  DESTRUCTOR destroy;
-  //  PROCEDURE clear;
-  //  PROCEDURE addLine(CONST lineText:ansistring);
-  //  PROCEDURE raiseStateMessage;
-  //end;
-
   P_abstractOutAdapter = ^T_abstractOutAdapter;
 
   { T_abstractOutAdapter }
@@ -76,9 +63,27 @@ TYPE
     PROCEDURE clearMessages;
   end;
 
+  {$ifdef fullVersion}
+  T_debugSignal=(ds_wait,ds_run,ds_step,ds_abort);
 
+  T_stepper=object
+    cs:TRTLCriticalSection;
+    signal:T_debugSignal;
+    toStep:longint;
+
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    FUNCTION stepping:boolean;
+
+    PROCEDURE setFreeRun;
+    PROCEDURE doStep;
+    PROCEDURE doMultiStep(CONST stepCount:longint);
+    PROCEDURE doAbort;
+  end;
+  {$endif}
 
 VAR
+  {$ifdef fullVersion}stepper:T_stepper;{$endif}
   outAdapter:P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
   maxErrorLevel: T_messageTypeOrErrorLevel;
@@ -110,7 +115,7 @@ PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    InterLockedIncrement(errorCount); if (errorCount>20) and (thisErrorLevel<=maxErrorLevel) then exit;
+    InterLockedIncrement(errorCount); if (thisErrorLevel<>els_step) and (errorCount>20) and (thisErrorLevel<=maxErrorLevel) then exit;
     if (thisErrorLevel > maxErrorLevel) then begin
       maxErrorLevel := thisErrorLevel;
       errorCount:=0;
@@ -148,70 +153,6 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
     if L>systemErrorlevel.value then halt(L)
                                 else halt(systemErrorlevel.value);
   end;
-
-//{ T_rolloverState }
-//
-//CONSTRUCTOR T_rolloverState.create;
-//  begin
-//    clear;
-//  end;
-//
-//DESTRUCTOR T_rolloverState.destroy;
-//  begin
-//    clear;
-//  end;
-//
-//PROCEDURE T_rolloverState.clear;
-//  VAR i:longint;
-//  begin
-//    for i:=0 to length(txt)-1 do txt[i]:='';
-//    offset:=0;
-//  end;
-//
-//PROCEDURE T_rolloverState.addLine(CONST lineText: ansistring);
-//  begin
-//    if (lineText='') or (lineText=txt[(offset+31) and 31]) then exit;
-//    txt[offset]:=lineText;
-//    offset:=(offset+1) mod length(txt);
-//  end;
-//
-//PROCEDURE T_rolloverState.raiseStateMessage;
-//  VAR i,j,j1,commonTailLength,lengthDiff:longint;
-//      someChanges:boolean=true;
-//  begin
-//    while someChanges do begin
-//      someChanges:=false;
-//      for i:=0 to length(txt)-2 do begin
-//        j :=(offset+i  ) and 31;
-//        j1:=(offset+i+1) and 31;
-//        if (length(txt[j1])=0) then Continue;
-//        commonTailLength:=0;
-//        while (commonTailLength<length(txt[j ])) and
-//              (commonTailLength<length(txt[j1])) and
-//              (txt[j ][length(txt[j ])-commonTailLength]=
-//               txt[j1][length(txt[j1])-commonTailLength]) do inc(commonTailLength);
-//        lengthDiff:=length(txt[j1])-length(txt[j]);
-//        if lengthDiff>0 then begin
-//          txt[j]:=copy(txt[j],1,length(txt[j])-commonTailLength)+
-//                  Space(lengthDiff)+
-//                  copy(txt[j],length(txt[j])-commonTailLength+1,commonTailLength);
-//          someChanges:=true;
-//        end else if lengthDiff<0 then begin
-//          txt[j1]:=copy(txt[j1],1,length(txt[j1])-commonTailLength)+
-//                  Space(-lengthDiff)+
-//                  copy(txt[j1],length(txt[j1])-commonTailLength+1,commonTailLength);
-//          someChanges:=true;
-//        end;
-//      end;
-//    end;
-//
-//    raiseError(elX_stateInfo,'The last 32 steps were:',C_nilTokenLocation);
-//    for i:=0 to length(txt)-1 do begin
-//      j:=(offset+i) and 31;
-//      txt[j]:=trim(txt[j]);
-//      if txt[j]<>'' then raiseError(elX_stateInfo,txt[j],C_nilTokenLocation);
-//    end;
-//  end;
 
 { T_abstractOutAdapter }
 
@@ -308,7 +249,7 @@ PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel
     {$ifdef debugMode}
     consoleOutAdapter.errorOut(level,errorMessage,errorLocation);
     {$endif}
-    if level<el2_warning then exit;
+    if (level<el2_warning) and (level<>els_step) then exit;
     system.enterCriticalSection(cs);
     msg.messageType:=level;
     msg.simpleMessage:=errorMessage;
@@ -328,11 +269,77 @@ PROCEDURE T_collectingOutAdapter.clearMessages;
     setLength(storedMessages,0);
   end;
 
+{$ifdef fullVersion}
+  CONSTRUCTOR T_stepper.create;
+  begin
+    system.initCriticalSection(cs);
+    setFreeRun;
+  end;
+
+DESTRUCTOR T_stepper.destroy;
+  begin
+    system.doneCriticalSection(cs);
+  end;
+
+FUNCTION T_stepper.stepping:boolean;
+  begin
+    if signal=ds_run then exit(false);
+
+    system.enterCriticalSection(cs);
+    if signal=ds_wait then repeat
+      system.leaveCriticalSection(cs);
+      sleep(10);
+      system.enterCriticalSection(cs);
+    until signal<>ds_wait;
+    if signal=ds_step then begin
+      dec(toStep);
+      if toStep<=0 then signal:=ds_wait;
+    end;
+    system.leaveCriticalSection(cs);
+    result:=true;
+  end;
+
+PROCEDURE T_stepper.doStep;
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_step;
+    toStep:=1;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.setFreeRun;
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_run;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.doMultiStep(CONST stepCount:longint);
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_step;
+    toStep:=stepCount;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.doAbort;
+  begin
+    signal:=ds_run;
+    haltEvaluation;
+  end;
+{$endif}
 
 INITIALIZATION
   consoleOutAdapter.create;
   setDefaultCallbacks;
   maxErrorLevel := el0_allOkay;
   systemErrorlevel.create(0);
+  {$ifdef fullVersion}
+  stepper.create;
+  {$endif}
 
+FINALIZATION
+  {$ifdef fullVersion}
+  stepper.destroy;
+  {$endif}
 end.

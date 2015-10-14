@@ -6,7 +6,8 @@ PROGRAM mnh_gui;
 USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   cthreads, {$ENDIF} {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog, mnh_cmdLineInterpretation
+  Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog,
+  mnh_cmdLineInterpretation, mnh_debugForm
   {$ifndef debugMode},windows,sysutils{$endif};
 
 {$R *.res}
@@ -26,6 +27,7 @@ begin
   Application.CreateForm(TSettingsForm, SettingsForm);
   Application.CreateForm(TcloseDialogForm, closeDialogForm);
   Application.CreateForm(TaskForm, askForm);
+  Application.CreateForm(TDebugForm, DebugForm);
   Application.Run;
   {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_SHOW); {$endif}
 end.

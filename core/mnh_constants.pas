@@ -242,6 +242,7 @@ TYPE
     ele_echoInput,
     eld_echoDeclaration,
     elo_echoOutput,
+    els_step,
     el0_allOkay,
     el1_note,
     el2_warning,
@@ -261,6 +262,7 @@ CONST
     ' in>',//echo input
     '_in>',//echo declaration
     'out>',//echo output
+    'STEP:',
     '', //el0
     'Note ',
     'Warning ',

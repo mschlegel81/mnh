@@ -1285,7 +1285,7 @@ end}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      //writeln(stateToString);
+      {$ifdef fullVersion} if stepper.stepping then raiseError(els_step,stateToString,first^.location); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin

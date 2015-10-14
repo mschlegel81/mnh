@@ -490,10 +490,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
 
   VAR localIdStack:T_idStack;
       first,last:P_token;
-      loadStartTime:double;
-
   begin
-    loadStartTime:=now;
     clear;
     loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
     fileTokens:=tokenizeAll(codeProvider,@self);

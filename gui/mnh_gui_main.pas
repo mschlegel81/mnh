@@ -8,7 +8,8 @@ USES
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,mnh_tokens,closeDialog,askDialog,SynEditKeyCmds;
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,
+  mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm;
 
 TYPE
 
@@ -16,6 +17,7 @@ TYPE
 
   TMnhForm = class(TForm)
     MenuItem3: TMenuItem;
+    miDebug: TMenuItem;
     miCallMain: TMenuItem;
     miHelp: TMenuItem;
     miHelpExternally: TMenuItem;
@@ -99,6 +101,7 @@ TYPE
       Y: integer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
+    PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
     PROCEDURE miEvalModeDirectClick(Sender: TObject);
@@ -229,13 +232,16 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
-    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-      elc_clearConsole: syn.lines.clear;
-      elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
-      ele_echoInput,
-      eld_echoDeclaration,
-      elo_echoOutput:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
-      else                 syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
+      case messageType of
+        elc_clearConsole: syn.lines.clear;
+        elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+        els_step: DebugForm.rollingAppend(simpleMessage);
+        ele_echoInput,
+        eld_echoDeclaration,
+        elo_echoOutput:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
+        else                 syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+      end;
     end;
     clearMessages;
     if result then begin
@@ -407,10 +413,15 @@ PROCEDURE TMnhForm.doStartEvaluation;
     needEvaluation:=false;
     doNotEvaluateBefore:=now+0.1*ONE_SECOND;
     guiOutAdapter.flushClear(OutputEdit);
+    DebugForm.debugEdit.ClearAll;
     UpdateTimeTimerTimer(self);
     UpdateTimeTimer.Interval:=200;
     autosizingEnabled:=true;
     doConditionalPlotReset;
+    if miDebug.Checked then begin
+      stepper.doStep;
+      DebugForm.Show;
+    end else stepper.setFreeRun;
   end;
 
 { TMnhForm }
@@ -526,7 +537,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    setUnderCursor(InputEdit.lines,InputEdit.CaretXY);
+    if (key>=37) and (key<=40) then setUnderCursor(InputEdit.lines,InputEdit.CaretXY);
   end;
 
 PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
@@ -559,6 +570,18 @@ PROCEDURE TMnhForm.miClearClick(Sender: TObject);
     if SettingsForm.setFileInEditor('') then processFileHistory;
   end;
 
+PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
+  begin
+    if miDebug.Checked
+    then miDebug.Checked:=false
+    else begin
+      miDebug.Checked:=true;
+      miEvalModeDirect.Checked:=true;
+      miEvalModeDirectOnKeypress.Checked:=false;
+      SettingsForm.instantEvaluation:=false;
+    end;
+  end;
+
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -580,12 +603,15 @@ PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
   begin
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
+    miEvalModeDirectOnKeypress.Checked:=false;
     SettingsForm.instantEvaluation:=false;
   end;
 
 PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
+    miDebug.Checked:=false;
+    miEvalModeDirect.Checked:=false;
     miEvalModeDirectOnKeypress.Checked:=true;
     SettingsForm.instantEvaluation:=true;
   end;
@@ -716,7 +742,7 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    setUnderCursor(OutputEdit.lines,OutputEdit.CaretXY);
+    if (key>=37) and (key<=40) then setUnderCursor(OutputEdit.lines,OutputEdit.CaretXY);
   end;
 
 
@@ -905,7 +931,8 @@ PROCEDURE TMnhForm.processSettings;
     then InputEdit.Font.Quality:=fqCleartypeNatural
     else InputEdit.Font.Quality:=fqNonAntialiased;
 
-    OutputEdit.Font     :=InputEdit.Font;
+    OutputEdit.Font         :=InputEdit.Font;
+    DebugForm.debugEdit.Font:=InputEdit.Font;
 
     top   :=SettingsForm.mainForm.top;
     left  :=SettingsForm.mainForm.left;

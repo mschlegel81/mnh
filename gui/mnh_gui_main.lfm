@@ -1,5 +1,5 @@
 object MnhForm: TMnhForm
-  Left = 761
+  Left = 714
   Height = 368
   Top = 273
   Width = 479
@@ -1159,13 +1159,15 @@ object MnhForm: TMnhForm
       object miEvalModeDirectOnKeypress: TMenuItem
         Caption = 'Instantly evaluate input'
         Checked = True
-        RadioItem = True
         OnClick = miEvalModeDirectOnKeypressClick
       end
       object miEvalModeDirect: TMenuItem
         Caption = 'Evaluate input on request'
-        RadioItem = True
         OnClick = miEvalModeDirectClick
+      end
+      object miDebug: TMenuItem
+        Caption = 'Debug'
+        OnClick = miDebugClick
       end
     end
     object submenuEditorAppearance: TMenuItem

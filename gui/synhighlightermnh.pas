@@ -180,7 +180,7 @@ PROCEDURE TSynMnhSyn.next;
       if i>=0 then run:=i+1;
       if specialLineCase>=el3_evalError then fTokenId:=tkError
                                         else fTokenId:=tkDefault;
-      if not(specialLineCase in [elo_echoOutput,eld_echoDeclaration,ele_echoInput]) then while (fLine[run]<>#0) do inc(run);
+      if not(specialLineCase in [elo_echoOutput,eld_echoDeclaration,ele_echoInput,els_step]) then while (fLine[run]<>#0) do inc(run);
       exit;
     end;
 
