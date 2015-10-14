@@ -248,7 +248,8 @@ TYPE
     el2_warning,
     el3_evalError,
     el4_parsingError,
-    el5_systemError);
+    el5_systemError,
+    elz_endOfEvaluation);
 
 CONST
   SELF_TOKEN_TEXT='$self';
@@ -268,7 +269,8 @@ CONST
     'Warning ',
     'Error ',
     'Parsing Error ',
-    'Sys. Error ');
+    'Sys. Error ',
+    '');
 
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';

@@ -130,6 +130,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     used.destroy;
     //-------------------------------------------------------------:housekeeping
     recycler.destroy;
+    raiseError(elz_endOfEvaluation,'',C_nilTokenLocation);
   end;
 
 PROCEDURE finalizePackages;
@@ -712,6 +713,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
     clearErrors;
     recycler.create;
     mainPackage.load(lu_forCallingMain,recycler,parameters);
+    raiseError(elz_endOfEvaluation,'',C_nilTokenLocation);
     recycler.destroy;
   end;
 

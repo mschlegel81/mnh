@@ -86,7 +86,6 @@ FUNCTION main(p:pointer):ptrint;
       then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
       else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
       sleepTime:=0;
-      raiseError(els_step,'Evaluation finished.',C_nilTokenLocation);
     end;
 
   begin

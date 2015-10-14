@@ -17,6 +17,7 @@ TYPE
 
   TMnhForm = class(TForm)
     MenuItem3: TMenuItem;
+    miDebugFrom: TMenuItem;
     miDebug: TMenuItem;
     miCallMain: TMenuItem;
     miHelp: TMenuItem;
@@ -102,6 +103,7 @@ TYPE
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
+    PROCEDURE miDebugFromClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
     PROCEDURE miEvalModeDirectClick(Sender: TObject);
@@ -236,8 +238,20 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       case messageType of
         elc_clearConsole: syn.lines.clear;
         elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
-        els_step: DebugForm.rollingAppend(simpleMessage);
-        ele_echoInput,
+        els_step: begin
+          DebugForm.rollingAppend(simpleMessage);
+          MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
+          MnhForm.needMarkPaint:=true;
+        end;
+        elz_endOfEvaluation: begin
+          DebugForm.rollingAppend('Evaluation finished');
+          MnhForm.InputEdit.ReadOnly:=false;
+          MnhForm.inputHighlighter.setMarkedToken(-1,-1);
+        end;
+        ele_echoInput: begin
+          syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
+          DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
+        end;
         eld_echoDeclaration,
         elo_echoOutput:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
         else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
@@ -421,6 +435,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
     autosizingEnabled:=true;
     doConditionalPlotReset;
     if miDebug.Checked then begin
+      InputEdit.ReadOnly:=true;
       stepper.doStep;
       DebugForm.Show;
     end else stepper.setFreeRun;
@@ -584,6 +599,23 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     end;
   end;
 
+PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
+  VAR lineIdx:longint;
+  begin
+    askForm.initWithFileLines(1,InputEdit.lines.count);
+    askForm.ShowModal;
+    lineIdx:=StrToInt(askForm.getLastAnswerReleasing);
+
+    miDebug.Checked:=true;
+    miEvalModeDirect.Checked:=true;
+    miEvalModeDirectOnKeypress.Checked:=false;
+    SettingsForm.instantEvaluation:=false;
+
+    doStartEvaluation;
+    stepper.setBreakpoint(mainPackageProvider.fileName,lineIdx);
+    ad_evaluate(InputEdit.lines);
+  end;
+
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
     if settingsHaveBeenProcessed then begin
@@ -676,7 +708,8 @@ PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
-    ad_haltEvaluation;
+    //ad_haltEvaluation;
+    stepper.doAbort;
   end;
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);

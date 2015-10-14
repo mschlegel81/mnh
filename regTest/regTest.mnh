@@ -31,13 +31,14 @@ private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void
 
 private average(L:numericList)->each(x,L,+)/size(L);
 //*Shows statistics on passed tests
-main('compare')->begin
+main('compare')->size(passedTests)<=0 ? print('No tests have been passed.') : begin
   local averageTimePerTest :=each(testFile,unique(passedTests%%1),[testFile, average(passedTests%(passedTests%%1=testFile)%%3)]).sort({$x%1<=$y%1});
+  local timeVariancePerTest:=each(testFile,unique(passedTests%%1),[testFile, sqrt(average(sqr(passedTests%(passedTests%%1=testFile)%%3 - averageTimePerTest%testFile)))]);
+
   print('All tests ordered by time:');
   printf('%X%\t%I%s',averageTimePerTest%%0,round(averageTimePerTest%%1,4));
   print;
 
-  local timeVariancePerTest:=each(testFile,unique(passedTests%%1),[testFile, average(sqr(passedTests%(passedTests%%1=testFile)%%3 - averageTimePerTest%testFile))]);
   printf@('Fastest test: %X%; average time: %0.0000%s'| averageTimePerTest%(argMin(averageTimePerTest%%1)));
   local testFile:=averageTimePerTest%(argMin(averageTimePerTest%%1))%0;
   local relAvgTimePerBin:=(passedTests%(passedTests%%1=testFile)%%[0,3]).sort({$x%1<=$y%1});
@@ -136,7 +137,7 @@ main(exe,...)->begin
   end : void;
   local FMT_STRING:="%X"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"% %###0.00%sec %X%";
   local first:=true;
-  each(test,testCases, systime>stopAtTime ? void : begin
+  each(test,testCases, (systime>stopAtTime) OR (testsFailed<>'') ? void : begin
     begin
       first
       ? print('---------------------------------------------------------\n',

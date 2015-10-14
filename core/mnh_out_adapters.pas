@@ -64,18 +64,20 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_debugSignal=(ds_wait,ds_run,ds_step,ds_abort);
+  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_step,ds_abort);
 
   T_stepper=object
+    breakAtLine:T_tokenLocation;
     cs:TRTLCriticalSection;
     signal:T_debugSignal;
     toStep:longint;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION stepping:boolean;
+    FUNCTION stepping(CONST location:T_tokenLocation):boolean;
 
     PROCEDURE setFreeRun;
+    PROCEDURE setBreakpoint(CONST fileName:ansistring; CONST line:longint);
     PROCEDURE doStep;
     PROCEDURE doMultiStep(CONST stepCount:longint);
     PROCEDURE doAbort;
@@ -192,7 +194,7 @@ PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
 PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    if level<minErrorLevel then exit;
+    if (level<minErrorLevel) or (level=elz_endOfEvaluation) then exit;
     writeln(stdErr, C_errorLevelTxt[errorLevel],ansistring(errorLocation),' ', errorMessage);
   end;
 
@@ -281,11 +283,21 @@ DESTRUCTOR T_stepper.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_stepper.stepping:boolean;
+FUNCTION T_stepper.stepping(CONST location:T_tokenLocation):boolean;
   begin
     if signal=ds_run then exit(false);
-
     system.enterCriticalSection(cs);
+    if signal=ds_runUntilBreak then begin
+      if (location.fileName=breakAtLine.fileName) and
+         (location.line    =breakAtLine.line)
+      then begin
+        signal:=ds_wait;
+        result:=true;
+      end else result:=false;
+      system.leaveCriticalSection(cs);
+      exit(result);
+    end;
+
     if signal=ds_wait then repeat
       system.leaveCriticalSection(cs);
       sleep(10);
@@ -313,6 +325,16 @@ PROCEDURE T_stepper.setFreeRun;
     signal:=ds_run;
     system.leaveCriticalSection(cs);
   end;
+
+PROCEDURE T_stepper.setBreakpoint(CONST fileName:ansistring; CONST line:longint);
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_runUntilBreak;
+    breakAtLine.fileName:=fileName;
+    breakAtLine.line:=line;
+    system.leaveCriticalSection(cs);
+  end;
+
 
 PROCEDURE T_stepper.doMultiStep(CONST stepCount:longint);
   begin

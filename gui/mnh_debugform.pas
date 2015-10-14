@@ -25,7 +25,7 @@ TYPE
 
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
-    procedure FormKeyPress(Sender: TObject; var Key: char);
+    PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE miCancelClick(Sender: TObject);
     PROCEDURE miMultistepClick(Sender: TObject);
     PROCEDURE miStepClick(Sender: TObject);
@@ -49,7 +49,7 @@ IMPLEMENTATION
 
 PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    stepper.setFreeRun;
+    if ad_evaluationRunning then stepper.setFreeRun;
   end;
 
 PROCEDURE TDebugForm.FormCreate(Sender: TObject);
@@ -58,7 +58,7 @@ PROCEDURE TDebugForm.FormCreate(Sender: TObject);
     debugEdit.Highlighter:=highlighter;
   end;
 
-procedure TDebugForm.FormKeyPress(Sender: TObject; var Key: char);
+PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);
 begin
   case key of
     's','S': miStepClick(Sender);

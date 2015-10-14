@@ -19,6 +19,7 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
   private
     rejectNonmatchingInput: boolean;
+    previousAnswers:array[0..31] of ansistring;
     { private declarations }
   public
     { public declarations }
@@ -27,6 +28,7 @@ TYPE
     lastAnswer: ansistring;
     PROCEDURE initWithQuestion(CONST question: ansistring);
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
+    PROCEDURE initWithFileLines(CONST minIdx,maxIdx:longint);
     PROCEDURE lock;
     FUNCTION getLastAnswerReleasing: ansistring;
   end;
@@ -51,8 +53,10 @@ PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShif
   end;
 
 PROCEDURE TaskForm.FormCreate(Sender: TObject);
+  VAR i:longint;
   begin
     ownerThread := 0;
+    for i:=0 to length(previousAnswers)-1 do previousAnswers[i]:='';
   end;
 
 PROCEDURE TaskForm.FormShow(Sender: TObject);
@@ -61,11 +65,13 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
   end;
 
 PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
+  VAR i:longint;
   begin
     lock;
     rejectNonmatchingInput := false;
     lastAnswer := '';
     ComboBox1.Items.clear;
+    for i:=0 to length(previousAnswers)-1 do if previousAnswers[i]<>'' then ComboBox1.Items.add(previousAnswers[i]);
     Caption := question;
     Label1.Caption:=question;
     ComboBox1.AutoComplete := false;
@@ -89,6 +95,21 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     displayPending := true;
   end;
 
+PROCEDURE TaskForm.initWithFileLines(CONST minIdx,maxIdx:longint);
+  VAR i:longint;
+  begin
+    lock;
+    rejectNonmatchingInput := true;
+    lastAnswer := '';
+    ComboBox1.Items.clear;
+    Caption := 'Breakpoint at line No.';
+    Label1.Caption := Caption;
+    for i := minIdx to maxIdx do ComboBox1.Items.add(intToStr(i));
+    ComboBox1.AutoComplete := true;
+    ComboBox1.text := '';
+    displayPending := true;
+  end;
+
 PROCEDURE TaskForm.lock;
   begin
     while showing or (ownerThread<>0) do sleep(1);
@@ -96,9 +117,12 @@ PROCEDURE TaskForm.lock;
   end;
 
 FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
+  VAR i:longint;
   begin
     while displayPending or showing do sleep(1);
     result := lastAnswer;
+    for i:=length(previousAnswers)-1 downto 1 do previousAnswers[i]:=previousAnswers[i-1];
+    previousAnswers[0]:=lastAnswer;
     ownerThread := 0;
   end;
 

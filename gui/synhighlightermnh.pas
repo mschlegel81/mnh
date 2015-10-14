@@ -24,7 +24,7 @@ TYPE
     tkModifier,
     tkNull,
     tkError,
-    tkStacktrace);
+    tkHighlightedItem);
 
 TYPE
   { TSynMnhSyn }
@@ -41,6 +41,9 @@ TYPE
     fTokenPos: integer;
     fTokenId: TtkTokenKind;
     fLineNumber: integer;
+    markedToken:record
+                  line,column:longint;
+                end;
 
     markedWord:string;
 
@@ -65,6 +68,7 @@ TYPE
     PROCEDURE setRange(value: pointer); override;
     PROCEDURE SetLine(CONST newValue: string; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
+    PROCEDURE setMarkedToken(CONST line,column:longint);
   end;
 
 IMPLEMENTATION
@@ -91,7 +95,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkModifier        ]:=TSynHighlighterAttributes.create('Modifier');
     styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
     styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
-    styleTable[tkStacktrace      ]:=TSynHighlighterAttributes.create('Stacktrace');
+    styleTable[tkHighlightedItem ]:=TSynHighlighterAttributes.create('Highlighted');
 
     styleTable[tkComment         ].style:=[fsItalic];
     styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
@@ -116,9 +120,11 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkModifier        ].foreground:=$000088FF;
     styleTable[tkNull            ].foreground:=$00000000;
     styleTable[tkError           ].foreground:=$000000FF; styleTable[tkError].background:=$0000FFFF;
-    styleTable[tkStacktrace      ].foreground:=$00FF0000;
+    styleTable[tkHighlightedItem ].foreground:=$00000000;
+    styleTable[tkHighlightedItem ].background:=$0000FFFF;
 
     markedWord:='';
+    setMarkedToken(-1,-1);
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
@@ -148,6 +154,12 @@ FUNCTION TSynMnhSyn.setMarkedWord(CONST s:ansistring):boolean;
   begin
     result:=(s<>markedWord);
     markedWord:=s;
+  end;
+
+PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
+  begin
+    markedToken.line:=line;
+    markedToken.column:=column;
   end;
 
 PROCEDURE TSynMnhSyn.next;
@@ -191,10 +203,14 @@ PROCEDURE TSynMnhSyn.next;
         fTokenId := tkDefault;
         end;
       '0'..'9': begin
-        while fLine [run] in ['0'..'9', '-', '+', '.', 'E', 'e'] do
+        while fLine [run] in ['0'..'9', '.'] do inc(run);
+        if fLine[run] in ['E','e'] then begin
           inc(run);
-        fTokenId := tkNonStringLiteral;
+          if fLine[run] in ['+','-'] then inc(run);
+          while fLine[run] in ['0'..'9'] do inc(run);
         end;
+        fTokenId := tkNonStringLiteral;
+      end;
       '$': begin
         inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do inc(run);
@@ -287,6 +303,10 @@ PROCEDURE TSynMnhSyn.next;
         fTokenId := tkDefault;
         inc(Run);
       end;
+    end;
+    if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then begin
+      writeln('Marked token @pos ',fTokenPos,'..',run-1,' (',markedToken.column, ')');
+      fTokenId:=tkHighlightedItem;
     end;
   end;
 

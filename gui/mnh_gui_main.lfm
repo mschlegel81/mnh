@@ -1169,6 +1169,10 @@ object MnhForm: TMnhForm
         Caption = 'Debug'
         OnClick = miDebugClick
       end
+      object miDebugFrom: TMenuItem
+        Caption = 'Debug starting at line...'
+        OnClick = miDebugFromClick
+      end
     end
     object submenuEditorAppearance: TMenuItem
       Caption = 'Appearance'
