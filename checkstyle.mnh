@@ -20,15 +20,23 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
          "startTime","stdErr","string","strToFloatDef","strToIntDef","style","subRule","sysutils","text",
          "textFile","time","title","tmp","top","trim","trimLeft","trimRight","trunc","tt_EOL","T_file","T_token",
          "uppercase","virtual","width","windows","write","writeln","xor"]);
-fixToken(s:string)->upper(s) in upper(myDict) and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
+upperDict:=upper(myDict);
+fixToken(s:string)->upper(s) in upperDict and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
 isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z_]+');
 
 checkConsistency(fileList)->begin
-  local all:=unique(flatten(pEach(file,fileList,pEach(tok,tokenSplit(fileContents(file),'pascal'),isIdentifier(tok) ? tok : void))));
+  local all:=unique(flatten(pEach(file,fileList,each(tok,tokenSplit(fileContents(file),'pascal'),isIdentifier(tok) AND not(tok in upperDict) ? tok : void))));
   local allUp:=unique(upper(all));
-  pEach(x,allUp,trueCount(upper(all)=x)>3 ? print('Inconsistent spelling: ',all%(upper(all)=x)) : void);
+  local anyComplaints:=false;
+  each(x,allUp,trueCount(upper(all)=x)>3 
+  ? begin
+      anyComplaints:=true;
+      print('Inconsistent spelling: ',all%(upper(all)=x));
+    end;
+  : void);
+  not(anyComplaints) ? print('Spelling is consistent.') : void;  
   void;
 end;
 
