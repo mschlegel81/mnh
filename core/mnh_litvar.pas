@@ -5,6 +5,8 @@ INTERFACE
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringutil, mnh_tokLoc;
 
 TYPE
+  T_hashInt=int64;
+
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
 
@@ -22,7 +24,7 @@ TYPE
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -72,7 +74,7 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
@@ -101,7 +103,7 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -126,7 +128,7 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -159,7 +161,7 @@ TYPE
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -190,7 +192,7 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
@@ -240,7 +242,7 @@ TYPE
     FUNCTION listConstructorToString:ansistring;
     FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation): P_literal; virtual;
-    FUNCTION hash: longint; virtual;
+    FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
   end;
 
@@ -1070,18 +1072,18 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 
 //====================================================================:?.operate
 //?.hash:=======================================================================
-FUNCTION T_literal    .hash: longint; begin result:=-1; end;
-FUNCTION T_boolLiteral.hash: longint; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: longint; begin result:=longint(lt_int) xor longint(val); end;
-FUNCTION T_realLiteral.hash: longint;
+FUNCTION T_literal    .hash: T_hashInt; begin result:=-1; end;
+FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
+FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longint(val); end;
+FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}
-    move(val, result, 4);
+    move(val, result, sizeOf(result));
     result:=result xor longint(lt_real);
     {$Q+}
   end;
 
-FUNCTION T_stringLiteral.hash: longint;
+FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}
@@ -1090,7 +1092,7 @@ FUNCTION T_stringLiteral.hash: longint;
     {$Q+}
   end;
 
-FUNCTION T_expressionLiteral.hash: longint;
+FUNCTION T_expressionLiteral.hash: T_hashInt;
   VAR i:longint;
       s:string;
   begin
@@ -1101,7 +1103,7 @@ FUNCTION T_expressionLiteral.hash: longint;
     {$Q+}
   end;
 
-FUNCTION T_listLiteral.hash: longint;
+FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}
