@@ -1,6 +1,6 @@
 UNIT mySys;
 INTERFACE
-USES dos,myGenerics,sysutils,process,windows;
+USES dos,myGenerics,sysutils,process,windows,FileUtil;
 
 FUNCTION getEnvironment:T_arrayOfString;
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
@@ -109,9 +109,7 @@ PROCEDURE getFileInfo(CONST filePath:string;
       isSystem   :=(Attr and sysfile  )<>0;
       isHidden   :=(Attr and hidden   )<>0;
       if fileExists(filePath) then try
-        reset (F);
-        size:=FileSize(F);
-        close (F);
+        size:=FileSize(filePath);
       except
         size:=-2;
       end;
