@@ -85,6 +85,7 @@
         <Filename Value="mnh_debugform.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="DebugForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_debugForm"/>
       </Unit5>

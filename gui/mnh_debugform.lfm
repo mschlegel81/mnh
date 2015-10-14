@@ -9,6 +9,7 @@ object DebugForm: TDebugForm
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
+  OnKeyPress = FormKeyPress
   LCLVersion = '1.2.6.0'
   inline debugEdit: TSynEdit
     Left = 0
@@ -23,6 +24,7 @@ object DebugForm: TDebugForm
     ParentColor = False
     ParentFont = False
     TabOrder = 0
+    OnKeyPress = FormKeyPress
     Gutter.AutoSize = False
     Gutter.Width = 0
     Gutter.MouseActions = <>
