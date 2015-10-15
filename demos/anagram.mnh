@@ -1,6 +1,6 @@
 USE inputs;
 
-private normalForm(s:string)->each(char,s.copy([0..length(s)-1],1).sort,&);
+private normalForm(s:string)->each(char,s.chars.sort,&);
 
 readDict(filename)->pEach(word,fileLines(filename),[normalForm(word),word]).sort;
 

@@ -121,6 +121,29 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end else raiseNotApplicableError('copy',params,tokenLocation);
   end;
 
+FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
+    VAR i:longint;
+        txt:ansistring;
+    begin
+      result:=newListLiteral;
+      txt:=P_stringLiteral(input)^.value;
+      for i:=1 to length(txt) do result^.appendString(txt[i]);
+    end;
+
+  VAR i:longint;
+  begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      result:=chars_internal(params^.value(0));
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_stringList) then begin
+      result:=newListLiteral;
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do P_listLiteral(result)^.append(chars_internal(P_listLiteral(params^.value(0))^.value(i)),false);
+    end else if (params=nil) or (params^.size=0) then begin
+      result:=newListLiteral;
+      for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
+    end else raiseNotApplicableError('chars',params,tokenLocation);
+  end;
+
 FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR splitters:T_arrayOfString;
   PROCEDURE initSplitters;
@@ -460,6 +483,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S');
   registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
+  registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);#Returns the characters in S as a list#chars;#Returns all ANSI characters in natural ordering');
   registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
   registerRule(STRINGS_NAMESPACE,'trim',@trim_imp,'trim(S:string);#Returns string S without leading or trailing spaces');
   registerRule(STRINGS_NAMESPACE,'trimLeft',@trimLeft_imp,'trimLeft(S:string);#Returns string S without leading spaces');

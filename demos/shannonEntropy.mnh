@@ -1,4 +1,4 @@
-shannonEntropy(s:string)->shannonEntropy(copy(s,[0..length(s)-1],1));
+shannonEntropy(s:string)->shannonEntropy(s.chars);
 shannonEntropy(C:stringList)->-each(s,each(c,unique(C),trueCount(C=c))/size(C),+,s*ln(s)/ln(2));
 
 //*See <a href="http://rosettacode.org/wiki/Entropy">Entropy task from RosettaCode</a>

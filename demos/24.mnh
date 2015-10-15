@@ -26,7 +26,7 @@ private getRiddle(set,0)->getRiddle(randomSet);
 private getRiddle(set,k)->set;
 
 private isCorrectSolution(set,text)->
-    not(each(c,copy(text,[0..length(text)-1],1),and,c in (set&"") | OPLIST | [' ','(',')']))
+    not(each(c,text.chars,AND,c in (set&"") | OPLIST | [' ','(',')']))
   ? print('The input contains an invalid character.') and false
   : '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
     '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)

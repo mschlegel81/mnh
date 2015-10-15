@@ -1,7 +1,6 @@
 memoized
-private chars(s:string )->copy(s,[0..length(s)-1],1);
-private chars(i:int    )->sort(chars(string(i)));
-private chars(i:intList)->sort(each(e,i,|,chars(e)));
+private chars(i:int    )->strings.chars(string(i)).sort;
+private chars(i:intList)->flatten(strings.chars(i&"")).sort;
 
 memoized
 private digits(n:int)->length(string(n));

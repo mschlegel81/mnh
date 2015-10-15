@@ -14,7 +14,7 @@ private histogram(words)->histogram(words,deltaIndexes(words));
 private histogram(words,IDX)->each(i,[0..size(IDX)-2],[(IDX%(i+1)-IDX%i),words%(IDX%i)]);
 
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
-private charactersInString     (s:string)->histogram(sort(copy(s,[0..length(s)-1],1)));
+private charactersInString     (s:string)->histogram(s.chars.sort);
 
 //*Solves the "Huffman coding" task from <a href="http://rosettacode.org/wiki/Huffman_coding">RosettaCode</a>
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
