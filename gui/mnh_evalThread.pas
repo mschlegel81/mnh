@@ -153,7 +153,7 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
 
 PROCEDURE ad_haltEvaluation;
   begin
-    if evaluationState.value=es_running then haltEvaluation;
+    if evaluationState.value=es_running then stepper.doAbort;
     pendingRequest.value:=er_none;
     while evaluationState.value=es_running do begin hasHaltMessage:=true;  pendingRequest.value:=er_none; sleep(1); end;
     raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
@@ -261,7 +261,7 @@ PROCEDURE initIntrinsicRuleList;
     intrinsicRules.clear;
     for i:=0 to length(ids)-1 do begin
       intrinsicRules.add(ids[i]);
-      intrinsicRules.add('mnh.'+ids[i]);
+      if pos('.',ids[i])<=0 then intrinsicRules.add('.'+ids[i]);
     end;
     intrinsicRules.unique;
   end;

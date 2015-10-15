@@ -653,6 +653,7 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
       ids:=packageUses[i].pack^.packageRules.keySet;
       for j:=0 to length(ids)-1 do begin
         userDefinedRules.add(ids[j]);
+        userDefinedRules.add(C_ID_QUALIFY_CHARACTER+ids[j]);
         userDefinedRules.add(packageId+C_ID_QUALIFY_CHARACTER+ids[j]);
       end;
     end;

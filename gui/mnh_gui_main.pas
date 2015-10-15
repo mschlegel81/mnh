@@ -9,7 +9,8 @@ USES
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,
-  mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm;
+  mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
+  myGenerics,mnh_fileWrappers;
 
 TYPE
 
@@ -17,6 +18,7 @@ TYPE
 
   TMnhForm = class(TForm)
     MenuItem3: TMenuItem;
+    miStartAnotherInstance: TMenuItem;
     miDebugFrom: TMenuItem;
     miDebug: TMenuItem;
     miCallMain: TMenuItem;
@@ -129,6 +131,7 @@ TYPE
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
+    PROCEDURE miStartAnotherInstanceClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE miAntialiasingOffClick(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
@@ -596,12 +599,15 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
       SettingsForm.instantEvaluation:=false;
+      if ad_evaluationRunning then stepper.doStep;
     end;
   end;
 
 PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
   VAR lineIdx:longint;
   begin
+    if ad_evaluationRunning then exit;
+
     askForm.initWithFileLines(1,InputEdit.lines.count);
     askForm.ShowModal;
     lineIdx:=StrToInt(askForm.getLastAnswerReleasing);
@@ -708,8 +714,7 @@ PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
-    //ad_haltEvaluation;
-    stepper.doAbort;
+    ad_haltEvaluation;
   end;
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
@@ -766,6 +771,11 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
       if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
       SettingsForm.saveSettings;
     end;
+  end;
+
+PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
+  begin
+    runCommandAsyncOrPipeless(paramStr(0),C_EMPTY_STRING_ARRAY,true);
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);

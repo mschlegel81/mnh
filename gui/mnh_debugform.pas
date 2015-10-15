@@ -9,7 +9,7 @@ USES
   ComCtrls, ButtonPanel, Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread;
 
 CONST
-  ROLLING_LINE_COUNT=32;
+  ROLLING_LINE_COUNT=40;
 
 TYPE
 
@@ -69,7 +69,7 @@ end;
 
 PROCEDURE TDebugForm.miCancelClick(Sender: TObject);
   begin
-    stepper.doAbort;
+    ad_haltEvaluation;
   end;
 
 PROCEDURE TDebugForm.miMultistepClick(Sender: TObject);
