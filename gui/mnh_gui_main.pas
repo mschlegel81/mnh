@@ -610,7 +610,8 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
 
     askForm.initWithFileLines(1,InputEdit.lines.count);
     askForm.ShowModal;
-    lineIdx:=StrToInt(askForm.getLastAnswerReleasing);
+    lineIdx:=strToIntDef(askForm.getLastAnswerReleasing,-1);
+    if lineIdx<0 then exit;
 
     miDebug.Checked:=true;
     miEvalModeDirect.Checked:=true;

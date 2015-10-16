@@ -1374,6 +1374,7 @@ end}
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
             tt_separatorComma: if cTokType[2]<>tt_EOL then begin
+              // each(<id>, || <literal> , ...
               stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
               P_literal(first^.data)^.rereference; //rereference literal to prevent destruction
               first:=recycler.disposeToken(first);
@@ -1382,7 +1383,9 @@ end}
             end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
             COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
-            else raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each!',stack[length(stack)-1]^.location);
+            else begin
+              raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
+            end;
           end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
