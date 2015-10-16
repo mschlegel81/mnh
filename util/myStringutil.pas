@@ -168,64 +168,84 @@ FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT 
   end;
 
 FUNCTION escapeString(CONST s: ansistring): ansistring;
-  VAR c1,c2,i:longint;
-      delimiter:char;
+  FUNCTION pascalStyle:ansistring;
+    CONST DELIM='''';
+    begin
+      result:=DELIM+replaceAll(s,DELIM,DELIM+DELIM)+DELIM;
+    end;
+
+  FUNCTION javaStyle:ansistring;
+    begin
+      result:='"'+replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(
+                                s, '\', '\\'),
+                             C_tabChar, '\t'),
+                       C_lineBreakChar, '\n'),
+                  C_carriageReturnChar, '\r'),
+                                   '"', '\"')+'"';
+    end;
+
+  VAR tmp:ansistring;
   begin
     //choose the delimiter leading to a shorter representation
-    c1:=0; c2:=0;
-    for i:=1 to length(s) do case s[i] of
-      '''': inc(c1);
-      '"' : inc(c2);
+    if (pos(C_tabChar,s)>0) or
+       (pos(C_lineBreakChar,s)>0) or
+       (pos(C_carriageReturnChar,s)>0) then result:=javaStyle
+    else begin
+      tmp:=javaStyle;
+      result:=pascalStyle;
+      if length(tmp)<length(result) then result:=tmp;
     end;
-    if c1>=c2 then delimiter:='"' else delimiter:='''';
-    result:=delimiter+
-            replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(
-                              s, '\', '\\'         ),
-                           C_tabChar, '\t'         ),
-                     C_lineBreakChar, '\n'         ),
-                C_carriageReturnChar, '\r'         ),
-                           delimiter, '\'+delimiter)+
-            delimiter;
   end;
 
 FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ansistring;
+  {$MACRO ON}
+  {$define exitFailing:=begin parsedLength:=0; exit(''); end}
+  CONST SQ='''';
+        DQ='"';
   VAR i: longint;
-      doubleQuoted: boolean;
+      continue:boolean;
   begin
-    if (length(input)>=1) and (input [1] in ['"', '''']) then begin
-      result := '';
-      doubleQuoted := input [1] = '"';
-      i := 2;
-      while (i<=length(input)) and (doubleQuoted and (input [i]<>'"') or  not (doubleQuoted) and (input [i]<>'''')) do
-      if (input [i] = '\') then begin
-        if i<length(input) then case input [i+1] of
-          '\': begin                            result := result+'\';                  inc(i, 2); end;
-          't': begin                            result := result+C_tabChar;            inc(i, 2); end;
-          'n': begin                            result := result+C_lineBreakChar;      inc(i, 2); end;
-          'r': begin                            result := result+C_carriageReturnChar; inc(i, 2); end;
-          '"': if       doubleQuoted then begin result := result+'"';                  inc(i, 2); end
-                                     else begin parsedLength := 0; exit(''); end;
-          '''': if not(doubleQuoted) then begin result := result+'''';                 inc(i, 2); end
-                                     else begin parsedLength := 0; exit(''); end;
-          else begin
+    if length(input)>=2 then begin //need at least a leading and a trailing delimiter
+      if input[1]=SQ then begin
+        i:=2; continue:=true;
+        while (i<=length(input)) and continue do begin
+          if (input[i]=SQ) then begin
+            if (i<length(input)) and (input[i+1]=SQ) then begin
+              result:=result+SQ;
+              inc(i,2);
+            end else continue:=false;
+          end else begin
+            result:=result+input[i];
+            inc(i);
+          end;
+        end;
+        parsedLength:=i;
+        exit(result);
+      end else if input[1]=DQ then begin
+        i:=2;
+        while (i<=length(input)) and (input[i]<>DQ) do
+        if (input[i] = '\') then begin
+          if i<length(input) then case input [i+1] of
+            '\': begin result := result+'\';                  inc(i,2); end;
+            't': begin result := result+C_tabChar;            inc(i,2); end;
+            'n': begin result := result+C_lineBreakChar;      inc(i,2); end;
+            'r': begin result := result+C_carriageReturnChar; inc(i,2); end;
+            DQ : begin result := result+DQ;                   inc(i,2); end;
+            else exitFailing;
+          end else exitFailing;
+        end else begin
+          if input [i] in [C_carriageReturnChar, C_lineBreakChar, C_tabChar] then begin
             parsedLength := 0;
             exit('');
           end;
-        end else i := length(input)+1;
-      end else begin
-        if input [i] in [C_carriageReturnChar, C_lineBreakChar, C_tabChar] then begin
-          parsedLength := 0;
-          exit('');
+          result:=result+input[i];
+          inc(i);
         end;
-        result := result+input [i];
-        inc(i);
+        parsedLength:=i;
+        exit(result);
       end;
-      parsedLength := i;
-      if i>length(input) then parsedLength := 0;
-    end else begin
-      parsedLength := 0;
-      result := '';
     end;
+    exitFailing;
   end;
 
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;

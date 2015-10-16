@@ -285,18 +285,14 @@ PROCEDURE TSynMnhSyn.next;
       end;
       '"': begin
         inc(run);
-        while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
-          inc(run);
-        if (fLine [run] = '"') then
-          inc(run);
+        while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do inc(run);
+        if (fLine [run] = '"') then inc(run);
         fTokenId := tkString;
       end;
       '''': begin
         inc(run);
-        while (fLine [run]<>#0) and ((fLine [run]<>'''') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do
-          inc(run);
-        if (fLine [run] = '''') then
-          inc(run);
+        while (fLine [run]<>#0) and (fLine [run]<>'''') do inc(run);
+        if (fLine [run] = '''') then inc(run);
         fTokenId := tkString;
       end;
       else begin
