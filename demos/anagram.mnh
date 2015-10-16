@@ -1,8 +1,6 @@
 USE inputs;
 
-private normalForm(s:string)->each(char,s.chars.sort,&);
-
-readDict(filename)->pEach(word,fileLines(filename),[normalForm(word),word]).sort;
+readDict(filename)->pEach(word,fileLines(filename),[each(char,word.chars.sort,&),word]).sort;
 
 anagramsInDict(list)->begin
   local SL:=sort(list);
