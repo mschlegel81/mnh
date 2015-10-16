@@ -27,22 +27,21 @@ shorten(s:string,subLength)->begin
   local proceed:=true;
   local result:='';
   each(run,[0..9],begin
-    local alphabet:=unique(copy(workString,[0..length(workString)-1],1));
+    local alphabet:=unique(workString.chars);
     alphabet:=each(c,[' '..'[',']'..'´'],c in alphabet ? void : c);
     each(alphabetChar,alphabet,proceed ? begin
       local subStrings:=unique(copy(workString,[0..length(workString)-subLength],subLength));
-      local benefits:=pEach(sub,subStrings,length(workString)-length(replace(workString,sub,alphabetChar))-length(sub)-1);
-      local bestIdx:=argMax(benefits);
+      local bestIdx:=argMax(pEach(sub,subStrings,length(workString)-length(replace(workString,sub,alphabetChar))-length(sub)-1));
       replacements:=subStrings%bestIdx|replacements;
       alphabetOut:=alphabetChar|alphabetOut;
       workString:=replace(workString,subStrings%bestIdx,alphabetChar);
       local oldLen:=length(result)=0 ? 2^62 : length(result);
       result:='replace('&escape(workString)&','&
-              'copy('&escape(each(c,alphabetOut ,&))&',[0..'&(size(alphabetOut )-1)&'],1),'&
-              'copy('&escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
+              'chars('&escape(each(c,alphabetOut ,&))&'),'&
+              'copy(' &escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
       length(result)>=oldLen ? proceed:=false : void;
       void;
-    end : void);
+    end : void); 
   end);
   result;
 end;
