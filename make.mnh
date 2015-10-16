@@ -273,4 +273,10 @@ main('quicktest')->pEach(task,[
    end)}],task());
 
 //*Several steps in succession
-main(...)->each(p,...,main(p));
+main(...)->each(p,...,
+  each(i,[0..7],or,
+    pos(upper(p),upper(binName(i)))>=0 
+    ? build(i) and true
+    :              false)
+  ? void
+  : main(p));
