@@ -1134,14 +1134,31 @@ To directly input a real, write a number containing of digits and a decimal poin
 
 <h4><a name="strings">Strings</a></h4>
 Strings are internally represented as ANSI-Strings, without length limitation.<br>
-You can alternatively use <code>'</code> or <code>"</code> as string delimiters. Within strings the following escape-sequences are defined:<ul>
-<li><code>\n  </code> Line break</li>
-<li><code>\r  </code> Carriage return</li>
-<li><code>\t  </code> Tabulator</li>
-<li><code>\\  </code> Backslash</li>
-<li><code>\"  </code> The delimiter (if it was <code>"</code>)</li>
-<li><code>\'  </code> The delimiter (if it was <code>'</code>)</li>
-</ul>
+You can use one of the following representations:<br>
+<ul>
+  <li><b>Pascal Strings</b>: Delimited by <code>'</code>. To insert a quote in the string, use <code>''</code>, e.g.:<code>
+<!--mnh-->
+  quote:='''';
+  doubleQuote:='"';
+  backslash:='\';
+<!--end-->  
+</code></li>
+  <li><b>Java Strings</b> (rather: Strings inspired by Java): Delimited by <code>"</code>.
+  Within strings the following escape-sequences are defined:<ul>
+  <li><code>\n  </code> Line break</li>
+  <li><code>\r  </code> Carriage return</li>
+  <li><code>\t  </code> Tabulator</li>
+  <li><code>\\  </code> Backslash</li>
+  <li><code>\"  </code> The delimiter, a double quote</li>
+  </ul>
+  e.g.:<code>
+<!--mnh-->
+  quote:="'";
+  doubleQuote:="\"";
+  backslash:="\\";
+<!--end-->  
+</code></li>
+  <li><b>Blobs</b>:
 Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are delimited by the special comments
 <code>//!BLOB START</code> and <code>//!BLOB END</code>. An example:<code>
 <!--mnh-->
@@ -1154,6 +1171,8 @@ Alternatively strings can be written as "blobs", i.e. as a text block preserving
   );
 <!--end-->
 </code>
+</li>
+</ul>
 
 <h4><a name="expressions">Expressions</a></h4>
 Expression literals are a MNH5's version of anonymous functions. They are escaped using curly brackets. To define a parameter to an expression literal, use $-Variables.<br>
