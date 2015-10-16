@@ -1,8 +1,8 @@
 private Josephus(n:int,k:int)->Josephus([0..(n-1)],k,k-1);
 private Josephus(L<>[],k,pos)->size(L)=1 ? L : (L%pos)|Josephus(L%([0..size(L)-1]<>pos),k,(k+pos-1) mod (size(L)-1));
-private Josephus(n:int,k:int,survivors:int)->print('Prisoners: ',n,
-                                                 '\nStep size: ',k,
-                                                 '\nSurvivors: ',tail(Josephus(n,k),n-survivors));
+private Josephus(n:int,k:int,survivors:int)->print("Prisoners: ",n,
+                                                 "\nStep size: ",k,
+                                                 "\nSurvivors: ",tail(Josephus(n,k),n-survivors));
 
 //*See <a href="http://rosettacode.org/wiki/Josephus_problem">http://rosettacode.org/wiki/Josephus_problem</a>
 main->Josephus(41,3,1);

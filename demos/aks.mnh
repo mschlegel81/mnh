@@ -15,4 +15,4 @@ private AKS_isPrime(n)->trueCount(AKSPoly(n)%[1..n-1] mod n<>0)=0;
 //*See <a href="http://rosettacode.org/wiki/AKS_test_for_primes">http://rosettacode.org/wiki/AKS_test_for_primes</a>
 main->print('Polynomial expansions:') |
       each(i,[0..7],printf("(x-1)^%I% = %X%",i,AKSPolyToString(AKSPoly(i))))|
-      print('\nPrimes <= 66 are : ',each(i,[2..66],AKS_isPrime(i) ? i : void));
+      print("\nPrimes <= 66 are : ",each(i,[2..66],AKS_isPrime(i) ? i : void));

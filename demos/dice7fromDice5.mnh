@@ -5,4 +5,4 @@ dice7(n   )->dice7;
 
 simpleHist(L)->each(i,[0..max(L)],aggregator({$x&"\n"&$y}),trueCount(L=i)/size(L));
 
-main->print('Distribution of seven sided dice (100000 samples): \n',simpleHist(each(k,[1..100000],dice7)));
+main->print("Distribution of seven sided dice (100000 samples): \n",simpleHist(each(k,[1..100000],dice7)));

@@ -22,7 +22,7 @@ printf('%I8% %I8% %I10',
   'decimal'|examples,
   'binary'|encode(POT,examples),
   'Zeckendorf'|encode(FIB,examples))|
-print('\n      bits rel. overhead') |
+print("\n      bits rel. overhead") |
 printf('%#0% %###0.00%     %###0.0000%',
        [1..12],
        each(i,[1..12],avgLen(i)),

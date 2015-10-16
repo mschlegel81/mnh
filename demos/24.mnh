@@ -46,7 +46,7 @@ private playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another ro
 private demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&string(set)&'.') |
                    print(' !> ',findSolution(set))|
                    print('The solution is valid.')|
-                   print(' ?> Another round?\n !> no');
+                   print(" ?> Another round?\n !> no");
 
 //*Demo - mainly for reg-testing
 main->print('This is a demo - start with any argument to play.')|demo(getRiddle);

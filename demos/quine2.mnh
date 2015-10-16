@@ -1,1 +1,1 @@
-main:={print('main:=',main)}
+main:={print("main:=",main)}

@@ -1,7 +1,7 @@
 private unpack(s:string)->expression(replace(s,["{" ,","   ,"}"," "],
                                                ["['","','","']",","]))();
-private pack(L)->replace("#"&string(L)&"#",['"',"[","]","#{","}#"],
-                                           ['' ,"{","}" ,"[","]" ]);
+private pack(L)->replace("#"&string(L)&"#",["'",'"',"[","]","#{","}#"],
+                                           ['' ,'' ,"{","}" ,"[","]" ]);
 private consolidate(s:string)->unpack(s).consolidate.pack;
 private consolidate(ListOfSets<>[])->
   size(ListOfSets)=1

@@ -20,10 +20,10 @@ private analyze(wordList)->begin
   print('Distinct words: ',size(hist));
   local top50:=head(hist.sort({$x%1>=$y%1}),50);
   print('Most frequent:');
-  printf('%X%\t%X%\t%X%',
-    'word'|(top50%%0),
+  printf("%X%\t%X%\t%X%",
+    'word' |(top50%%0),
     'count'|(top50%%1),
-    '%'|round(top50%%1/total*100,2));
+    '%'    |round(top50%%1/total*100,2));
 end;
 
 private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));

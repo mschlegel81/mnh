@@ -1,8 +1,8 @@
-USE regTest, checkstyle;
+USE regTest, checkstyle, hash;
 
 mutable private currentCodeHash:=0;
-private relevantFiles:=flatten(files(allFolders('.')&'\\*.pas'),each(f,files(allFolders('.')&'\\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));
-private getCurrentHash->each(filename,relevantFiles,+,hash(fileContents(filename)));
+private relevantFiles:=flatten(files(allFolders('.')&'\*.pas'),each(f,files(allFolders('.')&'\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));
+private getCurrentHash->each(filename,relevantFiles,+,hash(fileContents(filename))).hex;
 private hashFileContents->"writeln(':"&currentCodeHash&"');";
 
 memoized hashChanged->begin
@@ -16,7 +16,7 @@ memoized hashChanged->begin
   end;
 end;
 
-private binName(FI:int)->((FI and 1)>0 ? '.\\' : 'bin32\\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
+private binName(FI:int)->((FI and 1)>0 ? '.\' : 'bin32\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
 
 private exeHasWrongVersion(FI:int)->begin
   currentCodeHash==0 ? hashChanged : void;
@@ -39,15 +39,15 @@ private build(FI:int)->begin
     local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
                           : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
     local parameters:=
-         (full ? ['gui\\mnh_gui.lpr','-dfullVersion'] : 'consoles\\mnh_console.pas')|
+         (full ? ['gui\mnh_gui.lpr','-dfullVersion'] : 'consoles\mnh_console.pas')|
          ('-o'&binName(FI))|
          (debug ? ['-g','-gl','-Si','-ddebugMode']
                 : ['-O3','-CX','-XX','-Si']) |
          ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore','-vewnhi'] |
-         (bin64 ? ['-FuC:\\lazarus64\\components\\synedit\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64\\win32','-FuC:\\lazarus64\\lcl\\units\\x86_64-win64','-FuC:\\lazarus64\\components\\lazutils\\lib\\x86_64-win64','-FuC:\\lazarus64\\packager\\units\\x86_64-win64','-dversion64bit']
-                : ['-FuC:\\lazarus32\\components\\synedit\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32\\win32'  ,'-FuC:\\lazarus32\\lcl\\units\\i386-win32'  ,'-FuC:\\lazarus32\\components\\lazutils\\lib\\i386-win32'  ,'-FuC:\\lazarus32\\packager\\units\\i386-win32']);
+         (bin64 ? ['-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64','-FuC:\lazarus64\components\lazutils\lib\x86_64-win64','-FuC:\lazarus64\packager\units\x86_64-win64','-dversion64bit']
+                : ['-FuC:\lazarus32\components\synedit\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32'  ,'-FuC:\lazarus32\components\lazutils\lib\i386-win32'  ,'-FuC:\lazarus32\packager\units\i386-win32']);
     execPipeless(compiler,parameters);
-    execPipeless('C:\\lazarus64\\fpc\\2.6.4\\bin\\x86_64-win64\\delp',['.','core','util','test','consoles','bin32','gui\\lib\\i386-win32','gui\\lib\\x86_64-win64','gui']);
+    execPipeless('C:\lazarus64\fpc\2.6.4\bin\x86_64-win64\delp',['.','core','util','test','consoles','bin32','gui\lib\i386-win32','gui\lib\x86_64-win64','gui']);
     each(file,
          files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
          print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
@@ -167,12 +167,12 @@ end;
 
 main->begin
   local reply:=
-  ask('This script ('&myPath&') creates\n'&
-      '  - MNH Highlighting for Notepad++\n'&
-      '  - file associations\n'&
-      '  - the html documentation\n'&
-      'and deletes itself afterwards.\n'&
-      'Do you want to run it?',['Yes','No','Maybe later',"Later but don't ask me again"]);
+  ask("This script ("&myPath&") creates\n"&
+      "  - MNH Highlighting for Notepad++\n"&
+      "  - file associations\n"&
+      "  - the html documentation\n"&
+      "and deletes itself afterwards.\n"&
+      "Do you want to run it?",['Yes','No','Maybe later',"Later but don't ask me again"]);
   reply='Yes' ? main('run') :
   reply='No' ? deleteFile(myPath) :
   reply="Later but don't ask me again" ? begin

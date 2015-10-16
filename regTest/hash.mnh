@@ -1,3 +1,7 @@
-fileHash(filename:string)->fileExists(filename) ? hash(fileContents(filename))&'' : '--file does not exist--';
-main->print(fileHash(myPath));
+private halfBytes(i>=0)->i div 16^[15..0] and 15;
+private halfBytes(i)->(i and 15*16^[15..0]) div 16^[15..0]+[16,0,0,0 ,0,0,0,0 ,0,0,0,0 ,0,0,0,0];
+hex(i)->each(c,['0'..'9','A'..'F']%halfBytes(i),&);
+
+fileHash(filename:string)->fileExists(filename) ? fileContents(filename).hash.hex : '--file does not exist--';
+main->print(hex(fileHash(myPath)));
 main(...)->printf("%X%\t%X%",$params,each(p,$params,fileHash(p)));
