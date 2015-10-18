@@ -16,7 +16,18 @@ private storePassedTests->begin
   writeFile(PASSED_TESTS_STORE,string(passedTests).replace('],[',"],\n["));
 end;
 
-private synchronized markAsPassed(case,exeHash,runTime)->begin passedTests|=[[exeHash,case,fileHash(ROOT_DIRECTORY&case),runTime]]; void; end;
+private synchronized markAsPassed(case,exeHash,runTime)->begin
+  local contained:=false;
+  passedTests:=each(pt,passedTests,
+                    pt%0=exeHash AND pt%1=case ? begin
+                      contained:=true;
+                      [exeHash,case,fileHash(ROOT_DIRECTORY&case),(runTime+pt%3)/2];
+                    end : pt);
+  contained ? void
+            : passedTests|=[[exeHash,case,fileHash(ROOT_DIRECTORY&case),runTime]];
+  void;
+end;
+
 private synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,fileHash(case)] in passedTests%%[0..2];
 
 mutable testsFailed:="";
