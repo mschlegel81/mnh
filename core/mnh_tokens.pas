@@ -412,7 +412,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           exit;
         end;
       end;
-      predigestBeforeDeclarationParsing(first,recycler);
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken<>nil then begin
         predigest(assignmentToken,@self,recycler);

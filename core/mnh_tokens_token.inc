@@ -203,6 +203,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         t[i].txt:=t[i-1].txt+'.'+t[i].txt;
         t[i].tokType:=tt_identifier;
       end;
+      //resolve [ ] to [] (empty list literal)
       if (i<length(t)-1) and
          (t[i].tokType=tt_listBraceOpen ) and
          (t[i+1].tokType=tt_listBraceClose) then begin
@@ -210,6 +211,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         t[i].tokType:=tt_literal;
         t[i].data:=newListLiteral;
       end;
+      //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
       if (i<length(t)-3) and
          (t[i].tokType                   in [tt_each,tt_parallelEach]) and
          (t[i+1].tokType=tt_braceOpen) and
@@ -219,6 +221,16 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         t[i+3].txt:=t[i+2].txt;
         t[i+3].data:=nil;
         inc(i,3); //skip tt_braceOpen, identifier and comma
+      end;
+      //unary + and unary -:
+      if (i<length(t)-1) and
+         (t[i].tokType in [tt_operatorMinus,tt_operatorPlus]) and
+         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
+         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier])
+      then begin
+        if t[i].tokType=tt_operatorMinus
+        then t[i].tokType:=tt_unaryOpMinus //unary - is special token
+        else inc(i);                       //unary + is skipped
       end;
     until (i>=length(t)) or
           (t[i].tokType<>tt_EOL);
@@ -498,36 +510,6 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
           end;
         end;
       end;
-    end;
-  end;
-
-PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_tokenRecycler);
-  VAR this,next,prev:P_token;
-  begin
-    this:=first; prev:=nil;
-    while this<>nil do begin
-      next:=this^.next;
-      if (this^.tokType in [tt_operatorMinus,tt_operatorPlus]) and
-         ((prev=nil) or (prev^.tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus]))
-         and (this^.next<>nil) and (this^.next^.tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
-        if this^.tokType=tt_operatorMinus then begin
-          if (next<>nil) and (next^.tokType = tt_literal) then begin
-            this^.tokType:=tt_literal;
-            this^.data:=P_literal(next^.data)^.negate(this^.location);
-            this^.next:=recycler.disposeToken(next);
-          end else this^.tokType:=tt_unaryOpMinus;
-        end else begin
-          if prev=nil then begin
-            first:=recycler.disposeToken(this);
-            this:=first;
-          end else begin
-            prev^.next:=recycler.disposeToken(this);
-            this:=next;
-          end;
-        end;
-      end;
-      prev:=this;
-      this:=this^.next;
     end;
   end;
 
