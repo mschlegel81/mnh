@@ -190,48 +190,65 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
   begin
     repeat
       inc(i);
-      if (i<length(t)) and
-         (t[i].tokType=tt_EOL) then begin
-        if (t[i].txt<>'') then lastComment:=t[i].txt;
-      end;
-      //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
-      if (i<length(t)-1) and
-         (t[i].tokType                   =tt_identifier) and
-         (t[i+1].tokType=tt_identifier_pon) and
-         package^.isImportedOrBuiltinPackage(t[i].txt) then begin
-        inc(i);
-        t[i].txt:=t[i-1].txt+'.'+t[i].txt;
-        t[i].tokType:=tt_identifier;
-      end;
-      //resolve [ ] to [] (empty list literal)
-      if (i<length(t)-1) and
-         (t[i].tokType=tt_listBraceOpen ) and
-         (t[i+1].tokType=tt_listBraceClose) then begin
-        inc(i);
-        t[i].tokType:=tt_literal;
-        t[i].data:=newListLiteral;
-      end;
-      //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
-      if (i<length(t)-3) and
-         (t[i].tokType                   in [tt_each,tt_parallelEach]) and
+      if (i<length(t)) then case t[i].tokType of
+        tt_EOL: if (t[i].txt<>'') then lastComment:=t[i].txt;
+        tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
+          //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
+          inc(i);
+          t[i].txt:=t[i-1].txt+'.'+t[i].txt;
+          t[i].tokType:=tt_identifier;
+        end;
+        //tt_listBraceOpen: if (i<length(t)-1) and (t[i+1].tokType=tt_listBraceClose) then begin
+        //  //resolve [ ] to [] (empty list literal)
+        //  inc(i);
+        //  t[i].tokType:=tt_literal;
+        //  t[i].data:=newListLiteral;
+        //end;
+        tt_each,tt_parallelEach:       if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
          (t[i+2].tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
          (t[i+3].tokType=tt_separatorComma) then begin
-        t[i+3].tokType:=t[i].tokType;
-        t[i+3].txt:=t[i+2].txt;
-        t[i+3].data:=nil;
-        inc(i,3); //skip tt_braceOpen, identifier and comma
-      end;
-      //unary + and unary -:
-      if (i<length(t)-1) and
-         (t[i].tokType in [tt_operatorMinus,tt_operatorPlus]) and
+           //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
+          t[i+3].tokType:=t[i].tokType;
+          t[i+3].txt:=t[i+2].txt;
+          t[i+3].data:=nil;
+          inc(i,3); //skip tt_braceOpen, identifier and comma
+        end;
+        tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
          ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
-         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier])
-      then begin
-        if t[i].tokType=tt_operatorMinus
-        then t[i].tokType:=tt_unaryOpMinus //unary - is special token
-        else inc(i);                       //unary + is skipped
-      end;
+         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
+          if t[i].tokType=tt_operatorMinus
+          then t[i].tokType:=tt_unaryOpMinus //unary - is special token
+          else inc(i);                       //unary + is skipped
+        end;
+        //tt_modifier_local: if (i<length(t)-2) and
+        //   (t[i+1].tokType=tt_blockLocalVariable) and
+        //   (t[i+2].tokType=tt_assign) then begin
+        //
+        //  t[i+2].data:=nil;
+        //  t[i+2].tokType:=tt_assignNewBlockLocal;
+        //  t[i+2].txt    :=t[i+1].txt;
+        //  inc(i,2);
+        //end;
+        //
+        //tt_blockLocalVariable: if (i<length(t)-1) then begin
+        //  if t[i+1].tokType=tt_assign then begin
+        //    t[i+1].data:=nil;
+        //    t[i+1].txt :=t[i].txt;
+        //    t[i+1].tokType:=tt_assignExistingBlockLocal;
+        //    inc(i);
+        //  end else if t[i+1].tokType in [tt_cso_assignPlus..tt_cso_assignAppend] then begin
+        //    t[i+1].data:=nil;
+        //    t[i+1].txt :=t[i].txt;
+        //    inc(i);
+        //  end;
+        //end;
+      end; //case //end if
+
+
+
+
+
     until (i>=length(t)) or
           (t[i].tokType<>tt_EOL);
   end;

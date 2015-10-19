@@ -331,6 +331,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
+            end else if (first^.tokType=tt_listBraceOpen) and (first^.next<>nil) and (first^.next^.tokType=tt_listBraceClose) then begin
+              rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first);
             end else if (first^.tokType=tt_identifier)
                      and (n^.tokType in [tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList, tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList, tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList, tt_typeCheckKeyValueList])
                      and (nn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
@@ -357,7 +362,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
             end else begin
-              raiseError(el4_parsingError,'Invalid declaration pattern element.',first^.location);
+              raiseError(el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first) ,first^.location);
               recycler.cascadeDisposeToken(first);
               exit;
             end;
