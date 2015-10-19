@@ -13,4 +13,4 @@ main(batchFileName)->writeFileLines(batchFileName,''&flatten(begin
   end);
 end));
 
-main->main("regTest/t.bat");
+main->main(splitFileName(myPath)%'directory'&'\..\regTest\t.bat');
