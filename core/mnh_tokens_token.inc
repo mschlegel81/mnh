@@ -1330,19 +1330,24 @@ end}
             else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
-            tt_separatorComma: begin // [ | <Lit> ,
-              P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-              first:=recycler.disposeToken(first);
-              first:=recycler.disposeToken(first);
+            tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
+              repeat
+                P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
+                if first^.next^.tokType=tt_separatorCnt then P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
+                first:=recycler.disposeToken(first);
+                first:=recycler.disposeToken(first);
+
+              until (first=nil) or (first^.toktype<>tt_literal) or
+                    (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
             end;
-            tt_separatorCnt: begin // [ | <Lit> ..
-              P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-              P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
-              first:=recycler.disposeToken(first);
-              first:=recycler.disposeToken(first);
-              didSubstitution:=true;
-            end;
+            //tt_separatorCnt: begin // [ | <Lit> ..
+            //  P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
+            //  P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
+            //  first:=recycler.disposeToken(first);
+            //  first:=recycler.disposeToken(first);
+            //  didSubstitution:=true;
+            //end;
             tt_listBraceClose: begin // [ | <Lit> ]
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               first:=recycler.disposeToken(first);

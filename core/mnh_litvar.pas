@@ -1690,10 +1690,8 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     end;
     exit(result)}
 
-
-  VAR
-    i, i1, j: longint;
-    key: ansistring;
+  VAR i, i1, j: longint;
+      key: ansistring;
   begin
     //HANDLE S x S -> S OPERATORS:---------------------------------------------
     case op of
