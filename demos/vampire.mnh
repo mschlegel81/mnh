@@ -1,37 +1,53 @@
-memoized
-private chars(i:int    )->strings.chars(string(i)).sort;
-private chars(i:intList)->flatten(strings.chars(i&"")).sort;
+private getFangs(i:int)->begin
 
-memoized
-private digits(n:int)->length(string(n));
-private dividers(n:int)->dividers(n,floor(10**(digits(n)/2-1)),
-                                    floor(sqrt(n)),
-                                    floor(10**(digits(n)/2))-1);
-private dividers(n,k0,k1,k2)->dividers(n,abs(k1-k0)<abs(k1-k2) ? [k0..k1] : [k1..k2]);
-private dividers(n,Candidates)->Candidates%(n mod Candidates=0);
+  local digits:=length(string(i)) div 2;
+  local toTest1:=10^(digits-1);
+  local toTest2:=round(sqrt(i));
+  local toTest3:=10^ digits   -1;
+  local toTest:=abs(toTest2-toTest1)<abs(toTest3-toTest2)
+                ? [toTest1..toTest2]
+                : [toTest3..toTest2];
+  local iDigits:=string(i).chars.sort;
+  pEach(d,toTest%(i mod toTest=0),
+    (string(d)&string(i div d)).chars.sort==iDigits
+    ? [i div d,d]
+    : void);
+end;
 
-private factorPairs(n)->each(d,dividers(n),[n div d,d]);
+private isVampire(i:int)->not(getFangs(i)==[]);
 
-private isVampire(i:int)->isVampire(i,chars(i));
-private isVampire(i:int,iC)->(size(iC) and 1)=1 ? false : isVampire(i,iC,factorPairs(i));
-private isVampire(i,iC,FP)->vampPrint(i,FP%each(p,FP,chars(p)==iC));
-private vampPrint(i,[])->false;
-private vampPrint(i,fangs)->true and print(i," is a vampire. It's fangs are: ",each(f,fangs,aggregator({$x&" or "&$y}),string(f)));
+private printVampire(i:int)->begin
+  local fangs:=getFangs(i);
+  fangs==[]
+  ? false
+  : begin
+      print(i," is a vampire. It's fangs are: ",each(f,fangs,aggregator({$x&" or "&$y}),string(f)));
+      true;
+    end;
+end;
 
-private bigStep(n)->(digits(n) and 1) = 1 ? 10^(digits(n)) : n;
+private verbosePrintVampire(i)->printVampire(i) OR print(i,' is not a vampire.');
 
-private printFirstVampires(n<=0,k>0)->true;
-private printFirstVampires(n   ,k>0)->printFirstVampires(n-(isVampire(k)?1:0),bigStep(k+1));
+private step(99    ):=1000;
+private step(9999  ):=100000;
+private step(999999):=10000000;
+private step(k)->k+1;
 
-private verboseCheckIfVampire(n)->isVampire(n) ? true : print(n,' is not a vampire.');
+printFirstKVampires(k:int)->begin
+  local found:=0;
+  local toTest:=9;
+  while(found<k,printVampire(toTest:=step(toTest)) ? found+=1 : void);
+end;
 
 //*Solves the "Vampire-Number" task from <a href="http://rosettacode.org/wiki/Vampire_number">RosettaCode</a>
-main('rosetta')->print('See http://rosettacode.org/wiki/Vampire_number') and
-      printFirstVampires(25,1) and
-      print('-----------------------------------------------') and
-      verboseCheckIfVampire(16758243290880) and
-      verboseCheckIfVampire(24959017348650) and
-      verboseCheckIfVampire(14593825548650);
-      
+main('rosetta')->begin
+  print('See http://rosettacode.org/wiki/Vampire_number');
+  main;
+  print('-----------------------------------------------');
+  verbosePrintVampire(16758243290880);
+  verbosePrintVampire(24959017348650);
+  verbosePrintVampire(14593825548650);
+end;
+
 //*As above but abridged for regression test
-main->printFirstVampires(25,1);
+main->printFirstKVampires(25);
