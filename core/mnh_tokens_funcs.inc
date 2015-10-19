@@ -324,30 +324,28 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
     VAR next:T_token;
         first,last,temp:P_token;
-        loc:T_tokenLocation;
         recycler:T_tokenRecycler;
+
+
+        exTokens:T_tokenArray;
+        package:P_package;
+        dummyForLastComment:ansistring;
     begin
-      loc:=location;
-      next:=firstToken(s,loc,nil,true);
-      while (next.tokType=tt_EOL) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
-      if next.tokType=tt_EOL then exit(newErrorLiteralRaising('The parsed expression appears to be empty',location));
       recycler.create;
-      first:=recycler.newToken(next);
+
+      package:=guessPackageForProvider(tokenLocation.fileName);
+      exTokens:=tokenizeAll(s,location,package);
+      exTokens.step(package,dummyForLastComment);
+      first:=recycler.newToken(exTokens.current);
       last:=first;
-      repeat
-        loc:=location;
-        next:=firstToken(s,loc,nil,true);
-        while (next.tokType=tt_EOL) and (s<>'') and (errorLevel<el3_evalError) do next:=firstToken(s,loc,nil,true);
-        if next.tokType<>tt_EOL then begin
-          last^.next:=recycler.newToken(next);
-          last:=last^.next;
-        end;
-      until (next.tokType in [tt_EOL,tt_semicolon]) or (errorLevel>=el3_evalError);
-      if errorLevel>=el3_evalError then begin
-        recycler.cascadeDisposeToken(first);
-        recycler.destroy;
-        exit(newErrorLiteral);
+      exTokens.step(package,dummyForLastComment);
+      while not(exTokens.atEnd) do begin
+        last^.next:=recycler.newToken(exTokens.current);
+        last:=last^.next;
+        exTokens.step(package,dummyForLastComment);
       end;
+      exTokens.destroy;
+
 
       if first^.tokType<>tt_expBraceOpen then begin
         temp:=recycler.newToken(location,'',tt_expBraceOpen);

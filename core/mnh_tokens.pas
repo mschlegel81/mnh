@@ -72,12 +72,10 @@ VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
 
-FUNCTION guessPackageForToken(CONST token:T_token):P_package;
-  VAR providerPath:ansistring;
-      packId:string;
+FUNCTION guessPackageForProvider(CONST providerPath:ansistring):P_package;
+  VAR packId:string;
       i:longint;
   begin
-    providerPath:=token.location.fileName;
     if providerPath=mainPackage.codeProvider^.getPath then exit(@mainPackage);
     for i:=0 to length(secondaryPackages)-1 do
       if providerPath=secondaryPackages[i]^.codeProvider^.getPath then exit(secondaryPackages[i]);
@@ -90,6 +88,11 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
     for i:=0 to length(secondaryPackages)-1 do
       if packId=secondaryPackages[i]^.codeProvider^.id then exit(secondaryPackages[i]);
     result:=@mainPackage;
+  end;
+
+FUNCTION guessPackageForToken(CONST token:T_token):P_package;
+  begin
+    result:=guessPackageForProvider(token.location.fileName);
   end;
 
 {$define include_implementation}
@@ -197,10 +200,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           rulesSet:T_ruleMap.KEY_VALUE_LIST;
           dummyRule:P_rule;
       begin
+        raiseError(el0_allOkay,'Parsing USE-clause: '+tokensToString(first),first^.location);
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=recycler.disposeToken(temp);
         while first<>nil do begin
-          if first^.tokType=tt_identifier then begin
+          if first^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer] then begin
             newId:=first^.txt;
             if isQualified(newId) then begin
               raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
@@ -399,10 +403,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if first=nil then exit;
       if isFirstLine then begin
         isFirstLine:=false;
-        if (first^.tokType=tt_identifier) and
+        if (first^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
            (first^.txt    ='USE') and
            (first^.next   <>nil) and
-           (first^.next^.tokType=tt_identifier)
+           (first^.next^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer])
         then begin
           interpretUseClause;
           exit;
@@ -426,29 +430,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       first:=nil;
     end;
 
-  VAR currentTokenIndex:longint;
-      fileTokens:T_tokenArray;
-      {$define currentToken:=fileTokens[currentTokenIndex]}
-
-  PROCEDURE stepToken;
-    begin
-      repeat
-        inc(currentTokenIndex);
-        if (currentTokenIndex<length(fileTokens)) and
-           (currentToken.tokType=tt_EOL) then begin
-          if (currentToken.txt<>'') then lastComment:=currentToken.txt;
-        end;
-        if (currentTokenIndex<length(fileTokens)-1) and
-           (currentToken.tokType                   =tt_identifier) and
-           (fileTokens[currentTokenIndex+1].tokType=tt_identifier_pon) and
-           isImportedOrBuiltinPackage(currentToken.txt) then begin
-          inc(currentTokenIndex);
-          currentToken.txt:=fileTokens[currentTokenIndex-1].txt+'.'+currentToken.txt;
-          currentToken.tokType:=tt_identifier;
-        end;
-      until (currentTokenIndex>=length(fileTokens)) or
-            (currentToken.tokType<>tt_EOL);
-    end;
+  VAR fileTokens:T_tokenArray;
 
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -495,54 +477,53 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     clear;
     loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
     fileTokens:=tokenizeAll(codeProvider,@self);
-    currentTokenIndex:=-1;
-    stepToken;
+    fileTokens.step(@self,lastComment);
     first:=nil;
     last :=nil;
     localIdStack.create;
-    while currentTokenIndex<length(fileTokens) do begin
-      if currentToken.tokType=tt_procedureBlockBegin then begin
+    while not(fileTokens.atEnd) do begin
+      if fileTokens.current.tokType=tt_procedureBlockBegin then begin
         if first=nil then begin
-          first:=recycler.newToken(currentToken); currentToken.undefine;
+          first:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last :=first;
         end else begin
-          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
+          last^.next:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
         end;
 
         localIdStack.clear;
         localIdStack.scopePush;
-        stepToken;
-        while (currentTokenIndex<length(fileTokens)) and not((currentToken.tokType=tt_procedureBlockEnd) and (localIdStack.oneAboveBottom)) do begin
-          case currentToken.tokType of
+        fileTokens.step(@self,lastComment);
+        while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_procedureBlockEnd) and (localIdStack.oneAboveBottom)) do begin
+          case fileTokens.current.tokType of
             tt_procedureBlockBegin: localIdStack.scopePush;
             tt_procedureBlockEnd  : localIdStack.scopePop;
             tt_identifier: if (last^.tokType=tt_modifier_local) then begin
-              currentToken.tokType:=tt_blockLocalVariable;
-              localIdStack.addId(currentToken.txt);
-            end else if (localIdStack.hasId(currentToken.txt)) then
-              currentToken.tokType:=tt_blockLocalVariable;
+              fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
+              localIdStack.addId(fileTokens.current.txt);
+            end else if (localIdStack.hasId(fileTokens.current.txt)) then
+              fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
           end;
-          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
+          last^.next:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
-          stepToken;
+          fileTokens.step(@self,lastComment);
         end;
 
-      end else if (currentToken.tokType=tt_semicolon) then begin
+      end else if (fileTokens.current.tokType=tt_semicolon) then begin
         if first<>nil then interpret(first);
         last:=nil;
         first:=nil;
-        stepToken;
+        fileTokens.step(@self,lastComment);
       end else begin
         if first=nil then begin
-          first:=recycler.newToken(currentToken); currentToken.undefine;
+          first:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last :=first
         end else begin
-          last^.next:=recycler.newToken(currentToken); currentToken.undefine;
+          last^.next:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
         end;
         last^.next:=nil;
-        stepToken;
+        fileTokens.step(@self,lastComment);
       end;
     end;
     localIdStack.destroy;
@@ -550,8 +531,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     then begin if first<>nil then interpret(first); end
     else recycler.cascadeDisposeToken(first);
     ready:=true;
-    if length(fileTokens)>0
-    then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens[length(fileTokens)-1].location)
+    if length(fileTokens.t)>0
+    then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     if usecase=lu_forDirectExecution then complainAboutUncalled;
     if usecase=lu_forCallingMain then executeMain;

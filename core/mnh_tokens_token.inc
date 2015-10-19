@@ -18,7 +18,18 @@
     FUNCTION singleTokenToString:ansistring;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
   end;
-  T_tokenArray=array of T_token;
+
+  T_tokenArray=object
+    T:array of T_token;
+    i:longint;
+    CONSTRUCTOR create;
+    DESTRUCTOR destroy;
+    PROCEDURE append(CONST newTok:T_token);
+    PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring);
+    FUNCTION current:T_token;
+    PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
+    FUNCTION atEnd:boolean;
+  end;
 
 {$endif}
 {$ifdef include_implementation}
@@ -156,6 +167,78 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
       t:=t^.next;
     end;
   end;
+
+CONSTRUCTOR T_tokenArray.create;
+  begin
+    setLength(t,0);
+    i:=-1;
+  end;
+
+DESTRUCTOR T_tokenArray.destroy;
+  begin
+    setLength(t,0);
+    i:=-1;
+  end;
+
+PROCEDURE T_tokenArray.append(CONST newTok:T_token);
+  begin
+    setLength(t,length(t)+1);
+    t[length(t)-1]:=newTok;
+  end;
+
+PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring);
+  begin
+    repeat
+      inc(i);
+      if (i<length(t)) and
+         (t[i].tokType=tt_EOL) then begin
+        if (t[i].txt<>'') then lastComment:=t[i].txt;
+      end;
+      //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
+      if (i<length(t)-1) and
+         (t[i].tokType                   =tt_identifier) and
+         (t[i+1].tokType=tt_identifier_pon) and
+         package^.isImportedOrBuiltinPackage(t[i].txt) then begin
+        inc(i);
+        t[i].txt:=t[i-1].txt+'.'+t[i].txt;
+        t[i].tokType:=tt_identifier;
+      end;
+      if (i<length(t)-1) and
+         (t[i].tokType=tt_listBraceOpen ) and
+         (t[i+1].tokType=tt_listBraceClose) then begin
+        inc(i);
+        t[i].tokType:=tt_literal;
+        t[i].data:=newListLiteral;
+      end;
+      if (i<length(t)-3) and
+         (t[i].tokType                   in [tt_each,tt_parallelEach]) and
+         (t[i+1].tokType=tt_braceOpen) and
+         (t[i+2].tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
+         (t[i+3].tokType=tt_separatorComma) then begin
+        t[i+3].tokType:=t[i].tokType;
+        t[i+3].txt:=t[i+2].txt;
+        t[i+3].data:=nil;
+        inc(i,3); //skip tt_braceOpen, identifier and comma
+      end;
+    until (i>=length(t)) or
+          (t[i].tokType<>tt_EOL);
+  end;
+
+FUNCTION T_tokenArray.current:T_token;
+  begin
+    result:=t[i];
+  end;
+
+PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType:T_tokenType);
+  begin
+    t[i].tokType:=newTokType;
+  end;
+
+FUNCTION T_tokenArray.atEnd:boolean;
+  begin
+    result:=i>=length(t);
+  end;
+
 
 FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
   VAR parsedLength:longint=0;
@@ -355,6 +438,22 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     end;
   end;
 
+FUNCTION tokenizeAll(inputString:ansistring; location:T_tokenLocation;  CONST inPackage:P_package):T_tokenArray;
+  VAR next:T_token;
+  begin
+    result.create;
+    while not(isBlank(inputString)) and (errorLevel<el3_evalError) do begin
+      next:=firstToken(inputString,location,inPackage,true);
+      if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
+        if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
+          inputString:='';
+        end else begin
+          result.append(next);
+        end;
+      end;
+    end;
+  end;
+
 FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T_tokenArray;
   VAR location:T_tokenLocation;
       lineIndex:longint;
@@ -369,7 +468,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
   begin
     blob.level:=0;
     lines:=provider^.getLines;
-    setLength(result,0);
+    result.create;
     location.fileName:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
@@ -380,8 +479,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
         if blob.level=0 then begin
           next.create;
           next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
-          setLength(result,length(result)+1);
-          result[length(result)-1]:=next
+          result.append(next);
         end else begin
           if blob.text=C_carriageReturnChar
           then blob.text:=                          lines[lineIndex]
@@ -396,8 +494,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
             text:=C_carriageReturnChar;
             lines[lineIndex]:='';
           end else begin
-            setLength(result,length(result)+1);
-            result[length(result)-1]:=next
+            result.append(next);
           end;
         end;
       end;
@@ -428,10 +525,6 @@ PROCEDURE predigestBeforeDeclarationParsing(VAR first:P_token; VAR recycler:T_to
             this:=next;
           end;
         end;
-      end else if (this^.tokType=tt_listBraceOpen) and (this^.next<>nil) and (this^.next^.tokType=tt_listBraceClose) then begin
-        this^.tokType:=tt_literal;
-        this^.data:=newListLiteral;
-        this^.next:=recycler.disposeToken(this^.next);
       end;
       prev:=this;
       this:=this^.next;
@@ -486,18 +579,6 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
           t^.data:=nil;
           t^.next:=recycler.disposeToken(t^.next);
         end;
-        tt_each,tt_parallelEach:
-          if  (t^.data=nil)
-          and (t^.next            <>nil) and (t^.next^            .tokType=tt_braceOpen)
-          and (t^.next^.next      <>nil) and (t^.next^.next^      .tokType=tt_identifier)
-          and (t^.next^.next^.next<>nil) and (t^.next^.next^.next^.tokType=tt_separatorComma) then begin
-            t^.txt:=t^.next^.next^.txt;
-            t^.data:=nil;
-            t^.next:=recycler.disposeToken(recycler.disposeToken(recycler.disposeToken(t^.next))); //dispose ( , <id> and ","
-          end else if t^.txt='' then begin
-            raiseError(el4_parsingError,'Invalid each-expression; expected to start with "each(<id>,", starting with "'+tokensToString(t)+'"' ,t^.location);
-            exit;
-          end;
         end;
       t:=t^.next;
     end;
