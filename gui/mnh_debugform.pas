@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls,
-  ComCtrls, ButtonPanel, Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread;
+  Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread;
 
 CONST
   ROLLING_LINE_COUNT=40;
@@ -39,6 +39,8 @@ TYPE
 
 VAR
   DebugForm: TDebugForm;
+  StopDebuggingCallback: PROCEDURE = nil;
+  DebuggingStepCallback: PROCEDURE = nil;
 
 IMPLEMENTATION
 
@@ -50,6 +52,7 @@ IMPLEMENTATION
 PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if ad_evaluationRunning then stepper.setFreeRun;
+    if StopDebuggingCallback<>nil then StopDebuggingCallback;
   end;
 
 PROCEDURE TDebugForm.FormCreate(Sender: TObject);
@@ -70,16 +73,19 @@ end;
 PROCEDURE TDebugForm.miCancelClick(Sender: TObject);
   begin
     ad_haltEvaluation;
+    if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
 PROCEDURE TDebugForm.miMultistepClick(Sender: TObject);
   begin
     stepper.doMultiStep(ROLLING_LINE_COUNT-1);
+    if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
 PROCEDURE TDebugForm.miStepClick(Sender: TObject);
   begin
     stepper.doStep;
+    if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
 PROCEDURE TDebugForm.rollingAppend(CONST line: ansistring);

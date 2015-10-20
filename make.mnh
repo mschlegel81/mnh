@@ -272,6 +272,8 @@ main('quicktest')->pEach(task,[
      regTest.main(binName(i),'randomSample');
    end)}],task());
 
+
+
 //*Several steps in succession
 main(...)->each(p,...,
   each(i,[0..7],or,
@@ -279,4 +281,6 @@ main(...)->each(p,...,
     ? build(i) and true
     :              false)
   ? void
-  : main(p));
+  : p in ['distro','build','clean','test','quicktest']
+    ? main(p)
+    : void);

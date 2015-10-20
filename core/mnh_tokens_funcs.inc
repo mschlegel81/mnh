@@ -322,14 +322,12 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
 FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
-    VAR next:T_token;
-        first,last,temp:P_token;
+    VAR first,last,temp:P_token;
+
         recycler:T_tokenRecycler;
-
-
         exTokens:T_tokenArray;
         package:P_package;
-        dummyForLastComment:ansistring;
+        dummyForLastComment:ansistring='';
     begin
       recycler.create;
 

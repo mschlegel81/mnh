@@ -198,12 +198,6 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
           t[i].txt:=t[i-1].txt+'.'+t[i].txt;
           t[i].tokType:=tt_identifier;
         end;
-        //tt_listBraceOpen: if (i<length(t)-1) and (t[i+1].tokType=tt_listBraceClose) then begin
-        //  //resolve [ ] to [] (empty list literal)
-        //  inc(i);
-        //  t[i].tokType:=tt_literal;
-        //  t[i].data:=newListLiteral;
-        //end;
         tt_each,tt_parallelEach:       if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
          (t[i+2].tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
@@ -221,34 +215,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
           then t[i].tokType:=tt_unaryOpMinus //unary - is special token
           else inc(i);                       //unary + is skipped
         end;
-        //tt_modifier_local: if (i<length(t)-2) and
-        //   (t[i+1].tokType=tt_blockLocalVariable) and
-        //   (t[i+2].tokType=tt_assign) then begin
-        //
-        //  t[i+2].data:=nil;
-        //  t[i+2].tokType:=tt_assignNewBlockLocal;
-        //  t[i+2].txt    :=t[i+1].txt;
-        //  inc(i,2);
-        //end;
-        //
-        //tt_blockLocalVariable: if (i<length(t)-1) then begin
-        //  if t[i+1].tokType=tt_assign then begin
-        //    t[i+1].data:=nil;
-        //    t[i+1].txt :=t[i].txt;
-        //    t[i+1].tokType:=tt_assignExistingBlockLocal;
-        //    inc(i);
-        //  end else if t[i+1].tokType in [tt_cso_assignPlus..tt_cso_assignAppend] then begin
-        //    t[i+1].data:=nil;
-        //    t[i+1].txt :=t[i].txt;
-        //    inc(i);
-        //  end;
-        //end;
       end; //case //end if
-
-
-
-
-
     until (i>=length(t)) or
           (t[i].tokType<>tt_EOL);
   end;
@@ -527,6 +494,12 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
           end;
         end;
       end;
+    end;
+    //Handle unfinished blobs
+    if blob.level>0 then begin
+      next.create;
+      next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
+      result.append(next);
     end;
   end;
 
@@ -1009,7 +982,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
           result:=P_boolLiteral(res)^.value;
         end else begin
-          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
+          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt.firstOf);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);

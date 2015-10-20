@@ -609,7 +609,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
   end;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
-  CONST ruleTypeTxt:array[T_ruleType] of string=('normal','memoized','mutable','synchronized');
+  CONST ruleTypeTxt:array[T_ruleType] of string=('normal','memoized','mutable','persistent','synchronized');
 
   VAR ruleType:T_ruleType=rt_normal;
   begin

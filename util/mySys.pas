@@ -15,11 +15,11 @@ VAR CMD_PATH,
 IMPLEMENTATION
 
 FUNCTION getNumberOfCPUs:longint;
-VAR SystemInfo:SYSTEM_INFO;
-begin
-  getSystemInfo(SystemInfo);
-  result:=SystemInfo.dwNumberOfProcessors;
-end;
+  VAR SystemInfo:SYSTEM_INFO;
+  begin
+    getSystemInfo(SystemInfo);
+    result:=SystemInfo.dwNumberOfProcessors;
+  end;
 
 FUNCTION getEnvironment:T_arrayOfString;
   VAR i:longint;

@@ -1185,8 +1185,21 @@ PROCEDURE lateInitialization;
     mnh_evalThread.initUnit;
   end;
 
+PROCEDURE debugForm_stopDebugging;
+  begin
+    MnhForm.miDebug.Checked:=false;
+  end;
+
+PROCEDURE debugForm_debuggingStep;
+  begin
+    MnhForm.UpdateTimeTimerTimer(nil);
+    MnhForm.UpdateTimeTimer.Interval:=1;
+  end;
+
 INITIALIZATION
   guiOutAdapter.create;
+  StopDebuggingCallback:=@debugForm_stopDebugging;
+  DebuggingStepCallback:=@debugForm_debuggingStep;
 
 FINALIZATION
   guiOutAdapter.destroy;

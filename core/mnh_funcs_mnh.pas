@@ -39,14 +39,20 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    if (tokenLocation.fileName='?') or
-       (tokenLocation.fileName='') then result:=newStringLiteral('<Unknown>')
-                                   else result:=newStringLiteral(tokenLocation.fileName);
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      if (tokenLocation.fileName='?') or
+         (tokenLocation.fileName='') then result:=newStringLiteral('<Unknown>')
+                                     else result:=newStringLiteral(tokenLocation.fileName);
+    end else raiseNotApplicableError('myPath',params,tokenLocation);
   end;
 
 FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    result:=newStringLiteral(paramStr(0));
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then result:=newStringLiteral(paramStr(0))
+    else raiseNotApplicableError('executor',params,tokenLocation);
   end;
 
 FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;

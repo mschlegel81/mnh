@@ -1952,7 +1952,10 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
 
 FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
-    result:=activePlot.getAutoscale;
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then result:=activePlot.getAutoscale
+    else raiseError(el3_evalError,'Function getAutoscale is nullary.',tokenLocation);
   end;
 
 FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -1975,7 +1978,10 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
 
 FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
-    result:=activePlot.getLogscale;
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then result:=activePlot.getLogscale
+    else raiseError(el3_evalError,'Function getLogscale is nullary.',tokenLocation);
   end;
 
 FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2008,7 +2014,10 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
 
 FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
-    result:=activePlot.getRange;
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then result:=activePlot.getRange
+    else raiseError(el3_evalError,'Function getPlotRange is nullary.',tokenLocation);
   end;
 
 FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2028,7 +2037,10 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
 
 FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
   begin
-    result:=activePlot.getAxisStyle;
+    result:=nil;
+    if (params=nil) or (params^.size=0)
+    then result:=activePlot.getAxisStyle
+    else raiseError(el3_evalError,'Function getAxisStyle is nullary.',tokenLocation);
   end;
 
 FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;

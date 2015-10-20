@@ -423,8 +423,8 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: string;
         driveType:longint;
-        NotUsed:     dword;
-        VolumeFlags: dword;
+        NotUsed:     dword=0;
+        VolumeFlags: dword=0;
         VolumeInfo:  array[0..MAX_PATH] of char;
         VolumeSerialNumber: dword;
         Buf: array [0..MAX_PATH] of char;
