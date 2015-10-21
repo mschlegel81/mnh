@@ -45,7 +45,7 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
       FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
-      PROCEDURE complainAboutUncalled;
+      PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean);
       FUNCTION getDoc:P_userPackageDocumentation;
       PROCEDURE printHelpOnMain;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
@@ -546,8 +546,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     if length(fileTokens.t)>0
     then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
-    if usecase=lu_forDirectExecution then complainAboutUncalled;
     if usecase=lu_forCallingMain     then executeMain;
+    if usecase in [lu_forDirectExecution,lu_forCallingMain] then complainAboutUncalled(true);
     if usecase in [lu_forDirectExecution,lu_forCallingMain] then finalize;
   end;
 
@@ -684,12 +684,15 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
     userDefinedRules.unique;
   end;
 
-PROCEDURE T_package.complainAboutUncalled;
+PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean);
   VAR ruleList:array of P_rule;
       i:longint;
+      anyCalled:boolean=false;
   begin
     ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do ruleList[i]^.complainAboutUncalled;
+    for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage) then anyCalled:=true;
+    if not(anyCalled) and not(inMainPackage) then raiseError(el2_warning,'Unused package '+codeProvider^.id,C_nilTokenLocation);
+    if inMainPackage then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.complainAboutUncalled(false);
     setLength(ruleList,0);
   end;
 

@@ -30,7 +30,7 @@
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
-      PROCEDURE complainAboutUncalled;
+      FUNCTION complainAboutUncalled(CONST inMainPackage:boolean):boolean;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
       PROCEDURE writeBack(VAR provider:T_codeProvider);
@@ -235,10 +235,14 @@ FUNCTION T_rule.getInlineValue:P_literal;
                           else result:=nil;
   end;
 
-PROCEDURE T_rule.complainAboutUncalled;
+FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean):boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id);
+    result:=false;
+    for i:=0 to length(subrules)-1 do begin
+      if not(subrules[i]^.complainAboutUncalled(id,inMainPackage)) then result:=true;
+    end;
+    if not(result) and inMainPackage then raiseError(el2_warning,'Unused rule '+id,declarationStart);
   end;
 
 CONST C_ruleTypeText:array[T_ruleType] of string=(
