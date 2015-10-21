@@ -41,7 +41,7 @@ private build(FI:int)->begin
     local parameters:=
          (full ? ['gui\mnh_gui.lpr','-dfullVersion'] : 'consoles\mnh_console.pas')|
          ('-o'&binName(FI))|
-         (debug ? ['-g','-gl','-Si','-ddebugMode']
+         (debug ? ['-gl','-ddebugMode']
                 : ['-O3','-CX','-XX','-Si']) |
          ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore','-vewnhi'] |
          (bin64 ? ['-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64','-FuC:\lazarus64\components\lazutils\lib\x86_64-win64','-FuC:\lazarus64\packager\units\x86_64-win64','-dversion64bit']

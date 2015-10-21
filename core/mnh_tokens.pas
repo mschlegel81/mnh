@@ -468,7 +468,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           outAdapter^.printOut('');
           outAdapter^.printOut('Try one of the following:');
           outAdapter^.printOut('');
-          printMainPackageDocText;
+          mainPackage.printHelpOnMain;
         end;
         recycler.cascadeDisposeToken(t);
       end;
@@ -546,9 +546,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     if length(fileTokens.t)>0
     then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
-    if usecase=lu_forCallingMain     then executeMain;
-    if usecase in [lu_forDirectExecution,lu_forCallingMain] then complainAboutUncalled(true);
-    if usecase in [lu_forDirectExecution,lu_forCallingMain] then finalize;
+    if usecase=lu_forCallingMain then executeMain;
+    if usecase in [lu_forDirectExecution,lu_forCallingMain] then begin
+      if errorLevel<el3_evalError then complainAboutUncalled(true);
+      if errorLevel<el3_evalError then finalize;
+    end;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
@@ -692,7 +694,11 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean);
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage) then anyCalled:=true;
     if not(anyCalled) and not(inMainPackage) then raiseError(el2_warning,'Unused package '+codeProvider^.id,C_nilTokenLocation);
-    if inMainPackage then for i:=0 to length(packageUses)-1 do packageUses[i].pack^.complainAboutUncalled(false);
+    if inMainPackage then begin
+      for i:=0 to length(packageUses)-1 do begin
+        packageUses[i].pack^.complainAboutUncalled(false);
+      end;
+    end;
     setLength(ruleList,0);
   end;
 
