@@ -437,7 +437,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         end else if (stringToSplit[i0]='''') and singleQuoteString or
                     (stringToSplit[i0]='"') and doubleQuoteString then begin
           if escapeStringDelimiter then begin
-            unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),i1);
+            unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),1,i1);
             if i1<=0 then i1:=i0+1
                      else i1:=i0+i1;
           end else begin
@@ -456,7 +456,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           i1:=i0+1;
           while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
         end else if stringToSplit[i0] in ['0'..'9'] then begin //numbers
-          parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),false,i1);
+          parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),1,false,i1);
           if i1<=0 then i1:=i0
                    else i1:=i0+i1;
         end else begin

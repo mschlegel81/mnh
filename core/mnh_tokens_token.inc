@@ -235,8 +235,7 @@ FUNCTION T_tokenArray.atEnd:boolean;
     result:=i>=length(t);
   end;
 
-
-FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
+FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; CONST inEvaluationLoop:boolean):T_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(CONST message:ansistring);
@@ -249,31 +248,33 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
   FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
     VAR i:longint;
     begin
-      i:=1;
+      i:=lineLocation.column;
       while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_ID_QUALIFY_CHARACTER]) do begin
         inc(i);
         if line[i]=C_ID_QUALIFY_CHARACTER then begin
           if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
-            parsedLength:=i-1;
-            exit(copy(line,1,i-1));
+            parsedLength:=i-lineLocation.column;
+            exit(copy(line,lineLocation.column,parsedLength));
           end else if not(allowQualified) then begin
-            parsedLength:=i-1;
-            exit(copy(line,1,i-1));
+            parsedLength:=i-lineLocation.column;
+            exit(copy(line,lineLocation.column,parsedLength));
           end;
         end;
       end;
-      parsedLength:=i;
-      result:=copy(line,1,i);
+      parsedLength:=i-lineLocation.column+1;
+      result:=copy(line,lineLocation.column,parsedLength);
     end;
 
-  PROCEDURE removeLeadingBlanks();
-    VAR i:longint;
+  PROCEDURE removeLeadingBlanks(); inline;
     begin
-      i:=1;
-      while (i<=length(line)) and (line[i] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(i);
-      if i>1 then line:=copy(line,i,length(line)+1-i);
-      inc(lineLocation.column,i-1);
+      while (lineLocation.column<=length(line)) and
+            (line[lineLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(lineLocation.column);
     end;
+
+  FUNCTION startsWith(CONST c:char):boolean;
+    begin result:=line[lineLocation.column]=c; end;
+  FUNCTION startsWith(CONST prefix:string):boolean;
+    begin result:=copy(line,lineLocation.column,length(prefix))=prefix; end;
 
   VAR id:ansistring;
       tt:T_tokenType;
@@ -284,15 +285,15 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     result.tokType:=tt_EOL;
     result.data:=nil;
     result.next:=nil;
-    if length(line)<1 then exit(result);
-    case line[1] of
+    if length(line)<lineLocation.column then exit(result);
+    case line[lineLocation.column] of
       '0'..'9': begin
-        result.data:=parseNumber(line,not(inEvaluationLoop),parsedLength);
+        result.data:=parseNumber(line,lineLocation.column, not(inEvaluationLoop),parsedLength);
         if parsedLength<=0 then fail('Cannot parse numeric literal '+line)
                            else result.tokType:=tt_literal;
       end;
       '"','''': begin
-        id:=unescapeString(line,parsedLength);
+        id:=unescapeString(line,lineLocation.column,parsedLength);
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
           result.tokType:=tt_literal;
@@ -328,27 +329,27 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
           end;
         end;
       end;
-      '/': if startsWith(line,'//') then begin //comments
+      '/': if startsWith('//') then begin //comments
         parsedLength:=2;
-        while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
+        while (parsedLength+lineLocation.column<=length(line)) and not(line[parsedLength+lineLocation.column] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
         result.tokType:=tt_EOL;
-        if      startsWith(line,DOC_COMMENT_PREFIX) then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+1,length(line)-length(DOC_COMMENT_PREFIX)))
-        else if startsWith(line,SPECIAL_COMMENT_BLOB_BEGIN)  then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
-        else if startsWith(line,SPECIAL_COMMENT_BLOB_END) then result.txt:=SPECIAL_COMMENT_BLOB_END;
-      end else if startsWith(line,C_tokenString[tt_cso_assignDiv]) then begin
+        if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
+        else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
+        else if startsWith(SPECIAL_COMMENT_BLOB_END)   then result.txt:=SPECIAL_COMMENT_BLOB_END;
+      end else if startsWith(C_tokenString[tt_cso_assignDiv]) then begin
         parsedLength:=2;
         result.tokType:=tt_cso_assignDiv;
       end else begin
         parsedLength:=1;
         result.tokType:=tt_operatorDivReal;
       end;
-      '.': if startsWith(line,C_tokenString[tt_optionalParameters]) then begin
+      '.': if startsWith(C_tokenString[tt_optionalParameters]) then begin
         parsedLength:=length(C_tokenString[tt_optionalParameters]);
         result.tokType:=tt_optionalParameters;
-      end else if startsWith(line,C_tokenString[tt_separatorCnt]) then begin
+      end else if startsWith(C_tokenString[tt_separatorCnt]) then begin
         parsedLength:=length(C_tokenString[tt_separatorCnt]);
         result.tokType:=tt_separatorCnt;
-      end else if (length(line)>=2) and (line[2] in ['a'..'z','A'..'Z']) then begin
+      end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
         id:=copy(leadingId(false),2,length(line));
         parsedLength:=1+length(id);
         result.txt:=id;
@@ -356,10 +357,10 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         result.data:=inPackage;
         if not(inEvaluationLoop) then inPackage^.resolveRuleId(result,true);
       end else fail('Cannot parse: '+line);
-      ':': if startsWith(line,':=') then begin
+      ':': if startsWith(':=') then begin
         parsedLength:=2;
         result.tokType:=tt_assign;
-      end else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r','k']) then begin
+      end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
         id:=leadingId(false);
         parsedLength:=length(id);
         if      id=C_tokenString[tt_typeCheckBoolList  ] then result.tokType:=tt_typeCheckBoolList
@@ -384,66 +385,69 @@ FUNCTION firstToken(VAR line:ansistring; VAR lineLocation:T_tokenLocation; CONST
         parsedLength:=1;
         result.tokType:=tt_iifElse;
       end;
-      ';':                                                                  begin parsedLength:=1; result.tokType:=tt_semicolon;             end;
-      '}':                                                                  begin parsedLength:=1; result.tokType:=tt_expBraceClose;         end;
-      '{':                                                                  begin parsedLength:=1; result.tokType:=tt_expBraceOpen;          end;
-      '^':                                                                  begin parsedLength:=1; result.tokType:=tt_operatorPot;           end;
-      ']':                                                                  begin parsedLength:=1; result.tokType:=tt_listBraceClose;        end;
-      '[':                                                                  begin parsedLength:=1; result.tokType:=tt_listBraceOpen;         end;
-      '?':                                                                  begin parsedLength:=1; result.tokType:=tt_iifCheck;              end;
-      ',':                                                                  begin parsedLength:=1; result.tokType:=tt_separatorComma;        end;
-      '@':                                                                  begin parsedLength:=1; result.tokType:=tt_listToParameterList;   end;
-      ')':                                                                  begin parsedLength:=1; result.tokType:=tt_braceClose;            end;
-      '(':                                                                  begin parsedLength:=1; result.tokType:=tt_braceOpen;             end;
-      '|': if startsWith(line,C_tokenString[tt_cso_assignAppend])      then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend;      end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorConcat;        end;
-      '+': if startsWith(line,C_tokenString[tt_cso_assignPlus])        then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus;        end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorPlus;          end;
-      '&': if startsWith(line,C_tokenString[tt_cso_assignStrConcat])   then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat;   end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat;     end;
-      '-': if startsWith(line,C_tokenString[tt_declare])               then begin parsedLength:=2; result.tokType:=tt_declare;               end else
-           if startsWith(line,C_tokenString[tt_cso_assignMinus])       then begin parsedLength:=2; result.tokType:=tt_cso_assignMinus;       end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorMinus;         end;
-      '*': if startsWith(line,'**')                                    then begin parsedLength:=2; result.tokType:=tt_operatorPot;           end else
-           if startsWith(line,C_tokenString[tt_cso_assignMult])        then begin parsedLength:=2; result.tokType:=tt_cso_assignMult;        end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
-      '>': if startsWith(line,C_tokenString[tt_comparatorGeq])         then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
-      '=': if startsWith(line,C_tokenString[tt_typeCheckEmptyList])    then begin parsedLength:=3; result.tokType:=tt_typeCheckEmptyList;    end else
-           if startsWith(line,C_tokenString[tt_comparatorListEq])      then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
-      '<': if startsWith(line,C_tokenString[tt_typeCheckNonemptyList]) then begin parsedLength:=4; result.tokType:=tt_typeCheckNonemptyList; end else
-           if startsWith(line,'<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
-           if startsWith(line,'<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
-      '%': if startsWith(line,C_tokenString[tt_operatorExtractL3])     then begin parsedLength:=4; result.tokType:=tt_operatorExtractL3;     end else
-           if startsWith(line,C_tokenString[tt_operatorExtractL2])     then begin parsedLength:=3; result.tokType:=tt_operatorExtractL2;     end else
-           if startsWith(line,C_tokenString[tt_operatorExtractL1])     then begin parsedLength:=2; result.tokType:=tt_operatorExtractL1;     end
-                                                                       else begin parsedLength:=1; result.tokType:=tt_operatorExtractL0;     end;
-      '!': if startsWith(line,'!=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end
-                                                                       else begin fail('Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')'); line:=''; end;
+      ';':                                                        begin parsedLength:=1; result.tokType:=tt_semicolon;             end;
+      '}':                                                        begin parsedLength:=1; result.tokType:=tt_expBraceClose;         end;
+      '{':                                                        begin parsedLength:=1; result.tokType:=tt_expBraceOpen;          end;
+      '^':                                                        begin parsedLength:=1; result.tokType:=tt_operatorPot;           end;
+      ']':                                                        begin parsedLength:=1; result.tokType:=tt_listBraceClose;        end;
+      '[':                                                        begin parsedLength:=1; result.tokType:=tt_listBraceOpen;         end;
+      '?':                                                        begin parsedLength:=1; result.tokType:=tt_iifCheck;              end;
+      ',':                                                        begin parsedLength:=1; result.tokType:=tt_separatorComma;        end;
+      '@':                                                        begin parsedLength:=1; result.tokType:=tt_listToParameterList;   end;
+      ')':                                                        begin parsedLength:=1; result.tokType:=tt_braceClose;            end;
+      '(':                                                        begin parsedLength:=1; result.tokType:=tt_braceOpen;             end;
+      '|': if startsWith(C_tokenString[tt_cso_assignAppend])      then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend;      end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorConcat;        end;
+      '+': if startsWith(C_tokenString[tt_cso_assignPlus])        then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus;        end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorPlus;          end;
+      '&': if startsWith(C_tokenString[tt_cso_assignStrConcat])   then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat;   end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat;     end;
+      '-': if startsWith(C_tokenString[tt_declare])               then begin parsedLength:=2; result.tokType:=tt_declare;               end else
+           if startsWith(C_tokenString[tt_cso_assignMinus])       then begin parsedLength:=2; result.tokType:=tt_cso_assignMinus;       end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorMinus;         end;
+      '*': if startsWith('**')                                    then begin parsedLength:=2; result.tokType:=tt_operatorPot;           end else
+           if startsWith(C_tokenString[tt_cso_assignMult])        then begin parsedLength:=2; result.tokType:=tt_cso_assignMult;        end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
+      '>': if startsWith(C_tokenString[tt_comparatorGeq])         then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
+      '=': if startsWith(C_tokenString[tt_typeCheckEmptyList])    then begin parsedLength:=3; result.tokType:=tt_typeCheckEmptyList;    end else
+           if startsWith(C_tokenString[tt_comparatorListEq])      then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
+      '<': if startsWith(C_tokenString[tt_typeCheckNonemptyList]) then begin parsedLength:=4; result.tokType:=tt_typeCheckNonemptyList; end else
+           if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
+           if startsWith('<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
+      '%': if startsWith(C_tokenString[tt_operatorExtractL3])     then begin parsedLength:=4; result.tokType:=tt_operatorExtractL3;     end else
+           if startsWith(C_tokenString[tt_operatorExtractL2])     then begin parsedLength:=3; result.tokType:=tt_operatorExtractL2;     end else
+           if startsWith(C_tokenString[tt_operatorExtractL1])     then begin parsedLength:=2; result.tokType:=tt_operatorExtractL1;     end
+                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorExtractL0;     end;
+      '!': if startsWith('!=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end
+                                                                  else begin fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')'); lineLocation.column:=length(line)+1; end;
       else begin
-        fail('Cannot parse: '+line+' (first char is "'+line[1]+'"=#'+intToStr(ord(line[1]))+')');
-        line:='';
+        fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')');
+        lineLocation.column:=length(line)+1;
       end;
     end;
     if parsedLength>0 then begin
       if not(inEvaluationLoop) then result.txt:=copy(line,1,parsedLength);
-      line:=copy(line,parsedLength+1,length(line));
       inc(lineLocation.column,parsedLength);
     end;
   end;
 
 FUNCTION tokenizeAll(inputString:ansistring; location:T_tokenLocation;  CONST inPackage:P_package):T_tokenArray;
   VAR next:T_token;
+      workLocation:T_tokenLocation;
   begin
     result.create;
-    while not(isBlank(inputString)) and (errorLevel<3) do begin
-      next:=firstToken(inputString,location,inPackage,true);
+    workLocation:=location;
+    workLocation.column:=1;
+    while (workLocation.column<=length(inputString)) and (errorLevel<3) do begin
+      next:=firstToken(inputString,workLocation,inPackage,true);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
           inputString:='';
         end else begin
+          next.location:=location;
           result.append(next);
         end;
       end;
@@ -481,7 +485,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
           then blob.text:=                          lines[lineIndex]
           else blob.text:=blob.text+C_lineBreakChar+lines[lineIndex];
         end;
-      end else while not(isBlank(lines[lineIndex])) and (errorLevel<3) do begin
+      end else while (location.column<=length(lines[lineIndex])) and (errorLevel<3) do begin
         next:=firstToken(lines[lineIndex],location,inPackage,true);
         if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
           if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin

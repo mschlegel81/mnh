@@ -283,7 +283,7 @@ FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocat
 FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation): P_scalarLiteral; inline;
 FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation): P_literal; inline;
-FUNCTION parseNumber(CONST input: ansistring; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
+FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
 IMPLEMENTATION
 
@@ -380,50 +380,39 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
       result:=result+'.0';
   end;
 
-FUNCTION parseNumber(CONST input: ansistring; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
+FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral;
   VAR
     i: longint;
   begin
     result:=nil;
     parsedLength:=0;
-    if (length(input)>=1) and (input [1] in ['0'..'9', '-', '+']) then
-      begin
-      i:=1;
+    if (length(input)>=offset) and (input [offset] in ['0'..'9', '-', '+']) then begin
+      i:=offset;
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do
         inc(i);
-      parsedLength:=i;
+      parsedLength:=i+1-offset;
       //Only digits on indexes [1..i]; accept decimal point and following digts
-      if (i<length(input)) and (input [i+1] = '.') then
-        begin
+      if (i<length(input)) and (input [i+1] = '.') then begin
         inc(i);
-        if (i<length(input)) and (input [i+1] = '.') then
-          dec(i);
-        end;
+        if (i<length(input)) and (input [i+1] = '.') then dec(i);
+      end;
       while (i<length(input)) and (input [i+1] in ['0'..'9']) do
         inc(i);
       //Accept exponent marker and following exponent
-      if (i<length(input)) and (input [i+1] in ['e', 'E']) then
-        begin
+      if (i<length(input)) and (input [i+1] in ['e', 'E']) then begin
         inc(i);
-        if (i<length(input)) and (input [i+1] in ['+', '-']) then
-          inc(i);
-        end;
-      while (i<length(input)) and (input [i+1] in ['0'..'9']) do
-        inc(i);
-      if i>parsedLength then
-        begin
-        parsedLength:=i;
-        if suppressOutput then
-          exit(nil);
-        result:=newRealLiteral(strToFloatDef(copy(input, 1, parsedLength), Nan));
-        end
-      else
-        begin
-        if suppressOutput then
-          exit(nil);
-        result:=newIntLiteral(StrToInt64Def(copy(input, 1, parsedLength), 0));
-        end;
+        if (i<length(input)) and (input [i+1] in ['+', '-']) then inc(i);
       end;
+      while (i<length(input)) and (input [i+1] in ['0'..'9']) do inc(i);
+      if i+1-offset>parsedLength then begin
+        parsedLength:=i+1-offset;
+        if suppressOutput then exit(nil);
+        result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan));
+      end else begin
+        if suppressOutput then exit(nil);
+        result:=newIntLiteral(StrToInt64Def(copy(input, offset, parsedLength), 0));
+      end;
+    end;
   end;
 
 //=====================================================================================================================
@@ -1222,13 +1211,13 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
       exit(newBoolLiteral(false));
     if lowercase(val) = C_boolText [true] then
       exit(newBoolLiteral(true));
-    result:=parseNumber(val, false, len);
+    result:=parseNumber(val, 1, false, len);
     if (result<>nil) then
       if (len = length(val)) then
         exit(result)
       else
         disposeLiteral(result);
-    otherVal:=unescapeString(sysutils.trim(value), len);
+    otherVal:=unescapeString(sysutils.trim(value),1, len);
     if len = length(sysutils.trim(value)) then
       exit(newStringLiteral(otherVal));
     result:=@self;

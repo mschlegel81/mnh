@@ -93,12 +93,12 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
       if length(line)<1 then exit(result);
       case line[1] of
         '0'..'9': begin
-          parseNumber(line,true,parsedLength);
+          parseNumber(line,1,true,parsedLength);
           if parsedLength<=0 then begin result:=result+line; line:=''; end
                              else result:=result+span('literal', takeFromLine(parsedLength));
         end;
         '"','''': begin
-          id:=unescapeString(line,parsedLength);
+          id:=unescapeString(line,1,parsedLength);
           if parsedLength=0 then begin result:=result+line; line:=''; end
           else result:=result+span('stringLiteral', takeFromLine(parsedLength));
         end;

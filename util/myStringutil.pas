@@ -15,7 +15,7 @@ FUNCTION replaceAll(CONST original, lookFor, replaceBy: ansistring): ansistring;
 FUNCTION replaceRecursively(CONST original, lookFor, replaceBy: ansistring; OUT isValid: boolean): ansistring; inline;
 FUNCTION replaceOne(CONST original, lookFor, replaceBy: ansistring): ansistring; inline;
 FUNCTION escapeString(CONST s: ansistring): ansistring;
-FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ansistring;
+FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parsedLength: longint): ansistring;
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 FUNCTION unbrace(CONST s:ansistring):ansistring;
@@ -199,7 +199,7 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
     end;
   end;
 
-FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ansistring;
+FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parsedLength: longint): ansistring;
   {$MACRO ON}
   {$define exitFailing:=begin parsedLength:=0; exit(''); end}
   CONST SQ='''';
@@ -207,9 +207,9 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
   VAR i: longint;
       continue:boolean;
   begin
-    if length(input)>=2 then begin //need at least a leading and a trailing delimiter
-      if input[1]=SQ then begin
-        i:=2; continue:=true;
+    if length(input)>=offset+1 then begin //need at least a leading and a trailing delimiter
+      if input[offset]=SQ then begin
+        i:=offset+1; continue:=true;
         while (i<=length(input)) and continue do begin
           if (input[i]=SQ) then begin
             if (i<length(input)) and (input[i+1]=SQ) then begin
@@ -221,10 +221,10 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
             inc(i);
           end;
         end;
-        parsedLength:=i;
+        parsedLength:=i+1-offset;
         exit(result);
-      end else if input[1]=DQ then begin
-        i:=2;
+      end else if input[offset]=DQ then begin
+        i:=offset+1;
         while (i<=length(input)) and (input[i]<>DQ) do
         if (input[i] = '\') then begin
           if i<length(input) then case input [i+1] of
@@ -243,7 +243,7 @@ FUNCTION unescapeString(CONST input: ansistring; OUT parsedLength: longint): ans
           result:=result+input[i];
           inc(i);
         end;
-        parsedLength:=i;
+        parsedLength:=i+1-offset;
         exit(result);
       end;
     end;
