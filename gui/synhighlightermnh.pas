@@ -165,8 +165,8 @@ PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
 PROCEDURE TSynMnhSyn.next;
   VAR localId: shortString;
       i: longint;
-      lc:T_messageTypeOrErrorLevel;
-      specialLineCase:T_messageTypeOrErrorLevel;
+      lc:T_messageType;
+      specialLineCase:T_messageType;
   FUNCTION startsWith(CONST prefix:shortString):boolean;
     VAR k:longint=0;
     begin
@@ -184,7 +184,7 @@ PROCEDURE TSynMnhSyn.next;
     if defaultToPrint and (run = 0) then begin
       specialLineCase:=elc_clearConsole;
       i:=-1;
-      for lc:=low(T_messageTypeOrErrorLevel) to high(T_messageTypeOrErrorLevel) do
+      for lc:=low(T_messageType) to high(T_messageType) do
         if (C_errorLevelTxt[lc]<>'') and startsWith(C_errorLevelTxt[lc]) then begin
         specialLineCase:=lc;
         i:=length(C_errorLevelTxt[lc]);

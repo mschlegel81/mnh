@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar;
+USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,myStringutil;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_docRun,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -82,9 +82,9 @@ FUNCTION main(p:pointer):ptrint;
       getMainPackage^.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
-      if hasHaltMessage
-      then endOfEvaluationText.value:='Aborted after '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s'
-      else endOfEvaluationText.value:='Done in '+formatFloat('0.000',(now-startOfEvaluation.value)*(24*60*60))+'s';
+      if hasMessageOfType[el5_haltMessageReceived]
+      then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation.value)
+      else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation.value);
       sleepTime:=0;
     end;
 
@@ -155,7 +155,7 @@ PROCEDURE ad_haltEvaluation;
   begin
     if evaluationState.value=es_running then stepper.doAbort;
     pendingRequest.value:=er_none;
-    while evaluationState.value=es_running do begin hasHaltMessage:=true;  pendingRequest.value:=er_none; sleep(1); end;
+    while evaluationState.value=es_running do begin pendingRequest.value:=er_none; sleep(1); end;
     raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
 
@@ -233,7 +233,7 @@ FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_token
 
 FUNCTION ad_needReload: boolean;
   begin
-    result:=mainPackageProvider.fileHasChanged;
+    result:=not(ad_evaluationRunning) and mainPackageProvider.fileHasChanged;
   end;
 
 FUNCTION ad_needSave(CONST L: TStrings):boolean;

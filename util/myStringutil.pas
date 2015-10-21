@@ -1,7 +1,7 @@
 UNIT myStringutil;
 
 INTERFACE
-USES strutils, sysutils,  myGenerics;
+USES math, strutils, sysutils,  myGenerics;
 
 CONST
   C_lineBreakChar = chr(10);
@@ -27,6 +27,8 @@ FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
+
+FUNCTION myTimeToStr(dt:double):string;
 
 IMPLEMENTATION
 
@@ -399,6 +401,24 @@ FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansist
     except
       result:=myFormat(formatString,FloatToStr(realData));
     end;
+  end;
+
+FUNCTION myTimeToStr(dt:double):string;
+  CONST oneMinute=1/(24*60);
+        oneSecond=oneMinute/60;
+  begin
+    if dt<oneMinute
+      then begin
+        result:=formatFloat('#0.00',dt/oneSecond)+'sec';
+        if length(result)<8 then result:=' '+result;
+      end
+    else if dt>1
+      then begin
+        dt:=dt*24;             result:=       formatFloat('00',floor(dt))+':';
+        dt:=(dt-floor(dt))*60; result:=result+formatFloat('00',floor(dt))+':';
+        dt:=(dt-floor(dt))*60; result:=result+formatFloat('00',floor(dt));
+      end
+    else result:=timeToStr(dt);
   end;
 
 end.

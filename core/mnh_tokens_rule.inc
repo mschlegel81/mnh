@@ -10,7 +10,7 @@
 
   T_rule=object
     private
-      called:boolean;
+      called,valueChangedAfterDeclaration:boolean;
       declarationStart,declarationEnd:T_tokenLocation;
       namedValue:T_namedVariable;
       ruleType:T_ruleType;
@@ -27,20 +27,21 @@
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
-      PROCEDURE setMutableValue(CONST value:P_literal);
+      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       FUNCTION complainAboutUncalled(CONST inMainPackage:boolean):boolean;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
-      PROCEDURE writeBack(VAR provider:T_codeProvider);
+      FUNCTION writeBack(VAR provider:T_codeProvider):boolean;
     end;
 {$endif}
 {$ifdef include_implementation}
 CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
     called:=false;
+    valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
     declarationEnd:=C_nilTokenLocation;
     ruleType:=ruleTyp;
@@ -135,13 +136,13 @@ exit}
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin CLEAN_EXIT(true); end;
-          if (errorLevel<el3_evalError) then reduceExpression(firstRep,callDepth+1,recycler);
-          if (errorLevel<el3_evalError) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
+          if (errorLevel<3) then reduceExpression(firstRep,callDepth+1,recycler);
+          if (errorLevel<3) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,binIdx,lit);
           end;
           lastRep:=firstRep^.last;
-          if (errorLevel>=el3_evalError) then begin
+          if (errorLevel>=3) then begin
             if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
@@ -211,11 +212,12 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
       result:=result+'#'+id+subrules[i]^.pattern.toString;
   end;
 
-PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
+PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
   begin
     if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
       system.enterCriticalSection(rule_cs);
       namedValue.setValue(value);
+      if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
@@ -287,21 +289,24 @@ FUNCTION T_rule.getDocHtml:ansistring;
     if not(anyPublic) then result:='';
   end;
 
-PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider);
+FUNCTION T_rule.writeBack(VAR provider:T_codeProvider):boolean;
   VAR code:ansistring;
   begin
-    code:=C_tokenString[tt_modifier_persistent]+' '+
-          id+
-          C_tokenString[tt_assign]+
-          namedValue.getValue^.toString+
-          C_tokenString[tt_semicolon];
-    raiseError(el1_note,'Writing back: '+code,declarationStart);
-    provider.replaceCode(
-      declarationStart.line-1,
-      declarationStart.column,
-      declarationEnd.line-1,
-      declarationEnd.column,
-      code);
+    if (errorLevel<3) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
+      code:=C_tokenString[tt_modifier_persistent]+' '+
+            id+
+            C_tokenString[tt_assign]+
+            namedValue.getValue^.toString+
+            C_tokenString[tt_semicolon];
+      raiseError(el1_note,'Writing back: '+code,declarationStart);
+      provider.replaceCode(
+        declarationStart.line-1,
+        declarationStart.column,
+        declarationEnd.line-1,
+        declarationEnd.column,
+        code);
+      result:=true;
+    end else result:=false;
   end;
 
 {$endif}

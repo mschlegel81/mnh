@@ -204,7 +204,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       try
         tempProcess.execute;
         tempProcess.CloseInput;
-        while tempProcess.running and (errorLevel<el3_evalError) do begin
+        while tempProcess.running and (errorLevel<3) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then begin sleepTime:=1; inc(BytesRead, n); end

@@ -238,7 +238,7 @@ CONST
     'built in function');
 
 TYPE
-  T_messageTypeOrErrorLevel = (
+  T_messageType = (
     elc_clearConsole,
     elp_printline,
     ele_echoInput,
@@ -249,17 +249,38 @@ TYPE
     el1_note,
     el2_warning,
     el3_evalError,
+    el3_noParameterlessMain,
     el4_parsingError,
     el5_systemError,
-    elz_endOfEvaluation);
+    el5_haltMessageReceived,
+    el0_endOfEvaluation,
+    el0_reloadRequired);
 
 CONST
+  C_errorLevelForMessageType:array[T_messageType] of ShortInt=(
+  100,//elc_clearConsole,
+  100,//elp_printline,
+   -1,//ele_echoInput,
+   -1,//eld_echoDeclaration,
+   -1,//elo_echoOutput,
+   -1,//els_step,
+    0,//el0_allOkay,
+    1,//el1_note,
+    2,//el2_warning,
+    3,//el3_evalError,
+    3,//el3_noParameterlessMain
+    4,//el4_parsingError,
+    5,//el5_systemError,
+    5,//el5_haltMessageReceived
+    0,//el0_endOfEvaluation
+    0);//el0_reloadRequired
+
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
   ALL_PARAMETERS_TOKEN_TEXT='$params';
   ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
   REMAINING_PARAMETERS_IDX=ALL_PARAMETERS_PAR_IDX-1;
-  C_errorLevelTxt: array[T_messageTypeOrErrorLevel] of string = (
+  C_errorLevelTxt: array[T_messageType] of string = (
     '',//cls
     '',//out
     ' in>',//echo input
@@ -270,8 +291,11 @@ CONST
     'Note ',
     'Warning ',
     'Error ',
+    'Error: Cannot apply user defined rule main to parameter list ()',
     'Parsing Error ',
     'Sys. Error ',
+    'Evaluation haltet (most probably by user).',
+    '',
     '');
 
   DOC_COMMENT_PREFIX='//*';

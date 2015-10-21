@@ -10,7 +10,7 @@ USES
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
-  myGenerics,mnh_fileWrappers;
+  myGenerics,mnh_fileWrappers,mySys;
 
 TYPE
 
@@ -200,7 +200,7 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
-    PROCEDURE flushClear(VAR syn:TSynEdit);
+    PROCEDURE flushClear;
     PROCEDURE loadSettings;
   end;
 
@@ -246,12 +246,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
           MnhForm.needMarkPaint:=true;
         end;
-        elz_endOfEvaluation: begin
+        el0_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
-          if simpleMessage<>'' then ad_doReload(MnhForm.InputEdit.lines);
           MnhForm.InputEdit.ReadOnly:=false;
           MnhForm.inputHighlighter.setMarkedToken(-1,-1);
         end;
+        el0_reloadRequired: ad_doReload(MnhForm.InputEdit.lines);
         ele_echoInput: begin
           syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
           DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
@@ -271,7 +271,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_guiOutAdapter.flushClear(VAR syn: TSynEdit);
+PROCEDURE T_guiOutAdapter.flushClear;
   begin
     system.enterCriticalSection(cs);
     clearMessages;
@@ -432,13 +432,13 @@ PROCEDURE TMnhForm.doStartEvaluation;
   begin
     needEvaluation:=false;
     doNotEvaluateBefore:=now+0.1*ONE_SECOND;
-    guiOutAdapter.flushClear(OutputEdit);
-    DebugForm.debugEdit.ClearAll;
+    guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
     UpdateTimeTimer.Interval:=200;
     autosizingEnabled:=true;
     doConditionalPlotReset;
     if miDebug.Checked then begin
+      DebugForm.debugEdit.ClearAll;
       InputEdit.ReadOnly:=true;
       stepper.doStep;
       DebugForm.Show;
@@ -600,7 +600,12 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
       SettingsForm.instantEvaluation:=false;
-      if ad_evaluationRunning then stepper.doStep;
+      if ad_evaluationRunning then begin
+        DebugForm.debugEdit.ClearAll;
+        InputEdit.ReadOnly:=true;
+        stepper.doStep;
+        DebugForm.Show;
+      end;
     end;
   end;
 
@@ -929,7 +934,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //--------------------------------------------------:Halt/Run enabled states
     //progress time:------------------------------------------------------------
     flag:=ad_evaluationRunning;
-    if flag then aid:='Evaluating: '+formatFloat('0.000',(now-mnh_evalThread.startOfEvaluation.value )*(24*60*60))+'s'
+    if flag then aid:='Evaluating: '+myTimeToStr(now-mnh_evalThread.startOfEvaluation.value)
     else aid:=endOfEvaluationText.value;
     if (StatusBar.SimpleText<>aid) and (PageControl.ActivePageIndex=0) or flag  then begin
       StatusBar.SimpleText:=aid;

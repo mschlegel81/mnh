@@ -1,7 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics,
-     mnh_doc,lclintf;
+     mnh_doc,lclintf,mySys;
 PROCEDURE parseCmdLine;
 VAR displayTime:boolean=false;
 IMPLEMENTATION
@@ -15,7 +15,9 @@ VAR fileOrCommandToInterpret:ansistring='';
 PROCEDURE parseCmdLine;
   PROCEDURE makeAndShowDoc;
     begin
-      consoleOutAdapter.echoOn:=false;
+      consoleOutAdapter.outputBehaviour.doEchoInput:=false;
+      consoleOutAdapter.outputBehaviour.doEchoDeclaration:=false;
+      consoleOutAdapter.outputBehaviour.doShowExpressionOut:=false;
       findAndDocumentAllPackages;
       OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
     end;
@@ -59,7 +61,9 @@ PROCEDURE parseCmdLine;
     CONST setupFile='setup.mnh';
     begin
       if not(fileExists(setupFile)) then exit;
-      consoleOutAdapter.echoOn:=false;
+      consoleOutAdapter.outputBehaviour.doEchoInput:=false;
+      consoleOutAdapter.outputBehaviour.doEchoDeclaration:=false;
+      consoleOutAdapter.outputBehaviour.doShowExpressionOut:=false;
       mainPackageProvider.setPath(setupFile);
       setLength(parameters,0);
       callMainInMain(parameters);
@@ -76,7 +80,7 @@ PROCEDURE parseCmdLine;
         halt;
       end;
       callMainInMain(parameters);
-      if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
+      if displayTime then writeln('time: ',myTimeToStr(now-startTime),'sec');
       mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
     end;
 
@@ -117,7 +121,7 @@ PROCEDURE parseCmdLine;
             writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
             halt;
-          end else consoleOutAdapter.minErrorLevel:=T_messageTypeOrErrorLevel(ord(el0_allOkay)+ pel);
+          end else consoleOutAdapter.outputBehaviour.minErrorLevel:=pel;
         end else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
@@ -135,9 +139,13 @@ PROCEDURE parseCmdLine;
     end;
     //-----------------------------------------------------
     if (echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode) then begin
-      consoleOutAdapter.echoOn:=true;
+      consoleOutAdapter.outputBehaviour.doEchoInput:=true;
+      consoleOutAdapter.outputBehaviour.doEchoDeclaration:=true;
+      consoleOutAdapter.outputBehaviour.doShowExpressionOut:=true;
     end else begin
-      consoleOutAdapter.echoOn:=false;
+      consoleOutAdapter.outputBehaviour.doEchoInput:=false;
+      consoleOutAdapter.outputBehaviour.doEchoDeclaration:=false;
+      consoleOutAdapter.outputBehaviour.doShowExpressionOut:=false;
     end;
     displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
 

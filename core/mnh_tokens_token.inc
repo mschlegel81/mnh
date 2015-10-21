@@ -438,7 +438,7 @@ FUNCTION tokenizeAll(inputString:ansistring; location:T_tokenLocation;  CONST in
   VAR next:T_token;
   begin
     result.create;
-    while not(isBlank(inputString)) and (errorLevel<el3_evalError) do begin
+    while not(isBlank(inputString)) and (errorLevel<3) do begin
       next:=firstToken(inputString,location,inPackage,true);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
@@ -481,7 +481,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package):T
           then blob.text:=                          lines[lineIndex]
           else blob.text:=blob.text+C_lineBreakChar+lines[lineIndex];
         end;
-      end else while not(isBlank(lines[lineIndex])) and (errorLevel<el3_evalError) do begin
+      end else while not(isBlank(lines[lineIndex])) and (errorLevel<3) do begin
         next:=firstToken(lines[lineIndex],location,inPackage,true);
         if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
           if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
@@ -585,9 +585,9 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
     rep^.next:=t^.next; //remove expression from parent expression
     prev^.next:=nil; //unlink closing curly bracket
     recycler.disposeToken(t); //dispose closing curly bracket
-    if   errorLevel<=el2_warning then begin
+    if   errorLevel<3 then begin
       new(inlineSubRule,createFromInline(inlineRule,recycler));
-      if   errorLevel<=el2_warning then begin
+      if   errorLevel<3 then begin
         rep^.tokType:=tt_literal;
         rep^.data:=newExpressionLiteral(inlineSubRule);
       end else dispose(inlineSubRule,destroy);
@@ -866,7 +866,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do
         for j:=0 to length(bodyRule)-1 do begin
-          if (errorLevel<el3_evalError) and not(lazyAbort) then begin
+          if (errorLevel<3) and not(lazyAbort) then begin
             future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
             if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
@@ -897,12 +897,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           initFutures;
           aggregateFutures(true);
         end else begin
-          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (errorLevel<=el2_warning) and not(lazyAbort) then
+          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (errorLevel<3) and not(lazyAbort) then
             addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,recycler),true);
           finalizeAggregation;
         end;
       end else begin
-        for i:=0 to itList^.size-1 do if errorLevel<=el2_warning then addToAggregation(itList^.value(i),false);
+        for i:=0 to itList^.size-1 do if errorLevel<3 then addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList
@@ -1001,7 +1001,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         exit;
       end;
       if not(parseBodyOk) then exit;
-      while evaluateHead and (errorLevel<=el3_evalError) do evaluateBody;
+      while evaluateHead and (errorLevel<3) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
@@ -1012,7 +1012,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
     end;
-
 
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
@@ -1026,7 +1025,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
           if parameterListLiteral=nil
           then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
-          else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+          else begin
+            if (P_rule(first^.data)^.id='main') and (parameterListLiteral^.size=0)
+            then raiseError(el3_noParameterlessMain,'',first^.location)
+            else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+          end;
           exit;
         end;
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
@@ -1129,7 +1132,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      P_rule(first^.data)^.setMutableValue(newValue);
+      P_rule(first^.data)^.setMutableValue(newValue,false);
       first:=recycler.disposeToken(first);
     end;
 
@@ -1148,14 +1151,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         end;
         tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin
           newValue:=recycler.mutateInline(first^.txt,kind,newValue,first^.location);
-          if errorLevel<el3_evalError then begin
+          if errorLevel<3 then begin
             first:=recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
           end;
         end else begin
           newValue:=P_rule(first^.data)^.mutateInline(kind,newValue,first^.location);
-          if errorLevel<el3_evalError then begin
+          if errorLevel<3 then begin
             first:=recycler.disposeToken(first);
             disposeLiteral(first^.data);
             first^.data:=newValue;
@@ -1562,7 +1565,7 @@ end}
           else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack[length(stack)-1]^.data)^.literalType]+': '+stack[length(stack)-1]^.singleTokenToString,first^.location);
         end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
-    until not(didSubstitution) or (errorLevel>=el3_evalError);
+    until not(didSubstitution) or (errorLevel>=3);
     {$ifndef debugMode}
     except
       on EOutOfMemory do begin
@@ -1573,13 +1576,13 @@ end}
     end;
     {$endif}
 
-    if (errorLevel>=el3_evalError) and (first<>nil) then raiseError(el3_evalError,intToStr(callDepth)+' State: '+stateToString,first^.location);
+    if (errorLevel>=3) and (first<>nil) then raiseError(el3_evalError,intToStr(callDepth)+' State: '+stateToString,first^.location);
 
     if callDepth=0 then begin
       if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
                    else raiseError(el0_allOkay,'Reduce expression done',first^.location);
     end;
-    if (errorLevel>=el5_systemError) then begin
+    if (errorLevel>=5) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin
         raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);

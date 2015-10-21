@@ -346,34 +346,35 @@ FUNCTION T_codeProvider.getLines: T_arrayOfString;
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
   VAR i: longint;
   begin
+    outOfSync:=length(lineData)<>length(value);
     setLength(lineData, length(value));
-    for i := 0 to length(value)-1 do lineData[i] := value [i];
-    outOfSync:=true;
+    for i := 0 to length(value)-1 do begin
+      outOfSync:=outOfSync or (lineData[i]<>value[i]);
+      lineData[i] := value [i];
+    end;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
   VAR i: longint;
-    changed: boolean = false;
     cleanCount: longint;
   begin
     cleanCount := value.count;
     while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do dec(cleanCount);
     if length(lineData)<>cleanCount then begin
       setLength(lineData, cleanCount);
-      changed := true;
+      outOfSync:=true;
     end;
     for i := 0 to cleanCount-1 do begin
-      changed := changed or (trim(lineData [i])<>trim(value [i]));
+      outOfSync := outOfSync or (trim(lineData [i])<>trim(value [i]));
       lineData[i] := value [i];
     end;
-    outOfSync:=true;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
   begin
+    outOfSync:=(length(lineData)<>1) or (lineData[0]<>value);
     setLength(lineData, 1);
     lineData[0] := value;
-    outOfSync:=true;
   end;
 
 PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);

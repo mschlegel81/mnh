@@ -4,13 +4,9 @@ INTERFACE
 
 USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils;
 
-CONST
-  HALT_MESSAGE = 'Evaluation haltet (most probably by user).';
-  NO_PARAMETERLESS_MAIN_MESSAGE = 'Cannot apply user defined rule main to parameter list ()';
-
 TYPE
   T_storedMessage = record
-    messageType : T_messageTypeOrErrorLevel;
+    messageType : T_messageType;
     simpleMessage: ansistring;
     multiMessage: T_arrayOfString;
     location: T_tokenLocation;
@@ -19,13 +15,20 @@ TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
 
   { T_abstractOutAdapter }
+  T_outputBehaviour= record
+    doEchoInput: boolean;
+    doEchoDeclaration: boolean;
+    doShowExpressionOut: boolean;
+    minErrorLevel: ShortInt;
+  end;
 
   T_abstractOutAdapter = object
+    outputBehaviour:T_outputBehaviour;
     CONSTRUCTOR create;
     PROCEDURE clearConsole; virtual; abstract;
-    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual; abstract;
+    PROCEDURE writeEcho(CONST mt:T_messageType; CONST s: ansistring); virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
-    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
+    PROCEDURE errorOut(CONST level:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
   end;
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
@@ -33,32 +36,23 @@ TYPE
   { T_consoleOutAdapter }
 
   T_consoleOutAdapter = object(T_abstractOutAdapter)
-    echoOn:boolean;
-    minErrorLevel:T_messageTypeOrErrorLevel;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clearConsole; virtual;
-    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual;
+    PROCEDURE writeEcho(CONST mt:T_messageType; CONST s: ansistring); virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
-    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
-  end;
-
-  T_outputBehaviour= record
-    doEchoInput: boolean;
-    doEchoDeclaration: boolean;
-    doShowExpressionOut: boolean;
+    PROCEDURE errorOut(CONST level:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
   end;
 
   T_collectingOutAdapter=object(T_abstractOutAdapter)
-    outputBehaviour:T_outputBehaviour;
     storedMessages:array of T_storedMessage;
     cs:TRTLCriticalSection;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clearConsole; virtual;
-    PROCEDURE writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring); virtual;
+    PROCEDURE writeEcho(CONST mt:T_messageType; CONST s: ansistring); virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
-    PROCEDURE errorOut(CONST level:T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
+    PROCEDURE errorOut(CONST level:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
     PROCEDURE appendSingleMessage(CONST message:T_storedMessage);
     PROCEDURE clearMessages;
   end;
@@ -88,47 +82,48 @@ VAR
   {$ifdef fullVersion}stepper:T_stepper;{$endif}
   outAdapter:P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
-  maxErrorLevel: T_messageTypeOrErrorLevel;
+  maxErrorLevel: shortint;
 
 PROCEDURE clearErrors;
-PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-FUNCTION errorLevel: T_messageTypeOrErrorLevel;
+PROCEDURE raiseError(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+FUNCTION errorLevel: ShortInt;
 PROCEDURE haltEvaluation;
 PROCEDURE setDefaultCallbacks;
 
 PROCEDURE haltWithAdaptedSystemErrorLevel;
 VAR
-  hasHaltMessage: boolean = false;
-  hasNoParameterlessMainMessage: boolean = false;
+  hasMessageOfType:array[T_messageType] of boolean;
   systemErrorlevel: specialize G_safeVar<longint>;
-
+  parsingTime:double;
 
 IMPLEMENTATION
 
 PROCEDURE clearErrors;
+  VAR mt:T_messageType;
   begin
-    maxErrorLevel := el0_allOkay;
-    hasHaltMessage := false;
-    hasNoParameterlessMainMessage := false;
+    for mt:=low(T_messageType) to high(T_messageType) do begin
+      hasMessageOfType[mt]:=false;
+      if   maxErrorLevel>=C_errorLevelForMessageType[mt]
+      then maxErrorLevel:=C_errorLevelForMessageType[mt]-1;
+    end;
   end;
 
-PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
-  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE raiseError(CONST thisErrorLevel: T_messageType;  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    if (thisErrorLevel in [el0_allOkay..el5_systemError]) and (thisErrorLevel > maxErrorLevel) then maxErrorLevel := thisErrorLevel;
-    if errorMessage = HALT_MESSAGE then hasHaltMessage := true;
-    if errorMessage = NO_PARAMETERLESS_MAIN_MESSAGE then hasNoParameterlessMainMessage := true;
+    if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
+       maxErrorLevel:=C_errorLevelForMessageType[thisErrorLevel];
+    hasMessageOfType[thisErrorLevel]:=true;
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-FUNCTION errorLevel: T_messageTypeOrErrorLevel;
+FUNCTION errorLevel: ShortInt;
   begin
-    if hasHaltMessage then result:=el5_systemError else result := maxErrorLevel;
+    result := maxErrorLevel;
   end;
 
 PROCEDURE haltEvaluation;
   begin
-    raiseError(el5_systemError, HALT_MESSAGE, C_nilTokenLocation);
+    raiseError(el5_haltMessageReceived, '', C_nilTokenLocation);
   end;
 
 PROCEDURE setDefaultCallbacks;
@@ -139,11 +134,11 @@ PROCEDURE setDefaultCallbacks;
 PROCEDURE haltWithAdaptedSystemErrorLevel;
   VAR L:longint=0;
   begin
-    if errorLevel>=el3_evalError then begin
+    if errorLevel>=3 then begin
       L:=103;
-      if errorLevel>=el4_parsingError then begin
+      if errorLevel>=4 then begin
         L:=104;
-        if errorLevel>=el5_systemError then L:=105;
+        if errorLevel>=5 then L:=105;
       end;
     end;
     if L>systemErrorlevel.value then halt(L)
@@ -154,14 +149,19 @@ PROCEDURE haltWithAdaptedSystemErrorLevel;
 
 CONSTRUCTOR T_abstractOutAdapter.create;
   begin
+    with outputBehaviour do begin
+      doEchoDeclaration:=false;
+      doEchoInput:=false;
+      doShowExpressionOut:=false;
+      minErrorLevel:=3;
+    end;
   end;
 
 { T_consoleOutAdapter }
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
-    echoOn:=false;
-    minErrorLevel:=el3_evalError;
+    inherited create;
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -173,9 +173,14 @@ PROCEDURE T_consoleOutAdapter.clearConsole;
     mySys.clearConsole;
   end;
 
-PROCEDURE T_consoleOutAdapter.writeEcho(CONST mt:T_messageTypeOrErrorLevel; CONST s: ansistring);
+PROCEDURE T_consoleOutAdapter.writeEcho(CONST mt:T_messageType; CONST s: ansistring);
   begin
-    if not(echoOn) then exit;
+    case mt of
+      elo_echoOutput: if not(outputBehaviour.doShowExpressionOut) then exit;
+      eld_echoDeclaration:  if not (outputBehaviour.doEchoDeclaration) then exit;
+      ele_echoInput: if not (outputBehaviour.doEchoInput) then exit;
+      else exit;
+    end;
     writeln(C_errorLevelTxt[mt],s);
   end;
 
@@ -185,11 +190,11 @@ PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
     for i:=0 to length(s)-1 do writeln(s[i]);
   end;
 
-PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel;
+PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageType;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    if (level<minErrorLevel) or (level=elz_endOfEvaluation) then exit;
-    writeln(stdErr, C_errorLevelTxt[errorLevel],ansistring(errorLocation),' ', errorMessage);
+    if (C_errorLevelForMessageType[level]<outputBehaviour.minErrorLevel) or (level=el0_endOfEvaluation) then exit;
+    writeln(stdErr, C_errorLevelTxt[level],ansistring(errorLocation),' ', errorMessage);
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;
@@ -214,7 +219,7 @@ PROCEDURE T_collectingOutAdapter.clearConsole;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageTypeOrErrorLevel; CONST s: ansistring);
+PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageType; CONST s: ansistring);
   VAR msg:T_storedMessage;
   begin
     case mt of
@@ -239,7 +244,7 @@ PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageTypeOrErrorLevel; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_collectingOutAdapter.errorOut(CONST level: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR msg:T_storedMessage;
   begin
     {$ifdef debugMode}
@@ -348,7 +353,7 @@ PROCEDURE T_stepper.doAbort;
 INITIALIZATION
   consoleOutAdapter.create;
   setDefaultCallbacks;
-  maxErrorLevel := el0_allOkay;
+  maxErrorLevel := -1;
   systemErrorlevel.create(0);
   {$ifdef fullVersion}
   stepper.create;
