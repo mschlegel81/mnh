@@ -26,6 +26,12 @@ main('cleanup')->begin
   print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? pt : void)),' passed tests remain.');
 end;
 
+//*Remove all passed tests related to versions with equal (!) code hashes
+main('retest')->begin
+  local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
+  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? void : pt)),' passed tests remain.');
+end;
+
 private average(L:numericList)->each(x,L,+)/size(L);
 //*Shows statistics on passed tests
 main('compare')->size(passedTests)<=0 ? print('No tests have been passed.') : begin
