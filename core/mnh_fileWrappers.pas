@@ -8,22 +8,23 @@ TYPE
 
   T_codeProvider = object
   private
-    lock: TThreadID;
     filePath: ansistring;
     lineData: T_arrayOfString;
-    syncedFileAge: double;
-    fileVersion: longint;
-    version: longint;
 
+    outOfSync:boolean;
+    fileAccessedAtFileAge:double;
   public
     CONSTRUCTOR create;
     CONSTRUCTOR create(CONST path: ansistring);
     DESTRUCTOR destroy;
+
     FUNCTION getLines: T_arrayOfString;
     PROCEDURE setLines(CONST value: T_arrayOfString);
     PROCEDURE setLines(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
     PROCEDURE appendLine(CONST value: ansistring);
+
+    PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
 
     PROCEDURE setPath(CONST path: ansistring);
     FUNCTION getPath: ansistring;
@@ -32,7 +33,7 @@ TYPE
     FUNCTION fileName: ansistring;
     FUNCTION fileHasChanged: boolean;
     FUNCTION fileIsOutOfSync: boolean;
-    FUNCTION getVersion(CONST reloadIfNecessary: boolean): longint;
+
     FUNCTION id: ansistring;
     PROCEDURE clear;
   end;
@@ -338,31 +339,16 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 FUNCTION T_codeProvider.getLines: T_arrayOfString;
   VAR i: longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock := ThreadID until lock = ThreadID;
     setLength(result, length(lineData));
     for i := 0 to length(lineData)-1 do result[i] := lineData [i];
-    repeat
-      lock := 0
-    until lock = 0;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
-  VAR
-    i: longint;
+  VAR i: longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
     setLength(lineData, length(value));
-    for i := 0 to length(value)-1 do
-      lineData[i] := value [i];
-    inc(version);
-    repeat
-      lock := 0
-    until lock = 0;
+    for i := 0 to length(value)-1 do lineData[i] := value [i];
+    outOfSync:=true;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
@@ -370,64 +356,62 @@ PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
     changed: boolean = false;
     cleanCount: longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock := ThreadID until lock = ThreadID;
     cleanCount := value.count;
     while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do dec(cleanCount);
-    if length(lineData)<>cleanCount then
-      begin
+    if length(lineData)<>cleanCount then begin
       setLength(lineData, cleanCount);
       changed := true;
-      end;
-    for i := 0 to cleanCount-1 do
-      begin
+    end;
+    for i := 0 to cleanCount-1 do begin
       changed := changed or (trim(lineData [i])<>trim(value [i]));
       lineData[i] := value [i];
-
-      end;
-    if changed then inc(version);
-    repeat lock := 0 until lock = 0;
+    end;
+    outOfSync:=true;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
   begin
-    while (lock<>0) and (lock<>ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
     setLength(lineData, 1);
     lineData[0] := value;
-    inc(version);
-    repeat
-      lock := 0
-    until lock = 0;
+    outOfSync:=true;
   end;
 
 PROCEDURE T_codeProvider.appendLine(CONST value: ansistring);
   begin
-    while (lock<>0) and (lock<>ThreadID) do
-      sleep(1);
-    repeat
-      lock := ThreadID
-    until lock = ThreadID;
     setLength(lineData, length(lineData)+1);
     lineData[length(lineData)-1] := value;
-    inc(version);
-    repeat
-      lock := 0
-    until lock = 0;
+    outOfSync:=true;
+  end;
+
+PROCEDURE T_codeProvider.replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
+  VAR i:longint;
+      partAfter,
+      partBefore:ansistring;
+  begin
+    //Remember partBefore and part after for later reference
+    if (line1>=length(lineData)) or (line1<0) or (col1<=0) then begin
+      partAfter:='';
+      line1:=Length(lineData)+1;
+    end else begin
+      partAfter:=copy(lineData[line1],col1+1,length(lineData[line1]));
+    end;
+    partBefore:=copy(lineData[line0],1,col0-1);
+    //clear all related lines
+    for i:=line0 to line1-1 do lineData[i]:='';
+    //rewrite lines
+    lineData[line0]:=partBefore+newText;
+    if line1=line0 then lineData[line0]:=lineData[line0]+partAfter;
+    outOfSync:=true;
   end;
 
 CONSTRUCTOR T_codeProvider.create;
   begin
-    lock := 0;
     clear;
+    outOfSync:=false;
   end;
 
 CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
   begin
-    lock := 0;
     clear;
     filePath := path;
     if fileExists(path) then load;
@@ -449,41 +433,30 @@ FUNCTION T_codeProvider.getPath: ansistring;
   end;
 
 PROCEDURE T_codeProvider.load;
-  VAR
-    accessed: boolean;
-    L: T_arrayOfString;
-    i: longint;
+  VAR accessed: boolean;
+      L: T_arrayOfString;
+      i: longint;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock := ThreadID until lock = ThreadID;
     L := fileLines(filePath, accessed);
-    if accessed then
-      begin
+    if accessed then begin
       setLength(lineData, length(L));
       for i := 0 to length(L)-1 do lineData[i] := L [i];
-      fileAge(filePath, syncedFileAge);
-      inc(version);
-      fileVersion := version;
       i := length(lineData);
-      while (i>0) and (trim(lineData [i-1]) = '') do
-        begin
+      while (i>0) and (trim(lineData [i-1]) = '') do begin
         setLength(lineData, i-1);
         dec(i);
-        end;
       end;
-    repeat lock := 0 until lock = 0;
+      fileAge(filePath,fileAccessedAtFileAge);
+      outOfSync:=false;
+    end;
   end;
 
 PROCEDURE T_codeProvider.save;
   begin
-    while (lock<>0) and (lock<>ThreadID) do sleep(1);
-    repeat lock := ThreadID until lock = ThreadID;
-    if (filePath<>'') and writeFileLines(filePath, lineData,'') then
-      begin
-      fileAge(filePath, syncedFileAge);
-      fileVersion := version;
-      end;
-    repeat lock := 0 until lock = 0;
+    if (filePath<>'') and writeFileLines(filePath, lineData,'') then begin
+      fileAge(filePath,fileAccessedAtFileAge);
+      outOfSync:=false;
+    end;
   end;
 
 FUNCTION T_codeProvider.fileName: ansistring;
@@ -496,26 +469,13 @@ FUNCTION T_codeProvider.fileHasChanged: boolean;
   begin
     if (filePath<>'') and fileExists(filePath) then begin
       fileAge(filePath, currentFileAge);
-      result := currentFileAge<>syncedFileAge;
+      result:=currentFileAge>fileAccessedAtFileAge;
     end else result := false;
   end;
 
 FUNCTION T_codeProvider.fileIsOutOfSync: boolean;
   begin
-    result := fileHasChanged or (filePath<>'') and (version<>fileVersion);
-  end;
-
-FUNCTION T_codeProvider.getVersion(CONST reloadIfNecessary: boolean): longint;
-  begin
-    while (lock<>0) and (lock<>ThreadID) do
-      sleep(1);
-    repeat lock := ThreadID until lock = ThreadID;
-    if reloadIfNecessary and fileHasChanged then
-      load;
-    result := version;
-    repeat
-      lock := 0
-    until lock = 0;
+    result:=(filePath<>'') and outOfSync;
   end;
 
 FUNCTION T_codeProvider.id: ansistring;
@@ -527,9 +487,7 @@ PROCEDURE T_codeProvider.clear;
   begin
     filePath := '';
     setLength(lineData, 0);
-    version := 0;
-    fileVersion := 0;
-    syncedFileAge := 0;
+
   end;
 
 end.

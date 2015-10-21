@@ -97,6 +97,7 @@ TYPE
     tt_modifier_private,
     tt_modifier_memoized,
     tt_modifier_mutable,
+    tt_modifier_persistent,
     tt_modifier_synchronized,
     tt_modifier_local,
     //procedure block:
@@ -204,6 +205,7 @@ CONST
     'private',
     'memoized',
     'mutable',
+    'persistent',
     'synchronized',
     'local',
     'begin',

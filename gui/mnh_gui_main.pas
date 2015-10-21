@@ -248,6 +248,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         elz_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
+          if simpleMessage<>'' then ad_doReload(MnhForm.InputEdit.lines);
           MnhForm.InputEdit.ReadOnly:=false;
           MnhForm.inputHighlighter.setMarkedToken(-1,-1);
         end;

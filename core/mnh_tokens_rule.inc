@@ -4,6 +4,7 @@
 
   T_rule=object
     private
+      declarationStart,declarationEnd:T_tokenLocation;
       namedValue:T_namedVariable;
       ruleType:T_ruleType;
       cache:P_cache;
@@ -12,7 +13,7 @@
       id:ansistring;
       subrules:array of P_subrule;
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType);
+      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR recycler:T_tokenRecycler):boolean;
@@ -26,11 +27,14 @@
       PROCEDURE complainAboutUncalled;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
+      PROCEDURE writeBack(VAR provider:T_codeProvider);
     end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType);
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
+    declarationStart:=startAt;
+    declarationEnd:=C_nilTokenLocation;
     ruleType:=ruleTyp;
     id:=ruleId;
     setLength(subrules,0);
@@ -173,10 +177,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
     i:=0;
     while (i<length(subrules)) and not(rule^.pattern.isEquivalent(subrules[i]^.pattern)) do inc(i);
     if i>=length(subrules) then setLength(subrules,i+1)
-                           else begin
-                                  dispose(subrules[i],destroy);
-                                  raiseError(el4_parsingError,'Subrule has the same pattern as a previous declaration',rule^.declaredAt);
-                                end;
+                           else dispose(subrules[i],destroy);
     subrules[i]:=rule;
     if (length(subrules)>0) and (ruleType in [rt_mutable,rt_peristent]) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
@@ -269,5 +270,19 @@ FUNCTION T_rule.getDocHtml:ansistring;
     if not(anyPublic) then result:='';
   end;
 
-{$endif}
+PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider);
+  begin
+    writeln(ansistring(declarationStart),' - ',ansistring(declarationEnd));
+    provider.replaceCode(
+      declarationStart.line-1,
+      declarationStart.column,
+      declarationEnd.line-1,
+      declarationEnd.column,
+      C_tokenString[tt_modifier_persistent]+' '+
+      id+
+      C_tokenString[tt_assign]+
+      namedValue.getValue^.toString+
+      C_tokenString[tt_semicolon]);
+  end;
 
+{$endif}

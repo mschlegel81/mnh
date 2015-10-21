@@ -35,15 +35,15 @@ TYPE
       packageUses:array of T_packageReference;
       ready:boolean;
       codeProvider:P_codeProvider;
-      loadedVersion:longint;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler; CONST mainParameters:T_arrayOfString);
       PROCEDURE clear;
+      PROCEDURE finalize;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
       FUNCTION getDoc:P_userPackageDocumentation;
@@ -125,9 +125,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     for i:=0 to length(secondaryPackages)-1 do begin
       if used.contains(secondaryPackages[i]^.codeProvider^.id) then begin
         if j<>i then secondaryPackages[j]:=secondaryPackages[i]; inc(j);
-      end else begin
-        dispose(secondaryPackages[j],destroy);
-      end;
+      end else dispose(secondaryPackages[j],destroy);
     end;
     setLength(secondaryPackages,j);
     used.destroy;
@@ -190,6 +188,7 @@ DESTRUCTOR T_packageReference.destroy;
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_tokenRecycler; CONST mainParameters:T_arrayOfString);
   VAR isFirstLine:boolean=true;
       lastComment:ansistring;
+      previouslyParsedRule:P_rule=nil;
 
   PROCEDURE interpret(VAR first:P_token);
     PROCEDURE interpretUseClause;
@@ -249,6 +248,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
           ruleIsMutable:boolean=false;
+          ruleIsPersistent:boolean=false;
           ruleIsSynchronized:boolean=false;
           ruleId:string;
           evaluateBody:boolean;
@@ -269,12 +269,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           recycler.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_synchronized]) do begin
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_persistent,tt_modifier_synchronized]) do begin
           if first^.tokType=tt_modifier_private      then ruleIsPrivate :=true;
           if first^.tokType=tt_modifier_memoized     then ruleIsMemoized:=true;
           if first^.tokType=tt_modifier_synchronized then ruleIsSynchronized:=true;
-          if first^.tokType=tt_modifier_mutable  then begin
+          if first^.tokType in [tt_modifier_mutable,tt_modifier_persistent]  then begin
             ruleIsMutable :=true;
+            ruleIsPersistent:=(first^.tokType=tt_modifier_persistent);
             evaluateBody:=true;
           end;
           first:=recycler.disposeToken(first);
@@ -384,11 +385,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         end;
 
         if errorLevel<el3_evalError then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsSynchronized,ruleDeclarationStart);
+          ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart);
+          previouslyParsedRule:=ruleGroup;
           if errorLevel<el3_evalError then begin
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
             subRule^.comment:=lastComment; lastComment:='';
-            if ruleGroup^.ruleType=rt_mutable
+            if ruleGroup^.ruleType in [rt_mutable,rt_peristent]
             then begin
               ruleGroup^.setMutableValue(subRule^.getInlineValue);
               dispose(subRule,destroy);
@@ -479,7 +481,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       first,last:P_token;
   begin
     clear;
-    loadedVersion:=codeProvider^.getVersion((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider));
+    if ((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider))
+    and codeProvider^.fileHasChanged then codeProvider^.load;
+
     fileTokens:=tokenizeAll(codeProvider,@self);
     fileTokens.step(@self,lastComment);
     first:=nil;
@@ -517,6 +521,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if first<>nil then interpret(first);
         last:=nil;
         first:=nil;
+        if (previouslyParsedRule<>nil) then begin
+          previouslyParsedRule^.declarationEnd:=fileTokens.current.location;
+          previouslyParsedRule:=nil;;
+        end;
         fileTokens.step(@self,lastComment);
       end else begin
         if first=nil then begin
@@ -540,6 +548,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     if usecase=lu_forDirectExecution then complainAboutUncalled;
     if usecase=lu_forCallingMain then executeMain;
+    if usecase in [lu_forDirectExecution,lu_forCallingMain] then finalize;
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
@@ -548,12 +557,11 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
     codeProvider:=provider;
     packageRules.create;
     importedRules.create;
-    loadedVersion:=-1;
   end;
 
 FUNCTION T_package.needReload: boolean;
   begin
-    result:=loadedVersion<>codeProvider^.getVersion(true);
+    result:=codeProvider^.fileHasChanged;
   end;
 
 PROCEDURE T_package.clear;
@@ -565,6 +573,30 @@ PROCEDURE T_package.clear;
     end;
     packageRules.clear;
     importedRules.clear;
+    setLength(packageUses,0);
+    ready:=false;
+  end;
+
+PROCEDURE T_package.finalize;
+  VAR rule:P_rule;
+      wroteBack:boolean=false;
+      i:longint;
+  begin
+    while packageRules.size>0 do begin
+      rule:=packageRules.dropAny;
+      if rule^.ruleType=rt_peristent then begin
+        wroteBack:=true;
+        rule^.writeBack(codeProvider^);
+      end;
+      dispose(rule,destroy);
+    end;
+    if wroteBack then begin
+      codeProvider^.save;
+      if @self=@mainPackageProvider then raiseError(elz_endOfEvaluation,'reload',C_nilTokenLocation);
+    end;
+    packageRules.clear;
+    importedRules.clear;
+    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize;
     setLength(packageUses,0);
     ready:=false;
   end;
@@ -608,7 +640,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
   CONST ruleTypeTxt:array[T_ruleType] of string=('normal','memoized','mutable','persistent','synchronized');
 
   VAR ruleType:T_ruleType=rt_normal;
@@ -616,9 +648,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,r
     if ruleIsSynchronized then ruleType:=rt_synchronized;
     if ruleIsMemoized then ruleType:=rt_memoized else
     if ruleIsMutable then ruleType:=rt_mutable;
+    if ruleIsPersistent then ruleType:=rt_peristent;
 
     if not(packageRules.containsKey(ruleId,result)) then begin
-      new(result,create(ruleId,ruleType));
+      new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       raiseError(el0_allOkay,'New rule '+ruleId,ruleDeclarationStart);
     end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin

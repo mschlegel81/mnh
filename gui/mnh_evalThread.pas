@@ -248,6 +248,7 @@ PROCEDURE ad_doReload(CONST L: TStrings);
   begin
     ad_haltEvaluation;
     L.clear;
+    if mainPackageProvider.fileHasChanged then
     mainPackageProvider.load;
     lines:=mainPackageProvider.getLines;
     for i:=0 to length(lines)-1 do L.append(lines[i]);

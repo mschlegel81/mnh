@@ -517,7 +517,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRulePointer then begin
                 rule:=t^.data;
-                if rule^.ruleType=rt_mutable then begin
+                if rule^.ruleType in [rt_mutable,rt_peristent] then begin
                   t^.data:=rule;
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
@@ -531,7 +531,6 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
               if t^.tokType=tt_assign then t^.tokType:=tt_assignExistingBlockLocal;
               t^.data:=nil;
               t^.next:=recycler.disposeToken(t^.next);
-              //raiseError(el4_parsingError,'You can only mutate local mutable rules! Identifier '+t^.txt+' cannot be resolved.',t^.next^.location);
             end;
           end;
         end;
@@ -982,7 +981,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
           result:=P_boolLiteral(res)^.value;
         end else begin
-          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt.firstOf);
+          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);

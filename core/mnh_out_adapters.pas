@@ -104,24 +104,18 @@ VAR
 
 
 IMPLEMENTATION
-VAR errorCount:longint=0;
 
 PROCEDURE clearErrors;
   begin
     maxErrorLevel := el0_allOkay;
     hasHaltMessage := false;
     hasNoParameterlessMainMessage := false;
-    errorCount:=0;
   end;
 
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    InterLockedIncrement(errorCount); if (thisErrorLevel<>els_step) and (errorCount>20) and (thisErrorLevel<=maxErrorLevel) then exit;
-    if (thisErrorLevel > maxErrorLevel) then begin
-      maxErrorLevel := thisErrorLevel;
-      errorCount:=0;
-    end;
+    if (thisErrorLevel > maxErrorLevel) then maxErrorLevel := thisErrorLevel;
     if errorMessage = HALT_MESSAGE then hasHaltMessage := true;
     if errorMessage = NO_PARAMETERLESS_MAIN_MESSAGE then hasNoParameterlessMainMessage := true;
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);
