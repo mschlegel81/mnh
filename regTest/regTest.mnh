@@ -1,34 +1,9 @@
-USE hash;
+USE hash, passedTestsStore;
 
 private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
 private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
-private PASSED_TESTS_STORE:=TEST_DIRECTORY&'passedTests.dat';
 private TESTS_STORE       :=TEST_DIRECTORY&'regTestCases.dat';
 private NEED_PLOT_IDX:=3;
-
-private restore->fileExists(PASSED_TESTS_STORE) ? expression(fileContents(PASSED_TESTS_STORE))() : [];
-mutable passedTests:=restore;
-private storePassedTests->begin
-  fileExists(PASSED_TESTS_STORE) ? begin
-    local oldVal:=restore;
-    each(v,oldVal,v%[0,1] in passedTests%%[0,1] ? void : passedTests|=[v]);
-  end : void;
-  writeFile(PASSED_TESTS_STORE,string(passedTests).replace('],[',"],\n["));
-end;
-
-private synchronized markAsPassed(case,exeHash,runTime)->begin
-  local contained:=false;
-  passedTests:=each(pt,passedTests,
-                    pt%0=exeHash AND pt%1=case ? begin
-                      contained:=true;
-                      [exeHash,case,fileHash(ROOT_DIRECTORY&case),(runTime+pt%3)/2];
-                    end : pt);
-  contained ? void
-            : passedTests|=[[exeHash,case,fileHash(ROOT_DIRECTORY&case),runTime]];
-  void;
-end;
-
-private synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,fileHash(case)] in passedTests%%[0..2];
 
 mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
@@ -168,7 +143,6 @@ main(exe,...)->begin
 
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
-    storePassedTests;
     //displayUncoveredTests:--------------
     local coveredTests:=(expression(fileContents(TESTS_STORE))()%%0).unique.splitFileName%%'expanded';
     first:=true;

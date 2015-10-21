@@ -1,0 +1,27 @@
+USE hash;
+private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
+private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
+persistent passedTests:=[];
+
+synchronized markAsPassed(case,exeHash,runTime)->begin
+  local contained:=false;
+  passedTests:=each(pt,passedTests,
+                    pt%0=exeHash AND pt%1=case ? begin
+                      contained:=true;
+                      [exeHash,case,fileHash(ROOT_DIRECTORY&case),(runTime+pt%3)/2];
+                    end : pt);
+  contained ? void
+            : passedTests|=[[exeHash,case,fileHash(ROOT_DIRECTORY&case),runTime]];
+  void;
+end;
+
+synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,fileHash(case)] in passedTests%%[0..2];
+
+//*Clear all passed tests
+main('clear')->(passedTests:=[]);
+
+//*Remove all passed tests related to versions with different code hashes
+main('cleanup')->begin
+  local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
+  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? pt : void)),' passed tests remain.');
+end;

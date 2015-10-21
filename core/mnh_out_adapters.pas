@@ -115,7 +115,7 @@ PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageTypeOrErrorLevel;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
-    if (thisErrorLevel > maxErrorLevel) then maxErrorLevel := thisErrorLevel;
+    if (thisErrorLevel in [el0_allOkay..el5_systemError]) and (thisErrorLevel > maxErrorLevel) then maxErrorLevel := thisErrorLevel;
     if errorMessage = HALT_MESSAGE then hasHaltMessage := true;
     if errorMessage = NO_PARAMETERLESS_MAIN_MESSAGE then hasNoParameterlessMainMessage := true;
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);

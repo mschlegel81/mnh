@@ -1,6 +1,12 @@
 {$ifdef include_interface}
   { T_rule }
-  T_ruleType=(rt_normal,rt_memoized,rt_mutable,rt_peristent,rt_synchronized);
+  T_ruleType=(rt_normal,
+              rt_memoized,
+              rt_mutable_public,
+              rt_mutable_private,
+              rt_persistent_public,
+              rt_persistent_private,
+              rt_synchronized);
 
   T_rule=object
     private
@@ -43,7 +49,7 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
         new(cache,create);
         system.InitCriticalSection(rule_cs);
       end;
-      rt_mutable, rt_peristent: begin
+      rt_mutable_public, rt_mutable_private, rt_persistent_public, rt_persistent_private: begin
         namedValue.create(id,newVoidLiteral);
         system.InitCriticalSection(rule_cs);
       end;
@@ -60,10 +66,10 @@ DESTRUCTOR T_rule.destroy;
     if ruleType=rt_memoized then begin
       dispose(cache,destroy);
       system.DoneCriticalsection(rule_cs);
-    end else if ruleType in [rt_mutable,rt_peristent,rt_synchronized] then begin
+    end else if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized] then begin
       system.DoneCriticalsection(rule_cs);
     end;
-    if ruleType in [rt_mutable,rt_peristent] then namedValue.destroy;
+    if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then namedValue.destroy;
     ruleType:=rt_normal;
     id:='';
   end;
@@ -155,8 +161,8 @@ exit}
         end;
         result:=false;
       end;
-      rt_mutable,rt_peristent: begin
-        result:=includePrivateRules and ((param=nil) or (param^.size=0));
+      rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private: begin
+        result:=(includePrivateRules or (ruleType in [rt_mutable_public,rt_persistent_public])) and ((param=nil) or (param^.size=0));
         if result then begin
           system.enterCriticalSection(rule_cs);
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,namedValue.getValue);
@@ -179,7 +185,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>0) and (ruleType in [rt_mutable,rt_peristent]) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>0) and (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 
@@ -199,7 +205,7 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
   begin
-    if (ruleType in [rt_mutable,rt_peristent]) then begin
+    if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
       system.enterCriticalSection(rule_cs);
       namedValue.setValue(value);
       system.leaveCriticalSection(rule_cs);
@@ -208,7 +214,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal);
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   begin
-    if (ruleType in [rt_mutable,rt_peristent]) then begin
+    if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
       system.enterCriticalSection(rule_cs);
       result:=namedValue.mutate(mutation,RHS,location);
       system.leaveCriticalSection(rule_cs);
@@ -218,6 +224,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
 FUNCTION T_rule.hasPublicSubrule: boolean;
   VAR i:longint;
   begin
+    if ruleType in [rt_mutable_public,rt_persistent_public] then exit(true);
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then exit(true);
     result:=false;
   end;
@@ -234,15 +241,18 @@ PROCEDURE T_rule.complainAboutUncalled;
     for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id);
   end;
 
+CONST C_ruleTypeText:array[T_ruleType] of string=(
+    '','memoized',
+       'mutable',
+       'private mutable',
+       'persistent',
+       'private persistent',
+       'synchronized');
+
 FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
-    case ruleType of
-      rt_memoized     : result:='memoized ';
-      rt_mutable      : result:='mutable ';
-      rt_peristent    : result:='persistent ';
-      rt_synchronized : result:='synchronized ';
-    end;
+    result:=C_ruleTypeText[ruleType]+' ';
     if length(subrules)<=0 then exit;
     result:=result+'rule '+id+C_lineBreakChar+
       'in '+subrules[0]^.declaredAt.fileName;
@@ -254,12 +264,7 @@ FUNCTION T_rule.getDocHtml:ansistring;
       i:longint;
   begin
     result:='<table><tr class="ruleHead"><td>';
-    case ruleType of
-      rt_memoized     : result:=result+toHtmlCode('memoized ');
-      rt_mutable      : result:=result+toHtmlCode('mutable ');
-      rt_peristent    : result:=result+toHtmlCode('persistent ');
-      rt_synchronized : result:=result+toHtmlCode('synchronized ');
-    end;
+    result:=result+toHtmlCode(C_ruleTypeText[ruleType]+' ');
     if id = 'main' then result:=result+'<b>'+id+'</b>' else result:=result+id;
     result:=result+'</td></tr>';
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin
@@ -271,17 +276,20 @@ FUNCTION T_rule.getDocHtml:ansistring;
   end;
 
 PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider);
+  VAR code:ansistring;
   begin
+    code:=C_tokenString[tt_modifier_persistent]+' '+
+          id+
+          C_tokenString[tt_assign]+
+          namedValue.getValue^.toString+
+          C_tokenString[tt_semicolon];
+    raiseError(el1_note,'Writing back: '+code,declarationStart);
     provider.replaceCode(
       declarationStart.line-1,
       declarationStart.column,
       declarationEnd.line-1,
       declarationEnd.column,
-      C_tokenString[tt_modifier_persistent]+' '+
-      id+
-      C_tokenString[tt_assign]+
-      namedValue.getValue^.toString+
-      C_tokenString[tt_semicolon]);
+      code);
   end;
 
 {$endif}

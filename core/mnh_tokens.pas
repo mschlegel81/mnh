@@ -43,7 +43,7 @@ TYPE
       PROCEDURE finalize;
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST failSilently:boolean);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled;
       FUNCTION getDoc:P_userPackageDocumentation;
@@ -385,12 +385,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         end;
 
         if errorLevel<el3_evalError then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart);
+          ruleGroup:=ensureRuleId(ruleId,ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart);
           previouslyParsedRule:=ruleGroup;
           if errorLevel<el3_evalError then begin
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
             subRule^.comment:=lastComment; lastComment:='';
-            if ruleGroup^.ruleType in [rt_mutable,rt_peristent]
+            if ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]
             then begin
               ruleGroup^.setMutableValue(subRule^.getInlineValue);
               dispose(subRule,destroy);
@@ -547,7 +547,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     if usecase=lu_forDirectExecution then complainAboutUncalled;
-    if usecase=lu_forCallingMain then executeMain;
+    if usecase=lu_forCallingMain     then executeMain;
     if usecase in [lu_forDirectExecution,lu_forCallingMain] then finalize;
   end;
 
@@ -582,15 +582,17 @@ PROCEDURE T_package.finalize;
       wroteBack:boolean=false;
       i:longint;
   begin
+    raiseError(el0_allOkay,'Finalizing package '+codeProvider^.id,C_nilTokenLocation);
     while packageRules.size>0 do begin
       rule:=packageRules.dropAny;
-      if rule^.ruleType=rt_peristent then begin
+      if (errorLevel<el3_evalError) and (rule^.ruleType in [rt_persistent_private,rt_persistent_public]) then begin
         wroteBack:=true;
         rule^.writeBack(codeProvider^);
       end;
       dispose(rule,destroy);
     end;
     if wroteBack then begin
+      raiseError(el1_note,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
       codeProvider^.save;
       if @self=@mainPackageProvider then raiseError(elz_endOfEvaluation,'reload',C_nilTokenLocation);
     end;
@@ -640,22 +642,26 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
     if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
-  CONST ruleTypeTxt:array[T_ruleType] of string=('normal','memoized','mutable','persistent','synchronized');
-
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized:boolean; CONST ruleDeclarationStart:T_tokenLocation): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
   begin
     if ruleIsSynchronized then ruleType:=rt_synchronized;
-    if ruleIsMemoized then ruleType:=rt_memoized else
-    if ruleIsMutable then ruleType:=rt_mutable;
-    if ruleIsPersistent then ruleType:=rt_peristent;
+    if ruleIsMemoized then ruleType:=rt_memoized;
+    if ruleIsMutable then begin
+      if ruleIsPrivate then ruleType:=rt_mutable_private
+                       else ruleType:=rt_mutable_public;
+    end;
+    if ruleIsPersistent then begin
+      if ruleIsPrivate then ruleType:=rt_persistent_private
+                       else ruleType:=rt_persistent_public;
+    end;
 
     if not(packageRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       raiseError(el0_allOkay,'New rule '+ruleId,ruleDeclarationStart);
     end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin
-      raiseError(el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+ruleTypeTxt[result^.ruleType]+', redeclared as '+ruleTypeTxt[ruleType],ruleDeclarationStart);
+      raiseError(el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart);
     end;
   end;
 

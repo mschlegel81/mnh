@@ -517,7 +517,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRulePointer then begin
                 rule:=t^.data;
-                if rule^.ruleType in [rt_mutable,rt_peristent] then begin
+                if rule^.ruleType in [rt_mutable_private,rt_mutable_public,rt_persistent_private,rt_persistent_public] then begin
                   t^.data:=rule;
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;

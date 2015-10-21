@@ -266,7 +266,7 @@ CONST
     '_in>',//echo declaration
     'out>',//echo output
     'STEP:',
-    '', //el0
+    'Info ', //el0
     'Note ',
     'Warning ',
     'Error ',
