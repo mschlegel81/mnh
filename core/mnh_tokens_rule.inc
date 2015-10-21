@@ -272,7 +272,6 @@ FUNCTION T_rule.getDocHtml:ansistring;
 
 PROCEDURE T_rule.writeBack(VAR provider:T_codeProvider);
   begin
-    writeln(ansistring(declarationStart),' - ',ansistring(declarationEnd));
     provider.replaceCode(
       declarationStart.line-1,
       declarationStart.column,
