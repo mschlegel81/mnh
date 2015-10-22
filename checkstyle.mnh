@@ -24,19 +24,38 @@ upperDict:=upper(myDict);
 fixToken(s:string)->upper(s) in upperDict and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
+
 isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z_]+');
+isLiteral(x:string)->copy(x,0,1) in ["'",'0'..'9'];
 
 checkConsistency(fileList)->begin
-  local all:=unique(flatten(pEach(file,fileList,each(tok,tokenSplit(fileContents(file),'pascal'),isIdentifier(tok) AND not(tok in upperDict) ? tok : void))));
-  local allUp:=unique(upper(all));
+  local allIds:=[];
+  local allLiterals:=[];
+  
+  each(token,flatten(pEach(file,fileList,fileContents(file).tokenSplit('pascal'))),
+  begin
+    isLiteral(token) 
+    ? allLiterals|=token
+    : isIdentifier(token) AND not(token in upperDict) 
+      ? allIds|=token 
+      : void;
+    void;
+  end);
+  allIds:=unique(allIds);
+  
   local anyComplaints:=false;
-  each(x,allUp,trueCount(upper(all)=x)>3 
+  each(x,unique(upper(allIds)),
+  trueCount(upper(allIds)=x)>1
   ? begin
       anyComplaints:=true;
-      print('Inconsistent spelling: ',all%(upper(all)=x));
-    end;
+      print('Inconsistent spelling: ',allIds%(upper(allIds)=x));
+    end
   : void);
   not(anyComplaints) ? print('Spelling is consistent.') : void;  
+
+  allLiterals:=allLiterals.elementFrequency.sort.trailing(50);
+  print('Most frequent literals: ');
+  printf("%X%\t%X%",allLiterals%%0,allLiterals%%1);
   void;
 end;
 
@@ -49,7 +68,7 @@ fix(filename,readOnly)->begin
   local diffOut:=format(pattern,filename,size(oldLines));
   oldLines==newLines ? diffOut&=' ok' : begin
     readOnly ? diffOut&=' NOT OKAY:' : diffOut&=' FIXED:';
-    diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&'>\n   >'&(newLines%i)&'<' : void);
+    diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&">\n   >"&(newLines%i)&'<' : void);
     readOnly ? void : writeFileLines(filename,newLines);
   end;
   printf('%X%',diffOut);
