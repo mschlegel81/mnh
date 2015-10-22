@@ -57,8 +57,8 @@ FUNCTION TcloseDialogForm.showOnOutOfSync: integer;
   begin
     Caption:='The current file is out of sync';
     ButtonPanel1.OKButton.Caption := 'Reload';
-    ButtonPanel1.CancelButton.Caption := 'Overwrite';
-    ButtonPanel1.CloseButton.Caption := 'Ignore changes';
+    ButtonPanel1.CancelButton.Caption := 'Ignore changes';
+    ButtonPanel1.CloseButton.Caption := 'Overwrite';
     result:=ShowModal;
   end;
 

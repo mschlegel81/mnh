@@ -8,7 +8,7 @@ USES
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
-  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf,
+  types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
   myGenerics,mnh_fileWrappers,mySys;
 
@@ -90,6 +90,7 @@ TYPE
     SynCompletion: TSynCompletion;
     EditorTabSheet: TTabSheet;
     PlotTabSheet: TTabSheet;
+    autosizeToggleBox: TToggleBox;
     UpdateTimeTimer: TTimer;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -160,7 +161,6 @@ TYPE
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction
       );
     PROCEDURE Splitter1Moved(Sender: TObject);
-    PROCEDURE SplitterHMoved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
       sourceValue: string; VAR SourceStart, SourceEnd: TPoint;
       KeyChar: TUTF8Char; Shift: TShiftState);
@@ -174,14 +174,14 @@ TYPE
     needEvaluation:boolean;
     doNotEvaluateBefore:double;
     doNotMarkWordBefore:double;
+    doNotCheckFileBefore:double;
     needMarkPaint:boolean;
-    autosizingEnabled:boolean;
 
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     PROCEDURE autosizeBlocks(CONST forceOutputFocus:boolean);
     PROCEDURE positionHelpNotifier;
-    PROCEDURE setUnderCursor(CONST lines:TStrings; CONST caret:TPoint);
+    PROCEDURE setUnderCursor(CONST wordText:ansistring);
 
     PROCEDURE doPlot();
     PROCEDURE pullPlotSettingsToGui();
@@ -292,9 +292,8 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       availableTotalHeight,
       scrollbarHeight:longint;
       inputFocus:boolean;
-      needRepositioningOfHelp:boolean=false;
   begin
-    if autosizingEnabled then begin
+    if autosizeToggleBox.Checked then begin
       scrollbarHeight     :=InputEdit.height-InputEdit.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .lines.count;
       idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
@@ -317,14 +316,12 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
           idealInputHeight:=availableTotalHeight-idealOutputHeight;
         end;
       end;
-
-      idealInputHeight:=round(idealInputHeight*0.2+InputEdit.height*0.8);
       if idealInputHeight<>InputEdit.height then begin
         if UpdateTimeTimer.Interval>200 then UpdateTimeTimer.Interval:=200;
         InputEdit.height:=idealInputHeight;
-        needRepositioningOfHelp:=true;
+        if PopupNotifier1.Visible then positionHelpNotifier;
+        autosizeToggleBox.top:=OutputEdit.top;
       end;
-      if PopupNotifier1.Visible and needRepositioningOfHelp then positionHelpNotifier;
     end;
   end;
 
@@ -335,19 +332,15 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     InputEdit.SetFocus;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST lines: TStrings; CONST caret: TPoint);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText:ansistring);
   begin
-    if (caret.y>0) and (caret.y<=lines.count) then begin
-      underCursor:=ad_getTokenInfo(lines[caret.y-1],caret.x+1);
-      if isIdentifier(underCursor.tokenText,true) and
-         (inputHighlighter.setMarkedWord(underCursor.tokenText) and outputHighlighter.setMarkedWord(underCursor.tokenText)) then begin
-        needMarkPaint:=true;
-      end;
-      if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) then begin
-        PopupNotifier1.title:=underCursor.tokenText;
-        PopupNotifier1.text:=replaceAll(replaceAll(underCursor.tokenExplanation,'#',C_lineBreakChar),C_tabChar,' ');
-        if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
-      end;
+    if not(isIdentifier(wordText,true)) then exit;
+    if (inputHighlighter.setMarkedWord(wordText) and outputHighlighter.setMarkedWord(wordText)) then needMarkPaint:=true;
+    if miHelp.Checked then ad_explainIdentifier(wordText,underCursor);
+    if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) then begin
+      PopupNotifier1.title:=underCursor.tokenText;
+      PopupNotifier1.text:=underCursor.tokenExplanation;
+      if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
     end;
   end;
 
@@ -435,8 +428,8 @@ PROCEDURE TMnhForm.doStartEvaluation;
     guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
     UpdateTimeTimer.Interval:=200;
-    autosizingEnabled:=true;
     doConditionalPlotReset;
+    underCursor.tokenText:='';
     if miDebug.Checked then begin
       DebugForm.debugEdit.ClearAll;
       InputEdit.ReadOnly:=true;
@@ -449,11 +442,11 @@ PROCEDURE TMnhForm.doStartEvaluation;
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    autosizingEnabled:=true;
     needEvaluation:=false;
     needMarkPaint:=false;
     doNotEvaluateBefore:=now;
     doNotMarkWordBefore:=now;
+    doNotCheckFileBefore:=now+10*ONE_SECOND;
     OpenDialog.fileName:=paramStr(0);
     SaveDialog.fileName:=paramStr(0);
     inputHighlighter:=TSynMnhSyn.create(nil,false);
@@ -461,6 +454,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     InputEdit.Highlighter:=inputHighlighter;
     OutputEdit.Highlighter:=outputHighlighter;
     settingsHaveBeenProcessed:=false;
+    OutputEdit.ClearAll;
     StatusBar.SimpleText:=
       'compiled on: '+{$I %DATE%}+
       ' at: '+{$I %TIME%}+
@@ -558,7 +552,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key>=37) and (key<=40) then setUnderCursor(InputEdit.lines,InputEdit.CaretXY);
+    if (key>=37) and (key<=40) then setUnderCursor(InputEdit.GetWordAtRowCol(InputEdit.CaretXY));
   end;
 
 PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
@@ -567,15 +561,16 @@ PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(InputEdit.lines,InputEdit.PixelsToRowColumn(point));
+    setUnderCursor(InputEdit.GetWordAtRowCol(InputEdit.PixelsToRowColumn(point)));
   end;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
   begin
     askForm.initWithQuestion('Please give command line parameters');
-    askForm.ShowModal;
-    doStartEvaluation;
-    ad_callMain(InputEdit.lines,askForm.getLastAnswerReleasing);
+    if askForm.ShowModal=mrOk then begin
+      doStartEvaluation;
+      ad_callMain(InputEdit.lines,askForm.getLastAnswerReleasing);
+    end else askForm.getLastAnswerReleasing;
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
@@ -615,18 +610,19 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
     if ad_evaluationRunning then exit;
 
     askForm.initWithFileLines(1,InputEdit.lines.count);
-    askForm.ShowModal;
-    lineIdx:=strToIntDef(askForm.getLastAnswerReleasing,-1);
-    if lineIdx<0 then exit;
+    if askForm.ShowModal=mrOk then begin
+      lineIdx:=strToIntDef(askForm.getLastAnswerReleasing,-1);
+      if lineIdx<0 then exit;
 
-    miDebug.Checked:=true;
-    miEvalModeDirect.Checked:=true;
-    miEvalModeDirectOnKeypress.Checked:=false;
-    SettingsForm.instantEvaluation:=false;
+      miDebug.Checked:=true;
+      miEvalModeDirect.Checked:=true;
+      miEvalModeDirectOnKeypress.Checked:=false;
+      SettingsForm.instantEvaluation:=false;
 
-    doStartEvaluation;
-    stepper.setBreakpoint(mainPackageProvider.fileName,lineIdx);
-    ad_evaluate(InputEdit.lines);
+      doStartEvaluation;
+      stepper.setBreakpoint(mainPackageProvider.fileName,lineIdx);
+      ad_evaluate(InputEdit.lines);
+    end else askForm.getLastAnswerReleasing;
   end;
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
@@ -794,7 +790,7 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key>=37) and (key<=40) then setUnderCursor(OutputEdit.lines,OutputEdit.CaretXY);
+    if (key>=37) and (key<=40) then setUnderCursor(OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY));
   end;
 
 
@@ -804,7 +800,7 @@ PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(OutputEdit.lines,OutputEdit.PixelsToRowColumn(point));
+    setUnderCursor(OutputEdit.GetWordAtRowCol(OutputEdit.PixelsToRowColumn(point)));
   end;
 
 PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
@@ -867,13 +863,7 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseA
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
-    autosizingEnabled:=false;
-  end;
-
-PROCEDURE TMnhForm.SplitterHMoved(Sender: TObject);
-  begin
-    if PopupNotifier1.Visible then positionHelpNotifier;
-    autosizingEnabled:=false;
+     autosizeToggleBox.top:=OutputEdit.top;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
@@ -967,6 +957,18 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     i:=round((now-updateStart)*24*60*60*1000);
     if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
 
+    //if (now>doNotCheckFileBefore) and ad_needReload then begin
+    //  writeln(StdErr,'Opening modal dialog.');
+    //  UpdateTimeTimer.Enabled:=false;
+    //  i:=closeDialogForm.showOnOutOfSync;
+    //  writeln(StdErr, 'Modal result received...');
+    //  if i=mrOk     then begin ad_doReload(MnhForm.InputEdit.lines);                doNotCheckFileBefore:=now+ONE_SECOND; end;
+    //  if i=mrClose  then begin ad_saveFile(ad_currentFile,MnhForm.InputEdit.lines); doNotCheckFileBefore:=now+ONE_SECOND; end;
+    //  if i=mrCancel then begin                                                      doNotCheckFileBefore:=now+ONE_MINUTE; end;
+    //  writeln(StdErr, 'Modal result evaluation done.');
+    //  UpdateTimeTimer.Enabled:=true;
+    //end;
+    write(stdErr,':');
   end;
 
 PROCEDURE TMnhForm.processSettings;

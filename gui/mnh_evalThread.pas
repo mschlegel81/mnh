@@ -2,7 +2,7 @@ UNIT mnh_evalThread;
 INTERFACE
 USES sysutils,myGenerics,mnh_tokens,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,myStringutil;
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_docRun,er_callMain,er_die);
+  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
@@ -17,7 +17,7 @@ PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
 FUNCTION ad_currentFile:string;
 FUNCTION ad_evaluationRunning:boolean;
 PROCEDURE ad_killEvaluationLoopSoftly;
-FUNCTION ad_getTokenInfo(CONST line:ansistring; CONST column:longint):T_tokenInfo;
+PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
 FUNCTION ad_needReload:boolean;
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
 PROCEDURE ad_doReload(CONST L:TStrings);
@@ -77,14 +77,16 @@ FUNCTION main(p:pointer):ptrint;
       startOfEvaluation.value:=now;
     end;
 
-  PROCEDURE postEval;
+  PROCEDURE postEval(CONST silent:boolean);
     begin
       getMainPackage^.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
-      if hasMessageOfType[el5_haltMessageReceived]
-      then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation.value)
-      else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation.value);
+      if not(silent) then begin
+        if hasMessageOfType[el5_haltMessageReceived]
+        then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation.value)
+        else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation.value);
+      end;
       sleepTime:=0;
     end;
 
@@ -97,11 +99,11 @@ FUNCTION main(p:pointer):ptrint;
         preEval;
         reloadMainPackage(lu_forDirectExecution);
         raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
-        postEval;
+        postEval(false);
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
         callMainInMain(parametersForMainCall);
-        postEval;
+        postEval(false);
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);
@@ -201,39 +203,62 @@ PROCEDURE ad_killEvaluationLoopSoftly;
     repeat pendingRequest.value:=er_die; sleep(1); until evaluationState.value=es_dead;
   end;
 
-FUNCTION ad_getTokenInfo(CONST line: ansistring; CONST column: longint): T_tokenInfo;
-  VAR token:T_token;
+PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
+  VAR reservedWordClass: T_reservedWordClass;
+      ns:T_namespace;
+      packageReference: T_packageReference;
+      hasBuiltinNamespace:boolean;
+      token:T_token;
   begin
-    result.tokenText:='';
-    result.tokenExplanation:='';
-    if evaluationState.value<>es_running then begin
-      token:=getTokenAt(line,column);
-      result.tokenText:=token.txt;
-      result.tokenExplanation:='';//C_tokenInfoString[token.tokType];
-      if (token.tokType=tt_intrinsicRulePointer) then begin
-        result.tokenExplanation:=intrinsicRuleExplanationMap.get(token.txt);
-      end else if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
-        result.tokenExplanation:=P_rule(token.data)^.getDocTxt;
-      end else if (token.tokType=tt_identifier) then begin
-        if token.txt='USE' then begin
-          result.tokenExplanation:=result.tokenExplanation+'#Identifier has context sepecific interpretation'
-                                                          +'#As first token in a package, it marks the use-clause (importing packages)';
-        end
-      end else if (token.tokType=tt_literal) then begin
-        if (token.txt=C_boolText[true]) or (token.txt=C_boolText[false]) then result.tokenExplanation:='boolean literal'
-        else if (token.txt=C_nanText) then result.tokenExplanation:='numeric literal (Not-A-Number)'
-        else if (token.txt=C_infText) then result.tokenExplanation:='numeric literal (Infinity)'
-        else if (token.txt=C_voidText) then result.tokenExplanation:='void literal'
-        else if (token.txt[1] in ['"','''']) then result.tokenExplanation:='string literal'
-        else if (pos('.',token.txt)>0) or (pos('E',uppercase(token.txt))>0) then result.tokenExplanation:='real literal'
-        else result.tokenExplanation:='integer literal';
+    if id=info.tokenText then exit;
+
+    info.tokenText:=id;
+    reservedWordClass:=isReservedWord(id);
+    case reservedWordClass of
+      rwc_specialLiteral:   begin info.tokenExplanation:='Reserved word: special literal';   exit; end;
+      rwc_specialConstruct: begin info.tokenExplanation:='Reserved word: special construct'; exit; end;
+      rwc_operator:         begin info.tokenExplanation:='Reserved word: operator';          exit; end;
+      rwc_modifier:         begin info.tokenExplanation:='Reserved word: modifier';          exit; end;
+    end;
+    if id='USE' then begin
+      info.tokenExplanation:='Context specific reserved word: as first token in a package it marks the use-clause';
+      exit;
+    end;
+    info.tokenExplanation:='';
+
+    hasBuiltinNamespace:=false;
+    for ns:=low(T_namespace) to high(T_namespace) do if C_namespaceString[ns]=id then begin
+      info.tokenExplanation:='Builtin package name';
+      hasBuiltinNamespace:=true;
+    end;
+
+    if not(hasBuiltinNamespace) then begin
+      packageReference:=getMainPackage^.getPackageReferenceForId(id);
+      if packageReference.id<>'' then info.tokenExplanation:='Imported package ('+packageReference.path+')';
+    end;
+
+    token.create;
+    token.define(C_nilTokenLocation,id,tt_identifier,getMainPackage);
+    getMainPackage^.resolveRuleId(token,true);
+    case token.tokType of
+      tt_intrinsicRulePointer: begin
+        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+replaceAll(intrinsicRuleExplanationMap.get(id),'#',C_lineBreakChar);
+      end;
+      tt_importedUserRulePointer:begin
+        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+        info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
+      end;
+      tt_localUserRulePointer: begin
+        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+        info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
       end;
     end;
   end;
 
 FUNCTION ad_needReload: boolean;
   begin
-    result:=not(ad_evaluationRunning) and mainPackageProvider.fileHasChanged;
+    result:=not(ad_evaluationRunning) and (ad_currentFile<>'') and mainPackageProvider.fileHasChanged;
   end;
 
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
@@ -246,12 +271,15 @@ PROCEDURE ad_doReload(CONST L: TStrings);
   VAR lines:T_arrayOfString;
       i:longint;
   begin
-    ad_haltEvaluation;
+    writeln(stdErr,'  reload: clearing lines');
     L.clear;
-    if mainPackageProvider.fileHasChanged then
-    mainPackageProvider.load;
+    writeln(stdErr,'  reload: refresh code provider');
+    if mainPackageProvider.fileHasChanged then mainPackageProvider.load;
+    writeln(stdErr,'  reload: get lines');
     lines:=mainPackageProvider.getLines;
+    writeln(stdErr,'  reload: copy lines');
     for i:=0 to length(lines)-1 do L.append(lines[i]);
+    writeln(stdErr,'  reload: done');
   end;
 
 PROCEDURE initIntrinsicRuleList;

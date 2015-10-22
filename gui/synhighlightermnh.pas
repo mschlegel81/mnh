@@ -168,12 +168,12 @@ PROCEDURE TSynMnhSyn.next;
       lc:T_messageType;
       specialLineCase:T_messageType;
   FUNCTION startsWith(CONST prefix:shortString):boolean;
-    VAR k:longint=0;
+    VAR k:longint;
     begin
-      result:=true;
-      while result and (k<length(prefix)) and (fLine[k]<>#0) do begin
-        result:=result and (prefix[k+1]=fLine[k]);
-        inc(k);
+      result:=length(prefix)>0;
+      for k:=1 to length(prefix) do begin
+        //writeln('Checking prefix "',prefix,'" @',k,'="',prefix[k],'"');
+        if fLine[k-1]<>prefix[k] then exit(false);
       end;
     end;
 
@@ -184,16 +184,15 @@ PROCEDURE TSynMnhSyn.next;
     if defaultToPrint and (run = 0) then begin
       specialLineCase:=elc_clearConsole;
       i:=-1;
-      for lc:=low(T_messageType) to high(T_messageType) do
-        if (C_errorLevelTxt[lc]<>'') and startsWith(C_errorLevelTxt[lc]) then begin
+      for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
         specialLineCase:=lc;
         i:=length(C_errorLevelTxt[lc]);
       end;
       if i>=0 then run:=i+1;
-      if specialLineCase>=el3_evalError then fTokenId:=tkError
-                                        else fTokenId:=tkDefault;
+      if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError
+                                                        else fTokenId:=tkDefault;
       if not(specialLineCase in [elo_echoOutput,eld_echoDeclaration,ele_echoInput,els_step]) then while (fLine[run]<>#0) do inc(run);
-      exit;
+      if run>0 then exit;
     end;
 
     case fLine [Run] of

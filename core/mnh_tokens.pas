@@ -49,6 +49,8 @@ TYPE
       FUNCTION getDoc:P_userPackageDocumentation;
       PROCEDURE printHelpOnMain;
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
+      FUNCTION getPackageReferenceForId(CONST id:string):T_packageReference;
+      FUNCTION isReady:boolean;
   end;
 
 FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
@@ -57,7 +59,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
-FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
+//FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
 
@@ -548,7 +550,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     if (errorLevel<3)
     then begin if first<>nil then interpret(first,C_nilTokenLocation); end
     else recycler.cascadeDisposeToken(first);
-    ready:=true;
+    ready:=usecase<>lu_forDocGeneration;
     if length(fileTokens.t)>0
     then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
@@ -589,24 +591,20 @@ PROCEDURE T_package.clear;
   end;
 
 PROCEDURE T_package.finalize;
-  VAR rule:P_rule;
+  VAR ruleList:array of P_rule;
       wroteBack:boolean=false;
       i:longint;
+
   begin
     raiseError(el0_allOkay,'Finalizing package '+codeProvider^.id,C_nilTokenLocation);
-    while packageRules.size>0 do begin
-      rule:=packageRules.dropAny;
-      if rule^.writeBack(codeProvider^) then wroteBack:=true;
-      dispose(rule,destroy);
-    end;
+    ruleList:=packageRules.valueSet;
+    for i:=0 to length(ruleList)-1 do if ruleList[i]^.writeBack(codeProvider^) then wroteBack:=true;
+    setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
       if @self=@mainPackageProvider then raiseError(el0_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
     end;
-    packageRules.clear;
-    importedRules.clear;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize;
-    setLength(packageUses,0);
   end;
 
 DESTRUCTOR T_package.destroy;
@@ -746,6 +744,15 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
+FUNCTION T_package.getPackageReferenceForId(CONST id:string):T_packageReference;
+  VAR i:longint;
+  begin
+    for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(packageUses[i]);
+    result.create(codeProvider^.getPath,'',C_nilTokenLocation);
+  end;
+
+FUNCTION T_package.isReady:boolean; begin result:=ready; end;
+
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
   VAR recycler:T_tokenRecycler;
   begin
@@ -768,27 +775,30 @@ FUNCTION getMainPackage: P_package;
     result:=@mainPackage;
   end;
 
-FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
-  VAR copyOfLine:ansistring;
-      lineLocation:T_tokenLocation;
-  begin
-    try
-      copyOfLine:=line;
-      lineLocation.fileName:=mainPackage.codeProvider^.getPath;
-      lineLocation.line:=0;
-      lineLocation.column:=1;
-      if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
-        copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
-        inc(lineLocation.column,5);
-      end;
-      result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
-      while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
-        result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
-    except
-      result.create;
-      result.define(C_nilTokenLocation,'ERR',tt_EOL);
-    end;
-  end;
+//FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
+//  VAR lineLocation:T_tokenLocation;
+//  begin
+//    lineLocation.fileName:=mainPackage.codeProvider^.getPath;
+//    lineLocation.line:=0;
+//    lineLocation.column:=charIndex;
+//    result:=firstToken(line,lineLocation,@mainPackage,false);
+//    //try
+//    //  copyOfLine:=line;
+//    //  lineLocation.fileName:=mainPackage.codeProvider^.getPath;
+//    //  lineLocation.line:=0;
+//    //  lineLocation.column:=1;
+//    //  if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
+//    //    copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
+//    //    inc(lineLocation.column,5);
+//    //  end;
+//    //  result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+//    //  while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
+//    //    result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
+//    //except
+//    //  result.create;
+//    //  result.define(C_nilTokenLocation,'ERR',tt_EOL);
+//    //end;
+//  end;
 
 PROCEDURE findAndDocumentAllPackages;
   VAR sourceNames:T_arrayOfString;

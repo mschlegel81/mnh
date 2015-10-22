@@ -80,7 +80,7 @@ PROCEDURE parseCmdLine;
         halt;
       end;
       callMainInMain(parameters);
-      if displayTime then writeln('time: ',myTimeToStr(now-startTime),'sec');
+      if displayTime then writeln('time: ',myTimeToStr(now-startTime));
       mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
     end;
 
@@ -91,7 +91,7 @@ PROCEDURE parseCmdLine;
       mainPackageProvider.clear;
       mainPackageProvider.appendLine(fileOrCommandToInterpret);
       reloadMainPackage(lu_forDirectExecution);
-      if displayTime then writeln('time: ',(now-startTime)*24*60*60:0:3,'sec');
+      if displayTime then writeln('time: ',myTimeToStr(now-startTime));
       mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
     end;
 

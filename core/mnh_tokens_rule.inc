@@ -256,21 +256,20 @@ FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean):boolean;
   end;
 
 CONST C_ruleTypeText:array[T_ruleType] of string=(
-    '','memoized',
-       'mutable',
-       'private mutable',
-       'persistent',
-       'private persistent',
-       'synchronized');
+    '','memoized ',
+       'mutable ',
+       'private mutable ',
+       'persistent ',
+       'private persistent ',
+       'synchronized ');
 
 FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
-    result:=C_ruleTypeText[ruleType]+' ';
-    if length(subrules)<=0 then exit;
-    result:=result+'rule '+id+C_lineBreakChar+
-      'in '+subrules[0]^.declaredAt.fileName;
+    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.fileName;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
+    if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then
+      result:=result+'declared '+ansistring(declarationStart);
   end;
 
 FUNCTION T_rule.getDocHtml:ansistring;

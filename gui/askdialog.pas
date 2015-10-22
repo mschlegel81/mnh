@@ -45,6 +45,7 @@ VAR cs:TRTLCriticalSection;
 
 PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
+    if key=27 then ModalResult:=mrCancel;
     if (key = 13) and (not(rejectNonmatchingInput) or (ComboBox1.ItemIndex>=0)) then begin
       lastAnswer := ComboBox1.text;
       ModalResult := mrOk;

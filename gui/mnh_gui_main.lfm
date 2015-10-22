@@ -1041,6 +1041,13 @@ object MnhForm: TMnhForm
             end
           end
         end
+        object autosizeToggleBox: TToggleBox
+          Left = 0
+          Height = 23
+          Top = 150
+          Width = 23
+          TabOrder = 3
+        end
       end
     end
     object PlotTabSheet: TTabSheet

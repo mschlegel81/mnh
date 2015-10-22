@@ -22,6 +22,7 @@ CONST
   C_boolText: array[false..true] of string = ('false', 'true');
 
   ONE_SECOND=1/(24*60*60);
+  ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.MNH';
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','plot');
   C_ID_QUALIFY_CHARACTER='.';
@@ -258,8 +259,8 @@ TYPE
 
 CONST
   C_errorLevelForMessageType:array[T_messageType] of ShortInt=(
-  100,//elc_clearConsole,
-  100,//elp_printline,
+    0,//elc_clearConsole,
+    0,//elp_printline,
    -1,//ele_echoInput,
    -1,//eld_echoDeclaration,
    -1,//elo_echoOutput,
@@ -284,7 +285,7 @@ CONST
     '',//cls
     '',//out
     ' in>',//echo input
-    '_in>',//echo declaration
+    ' in>',//echo declaration
     'out>',//echo output
     'STEP:',
     'Info ', //el0
