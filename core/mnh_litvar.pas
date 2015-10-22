@@ -232,6 +232,7 @@ TYPE
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
+    PROCEDURE toElementFrequency;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValuePair: boolean;
     FUNCTION clone:P_listLiteral;
@@ -1598,23 +1599,48 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
   end;
 
 PROCEDURE T_listLiteral.unique;
-  VAR
-    i, j: longint;
+  VAR i, j: longint;
   begin
     if length(element)<=1 then exit;
     sort;
     i:=0;
     for j:=1 to length(element)-1 do
-      if (element [i]^.leqForSorting(element [j])) and
-        (element [j]^.leqForSorting(element [i])) then disposeLiteral(element [j])
-      else
-        begin
-        inc(i);
-        element[i]:=element [j];
-        end;
+    if (element[i]^.equals(element[j])) then disposeLiteral(element [j])
+    else begin
+      inc(i);
+      element[i]:=element [j];
+    end;
     setLength(element, i+1);
   end;
 
+PROCEDURE T_listLiteral.toElementFrequency;
+  FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
+    begin result:=newListLiteral^.appendInt(count)^.append(value,false); end;
+
+  VAR i,j:longint;
+      currentValue:P_literal=nil;
+      count:longint;
+  begin
+    if length(element)=0 then exit;
+    sort;
+    i:=0;
+    count:=1;
+    currentValue:=element[0];
+    element[0]:=nil;
+    for j:=1 to length(element)-1 do
+    if element[j]^.equals(currentValue) then begin
+      inc(count);
+      disposeLiteral(element[j]);
+    end else begin
+      element[i]:=pair(count,currentValue);
+      inc(i);
+      count:=1;
+      currentValue:=element[j];
+      element[j]:=nil;
+    end;
+    element[i]:=pair(count,currentValue);
+    setLength(element,i+1);
+  end;
 
 FUNCTION T_listLiteral.isKeyValuePair: boolean;
   begin

@@ -257,8 +257,8 @@ each(file,
 
 //*Tests all files
 main('test')->pEach(task,[
-  {begin each(i,[0..7],build(i)); true; end},
-  {each(i,[0..7],AND,begin
+  {begin each(i,[0..3],build(i)); true; end},
+  {each(i,[0..3],AND,begin
      waitForBuilt(i);
      regTest.main(binName(i));
    end)}],AND,task());
@@ -266,8 +266,8 @@ main('test')->pEach(task,[
 
 //*Tests some files - randomly
 main('quicktest')->pEach(task,[
-  {each(i,[0..7],build(i))},
-  {each(i,[0..7],AND,begin
+  {each(i,[0..3],build(i))},
+  {each(i,[0..3],AND,begin
      waitForBuilt(i);
      regTest.main(binName(i),'randomSample');
    end)}],task());

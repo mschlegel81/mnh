@@ -6,24 +6,17 @@ private cleanSplit(s:string)->s='' ? void : split(s,' ');
 
 private fileWords(filename)->pEach(l,fileLines(filename),cleanSplit(cleanString(l))).flatten;
 
-//converts a list L=[x,y,z,...] to a nested list [[x,count(x)],[y,count(y)],...]
-private histogram(L)->begin
-  local SL:=sort(L);
-  local deltaIndexes:=0|[1..size(SL)-1]%(leading(SL)<>tail(SL))|size(SL);
-  each(i,[0..size(deltaIndexes)-2],[SL%(deltaIndexes%i),(deltaIndexes%(i+1))-(deltaIndexes%(i))]);
-end;
-
 private analyze(wordList)->begin
   local total:=size(wordList);
   print('Words total:    ',total);
-  local hist:=histogram(wordList);
+  local hist:=elementFrequency(wordList);
   print('Distinct words: ',size(hist));
-  local top50:=head(hist.sort({$x%1>=$y%1}),50);
+  local top50:=head(hist.sort({$x%0>=$y%0}),50);
   print('Most frequent:');
   printf("%X%\t%X%\t%X%",
-    'word' |(top50%%0),
-    'count'|(top50%%1),
-    '%'    |round(top50%%1/total*100,2));
+    'word' |(top50%%1),
+    'count'|(top50%%0),
+    '%'    |round(top50%%0/total*100,2));
 end;
 
 private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));

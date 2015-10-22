@@ -9,12 +9,8 @@ private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
 private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T%0)|
                                               traverseBinaryTree(codePrefix&1,T%1) ;
 
-private deltaIndexes(L)->0|[1..size(L)-1]%(leading(L)<>tail(L))|size(L);
-private histogram(words)->histogram(words,deltaIndexes(words));
-private histogram(words,IDX)->each(i,[0..size(IDX)-2],[(IDX%(i+1)-IDX%i),words%(IDX%i)]);
-
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
-private charactersInString     (s:string)->histogram(s.chars.sort);
+private charactersInString     (s:string)->s.chars.elementFrequency;
 
 //*Solves the "Huffman coding" task from <a href="http://rosettacode.org/wiki/Huffman_coding">RosettaCode</a>
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and

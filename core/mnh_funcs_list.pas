@@ -60,12 +60,19 @@ FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      if (params^.value(0)^.literalType in C_validListTypes) then begin
-        result:=P_listLiteral(params^.value(0))^.clone;
-        P_listLiteral(result)^.unique;
-      end;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
+      result:=P_listLiteral(params^.value(0))^.clone;
+      P_listLiteral(result)^.unique;
     end else raiseNotApplicableError('unique',params,tokenLocation);
+  end;
+
+FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
+      result:=P_listLiteral(params^.value(0))^.clone;
+      P_listLiteral(result)^.toElementFrequency;
+    end else raiseNotApplicableError('elementFrequency',params,tokenLocation);
   end;
 
 FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -128,6 +135,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
   registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L);#Returns list L sorted ascending and without duplicates');
+  registerRule(LIST_NAMESPACE,'elementFrequency',@elementFrequency_imp,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
   registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
