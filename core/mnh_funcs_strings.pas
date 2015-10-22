@@ -1,6 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringutil,sysutils;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils;
 IMPLEMENTATION
 {$MACRO ON}
 FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;

@@ -1396,7 +1396,7 @@ end}
                 first:=recycler.disposeToken(first);
                 first:=recycler.disposeToken(first);
 
-              until (first=nil) or (first^.toktype<>tt_literal) or
+              until (first=nil) or (first^.tokType<>tt_literal) or
                     (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
             end;

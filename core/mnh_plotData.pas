@@ -185,7 +185,7 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
     if x = nil then result:=Nan else case X^.literalType of
         lt_real: begin
           result:=P_realLiteral(x)^.value;
-          if IsInfinite(result) then
+          if isInfinite(result) then
             result:=Nan;
           end;
         lt_int: result:=P_intLiteral(x)^.value;
@@ -221,16 +221,16 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
       y:=sample[i, 1];
       if logY and (y<=1E-100) then
         y:=Nan;
-      if isNan(box['x', 0]) or (not (isNan(x)) and not (IsInfinite(x)) and
+      if isNan(box['x', 0]) or (not (isNan(x)) and not (isInfinite(x)) and
         (x<box['x', 0])) then
         box['x', 0]:=x;
-      if isNan(box['x', 1]) or (not (isNan(x)) and not (IsInfinite(x)) and
+      if isNan(box['x', 1]) or (not (isNan(x)) and not (isInfinite(x)) and
         (x>box['x', 1])) then
         box['x', 1]:=x;
-      if isNan(box['y', 0]) or (not (isNan(y)) and not (IsInfinite(y)) and
+      if isNan(box['y', 0]) or (not (isNan(y)) and not (isInfinite(y)) and
         (y<box['y', 0])) then
         box['y', 0]:=y;
-      if isNan(box['y', 1]) or (not (isNan(y)) and not (IsInfinite(y)) and
+      if isNan(box['y', 1]) or (not (isNan(y)) and not (isInfinite(y)) and
         (y>box['y', 1])) then
         box['y', 1]:=y;
       end;
@@ -358,7 +358,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
           (p1[1]>activePlot.screenHeight) and  (p2[1]>activePlot.screenHeight) then exit(0);
         end;
       result:=sqr(p0[0]-2*p1[0]+p2[0])+sqr(p0[1]-2*p1[1]+p2[1]);
-      if isNan(result) or IsInfinite(result) then
+      if isNan(result) or isInfinite(result) then
         result:=0;
     end;
 
@@ -371,11 +371,11 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
         setLength(sample, length(temp));
         for i:=0 to length(temp)-1 do
           begin
-          if IsInfinite(temp[i].x) then
+          if isInfinite(temp[i].x) then
             sample[i, 0]:=Nan
           else
             sample[i, 0]:=temp[i].x;
-          if IsInfinite(temp[i].y) then
+          if isInfinite(temp[i].y) then
             sample[i, 1]:=Nan
           else
             sample[i, 1]:=temp[i].y;
@@ -446,11 +446,11 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
 PROCEDURE T_sampleRow.addSample(CONST x, y: double);
   begin
     setLength(sample, length(sample)+1);
-    if IsInfinite(x) then
+    if isInfinite(x) then
       sample[length(sample)-1, 0]:=Nan
     else
       sample[length(sample)-1, 0]:=x;
-    if IsInfinite(y) then
+    if isInfinite(y) then
       sample[length(sample)-1, 1]:=Nan
     else
       sample[length(sample)-1, 1]:=y;
@@ -870,7 +870,7 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
         screenPos: double;
       begin
         screenPos:=realToScreen(axis, realPos);
-        if not (isNan(screenPos)) and not (IsInfinite(screenPos)) and  not (screenPos<0) and not ((axis = 'y') and
+        if not (isNan(screenPos)) and not (isInfinite(screenPos)) and  not (screenPos<0) and not ((axis = 'y') and
           (screenPos>screenHeight)) and not ((axis = 'x') and
           (screenPos>screenWidth)) then
           begin
@@ -1175,7 +1175,7 @@ FUNCTION T_plot.est_curvature(CONST s0, s1, s2: T_point): double;
     p1:=realToScreen(s1);
     p2:=realToScreen(s2);
     result:=sqr(p0 [0]-2*p1 [0]+p2 [0])+sqr(p0 [1]-2*p1 [1]+p2 [1]);
-    if isNan(result) or IsInfinite(result) then
+    if isNan(result) or isInfinite(result) then
       result:=0;
   end;
 
@@ -1185,7 +1185,7 @@ FUNCTION T_plot.olx(CONST x: double): double;
       begin
       if x<1E-324 then exit(-324);
       result:=ln(x)/ln(10);
-      if isNan(result) or IsInfinite(result) then
+      if isNan(result) or isInfinite(result) then
         result:=-324;
       end
     else
@@ -1206,7 +1206,7 @@ FUNCTION T_plot.oly(CONST y: double): double;
       begin
       if y<1E-324 then exit(-324);
       result:=ln(y)/ln(10);
-      if isNan(result) or IsInfinite(result) then
+      if isNan(result) or isInfinite(result) then
         result:=-324;
       end
     else
@@ -1223,9 +1223,9 @@ FUNCTION T_plot.oey(CONST y: double): double;
 
 FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
   begin
-    result:=not (isNan(sample [0])) and not (IsInfinite(sample [0])) and
+    result:=not (isNan(sample [0])) and not (isInfinite(sample [0])) and
       (not (logscale ['x']) or (sample [0]>=1E-100)) and not
-      (isNan(sample [1])) and not (IsInfinite(sample [1])) and
+      (isNan(sample [1])) and not (isInfinite(sample [1])) and
       (not (logscale ['y']) or (sample [1]>=1E-100));
   end;
 
@@ -1726,7 +1726,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
     begin
       X:=round(Source.width*factor);
       Y:=round(Source.height*factor);
-      ARect:=Rect(0, 0, X, Y);
+      ARect:=rect(0, 0, X, Y);
       dest.Canvas.AntialiasingMode:=amOn;
       dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
     end;
@@ -1870,7 +1870,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         rowId:=activePlot.addRow(options);
         X:=P_listLiteral(params^.value(0));
         Y:=P_listLiteral(params^.value(1));
-        iMax:=Min(X^.size, Y^.size);
+        iMax:=min(X^.size, Y^.size);
         for i:=0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         result:=newVoidLiteral;
       end else if (sizeWithoutOptions = 4) and
@@ -2002,7 +2002,7 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         x1:=fReal(P_listLiteral(x)^.value(1));
         y0:=fReal(P_listLiteral(y)^.value(0));
         y1:=fReal(P_listLiteral(y)^.value(1));
-        if not (isNan(x0)) and not (IsInfinite(x0)) and not (isNan(x1)) and  not (IsInfinite(x1)) and not (isNan(y0)) and not (IsInfinite(y0)) and  not (isNan(y1)) and not (IsInfinite(y1)) then begin
+        if not (isNan(x0)) and not (isInfinite(x0)) and not (isNan(x1)) and  not (isInfinite(x1)) and not (isNan(y0)) and not (isInfinite(y0)) and  not (isNan(y1)) and not (isInfinite(y1)) then begin
           system.enterCriticalSection(plotCS);
           activePlot.setRange(x0, y0, x1, y1);
           result:=newVoidLiteral;
@@ -2114,7 +2114,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
 
 
 INITIALIZATION
-  system.InitCriticalSection(plotCS);
+  system.initCriticalSection(plotCS);
   activePlot.createWithDefaults;
   mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot,
     'plot(list,[options]); //plots flat numeric list or xy-list'+
@@ -2167,5 +2167,5 @@ FINALIZATION
   enterCriticalSection(plotCS);
   activePlot.destroy;
   leaveCriticalSection(plotCS);
-  DoneCriticalsection(plotCS);
+  doneCriticalSection(plotCS);
 end.

@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, mnh_funcs, myStringutil, myGenerics, mnh_constants, mnh_litVar;
+USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar;
 VAR htmlRoot: string;
 TYPE
 
@@ -385,7 +385,7 @@ PROCEDURE makeHtmlFromTemplate;
       end;
     begin
       //Prepare and sort data:-------------------------------------------------------------
-      for n:=Low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
+      for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
       ids:=intrinsicRuleExplanationMap.keySet;
       for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
         n:=namespace(ids[i]);
@@ -395,7 +395,7 @@ PROCEDURE makeHtmlFromTemplate;
       end;
       setLength(ids,0);
 
-      for n:=Low(T_namespace) to high(T_namespace) do
+      for n:=low(T_namespace) to high(T_namespace) do
       for i:=1 to length(builtInDoc[n])-1 do for j:=0 to i-1 do
       if builtInDoc[n][i].id < builtInDoc[n][j].id then begin
         swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
@@ -409,13 +409,13 @@ PROCEDURE makeHtmlFromTemplate;
         n: T_namespace;
     begin
       writeln(outFile, '<div align="right"><hr></div><br><div>');
-      for n:=Low(T_namespace) to high(T_namespace) do for i:=0 to length(builtInDoc[n])-1 do
+      for n:=low(T_namespace) to high(T_namespace) do for i:=0 to length(builtInDoc[n])-1 do
         writeln(outFile, '<a href="#', builtInDoc[n][i].id, '">', builtInDoc[n][i].id, '</a> &nbsp; ');
       writeln(outFile, '</div><br><div align="right"><hr></div>');
-      for n:=Low(T_namespace) to high(T_namespace) do
+      for n:=low(T_namespace) to high(T_namespace) do
         writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
 
-      for n:=Low(T_namespace) to high(T_namespace) do begin
+      for n:=low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
         for i:=0 to length(builtInDoc[n])-1 do begin
           htmlDoc:=builtInDoc[n][i].toHtml;
@@ -455,7 +455,7 @@ PROCEDURE makeHtmlFromTemplate;
           setLength(includes,length(includes)+1);
           includes[length(includes)-1]:=context.include;
         end else if context.mode = definingExample then begin
-          for ns:=Low(T_namespace) to high(T_namespace) do
+          for ns:=low(T_namespace) to high(T_namespace) do
           for i:=0 to length(builtInDoc[ns])-1 do
             if   builtInDoc[ns][i].id      =context.include.includeTag
             then builtInDoc[ns][i].example:=context.include.content;

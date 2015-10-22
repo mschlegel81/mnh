@@ -285,14 +285,11 @@ FUNCTION TSettingsForm.polishHistory: boolean;
   VAR i, j: longint;
   begin
     result := false;
-    for i := 0 to length(fileHistory)-1 do
-      if (fileHistory [i]<>'') and not(fileExists(fileHistory [i])) then
-        begin
-        for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
-        fileHistory[length(fileHistory)-1] := '';
-        result := true;
-
-        end;
+    for i := 0 to length(fileHistory)-1 do if (fileHistory [i]<>'') and not(fileExists(fileHistory [i])) then begin
+      for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
+      fileHistory[length(fileHistory)-1] := '';
+      result := true;
+    end;
   end;
 
 end.

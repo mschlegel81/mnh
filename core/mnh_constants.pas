@@ -1,6 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
-USES myGenerics,myStringutil;
+USES myGenerics,myStringUtil;
 TYPE
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
@@ -258,7 +258,7 @@ TYPE
     el0_reloadRequired);
 
 CONST
-  C_errorLevelForMessageType:array[T_messageType] of ShortInt=(
+  C_errorLevelForMessageType:array[T_messageType] of shortint=(
     0,//elc_clearConsole,
     0,//elp_printline,
    -1,//ele_echoInput,
@@ -315,7 +315,7 @@ FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
   VAR n:T_namespace;
   begin
-    for n:=Low(T_namespace) to high(T_namespace) do if id=C_namespaceString[n] then exit(true);
+    for n:=low(T_namespace) to high(T_namespace) do if id=C_namespaceString[n] then exit(true);
     result:=false;
   end;
 

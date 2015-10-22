@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES sysutils,Classes,process,myGenerics,mnh_constants,myStringutil;
+USES sysutils,Classes,process,myGenerics,mnh_constants,myStringUtil;
 TYPE
   P_codeProvider = ^T_codeProvider;
 
@@ -392,7 +392,7 @@ PROCEDURE T_codeProvider.replaceCode(CONST line0, col0:longint; line1:longint; C
     //Remember partBefore and part after for later reference
     if (line1>=length(lineData)) or (line1<0) or (col1<=0) then begin
       partAfter:='';
-      line1:=Length(lineData)+1;
+      line1:=length(lineData)+1;
     end else begin
       partAfter:=copy(lineData[line1],col1+1,length(lineData[line1]));
     end;

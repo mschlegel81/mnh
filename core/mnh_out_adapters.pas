@@ -19,7 +19,7 @@ TYPE
     doEchoInput: boolean;
     doEchoDeclaration: boolean;
     doShowExpressionOut: boolean;
-    minErrorLevel: ShortInt;
+    minErrorLevel: shortint;
   end;
 
   T_abstractOutAdapter = object
@@ -86,7 +86,7 @@ VAR
 
 PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-FUNCTION errorLevel: ShortInt;
+FUNCTION errorLevel: shortint;
 PROCEDURE haltEvaluation;
 PROCEDURE setDefaultCallbacks;
 
@@ -116,7 +116,7 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_messageType;  CONST errorMessage: a
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-FUNCTION errorLevel: ShortInt;
+FUNCTION errorLevel: shortint;
   begin
     result := maxErrorLevel;
   end;
@@ -199,13 +199,13 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST level: T_messageType;
 
 CONSTRUCTOR T_collectingOutAdapter.create;
   begin
-    system.InitCriticalSection(cs);
+    system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
-    system.DoneCriticalsection(cs);
+    system.doneCriticalSection(cs);
     clearMessages;
   end;
 

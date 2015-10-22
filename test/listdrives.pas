@@ -15,7 +15,7 @@ FUNCTION getVolumeLabel(CONST DriveChar: char): string;
     Buf: array [0..MAX_PATH] of char;
   begin
       GetVolumeInformation(PChar(DriveChar + ':\'),
-      Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
+      Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
       VolumeFlags, nil, 0);
 
       writeln(VolumeSerialNumber,' ',VolumeFlags);

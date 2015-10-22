@@ -37,7 +37,7 @@ TYPE
 
     fLine: PChar;
     styleTable: array[TtkTokenKind] of TSynHighlighterAttributes;
-    Run: longint;
+    run: longint;
     fTokenPos: integer;
     fTokenId: TtkTokenKind;
     fLineNumber: integer;
@@ -145,7 +145,7 @@ PROCEDURE TSynMnhSyn.SetLine(CONST newValue: string; LineNumber: integer);
   begin
     inherited;
     fLine := PChar(newValue);
-    Run := 0;
+    run := 0;
     fLineNumber := LineNumber;
     next;
   end;
@@ -180,7 +180,7 @@ PROCEDURE TSynMnhSyn.next;
   begin
     isMarked:=false;
     fTokenId := tkDefault;
-    fTokenPos := Run;
+    fTokenPos := run;
     if defaultToPrint and (run = 0) then begin
       specialLineCase:=elc_clearConsole;
       i:=-1;
@@ -195,7 +195,7 @@ PROCEDURE TSynMnhSyn.next;
       if run>0 then exit;
     end;
 
-    case fLine [Run] of
+    case fLine [run] of
       #0: fTokenId := tkNull;
       ';': begin
         inc(run);
@@ -296,7 +296,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
       else begin
         fTokenId := tkDefault;
-        inc(Run);
+        inc(run);
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then begin
@@ -319,14 +319,14 @@ FUNCTION TSynMnhSyn.GetToken: string;
   VAR
     Len: longint;
   begin
-    Len := Run-fTokenPos;
+    Len := run-fTokenPos;
     result := '';
     SetString(result, (fLine+fTokenPos), Len);
   end;
 
 PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer);
   begin
-    TokenLength := Run-fTokenPos;
+    TokenLength := run-fTokenPos;
     TokenStart := fLine+fTokenPos;
   end;
 

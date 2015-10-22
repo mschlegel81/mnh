@@ -19,7 +19,11 @@ myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTO
          "section","self","setRange","shortString","showing","size","sleep","sourceValue","split","start",
          "startTime","stdErr","string","strToFloatDef","strToIntDef","style","subRule","sysutils","text",
          "textFile","time","title","tmp","top","trim","trimLeft","trimRight","trunc","tt_EOL","T_file","T_token",
-         "uppercase","virtual","width","windows","write","writeln","xor"]);
+         "uppercase","virtual","width","windows","write","writeln","xor",'read',
+         'doneCriticalSection','FeatureFlags','highlighter','HWTickSupportAvailable','initCriticalSection','inputString',
+         'isInfinite','length','low','min','myStringUtil','pop','push','read','readMode','readonly','rect','run','sec',
+         'shortint','sizeOf','SystemTimeBase','TickType','TimeBase','TimeBaseCorrelationData','TimeBaseData',
+         'TimeBaseSelector','TimeBaseUsed','tokType']);
 upperDict:=upper(myDict);
 fixToken(s:string)->upper(s) in upperDict and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
 fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
@@ -53,7 +57,7 @@ checkConsistency(fileList)->begin
   : void);
   not(anyComplaints) ? print('Spelling is consistent.') : void;  
 
-  allLiterals:=allLiterals.elementFrequency.sort.trailing(50);
+  allLiterals:=allLiterals .elementFrequency .sort .trailing(50);
   print('Most frequent literals: ');
   printf("%X%\t%X%",allLiterals%%0,allLiterals%%1);
   void;
@@ -71,6 +75,7 @@ fix(filename,readOnly)->begin
     diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&">\n   >"&(newLines%i)&'<' : void);
     readOnly ? void : writeFileLines(filename,newLines);
   end;
+  a.sort 
   printf('%X%',diffOut);
 end;
 

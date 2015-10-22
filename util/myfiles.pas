@@ -72,7 +72,7 @@ PROCEDURE T_file.flushBuffer;
 PROCEDURE T_file.readBuffer;
   VAR actuallyRead:longint;
   begin
-    if readmode and stateOkay then begin
+    if readMode and stateOkay then begin
       blockread(handle,buffer[bufFill],bufferSize-bufFill,actuallyRead);
       bufFill:=bufFill+actuallyRead;
     end;
@@ -206,7 +206,7 @@ PROCEDURE T_file.writeBuf(p:PByte; pSize:longint);
 PROCEDURE T_file.readBuf (p:PByte; pSize:longint);
   VAR actuallyRead:longint;
   begin
-    if readmode then begin
+    if readMode then begin
       if bufFill>=pSize then begin //if buffer contains enough data...
         move(buffer[0],p^,pSize);                    //move data from buffer to pointer
         move(buffer[pSize],buffer[0],bufFill-pSize); //buffer shift

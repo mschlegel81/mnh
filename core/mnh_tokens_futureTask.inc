@@ -124,7 +124,7 @@ DESTRUCTOR T_futureTask.proFormaDestroy;
 
 CONSTRUCTOR T_taskQueue.create;
   begin
-    system.InitCriticalSection(cs);
+    system.initCriticalSection(cs);
     destructionPending:=false;
     first:=nil;
     last:=nil;
@@ -137,7 +137,7 @@ DESTRUCTOR T_taskQueue.destroy;
       destructionPending:=true;
       sleep(5);
     end;
-    system.DoneCriticalsection(cs);
+    system.doneCriticalSection(cs);
   end;
 
 FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler):P_futureTask;

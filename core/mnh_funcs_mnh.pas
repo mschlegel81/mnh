@@ -1,6 +1,6 @@
 UNIT mnh_funcs_mnh;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringutil;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil;
 IMPLEMENTATION
 FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;

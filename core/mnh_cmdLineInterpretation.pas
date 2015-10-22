@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringutil,sysutils,myGenerics,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
      mnh_doc,lclintf,mySys;
 PROCEDURE parseCmdLine;
 VAR displayTime:boolean=false;

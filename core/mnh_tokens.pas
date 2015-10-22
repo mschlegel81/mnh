@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, myStringutil,typinfo, mySys, //utilities
+USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, //even more specific

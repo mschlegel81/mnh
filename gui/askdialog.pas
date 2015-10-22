@@ -153,10 +153,10 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
   end;
 
 INITIALIZATION
-  system.InitCriticalSection(cs);
+  system.initCriticalSection(cs);
 
 FINALIZATION
-  system.DoneCriticalsection(cs);
+  system.doneCriticalSection(cs);
 
 
 end.

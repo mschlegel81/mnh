@@ -2,7 +2,7 @@ UNIT mnh_litVar;
 
 INTERFACE
 
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringutil, mnh_tokLoc;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc;
 
 TYPE
   T_hashInt=int64;
@@ -1117,7 +1117,7 @@ FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
     result:=(@self = other)
            or (other^.literalType = lt_real) and ((P_realLiteral(other)^.value = val)
                                                or isNan(P_realLiteral(other)^.value) and isNan(val)
-                                               or IsInfinite(P_realLiteral(other)^.value) and IsInfinite(val));
+                                               or isInfinite(P_realLiteral(other)^.value) and isInfinite(val));
   end;
 
 FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
@@ -1279,7 +1279,7 @@ FUNCTION T_stringLiteral.lower: P_stringLiteral;
 FUNCTION T_stringLiteral.unbrace: P_stringLiteral;
   VAR rs: string;
   begin
-    rs:=myStringutil.unbrace(val);
+    rs:=myStringUtil.unbrace(val);
     if rs = val then begin
       result:=@self;
       rereference;

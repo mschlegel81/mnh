@@ -50,14 +50,14 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
     case ruleTyp of
       rt_memoized:begin
         new(cache,create);
-        system.InitCriticalSection(rule_cs);
+        system.initCriticalSection(rule_cs);
       end;
       rt_mutable_public, rt_mutable_private, rt_persistent_public, rt_persistent_private: begin
         namedValue.create(id,newVoidLiteral);
-        system.InitCriticalSection(rule_cs);
+        system.initCriticalSection(rule_cs);
       end;
       rt_synchronized:
-        system.InitCriticalSection(rule_cs);
+        system.initCriticalSection(rule_cs);
     end;
   end;
 
@@ -68,9 +68,9 @@ DESTRUCTOR T_rule.destroy;
     setLength(subrules,0);
     if ruleType=rt_memoized then begin
       dispose(cache,destroy);
-      system.DoneCriticalsection(rule_cs);
+      system.doneCriticalSection(rule_cs);
     end else if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized] then begin
-      system.DoneCriticalsection(rule_cs);
+      system.doneCriticalSection(rule_cs);
     end;
     if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then namedValue.destroy;
     ruleType:=rt_normal;

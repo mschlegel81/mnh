@@ -58,7 +58,7 @@ PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TDebugForm.FormCreate(Sender: TObject);
   begin
     highlighter:=TSynMnhSyn.create(nil,false);
-    debugEdit.Highlighter:=highlighter;
+    debugEdit.highlighter:=highlighter;
   end;
 
 PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);

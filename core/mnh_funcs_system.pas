@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringutil;
+     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil;
 IMPLEMENTATION
 VAR     file_cs :system.TRTLCriticalSection;
 
@@ -206,14 +206,14 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         tempProcess.CloseInput;
         while tempProcess.running and (errorLevel<3) do begin
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
                  else begin inc(sleepTime); sleep(sleepTime); end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.output.Read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.read((memStream.Memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
         result := (tempProcess.exitStatus = 0);
@@ -450,7 +450,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       P_listLiteral(result)^.append(infoPair,false);
 
       GetVolumeInformation(PChar(DriveLetter),
-        Buf, SizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
+        Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
       SetString(DriveLetter, Buf, StrLen(Buf));
 
@@ -488,7 +488,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 INITIALIZATION
-  system.InitCriticalSection(file_cs);
+  system.initCriticalSection(file_cs);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
@@ -517,6 +517,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables.');
 
 FINALIZATION
-  system.DoneCriticalsection(file_cs);
+  system.doneCriticalSection(file_cs);
 
 end.

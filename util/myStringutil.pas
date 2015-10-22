@@ -1,4 +1,4 @@
-UNIT myStringutil;
+UNIT myStringUtil;
 
 INTERFACE
 USES math, strutils, sysutils,  myGenerics;

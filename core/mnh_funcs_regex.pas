@@ -48,7 +48,7 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     begin
       regex:=TRegExpr.create;
       regex.expression:=trip.x;
-      regex.InputString:=trip.y;
+      regex.inputString:=trip.y;
       try
         result:=regex.Exec(trip.y);
       except
@@ -79,7 +79,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
     begin
       regex:=TRegExpr.create;
       regex.expression:=trip.x;
-      regex.InputString:=trip.y;
+      regex.inputString:=trip.y;
       result:=newListLiteral;
       try
         if regex.Exec(trip.y) then for i:=0 to regex.SubExprMatchCount do begin

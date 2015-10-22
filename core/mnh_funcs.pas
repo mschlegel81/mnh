@@ -1,7 +1,7 @@
 UNIT mnh_funcs;
 INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,
-     myStringutil,Classes,mySys;
+     myStringUtil,Classes,mySys;
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
 
@@ -188,9 +188,9 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
-  system.InitCriticalSection(print_cs);
+  system.initCriticalSection(print_cs);
 FINALIZATION
   intrinsicRuleMap.destroy;
   intrinsicRuleExplanationMap.destroy;
-  system.DoneCriticalsection(print_cs);
+  system.doneCriticalSection(print_cs);
 end.

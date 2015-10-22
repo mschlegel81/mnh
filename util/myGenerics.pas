@@ -205,7 +205,7 @@ FUNCTION hashOfAnsiString(CONST x:ansistring):longint; inline;
 
 CONSTRUCTOR G_safeArray.create;
   begin
-    system.InitCriticalSection(saveCS);
+    system.initCriticalSection(saveCS);
     clear;
   end;
 
@@ -270,7 +270,7 @@ PROCEDURE G_safeArray.unlock;
 DESTRUCTOR G_safeArray.destroy;
   begin
     clear;
-    system.DoneCriticalsection(saveCS);
+    system.doneCriticalSection(saveCS);
   end;
 
 { G_lazyVar }
@@ -298,7 +298,7 @@ DESTRUCTOR G_lazyVar.destroy;
 
 CONSTRUCTOR G_safeVar.create(CONST intialValue: ENTRY_TYPE);
   begin
-    system.InitCriticalSection(saveCS);
+    system.initCriticalSection(saveCS);
     v:=intialValue;
   end;
 
@@ -328,14 +328,14 @@ PROCEDURE G_safeVar.unlock;
 
 DESTRUCTOR G_safeVar.destroy;
   begin
-    system.DoneCriticalsection(saveCS);
+    system.doneCriticalSection(saveCS);
   end;
 
 CONSTRUCTOR G_list.create;
-  begin system.InitCriticalSection(cs); clear; end;
+  begin system.initCriticalSection(cs); clear; end;
 
 DESTRUCTOR G_list.destroy;
-  begin clear; system.DoneCriticalsection(cs); end;
+  begin clear; system.doneCriticalSection(cs); end;
 
 FUNCTION G_list.contains(CONST value:ENTRY_TYPE):boolean;
   begin result:=indexOf(value)>=0; end;
@@ -854,7 +854,7 @@ PROCEDURE G_stringKeyMap.rehash(grow: boolean);
 
 CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
   begin
-    system.InitCriticalSection(cs);
+    system.initCriticalSection(cs);
     rebalanceFac:=rebalanceFactor;
     clear;
   end;
@@ -882,7 +882,7 @@ DESTRUCTOR G_stringKeyMap.destroy;
     for i:=0 to length(bucket)-1 do setLength(bucket[i],0);
     setLength(bucket,0);
     system.leaveCriticalSection(cs);
-    system.DoneCriticalsection(cs);
+    system.doneCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;

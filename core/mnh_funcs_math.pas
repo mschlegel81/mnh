@@ -111,7 +111,7 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
       case params^.value(0)^.literalType of
-        lt_real: exit(newBoolLiteral(IsInfinite(P_realLiteral(params^.value(0))^.value)));
+        lt_real: exit(newBoolLiteral(isInfinite(P_realLiteral(params^.value(0))^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
           result:=newListLiteral;
@@ -138,7 +138,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     begin
       if l^.literalType=lt_real then begin
         r:=P_realLiteral(l)^.value;
-        result:=not(isNan(r)) and not(IsInfinite(r)) and (r0<=r) and (r<=r1);
+        result:=not(isNan(r)) and not(isInfinite(r)) and (r0<=r) and (r<=r1);
       end else begin
         i:=P_intLiteral(l)^.value;
         result:=(r0<=i) and (i<=r1);

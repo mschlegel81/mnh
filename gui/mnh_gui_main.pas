@@ -7,7 +7,7 @@ USES
   Classes, sysutils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
-  mnh_out_adapters, myStringutil, mnh_evalThread, mnh_constants,
+  mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
   myGenerics,mnh_fileWrappers,mySys;
@@ -248,7 +248,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         el0_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
-          MnhForm.InputEdit.ReadOnly:=false;
+          MnhForm.InputEdit.readonly:=false;
           MnhForm.inputHighlighter.setMarkedToken(-1,-1);
         end;
         el0_reloadRequired: ad_doReload(MnhForm.InputEdit.lines);
@@ -432,7 +432,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
       DebugForm.debugEdit.ClearAll;
-      InputEdit.ReadOnly:=true;
+      InputEdit.readonly:=true;
       stepper.doStep;
       DebugForm.Show;
     end else stepper.setFreeRun;
@@ -451,8 +451,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     SaveDialog.fileName:=paramStr(0);
     inputHighlighter:=TSynMnhSyn.create(nil,false);
     outputHighlighter:=TSynMnhSyn.create(nil,true);
-    InputEdit.Highlighter:=inputHighlighter;
-    OutputEdit.Highlighter:=outputHighlighter;
+    InputEdit.highlighter:=inputHighlighter;
+    OutputEdit.highlighter:=outputHighlighter;
     settingsHaveBeenProcessed:=false;
     OutputEdit.ClearAll;
     StatusBar.SimpleText:=
@@ -597,7 +597,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       SettingsForm.instantEvaluation:=false;
       if ad_evaluationRunning then begin
         DebugForm.debugEdit.ClearAll;
-        InputEdit.ReadOnly:=true;
+        InputEdit.readonly:=true;
         stepper.doStep;
         DebugForm.Show;
       end;
@@ -752,16 +752,16 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
         if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
         if mr=mrCancel then exit;
       end;
-      ad_setFile(OpenDialog.fileName,InputEdit.lines);
-      if SettingsForm.setFileInEditor(OpenDialog.fileName) then processFileHistory;
+      ad_setFile(expandFileName(OpenDialog.fileName),InputEdit.lines);
+      if SettingsForm.setFileInEditor(expandFileName(OpenDialog.fileName)) then processFileHistory;
     end;
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
     if SaveDialog.execute then begin
-      ad_saveFile(SaveDialog.fileName,InputEdit.lines);
-      if SettingsForm.setFileInEditor(SaveDialog.fileName) then processFileHistory;
+      ad_saveFile(expandFileName(SaveDialog.fileName),InputEdit.lines);
+      if SettingsForm.setFileInEditor(expandFileName(SaveDialog.fileName)) then processFileHistory;
       SettingsForm.saveSettings;
     end;
   end;
@@ -968,7 +968,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //  writeln(StdErr, 'Modal result evaluation done.');
     //  UpdateTimeTimer.Enabled:=true;
     //end;
-    write(stdErr,':');
   end;
 
 PROCEDURE TMnhForm.processSettings;
