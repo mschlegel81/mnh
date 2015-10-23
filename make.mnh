@@ -80,7 +80,7 @@ writeNppUserLang(notePadConfigFolder)->
   '            <Keywords name="Numbers, suffix1"></Keywords>',
   '            <Keywords name="Numbers, suffix2"></Keywords>',
   '            <Keywords name="Numbers, range"></Keywords>',
-  '            <Keywords name="Operators1">:keyValueList :booleanList :numericList :stringList :expression :realList :boolean :intList :numeric :scalar :string :list :real %%%% :int %%% &lt;&gt; &lt;= &gt;= == %% -&gt; := , = &lt; &gt; + - * / ^ + - &amp; % | ? : @ ;</Keywords>',
+  '            <Keywords name="Operators1">:keyValueList :booleanList :numericList :stringList :expression :realList :boolean :intList :numeric :scalar :string :list :real :int &lt;&gt; &lt;= &gt;= == -&gt; := , = &lt; &gt; + - * / ^ + - &amp; | ? : @ ;</Keywords>',
   '            <Keywords name="Operators2">and xor div mod or in AND OR</Keywords>',
   '            <Keywords name="Folders in code1, open"></Keywords>',
   '            <Keywords name="Folders in code1, middle"></Keywords>',

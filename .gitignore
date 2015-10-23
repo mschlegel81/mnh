@@ -1,35 +1,21 @@
-#ignore thumbnails created by windows
-Thumbs.db
-#ignore binaries
-*.exe
-*.ppu
-*.o
-*.res
-*.settings
-*.dll
-*.or
-#ignore images and backups
-*.png
 *.7z
 *.bak
-#ignore Lazarus Project state
-*.lps
-gui/mnh_gui.lps
-gui/lib/i386-win32/askdialog.lfm
-gui/lib/i386-win32/closedialog.lfm
-gui/lib/i386-win32/mnh_gui.compiled
-gui/lib/i386-win32/mnh_gui_main.lfm
-gui/lib/i386-win32/mnh_gui_settings.lfm
-regTest/*.log.1
-*.last
-doc/builtin.html
-doc/packages.html
-regTest/passedTests.dat
+*.dll
+*.exe
 *.html
-gui/lib/x86_64-win64/*
+*.last
+*.o
+*.or
+*.png
+*.ppu
+*.settings
+Thumbs.db
+core/code_hash.inc
 demos/inputs/kjv.txt
 demos/inputs/unixdict.txt
-core/code_hash.inc
-doc/style.css
-setup.mnh
 doTests.bat
+doc/style.css
+gui/lib/i386-win32/*
+gui/lib/x86_64-win64/*
+regTest/*.last
+setup.mnh

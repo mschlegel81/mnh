@@ -23,7 +23,6 @@ FUNCTION ad_needSave(CONST L: TStrings):boolean;
 PROCEDURE ad_doReload(CONST L:TStrings);
 
 VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
-    startOfEvaluation  :specialize G_safeVar<double>;
     endOfEvaluationText:specialize G_safeVar<ansistring>;
     intrinsicRules,
     userRules,
@@ -40,6 +39,8 @@ VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
+      startOfEvaluation:double;
+
   PROCEDURE updateCompletionList;
     begin
       completionList.clear;
@@ -58,6 +59,7 @@ FUNCTION main(p:pointer):ptrint;
       completionList.add(C_tokenString[tt_modifier_memoized]);
       completionList.add(C_tokenString[tt_modifier_mutable]);
       completionList.add(C_tokenString[tt_modifier_synchronized]);
+      completionList.add(C_tokenString[tt_modifier_persistent]);
       completionList.add(C_tokenString[tt_modifier_local]);
       completionList.add(C_tokenString[tt_procedureBlockBegin]);
       completionList.add(C_tokenString[tt_procedureBlockEnd]);
@@ -74,7 +76,7 @@ FUNCTION main(p:pointer):ptrint;
     begin
       pendingRequest.value:=er_none;
       evaluationState.value:=es_running;
-      startOfEvaluation.value:=now;
+      startOfEvaluation:=now;
     end;
 
   PROCEDURE postEval(CONST silent:boolean);
@@ -84,8 +86,8 @@ FUNCTION main(p:pointer):ptrint;
       evaluationState.value:=es_idle;
       if not(silent) then begin
         if hasMessageOfType[el5_haltMessageReceived]
-        then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation.value)
-        else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation.value);
+        then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
+        else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
       end;
       sleepTime:=0;
     end;
@@ -299,7 +301,6 @@ PROCEDURE initUnit;
   begin
     pendingRequest.create(er_none);
     evaluationState.create(es_dead);
-    startOfEvaluation.create(now);
     endOfEvaluationText.create('');
     intrinsicRules.create;
     initIntrinsicRuleList;
@@ -314,7 +315,6 @@ FINALIZATION
     ad_killEvaluationLoopSoftly;
     pendingRequest.destroy;
     evaluationState.destroy;
-    startOfEvaluation.destroy;
     endOfEvaluationText.destroy;
     intrinsicRules.destroy;
     userRules.destroy;

@@ -12,6 +12,9 @@ USES
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
   myGenerics,mnh_fileWrappers,mySys;
 
+CONST
+  STATE_SAVE_INTERVAL=ONE_MINUTE;
+
 TYPE
 
   { TMnhForm }
@@ -169,17 +172,24 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 
   private
+    subTimerCounter:longint;
     underCursor:T_tokenInfo;
-    settingsHaveBeenProcessed:boolean;
-    needEvaluation:boolean;
-    doNotEvaluateBefore:double;
+    settings:record
+      ready:boolean;
+      storedAt:double;
+    end;
+    evaluation:record
+      required:boolean;
+      start:double;
+      deferredUntil:double;
+    end;
+
     doNotMarkWordBefore:double;
     doNotCheckFileBefore:double;
-    needMarkPaint:boolean;
 
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
-    PROCEDURE autosizeBlocks(CONST forceOutputFocus:boolean);
+    FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring);
 
@@ -244,7 +254,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         els_step: begin
           DebugForm.rollingAppend(simpleMessage);
           MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
-          MnhForm.needMarkPaint:=true;
+          MnhForm.InputEdit.Repaint;
         end;
         el0_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
@@ -284,7 +294,7 @@ PROCEDURE T_guiOutAdapter.loadSettings;
     outputBehaviour:=SettingsForm.outputBehaviour;
   end;
 
-PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
+FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
   CONST SAMPLE_TEXT='1!gPQ|';
   VAR temp,
       idealInputHeight,
@@ -293,6 +303,7 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
       scrollbarHeight:longint;
       inputFocus:boolean;
   begin
+    result:=false;
     if autosizeToggleBox.Checked then begin
       scrollbarHeight     :=InputEdit.height-InputEdit.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ InputEdit .Font.GetTextHeight(SAMPLE_TEXT)* InputEdit .lines.count;
@@ -317,10 +328,10 @@ PROCEDURE TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean);
         end;
       end;
       if idealInputHeight<>InputEdit.height then begin
-        if UpdateTimeTimer.Interval>200 then UpdateTimeTimer.Interval:=200;
         InputEdit.height:=idealInputHeight;
         if PopupNotifier1.Visible then positionHelpNotifier;
         autosizeToggleBox.top:=OutputEdit.top;
+        result:=true;
       end;
     end;
   end;
@@ -335,7 +346,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 PROCEDURE TMnhForm.setUnderCursor(CONST wordText:ansistring);
   begin
     if not(isIdentifier(wordText,true)) then exit;
-    if (inputHighlighter.setMarkedWord(wordText) and outputHighlighter.setMarkedWord(wordText)) then needMarkPaint:=true;
+    if (inputHighlighter.setMarkedWord(wordText) and outputHighlighter.setMarkedWord(wordText)) then InputEdit.Repaint;
     if miHelp.Checked then ad_explainIdentifier(wordText,underCursor);
     if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) then begin
       PopupNotifier1.title:=underCursor.tokenText;
@@ -423,11 +434,15 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.doStartEvaluation;
   begin
-    needEvaluation:=false;
-    doNotEvaluateBefore:=now+0.1*ONE_SECOND;
+    with evaluation do begin
+      required:=false;
+      deferredUntil:=now+0.1*ONE_SECOND;
+      start:=now;
+    end;
+
     guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
-    UpdateTimeTimer.Interval:=200;
+    UpdateTimeTimer.Interval:=20;
     doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
@@ -442,9 +457,18 @@ PROCEDURE TMnhForm.doStartEvaluation;
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    needEvaluation:=false;
-    needMarkPaint:=false;
-    doNotEvaluateBefore:=now;
+    subTimerCounter:=0;
+
+    with settings do begin
+      ready:=false;
+      storedAt:=now;
+    end;
+    with evaluation do begin
+      required:=false;
+      deferredUntil:=now;
+      start:=now;
+    end;
+
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+10*ONE_SECOND;
     OpenDialog.fileName:=paramStr(0);
@@ -453,7 +477,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     outputHighlighter:=TSynMnhSyn.create(nil,true);
     InputEdit.highlighter:=inputHighlighter;
     OutputEdit.highlighter:=outputHighlighter;
-    settingsHaveBeenProcessed:=false;
     OutputEdit.ClearAll;
     StatusBar.SimpleText:=
       'compiled on: '+{$I %DATE%}+
@@ -501,7 +524,7 @@ end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       SettingsForm.mainForm.top   :=top;
       SettingsForm.mainForm.left  :=left;
       SettingsForm.mainForm.width :=width;
@@ -515,23 +538,8 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
-  PROCEDURE optionalReload;
-    VAR mr:integer;
-    begin
-      mr:=closeDialogForm.showOnOutOfSync;
-      if mr=mrOk then begin
-        InputEdit.BeginUpdate();
-        ad_doReload(InputEdit.lines);
-        InputEdit.EndUpdate;
-        UpdateTimeTimer.Interval:=200;
-        OutputEdit.ClearAll;
-      end else if mr=mrCancel then begin
-        InputEdit.lines.saveToFile(ad_currentFile);
-      end;
-    end;
-
   begin
-    if not(settingsHaveBeenProcessed) then begin
+    if not(settings.ready) then begin
       processSettings;
       InputEdit.SetFocus;
     end;
@@ -542,10 +550,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
-      if now>doNotEvaluateBefore then begin
+      if now>evaluation.deferredUntil then begin
         doStartEvaluation;
         ad_evaluate(InputEdit.lines);
-      end else needEvaluation:=true;
+      end else evaluation.required:=true;
     end;
   end;
 
@@ -627,7 +635,7 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       SettingsForm.fontSize:=SettingsForm.fontSize-1;
       processSettings;
     end;
@@ -635,7 +643,7 @@ PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
       with SettingsForm.outputBehaviour do doEchoDeclaration:=miDeclarationEcho.Checked;
       guiOutAdapter.loadSettings;
@@ -661,10 +669,10 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
-    if now>doNotEvaluateBefore then begin
+    if now>evaluation.deferredUntil then begin
       doStartEvaluation;
       ad_evaluate(InputEdit.lines);
-    end else needEvaluation:=true;
+    end else evaluation.required:=true;
   end;
 
 PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
@@ -688,7 +696,7 @@ PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
       with SettingsForm.outputBehaviour do doEchoInput:=miExpressionEcho.Checked;
       guiOutAdapter.loadSettings;
@@ -697,7 +705,7 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
       with SettingsForm.outputBehaviour do doShowExpressionOut:=miExpressionResult.Checked;
       guiOutAdapter.loadSettings;
@@ -735,7 +743,7 @@ PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
-    if settingsHaveBeenProcessed then begin
+    if settings.ready then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
       processSettings;
     end;
@@ -899,63 +907,76 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
-  CONST MIN_INTERVALL=200;
-        MAX_INTERVALL=5000;
-  VAR aid:string;
-      flag:boolean;
-      i:longint;
-      updateStart:double;
+  CONST MIN_INTERVALL=20;
+        MAX_INTERVALL=250;
+  VAR aid:ansistring;
+      isEvaluationRunning:boolean;
+      flushPerformed:boolean;
+      autosizingDone:boolean;
   begin
+    isEvaluationRunning:=ad_evaluationRunning;
+    //fast ones:================================================================
     //Show ask form?
     if askForm.displayPending then askForm.ShowModal;
-
-    updateStart:=now;
     //Form caption:-------------------------------------------------------------
     aid:='MNH5 '+ad_currentFile;
-    if aid<>Caption then begin Caption:=aid; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
+    if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
+    //progress time:------------------------------------------------------------
+    if isEvaluationRunning then StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)
+                           else StatusBar.SimpleText:=endOfEvaluationText.value;
+    //------------------------------------------------------------:progress time
     //Halt/Run enabled states:--------------------------------------------------
-    flag:=ad_evaluationRunning;
-    if flag<>miHaltEvalutaion.Enabled then begin miHaltEvalutaion.Enabled:=flag; UpdateTimeTimer.Interval:=MIN_INTERVALL; end;
-    if not(flag)<>miEvaluateNow.Enabled then begin
-      miEvaluateNow.Enabled:=not(flag);
-      miCallMain.Enabled:=not(flag);
+    if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
+    if not(isEvaluationRunning)<>miEvaluateNow.Enabled then begin
+      miEvaluateNow.Enabled:=not(isEvaluationRunning);
+      miCallMain.Enabled:=not(isEvaluationRunning);
     end;
     //--------------------------------------------------:Halt/Run enabled states
-    //progress time:------------------------------------------------------------
-    flag:=ad_evaluationRunning;
-    if flag then aid:='Evaluating: '+myTimeToStr(now-mnh_evalThread.startOfEvaluation.value)
-    else aid:=endOfEvaluationText.value;
-    if (StatusBar.SimpleText<>aid) and (PageControl.ActivePageIndex=0) or flag  then begin
-      StatusBar.SimpleText:=aid;
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+
+    //================================================================:fast ones
+    inc(subTimerCounter);
+    //slow ones:================================================================
+    if subTimerCounter and 15=0 then begin
+      flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
+      autosizingDone:=autosizeBlocks(isEvaluationRunning);
+
+      if ((plotSubsystem.state=pss_plotAfterCalculation) or
+          (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
+         not(ad_evaluationRunning) and
+         not(plotSubsystem.rendering) and
+         not(now<plotSubsystem.renderNotBefore) then doPlot();
+
+      if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
+      if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
+        doStartEvaluation;
+        ad_evaluate(InputEdit.lines);
+        UpdateTimeTimer.Interval:=MIN_INTERVALL;
+      end;
+
+      if (now>settings.storedAt+STATE_SAVE_INTERVAL) then begin
+        settings.storedAt:=now;
+        SettingsForm.saveSettings;
+      end;
+
+      if not(flushPerformed) and not(autosizingDone) and not(isEvaluationRunning) then begin
+        UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
+        if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
+      end;
     end;
-    //------------------------------------------------------------:progress time
-    autosizeBlocks(guiOutAdapter.flushToGui(OutputEdit) or flag);
+    //================================================================:slow ones
 
-    if ((plotSubsystem.state=pss_plotAfterCalculation) or
-        (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
-       not(ad_evaluationRunning) and
-       not(plotSubsystem.rendering) and
-       not(now<plotSubsystem.renderNotBefore) then doPlot();
 
-    if flag then doNotEvaluateBefore:=now+0.1*ONE_SECOND else
-    if needEvaluation and not(ad_evaluationRunning) and (now>doNotEvaluateBefore) then begin
-      doStartEvaluation;
-      ad_evaluate(InputEdit.lines);
-    end;
 
-    //paint marks:--------------------------------------------------------------
-    if needMarkPaint and (now>doNotMarkWordBefore) then begin
-      needMarkPaint:=false;
-      doNotMarkWordBefore:=now+ONE_SECOND;
-      Repaint;
-    end;
-    //--------------------------------------------------------------:paint marks
 
-    if UpdateTimeTimer.Interval<MAX_INTERVALL then UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
-    i:=round((now-updateStart)*24*60*60*1000);
-    if i>UpdateTimeTimer.Interval then UpdateTimeTimer.Interval:=i;
+    ////paint marks:--------------------------------------------------------------
+    //if (now>doNotMarkWordBefore) then begin
+    //  needMarkPaint:=false;
+    //  doNotMarkWordBefore:=now+ONE_SECOND;
+    //  Repaint;
+    //end;
+    ////--------------------------------------------------------------:paint marks
+
 
     //if (now>doNotCheckFileBefore) and ad_needReload then begin
     //  writeln(StdErr,'Opening modal dialog.');
@@ -972,7 +993,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
 PROCEDURE TMnhForm.processSettings;
   begin
-    if not(settingsHaveBeenProcessed) then begin
+    if not(settings.ready) then begin
       InputEdit.BeginUpdate();
       SettingsForm.getFileContents(InputEdit.lines);
       InputEdit.EndUpdate();
@@ -998,7 +1019,7 @@ PROCEDURE TMnhForm.processSettings;
       miExpressionResult.Checked:=doShowExpressionOut;
       guiOutAdapter.loadSettings;
     end;
-    if not(settingsHaveBeenProcessed) then begin
+    if not(settings.ready) then begin
       if SettingsForm.mainForm.isFullscreen then WindowState:=wsMaximized;
       miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
       miEvalModeDirect.Checked:=not(SettingsForm.instantEvaluation);
@@ -1009,9 +1030,8 @@ PROCEDURE TMnhForm.processSettings;
       then ad_clearFile
       else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
     end;
-    if not(settingsHaveBeenProcessed) then processFileHistory;
-
-    settingsHaveBeenProcessed:=true;
+    if not(settings.ready) then processFileHistory;
+    settings.ready:=true;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1200,7 +1220,7 @@ PROCEDURE debugForm_stopDebugging;
 PROCEDURE debugForm_debuggingStep;
   begin
     MnhForm.UpdateTimeTimerTimer(nil);
-    MnhForm.UpdateTimeTimer.Interval:=1;
+    MnhForm.UpdateTimeTimer.Interval:=20;
   end;
 
 INITIALIZATION

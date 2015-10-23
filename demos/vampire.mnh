@@ -1,12 +1,11 @@
 private getFangs(i:int)->begin
-
   local digits:=length(string(i)) div 2;
   local toTest1:=10^(digits-1);
   local toTest2:=round(sqrt(i));
-  local toTest3:=10^ digits   -1;
+  local toTest3:=10^digits-1;
   local toTest:=abs(toTest2-toTest1)<abs(toTest3-toTest2)
-                ? [toTest1..toTest2]
-                : [toTest3..toTest2];
+                 ? [toTest1..toTest2]
+                 : [toTest3..toTest2];
   local iDigits:=string(i).chars.sort;
   pEach(d,toTest%(i mod toTest=0),
     (string(d)&string(i div d)).chars.sort==iDigits

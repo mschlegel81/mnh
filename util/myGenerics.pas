@@ -107,8 +107,6 @@ TYPE
       CONSTRUCTOR create(CONST intialValue:ENTRY_TYPE);
       DESTRUCTOR destroy;
       PROPERTY value:ENTRY_TYPE read getValue write setValue;
-      PROCEDURE lock;
-      PROCEDURE unlock;
   end;
 
   { G_safeArray }
@@ -313,16 +311,6 @@ PROCEDURE G_safeVar.setValue(newValue: ENTRY_TYPE);
   begin
     system.enterCriticalSection(saveCS);
     v:=newValue;
-    system.leaveCriticalSection(saveCS);
-  end;
-
-PROCEDURE G_safeVar.lock;
-  begin
-    system.enterCriticalSection(saveCS);
-  end;
-
-PROCEDURE G_safeVar.unlock;
-  begin
     system.leaveCriticalSection(saveCS);
   end;
 

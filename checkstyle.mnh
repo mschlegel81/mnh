@@ -57,11 +57,11 @@ checkConsistency(fileList)->begin
   : void);
   not(anyComplaints) ? print('Spelling is consistent.') : void;  
 
-  allLiterals:=allLiterals .elementFrequency .sort .trailing(50);
+  allLiterals:=allLiterals .elementFrequency .sort.trailing(50);
   print('Most frequent literals: ');
   printf("%X%\t%X%",allLiterals%%0,allLiterals%%1);
   void;
-end;
+end; 
 
 allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
 pattern:='checkstyle: %X'&max(length(allFiles))&'% (%I5% lines) ';
@@ -75,7 +75,6 @@ fix(filename,readOnly)->begin
     diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&">\n   >"&(newLines%i)&'<' : void);
     readOnly ? void : writeFileLines(filename,newLines);
   end;
-  a.sort 
   printf('%X%',diffOut);
 end;
 
