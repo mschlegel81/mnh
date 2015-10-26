@@ -133,7 +133,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation));
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<3 then
+          for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
             P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
         end;
       end;

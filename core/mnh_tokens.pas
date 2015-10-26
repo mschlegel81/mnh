@@ -234,7 +234,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               setLength(packageUses,length(packageUses)-1);
             end else inc(i);
           end;
-          if errorLevel<3 then for i:=length(packageUses)-1 downto 0 do begin
+          if noErrors then for i:=length(packageUses)-1 downto 0 do begin
              rulesSet:=packageUses[i].pack^.packageRules.entrySet;
              for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
                if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
@@ -388,9 +388,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           if evaluateBody then reduceExpression(ruleBody,0,recycler);
         end;
 
-        if errorLevel<3 then begin
+        if noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart,semicolonPosition);
-          if errorLevel<3 then begin
+          if noErrors then begin
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,recycler));
             subRule^.comment:=lastComment; lastComment:='';
             if ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]
@@ -399,11 +399,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule);
             first:=nil;
-          end else if errorLevel<5 then
+          end else if not(hasMessageOfType[el5_systemError] or hasMessageOfType[el5_haltMessageReceived]) then
             recycler.cascadeDisposeToken(first)
           else
             first:=nil;
-        end else if errorLevel<5 then
+        end else if (hasMessageOfType[el5_systemError] or hasMessageOfType[el5_haltMessageReceived]) then
           recycler.cascadeDisposeToken(first)
         else
           first:=nil;
@@ -452,7 +452,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         i:longint;
         startTime:double;
     begin
-      if not(ready) or (errorLevel>=3) then begin
+      if not(ready) or not(noErrors) then begin
         raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
         recycler.destroy;
         exit;
@@ -547,7 +547,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       end;
     end;
     localIdStack.destroy;
-    if (errorLevel<3)
+    if (noErrors)
     then begin if first<>nil then interpret(first,C_nilTokenLocation); end
     else recycler.cascadeDisposeToken(first);
     ready:=usecase<>lu_forDocGeneration;
@@ -556,8 +556,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
     if usecase=lu_forCallingMain then executeMain;
     if usecase in [lu_forDirectExecution,lu_forCallingMain] then begin
-      if errorLevel<3 then complainAboutUncalled(true);
-      if errorLevel<3 then finalize;
+      if noErrors then complainAboutUncalled(true);
+      if noErrors then finalize;
       raiseError(el0_allOkay,'Tokenizing time     '+myTimeToStr(timeForTokenizing),C_nilTokenLocation);
       raiseError(el0_allOkay,'Declaration time    '+myTimeToStr(timeForDeclarations),C_nilTokenLocation);
       raiseError(el0_allOkay,'Interpretation time '+myTimeToStr(timeForInterpretation),C_nilTokenLocation);

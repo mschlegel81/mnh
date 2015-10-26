@@ -195,7 +195,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         lt_string: result:=splitOneString(P_stringLiteral(p));
         lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(p)^.size-1 do if errorLevel<3 then
+          for i:=0 to P_listLiteral(p)^.size-1 do if noErrors then
             P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
         end
        else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation);
@@ -252,7 +252,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
       lt_list,lt_stringList,lt_emptyList:  begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<3 then
+        for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
           P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
       end;
       else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation);

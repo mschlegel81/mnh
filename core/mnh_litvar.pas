@@ -1417,12 +1417,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       begin
       i0:=P_intLiteral(last)^.val;
       i1:=P_intLiteral(L)^.val;
-      while (i0<i1) and (errorLevel<3) do
+      while (i0<i1) and noErrors do
         begin
         inc(i0);
         appendInt(i0);
         end;
-      while (i0>i1) and (errorLevel<3) do
+      while (i0>i1) and noErrors do
         begin
         dec(i0);
         appendInt(i0);
@@ -1510,10 +1510,10 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral);
     if length(element)<=1 then exit;
     scale:=1;
     setLength(temp, length(element));
-    while (scale<length(element)) and (errorLevel<3) do begin
+    while (scale<length(element)) and noErrors do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while (i<length(element)) and (errorLevel<3) do begin
+      while (i<length(element)) and noErrors do begin
         j0:=i; j1:=i+scale; k:=i;
         while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
           if isLeq(element [j0],element [j1])           then begin temp[k]:=element [j0]; inc(k); inc(j0); end
@@ -1524,12 +1524,12 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral);
       end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<length(element)) and (errorLevel<3) then begin
+      if (scale<length(element)) and noErrors then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while (i<length(element)) and (errorLevel<3) do begin
+        while (i<length(element)) and noErrors do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
             if isLeq(temp [j0],temp [j1])                 then begin element[k]:=temp [j0]; inc(k); inc(j0); end

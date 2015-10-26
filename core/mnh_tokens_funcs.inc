@@ -312,7 +312,7 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       if params^.value(0)^.literalType=lt_int
       then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value/SECONDS_PER_DAY
       else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value/SECONDS_PER_DAY;
-      while (now<sleepUntil) and (errorLevel<3) do begin
+      while (now<sleepUntil) and (noErrors) do begin
         sleepInt:=round(900*(sleepUntil-now)*SECONDS_PER_DAY);
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
@@ -353,8 +353,8 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       end;
 
       digestInlineExpression(first,recycler);
-      if (errorLevel<3) and (first^.next<>nil) then raiseError(el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-      if errorLevel>=3 then begin
+      if (noErrors) and (first^.next<>nil) then raiseError(el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+      if not(noErrors) then begin
         recycler.cascadeDisposeToken(first);
         recycler.destroy;
         exit(newErrorLiteral);
@@ -380,7 +380,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation);
         lt_list,lt_stringList,lt_emptyList:  begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if errorLevel<3 then
+          for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
             P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
         end;
         else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation);

@@ -136,13 +136,13 @@ exit}
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin CLEAN_EXIT(true); end;
-          if (errorLevel<3) then reduceExpression(firstRep,callDepth+1,recycler);
-          if (errorLevel<3) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
+          if (noErrors) then reduceExpression(firstRep,callDepth+1,recycler);
+          if (noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,binIdx,lit);
           end;
           lastRep:=firstRep^.last;
-          if (errorLevel>=3) then begin
+          if not(noErrors) then begin
             if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
@@ -292,7 +292,7 @@ FUNCTION T_rule.getDocHtml:ansistring;
 FUNCTION T_rule.writeBack(VAR provider:T_codeProvider):boolean;
   VAR code:ansistring;
   begin
-    if (errorLevel<3) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
+    if (noErrors) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
       code:=C_tokenString[tt_modifier_persistent]+' '+
             id+
             C_tokenString[tt_assign]+

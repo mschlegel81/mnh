@@ -91,7 +91,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; V
 
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR recycler:T_tokenRecycler);
   begin
-    if errorLevel<3 then begin
+    if noErrors then begin
       reduceExpression(task,callDepth,recycler);
     end else begin
       recycler.cascadeDisposeToken(task);

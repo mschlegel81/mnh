@@ -467,7 +467,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
   begin
     if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
-      if (errorLevel<3) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
@@ -487,7 +487,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     param.append(x,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
-      if (errorLevel<3) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
@@ -510,7 +510,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
-      if (errorLevel<3) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
+      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
       then begin
         result:=P_boolLiteral(firstRep^.data)^.value;
       end else begin
@@ -531,7 +531,7 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
     param.append(y,true);
     if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
       reduceExpression(firstRep,callDepth+1,recycler);
-      if (errorLevel<3) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;

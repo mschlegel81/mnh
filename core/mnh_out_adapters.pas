@@ -82,16 +82,16 @@ VAR
   {$ifdef fullVersion}stepper:T_stepper;{$endif}
   outAdapter:P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
-  maxErrorLevel: shortint;
 
 PROCEDURE clearErrors;
 PROCEDURE raiseError(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-FUNCTION errorLevel: shortint;
+FUNCTION noErrors: boolean; inline;
 PROCEDURE haltEvaluation;
 PROCEDURE setDefaultCallbacks;
 
 PROCEDURE haltWithAdaptedSystemErrorLevel;
 VAR
+  maxErrorLevel: shortint;
   hasMessageOfType:array[T_messageType] of boolean;
   systemErrorlevel: specialize G_safeVar<longint>;
   parsingTime:double;
@@ -116,9 +116,9 @@ PROCEDURE raiseError(CONST thisErrorLevel: T_messageType;  CONST errorMessage: a
     outAdapter^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-FUNCTION errorLevel: shortint;
+FUNCTION noErrors: boolean; inline;
   begin
-    result := maxErrorLevel;
+    result:=maxErrorLevel<3;
   end;
 
 PROCEDURE haltEvaluation;
@@ -134,11 +134,11 @@ PROCEDURE setDefaultCallbacks;
 PROCEDURE haltWithAdaptedSystemErrorLevel;
   VAR L:longint=0;
   begin
-    if errorLevel>=3 then begin
-      L:=103;
-      if errorLevel>=4 then begin
-        L:=104;
-        if errorLevel>=5 then L:=105;
+    if maxErrorLevel>=3 then begin
+      L:=3;
+      if maxErrorLevel>=4 then begin
+        L:=4;
+        if maxErrorLevel>=5 then L:=5;
       end;
     end;
     if L>systemErrorlevel.value then halt(L)

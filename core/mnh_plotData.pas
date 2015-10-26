@@ -398,7 +398,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
       setLength(computed.temp, initialSampleCount+1);
       with computed do
         for i:=0 to initialSampleCount do
-          if errorLevel<3 then
+          if noErrors then
             computed.temp[i] :=
               getSampleWithTime(t0+(t1-t0)*i/initialSampleCount,recycler);
 
@@ -421,7 +421,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
       repeat
         i:=0;
         for i:=0 to length(computed.temp)-1 do
-          if (errorLevel<3) and
+          if (noErrors) and
             ((curvature(i)>curvatureThreshold) or
             (curvature(i+1)>curvatureThreshold)) then
             addRefine(getSampleWithTime(
@@ -430,7 +430,7 @@ PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR 
         if not (mergeTemp) then
           curvatureThreshold:=curvatureThreshold*0.9;
       until (length(computed.temp)>=computed.maxSamples) or
-        (errorLevel>=3);
+        not(noErrors);
 
       copyTempToData;
       setLength(computed.temp, 0);
