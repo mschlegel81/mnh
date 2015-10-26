@@ -2,6 +2,19 @@ UNIT mnh_funcs_list;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters;
 IMPLEMENTATION
+
+FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType in C_validListTypes) then begin
+      if params^.value(0)^.getReferenceCount=1 then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
+      P_listLiteral(result)^.append(params^.value(1),true);
+    end else raiseNotApplicableError('add',params,tokenLocation);
+  end;
+
 {$MACRO ON}
 {$define SUB_LIST_IMPL:=
 begin
@@ -128,6 +141,7 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
 INITIALIZATION
   //Functions on lists:
+  registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended');
   registerRule(LIST_NAMESPACE,'head',@head_imp,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
   registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
   registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
