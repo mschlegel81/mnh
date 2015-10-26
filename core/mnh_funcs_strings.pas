@@ -212,6 +212,37 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else raiseNotApplicableError('split',params,tokenLocation);
   end;
 
+FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  FUNCTION stringOfLit(CONST L:P_literal):ansistring;
+    begin
+      case L^.literalType of
+        lt_boolean,
+        lt_int,
+        lt_real,
+        lt_string,
+        lt_expression: result:= P_scalarLiteral(L)^.stringForm;
+        lt_list..lt_listWithError: result:=L^.toString;
+        else result:='';
+      end;
+    end;
+
+  VAR resTxt:ansistring='';
+      joiner:ansistring='';
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType=lt_string)) and
+       (params^.value(0)^.literalType in C_validListTypes) then begin
+
+      if P_listLiteral(params^.value(0))^.size=0 then exit(newStringLiteral(''));
+      if params^.size=2 then joiner:=P_stringLiteral(params^.value(1))^.value;
+      resTxt:=stringOfLit(P_listLiteral(params^.value(0))^.value(0));
+      for i:=1 to P_listLiteral(params^.value(0))^.size-1 do
+        resTxt:=resTxt+joiner+stringOfLit(P_listLiteral(params^.value(0))^.value(i));
+      result:=newStringLiteral(resTxt);
+    end else raiseNotApplicableError('join',params,tokenLocation);
+  end;
+
 {$define STRINGLITERAL_ROUTINE:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
   VAR i:longint;
@@ -484,7 +515,8 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
   registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
   registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);#Returns the characters in S as a list#chars;#Returns all ANSI characters in natural ordering');
-  registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string;splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
+  registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string,splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
+  registerRule(STRINGS_NAMESPACE,'join',@join_impl,'join(L:list);#Returns a string-concatenation of all elements in L#join(L:list,joiner:string);#Returns a string-concatenation of all elements, with joiner between.');
   registerRule(STRINGS_NAMESPACE,'trim',@trim_imp,'trim(S:string);#Returns string S without leading or trailing spaces');
   registerRule(STRINGS_NAMESPACE,'trimLeft',@trimLeft_imp,'trimLeft(S:string);#Returns string S without leading spaces');
   registerRule(STRINGS_NAMESPACE,'trimRight',@trimRight_imp,'trimRight(S:string);#Returns string S without trailing spaces');

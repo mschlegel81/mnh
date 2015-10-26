@@ -72,7 +72,7 @@ TYPE
          end;
          KEY_VALUE_LIST=array of KEY_VALUE_PAIR;
     private VAR
-      cs:system.TRTLCriticalSection;
+      cs:TRTLCriticalSection;
       entryCount:longint;
       rebalanceFac:double;
       bitMask:longint;

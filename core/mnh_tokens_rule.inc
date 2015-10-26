@@ -227,6 +227,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
     if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
       system.enterCriticalSection(rule_cs);
       result:=namedValue.mutate(mutation,RHS,location);
+      valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
     end else raiseError(el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
   end;

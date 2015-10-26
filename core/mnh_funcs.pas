@@ -133,10 +133,7 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
-      if resultIsList or (length(resultString)<>1) then begin
-        result:=newListLiteral;
-        for k:=0 to length(resultString)-1 do P_listLiteral(result)^.appendString(resultString[k]);
-      end else result:=newStringLiteral(join(formatTabs(split(resultString[0])),C_lineBreakChar));
+      result:=newStringLiteral(join(formatTabs(reSplit(resultString)),C_lineBreakChar));
     end else raiseNotApplicableError('format',params,tokenLocation);
   end;
 

@@ -120,7 +120,7 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
           for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.value(i))^.value then inc(c);
           exit(newIntLiteral(c));
         end;
-        lt_list, lt_flatList: if P_listLiteral(B)^.size=0 then exit(newIntLiteral(0));
+        lt_emptyList: exit(newIntLiteral(0));
       end;
     end;
     raiseNotApplicableError('trueCount',params,tokenLocation);

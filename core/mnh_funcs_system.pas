@@ -3,7 +3,25 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil;
 IMPLEMENTATION
-VAR     file_cs :system.TRTLCriticalSection;
+VAR lockedFiles:specialize G_stringKeyMap<TThreadId>;
+
+PROCEDURE obtainLock(CONST fileName:ansistring);
+  VAR lockedBy:TThreadID;
+  begin
+    repeat
+      while (lockedFiles.containsKey(fileName,lockedBy)) and (lockedBy<>ThreadID) do sleep(10);
+      lockedFiles.put(fileName,ThreadID);
+    until lockedFiles.containsKey(fileName,lockedBy)
+  end;
+
+PROCEDURE releaseLock(CONST fileName:ansistring);
+  VAR lockedBy:TThreadID;
+  begin
+    while (lockedFiles.containsKey(fileName,lockedBy)) and (lockedBy=ThreadID) do begin
+      lockedFiles.dropKey(fileName);
+      sleep(10);
+    end;
+  end;
 
 FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR i,count:longint;
@@ -108,9 +126,9 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      system.enterCriticalSection(file_cs);
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
-      system.leaveCriticalSection(file_cs);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
@@ -122,9 +140,9 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      system.enterCriticalSection(file_cs);
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
-      system.leaveCriticalSection(file_cs);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -132,11 +150,11 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
                 (params^.value(0)^.literalType=lt_string) and
                 (params^.value(1)^.literalType=lt_int) and
                 (params^.value(2)^.literalType=lt_int) then begin
-      system.enterCriticalSection(file_cs);
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       L:=fileLines(P_stringLiteral(params^.value(0))^.value,
                    P_intLiteral   (params^.value(1))^.value,
                    P_intLiteral   (params^.value(2))^.value,accessed);
-      system.leaveCriticalSection(file_cs);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
@@ -149,10 +167,10 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
                                           and (params^.value(1)^.literalType=lt_string) then begin
-      system.enterCriticalSection(file_cs);
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       ok:=mnh_fileWrappers.writeFile(P_stringLiteral(params^.value(0))^.value,
                                      P_stringLiteral(params^.value(1))^.value);
-      system.leaveCriticalSection(file_cs);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
@@ -173,9 +191,9 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
                         else sep:='';
       setLength(L,P_listLiteral(params^.value(1))^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      system.enterCriticalSection(file_cs);
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L,sep);
-      system.leaveCriticalSection(file_cs);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
@@ -295,7 +313,9 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(DeleteFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value)));
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
     end else raiseNotApplicableError('deleteFile',params,tokenLocation);
   end;
 
@@ -303,7 +323,9 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(DeleteDirectory(P_stringLiteral(params^.value(0))^.value,false));
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
     end else raiseNotApplicableError('deleteDir',params,tokenLocation);
   end;
 
@@ -311,10 +333,14 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
+      obtainLock(P_stringLiteral(params^.value(1))^.value);
       ensurePath(P_stringLiteral(params^.value(1))^.value);
       result:=newBoolLiteral(
       FileUtil.CopyFile(P_stringLiteral(params^.value(0))^.value,
                         P_stringLiteral(params^.value(1))^.value,true));
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
+      releaseLock(P_stringLiteral(params^.value(1))^.value);
     end else raiseNotApplicableError('copyFile',params,tokenLocation);
   end;
 
@@ -322,10 +348,14 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
+      obtainLock(P_stringLiteral(params^.value(1))^.value);
       ensurePath(P_stringLiteral(params^.value(1))^.value);
       result:=newBoolLiteral(
       FileUtil.RenameFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value),
                               UTF8Encode(P_stringLiteral(params^.value(1))^.value)));
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
+      releaseLock(P_stringLiteral(params^.value(1))^.value);
     end else raiseNotApplicableError('moveFile',params,tokenLocation);
   end;
 
@@ -355,7 +385,9 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      obtainLock(P_stringLiteral(params^.value(0))^.value);
       getFileInfo(P_stringLiteral(params^.value(0))^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      releaseLock(P_stringLiteral(params^.value(0))^.value);
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
       if isExistent then begin
@@ -488,7 +520,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 INITIALIZATION
-  system.initCriticalSection(file_cs);
+  lockedFiles.create();
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
@@ -517,6 +549,6 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables.');
 
 FINALIZATION
-  system.doneCriticalSection(file_cs);
+  lockedFiles.destroy;
 
 end.

@@ -602,7 +602,7 @@ PROCEDURE T_package.finalize;
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      if @self=@mainPackageProvider then raiseError(el0_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
+      if @self=@mainPackage then raiseError(el0_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize;
   end;
