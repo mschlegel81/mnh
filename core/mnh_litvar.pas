@@ -200,7 +200,6 @@ TYPE
   P_listLiteral = ^T_listLiteral;
 
   { T_listLiteral }
-
   T_listLiteral = object(T_literal)
   private
     strictType: T_literalType;
@@ -701,9 +700,8 @@ FUNCTION T_realLiteral.negate(CONST minusLocation: T_tokenLocation): P_literal;
 FUNCTION T_expressionLiteral.negate(CONST minusLocation: T_tokenLocation): P_literal;
   begin result:=newErrorLiteralRaising('Cannot negate expression. Please use "-1*..." instead.', minusLocation); end;
 FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation): P_literal;
-  VAR
-    res: P_listLiteral;
-    i: longint;
+  VAR res: P_listLiteral;
+      i: longint;
   begin
     res:=newListLiteral;
     for i:=0 to length(element)-1 do res^.append(element [i]^.negate(minusLocation), false);
@@ -1462,7 +1460,7 @@ PROCEDURE T_listLiteral.sort;
       scale: longint;
       i, j0, j1, k: longint;
   begin
-    if length(element)<=1 then exit;
+    if (length(element)<=1) then exit;
     scale:=1;
     setLength(temp, length(element));
     while scale<length(element) do begin
@@ -1601,7 +1599,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
 PROCEDURE T_listLiteral.unique;
   VAR i, j: longint;
   begin
-    if length(element)<=1 then exit;
+    if (length(element)<=1) then exit;
     sort;
     i:=0;
     for j:=1 to length(element)-1 do
@@ -1649,10 +1647,16 @@ FUNCTION T_listLiteral.isKeyValuePair: boolean;
   end;
 
 FUNCTION T_listLiteral.clone:P_listLiteral;
+  VAR i:longint;
   begin
     result:=newListLiteral;
-    result^.appendAll(@self);
-    if nextAppendIsRange then result^.setRangeAppend;
+    setLength(result^.element,length(element));
+    for i:=0 to length(element)-1 do begin
+      result^.element[i]:=element[i];
+      element[i]^.rereference;
+    end;
+    result^.strictType:=strictType;
+    result^.nextAppendIsRange:=nextAppendIsRange;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation): P_literal;
