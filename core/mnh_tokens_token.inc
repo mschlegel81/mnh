@@ -686,8 +686,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
           if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin] then inc(bracketLevel)
           else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  ] then dec(bracketLevel)
-          else if t^.tokType in [tt_blockLocalVariable,tt_modifier_local] then inParallel:=false
-          else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+          else if t^.tokType in [tt_assignExistingBlockLocal..tt_cso_assignAppend] then begin
+            if inParallel then raiseError(el2_warning,'pEach construct is converted into each because a token "'+
+            getEnumName(TypeInfo(t^.tokType),ord(t^.tokType))+'" was found',t^.location);
+            inParallel:=false
+          end else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
             bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
             setLength(bodyPart,length(bodyPart)+1);
             bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma

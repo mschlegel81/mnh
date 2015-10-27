@@ -12,6 +12,7 @@
     task:P_token;
     state:T_futureTaskState;
     next:P_futureTask;
+    scope:P_tokenRecycler;
 
     CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal; VAR recycler:T_tokenRecycler);
     PROCEDURE   evaluate(CONST callDepth:word; VAR recycler:T_tokenRecycler);
@@ -53,6 +54,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         inc(sleepTime);
         sleep(sleepTime div 5);
       end else begin
+        tempRecycler.parentRecycler:=currentTask^.scope;
         currentTask^.evaluate(0,tempRecycler);
         sleepTime:=0;
       end;
@@ -80,6 +82,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; V
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
+    scope:=@recycler;
     param.create;
     param.append(x,true);
     if expr^.replaces(@param,nil,task,dummy,recycler)

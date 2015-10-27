@@ -1,0 +1,39 @@
+//This is the safest way to parallelize a list of tasks;
+private parallelize(...)->
+  size(...)=0 OR each(task,...,AND,task:expression) 
+  ? pEach(task,...,task())
+  : fail('parallelize expects expressions as arguments');
+
+//This must be a global variable because it is shared by different threads (A1 and A2)
+private mutable beepOn:=true;
+beepUntilKeyIsPressed:={parallelize(
+ {while(beepOn,begin each(i,[1..4],beep(1000,100)); sleep(1); end)},                //A1
+ {begin ask('Press Enter to stop this annoying beeping...'); beepOn:=false; end})}; //A2
+ 
+private lockScreen:={execPipeless('rundll32.exe',['user32.dll,LockWorkStation'])};
+
+//Just a conversion factor
+private MINUTES_PER_DAY:=24*60;
+//This must be a global variable because it is shared by different threads (B1 and B2)
+private mutable timerCancelled:=false;
+
+main->begin
+  local timerAction:=ask('Timer action...',['Beep','Lock screen'])='Beep'
+  ? beepUntilKeyIsPressed
+  : lockScreen;
+  local timeOut:=systime+softCast(ask('Time in minutes'))/MINUTES_PER_DAY;
+  parallelize(
+    {begin //B1
+       while(not(timerCancelled) AND systime<timeOut,
+       begin
+         printf('%hh:nn:ss% - press Enter to cancel',timeOut-systime);
+         sleep(1);
+         clearPrint;
+       end);
+       timerCancelled ? void : timerAction();
+     end},
+    {begin //B2
+       ask('');
+       timerCancelled:=true;
+     end});
+end;

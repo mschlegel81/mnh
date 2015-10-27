@@ -1,0 +1,39 @@
+//*Format is [[name1,timeSpent1],[name2,timeSpent2],...]
+private persistent allTasks:=[];
+//*Format is [name,timeSpent,startedAt]
+private persistent runningTask:=[];
+
+private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
+begin
+  allTasks:=each(t,allTasks,
+                 t%0=runningTask%0
+                 ? begin
+                     printf('Task %X% finished after %hh:nn:ss%; total time spent: %hh:nn:ss%',
+                      t%0,systime-runningTask%2,t%1+systime-runningTask%2);
+                     [t%0,                      t%1+systime-runningTask%2];
+                   end
+                 : t);
+  runningTask:=[];
+end;
+
+//*Ends the current task and lists all tasks
+main()->begin
+  endTask;
+  print('All tasks:');
+  printf("  %X%\t%hh:nn:ss%",
+    'Task'      | allTasks%%0,
+    'Time spent'| allTasks%%1);
+end;
+
+//*Resumes a task
+main('?')->size(allTasks)>0 
+           ? main(ask('Task to resume',allTasks%%0))
+           : print('There are no tasks to resume.');
+
+//*Resumes a task or starts a new one
+main(taskName)->begin
+  endTask;
+  trueCount(allTasks%%0=taskName)=0
+  ? begin allTasks|=[leading(runningTask:=[taskName,0,systime])]; print('New task ',taskName); end
+  : begin runningTask:=(allTasks%(allTasks%%0=taskName)%0)|systime; print('Resmuming task ',taskName); end;
+end;

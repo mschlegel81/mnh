@@ -1,6 +1,6 @@
 {$ifdef include_interface}
 
-  T_valueStore=object
+  T_valueStoreElement=object
     data:array of T_namedVariable;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -14,11 +14,15 @@
     FUNCTION getValueOrNull(CONST idx:longint):P_literal;
   end;
 
+  T_valueStore=array of T_valueStoreElement;
+
+  P_tokenRecycler=^T_tokenRecycler;
   T_tokenRecycler=object
     dat:array[0..1023] of P_token;
     fill:longint;
 
-    scopeStack:array of T_valueStore;
+    parentRecycler:P_tokenRecycler;
+    scopeStack:T_valueStore;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION disposeToken(p:P_token):P_token; inline;
@@ -40,26 +44,26 @@
 
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_valueStore.create;
+CONSTRUCTOR T_valueStoreElement.create;
   begin
     setLength(data,0);
   end;
 
-DESTRUCTOR T_valueStore.destroy;
+DESTRUCTOR T_valueStoreElement.destroy;
   VAR i:longint;
   begin
     for i:=0 to length(data)-1 do data[i].destroy;
     setLength(data,0);
   end;
 
-FUNCTION T_valueStore.indexOfId(id:ansistring):longint;
+FUNCTION T_valueStoreElement.indexOfId(id:ansistring):longint;
   VAR i:longint;
   begin
     for i:=0 to length(data)-1 do if data[i].getId=id then exit(i);
     result:=-1;
   end;
 
-PROCEDURE T_valueStore.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
+PROCEDURE T_valueStoreElement.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
   VAR i:longint;
   begin
     if guaranteedToBeNew then i:=length(data) else begin
@@ -72,7 +76,7 @@ PROCEDURE T_valueStore.declareValue(CONST id:ansistring; CONST value:P_literal; 
     end else data[i].setValue(value);
   end;
 
-PROCEDURE T_valueStore.setValue(CONST id:ansistring; CONST value:P_literal);
+PROCEDURE T_valueStoreElement.setValue(CONST id:ansistring; CONST value:P_literal);
   VAR idx:longint;
   begin
     idx:=indexOfId(id);
@@ -80,12 +84,12 @@ PROCEDURE T_valueStore.setValue(CONST id:ansistring; CONST value:P_literal);
              else setValue(idx,value);
   end;
 
-PROCEDURE T_valueStore.setValue(CONST idx:longint; CONST value:P_literal);
+PROCEDURE T_valueStoreElement.setValue(CONST idx:longint; CONST value:P_literal);
   begin
     data[idx].setValue(value);
   end;
 
-FUNCTION T_valueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+FUNCTION T_valueStoreElement.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   VAR idx:longint;
   begin
     idx:=indexOfId(id);
@@ -95,12 +99,12 @@ FUNCTION T_valueStore.mutateInline(CONST id:ansistring; CONST mutation:T_tokenTy
     end else mutateInline(idx,mutation,RHS,location);
   end;
 
-FUNCTION T_valueStore.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+FUNCTION T_valueStoreElement.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
   begin
     result:=data[idx].mutate(mutation,RHS,location);
   end;
 
-FUNCTION T_valueStore.getValueOrNull(CONST id:ansistring):P_literal;
+FUNCTION T_valueStoreElement.getValueOrNull(CONST id:ansistring):P_literal;
   VAR idx:longint;
   begin
     idx:=indexOfId(id);
@@ -109,7 +113,7 @@ FUNCTION T_valueStore.getValueOrNull(CONST id:ansistring):P_literal;
     end;
   end;
 
-FUNCTION T_valueStore.getValueOrNull(CONST idx:longint):P_literal;
+FUNCTION T_valueStoreElement.getValueOrNull(CONST idx:longint):P_literal;
   begin
     if idx<0 then result:=nil else begin
       result:=data[idx].getValue;
@@ -119,6 +123,7 @@ FUNCTION T_valueStore.getValueOrNull(CONST idx:longint):P_literal;
 CONSTRUCTOR T_tokenRecycler.create;
   VAR i:longint;
   begin
+    parentRecycler:=nil;
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
     setLength(scopeStack,0);
@@ -251,6 +256,7 @@ FUNCTION T_tokenRecycler.getLocalValueOrNull(CONST id:ansistring):P_literal;
       j:=scopeStack[i].indexOfId(id);
       if j>=0 then exit(scopeStack[i].getValueOrNull(j));
     end;
+    if parentRecycler<>nil then result:=parentRecycler^.getLocalValueOrNull(id);
   end;
 
 FUNCTION T_tokenRecycler.hasId(CONST id:ansistring):boolean;

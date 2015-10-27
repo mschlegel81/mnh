@@ -128,7 +128,6 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       end;
     end}
   INNER_FORMATTING;
-  VAR k:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
