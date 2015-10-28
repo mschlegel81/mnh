@@ -684,16 +684,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin] then inc(bracketLevel)
-          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  ] then dec(bracketLevel)
-          else if t^.tokType in [tt_assignExistingBlockLocal..tt_cso_assignAppend] then begin
-            if inParallel then raiseError(el2_warning,'pEach construct is converted into each because a token "'+
-            getEnumName(TypeInfo(t^.tokType),ord(t^.tokType))+'" was found',t^.location);
-            inParallel:=false
-          end else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-            bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-            setLength(bodyPart,length(bodyPart)+1);
-            bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
+          case t^.tokType of
+            tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+            tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+            tt_separatorComma: if bracketLevel=1 then begin
+              bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
+              setLength(bodyPart,length(bodyPart)+1);
+              bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
+            end;
           end;
           p:=t; t:=t^.next;
         end;
@@ -716,15 +714,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           t:=bodyPart[0,0];
         end;
         if t^.next=nil then begin
-          if t^.tokType in [tt_comparatorEq..tt_operatorIn] then begin
-            aggregatorToken:=t^.tokType;
-            aggregatorPresent:=yes_as_operator;
-            aggregatorLocation:=t^.location;
-          end else if t^.tokType=tt_aggregatorExpressionLiteral then begin
-            aggregatorExpression:=P_expressionLiteral(t^.data);
-            aggregatorExpression^.rereference;
-            aggregatorPresent:=yes_as_expression;
-            aggregatorLocation:=t^.location
+          case t^.tokType of
+            tt_comparatorEq..tt_operatorIn: begin
+              aggregatorToken:=t^.tokType;
+              aggregatorPresent:=yes_as_operator;
+              aggregatorLocation:=t^.location;
+            end;
+            tt_aggregatorExpressionLiteral: begin
+              aggregatorExpression:=P_expressionLiteral(t^.data);
+              aggregatorExpression^.rereference;
+              aggregatorPresent:=yes_as_expression;
+              aggregatorLocation:=t^.location
+            end;
           end;
         end;
         if aggregatorPresent<>no then begin
@@ -763,45 +764,43 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             if resultLiteral=nil then resultLiteral:=newListLiteral;
             P_listLiteral(resultLiteral)^.append(L,true);
           end;
-          yes_as_operator: begin
-            case aggregatorToken of
-              tt_operatorConcat: begin
-                if resultLiteral=nil then resultLiteral:=newListLiteral;
-                if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
-                then P_listLiteral(resultLiteral)^.append   (L, true)
-                else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
+          yes_as_operator: case aggregatorToken of
+            tt_operatorConcat: begin
+              if resultLiteral=nil then resultLiteral:=newListLiteral;
+              if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
+              then P_listLiteral(resultLiteral)^.append   (L, true)
+              else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
+            end;
+            tt_operatorLazyAnd: if resultLiteral=nil then begin
+              if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
+              else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              if not(booleanResult) then begin
+                lazyAbort:=true;
+                resultLiteral:=L;
+                L^.rereference;
               end;
-              tt_operatorLazyAnd: if resultLiteral=nil then begin
-                if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-                else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
-                if not(booleanResult) then begin
-                  lazyAbort:=true;
-                  resultLiteral:=L;
-                  L^.rereference;
-                end;
+            end;
+            tt_operatorLazyOr: if resultLiteral=nil then begin
+              if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
+              else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              if booleanResult then begin
+                lazyAbort:=true;
+                resultLiteral:=L;
+                L^.rereference;
               end;
-              tt_operatorLazyOr: if resultLiteral=nil then begin
-                if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-                else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
-                if booleanResult then begin
-                  lazyAbort:=true;
-                  resultLiteral:=L;
-                  L^.rereference;
-                end;
-              end;
-              else begin
-                if resultLiteral=nil then begin
-                  resultLiteral:=L; L^.rereference;
-                end else begin
-                  newLit:=resolveOperator(resultLiteral,
-                                          aggregatorToken,
-                                          L,
-                                          eachLocation);
-                  if newLit<>nil then begin
-                    disposeLiteral(resultLiteral);
-                    resultLiteral:=newLit;
-                  end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
-                end;
+            end;
+            else begin
+              if resultLiteral=nil then begin
+                resultLiteral:=L; L^.rereference;
+              end else begin
+                newLit:=resolveOperator(resultLiteral,
+                                        aggregatorToken,
+                                        L,
+                                        eachLocation);
+                if newLit<>nil then begin
+                  disposeLiteral(resultLiteral);
+                  resultLiteral:=newLit;
+                end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
               end;
             end;
           end;
@@ -871,8 +870,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         else maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS*8;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
-        for i:=0 to itList^.size-1 do
-        for j:=0 to length(bodyRule)-1 do begin
+        for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (noErrors) and not(lazyAbort) then begin
             future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
             if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
@@ -1347,7 +1345,7 @@ end}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseError(els_step,stateToString,first^.location); {$endif}
+      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseError(db_step,stateToString,first^.location); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
