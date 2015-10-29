@@ -148,7 +148,7 @@ PROCEDURE parseCmdLine;
       consoleOutAdapter.outputBehaviour.doShowExpressionOut:=false;
     end;
     displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
-
+    consoleOutAdapter.outputBehaviour.doShowTimingInfo:=displayTime;
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect
                               else fileMode;

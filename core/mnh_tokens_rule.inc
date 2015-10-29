@@ -143,7 +143,7 @@ exit}
           end;
           lastRep:=firstRep^.last;
           if not(noErrors) then begin
-            if (callDepth mod 1000)=0 then raiseError(el1_note,'Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
+            if (callDepth mod 1000)=0 then raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
             recycler.cascadeDisposeToken(firstRep);
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
@@ -154,7 +154,7 @@ exit}
       end;
       rt_synchronized: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
-          if callDepth>=STACK_DEPTH_LIMIT then raiseError(el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+          if callDepth>=STACK_DEPTH_LIMIT then raiseError_(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
           else begin
             system.enterCriticalSection(rule_cs);
             reduceExpression(firstRep,callDepth+1,recycler);
@@ -194,7 +194,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule);
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>0) and (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then raiseError(el4_parsingError,'Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>0) and (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 
@@ -219,7 +219,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
       namedValue.setValue(value);
       if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else raiseError(el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
+    end else raiseError_(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
@@ -229,7 +229,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
       result:=namedValue.mutate(mutation,RHS,location);
       valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else raiseError(el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
+    end else raiseError_(mt_el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;
@@ -250,7 +250,7 @@ FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean):boolean;
   VAR i:longint;
   begin
     if not(called) then begin
-      if inMainPackage then raiseError(el2_warning,'Unused rule '+id,declarationStart);
+      if inMainPackage then raiseWarning('Unused rule '+id,declarationStart);
       exit(false);
     end;
     if inMainPackage then for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id,inMainPackage);
@@ -298,7 +298,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider):boolean;
             C_tokenString[tt_assign]+
             namedValue.getValue^.toString+
             C_tokenString[tt_semicolon];
-      raiseError(el1_note,'Writing back: '+code,declarationStart);
+      raiseNote('Writing back: '+code,declarationStart);
       provider.replaceCode(
         declarationStart.line-1,
         declarationStart.column,

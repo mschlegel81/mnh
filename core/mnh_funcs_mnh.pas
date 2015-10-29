@@ -112,8 +112,8 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    if (params=nil) or (params^.size=0) then raiseError(el3_evalError,'Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then raiseError(el3_evalError,params^.value(0)^.toString,tokenLocation)
+    if (params=nil) or (params^.size=0) then raiseError('Fail.',tokenLocation)
+    else if (params<>nil) and (params^.size=1) then raiseError(params^.value(0)^.toString,tokenLocation)
     else raiseNotApplicableError('fail',params,tokenLocation);
     result:=nil;
   end;

@@ -139,13 +139,13 @@ FUNCTION T_subrule.needEmbrace:boolean;
 
     begin
       if length(bracketStack)=0 then begin
-        raiseError(el4_parsingError,'Unbalanced paranthesis: missing opening bracket',preparedBody[index].token.location);
+        raiseError('Unbalanced paranthesis: missing opening bracket',preparedBody[index].token.location);
         exit;
       end;
       if not(compatible(preparedBody[bracketStack[length(bracketStack)-1]].token.tokType,
                         preparedBody[index                               ].token.tokType)) then begin
-        raiseError(el4_parsingError,'Unbalanced paranthesis: bracket mismatch (open)' ,preparedBody[bracketStack[length(bracketStack)-1]].token.location);
-        raiseError(el4_parsingError,'Unbalanced paranthesis: bracket mismatch (close)',preparedBody[index                               ].token.location);
+        raiseError('Unbalanced paranthesis: bracket mismatch (open)' ,preparedBody[bracketStack[length(bracketStack)-1]].token.location);
+        raiseError('Unbalanced paranthesis: bracket mismatch (close)',preparedBody[index                               ].token.location);
       end;
       setLength(bracketStack,length(bracketStack)-1);
     end;
@@ -154,7 +154,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     VAR i:longint;
     begin
       if length(bracketStack)>0 then for i:=0 to length(bracketStack)-1 do
-        raiseError(el4_parsingError,'Unbalanced paranthesis: missing closing bracket',preparedBody[bracketStack[i]].token.location);
+        raiseError('Unbalanced paranthesis: missing closing bracket',preparedBody[bracketStack[i]].token.location);
       setLength(bracketStack,0);
     end;
 
@@ -323,12 +323,12 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       result:=false;
       case typ of
         srt_inline_for_each: begin
-          if param=nil then raiseError(el3_evalError,'Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else raiseError(el3_evalError,'Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                       else raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
         srt_inline_for_literal: begin
-          if param=nil then raiseError(el3_evalError,'Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else raiseError(el3_evalError,'Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                       else raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
       end;
     end;
@@ -473,7 +473,7 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+        raiseError('Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
@@ -493,7 +493,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. '+
+        raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. '+
         'The failed function is:'+toString,declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
@@ -515,7 +515,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
         result:=P_boolLiteral(firstRep^.data)^.value;
       end else begin
         result:=false;
-        raiseError(el3_evalError,'Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
+        raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=false;
@@ -537,7 +537,7 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError(el3_evalError,'Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+        raiseError('Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
@@ -566,7 +566,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean):boolean;
   begin
     result:=not(called);
-    if inMainPackage and result then raiseError(el2_warning,'Unused private subrule '+ruleId+pattern.toString,declaredAt);
+    if inMainPackage and result then raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 
 FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;

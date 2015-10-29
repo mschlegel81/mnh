@@ -241,7 +241,7 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
   PROCEDURE fail(CONST message:ansistring);
     begin
       if inEvaluationLoop then begin
-        raiseError(el4_parsingError,message,lineLocation);
+        raiseError_(mt_el4_parsingError,message,lineLocation);
       end else parsedLength:=length(line);
     end;
 
@@ -527,10 +527,10 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                   t^.txt:=t^.txt;
                   t^.next:=recycler.disposeToken(t^.next);
-                end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
-              end else raiseError(el4_parsingError,'You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+                end else raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
+              end else raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
             end else begin
-              raiseError(el2_warning,'Cannot resolve identifier "'+t^.txt+'" using dynamic scoping (expecting a block-local variable for this identifier) as a fallback.',t^.location);
+              raiseWarning('Cannot resolve identifier "'+t^.txt+'" using dynamic scoping (expecting a block-local variable for this identifier) as a fallback.',t^.location);
               t^.tokType:=t^.next^.tokType;
               if t^.tokType=tt_assign then t^.tokType:=tt_assignExistingBlockLocal;
               t^.data:=nil;
@@ -566,7 +566,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
   begin
     predigest(rep,nil,recycler);
     if (rep^.tokType<>tt_expBraceOpen) then begin
-      raiseError(el4_parsingError,'Error creating subrule from inline; expression does not start with "{"',rep^.location);
+      raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
     t:=rep^.next; prev:=rep;
@@ -582,7 +582,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR recycler:T_tokenRecycler);
       t:=t^.next;
     end;
     if (t=nil) or (t^.tokType<>tt_expBraceClose) then begin
-      raiseError(el4_parsingError,'Error creating subrule from inline; expression does not end with an }',rep^.location);
+      raiseError('Error creating subrule from inline; expression does not end with an }',rep^.location);
       exit;
     end;
 
@@ -680,7 +680,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           setLength(bodyPart,1);
           bodyPart[0,0]:=first^.next;
         end else begin
-          raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+          raiseError('Invalid each-construct; Cannot find closing bracket.',first^.location);
           exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
@@ -697,7 +697,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         end;
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
         if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-          raiseError(el4_parsingError,'Invalid each-construct; Cannot find closing bracket.',first^.location);
+          raiseError('Invalid each-construct; Cannot find closing bracket.',first^.location);
           exit(false);
         end;
         bracketClosingEach:=t;
@@ -756,7 +756,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       begin
         if L=nil then begin
           if resultLiteral=nil then resultLiteral:=newErrorLiteral;
-          raiseError(el3_evalError,'Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
+          raiseError('Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           exit;
         end else if L^.literalType=lt_void then exit;
         case aggregatorPresent of
@@ -773,7 +773,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             end;
             tt_operatorLazyAnd: if resultLiteral=nil then begin
               if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              else raiseError( 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
               if not(booleanResult) then begin
                 lazyAbort:=true;
                 resultLiteral:=L;
@@ -782,7 +782,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             end;
             tt_operatorLazyOr: if resultLiteral=nil then begin
               if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else raiseError(el3_evalError, 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              else raiseError( 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
               if booleanResult then begin
                 lazyAbort:=true;
                 resultLiteral:=L;
@@ -800,7 +800,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
                 if newLit<>nil then begin
                   disposeLiteral(resultLiteral);
                   resultLiteral:=newLit;
-                end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
+                end else raiseError('Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
               end;
             end;
           end;
@@ -812,7 +812,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
-              end else raiseError(el3_evalError,'Error performing aggregation in each-construct with aggregator '+aggregatorExpression^.toString,eachLocation);
+              end else raiseError('Error performing aggregation in each-construct with aggregator '+aggregatorExpression^.toString,eachLocation);
             end;
           end;
         end;
@@ -828,7 +828,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if resultLiteral=nil then begin
           if aggregatorPresent<>no then begin
             first^.data:=newErrorLiteral;
-            raiseError(el3_evalError,'Error performing finalizing aggregation each-construct - NIL literal encountered',eachLocation);
+            raiseError('Error performing finalizing aggregation each-construct - NIL literal encountered',eachLocation);
           end else first^.data:=newListLiteral;
         end else first^.data:=resultLiteral;
         first^.txt:='';
@@ -873,7 +873,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (noErrors) and not(lazyAbort) then begin
             future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),recycler);
-            if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError(el3_evalError,'Error initializing future.',eachLocation);
+            if future[initializedFutures]^.state=fts_errorOnInitialization then raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
@@ -883,7 +883,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       eachLocation:=first^.location;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        raiseError(el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
+        raiseError_(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -896,7 +896,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       //iterate over itList----------------------------------------------------------
       t:=first;
       if (aggregatorPresent<>no) and (itList^.size=0)
-      then raiseError(el3_evalError,'Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
+      then raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
         if inParallel then begin
           initFutures;
@@ -938,7 +938,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           setLength(bodyPart,1);
           bodyPart[0,0]:=first^.next;
         end else begin
-          raiseError(el4_parsingError,'Invalid while-construct; Cannot find closing bracket.',first^.location);
+          raiseError('Invalid while-construct; Cannot find closing bracket.',first^.location);
           exit(false);
         end;
         while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
@@ -953,12 +953,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         end;
         bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
         if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-          raiseError(el4_parsingError,'Invalid while-construct; Cannot find closing bracket.',first^.location);
+          raiseError('Invalid while-construct; Cannot find closing bracket.',first^.location);
           exit(false);
         end;
         bracketClosingWhile:=t;
         if length(bodyPart)<>2 then begin
-          raiseError(el4_parsingError,'Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
+          raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
           exit(false);
         end;
 
@@ -986,7 +986,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
           result:=P_boolLiteral(res)^.value;
         end else begin
-          raiseError(el3_evalError,'The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
+          raiseError('The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);
@@ -1002,7 +1002,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       whileLocation:=first^.location;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        raiseError(el5_systemError,'Stack overflow in while construct.',whileLocation);
+        raiseError_(mt_el5_systemError,'Stack overflow in while construct.',whileLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -1029,11 +1029,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       if (first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
         if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
           if parameterListLiteral=nil
-          then raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
+          then raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else begin
             if (P_rule(first^.data)^.id='main') and (parameterListLiteral^.size=0)
-            then raiseError(el3_noParameterlessMain,'',first^.location)
-            else raiseError(el3_evalError,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+            then raiseError_(mt_el3_noParameterlessMain,'',first^.location)
+            else raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           end;
           exit;
         end;
@@ -1046,7 +1046,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           firstReplace:=recycler.newToken(first^.location,'',tt_aggregatorExpressionLiteral,parameterListLiteral^.value(0));
           parameterListLiteral^.value(0)^.rereference;
           lastReplace:=firstReplace;
-        end else raiseError(el3_evalError,'Aggregators can only be constructed from expression literals!',first^.location);
+        end else raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRulePointer) then begin
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         if newLiteral<>nil then begin
@@ -1054,8 +1054,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           lastReplace:=firstReplace;
         end else begin
           if parameterListLiteral=nil
-          then raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
-          else raiseError(el3_evalError,'Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+          then raiseError('Cannot apply intrinsic rule '+first^.txt+' to empty parameter list',first^.location)
+          else raiseError('Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
       end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
@@ -1063,7 +1063,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
       end else begin
-        raiseError(el3_evalError,'Trying to apply a rule which is no rule!',first^.location);
+        raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
       recycler.disposeToken(first);
@@ -1089,7 +1089,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       end;
       if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
         stack_popLink;
-        raiseError(el3_evalError,'Cannot evaluate inline-if; cannot locate then-marker',first^.location);
+        raiseError('Cannot evaluate inline-if; cannot locate then-marker',first^.location);
         exit;
       end;
       tokenBeforeElse:=prev;
@@ -1102,7 +1102,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       end;
       if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
         stack_popLink;
-        raiseError(el3_evalError,'Cannot evaluate inline-if; cannot locate end of then-expression',first^.location);
+        raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',first^.location);
         exit;
       end;
       lastThen:=prev;
@@ -1211,7 +1211,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         tokType:=tt_localUserRulePointer;
                  tt_intrinsicRulePointer_pon:
         tokType:=tt_intrinsicRulePointer;
-        else raiseError(el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
+        else raiseError_(mt_el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
       end;
       newParameterListToken:=recycler.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
 
@@ -1273,7 +1273,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             first^.next:=p;
             didSubstitution:=true;
           end;
-        end else raiseError(el3_evalError,'Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        end else raiseError('Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
         tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
           if (P_boolLiteral(first^.data)^.value) then begin
             //true OR ... -> true
@@ -1293,7 +1293,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             first:=recycler.disposeToken(first); //drop OR
             didSubstitution:=true;
           end;
-        end else raiseError(el3_evalError,'Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        end else raiseError('Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
         else begin
           setLength(stack,length(stack)+2);
           stack[length(stack)-2]:=first; first:=first^.next;
@@ -1345,7 +1345,7 @@ end}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseError(db_step,stateToString,first^.location); {$endif}
+      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseError_(mt_debug_step,stateToString,first^.location); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1387,7 +1387,7 @@ end}
             end;
             COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
-            else raiseError(el3_evalError,'Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
+            else raiseError('Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
@@ -1445,13 +1445,13 @@ end}
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
               stack_popLink;
-            end else raiseError(el3_evalError,'Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
+            end else raiseError('Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
             COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
             else begin
-              raiseError(el3_evalError,'Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
+              raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
             end;
-          end else raiseError(el3_evalError,'Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
+          end else raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
               stack_popDestroy;
@@ -1504,13 +1504,13 @@ end}
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
-          end else raiseError(el3_evalError,'Cannot find value for local id "'+first^.txt+'"',first^.location);
+          end else raiseError('Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
         tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack_push; end;
         tt_unaryOpPlus, tt_unaryOpMinus: stack_push;
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
-          raiseError(el3_evalError,'Undefined prefix operator '+first^.singleTokenToString,first^.location);
+          raiseError('Undefined prefix operator '+first^.singleTokenToString,first^.location);
         tt_braceOpen: stack_push;
         tt_expBraceOpen: begin
           digestInlineExpression(first,recycler);
@@ -1567,30 +1567,25 @@ end}
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value)
-          else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack[length(stack)-1]^.data)^.literalType]+': '+stack[length(stack)-1]^.singleTokenToString,first^.location);
-        end else raiseError(el3_evalError,'Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
+          else raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack[length(stack)-1]^.data)^.literalType]+': '+stack[length(stack)-1]^.singleTokenToString,first^.location);
+        end else raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or not(noErrors);
     {$ifndef debugMode}
     except
       on EOutOfMemory do begin
-        raiseError(el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+        raiseError_(mt_el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end else begin
-        raiseError(el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+        raiseError_(mt_el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end;
     end;
     {$endif}
 
-    if not(noErrors) and (first<>nil) then raiseError(el3_evalError,intToStr(callDepth)+' State: '+stateToString,first^.location);
-
-    if callDepth=0 then begin
-      if first=nil then raiseError(el0_allOkay,'Reduce expression done',C_nilTokenLocation)
-                   else raiseError(el0_allOkay,'Reduce expression done',first^.location);
-    end;
-    if (hasMessageOfType[el5_haltMessageReceived] or hasMessageOfType[el5_systemError]) then begin
+    if not(noErrors) and (first<>nil) then raiseError(intToStr(callDepth)+' State: '+stateToString,first^.location);
+    if (hasMessageOfType[mt_el5_haltMessageReceived] or hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin
-        raiseError(el1_note,'Cleaning up partial result after system error',C_nilTokenLocation);
+        raiseNote('Cleaning up partial result after system error',C_nilTokenLocation);
         recycler.cascadeDisposeToken(first);
       end;
     end else while (length(stack)>0) do stack_popLink;

@@ -43,7 +43,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="35">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -89,6 +89,143 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_debugForm"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="synhighlightermnh.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="SynHighlighterMnh"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\core\mnh_tokens.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_tokens"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\core\mnh_tokens_subrule.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\core\mnh_tokens_rule.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\core\mnh_fileWrappers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_fileWrappers"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\core\mnh_tokloc.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_tokLoc"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\core\mnh_out_adapters.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_out_adapters"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\core\mnh_tokens_token.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\core\mnh_constants.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_constants"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\core\mnh_litvar.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_litVar"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\core\mnh_funcs.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="mnh_evalThread.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_evalThread"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="..\core\mnh_tokens_pattern.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="..\core\mnh_plotData.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_plotData"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="..\core\mnh_caches.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_caches"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="..\core\mnh_tokens_futureTask.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="..\core\mnh_doc.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_doc"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="..\core\mnh_tokens_funcs.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="..\core\consoleAsk.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="consoleAsk"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="..\core\mnh_tokens_recycler.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="..\core\mnh_cmdLineInterpretation.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_cmdLineInterpretation"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="..\util\mySys.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mySys"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="..\core\mnh_funcs_mnh.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_mnh"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="..\core\mnh_funcs_math.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_math"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="..\core\mnh_funcs_strings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_strings"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="..\core\mnh_funcs_list.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_list"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="..\core\mnh_funcs_system.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_system"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="..\core\mnh_funcs_regex.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_funcs_regex"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="..\core\mnh_tokens_procBlock.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit34>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

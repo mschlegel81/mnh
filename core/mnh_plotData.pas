@@ -1820,10 +1820,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
       par.create(random);
       res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),0,recycler);
       if res=nil then begin
-        raiseError(el3_evalError,'Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
+        raiseError('Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
         result:=false;
       end else if not(res^.literalType in [lt_int,lt_real]) then begin
-        raiseError(el3_evalError,'Expression to plot '+p^.toString+' returns '+C_typeString[res^.literalType]+'; should be int or real.',tokenLocation);
+        raiseError('Expression to plot '+p^.toString+' returns '+C_typeString[res^.literalType]+'; should be int or real.',tokenLocation);
         result:=false;
       end else result:=true;
       if res<>nil then disposeLiteral(res);
@@ -1915,10 +1915,10 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
         recycler.destroy;
         result:=newVoidLiteral;
-      end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to parameter list'+
+      end else raiseError('Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
                                                 tokenLocation);
-    end else raiseError(el3_evalError,'Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
+    end else raiseError('Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
     system.leaveCriticalSection(plotCS);
   end;
 
@@ -1945,7 +1945,7 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(el3_evalError,
+      raiseError(
         'Function setPlotAutoscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
@@ -1955,7 +1955,7 @@ FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getAutoscale
-    else raiseError(el3_evalError,'Function getAutoscale is nullary.',tokenLocation);
+    else raiseError('Function getAutoscale is nullary.',tokenLocation);
   end;
 
 FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -1971,7 +1971,7 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(el3_evalError,
+      raiseError(
         'Function setPlotLogscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
@@ -1981,7 +1981,7 @@ FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getLogscale
-    else raiseError(el3_evalError,'Function getLogscale is nullary.',tokenLocation);
+    else raiseError('Function getLogscale is nullary.',tokenLocation);
   end;
 
 FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2007,9 +2007,9 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
           activePlot.setRange(x0, y0, x1, y1);
           result:=newVoidLiteral;
           system.leaveCriticalSection(plotCS);
-        end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
-      end else raiseError(el3_evalError,'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
-    end else raiseError(el3_evalError, 'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+        end else raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+      end else raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+    end else raiseError( 'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
   end;
 
 FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2017,7 +2017,7 @@ FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getRange
-    else raiseError(el3_evalError,'Function getPlotRange is nullary.',tokenLocation);
+    else raiseError('Function getPlotRange is nullary.',tokenLocation);
   end;
 
 FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2032,7 +2032,7 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
-    end else raiseError(el3_evalError, 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
+    end else raiseError( 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
   end;
 
 FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2040,7 +2040,7 @@ FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getAxisStyle
-    else raiseError(el3_evalError,'Function getAxisStyle is nullary.',tokenLocation);
+    else raiseError('Function getAxisStyle is nullary.',tokenLocation);
   end;
 
 FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2052,7 +2052,7 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
       activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
-    end else raiseError(el3_evalError,'Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
+    end else raiseError('Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
   end;
 
 FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
@@ -2081,7 +2081,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       if params^.size>3 then supersampling:=P_intLiteral(params^.value(3))^.value
                         else supersampling:=1;
       if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
-        raiseError(el3_evalError,
+        raiseError(
           'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
           tokenLocation);
         system.leaveCriticalSection(plotCS);
@@ -2107,7 +2107,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(el3_evalError,
+      raiseError(
         'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
         tokenLocation);
   end;

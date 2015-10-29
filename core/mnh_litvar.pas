@@ -355,14 +355,14 @@ FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocat
   begin
     result:=@errLit;
     errLit.rereference;
-    raiseError(el3_evalError, errorMessage, tokenLocation);
+    raiseError(errorMessage, tokenLocation);
   end;
 
 FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation): P_scalarLiteral;
   begin
     result:=@errLit;
     errLit.rereference;
-    raiseError(el3_evalError, 'Operator '+C_tokenString [op]+ ' is not supported for types '+C_typeString [x]+' and '+ C_typeString [y], tokenLocation);
+    raiseError('Operator '+C_tokenString [op]+ ' is not supported for types '+C_typeString [x]+' and '+ C_typeString [y], tokenLocation);
   end;
 
 FUNCTION newVoidLiteral: P_voidLiteral; inline;
@@ -864,7 +864,7 @@ FUNCTION T_intLiteral.opDivInt(CONST other: P_scalarLiteral; CONST tokenLocation
       lt_int:        try
                        result:=newIntLiteral(val div P_intLiteral(other)^.val);
                      except
-                       raiseError(el1_note, 'Integer division by zero; returning Nan', tokenLocation);
+                       raiseNote('Integer division by zero; returning Nan', tokenLocation);
                        result:=newRealLiteral(Nan);
                      end;
       lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivInt, other, tokenLocation));
@@ -878,7 +878,7 @@ FUNCTION T_intLiteral.opMod(CONST other: P_scalarLiteral; CONST tokenLocation: T
       lt_int:        try
                        result:=newIntLiteral(val mod P_intLiteral(other)^.val)
                      except
-                       raiseError(el1_note, 'Integer division by zero(in modulo); returning Nan', tokenLocation);
+                       raiseNote('Integer division by zero(in modulo); returning Nan', tokenLocation);
                        result:=newRealLiteral(Nan);
                      end;
       lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMod, other, tokenLocation));
@@ -1298,7 +1298,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean):P_list
   begin
     result:=@self;
     if L = nil then begin
-      raiseError(el3_evalError, 'Trying to append NIL literal to list', C_nilTokenLocation);
+      raiseError('Trying to append NIL literal to list', C_nilTokenLocation);
       exit;
     end;
     if L^.literalType=lt_void then exit;
@@ -1407,7 +1407,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
 
     if length(element) = 0 then begin
       strictType:=lt_listWithError;
-      raiseError(el3_evalError, 'Cannot append range to empty list', tokenLocation);
+      raiseError('Cannot append range to empty list', tokenLocation);
       exit;
     end;
     last:=element [length(element)-1];
@@ -1445,7 +1445,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
       end
     else begin
       strictType:=lt_listWithError;
-      raiseError(el3_evalError, 'Invalid range expression '+
+      raiseError('Invalid range expression '+
         last^.toString+'..'+L^.toString, tokenLocation);
     end;
   end;

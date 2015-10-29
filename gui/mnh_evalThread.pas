@@ -85,10 +85,11 @@ FUNCTION main(p:pointer):ptrint;
       updateCompletionList;
       evaluationState.value:=es_idle;
       if not(silent) then begin
-        if hasMessageOfType[el5_haltMessageReceived]
+        if hasMessageOfType[mt_el5_haltMessageReceived]
         then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
         else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
       end;
+      raiseError_(mt_endOfEvaluation,'',C_nilTokenLocation);
       sleepTime:=0;
     end;
 
@@ -100,7 +101,6 @@ FUNCTION main(p:pointer):ptrint;
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         preEval;
         reloadMainPackage(lu_forDirectExecution);
-        raiseError(el0_allOkay,'reloadMainPackage done',C_nilTokenLocation);
         postEval(false);
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
@@ -160,7 +160,6 @@ PROCEDURE ad_haltEvaluation;
     if evaluationState.value=es_running then stepper.doAbort;
     pendingRequest.value:=er_none;
     while evaluationState.value=es_running do begin pendingRequest.value:=er_none; sleep(1); end;
-    raiseError(el0_allOkay,'Evaluation halted.',C_nilTokenLocation);
   end;
 
 PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);

@@ -182,7 +182,7 @@ PROCEDURE TSynMnhSyn.next;
     fTokenId := tkDefault;
     fTokenPos := run;
     if defaultToPrint and (run = 0) then begin
-      specialLineCase:=elc_clearConsole;
+      specialLineCase:=mt_clearConsole;
       i:=-1;
       for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
         specialLineCase:=lc;
@@ -191,7 +191,7 @@ PROCEDURE TSynMnhSyn.next;
       if i>=0 then run:=i+1;
       if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError
                                                         else fTokenId:=tkDefault;
-      if not(specialLineCase in [elo_echoOutput,eld_echoDeclaration,ele_echoInput,els_step]) then while (fLine[run]<>#0) do inc(run);
+      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
 

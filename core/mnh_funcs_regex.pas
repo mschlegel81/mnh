@@ -53,7 +53,7 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.message,tokenLocation);
+          raiseError_(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -91,7 +91,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
         end;
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.message,tokenLocation);
+          raiseError_(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -124,7 +124,7 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.message,tokenLocation);
+          raiseError_(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -157,7 +157,7 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          raiseError(el5_systemError,e.message,tokenLocation);
+          raiseError_(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;

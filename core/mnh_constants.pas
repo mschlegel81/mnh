@@ -240,41 +240,41 @@ CONST
 
 TYPE
   T_messageType = (
-    elc_clearConsole,
-    elp_printline,
-    ele_echoInput,
-    eld_echoDeclaration,
-    elo_echoOutput,
-    els_step,
-    el0_allOkay,
-    el1_note,
-    el2_warning,
-    el3_evalError,
-    el3_noParameterlessMain,
-    el4_parsingError,
-    el5_systemError,
-    el5_haltMessageReceived,
-    el0_endOfEvaluation,
-    el0_reloadRequired);
+    mt_clearConsole,
+    mt_printline,
+    mt_echo_input,
+    mt_echo_declaration,
+    mt_echo_output,
+    mt_debug_step,
+    mt_el1_note,
+    mt_el2_warning,
+    mt_el3_evalError,
+    mt_el3_noParameterlessMain,
+    mt_el4_parsingError,
+    mt_el5_systemError,
+    mt_el5_haltMessageReceived,
+    mt_endOfEvaluation,
+    mt_reloadRequired,
+    mt_timing_info);
 
 CONST
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
-    0,//elc_clearConsole,
-    0,//elp_printline,
-   -1,//ele_echoInput,
-   -1,//eld_echoDeclaration,
-   -1,//elo_echoOutput,
-   -1,//els_step,
-    0,//el0_allOkay,
-    1,//el1_note,
-    2,//el2_warning,
-    3,//el3_evalError,
-    3,//el3_noParameterlessMain
-    4,//el4_parsingError,
-    5,//el5_systemError,
-    5,//el5_haltMessageReceived
-    0,//el0_endOfEvaluation
-    0);//el0_reloadRequired
+    0,//mt_clearConsole,
+    0,//mt_printline,
+    0,//mt_echo_input,
+    0,//mt_echo_declaration,
+    0,//mt_echo_output,
+    0,//mt_debug_step,
+    1,//mt_el1_note,
+    2,//mt_el2_warning,
+    3,//mt_el3_evalError,
+    3,//mt_el3_noParameterlessMain
+    4,//mt_el4_parsingError,
+    5,//mt_el5_systemError,
+    5,//mt_el5_haltMessageReceived
+    0,//mt_endOfEvaluation
+    0,//mt_reloadRequired
+    0);//mt_timing_info
 
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
@@ -288,7 +288,7 @@ CONST
     ' in>',//echo declaration
     'out>',//echo output
     'STEP:',
-    'Info ', //el0
+
     'Note ',
     'Warning ',
     'Error ',
@@ -296,6 +296,7 @@ CONST
     'Parsing Error ',
     'Sys. Error ',
     'Evaluation haltet (most probably by user).',
+    '',
     '',
     '');
 

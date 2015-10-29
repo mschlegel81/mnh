@@ -55,7 +55,7 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
             for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
               P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
                                                    P_listLiteral(params^.value(1))^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths for function pos.',tokenLocation)
+          end else raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
     end else raiseNotApplicableError('pos',params,tokenLocation);

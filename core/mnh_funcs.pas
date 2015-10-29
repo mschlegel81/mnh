@@ -36,14 +36,14 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_
     complaintText:='Built in function '+functionName+' cannot be applied to parameters ';
     if params=nil then complaintText:=complaintText+'()'
                   else complaintText:=complaintText+params^.toParameterListString(true);
-    raiseError(el3_evalError,complaintText,tokenLocation);
+    raiseError(complaintText,tokenLocation);
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
-    raiseError(el3_evalError,complaintText,tokenLocation);
+    raiseError(complaintText,tokenLocation);
   end;
 
 FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;

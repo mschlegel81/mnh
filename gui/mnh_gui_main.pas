@@ -249,25 +249,25 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     result:=length(storedMessages)>0;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       case messageType of
-        elc_clearConsole: syn.lines.clear;
-        elp_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
-        els_step: begin
+        mt_clearConsole: syn.lines.clear;
+        mt_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+        mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
           MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
           MnhForm.InputEdit.Repaint;
         end;
-        el0_endOfEvaluation: begin
+        mt_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
           MnhForm.InputEdit.readonly:=false;
           MnhForm.inputHighlighter.setMarkedToken(-1,-1);
         end;
-        el0_reloadRequired: ad_doReload(MnhForm.InputEdit.lines);
-        ele_echoInput: begin
+        mt_reloadRequired: ad_doReload(MnhForm.InputEdit.lines);
+        mt_echo_input: begin
           syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
           DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
         end;
-        eld_echoDeclaration,
-        elo_echoOutput:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
+        mt_echo_declaration,
+        mt_echo_output:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
         else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
           DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
         end;
@@ -938,6 +938,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     inc(subTimerCounter);
     //slow ones:================================================================
     if subTimerCounter and 15=0 then begin
+      if not(isEvaluationRunning) then InputEdit.readonly:=false;
       flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
       autosizingDone:=autosizeBlocks(isEvaluationRunning);
 
@@ -959,10 +960,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         SettingsForm.saveSettings;
       end;
 
-      if not(flushPerformed) and not(autosizingDone) and not(isEvaluationRunning) then begin
+      if not(flushPerformed) and not(autosizingDone) then begin
         UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
         if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
-      end;
+      end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //================================================================:slow ones
 

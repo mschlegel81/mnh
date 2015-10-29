@@ -188,7 +188,7 @@ UNARY_NUM_TO_SAME;
           lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError(el3_evalError,'Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
+          end else raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
           else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
         end;
         else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation);
@@ -353,7 +353,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       end;
 
       digestInlineExpression(first,recycler);
-      if (noErrors) and (first^.next<>nil) then raiseError(el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+      if (noErrors) and (first^.next<>nil) then raiseError_(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
       if not(noErrors) then begin
         recycler.cascadeDisposeToken(first);
         recycler.destroy;
@@ -361,7 +361,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       end;
       if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
         recycler.disposeToken(first);
-        raiseError(el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+        raiseError_(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
         recycler.destroy;
         exit(newErrorLiteral);
       end;

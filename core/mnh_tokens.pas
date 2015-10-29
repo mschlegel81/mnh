@@ -133,7 +133,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
     used.destroy;
     //-------------------------------------------------------------:housekeeping
     recycler.destroy;
-    raiseError(el0_endOfEvaluation,'',C_nilTokenLocation);
+    raiseError_(mt_endOfEvaluation,'',C_nilTokenLocation);
   end;
 
 PROCEDURE finalizePackages;
@@ -160,7 +160,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
           pack.pack:=secondaryPackages[i];
           exit;
         end else begin
-          raiseError(el4_parsingError,'Cyclic package dependencies encountered; already loading "'+pack.id+'"',tokenLocation);
+          raiseError_(mt_el4_parsingError,'Cyclic package dependencies encountered; already loading "'+pack.id+'"',tokenLocation);
           exit;
         end;
       end;
@@ -175,7 +175,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
   begin
     id:=packId;
     path:=locateSource(root,id);
-    if path='' then raiseError(el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
+    if path='' then raiseError_(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;
 
@@ -203,14 +203,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           rulesSet:T_ruleMap.KEY_VALUE_LIST;
           dummyRule:P_rule;
       begin
-        raiseError(el0_allOkay,'Parsing USE-clause: '+tokensToString(first),first^.location);
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=recycler.disposeToken(temp);
         while first<>nil do begin
           if first^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer] then begin
             newId:=first^.txt;
             if isQualified(newId) then begin
-              raiseError(el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
+              raiseError_(mt_el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
               exit;
             end;
             //no duplicates are created; packages are always added at the end
@@ -220,7 +219,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
                                      else setLength(packageUses,length(packageUses)+1);
             packageUses[length(packageUses)-1].create(codeProvider^.getPath,first^.txt,first^.location);
           end else if first^.tokType<>tt_separatorComma then begin
-            raiseError(el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+            raiseError_(mt_el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
             exit;
           end;
           temp:=first; first:=recycler.disposeToken(temp);
@@ -269,7 +268,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
 
         //plausis:
         if (ruleBody=nil) then begin
-          raiseError(el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
+          raiseError_(mt_el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
@@ -285,14 +284,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           first:=recycler.disposeToken(first);
         end;
         if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
-          raiseError(el4_parsingError,'Declaration does not start with an identifier.',first^.location);
+          raiseError_(mt_el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
           if (p^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) and isQualified(first^.txt) then begin
-            raiseError(el4_parsingError,'Declaration head contains qualified ID.',p^.location);
+            raiseError_(mt_el4_parsingError,'Declaration head contains qualified ID.',p^.location);
             recycler.cascadeDisposeToken(first);
             exit;
           end;
@@ -303,7 +302,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         ruleId:=trim(first^.txt);
         first:=recycler.disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
-          raiseError(el4_parsingError,'Invalid declaration head.',first^.location);
+          raiseError_(mt_el4_parsingError,'Invalid declaration head.',first^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
@@ -312,7 +311,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           first:=recycler.disposeToken(first);
           if (first<>nil) and (first^.tokType=tt_braceClose) then first:=recycler.disposeToken(first);
           while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
-            if rulePattern.hasOptionals then raiseError(el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
+            if rulePattern.hasOptionals then raiseError_(mt_el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
             n  :=first^.next;
             nn :=n    ^.next;
             nnn:=nn   ^.next;
@@ -323,7 +322,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               first:=recycler.disposeToken(first);
             end else if (first^.tokType=tt_optionalParameters)
                      and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              if n^.tokType=tt_separatorComma then raiseError(el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
+              if n^.tokType=tt_separatorComma then raiseError_(mt_el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
               rulePattern.appendOptional;
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
@@ -367,7 +366,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
             end else begin
-              raiseError(el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first) ,first^.location);
+              raiseError_(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first) ,first^.location);
               recycler.cascadeDisposeToken(first);
               exit;
             end;
@@ -376,7 +375,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         if first<>nil then begin
           first:=recycler.disposeToken(first);
         end else begin
-          raiseError(el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
+          raiseError_(mt_el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
 
@@ -399,11 +398,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule);
             first:=nil;
-          end else if not(hasMessageOfType[el5_systemError] or hasMessageOfType[el5_haltMessageReceived]) then
+          end else if not(hasMessageOfType[mt_el5_systemError] or hasMessageOfType[mt_el5_haltMessageReceived]) then
             recycler.cascadeDisposeToken(first)
           else
             first:=nil;
-        end else if (hasMessageOfType[el5_systemError] or hasMessageOfType[el5_haltMessageReceived]) then
+        end else if (hasMessageOfType[mt_el5_systemError] or hasMessageOfType[mt_el5_haltMessageReceived]) then
           recycler.cascadeDisposeToken(first)
         else
           first:=nil;
@@ -426,18 +425,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if assignmentToken<>nil then begin
         startTime:=now;
         predigest(assignmentToken,@self,recycler);
-        if outAdapter^.outputBehaviour.doEchoDeclaration then outAdapter^.writeEcho(eld_echoDeclaration, tokensToString(first)+';');
+        if outAdapter^.outputBehaviour.doEchoDeclaration then outAdapter^.writeEcho(mt_echo_declaration, tokensToString(first)+';');
         parseRule;
         timeForDeclarations:=timeForDeclarations+now-startTime;
       end else begin
         if (usecase=lu_forDirectExecution) then begin
           startTime:=now;
           predigest(first,@self,recycler);
-          if outAdapter^.outputBehaviour.doEchoInput then outAdapter^.writeEcho(ele_echoInput, tokensToString(first)+';');
+          if outAdapter^.outputBehaviour.doEchoInput then outAdapter^.writeEcho(mt_echo_input, tokensToString(first)+';');
           reduceExpression(first,0,recycler);
           timeForInterpretation:=timeForInterpretation+now-startTime;
-          if (first<>nil) and outAdapter^.outputBehaviour.doShowExpressionOut then outAdapter^.writeEcho(elo_echoOutput, tokensToString(first));
-        end else raiseError(el1_note,'Skipping expression '+tokensToString(first),first^.location);
+          if (first<>nil) and outAdapter^.outputBehaviour.doShowExpressionOut then outAdapter^.writeEcho(mt_echo_output, tokensToString(first));
+        end else raiseNote('Skipping expression '+tokensToString(first),first^.location);
       end;
       if first<>nil then recycler.cascadeDisposeToken(first);
       first:=nil;
@@ -453,12 +452,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         startTime:double;
     begin
       if not(ready) or not(noErrors) then begin
-        raiseError(el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
+        raiseError_(mt_el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
         recycler.destroy;
         exit;
       end;
       if not(packageRules.containsKey('main',mainRule)) then begin
-        raiseError(el3_evalError,'The specified package contains no main rule.',fileTokenLocation(codeProvider));
+        raiseError('The specified package contains no main rule.',fileTokenLocation(codeProvider));
       end else begin
         t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_localUserRulePointer,mainRule);
         parametersForMain:=newListLiteral;
@@ -474,7 +473,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
         end;
         //:special handling if main returns an expression
-        if hasMessageOfType[el3_noParameterlessMain] then begin
+        if hasMessageOfType[mt_el3_noParameterlessMain] then begin
           outAdapter^.printOut('');
           outAdapter^.printOut('Try one of the following:');
           outAdapter^.printOut('');
@@ -551,16 +550,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     then begin if first<>nil then interpret(first,C_nilTokenLocation); end
     else recycler.cascadeDisposeToken(first);
     ready:=usecase<>lu_forDocGeneration;
-    if length(fileTokens.t)>0
-    then raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',fileTokens.t[length(fileTokens.t)-1].location)
-    else raiseError(el0_allOkay,'Package '+codeProvider^.id+' ready.',C_nilTokenLocation);
+
     if usecase=lu_forCallingMain then executeMain;
     if usecase in [lu_forDirectExecution,lu_forCallingMain] then begin
       if noErrors then complainAboutUncalled(true);
       if noErrors then finalize;
-      raiseError(el0_allOkay,'Tokenizing time     '+myTimeToStr(timeForTokenizing),C_nilTokenLocation);
-      raiseError(el0_allOkay,'Declaration time    '+myTimeToStr(timeForDeclarations),C_nilTokenLocation);
-      raiseError(el0_allOkay,'Interpretation time '+myTimeToStr(timeForInterpretation),C_nilTokenLocation);
+      raiseError_(mt_timing_info,'Tokenizing time     '+myTimeToStr(timeForTokenizing),C_nilTokenLocation);
+      raiseError_(mt_timing_info,'Declaration time    '+myTimeToStr(timeForDeclarations),C_nilTokenLocation);
+      raiseError_(mt_timing_info,'Interpretation time '+myTimeToStr(timeForInterpretation),C_nilTokenLocation);
     end;
   end;
 
@@ -596,13 +593,12 @@ PROCEDURE T_package.finalize;
       i:longint;
 
   begin
-    raiseError(el0_allOkay,'Finalizing package '+codeProvider^.id,C_nilTokenLocation);
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.writeBack(codeProvider^) then wroteBack:=true;
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      if @self=@mainPackage then raiseError(el0_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
+      if @self=@mainPackage then raiseError_(mt_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize;
   end;
@@ -643,7 +639,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
       token.data:=intrinsicFuncPtr;
       exit;
     end;
-    if not(failSilently) then raiseError(el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
+    if not(failSilently) then raiseError_(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
 FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation): P_rule;
@@ -663,9 +659,8 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ru
     if not(packageRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
-      raiseError(el0_allOkay,'New rule '+ruleId,ruleDeclarationStart);
     end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin
-      raiseError(el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart);
+      raiseError_(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;
   end;
@@ -696,7 +691,7 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean);
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then raiseError(el2_warning,'Unused package '+codeProvider^.id,C_nilTokenLocation);
+    if not(anyCalled) and not(inMainPackage) then raiseWarning('Unused package '+codeProvider^.id,C_nilTokenLocation);
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUncalled(false);
@@ -759,7 +754,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
     clearErrors;
     recycler.create;
     mainPackage.load(lu_forCallingMain,recycler,parameters);
-    raiseError(el0_endOfEvaluation,'',C_nilTokenLocation);
+    raiseError_(mt_endOfEvaluation,'',C_nilTokenLocation);
     recycler.destroy;
   end;
 
@@ -774,31 +769,6 @@ FUNCTION getMainPackage: P_package;
   begin
     result:=@mainPackage;
   end;
-
-//FUNCTION getTokenAt(CONST line: ansistring; CONST charIndex: longint): T_token;
-//  VAR lineLocation:T_tokenLocation;
-//  begin
-//    lineLocation.fileName:=mainPackage.codeProvider^.getPath;
-//    lineLocation.line:=0;
-//    lineLocation.column:=charIndex;
-//    result:=firstToken(line,lineLocation,@mainPackage,false);
-//    //try
-//    //  copyOfLine:=line;
-//    //  lineLocation.fileName:=mainPackage.codeProvider^.getPath;
-//    //  lineLocation.line:=0;
-//    //  lineLocation.column:=1;
-//    //  if (length(copyOfLine)>1) and (copyOfLine[1]=#10) then begin
-//    //    copyOfLine:=copy(copyOfLine,6,length(copyOfLine)-5);
-//    //    inc(lineLocation.column,5);
-//    //  end;
-//    //  result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
-//    //  while (length(copyOfLine)>0) and (lineLocation.column<charIndex) do
-//    //    result:=firstToken(copyOfLine,lineLocation,@mainPackage,false);
-//    //except
-//    //  result.create;
-//    //  result.define(C_nilTokenLocation,'ERR',tt_EOL);
-//    //end;
-//  end;
 
 PROCEDURE findAndDocumentAllPackages;
   VAR sourceNames:T_arrayOfString;
@@ -841,8 +811,8 @@ FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
     reloadMainPackage(lu_forDirectExecution);
     result:='';
     for i:=0 to length(tempAdapter.storedMessages)-1 do with tempAdapter.storedMessages[i] do case messageType of
-      elo_echoOutput: result:=result+'out>'+simpleMessage+C_lineBreakChar;
-      elp_printline : for j:=0 to length(multiMessage)-1 do result:=result+multiMessage[j]+C_lineBreakChar;
+      mt_echo_output: result:=result+'out>'+simpleMessage+C_lineBreakChar;
+      mt_printline : for j:=0 to length(multiMessage)-1 do result:=result+multiMessage[j]+C_lineBreakChar;
     end;
     //set-down:---------------------------------------------------
     clearErrors;

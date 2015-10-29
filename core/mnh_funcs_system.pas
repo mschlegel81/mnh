@@ -129,7 +129,7 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
 
@@ -145,7 +145,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else if (params<>nil) and (params^.size=3) and
                 (params^.value(0)^.literalType=lt_string) and
                 (params^.value(1)^.literalType=lt_int) and
@@ -157,7 +157,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
-      if not(accessed) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('fileLines',params,tokenLocation);
   end;
 
@@ -172,7 +172,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
                                      P_stringLiteral(params^.value(1))^.value);
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFile',params,tokenLocation);
   end;
 
@@ -195,7 +195,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L,sep);
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then raiseError(el2_warning,'File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
     end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
   end;
 
@@ -422,7 +422,7 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       except
         On E : Exception do begin
           resultText:='';
-          raiseError(el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
+          raiseError_(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
         end;
       end;
       result:=newStringLiteral(resultText);

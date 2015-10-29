@@ -18,7 +18,7 @@
 
   P_tokenRecycler=^T_tokenRecycler;
   T_tokenRecycler=object
-    dat:array[0..1023] of P_token;
+    dat:array[0..2047] of P_token;
     fill:longint;
 
     parentRecycler:P_tokenRecycler;
@@ -94,7 +94,7 @@ FUNCTION T_valueStoreElement.mutateInline(CONST id:ansistring; CONST mutation:T_
   begin
     idx:=indexOfId(id);
     if idx<0 then begin
-      raiseError(el3_evalError,'Value with ID="'+id+'" is not contained in value store! Cannot apply mutation.',location);
+      raiseError('Value with ID="'+id+'" is not contained in value store! Cannot apply mutation.',location);
       result:=nil;
     end else mutateInline(idx,mutation,RHS,location);
   end;
