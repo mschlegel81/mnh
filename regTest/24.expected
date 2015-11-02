@@ -4,3 +4,7 @@ This is a demo - start with any argument to play.
 The solution is valid.
  ?> Another round?
  !> no
+Warning @regTest/../demos/24.mnh:25,1 Unused private subrule getRiddle(set, 0)
+Warning @regTest/../demos/24.mnh:40,1 Unused private subrule playARound
+Warning @regTest/../demos/24.mnh:41,1 Unused private subrule playARound(set)
+Warning @regTest/../demos/24.mnh:42,1 Unused private subrule playARound(set, answer)

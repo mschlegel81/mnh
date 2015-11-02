@@ -13,8 +13,6 @@ private getFangs(i:int)->begin
     : void);
 end;
 
-private isVampire(i:int)->not(getFangs(i)==[]);
-
 private printVampire(i:int)->begin
   local fangs:=getFangs(i);
   fangs==[]
@@ -29,7 +27,6 @@ private verbosePrintVampire(i)->printVampire(i) OR print(i,' is not a vampire.')
 
 private step(99    ):=1000;
 private step(9999  ):=100000;
-private step(999999):=10000000;
 private step(k)->k+1;
 
 printFirstKVampires(k:int)->begin

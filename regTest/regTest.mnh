@@ -7,7 +7,7 @@ private NEED_PLOT_IDX:=3;
 
 mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
-synchronized addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
+synchronized private addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
 
 private expectedResultName  (scriptname)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".expected");
 private lastResultName      (scriptname)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",".last");
