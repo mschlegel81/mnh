@@ -3,7 +3,7 @@ INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, //types
      EpikTimer,
-     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, //even more specific
+     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_html, //even more specific
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_regex;
 
 {$define include_interface}
@@ -53,13 +53,10 @@ TYPE
       FUNCTION isReady:boolean;
   end;
 
-FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
-
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString);
 PROCEDURE printMainPackageDocText;
 FUNCTION getMainPackage:P_package;
-//FUNCTION getTokenAt(CONST line:ansistring; CONST charIndex:longint):T_token;
 PROCEDURE findAndDocumentAllPackages;
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler:T_tokenRecycler);
 
@@ -425,17 +422,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if assignmentToken<>nil then begin
         startTime:=now;
         predigest(assignmentToken,@self,recycler);
-        if outAdapter^.outputBehaviour.doEchoDeclaration then outAdapter^.writeEcho(mt_echo_declaration, tokensToString(first)+';');
+        if someEchoDeclaration then raiseError_(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
         timeForDeclarations:=timeForDeclarations+now-startTime;
       end else begin
         if (usecase=lu_forDirectExecution) then begin
           startTime:=now;
           predigest(first,@self,recycler);
-          if outAdapter^.outputBehaviour.doEchoInput then outAdapter^.writeEcho(mt_echo_input, tokensToString(first)+';');
+          if someEchoInput then raiseError_(mt_echo_input, tokensToString(first)+';',first^.location);
           reduceExpression(first,0,recycler);
           timeForInterpretation:=timeForInterpretation+now-startTime;
-          if (first<>nil) and outAdapter^.outputBehaviour.doShowExpressionOut then outAdapter^.writeEcho(mt_echo_output, tokensToString(first));
+          if (first<>nil) and someEchoOutput then raiseError_(mt_echo_output, tokensToString(first),first^.location);
         end else raiseNote('Skipping expression '+tokensToString(first),first^.location);
       end;
       if first<>nil then recycler.cascadeDisposeToken(first);
@@ -473,10 +470,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,recycler);
         end;
         //:special handling if main returns an expression
-        if hasMessageOfType[mt_el3_noParameterlessMain] then begin
-          outAdapter^.printOut('');
-          outAdapter^.printOut('Try one of the following:');
-          outAdapter^.printOut('');
+        if hasMessageOfType[mt_el3_noMatchingMain] then begin
+          printOut('');
+          printOut('Try one of the following:');
+          printOut('');
           mainPackage.printHelpOnMain;
         end;
         recycler.cascadeDisposeToken(t);
@@ -623,6 +620,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
       then token.tokType:=tt_localUserRulePointer_pon
       else token.tokType:=tt_localUserRulePointer;
       token.data:=userRule;
+      userRule^.used:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
@@ -630,6 +628,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
       then token.tokType:=tt_importedUserRulePointer_pon
       else token.tokType:=tt_importedUserRulePointer;
       token.data:=userRule;
+      userRule^.used:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -788,38 +787,6 @@ PROCEDURE findAndDocumentAllPackages;
     end;
     makeHtmlFromTemplate;
     recycler.destroy;
-  end;
-
-FUNCTION parse_evaluate_return(CONST command:ansistring):ansistring;
-  VAR previousAdapter:P_abstractOutAdapter;
-      tempAdapter:T_collectingOutAdapter;
-      i,j:longint;
-
-  begin
-    //set-up:-----------------------------------------------------
-    previousAdapter:=outAdapter;
-    tempAdapter.create;
-    with tempAdapter.outputBehaviour do begin
-      doEchoDeclaration:=false;
-      doEchoInput:=false;
-      doShowExpressionOut:=true;
-    end;
-    outAdapter:=@tempAdapter;
-    //-----------------------------------------------------:set-up
-    mainPackageProvider.clear;
-    mainPackageProvider.appendLine(command);
-    reloadMainPackage(lu_forDirectExecution);
-    result:='';
-    for i:=0 to length(tempAdapter.storedMessages)-1 do with tempAdapter.storedMessages[i] do case messageType of
-      mt_echo_output: result:=result+'out>'+simpleMessage+C_lineBreakChar;
-      mt_printline : for j:=0 to length(multiMessage)-1 do result:=result+multiMessage[j]+C_lineBreakChar;
-    end;
-    //set-down:---------------------------------------------------
-    clearErrors;
-    tempAdapter.clearMessages;
-    outAdapter:=previousAdapter;
-    tempAdapter.destroy;
-    //---------------------------------------------------:set-down
   end;
 
 {$undef include_implementation}

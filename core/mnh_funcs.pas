@@ -143,7 +143,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       system.enterCriticalSection(print_cs);
-      outAdapter^.printOut(formatTabs(reSplit(resultString)));
+      printOut(formatTabs(reSplit(resultString)));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
     end else raiseNotApplicableError('printf',params,tokenLocation);
@@ -153,7 +153,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     system.enterCriticalSection(print_cs);
-    mnh_out_adapters.outAdapter^.clearConsole();
+    clearPrint();
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
@@ -171,7 +171,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.enterCriticalSection(print_cs);
-    outAdapter^.printOut(formatTabs(split(stringToPrint)));
+    printOut(formatTabs(split(stringToPrint)));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;

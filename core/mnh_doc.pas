@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar;
+USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
 VAR htmlRoot: string;
 TYPE
 
@@ -38,155 +38,11 @@ TYPE
 
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
-FUNCTION toHtmlCode(line:ansistring):ansistring;
 PROCEDURE makeHtmlFromTemplate;
 
 
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
-
-FUNCTION toHtmlCode(line:ansistring):ansistring;
-  VAR parsedLength:longint=0;
-  FUNCTION span(CONST sc,txt:ansistring):ansistring;
-    begin
-      result:='<span class="'+sc+'">'+txt+'</span>';
-    end;
-
-  FUNCTION leadingIdLength(CONST allowQualified:boolean):longint;
-    VAR i:longint;
-    begin
-      i:=1;
-      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_ID_QUALIFY_CHARACTER]) do begin
-        inc(i);
-        if line[i]=C_ID_QUALIFY_CHARACTER then begin
-          if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
-            exit(i-1);
-          end else if not(allowQualified) then begin
-            exit(length(line));
-          end;
-        end;
-      end;
-      result:=i;
-    end;
-
-  FUNCTION takeFromLine(CONST len:longint):ansistring;
-    begin
-      result:=copy(line,1,len);
-      line:=copy(line,len+1,length(line)+len-1);
-    end;
-
-  PROCEDURE removeLeadingBlanks();
-    VAR i:longint;
-    begin
-      i:=1;
-      while (i<=length(line)) and (line[i] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(i);
-      if i>1 then result:=result+takeFromLine(i-1);
-    end;
-
-  VAR id:ansistring;
-      rwc:T_reservedWordClass;
-  begin
-    result:='';
-    while length(line)>0 do begin
-      parsedLength:=0;
-      removeLeadingBlanks;
-      if length(line)<1 then exit(result);
-      case line[1] of
-        '0'..'9': begin
-          parseNumber(line,1,true,parsedLength);
-          if parsedLength<=0 then begin result:=result+line; line:=''; end
-                             else result:=result+span('literal', takeFromLine(parsedLength));
-        end;
-        '"','''': begin
-          id:=unescapeString(line,1,parsedLength);
-          if parsedLength=0 then begin result:=result+line; line:=''; end
-          else result:=result+span('stringLiteral', takeFromLine(parsedLength));
-        end;
-        '$': result:=result+span('identifier', takeFromLine(leadingIdLength(false)));
-        'a'..'z','A'..'Z':
-          if copy(line,1,3)='in>' then result:=result+takeFromLine(3)
-          else if copy(line,1,4)='out>' then result:=result+takeFromLine(4)
-          else begin
-            id:=takeFromLine(leadingIdLength(true));
-            rwc:=isReservedWord(id);
-            case rwc of
-              rwc_specialConstruct  : result:=result+span('builtin',id);
-              rwc_specialLiteral    : result:=result+span('literal',id);
-              rwc_operator          : result:=result+span('operator',id);
-              rwc_modifier          : result:=result+span('modifier',id);
-              else begin
-                if intrinsicRuleMap.containsKey(id) then result:=result+span('builtin',id)
-                                                    else result:=result+span('identifier',id);
-              end;
-            end;
-          end;
-        ';',')','}','(','{',',',']','[': result:=result+takeFromLine(1);
-        '@','^','?': result:=result+span('operator',takeFromLine(1));
-        '|': if startsWith(line,'|=') then result:=result+span('operator',takeFromLine(2))
-                                      else result:=result+span('operator',takeFromLine(1));
-        '+': if startsWith(line,C_tokenString[tt_cso_assignPlus])
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '&': if startsWith(line,C_tokenString[tt_cso_assignStrConcat])
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '-': if startsWith(line,'->') or startsWith(line,C_tokenString[tt_cso_assignMinus])
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '*': if startsWith(line,'**') or startsWith(line,C_tokenString[tt_cso_assignMult])
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '>': if startsWith(line,'>=')
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '!': if startsWith(line,'!=')
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '=': if startsWith(line,'==')
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '<': if startsWith(line,'<>') or startsWith(line,'<=')
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '/': if startsWith(line,'//') then begin //comments
-               parsedLength:=2;
-               while (parsedLength<length(line)) and not(line[parsedLength+1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
-               result:=result+span('comment',takeFromLine(parsedLength));
-             end else if startsWith(line,C_tokenString[tt_cso_assignDiv])
-             then result:=result+span('operator',takeFromLine(2))
-             else result:=result+span('operator',takeFromLine(1));
-        '%': if      startsWith(line,'%%%%') then result:=result+span('operator',takeFromLine(4))
-             else if startsWith(line,'%%%') then  result:=result+span('operator',takeFromLine(3))
-             else if startsWith(line,'%%') then   result:=result+span('operator',takeFromLine(2))
-             else                                 result:=result+span('operator',takeFromLine(1));
-        '.': if startsWith(line,C_tokenString[tt_optionalParameters]) then result:=result+span('operator',takeFromLine(3))
-             else if startsWith(line,C_tokenString[tt_separatorCnt]) then result:=result+span('operator',takeFromLine(2))
-             else result:=result+takeFromLine(length(line));
-        ':': if startsWith(line,':=') then result:=result+span('operator',takeFromLine(2))
-             else if (length(line)>=4) and (line[2] in ['b','e','i','l','n','s','r','k']) then begin
-               id:=takeFromLine(leadingIdLength(true));
-               if (id=C_tokenString[tt_typeCheckBoolList  ])
-               or (id=C_tokenString[tt_typeCheckBoolean   ])
-               or (id=C_tokenString[tt_typeCheckExpression])
-               or (id=C_tokenString[tt_typeCheckIntList   ])
-               or (id=C_tokenString[tt_typeCheckInt       ])
-               or (id=C_tokenString[tt_typeCheckList      ])
-               or (id=C_tokenString[tt_typeCheckNumList   ])
-               or (id=C_tokenString[tt_typeCheckNumeric   ])
-               or (id=C_tokenString[tt_typeCheckStringList])
-               or (id=C_tokenString[tt_typeCheckScalar    ])
-               or (id=C_tokenString[tt_typeCheckString    ])
-               or (id=C_tokenString[tt_typeCheckRealList  ])
-               or (id=C_tokenString[tt_typeCheckReal      ])
-               or (id=C_tokenString[tt_typeCheckKeyValueList]) then result:=result+span('operator',id)
-               else result:=result+span('operator',takeFromLine(1));
-             end else result:=result+span('operator',takeFromLine(1));
-        else begin
-          result:=result+takeFromLine(length(line));
-        end;
-      end;
-    end;
-  end;
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
   begin

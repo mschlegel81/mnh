@@ -43,7 +43,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="35">
+    <Units Count="36">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -226,6 +226,11 @@
         <Filename Value="..\core\mnh_tokens_procBlock.inc"/>
         <IsPartOfProject Value="True"/>
       </Unit34>
+      <Unit35>
+        <Filename Value="..\core\mnh_html.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_html"/>
+      </Unit35>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

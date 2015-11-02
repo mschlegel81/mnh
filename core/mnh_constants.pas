@@ -249,32 +249,34 @@ TYPE
     mt_el1_note,
     mt_el2_warning,
     mt_el3_evalError,
-    mt_el3_noParameterlessMain,
+    mt_el3_noMatchingMain,
     mt_el4_parsingError,
     mt_el5_systemError,
     mt_el5_haltMessageReceived,
     mt_endOfEvaluation,
     mt_reloadRequired,
-    mt_timing_info);
+    mt_timing_info,
+    mt_imageCreated);
 
 CONST
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
-    0,//mt_clearConsole,
-    0,//mt_printline,
-    0,//mt_echo_input,
-    0,//mt_echo_declaration,
-    0,//mt_echo_output,
-    0,//mt_debug_step,
+   -2,//mt_clearConsole,
+   -2,//mt_printline,
+   -1,//mt_echo_input,
+   -1,//mt_echo_declaration,
+   -1,//mt_echo_output,
+   -1,//mt_debug_step,
     1,//mt_el1_note,
     2,//mt_el2_warning,
     3,//mt_el3_evalError,
-    3,//mt_el3_noParameterlessMain
+    3,//mt_el3_noMatchingMain
     4,//mt_el4_parsingError,
     5,//mt_el5_systemError,
     5,//mt_el5_haltMessageReceived
-    0,//mt_endOfEvaluation
-    0,//mt_reloadRequired
-    0);//mt_timing_info
+   -1,//mt_endOfEvaluation
+   -1,//mt_reloadRequired
+   -1,//mt_timing_info
+   -1);
 
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
@@ -292,13 +294,14 @@ CONST
     'Note ',
     'Warning ',
     'Error ',
-    'Error: Cannot apply user defined rule main to parameter list ()',
+    'Error ',
     'Parsing Error ',
     'Sys. Error ',
     'Evaluation haltet (most probably by user).',
     '',
     '',
-    '');
+    '',
+    'Image:');
 
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';

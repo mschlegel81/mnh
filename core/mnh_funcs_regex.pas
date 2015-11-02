@@ -82,13 +82,15 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
       regex.inputString:=trip.y;
       result:=newListLiteral;
       try
-        if regex.Exec(trip.y) then for i:=0 to regex.SubExprMatchCount do begin
-          result^.append(
-            newListLiteral^.
-            appendString(regex.Match[i])^.
-            appendInt(regex.MatchPos[i])^.
-            appendInt(regex.MatchLen[i]),false);
-        end;
+        if regex.Exec(trip.y) then repeat
+          for i:=0 to regex.SubExprMatchCount do begin
+            result^.append(
+              newListLiteral^.
+              appendString(regex.Match   [i])^.
+              appendInt   (regex.MatchPos[i])^.
+              appendInt   (regex.MatchLen[i]),false);
+          end;
+        until not(regex.ExecNext);
       except
         on e:Exception do begin
           raiseError_(mt_el5_systemError,e.message,tokenLocation);

@@ -235,6 +235,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
     inherited create;
+    outputBehaviour.doShowTimingInfo:=false;
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -488,7 +489,10 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.lines.append('       at: '+{$I %TIME%});
     OutputEdit.lines.append('       with FPC'+{$I %FPCVERSION%});
     OutputEdit.lines.append('       for '+{$I %FPCTARGET%});
-    outAdapter:=@guiOutAdapter;
+    {$ifndef debugMode}
+    removeOutAdapter(@consoleOutAdapter);
+    {$endif}
+    addOutAdapter(@guiOutAdapter);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -961,7 +965,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end;
 
       if not(flushPerformed) and not(autosizingDone) then begin
-        UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+1;
+        UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
         if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
       end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;

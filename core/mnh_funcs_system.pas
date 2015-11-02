@@ -129,7 +129,11 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
-      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then begin
+        raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        disposeLiteral(result);
+        result:=newStringLiteral('');
+      end;
     end else raiseNotApplicableError('fileContents',params,tokenLocation);
   end;
 
@@ -145,7 +149,11 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
-      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then begin
+        raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        disposeLiteral(result);
+        result:=newListLiteral;
+      end;
     end else if (params<>nil) and (params^.size=3) and
                 (params^.value(0)^.literalType=lt_string) and
                 (params^.value(1)^.literalType=lt_int) and
@@ -157,7 +165,11 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
-      if not(accessed) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(accessed) then begin
+        raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        disposeLiteral(result);
+        result:=newListLiteral;
+      end;
     end else raiseNotApplicableError('fileLines',params,tokenLocation);
   end;
 

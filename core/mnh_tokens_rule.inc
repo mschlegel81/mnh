@@ -10,7 +10,7 @@
 
   T_rule=object
     private
-      called,valueChangedAfterDeclaration:boolean;
+      used,valueChangedAfterDeclaration:boolean;
       declarationStart,declarationEnd:T_tokenLocation;
       namedValue:T_namedVariable;
       ruleType:T_ruleType;
@@ -40,7 +40,7 @@
 {$ifdef include_implementation}
 CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
-    called:=false;
+    used:=false;
     valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
     declarationEnd:=C_nilTokenLocation;
@@ -121,7 +121,7 @@ exit}
           result:=false;
           for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler));
           if result then begin
-            called:=true;
+            used:=true;
             wrapResultInPutCacheRule;
             if param=nil then disposeLiteral(useParam);
           end;
@@ -133,9 +133,10 @@ exit}
           lit^.rereference;
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,lit);
           lastRep:=firstRep;
+          used:=true;
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,recycler) then begin
-          if (callDepth>=STACK_DEPTH_LIMIT) then begin CLEAN_EXIT(true); end;
+          if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; CLEAN_EXIT(true); end;
           if (noErrors) then reduceExpression(firstRep,callDepth+1,recycler);
           if (noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
@@ -148,6 +149,7 @@ exit}
             firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
           end;
+          used:=true;
           CLEAN_EXIT(true);
         end;
         CLEAN_EXIT(false);
@@ -161,7 +163,7 @@ exit}
             lastRep:=firstRep^.last;
             system.leaveCriticalSection(rule_cs);
           end;
-          called:=true;
+          used:=true;
           exit(true);
         end;
         result:=false;
@@ -173,12 +175,12 @@ exit}
           firstRep:=recycler.newToken(C_nilTokenLocation,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
-          called:=true;
+          used:=true;
         end;
       end;
       rt_normal: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
-          called:=true;
+          used:=true;
           exit(true);
         end;
         result:=false;
@@ -242,18 +244,24 @@ FUNCTION T_rule.hasPublicSubrule: boolean;
 
 FUNCTION T_rule.getInlineValue:P_literal;
   begin
-    if length(subrules)=1 then result:=subrules[0]^.getInlineValue
-                          else result:=nil;
+    if length(subrules)=1 then begin
+      result:=subrules[0]^.getInlineValue;
+      used:=true;
+    end else result:=nil;
   end;
 
 FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean):boolean;
   VAR i:longint;
   begin
-    if not(called) then begin
+    //If a rule is public, it may be used by importing packages -> no complaint
+    if not(used) and not(hasPublicSubrule) then begin
       if inMainPackage then raiseWarning('Unused rule '+id,declarationStart);
       exit(false);
     end;
-    if inMainPackage then for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id,inMainPackage);
+    //If a rule is used and has only one subrule, this one is also used per definition -> no complaint
+    if used and inMainPackage and (length(subrules)>1) then
+      for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id,inMainPackage);
+    result:=true;
   end;
 
 CONST C_ruleTypeText:array[T_ruleType] of string=(

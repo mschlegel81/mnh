@@ -565,7 +565,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
 
 FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean):boolean;
   begin
-    result:=not(called);
+    result:=not(called) and (typ=srt_normal_private);
     if inMainPackage and result then raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 

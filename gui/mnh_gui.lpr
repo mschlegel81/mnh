@@ -10,7 +10,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   mnh_cmdLineInterpretation, mnh_tokLoc, mnh_funcs, mnh_funcs_list,
   mnh_funcs_math, mnh_funcs_mnh, mnh_funcs_regex, mnh_funcs_strings,
   mnh_funcs_system, mnh_litVar, mnh_tokens, mnh_out_adapters, mnh_plotData,
-  consoleAsk, mnh_caches, mnh_constants, mnh_doc, mnh_fileWrappers,
+  consoleAsk, mnh_caches, mnh_constants, mnh_doc, mnh_html,
   mnh_debugForm, SynHighlighterMnh, mnh_evalThread, mySys
   {$ifndef debugMode},windows,sysutils{$endif};
 

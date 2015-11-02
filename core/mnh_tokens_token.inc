@@ -907,6 +907,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           finalizeAggregation;
         end;
       end else begin
+        if inParallel then raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to itList^.size-1 do if noErrors then addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
@@ -1031,8 +1032,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           if parameterListLiteral=nil
           then raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else begin
-            if (P_rule(first^.data)^.id='main') and (parameterListLiteral^.size=0)
-            then raiseError_(mt_el3_noParameterlessMain,'',first^.location)
+            if (P_rule(first^.data)^.id='main')
+            then raiseError_(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location)
             else raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           end;
           exit;
