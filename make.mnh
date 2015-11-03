@@ -28,7 +28,6 @@ private exeHasWrongVersion(FI:int)->begin
 end;
 
 private mutable builtReady:=[0..7]<0;
-private synchronized waitForBuilt(FI:int)->while(not(builtReady%FI),sleep(0.1));
 
 private build(FI:int)->begin
   hashChanged OR exeHasWrongVersion(FI) ? begin
@@ -219,15 +218,14 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
 
 //*Make distro 7z - including build and regTest if needed
-main('distro')->pEach(task,[{each(i,[3,1,2,0],build(i))},
-  {begin
-     waitForBuilt(1);
-     compress('64bit');
-     waitForBuilt(0);
-     each(pair,movePairs,moveFile@pair);
-     compress('32bit');
-     each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
-  end}],task());
+main('distro')->
+  begin
+    each(i,[0..3],build(i));
+    compress('64bit');
+    each(pair,movePairs,moveFile@pair);
+    compress('32bit');
+    each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+  end;
 
 //*Build - ignoring potentially existing executables
 main('build')->each(i,[0..7],build(i));
@@ -256,22 +254,16 @@ each(file,
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
 //*Tests all files
-main('test')->pEach(task,[
-  {begin each(i,[0..3],build(i)); true; end},
-  {each(i,[0..3],AND,begin
-     waitForBuilt(i);
-     regTest.main(binName(i));
-   end)}],AND,task());
-
+main('test')->begin
+  each(i,[0..3],build(i)); 
+  each(i,[0..3],AND,regTest.main(binName(i)));
+end;
 
 //*Tests some files - randomly
-main('quicktest')->pEach(task,[
-  {each(i,[0..3],build(i))},
-  {each(i,[0..3],AND,begin
-     waitForBuilt(i);
-     regTest.main(binName(i),'randomSample');
-   end)}],task());
-
+main('quicktest')->begin
+  each(i,[0..3],build(i));
+  each(i,[0..3],AND,regTest.main(binName(i),'randomSample'));
+end;
 
 
 //*Several steps in succession

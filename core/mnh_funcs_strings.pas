@@ -254,6 +254,10 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
           P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        if result^.literalType = lt_listWithError then begin
+          disposeLiteral(result);
+          result:=newErrorLiteral;
+        end;
       end;
       else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation);
     end;

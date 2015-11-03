@@ -987,7 +987,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
           result:=P_boolLiteral(res)^.value;
         end else begin
-          raiseError('The head-part of a while statement must return a scalar boolean!',headRule^.declaredAt);
+          raiseError('The head-part of a while statement must return a scalar boolean! Instead it returned: '+res^.toString,headRule^.declaredAt);
           result:=false;
         end;
         if res<>nil then disposeLiteral(res);
