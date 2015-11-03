@@ -27,6 +27,7 @@
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR recycler:T_tokenRecycler);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+      CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
       FUNCTION toString:ansistring;
@@ -255,6 +256,23 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR recycler:T_tokenRe
     updatePatternForInline;
   end;
 
+CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
+  begin
+    comment:='';
+    called:=false;
+    typ:=srt_inline_for_literal;
+    declaredAt:=tok^.location;
+    pattern.create;
+    pattern.appendFreeId('$x');
+    pattern.appendFreeId('$y');
+    setLength(preparedBody,5);
+    preparedBody[0].token.create; preparedBody[0].token.define(tok^.location,'',tt_braceOpen);             preparedBody[0].parIdx:=-1;
+    preparedBody[1].token.create; preparedBody[1].token.define(tok^.location,'$x',tt_parameterIdentifier); preparedBody[1].parIdx:=0;
+    preparedBody[2].token.create; preparedBody[2].token.define(tok^.location,'',tok^.tokType);             preparedBody[2].parIdx:=-1;
+    preparedBody[3].token.create; preparedBody[3].token.define(tok^.location,'$y',tt_parameterIdentifier); preparedBody[3].parIdx:=1;
+    preparedBody[4].token.create; preparedBody[4].token.define(tok^.location,'',tt_braceClose);            preparedBody[4].parIdx:=-1;
+  end;
+
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
@@ -262,6 +280,13 @@ DESTRUCTOR T_subrule.destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
+  end;
+
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
+  VAR subRule:P_subrule;
+  begin
+    new(subRule,createPrimitiveAggregator(tok));
+    result:=newExpressionLiteral(subRule);
   end;
 
 PROCEDURE disposeSubruleImpl (VAR p:pointer);

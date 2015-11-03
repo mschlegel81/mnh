@@ -1059,7 +1059,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           else raiseError('Cannot apply intrinsic rule '+first^.txt+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           exit;
         end;
-      end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_expression) then begin
+      end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,recycler)) then exit;
@@ -1441,12 +1441,12 @@ end}
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
             tt_separatorComma: if cTokType[2]<>tt_EOL then begin
               // each(<id>, || <literal> , ...
-              stack[length(stack)-1]^.data:=first^.data; //store literal list in each-token
+              stack[length(stack)-1]^.data:=first^.data; //store literal list in each/pEach-token
               P_literal(first^.data)^.rereference; //rereference literal to prevent destruction
-              first:=recycler.disposeToken(first);
-              first:=recycler.disposeToken(first);
+              first:=recycler.disposeToken(first); //dispose old literal
+              first:=recycler.disposeToken(first); //dispose comma
               stack_popLink;
-            end else raiseError('Invalid syntax for each construct - EOL comes to early!',stack[length(stack)-1]^.location);
+            end else raiseError('Invalid syntax for each/pEach construct - EOL comes to early!',stack[length(stack)-1]^.location);
             COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
             else begin
@@ -1552,10 +1552,26 @@ end}
           P_package(first^.data)^.resolveRuleId(first^,false);
           if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach(
-        (first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
-        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue, tt_aggregatorConstructor : case cTokType[1] of
+        tt_aggregatorConstructor: case cTokType[1] of
+          tt_braceOpen, tt_parList_constructor, tt_listToParameterList:
+          if (cTokType[2] in [tt_operatorAnd..tt_operatorPot]) and
+             (first^.next^.next^.next<>nil) and
+             (first^.next^.next^.next^.tokType=tt_braceClose) then begin
+            first^.tokType:=tt_aggregatorExpressionLiteral;
+            first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
+            first^.next:=recycler.disposeToken(first^.next); //drop (
+            first^.next:=recycler.disposeToken(first^.next); //drop +
+            first^.next:=recycler.disposeToken(first^.next); //drop )
+            didSubstitution:=true;
+          end else startOrPushParameterList;
+          tt_parList: applyRule(first^.next,first^.next^.next);
+          //tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
+          //tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRulePointer_pon,tt_importedUserRulePointer_pon,tt_intrinsicRulePointer_pon,tt_identifier_pon : applyRule(nil,first^.next);
+        end;
+
+        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
