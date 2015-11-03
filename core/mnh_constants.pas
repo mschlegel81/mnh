@@ -250,6 +250,7 @@ TYPE
     mt_el2_warning,
     mt_el3_evalError,
     mt_el3_noMatchingMain,
+    mt_el3_stackTrace,
     mt_el4_parsingError,
     mt_el5_systemError,
     mt_el5_haltMessageReceived,
@@ -270,6 +271,7 @@ CONST
     2,//mt_el2_warning,
     3,//mt_el3_evalError,
     3,//mt_el3_noMatchingMain
+    3,
     4,//mt_el4_parsingError,
     5,//mt_el5_systemError,
     5,//mt_el5_haltMessageReceived
@@ -295,6 +297,7 @@ CONST
     'Warning ',
     'Error ',
     'Error ',
+    'Error [stack trace]',
     'Parsing Error ',
     'Sys. Error ',
     'Evaluation haltet (most probably by user).',

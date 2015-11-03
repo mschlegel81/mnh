@@ -83,11 +83,12 @@ VAR
   {$ifdef fullVersion}stepper:T_stepper;{$endif}
   systemErrorlevel: specialize G_safeVar<longint>;
   hasMessageOfType:array[T_messageType] of boolean;
+  stackTraceCount:longint;
   outAdapter:array[0..7] of P_abstractOutAdapter;
   consoleOutAdapter:T_consoleOutAdapter;
 
 PROCEDURE clearErrors;
-PROCEDURE raiseError_(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
 PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
 PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
 PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -118,14 +119,19 @@ PROCEDURE clearErrors;
       if   maxErrorLevel>=C_errorLevelForMessageType[mt]
       then maxErrorLevel:=C_errorLevelForMessageType[mt]-1;
     end;
+    stackTraceCount:=0;
   end;
 
-PROCEDURE raiseError_(CONST thisErrorLevel: T_messageType;  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType;  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:byte;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
        maxErrorLevel:=C_errorLevelForMessageType[thisErrorLevel];
     hasMessageOfType[thisErrorLevel]:=true;
+    if (thisErrorLevel=mt_el3_stackTrace) then begin
+      inc(stackTraceCount);
+      if stackTraceCount>30 then exit;
+    end;
     for i:=0 to length(outAdapter)-1 do if outAdapter[i]<>nil then outAdapter[i]^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
@@ -175,7 +181,7 @@ FUNCTION noErrors: boolean; inline;
 
 PROCEDURE haltEvaluation;
   begin
-    raiseError_(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
+    raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
   end;
 
 PROCEDURE setDefaultCallbacks;

@@ -434,7 +434,7 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       except
         On E : Exception do begin
           resultText:='';
-          raiseError_(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
+          raiseCustomMessage(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
         end;
       end;
       result:=newStringLiteral(resultText);

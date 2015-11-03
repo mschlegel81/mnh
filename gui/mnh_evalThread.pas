@@ -89,7 +89,7 @@ FUNCTION main(p:pointer):ptrint;
         then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
         else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
       end;
-      raiseError_(mt_endOfEvaluation,'',C_nilTokenLocation);
+      raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
       sleepTime:=0;
     end;
 

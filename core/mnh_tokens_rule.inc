@@ -156,7 +156,7 @@ exit}
       end;
       rt_synchronized: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,recycler) then begin
-          if callDepth>=STACK_DEPTH_LIMIT then raiseError_(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+          if callDepth>=STACK_DEPTH_LIMIT then raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
           else begin
             system.enterCriticalSection(rule_cs);
             reduceExpression(firstRep,callDepth+1,recycler);
@@ -221,7 +221,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
       namedValue.setValue(value);
       if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else raiseError_(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
+    end else raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
@@ -231,7 +231,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
       result:=namedValue.mutate(mutation,RHS,location);
       valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else raiseError_(mt_el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
+    end else raiseCustomMessage(mt_el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;

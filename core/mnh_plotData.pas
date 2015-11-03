@@ -2101,7 +2101,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       rect.Bottom:=height;
       storeImage.Canvas.CopyRect(rect, plotImage.Canvas, rect);
       storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
-      raiseError_(mt_imageCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+      raiseCustomMessage(mt_imageCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
       storeImage.free;
 
       plotImage.free;

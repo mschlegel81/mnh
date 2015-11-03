@@ -353,7 +353,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       end;
 
       digestInlineExpression(first,recycler);
-      if (noErrors) and (first^.next<>nil) then raiseError_(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+      if (noErrors) and (first^.next<>nil) then raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
       if not(noErrors) then begin
         recycler.cascadeDisposeToken(first);
         recycler.destroy;
@@ -361,7 +361,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       end;
       if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
         recycler.disposeToken(first);
-        raiseError_(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+        raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
         recycler.destroy;
         exit(newErrorLiteral);
       end;

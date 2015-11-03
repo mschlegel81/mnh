@@ -241,7 +241,7 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
   PROCEDURE fail(CONST message:ansistring);
     begin
       if inEvaluationLoop then begin
-        raiseError_(mt_el4_parsingError,message,lineLocation);
+        raiseCustomMessage(mt_el4_parsingError,message,lineLocation);
       end else parsedLength:=length(line);
     end;
 
@@ -883,7 +883,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       eachLocation:=first^.location;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        raiseError_(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
+        raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -1003,7 +1003,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       whileLocation:=first^.location;
       if callDepth>STACK_DEPTH_LIMIT then begin
-        raiseError_(mt_el5_systemError,'Stack overflow in while construct.',whileLocation);
+        raiseCustomMessage(mt_el5_systemError,'Stack overflow in while construct.',whileLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
@@ -1033,7 +1033,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           then raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else begin
             if (P_rule(first^.data)^.id='main')
-            then raiseError_(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location)
+            then raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location)
             else raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
           end;
           exit;
@@ -1212,7 +1212,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
         tokType:=tt_localUserRulePointer;
                  tt_intrinsicRulePointer_pon:
         tokType:=tt_intrinsicRulePointer;
-        else raiseError_(mt_el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
+        else raiseCustomMessage(mt_el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
       end;
       newParameterListToken:=recycler.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
 
@@ -1346,7 +1346,7 @@ end}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseError_(mt_debug_step,stateToString,first^.location); {$endif}
+      {$ifdef fullVersion} if stepper.stepping(first^.location) then raiseCustomMessage(mt_debug_step,stateToString,first^.location); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1575,14 +1575,14 @@ end}
     {$ifndef debugMode}
     except
       on EOutOfMemory do begin
-        raiseError_(mt_el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+        raiseCustomMessage(mt_el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end else begin
-        raiseError_(mt_el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+        raiseCustomMessage(mt_el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
       end;
     end;
     {$endif}
 
-    if not(noErrors) and (first<>nil) then raiseError(intToStr(callDepth)+' State: '+stateToString,first^.location);
+    if not(noErrors) and (first<>nil) then raiseCustomMessage(mt_el3_stackTrace,intToStr(callDepth)+': '+stateToString,first^.location);
     if (hasMessageOfType[mt_el5_haltMessageReceived] or hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin
