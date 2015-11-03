@@ -431,6 +431,100 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end else raiseNotApplicableError('setThreadCount',params,tokenLocation);
   end;
 
+
+FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  TYPE T_group=record
+         key:P_literal;
+         resultLiteral:P_literal;
+       end;
+  VAR listToGroup:P_listLiteral;
+      keyList:array of P_literal;
+      groups:array of T_group;
+      aggregator:P_expressionLiteral;
+      tempContext:T_tokenRecycler;
+
+  PROCEDURE makeKeysByList(CONST list:P_listLiteral);
+    VAR i:longint;
+    begin
+      setLength(keyList,list^.size);
+      for i:=0 to length(keyList)-1 do keyList[i]:=list^.value(i);
+    end;
+
+  PROCEDURE makeKeysByIndex(CONST index:longint);
+    VAR i:longint;
+        dummy:P_literal;
+    begin
+      dummy:=newErrorLiteral;
+      setLength(keyList,listToGroup^.size);
+      for i:=0 to length(keyList)-1 do begin
+        if (listToGroup^.value(i)^.literalType in C_validListTypes) and (P_listLiteral(listToGroup^.value(i))^.size>index)
+        then keyList[i]:=P_listLiteral(listToGroup^.value(i))^.value(index)
+        else keyList[i]:=dummy;
+      end;
+      disposeLiteral(dummy);
+    end;
+
+  FUNCTION getGroupIndexByKey(CONST key:P_literal):longint;
+    begin
+      result:=0;
+      while (result<length(groups)) and not(groups[result].key^.equals(key)) do inc(result);
+      if result>=length(groups) then begin
+        setLength(groups,result+1);
+        groups[result].key:=key;
+        groups[result].resultLiteral:=nil;
+      end;
+    end;
+
+  PROCEDURE addToAggregation(VAR resultGroup:T_group; CONST L:P_literal); inline;
+    VAR newLit:P_literal;
+    begin
+      with resultGroup do begin
+        if aggregator=nil then begin
+          if resultLiteral=nil then resultLiteral:=newListLiteral;
+          P_listLiteral(resultLiteral)^.append(L,true);
+        end else begin
+          if resultLiteral=nil then begin
+            resultLiteral:=L; L^.rereference;
+          end else begin
+            newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,tempContext);
+            if newLit<>nil then begin
+              disposeLiteral(resultLiteral);
+              resultLiteral:=newLit;
+            end else raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
+          end;
+        end;
+      end;
+    end;
+
+  VAR inputIndex,outputIndex:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+       (params^.value(0)^.literalType in C_validListTypes) and
+      ((params^.value(1)^.literalType in C_validListTypes) and (P_listLiteral(params^.value(1))^.size=P_listLiteral(params^.value(0))^.size) or (params^.value(1)^.literalType=lt_int)) and
+      ((params^.size=2) or (params^.value(2)^.literalType=lt_expression))
+    then begin
+      listToGroup:=P_listLiteral(params^.value(0));
+
+      if params^.value(1)^.literalType=lt_int
+      then makeKeysByIndex(P_intLiteral(params^.value(1))^.value)
+      else makeKeysByList(P_listLiteral(params^.value(1)));
+
+      if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
+                          else aggregator:=nil;
+
+      tempContext.create;
+      for inputIndex:=0 to length(keyList)-1 do if noErrors then begin
+        outputIndex:=getGroupIndexByKey(keyList[inputIndex]);
+        addToAggregation(groups[outputIndex],listToGroup^.value(inputIndex));
+      end;
+      tempContext.destroy;
+
+      result:=newListLiteral;
+      for outputIndex:=0 to length(groups)-1 do P_listLiteral(result)^.append(groups[outputIndex].resultLiteral,false);
+    end;
+  end;
+
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -461,4 +555,5 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
 {$endif}
