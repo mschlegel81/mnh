@@ -27,7 +27,6 @@ TYPE
     outputBehaviour:T_outputBehaviour;
     CONSTRUCTOR create;
     PROCEDURE clearConsole; virtual; abstract;
-    PROCEDURE writeEcho(CONST messageType:T_messageType; CONST s: ansistring); virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
   end;
@@ -40,7 +39,6 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clearConsole; virtual;
-    PROCEDURE writeEcho(CONST messageType:T_messageType; CONST s: ansistring); virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
   end;
@@ -51,7 +49,6 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clearConsole; virtual;
-    PROCEDURE writeEcho(CONST mt:T_messageType; CONST s: ansistring); virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
     PROCEDURE appendSingleMessage(CONST message:T_storedMessage); virtual;
@@ -274,17 +271,6 @@ PROCEDURE T_consoleOutAdapter.clearConsole;
     mySys.clearConsole;
   end;
 
-PROCEDURE T_consoleOutAdapter.writeEcho(CONST messageType:T_messageType; CONST s: ansistring);
-  begin
-    case messageType of
-      mt_echo_output:      if not(outputBehaviour.doShowExpressionOut) then exit;
-      mt_echo_declaration: if not(outputBehaviour.doEchoDeclaration)   then exit;
-      mt_echo_input:       if not(outputBehaviour.doEchoInput)         then exit;
-      else exit;
-    end;
-    writeln(C_errorLevelTxt[messageType],s);
-  end;
-
 PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR i:longint;
   begin
@@ -296,10 +282,13 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST messageType: T_messageType;
   begin
     if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
     or (messageType in [mt_endOfEvaluation,mt_reloadRequired,mt_imageCreated])
-    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo) then exit;
+    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
+    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
+    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
+    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     if messageType in [mt_debug_step,mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived]
     then writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ', errorMessage)
-    else writeln(stdErr,                        ansistring(errorLocation),' ', errorMessage);
+    else writeln(stdErr,                              ansistring(errorLocation),' ', errorMessage);
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;
@@ -324,21 +313,6 @@ PROCEDURE T_collectingOutAdapter.clearConsole;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_collectingOutAdapter.writeEcho(CONST mt: T_messageType; CONST s: ansistring);
-  VAR msg:T_storedMessage;
-  begin
-    case mt of
-      mt_echo_output     : if not(outputBehaviour.doShowExpressionOut) then exit;
-      mt_echo_declaration: if not(outputBehaviour.doEchoDeclaration) then exit;
-      mt_echo_input      : if not(outputBehaviour.doEchoInput) then exit;
-    end;
-    system.enterCriticalSection(cs);
-    msg.messageType:=mt;
-    msg.simpleMessage:=s;
-    appendSingleMessage(msg);
-    system.leaveCriticalSection(cs);
-  end;
-
 PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR msg:T_storedMessage;
   begin
@@ -353,7 +327,10 @@ PROCEDURE T_collectingOutAdapter.errorOut(CONST messageType: T_messageType; CONS
   VAR msg:T_storedMessage;
   begin
     if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
-    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo) then exit;
+    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
+    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
+    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
+    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     system.enterCriticalSection(cs);
     msg.messageType:=messageType;
     msg.simpleMessage:=errorMessage;
