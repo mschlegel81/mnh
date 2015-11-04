@@ -404,6 +404,52 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
+FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  //clean(input,whitelist,instead)
+  VAR whiteList:set of char;
+      instead:char;
+      tmp:ansistring;
+      i:longint;
+  FUNCTION cleanString(CONST s:ansistring):ansistring;
+    VAR k:longint;
+        tmp:shortString;
+    begin
+      if length(s)<=255 then begin
+        tmp:=s;
+        for k:=1 to length(s) do if not(tmp[k] in whiteList) then tmp[k]:=instead;
+        exit(tmp);
+      end;
+      result:='';
+      for k:=1 to length(s) do if s[k] in whiteList then result:=result+s[k] else result:=result+instead;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=3) and
+       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(1)^.literalType=lt_stringList) and
+       (params^.value(2)^.literalType=lt_string) and
+       (length(P_stringLiteral(params^.value(2))^.value)=1) then begin
+      whiteList:=[];
+      for i:=0 to P_listLiteral(params^.value(1))^.size-1 do begin
+        tmp:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+        if length(tmp)=1 then Include(whiteList,tmp[1])
+        else begin
+          raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
+          exit(nil);
+        end;
+      end;
+      instead:=P_stringLiteral(params^.value(2))^.value[1];
+      if params^.value(0)^.literalType=lt_string then begin
+        result:=newStringLiteral(cleanString(P_stringLiteral(params^.value(0))^.value));
+      end else begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
+      end;
+    end;
+  end;
+
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR stringToSplit:ansistring;
       i0,i1:longint;
@@ -525,5 +571,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
   registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
+  registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
   registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
 end.
