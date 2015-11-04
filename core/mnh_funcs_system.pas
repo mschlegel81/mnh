@@ -36,7 +36,6 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       end;
     end;
     result:=nil;
-    raiseNotApplicableError('random',params,tokenLocation);
   end;
 
 FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -52,7 +51,6 @@ FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       end;
     end;
     result:=nil;
-    raiseNotApplicableError('intRandom',params,tokenLocation);
   end;
 
 
@@ -75,17 +73,15 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
 FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList]) then begin
-      result:=filesOrDirs_impl(params^.value(0),true);
-    end else raiseNotApplicableError('files',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(params^.value(0),true);
   end;
 
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList]) then begin
-      result:=filesOrDirs_impl(params^.value(0),false);
-    end else raiseNotApplicableError('folders',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(params^.value(0),false);
   end;
 
 FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -101,23 +97,21 @@ FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(replaceAll(resultList[i],'\','/'));
         resultList.free;
       end;
-    end else raiseNotApplicableError('allFolders',params,tokenLocation);
+    end;
   end;
 
 FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(fileExists(P_stringLiteral(params^.value(0))^.value));
-    end else raiseNotApplicableError('fileExists',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
+    then result:=newBoolLiteral(fileExists(P_stringLiteral(params^.value(0))^.value));
   end;
 
 FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DirectoryExists(P_stringLiteral(params^.value(0))^.value));
-    end else raiseNotApplicableError('folderExists',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
+    then result:=newBoolLiteral(DirectoryExists(P_stringLiteral(params^.value(0))^.value));
   end;
 
 
@@ -134,7 +128,7 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
         disposeLiteral(result);
         result:=newStringLiteral('');
       end;
-    end else raiseNotApplicableError('fileContents',params,tokenLocation);
+    end;
   end;
 
 FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -170,7 +164,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         disposeLiteral(result);
         result:=newListLiteral;
       end;
-    end else raiseNotApplicableError('fileLines',params,tokenLocation);
+    end;
   end;
 
 FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -185,7 +179,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
-    end else raiseNotApplicableError('writeFile',params,tokenLocation);
+    end;
   end;
 
 FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -208,7 +202,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
-    end else raiseNotApplicableError('writeFileLines',params,tokenLocation);
+    end;
   end;
 
 
@@ -278,10 +272,10 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       result:=newListLiteral;
       for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(output[i]);
       output.free;
-    end else raiseNotApplicableError('exec',params,tokenLocation);
+    end;
   end;
 
-FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST functionName:ansistring; CONST doAsynch:boolean):P_literal;
+FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean):P_literal;
   VAR executable:ansistring;
       cmdLinePar:T_arrayOfString;
       i:longint;
@@ -299,25 +293,24 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST tokenLocation:T_t
       runCommandAsyncOrPipeless(executable,
                                 cmdLinePar,doAsynch);
       result:=newBoolLiteral(true);
-    end else raiseNotApplicableError(functionName,params,tokenLocation);
+    end;
   end;
 
 FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    result:=execAsyncOrPipeless(params,tokenLocation,'execAsync',true);
+    result:=execAsyncOrPipeless(params,true);
   end;
 
 FUNCTION execPipeless_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
-    result:=execAsyncOrPipeless(params,tokenLocation,'execPipeless',false);
+    result:=execAsyncOrPipeless(params,false);
   end;
 
 FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then exit(newRealLiteral(now))
-    else raiseNotApplicableError('systime',params,tokenLocation);
+    then exit(newRealLiteral(now));
   end;
 
 
@@ -328,7 +321,7 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(DeleteFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value)));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
-    end else raiseNotApplicableError('deleteFile',params,tokenLocation);
+    end;
   end;
 
 FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -338,7 +331,7 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       obtainLock(P_stringLiteral(params^.value(0))^.value);
       result:=newBoolLiteral(DeleteDirectory(P_stringLiteral(params^.value(0))^.value,false));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
-    end else raiseNotApplicableError('deleteDir',params,tokenLocation);
+    end;
   end;
 
 FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -353,7 +346,7 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
                         P_stringLiteral(params^.value(1))^.value,true));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       releaseLock(P_stringLiteral(params^.value(1))^.value);
-    end else raiseNotApplicableError('copyFile',params,tokenLocation);
+    end;
   end;
 
 FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -368,7 +361,7 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
                               UTF8Encode(P_stringLiteral(params^.value(1))^.value)));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       releaseLock(P_stringLiteral(params^.value(1))^.value);
-    end else raiseNotApplicableError('moveFile',params,tokenLocation);
+    end;
   end;
 
 FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -421,7 +414,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation),false);
         disposeLiteral(tmpParam);
       end;
-    end else raiseNotApplicableError('fileInfo',params,tokenLocation);
+    end;
   end;
 
 FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -438,7 +431,7 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
         end;
       end;
       result:=newStringLiteral(resultText);
-    end else raiseNotApplicableError('httpGet',params,tokenLocation);
+    end;
   end;
 
 FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -451,7 +444,7 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       result:=newVoidLiteral;
       windows.Beep(P_intLiteral(params^.value(0))^.value,
                    P_intLiteral(params^.value(1))^.value);
-    end else raiseNotApplicableError('beep',params,tokenLocation);
+    end;
   end;
 
 FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -460,7 +453,7 @@ FUNCTION setErrorlevel_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
       mnh_out_adapters.systemErrorlevel.value:=P_intLiteral(params^.value(0))^.value;
       result:=newVoidLiteral;
-    end else raiseNotApplicableError('setErrorlevel',params,tokenLocation);
+    end;
   end;
 
 FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -515,7 +508,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false);
-    end else raiseNotApplicableError('driveInfo',params,tokenLocation);
+    end;
   end;
 
 FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -528,7 +521,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       result:=newListLiteral;
       for i:=0 to length(e)-1 do P_listLiteral(result)^.appendString(e[i]);
       setLength(e,0);
-    end else raiseNotApplicableError('getEnv',params,tokenLocation);
+    end;
   end;
 
 INITIALIZATION

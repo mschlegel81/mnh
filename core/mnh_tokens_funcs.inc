@@ -22,8 +22,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 begin
   result:=nil;
   if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0))
-  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+  then result:=recurse(params^.value(0));
 end}
 
 FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -94,8 +93,7 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=not_rec(params^.value(0))
-    else raiseNotApplicableError('not',params,tokenLocation);
+    then result:=not_rec(params^.value(0));
   end;
 
 {$define UNARY_NUM_TO_SAME:=
@@ -119,8 +117,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 begin
   result:=nil;
   if (params<>nil) and (params^.size=1)
-  then result:=recurse(params^.value(0))
-  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+  then result:=recurse(params^.value(0));
 end}
 
 FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -198,8 +195,7 @@ UNARY_NUM_TO_SAME;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then result:=recurse1(params^.value(0)) else
-    if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1))
-    else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+    if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1));
   end}
 
 FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -239,8 +235,7 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=sign_rec(params^.value(0))
-    else raiseNotApplicableError('sign',params,tokenLocation);
+    then result:=sign_rec(params^.value(0));
   end;
 
 
@@ -297,7 +292,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
                                      else disposeLiteral(res);
         appendPair(result,'time'  ,newRealLiteral(t));
       end;
-    end else raiseNotApplicableError('time',params,tokenLocation);
+    end;
   end;
 
 FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -317,7 +312,7 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
       end;
-    end else raiseNotApplicableError('sleep',params,tokenLocation);
+    end;
   end;
 
 FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -390,8 +385,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_emptyList,lt_string])
-    then result:=expression_rec(params^.value(0))
-    else raiseNotApplicableError('expression',params,tokenLocation);
+    then result:=expression_rec(params^.value(0));
   end;
 
 FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -402,9 +396,8 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      result:=newIntLiteral(getArity(P_expressionLiteral(params^.value(0))));
-    end else raiseNotApplicableError('arity',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression)
+    then result:=newIntLiteral(getArity(P_expressionLiteral(params^.value(0))));
   end;
 
 FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -417,9 +410,8 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression) then begin
-      result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
-    end else raiseNotApplicableError('parameterNames',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression)
+    then result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
   end;
 
 FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -428,9 +420,8 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
       limitPoolThreads(P_intLiteral(params^.value(0))^.value-1);
       result:=newVoidLiteral;
-    end else raiseNotApplicableError('setThreadCount',params,tokenLocation);
+    end;
   end;
-
 
 FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   TYPE T_group=record

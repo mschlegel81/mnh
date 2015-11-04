@@ -51,8 +51,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       for i := 0 to length(opt)-1 do opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       result := newStringLiteral(ask(P_stringLiteral(params^.value(0))^.value, opt));
       system.leaveCriticalSection(cs);
-    end
-    else raiseNotApplicableError('ask', params, tokenLocation);
+    end;
   end;
 
 INITIALIZATION

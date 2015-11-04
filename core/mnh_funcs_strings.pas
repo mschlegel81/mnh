@@ -15,9 +15,8 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
             P_listLiteral(result)^.appendInt(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
         end;
-        else raiseNotApplicableError('length',params,tokenLocation);
       end;
-    end else raiseNotApplicableError('length',params,tokenLocation);
+    end;
   end;
 
 FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -58,7 +57,7 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           end else raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
-    end else raiseNotApplicableError('pos',params,tokenLocation);
+    end;
   end;
 
 FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -105,7 +104,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       if params^.value(0)^.literalType=lt_stringList then checkLength(params^.value(0));
       if params^.value(1)^.literalType=lt_intList    then checkLength(params^.value(1));
       if params^.value(2)^.literalType=lt_intList    then checkLength(params^.value(2));
-      if not(allOkay) then raiseNotApplicableError('copy',params,tokenLocation)
+      if not(allOkay) then exit(nil)
       else if not(anyList) then
         result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
                                       P_intLiteral   (params^.value(1))^.value+1,
@@ -118,7 +117,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
                    safeStart(i),
                    safeLen(i)));
       end;
-    end else raiseNotApplicableError('copy',params,tokenLocation);
+    end;
   end;
 
 FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -141,7 +140,7 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
-    end else raiseNotApplicableError('chars',params,tokenLocation);
+    end;
   end;
 
 FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -209,7 +208,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       and (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       initSplitters;
       result:=splitRecurse(params^.value(0));
-    end else raiseNotApplicableError('split',params,tokenLocation);
+    end;
   end;
 
 FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -240,7 +239,7 @@ FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       for i:=1 to P_listLiteral(params^.value(0))^.size-1 do
         resTxt:=resTxt+joiner+stringOfLit(P_listLiteral(params^.value(0))^.value(i));
       result:=newStringLiteral(resTxt);
-    end else raiseNotApplicableError('join',params,tokenLocation);
+    end;
   end;
 
 {$define STRINGLITERAL_ROUTINE:=
@@ -266,8 +265,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 begin
   result:=nil;
   if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList])
-  then result:=recurse(params^.value(0))
-  else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+  then result:=recurse(params^.value(0));
 end}
 
 
@@ -377,7 +375,7 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
        (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
        (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
       result:=replace_one_or_all(params,false);
-    end else raiseNotApplicableError('replaceOne',params,tokenLocation);
+    end;
   end;
 
 FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -388,7 +386,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
        (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
        (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
       result:=replace_one_or_all(params,true);
-    end else raiseNotApplicableError('replace',params,tokenLocation);
+    end;
   end;
 
 FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -403,7 +401,7 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       sub:=P_stringLiteral(params^.value(0))^.value;
       for i:=1 to P_intLiteral(params^.value(1))^.value do res:=res+sub;
       result:=newStringLiteral(res);
-    end else raiseNotApplicableError('repeat',params,tokenLocation);
+    end;
   end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -453,10 +451,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params<>nil) and (params^.size=2) then begin
       if (params^.value(1)^.literalType=lt_string)
       then setLanguage(P_stringLiteral(params^.value(1))^.value)
-      else begin
-        raiseNotApplicableError('tokenSplit',params,tokenLocation);
-        exit(nil);
-      end;
+      else exit(nil);
     end;
 
     if (params<>nil) and (params^.size>=1) and
@@ -508,8 +503,7 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
         end;
         stepToken;
       end;
-
-    end else raiseNotApplicableError('tokenSplit',params,tokenLocation);
+    end;
   end;
 
 

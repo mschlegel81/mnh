@@ -10,7 +10,6 @@ VAR
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
 
 IMPLEMENTATION
@@ -28,15 +27,6 @@ PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST
   begin
     if not(fullNameOnly) then registerImp(name);
     registerImp(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name);
-  end;
-
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation);
-  VAR complaintText:ansistring;
-  begin
-    complaintText:='Built in function '+functionName+' cannot be applied to parameters ';
-    if params=nil then complaintText:=complaintText+'()'
-                  else complaintText:=complaintText+params^.toParameterListString(true);
-    raiseError(complaintText,tokenLocation);
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
@@ -133,7 +123,7 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       result:=newStringLiteral(join(formatTabs(reSplit(resultString)),C_lineBreakChar));
-    end else raiseNotApplicableError('format',params,tokenLocation);
+    end;
   end;
 
 FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -146,7 +136,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       printOut(formatTabs(reSplit(resultString)));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
-    end else raiseNotApplicableError('printf',params,tokenLocation);
+    end;
   end;
 {$undef INNER_FORMATTING}
 

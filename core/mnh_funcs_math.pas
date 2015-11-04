@@ -14,7 +14,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end else raiseNotApplicableError('max',params,tokenLocation);
+    end;
   end;
 
 FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -35,7 +35,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         end;
       end;
       result:=newIntLiteral(iMin);
-    end else raiseNotApplicableError('argMax',params,tokenLocation);
+    end;
   end;
 
 FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -50,7 +50,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end else raiseNotApplicableError('min',params,tokenLocation);
+    end;
   end;
 
 FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -71,7 +71,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         end;
       end;
       result:=newIntLiteral(iMin);
-    end else raiseNotApplicableError('argMin',params,tokenLocation);
+    end;
   end;
 
 FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -99,7 +99,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
           end;
         end;
       end;
-    end else raiseNotApplicableError('isNan',params,tokenLocation);
+    end;
   end;
 
 FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -127,7 +127,7 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           end;
         end;
       end;
-    end else raiseNotApplicableError('isInfinite',params,tokenLocation);
+    end;
   end;
 
 FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -164,7 +164,7 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
           P_listLiteral(result)^.appendBool(inRange(P_listLiteral(params^.value(0))^.value(i)));
       end;
-    end else raiseNotApplicableError('isInRange',params,tokenLocation);
+    end;
   end;
 
 

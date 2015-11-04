@@ -63,13 +63,13 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation)
+      if i1<0 then exit(nil)
       else if i1=0 then result:=newBoolLiteral(regexMatches(triplet(params^.value(1),params^.value(0),nil,0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(regexMatches(triplet(params^.value(1),params^.value(0),nil,i)));
       end;
-    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matches',params,tokenLocation);
+    end;
   end;
 
 FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -104,13 +104,13 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation)
+      if i1<0 then exit(nil)
       else if i1=0 then result:=regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
-    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'matchComposite',params,tokenLocation);
+    end;
   end;
 
 FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -140,13 +140,13 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       i1:=listSize(params^.value(0),params^.value(1),nil);
-      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation)
+      if i1<0 then exit(nil)
       else if i1=0 then result:=regexSplit(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
-    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'split',params,tokenLocation);
+    end;
   end;
 
 FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -170,13 +170,13 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     result:=nil;
     if (params<>nil) and (params^.size=3) then begin
       i1:=listSize(params^.value(0),params^.value(1),params^.value(2));
-      if i1<0 then raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation)
+      if i1<0 then exit(nil)
       else if i1=0 then result:=newStringLiteral(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),0)))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do P_listLiteral(result)^.appendString(regexReplace(triplet(params^.value(1),params^.value(0),params^.value(2),i)));
       end;
-    end else raiseNotApplicableError(C_namespaceString[REGEX_NAMESPACE]+'replace',params,tokenLocation);
+    end;
   end;
 
 INITIALIZATION

@@ -12,7 +12,7 @@ FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         result^.rereference;
       end else result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.append(params^.value(1),true);
-    end else raiseNotApplicableError('add',params,tokenLocation);
+    end;
   end;
 
 {$MACRO ON}
@@ -21,9 +21,8 @@ begin
   result:=nil;
   if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
     if      (params^.size=1) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO
-    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO(P_intLiteral(params^.value(1))^.value)
-    else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
-  end else raiseNotApplicableError(ID_MACRO,params,tokenLocation);
+    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO(P_intLiteral(params^.value(1))^.value);
+  end;
 end}
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -59,15 +58,14 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
             and (params^.value(1)^.literalType=lt_expression) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)));
-    end else raiseNotApplicableError('sort',params,tokenLocation);
+    end;
   end;
 
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)
-    then result:=P_listLiteral(params^.value(0))^.sortPerm
-    else raiseNotApplicableError('sortPerm',params,tokenLocation);
+    then result:=P_listLiteral(params^.value(0))^.sortPerm;
   end;
 
 FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -76,7 +74,7 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.unique;
-    end else raiseNotApplicableError('unique',params,tokenLocation);
+    end;
   end;
 
 FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -85,7 +83,7 @@ FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.toElementFrequency;
-    end else raiseNotApplicableError('elementFrequency',params,tokenLocation);
+    end;
   end;
 
 FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -102,10 +100,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     if params<>nil then begin
       result:=newListLiteral;
       recurse_flatten(params);
-    end else begin
-      result:=nil;
-      raiseNotApplicableError('flatten',params,tokenLocation);
-    end;
+    end else result:=nil;
   end;
 
 FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -116,7 +111,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         lt_error..  lt_expression: result:=newIntLiteral(1);
         lt_list..lt_listWithError: result:=newIntLiteral(P_listLiteral(params^.value(0))^.size);
       end;
-    end else raiseNotApplicableError('size',params,tokenLocation);
+    end;
   end;
 
 FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -136,7 +131,6 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         lt_emptyList: exit(newIntLiteral(0));
       end;
     end;
-    raiseNotApplicableError('trueCount',params,tokenLocation);
   end;
 
 INITIALIZATION

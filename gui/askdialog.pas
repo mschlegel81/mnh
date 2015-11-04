@@ -148,8 +148,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
       result := newStringLiteral(askForm.getLastAnswerReleasing);
       system.leaveCriticalSection(cs);
-    end
-    else raiseNotApplicableError('ask', params, tokenLocation);
+    end;
   end;
 
 INITIALIZATION

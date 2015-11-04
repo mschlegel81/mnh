@@ -22,8 +22,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0))
-    else raiseNotApplicableError('softcast',params,tokenLocation);
+    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0));
   end;
 
 FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -34,7 +33,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         result:=params^.value(0);
         result^.rereference;
       end else result:=newStringLiteral(params^.value(0)^.toString);
-    end else raiseNotApplicableError('string',params,tokenLocation);
+    end;
   end;
 
 FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -44,15 +43,14 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       if (tokenLocation.fileName='?') or
          (tokenLocation.fileName='') then result:=newStringLiteral('<Unknown>')
                                      else result:=newStringLiteral(tokenLocation.fileName);
-    end else raiseNotApplicableError('myPath',params,tokenLocation);
+    end;
   end;
 
 FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=newStringLiteral(paramStr(0))
-    else raiseNotApplicableError('executor',params,tokenLocation);
+    then result:=newStringLiteral(paramStr(0));
   end;
 
 FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -86,15 +84,14 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
         P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation),false);
         disposeLiteral(tmpParam);
       end;
-    end else raiseNotApplicableError('splitFileName',params,tokenLocation);
+    end;
   end;
 
 FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=newIntLiteral(params^.value(0)^.hash)
-    else raiseNotApplicableError('hash',params,tokenLocation);
+    then result:=newIntLiteral(params^.value(0)^.hash);
   end;
 
 FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
@@ -107,14 +104,13 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
       result:=newListLiteral;
       for i:=0 to length(keys)-1 do P_listLiteral(result)^.appendString(keys[i]);
       setLength(keys,0);
-    end else raiseNotApplicableError('listBuiltin',params,tokenLocation);
+    end;
   end;
 
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   begin
     if (params=nil) or (params^.size=0) then raiseError('Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then raiseError(params^.value(0)^.toString,tokenLocation)
-    else raiseNotApplicableError('fail',params,tokenLocation);
+    else if (params<>nil) and (params^.size=1) then raiseError(params^.value(0)^.toString,tokenLocation);
     result:=nil;
   end;
 
@@ -142,8 +138,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=recurse(params^.value(0))
-    else raiseNotApplicableError('ord',params,tokenLocation);
+    then result:=recurse(params^.value(0));
   end;
 
 INITIALIZATION
