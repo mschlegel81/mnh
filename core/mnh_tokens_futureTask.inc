@@ -104,14 +104,20 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR recycler:T_tokenRecyc
   end;
 
 FUNCTION T_futureTask.getResultAsLiteral: P_literal;
+  VAR loc:T_tokenLocation;
   begin
     while state in [fts_pending,fts_evaluating] do sleep(1);
-    if (task<>nil) and (task^.next=nil) and (task^.tokType=tt_literal) and (task^.data<>nil)
-    then begin
-      result:=task^.data;
-      result^.rereference;
-    end
-    else result:=newErrorLiteral;
+    if (noErrors) then begin
+      if (task<>nil) and (task^.next=nil) and (task^.tokType=tt_literal) then begin
+        result:=task^.data;
+        result^.rereference;
+      end else begin
+        result:=newErrorLiteral;
+        if task<>nil then loc:=task^.location else loc:=C_nilTokenLocation;
+        raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
+        raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
+      end;
+    end else result:=newErrorLiteral;
   end;
 
 PROCEDURE T_futureTask.free(VAR recycler:T_tokenRecycler);

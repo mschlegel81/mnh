@@ -365,7 +365,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
               first:=recycler.disposeToken(first);
               first:=recycler.disposeToken(first);
             end else begin
-              raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first) ,first^.location);
+              raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first,10) ,first^.location);
               recycler.cascadeDisposeToken(first);
               exit;
             end;
@@ -424,18 +424,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if assignmentToken<>nil then begin
         startTime:=now;
         predigest(assignmentToken,@self,recycler);
-        if someEchoDeclaration then raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
+        if someEchoDeclaration then raiseCustomMessage(mt_echo_declaration, tokensToString(first,maxLongint)+';',first^.location);
         parseRule;
         timeForDeclarations:=timeForDeclarations+now-startTime;
       end else begin
         if (usecase=lu_forDirectExecution) then begin
           startTime:=now;
           predigest(first,@self,recycler);
-          if someEchoInput then raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
+          if someEchoInput then raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
           reduceExpression(first,0,recycler);
           timeForInterpretation:=timeForInterpretation+now-startTime;
-          if (first<>nil) and someEchoOutput then raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
-        end else raiseNote('Skipping expression '+tokensToString(first),first^.location);
+          if (first<>nil) and someEchoOutput then raiseCustomMessage(mt_echo_output, tokensToString(first,maxLongint),first^.location);
+        end else raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
       if first<>nil then recycler.cascadeDisposeToken(first);
       first:=nil;

@@ -33,18 +33,20 @@
 
 {$endif}
 {$ifdef include_implementation}
-FUNCTION tokensToString(CONST first:P_token):ansistring;
+FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;
+      count:longint=0;
   begin
     prevIdLike:=false;
     result:='';
     p:=first;
-    while p<>nil do begin
+    while (p<>nil) and (count<limit) do begin
       result:=result+p^.toString(prevIdLike,idLike);
       prevIdLike:=idLike;
       p:=p^.next;
     end;
+    if p<>nil then result:=result+' ...';
   end;
 
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
@@ -830,7 +832,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             first^.data:=newErrorLiteral;
             raiseError('Error performing finalizing aggregation each-construct - NIL literal encountered',eachLocation);
           end else first^.data:=newListLiteral;
-        end else first^.data:=resultLiteral;
+        end else begin
+          if resultLiteral^.literalType=lt_listWithError then begin
+            disposeLiteral(resultLiteral);
+            resultLiteral:=newErrorLiteral;
+          end;
+          first^.data:=resultLiteral;
+        end;
         first^.txt:='';
         first^.next:=recycler.disposeToken(bracketClosingEach);
       end;
@@ -1327,6 +1335,11 @@ tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
 tt_identifier_pon,tt_importedUserRulePointer_pon,tt_localUserRulePointer_pon,tt_intrinsicRulePointer_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
+
+{$define FORBIDDEN_SEPARATORS:=
+tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
+tt_separatorComma: raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
+
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
   stack_popDestroy;
@@ -1386,8 +1399,9 @@ end}
               first^.next:=recycler.disposeToken(first^.next);
               didSubstitution:=true;
             end;
-            COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
+            COMMON_CASES;
+            FORBIDDEN_SEPARATORS;
             else raiseError('Unable to resolve paranthesis!',stack[length(stack)-1]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
@@ -1402,13 +1416,6 @@ end}
                     (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
             end;
-            //tt_separatorCnt: begin // [ | <Lit> ..
-            //  P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
-            //  P_listLiteral(stack[length(stack)-1]^.data)^.setRangeAppend;
-            //  first:=recycler.disposeToken(first);
-            //  first:=recycler.disposeToken(first);
-            //  didSubstitution:=true;
-            //end;
             tt_listBraceClose: begin // [ | <Lit> ]
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location);
               first:=recycler.disposeToken(first);
@@ -1417,8 +1424,9 @@ end}
               first^.tokType:=tt_literal;
               didSubstitution:=true;
             end;
-            COMMON_CASES;
             COMMON_SEMICOLON_HANDLING;
+            COMMON_CASES;
+            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
@@ -1435,8 +1443,10 @@ end}
               first:=recycler.disposeToken(first);
               didSubstitution:=true;
             end;
-            COMMON_CASES;
+            tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
             COMMON_SEMICOLON_HANDLING;
+            COMMON_CASES;
+            else raiseError('Invalid token '+tokensToString(first,10),first^.location)
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
             tt_separatorComma: if cTokType[2]<>tt_EOL then begin
@@ -1447,11 +1457,10 @@ end}
               first:=recycler.disposeToken(first); //dispose comma
               stack_popLink;
             end else raiseError('Invalid syntax for each/pEach construct - EOL comes to early!',stack[length(stack)-1]^.location);
-            COMMON_CASES;
+            tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
             COMMON_SEMICOLON_HANDLING;
-            else begin
-              raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
-            end;
+            COMMON_CASES;
+            else raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
           end else raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
@@ -1469,6 +1478,7 @@ end}
               applyMutation;
             end;
             COMMON_CASES;
+            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
@@ -1486,11 +1496,14 @@ end}
               applyLocalAssignment(cTokType[-1]);
             end;
             COMMON_CASES;
+            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           else begin
             case cTokType[1] of
-              COMMON_CASES;
               COMMON_SEMICOLON_HANDLING;
+              COMMON_CASES;
+              FORBIDDEN_SEPARATORS;
+              else raiseError('Invalid token '+tokensToString(first,10),first^.location);
             end;
           end;
         end;

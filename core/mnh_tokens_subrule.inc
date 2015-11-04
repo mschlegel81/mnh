@@ -517,9 +517,10 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
         result:=firstRep^.data;
         result^.rereference;
       end else begin
-        result:=nil;
-        raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. '+
-        'The failed function is:'+toString,declaredAt);
+        result:=newErrorLiteral;
+        raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
+        raiseError('The failed function is:'+toString,declaredAt);
+        raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
       end;
       recycler.cascadeDisposeToken(firstRep);
     end else result:=nil;
