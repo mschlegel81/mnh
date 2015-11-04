@@ -16,11 +16,7 @@ private cleanString(drawChars:string, input:string, allowShortening:boolean)->be
     allowShortening ? ['0','1' ,'2' ,'3' ,'4' ,'5' ,'6' ,'7' ,'8' ,'9'] : '0');
 end;
 
-multistep(i)->{begin
-                 local oldPos:=turtlePos;
-                 turtlePos+=i*[cos(turtleDir),sin(turtleDir)];
-                 oldPos;
-               end};
+
 turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
 turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,allowShortening:boolean)->begin
   local cleanInput:=cleanString(drawChars,s,allowShortening);
@@ -30,22 +26,31 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,al
   local posStack:=[];
   local dirStack:=[];
   local rotAngle:=rotAngleInDegrees*degToRad;
-  local OP_LUT:=each(i,[0..9],[string(i),multistep(2^i)])|[
-        ['+',{begin turtleDir-=rotAngle; void; end}],
-        ['-',{begin turtleDir+=rotAngle; void; end}],
-        ['[',{begin
-                posStack|=[turtlePos];
-                dirStack|=turtleDir;
-                void;
-              end}],
-        [']',{begin
-                turtlePos:=trailing(posStack);
-                posStack := leading(posStack);
-                turtleDir:=trailing(dirStack);
-                dirStack := leading(dirStack);
-                [[Nan,Nan]] | turtlePos;
-              end}]];
-  each(c,copy(cleanInput,[0..length(cleanInput)-1],1),(OP_LUT%c)()) | [turtlePos];
+  each(c,cleanInput .chars,when(
+    c='0', begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='+', begin turtleDir-=rotAngle; void; end,
+    c='-', begin turtleDir+=rotAngle; void; end,
+    c='[', begin
+             posStack|=[turtlePos];
+             dirStack|=turtleDir;
+             void;
+           end,
+    c=']', begin
+             turtlePos:=trailing(posStack);
+             posStack := leading(posStack);
+             turtleDir:=trailing(dirStack);
+             dirStack := leading(dirStack);
+             [[Nan,Nan]] | turtlePos;
+           end,
+    c='1', begin local oldPos:=turtlePos; turtlePos+=  2*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='2', begin local oldPos:=turtlePos; turtlePos+=  4*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='3', begin local oldPos:=turtlePos; turtlePos+=  8*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='4', begin local oldPos:=turtlePos; turtlePos+= 16*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='5', begin local oldPos:=turtlePos; turtlePos+= 32*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='6', begin local oldPos:=turtlePos; turtlePos+= 64*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='7', begin local oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='8', begin local oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
+    c='9', begin local oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end)) | [turtlePos];
 end;
 
 //*For reg-test

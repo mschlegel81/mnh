@@ -531,13 +531,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
                   t^.next:=recycler.disposeToken(t^.next);
                 end else raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
               end else raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
-            end else begin
-              raiseWarning('Cannot resolve identifier "'+t^.txt+'" using dynamic scoping (expecting a block-local variable for this identifier) as a fallback.',t^.location);
-              t^.tokType:=t^.next^.tokType;
-              if t^.tokType=tt_assign then t^.tokType:=tt_assignExistingBlockLocal;
-              t^.data:=nil;
-              t^.next:=recycler.disposeToken(t^.next);
-            end;
+            end else raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
         tt_modifier_local: if (t^.next<>nil) and (t^.next^.tokType=tt_blockLocalVariable) and (t^.next^.next<>nil) and (t^.next^.next^.tokType=tt_assign) then begin
@@ -661,8 +655,50 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       didSubstitution:=true;
     end;
 
+  TYPE T_bodyParts=array of record first,last:P_token; end;
+
+  FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; OUT closingBracket:P_token):T_bodyParts;
+    VAR t,p:P_token;
+        bracketLevel,i:longint;
+    begin
+      closingBracket:=nil;
+      bracketLevel:=initialBracketLevel;
+      t:=first; p:=nil;
+      if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+        setLength(result,1);
+        result[0].first:=first^.next;
+      end else begin
+        raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+        setLength(result,0);
+        exit;
+      end;
+      while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+        case t^.tokType of
+          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
+          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+          tt_separatorComma: if bracketLevel=1 then begin
+            result[length(result)-1].last:=p; //end of body part is token before comma
+            setLength(result,length(result)+1);
+            result[length(result)-1].first:=t^.next; //start of next body part is token after comma
+          end;
+        end;
+        p:=t; t:=t^.next;
+      end;
+      result[length(result)-1].last:=p; //end of body part is token before comma
+      if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+        raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+        setLength(result,0);
+        exit;
+      end;
+      closingBracket:=t;
+      for i:=0 to length(result)-1 do begin
+        if result[i].last^.next<>closingBracket then recycler.disposeToken(result[i].last^.next);
+        result[i].last^.next:=nil;
+      end;
+    end;
+
   PROCEDURE resolveEach(inParallel:boolean);
-    VAR t,bracketClosingEach:P_token;
+    VAR bracketClosingEach:P_token;
         bodyRule:array of P_subrule;
         aggregatorLocation:T_tokenLocation;
         aggregatorToken:T_tokenType;
@@ -671,49 +707,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
 
     FUNCTION parseBodyOk:boolean;
       VAR bracketLevel,i:longint;
-          p:P_token;
-          bodyPart:array of array[0..1] of P_token;
+          t,p:P_token;
+          bodyParts:T_bodyParts;
       begin
         //first token is <each>-Token
         //find closing bracket and body parts
-        bracketLevel:=0; //note: first token will raise bracket Level to 1
-        t:=first; p:=nil;
-        if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-          setLength(bodyPart,1);
-          bodyPart[0,0]:=first^.next;
-        end else begin
-          raiseError('Invalid each-construct; Cannot find closing bracket.',first^.location);
-          exit(false);
-        end;
-        while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-          case t^.tokType of
-            tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-            tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
-            tt_separatorComma: if bracketLevel=1 then begin
-              bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-              setLength(bodyPart,length(bodyPart)+1);
-              bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-            end;
-          end;
-          p:=t; t:=t^.next;
-        end;
-        bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-        if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-          raiseError('Invalid each-construct; Cannot find closing bracket.',first^.location);
-          exit(false);
-        end;
-        bracketClosingEach:=t;
-        for i:=0 to length(bodyPart)-1 do begin
-          if bodyPart[i,1]^.next<>bracketClosingEach then recycler.disposeToken(bodyPart[i,1]^.next);
-          bodyPart[i,1]^.next:=nil;
-        end;
+        bodyParts:=getBodyParts(first,0,bracketClosingEach);
+        if bracketClosingEach=nil then exit(false);
+
         //process aggregator part (if any)----------------------------------------------
         aggregatorPresent:=no;
-        t:=bodyPart[0,0];
+        t:=bodyParts[0].first;
         if t^.tokType=tt_aggregatorConstructor then begin
-          reduceExpression(bodyPart[0,0],callDepth+1,recycler);
-          bodyPart[0,1]:=bodyPart[0,0]^.last;
-          t:=bodyPart[0,0];
+          reduceExpression(bodyParts[0].first,callDepth+1,recycler);
+          bodyParts[0].last:=bodyParts[0].first^.last;
+          t:=bodyParts[0].first;
         end;
         if t^.next=nil then begin
           case t^.tokType of
@@ -731,17 +739,17 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           end;
         end;
         if aggregatorPresent<>no then begin
-          recycler.disposeToken(bodyPart[0,0]);
-          for i:=0 to length(bodyPart)-2 do bodyPart[i]:=bodyPart[i+1];
-          setLength(bodyPart,length(bodyPart)-1);
+          recycler.disposeToken(bodyParts[0].first);
+          for i:=0 to length(bodyParts)-2 do bodyParts[i]:=bodyParts[i+1];
+          setLength(bodyParts,length(bodyParts)-1);
           first^.tokType:=tt_braceOpen;
           bracketClosingEach^.tokType:=tt_braceClose;
         end;
         //----------------------------------------------process aggregator part (if any)
         //process other body parts (if any)---------------------------------------------
-        setLength(bodyRule       ,length(bodyPart));
-        for i:=0 to length(bodyPart)-1 do
-          new(bodyRule[i],createForEachBody(first^.txt,bodyPart[i,0],recycler));
+        setLength(bodyRule       ,length(bodyParts));
+        for i:=0 to length(bodyParts)-1 do
+          new(bodyRule[i],createForEachBody(first^.txt,bodyParts[i].first,recycler));
         //---------------------------------------------process other body parts (if any)
         result:=true;
       end;
@@ -902,7 +910,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       first^.data:=nil;
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
-      t:=first;
+      //t:=first;
       if (aggregatorPresent<>no) and (itList^.size=0)
       then raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
@@ -929,58 +937,35 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     end;
 
   PROCEDURE resolveWhile;
-    VAR t,bracketClosingWhile:P_token;
+    VAR bracketClosingWhile:P_token;
         headRule:P_subrule;
         bodyRule:P_subrule;
 
     FUNCTION parseBodyOk:boolean;
-      VAR bracketLevel,i:longint;
+      VAR i:longint;
           p:P_token;
-          bodyPart:array of array[0..1] of P_token;
+          bodyParts:T_bodyParts;
           emptyPattern:T_pattern;
       begin
         //first token is <while>-Token
         //find closing bracket and body parts
-        bracketLevel:=1;
-        t:=first; p:=nil;
-        if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-          setLength(bodyPart,1);
-          bodyPart[0,0]:=first^.next;
-        end else begin
-          raiseError('Invalid while-construct; Cannot find closing bracket.',first^.location);
-          exit(false);
-        end;
-        while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-          if      t^.tokType in [tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin] then inc(bracketLevel)
-          else if t^.tokType in [tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd]   then dec(bracketLevel)
-          else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-            bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-            setLength(bodyPart,length(bodyPart)+1);
-            bodyPart[length(bodyPart)-1,0]:=t^.next; //start of next body part is token after comma
-          end;
-          p:=t; t:=t^.next;
-        end;
-        bodyPart[length(bodyPart)-1,1]:=p; //end of body part is token before comma
-        if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-          raiseError('Invalid while-construct; Cannot find closing bracket.',first^.location);
-          exit(false);
-        end;
-        bracketClosingWhile:=t;
-        if length(bodyPart)<>2 then begin
+        bodyParts:=getBodyParts(first,1,bracketClosingWhile);
+        if bracketClosingWhile=nil then exit(false);
+        if length(bodyParts)<>2 then begin
           raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
           exit(false);
         end;
 
-        for i:=0 to length(bodyPart)-1 do begin
-          if bodyPart[i,1]^.next<>bracketClosingWhile then recycler.disposeToken(bodyPart[i,1]^.next);
-          bodyPart[i,1]^.next:=nil;
+        for i:=0 to length(bodyParts)-1 do begin
+          if bodyParts[i].last^.next<>bracketClosingWhile then recycler.disposeToken(bodyParts[i].last^.next);
+          bodyParts[i].last^.next:=nil;
         end;
 
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyPart[0,0],bodyPart[0,0]^.location,true,recycler));
-        new(bodyRule,create(emptyPattern,bodyPart[1,0],bodyPart[1,0]^.location,true,recycler));
+        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,recycler));
+        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,recycler));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
@@ -1024,6 +1009,58 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       dispose(headRule,destroy);
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
+      didSubstitution:=true;
+    end;
+
+  PROCEDURE resolveWhen;
+    VAR bodyParts:T_bodyParts;
+        closingBracket:P_token;
+
+        conditionIdx,i:longint;
+        resultIndex:longint=-1;
+
+        locationForComplaint:T_tokenLocation;
+    begin
+      bodyParts:=getBodyParts(first,1,closingBracket);
+      if closingBracket=nil then exit;
+
+      for i:=0 to length(bodyParts)-1 do begin
+        if bodyParts[i].last^.next<>closingBracket then recycler.disposeToken(bodyParts[i].last^.next);
+        bodyParts[i].last^.next:=nil;
+      end;
+
+      conditionIdx:=0;
+      while (conditionIdx<length(bodyParts)-1) and noErrors and (resultIndex<0) do begin
+        locationForComplaint:=bodyParts[conditionIdx].first^.location;
+        reduceExpression(bodyParts[conditionIdx].first,callDepth+1,recycler);
+
+        if noErrors and
+          (bodyParts[conditionIdx].first<>nil) and
+          (bodyParts[conditionIdx].first^.next=nil) and
+          (bodyParts[conditionIdx].first^.tokType=tt_literal) and
+          (P_literal(bodyParts[conditionIdx].first^.data)^.literalType=lt_boolean) then begin
+          if P_boolLiteral(bodyParts[conditionIdx].first^.data)^.value then resultIndex:=conditionIdx+1;
+        end else raiseError('Conditions in switch construct must return scalar booleans.',locationForComplaint);
+        inc(conditionIdx,2);
+      end;
+      //Fallback to default case
+      if (resultIndex<0) and //no result found and
+        odd(length(bodyParts)) //there is a default case
+      then resultIndex:=length(bodyParts)-1;
+
+      for i:=0 to length(bodyParts)-1 do if (i<>resultIndex) then recycler.cascadeDisposeToken(bodyParts[i].first);
+
+      if resultIndex<0 then begin
+        first^.tokType:=tt_literal; //mutate when-token to literal
+        first^.data:=newVoidLiteral;
+        first^.next:=closingBracket^.next;
+        recycler.disposeToken(closingBracket);
+      end else begin
+        first^.tokType:=tt_braceOpen; //mutate when-token to (
+        first^.next:=bodyParts[resultIndex].first;
+        bodyParts[resultIndex].last^.next:=closingBracket;
+      end;
+      setLength(bodyParts,0);
       didSubstitution:=true;
     end;
 
@@ -1589,6 +1626,11 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
           first^.next:=recycler.disposeToken(first^.next);
           resolveWhile;
         end;
+        tt_when: if (cTokType[1]=tt_braceOpen) then begin
+          first^.next:=recycler.disposeToken(first^.next);
+          resolveWhen;
+        end;
+
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack[length(stack)-1]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack[length(stack)-1]^.data)^.value)

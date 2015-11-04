@@ -51,7 +51,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach,
+    tt_each, tt_parallelEach, tt_when,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -169,7 +169,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    'each', 'pEach',
+    'each', 'pEach', 'when',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -343,6 +343,7 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
        (wordText=C_boolText[false]) then exit(rwc_specialLiteral);
     if (wordText=C_tokenString[tt_each]) or
        (wordText=C_tokenString[tt_parallelEach]) or
+       (wordText=C_tokenString[tt_when]) or
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
        (wordText=C_tokenString[tt_procedureBlockWhile]) or
        (wordText=C_tokenString[tt_procedureBlockBegin]) or
@@ -370,6 +371,7 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
       rwc_specialConstruct: begin
         result.add(C_tokenString[tt_each]);
         result.add(C_tokenString[tt_parallelEach]);
+        result.add(C_tokenString[tt_when]);
         result.add(C_tokenString[tt_aggregatorConstructor]);
         result.add(C_tokenString[tt_procedureBlockWhile]);
         result.add(C_tokenString[tt_procedureBlockBegin]);
