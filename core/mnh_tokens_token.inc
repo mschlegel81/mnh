@@ -1334,17 +1334,19 @@ tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',f
 tt_separatorComma: raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
-  stack_popDestroy;
-  first^.next:=recycler.disposeToken(first^.next);
-  first^.next:=recycler.disposeToken(first^.next);
-  recycler.scopePop;
-  didSubstitution:=true;
-end else begin
-  first:=recycler.disposeToken(first);
-  first:=recycler.disposeToken(first);
-  didSubstitution:=true;
-end}
+tt_semicolon: if (cTokType[-1]=tt_procedureBlockBegin) then begin
+  if (cTokType[2]=tt_procedureBlockEnd) then begin
+    stack_popDestroy;
+    first^.next:=recycler.disposeToken(first^.next);
+    first^.next:=recycler.disposeToken(first^.next);
+    recycler.scopePop;
+    didSubstitution:=true;
+  end else begin
+    first:=recycler.disposeToken(first);
+    first:=recycler.disposeToken(first);
+    didSubstitution:=true;
+  end;
+end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
   begin
     setLength(stack,0);
