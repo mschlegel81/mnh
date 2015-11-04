@@ -1,6 +1,15 @@
 UNIT mnh_html;
 INTERFACE
 USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_funcs,mnh_out_adapters,mnh_tokLoc,FileUtil;
+CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="10"/> '+
+  '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
+  'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
+  'lar, sans-serif } code { font-family: Courier-New, Courier; white-space: pre } table { display: inline-t'+
+  'able} .oben    { vertical-align:top} .red {color:#FF0000} .ruleHead  { vertical-align:top; background-co'+
+  'lor: #DDDDDD} .identifier{color:#0000FF} .builtin{color:#0000FF;font-weight:bold} .modifier{color:#FF880'+
+  '0;font-weight:bold} .stringLiteral{color:#008800} .literal{color:#FF0000} .operator{color:#000088;font-w'+
+  'eight:bold} .comment{color:#666666;font-style:italic} </style> </head><body><table>';
+
 TYPE
   P_htmlOutAdapter=^T_htmlOutAdapter;
   T_htmlOutAdapter=object(T_collectingOutAdapter)
@@ -14,14 +23,7 @@ TYPE
 
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 IMPLEMENTATION
-CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="10"/> '+
-  '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
-  'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
-  'lar, sans-serif } code { font-family: Courier-New, Courier; white-space: pre } table { display: inline-t'+
-  'able} .oben    { vertical-align:top} .red {color:#FF0000} .ruleHead  { vertical-align:top; background-co'+
-  'lor: #DDDDDD} .identifier{color:#0000FF} .builtin{color:#0000FF;font-weight:bold} .modifier{color:#FF880'+
-  '0;font-weight:bold} .stringLiteral{color:#008800} .literal{color:#FF0000} .operator{color:#000088;font-w'+
-  'eight:bold} .comment{color:#666666;font-style:italic} </style> </head><body><table>';
+
 FUNCTION toHtmlCode(line:ansistring):ansistring;
   VAR parsedLength:longint=0;
   FUNCTION span(CONST sc,txt:ansistring):ansistring;

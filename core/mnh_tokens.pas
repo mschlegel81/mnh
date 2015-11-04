@@ -786,7 +786,7 @@ PROCEDURE findAndDocumentAllPackages;
       addPackageDoc(p.getDoc);
       p.destroy;
     end;
-    makeHtmlFromTemplate;
+    makeHtmlFromTemplate(false);
     recycler.destroy;
   end;
 
