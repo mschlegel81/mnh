@@ -205,7 +205,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         locationForErrorFeedback:=first^.location;
         temp:=first; first:=recycler.disposeToken(temp);
         while first<>nil do begin
-          if first^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer] then begin
+          if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
             if isQualified(newId) then begin
               raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
@@ -282,14 +282,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
           end;
           first:=recycler.disposeToken(first);
         end;
-        if not(first^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) then begin
+        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
           raiseCustomMessage(mt_el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           recycler.cascadeDisposeToken(first);
           exit;
         end;
         p:=first;
         while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
-          if (p^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer]) and isQualified(first^.txt) then begin
+          if (p^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) and isQualified(first^.txt) then begin
             raiseCustomMessage(mt_el4_parsingError,'Declaration head contains qualified ID.',p^.location);
             recycler.cascadeDisposeToken(first);
             exit;
@@ -411,10 +411,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if first=nil then exit;
       if isFirstLine then begin
         isFirstLine:=false;
-        if (first^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
+        if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
            (first^.txt    ='USE') and
            (first^.next   <>nil) and
-           (first^.next^.tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer])
+           (first^.next^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
         then begin
           interpretUseClause;
           exit;
@@ -458,7 +458,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
       if not(packageRules.containsKey('main',mainRule)) then begin
         raiseError('The specified package contains no main rule.',fileTokenLocation(codeProvider));
       end else begin
-        t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_localUserRulePointer,mainRule);
+        t:=recycler.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
@@ -500,7 +500,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
     last :=nil;
     localIdStack.create;
     while not(fileTokens.atEnd) do begin
-      if fileTokens.current.tokType=tt_procedureBlockBegin then begin
+      if fileTokens.current.tokType=tt_begin then begin
         if first=nil then begin
           first:=recycler.newToken(fileTokens.current); fileTokens.current.undefine;
           last :=first;
@@ -512,10 +512,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR recycler:T_toke
         localIdStack.clear;
         localIdStack.scopePush;
         fileTokens.step(@self,lastComment);
-        while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_procedureBlockEnd) and (localIdStack.oneAboveBottom)) do begin
+        while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
           case fileTokens.current.tokType of
-            tt_procedureBlockBegin: localIdStack.scopePush;
-            tt_procedureBlockEnd  : localIdStack.scopePop;
+            tt_begin: localIdStack.scopePush;
+            tt_end  : localIdStack.scopePop;
             tt_identifier: if (last^.tokType=tt_modifier_local) then begin
               fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
               localIdStack.addId(fileTokens.current.txt);
@@ -619,24 +619,24 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST failSilently: boolea
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
       if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_localUserRulePointer_pon
-      else token.tokType:=tt_localUserRulePointer;
+      then token.tokType:=tt_localUserRule_pon
+      else token.tokType:=tt_localUserRule;
       token.data:=userRule;
       userRule^.used:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
       if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_importedUserRulePointer_pon
-      else token.tokType:=tt_importedUserRulePointer;
+      then token.tokType:=tt_importedUserRule_pon
+      else token.tokType:=tt_importedUserRule;
       token.data:=userRule;
       userRule^.used:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
       if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_intrinsicRulePointer_pon
-      else token.tokType:=tt_intrinsicRulePointer;
+      then token.tokType:=tt_intrinsicRule_pon
+      else token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
     end;

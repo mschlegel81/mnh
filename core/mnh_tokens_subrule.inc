@@ -57,7 +57,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
         token.next:=nil;
         if token.tokType=tt_optionalParameters then begin
           parIdx:=REMAINING_PARAMETERS_IDX;
-        end else if token.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer] then begin
+        end else if token.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule] then begin
           parIdx:=pattern.indexOfId(token.txt);
           if parIdx>=0 then begin
             if parIdx>=REMAINING_PARAMETERS_IDX
@@ -65,7 +65,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
             else token.tokType:=tt_identifier;
           end else begin
             if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
-            if (token.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) and
+            if (token.tokType in [tt_localUserRule,tt_importedUserRule]) and
                ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList,tt_listToParameterList])) //rule must not be followed by an opening bracket, indicating a call with parameters
             then begin
               inlineLiteral:=P_rule(token.data)^.getInlineValue;
@@ -135,7 +135,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
         result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
              or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
              or (oT=tt_expBraceOpen) and (ct=tt_expBraceClose)
-             or (ot=tt_procedureBlockBegin) and (ct=tt_procedureBlockEnd);
+             or (ot=tt_begin) and (ct=tt_end);
       end;
 
     begin
@@ -166,8 +166,8 @@ FUNCTION T_subrule.needEmbrace:boolean;
 
     result:=false;
     for i:=0 to length(preparedBody)-1 do case preparedBody[i].token.tokType of
-      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_procedureBlockBegin: push(i);
-      tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_procedureBlockEnd: pop(i);
+      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(i);
+      tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_end: pop(i);
 
       tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
@@ -275,7 +275,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
       with preparedBody[2] do begin token.create; token.define(tok^.location,'',tok^.tokType);             parIdx:=-1; end;
       with preparedBody[3] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
       with preparedBody[4] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
-    end else if (tok^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
+    end else if (tok^.tokType in [tt_identifier,tt_intrinsicRule,tt_localUserRule,tt_importedUserRule]) then begin
       if (T_intFuncCallback(tok^.data)=BUILTIN_MIN) or (T_intFuncCallback(tok^.data)=BUILTIN_MAX) then funcPtr:=T_intFuncCallback(tok^.data)
       else begin
         raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
@@ -285,7 +285,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
       pattern.appendFreeId('$x');
       pattern.appendFreeId('$y');
       setLength(preparedBody,6);
-      with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRulePointer,funcPtr); parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
       with preparedBody[1] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
       with preparedBody[2] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
       with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
@@ -474,7 +474,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     typ:=srt_inline_for_literal;
 
     setLength(preparedBody,1);
-    with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRulePointer,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+    with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
     if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceOpen);
     for i:=0 to length(origRule^.preparedBody)-1 do appendToExpression(origRule^.preparedBody[i].token);
     if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceClose);

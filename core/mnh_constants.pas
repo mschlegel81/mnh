@@ -43,15 +43,15 @@ TYPE
 
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
     //identifier and resolved identifiers
-    tt_identifier, tt_parameterIdentifier, tt_localUserRulePointer,
-    tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue,
+    tt_identifier, tt_parameterIdentifier, tt_localUserRule,
+    tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
     tt_identifier_pon,
-    tt_localUserRulePointer_pon,
-    tt_importedUserRulePointer_pon, tt_intrinsicRulePointer_pon,
+    tt_localUserRule_pon,
+    tt_importedUserRule_pon, tt_intrinsicRule_pon,
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_when,
+    tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin,  tt_end,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -101,10 +101,6 @@ TYPE
     tt_modifier_persistent,
     tt_modifier_synchronized,
     tt_modifier_local,
-    //procedure block:
-    tt_procedureBlockBegin,
-    tt_procedureBlockEnd,
-    tt_procedureBlockWhile,
     //special: [E]nd [O]f [L]ine
     tt_EOL);
 
@@ -130,11 +126,11 @@ TYPE
 CONST
   C_validListTypes: set of T_literalType=[lt_list..lt_flatList];
   C_operatorsForAggregators: set of T_tokenType=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
-  C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRulePointer_pon] of T_tokenType=(
+  C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
     tt_identifier,
-    tt_localUserRulePointer,
-    tt_importedUserRulePointer,
-    tt_intrinsicRulePointer);
+    tt_localUserRule,
+    tt_importedUserRule,
+    tt_intrinsicRule);
 
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
@@ -169,7 +165,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    'each', 'pEach', 'when',
+    'each', 'pEach', 'when','while','begin','end',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -215,9 +211,6 @@ CONST
     'persistent',
     'synchronized',
     'local',
-    'begin',
-    'end',
-    'while',
     '');
 
   C_typeString: array[T_literalType] of string = (
@@ -239,7 +232,7 @@ CONST
     'list(containing error)',
     C_voidText);
 
-  C_ruleTypeString: array[tt_localUserRulePointer..tt_intrinsicRulePointer] of string = (
+  C_ruleTypeString: array[tt_localUserRule..tt_intrinsicRule] of string = (
     'user function (local)',
     'user function (imported)',
     'built in function');
@@ -345,9 +338,9 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
        (wordText=C_tokenString[tt_parallelEach]) or
        (wordText=C_tokenString[tt_when]) or
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
-       (wordText=C_tokenString[tt_procedureBlockWhile]) or
-       (wordText=C_tokenString[tt_procedureBlockBegin]) or
-       (wordText=C_tokenString[tt_procedureBlockEnd]) then exit(rwc_specialConstruct);
+       (wordText=C_tokenString[tt_while]) or
+       (wordText=C_tokenString[tt_begin]) or
+       (wordText=C_tokenString[tt_end]) then exit(rwc_specialConstruct);
     for tt:=tt_comparatorEq to tt_listToParameterList do
       if wordText=C_tokenString[tt] then exit(rwc_operator);
     for tt:=tt_modifier_private to tt_modifier_local do
@@ -373,9 +366,9 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
         result.add(C_tokenString[tt_parallelEach]);
         result.add(C_tokenString[tt_when]);
         result.add(C_tokenString[tt_aggregatorConstructor]);
-        result.add(C_tokenString[tt_procedureBlockWhile]);
-        result.add(C_tokenString[tt_procedureBlockBegin]);
-        result.add(C_tokenString[tt_procedureBlockEnd]);
+        result.add(C_tokenString[tt_while]);
+        result.add(C_tokenString[tt_begin]);
+        result.add(C_tokenString[tt_end]);
       end;
       rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);
       rwc_modifier: for tt:=tt_modifier_private to tt_modifier_local do result.add(C_tokenString[tt]);

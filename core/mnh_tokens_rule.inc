@@ -306,7 +306,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider):boolean;
             C_tokenString[tt_assign]+
             namedValue.getValue^.toString+
             C_tokenString[tt_semicolon];
-      raiseNote('Writing back: '+code,declarationStart);
+      raiseNote('Writing back: '+C_tokenString[tt_modifier_persistent]+' '+id,declarationStart);
       provider.replaceCode(
         declarationStart.line-1,
         declarationStart.column,

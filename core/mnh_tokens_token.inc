@@ -127,13 +127,13 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_assignNewBlockLocal: result:=C_tokenString[tt_modifier_local]+' '+txt+C_tokenString[tokType];
       tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenString[tokType];
       tt_identifier_pon,
-      tt_localUserRulePointer_pon,
-      tt_importedUserRulePointer_pon,
-      tt_intrinsicRulePointer_pon: result:='.'+txt;
+      tt_localUserRule_pon,
+      tt_importedUserRule_pon,
+      tt_intrinsicRule_pon: result:='.'+txt;
       tt_identifier,
-      tt_localUserRulePointer,
-      tt_importedUserRulePointer,
-      tt_intrinsicRulePointer,
+      tt_localUserRule,
+      tt_importedUserRule,
+      tt_intrinsicRule,
       tt_rulePutCacheValue,
       tt_parameterIdentifier,
       tt_blockLocalVariable: result:=txt;
@@ -163,8 +163,8 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
     while t<>nil do begin
       case t^.tokType of
         tt_declare,tt_assign: if scopeLevel=0 then exit(t);
-        tt_procedureBlockBegin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
-        tt_procedureBlockEnd  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
+        tt_begin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
+        tt_end  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
       end;
       t:=t^.next;
     end;
@@ -202,7 +202,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         end;
         tt_each,tt_parallelEach:       if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
-         (t[i+2].tokType in [tt_identifier,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer]) and
+         (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
          (t[i+3].tokType=tt_separatorComma) then begin
            //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
           t[i+3].tokType:=t[i].tokType;
@@ -212,7 +212,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
          ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
-         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRulePointer,tt_importedUserRulePointer,tt_intrinsicRulePointer,tt_parameterIdentifier]) then begin
+         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
           if t[i].tokType=tt_operatorMinus
           then t[i].tokType:=tt_unaryOpMinus //unary - is special token
           else inc(i);                       //unary + is skipped
@@ -521,7 +521,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR recycler:T
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
             inPackage^.resolveRuleId(t^,true);
             if t^.tokType<>tt_identifier then begin
-              if t^.tokType=tt_localUserRulePointer then begin
+              if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
                 if rule^.ruleType in [rt_mutable_private,rt_mutable_public,rt_persistent_private,rt_persistent_public] then begin
                   t^.data:=rule;
@@ -674,8 +674,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       end;
       while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
         case t^.tokType of
-          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
           tt_separatorComma: if bracketLevel=1 then begin
             result[length(result)-1].last:=p; //end of body part is token before comma
             setLength(result,length(result)+1);
@@ -1072,8 +1072,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if (first^.tokType in [tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
-        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRulePointer,recycler)) then begin
+      if (first^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRule,recycler)) then begin
           if parameterListLiteral=nil
           then raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
           else begin
@@ -1093,7 +1093,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
           parameterListLiteral^.value(0)^.rereference;
           lastReplace:=firstReplace;
         end else raiseError('Aggregators can only be constructed from expression literals!',first^.location);
-      end else if (first^.tokType=tt_intrinsicRulePointer) then begin
+      end else if (first^.tokType=tt_intrinsicRule) then begin
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location);
         if newLiteral<>nil then begin
           firstReplace:=recycler.newToken(first^.location,'',tt_literal,newLiteral);
@@ -1128,8 +1128,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1141,8 +1141,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1284,7 +1284,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
-      else if cTokType[1] in [tt_identifier_pon,tt_localUserRulePointer_pon,tt_importedUserRulePointer_pon,tt_intrinsicRulePointer_pon] then pon_flip
+      else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
       else stack_push_push;
     end;
 
@@ -1304,8 +1304,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
               end;
               p:=recycler.disposeToken(p);
             end;
@@ -1319,8 +1319,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_procedureBlockBegin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_procedureBlockEnd  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
               end;
               p:=recycler.disposeToken(p);
             end;
@@ -1363,7 +1363,7 @@ tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParamet
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
-tt_identifier_pon,tt_importedUserRulePointer_pon,tt_localUserRulePointer_pon,tt_intrinsicRulePointer_pon: pon_flip;
+tt_identifier_pon,tt_importedUserRule_pon,tt_localUserRule_pon,tt_intrinsicRule_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
 
 {$define FORBIDDEN_SEPARATORS:=
@@ -1371,8 +1371,8 @@ tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',f
 tt_separatorComma: raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[-1]=tt_procedureBlockBegin) then begin
-  if (cTokType[2]=tt_procedureBlockEnd) then begin
+tt_semicolon: if (cTokType[-1]=tt_begin) then begin
+  if (cTokType[2]=tt_end) then begin
     stack_popDestroy;
     first^.next:=recycler.disposeToken(first^.next);
     first^.next:=recycler.disposeToken(first^.next);
@@ -1493,7 +1493,7 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
             else raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
           end else raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               stack_popDestroy;
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
@@ -1510,7 +1510,7 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
             COMMON_CASES;
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               first:=recycler.disposeToken(first);
               first^.next:=recycler.disposeToken(first^.next);
               first^.next:=recycler.disposeToken(first^.next);
@@ -1534,7 +1534,7 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
             end;
           end;
         end;
-        tt_procedureBlockBegin: begin
+        tt_begin: begin
           recycler.scopePush;
           stack_push;
           didSubstitution:=true;
@@ -1601,7 +1601,7 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
               P_package(first^.next^.next^.data)^.resolveRuleId(first^.next^.next^,false);
               cTokType[2]:=first^.next^.next^.tokType;
             end;
-            if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRulePointer)) and
+            if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRule)) and
                (first^.next^.next^.next<>nil) and
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
               // || aggregator ( + )
@@ -1616,13 +1616,13 @@ end else raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.l
           tt_parList: applyRule(first^.next,first^.next^.next);
         end;
 
-        tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue : case cTokType[1] of
+        tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRulePointer_pon,tt_importedUserRulePointer_pon,tt_intrinsicRulePointer_pon,tt_identifier_pon : applyRule(nil,first^.next);
+          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon : applyRule(nil,first^.next);
         end;
-        tt_procedureBlockWhile: if (cTokType[1]=tt_braceOpen) then begin
+        tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=recycler.disposeToken(first^.next);
           resolveWhile;
         end;

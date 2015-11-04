@@ -247,7 +247,7 @@ PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);
   begin
     t:=tok;
     while t<>nil do begin
-      if (t^.tokType in [tt_identifier, tt_localUserRulePointer, tt_importedUserRulePointer, tt_parameterIdentifier, tt_intrinsicRulePointer])
+      if (t^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
       and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
