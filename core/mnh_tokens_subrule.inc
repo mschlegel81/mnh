@@ -265,8 +265,8 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
     typ:=srt_inline_for_literal;
     declaredAt:=tok^.location;
     pattern.create;
-    SetLength(preparedBody,0);
-    if tok^.tokType in [tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat] then begin
+    setLength(preparedBody,0);
+    if tok^.tokType in C_operatorsForAggregators then begin
       pattern.appendFreeId('$x');
       pattern.appendFreeId('$y');
       setLength(preparedBody,5);
@@ -276,9 +276,8 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
       with preparedBody[3] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
       with preparedBody[4] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
     end else if (tok^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
-      if      (tok^.txt='min') or (tok^.txt=C_namespaceString[MATH_NAMESPACE]+C_ID_QUALIFY_CHARACTER+'min') then funcPtr:=T_intFuncCallback(tok^.data)
-      else if (tok^.txt='max') or (tok^.txt=C_namespaceString[MATH_NAMESPACE]+C_ID_QUALIFY_CHARACTER+'max') then funcPtr:=T_intFuncCallback(tok^.data);
-      if funcPtr=nil then begin
+      if (T_intFuncCallback(tok^.data)=BUILTIN_MIN) or (T_intFuncCallback(tok^.data)=BUILTIN_MAX) then funcPtr:=T_intFuncCallback(tok^.data)
+      else begin
         raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
         exit;
       end;

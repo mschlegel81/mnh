@@ -1208,22 +1208,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR recycler
       //  <Lit>.func     -> func(<Lit>)
       //  <Lit>.func(... -> func(<Lit>,...
       newFunctionToken:=recycler.newToken(first^.next);
-      with newFunctionToken^ do case tokType of
-                 tt_identifier_pon:begin
-        tokType:=tt_identifier;
-          if newFunctionToken^.data=nil then newFunctionToken^.data:=guessPackageForToken(newFunctionToken^);
-          P_package(newFunctionToken^.data)^.resolveRuleId(newFunctionToken^,false);
+
+      with newFunctionToken^ do begin
+        tokType:=C_ponToFunc[tokType];
+        if tokType=tt_identifier then begin
+          if data=nil then data:=guessPackageForToken(newFunctionToken^);
+          P_package(data)^.resolveRuleId(newFunctionToken^,false);
         end;
-                 tt_importedUserRulePointer_pon:
-        tokType:=tt_importedUserRulePointer;
-                 tt_localUserRulePointer_pon:
-        tokType:=tt_localUserRulePointer;
-                 tt_intrinsicRulePointer_pon:
-        tokType:=tt_intrinsicRulePointer;
-        else raiseCustomMessage(mt_el5_systemError,'Something went wrong in pon_flip.',first^.next^.location);
       end;
       newParameterListToken:=recycler.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
-
 
       first^.data:=nil; first^.tokType:=tt_identifier;
       first^.next^.data:=nil;
@@ -1569,7 +1562,7 @@ end}
               P_package(first^.next^.next^.data)^.resolveRuleId(first^.next^.next^,false);
               cTokType[2]:=first^.next^.next^.tokType;
             end;
-            if (cTokType[2] in [tt_operatorAnd..tt_operatorPot,tt_intrinsicRulePointer]) and
+            if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRulePointer)) and
                (first^.next^.next^.next<>nil) and
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
               // || aggregator ( + )

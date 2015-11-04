@@ -129,6 +129,12 @@ TYPE
 
 CONST
   C_validListTypes: set of T_literalType=[lt_list..lt_flatList];
+  C_operatorsForAggregators: set of T_tokenType=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
+  C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRulePointer_pon] of T_tokenType=(
+    tt_identifier,
+    tt_localUserRulePointer,
+    tt_importedUserRulePointer,
+    tt_intrinsicRulePointer);
 
   C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =

@@ -1,6 +1,8 @@
 UNIT mnh_funcs_math;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math;
+VAR BUILTIN_MIN,
+    BUILTIN_MAX:T_intFuncCallback;
 IMPLEMENTATION
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
   VAR x:P_literal;
@@ -176,5 +178,6 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
   registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule(MATH_NAMESPACE,'isInRange',@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
-
+  BUILTIN_MIN:=@min_imp;
+  BUILTIN_MAX:=@max_imp;
 end.
