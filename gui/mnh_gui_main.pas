@@ -927,8 +927,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
     //progress time:------------------------------------------------------------
-    if isEvaluationRunning then StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)
-                           else StatusBar.SimpleText:=endOfEvaluationText.value;
+    aid:=C_tabChar+intToStr(InputEdit.CaretY)+','+intToStr(InputEdit.CaretX);
+    if isEvaluationRunning then StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid
+                           else StatusBar.SimpleText:=endOfEvaluationText.value                       +aid;
     //------------------------------------------------------------:progress time
     //Halt/Run enabled states:--------------------------------------------------
     if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
