@@ -257,20 +257,42 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR recycler:T_tokenRe
   end;
 
 CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
+  VAR dummyBool:boolean;
+      funcPtr:T_intFuncCallback=nil;
   begin
     comment:='';
     called:=false;
     typ:=srt_inline_for_literal;
     declaredAt:=tok^.location;
     pattern.create;
-    pattern.appendFreeId('$x');
-    pattern.appendFreeId('$y');
-    setLength(preparedBody,5);
-    preparedBody[0].token.create; preparedBody[0].token.define(tok^.location,'',tt_braceOpen);             preparedBody[0].parIdx:=-1;
-    preparedBody[1].token.create; preparedBody[1].token.define(tok^.location,'$x',tt_parameterIdentifier); preparedBody[1].parIdx:=0;
-    preparedBody[2].token.create; preparedBody[2].token.define(tok^.location,'',tok^.tokType);             preparedBody[2].parIdx:=-1;
-    preparedBody[3].token.create; preparedBody[3].token.define(tok^.location,'$y',tt_parameterIdentifier); preparedBody[3].parIdx:=1;
-    preparedBody[4].token.create; preparedBody[4].token.define(tok^.location,'',tt_braceClose);            preparedBody[4].parIdx:=-1;
+    SetLength(preparedBody,0);
+    if tok^.tokType in [tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat] then begin
+      pattern.appendFreeId('$x');
+      pattern.appendFreeId('$y');
+      setLength(preparedBody,5);
+      with preparedBody[0] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
+      with preparedBody[1] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
+      with preparedBody[2] do begin token.create; token.define(tok^.location,'',tok^.tokType);             parIdx:=-1; end;
+      with preparedBody[3] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
+      with preparedBody[4] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
+    end else if (tok^.tokType in [tt_identifier,tt_intrinsicRulePointer,tt_localUserRulePointer,tt_importedUserRulePointer]) then begin
+      if      (tok^.txt='min') or (tok^.txt=C_namespaceString[MATH_NAMESPACE]+C_ID_QUALIFY_CHARACTER+'min') then funcPtr:=T_intFuncCallback(tok^.data)
+      else if (tok^.txt='max') or (tok^.txt=C_namespaceString[MATH_NAMESPACE]+C_ID_QUALIFY_CHARACTER+'max') then funcPtr:=T_intFuncCallback(tok^.data);
+      if funcPtr=nil then begin
+        raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
+        exit;
+      end;
+
+      pattern.appendFreeId('$x');
+      pattern.appendFreeId('$y');
+      setLength(preparedBody,6);
+      with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRulePointer,funcPtr); parIdx:=-1; end;
+      with preparedBody[1] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
+      with preparedBody[2] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
+      with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
+      with preparedBody[4] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
+      with preparedBody[5] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
+    end else raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
   end;
 
 DESTRUCTOR T_subrule.destroy;

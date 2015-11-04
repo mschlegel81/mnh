@@ -1426,7 +1426,6 @@ end}
             end;
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
-            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
@@ -1446,7 +1445,6 @@ end}
             tt_separatorCnt:   raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
-            else raiseError('Invalid token '+tokensToString(first,10),first^.location)
           end;
           tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
             tt_separatorComma: if cTokType[2]<>tt_EOL then begin
@@ -1478,7 +1476,6 @@ end}
               applyMutation;
             end;
             COMMON_CASES;
-            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_procedureBlockEnd) and (cTokType[-1]=tt_procedureBlockBegin) then begin
@@ -1496,14 +1493,12 @@ end}
               applyLocalAssignment(cTokType[-1]);
             end;
             COMMON_CASES;
-            else raiseError('Invalid token '+tokensToString(first,10),first^.location);
           end;
           else begin
             case cTokType[1] of
               COMMON_SEMICOLON_HANDLING;
               COMMON_CASES;
               FORBIDDEN_SEPARATORS;
-              else raiseError('Invalid token '+tokensToString(first,10),first^.location);
             end;
           end;
         end;
@@ -1568,20 +1563,25 @@ end}
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
         tt_mutate: stack_push;
         tt_aggregatorConstructor: case cTokType[1] of
-          tt_braceOpen, tt_parList_constructor, tt_listToParameterList:
-          if (cTokType[2] in [tt_operatorAnd..tt_operatorPot]) and
-             (first^.next^.next^.next<>nil) and
-             (first^.next^.next^.next^.tokType=tt_braceClose) then begin
-            first^.tokType:=tt_aggregatorExpressionLiteral;
-            first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
-            first^.next:=recycler.disposeToken(first^.next); //drop (
-            first^.next:=recycler.disposeToken(first^.next); //drop +
-            first^.next:=recycler.disposeToken(first^.next); //drop )
-            didSubstitution:=true;
-          end else startOrPushParameterList;
+          tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
+            if cTokType[2]=tt_identifier then begin
+              if first^.next^.next^.data=nil then first^.next^.next^.data:=guessPackageForToken(first^.next^.next^);
+              P_package(first^.next^.next^.data)^.resolveRuleId(first^.next^.next^,false);
+              cTokType[2]:=first^.next^.next^.tokType;
+            end;
+            if (cTokType[2] in [tt_operatorAnd..tt_operatorPot,tt_intrinsicRulePointer]) and
+               (first^.next^.next^.next<>nil) and
+               (first^.next^.next^.next^.tokType=tt_braceClose) then begin
+              // || aggregator ( + )
+              first^.tokType:=tt_aggregatorExpressionLiteral;
+              first^.data:=createPrimitiveAggregatorLiteral(first^.next^.next);
+              first^.next:=recycler.disposeToken(first^.next); //drop (
+              first^.next:=recycler.disposeToken(first^.next); //drop +
+              first^.next:=recycler.disposeToken(first^.next); //drop )
+              didSubstitution:=true;
+            end else startOrPushParameterList;
+          end;
           tt_parList: applyRule(first^.next,first^.next^.next);
-          //tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          //tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRulePointer_pon,tt_importedUserRulePointer_pon,tt_intrinsicRulePointer_pon,tt_identifier_pon : applyRule(nil,first^.next);
         end;
 
         tt_localUserRulePointer, tt_importedUserRulePointer, tt_intrinsicRulePointer, tt_rulePutCacheValue : case cTokType[1] of
