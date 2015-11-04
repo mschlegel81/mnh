@@ -1,25 +1,25 @@
 USE regTest, checkstyle, hash;
 
-mutable private currentCodeHash:=0;
-private relevantFiles:=flatten(files(allFolders('.')&'\*.pas'),each(f,files(allFolders('.')&'\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));
-private getCurrentHash->each(filename,relevantFiles,+,hash(fileContents(filename))).hex;
-private hashFileContents->"writeln(':"&currentCodeHash&"');";
-
-memoized hashChanged->begin
-  local oldFile:=fileContents('core/code_hash.inc');
-  currentCodeHash:=getCurrentHash;
-  oldFile==hashFileContents ? false : begin
+memoized private 
+relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
+                       files(allFolders('.')&'\*.pas'),
+                       each(f,files(allFolders('.')&'\*.inc'),splitFileName(f)%"filename"='code_hash.inc' ? void : f));
+                               
+memoized private 
+currentCodeHash->begin
+  local oldFileContents:=fileContents('core/code_hash.inc');
+  local result:=pEach(filename,relevantFiles,+,hash(fileContents(filename))).hex;
+  oldFileContents=="writeln(':"&result&"');" ? false : begin
     checkstyle.main('fix');
-    currentCodeHash:=getCurrentHash;
-    writeFile('core/code_hash.inc',hashFileContents);
-    true;
+    result:=pEach(filename,relevantFiles,+,hash(fileContents(filename))).hex;
+    writeFile('core/code_hash.inc',"writeln(':"&result&"');");
   end;
+  result;
 end;
 
 private binName(FI:int)->((FI and 1)>0 ? '.\' : 'bin32\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
 
 private exeHasWrongVersion(FI:int)->begin
-  currentCodeHash==0 ? hashChanged : void;
   local exeName:=binName(FI);
   fileExists(exeName) ? begin
     local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');
@@ -27,10 +27,8 @@ private exeHasWrongVersion(FI:int)->begin
   end : true;
 end;
 
-private mutable builtReady:=[0..7]<0;
-
 private build(FI:int)->begin
-  hashChanged OR exeHasWrongVersion(FI) ? begin
+  exeHasWrongVersion(FI) ? begin
     local bin64:=(FI and 1)>0;
     local full :=(FI and 2)>0;
     local debug:=(FI and 4)>0;
@@ -51,8 +49,7 @@ private build(FI:int)->begin
          files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
          print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   end : void;
-  builtReady:=each(i,[0..7],FI=i ? true : builtReady%i);
-  void;
+  not(exeHasWrongVersion(FI));
 end;
 
 private compress(suffix)->
@@ -219,16 +216,15 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
 
 //*Make distro 7z - including build and regTest if needed
 main('distro')->
-  begin
-    each(i,[0..3],build(i));
+  each(i,[0..3],AND,build(i)) ? begin
     compress('64bit');
     each(pair,movePairs,moveFile@pair);
     compress('32bit');
     each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
-  end;
+  end : void;
 
 //*Build - ignoring potentially existing executables
-main('build')->each(i,[0..7],build(i));
+main('build')->each(i,[0..7],AND,build(i));
 
 //*Build - ignoring potentially existing executables
 main->main('build');
@@ -254,24 +250,21 @@ each(file,
      print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 
 //*Tests all files
-main('test')->begin
-  each(i,[0..3],build(i)); 
-  each(i,[0..3],AND,regTest.main(binName(i)));
-end;
+main('test')->each(i,[0..3],AND, 
+  build(i), 
+  regTest.main(binName(i)))
 
 //*Tests some files - randomly
-main('quicktest')->begin
-  each(i,[0..3],build(i));
-  each(i,[0..3],AND,regTest.main(binName(i),'randomSample'));
-end;
-
+main('quicktest')->each(i,[0..3],AND,
+  build(i),
+  regTest.main(binName(i),'randomSample'));
 
 //*Several steps in succession
 main(...)->each(p,...,
   each(i,[0..7],or,
     pos(upper(p),upper(binName(i)))>=0 
-    ? build(i) and true
-    :              false)
+    ? build(i) OR true
+    :             false)
   ? void
   : p in ['distro','build','clean','test','quicktest']
     ? main(p)

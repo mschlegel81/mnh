@@ -1046,6 +1046,9 @@ object MnhForm: TMnhForm
           Height = 23
           Top = 150
           Width = 23
+          Caption = '^'#13#10'v'
+          Checked = True
+          State = cbChecked
           TabOrder = 3
         end
       end
