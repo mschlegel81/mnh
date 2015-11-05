@@ -31,6 +31,8 @@ VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
 PROCEDURE initIntrinsicRuleList;
 PROCEDURE initUnit;
 
+VAR guiOutAdapters:P_adapters;
+
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
@@ -40,6 +42,7 @@ FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;
       startOfEvaluation:double;
+      mainEvaluationContext:T_evaluationContext;
 
   PROCEDURE updateCompletionList;
     VAR list:T_listOfString;
@@ -67,26 +70,28 @@ FUNCTION main(p:pointer):ptrint;
       updateCompletionList;
       evaluationState.value:=es_idle;
       if not(silent) then begin
-        if hasMessageOfType[mt_el5_haltMessageReceived]
+        if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
         then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
         else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
       end;
-      raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+      if not(mainEvaluationContext.adapters^.hasMessageOfType[mt_endOfEvaluation])
+      then mainEvaluationContext.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
       sleepTime:=0;
     end;
 
   begin
+    mainEvaluationContext.create(guiOutAdapters);
     result:=0;
     evaluationState.value:=es_idle;
     updateCompletionList;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         preEval;
-        reloadMainPackage(lu_forDirectExecution);
+        reloadMainPackage(lu_forDirectExecution,mainEvaluationContext);
         postEval(false);
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
-        callMainInMain(parametersForMainCall);
+        callMainInMain(parametersForMainCall,mainEvaluationContext);
         postEval(false);
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
@@ -94,11 +99,12 @@ FUNCTION main(p:pointer):ptrint;
       end;
     until (pendingRequest.value=er_die);
     evaluationState.value:=es_dead;
+    mainEvaluationContext.destroy;
   end;
 
 PROCEDURE ad_clearFile;
   begin
-    if evaluationState.value=es_running then haltEvaluation;
+    if evaluationState.value=es_running then guiOutAdapters^.haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     mainPackageProvider.clear;
   end;
@@ -139,7 +145,8 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
 
 PROCEDURE ad_haltEvaluation;
   begin
-    if evaluationState.value=es_running then stepper.doAbort;
+    guiOutAdapters^.haltEvaluation;
+    if evaluationState.value=es_running then stepper.onAbort;
     pendingRequest.value:=er_none;
     while evaluationState.value=es_running do begin pendingRequest.value:=er_none; sleep(1); end;
   end;
@@ -182,7 +189,7 @@ FUNCTION ad_evaluationRunning: boolean;
 
 PROCEDURE ad_killEvaluationLoopSoftly;
   begin
-    if evaluationState.value=es_running then haltEvaluation;
+    if evaluationState.value=es_running then guiOutAdapters^.haltEvaluation;
     repeat pendingRequest.value:=er_die; sleep(1); until evaluationState.value=es_dead;
   end;
 
@@ -216,13 +223,13 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     if not(hasBuiltinNamespace) then begin
-      packageReference:=getMainPackage^.getPackageReferenceForId(id);
+      packageReference:=getMainPackage^.getPackageReferenceForId(id,guiOutAdapters^);
       if packageReference.id<>'' then info.tokenExplanation:='Imported package ('+packageReference.path+')';
     end;
 
     token.create;
     token.define(C_nilTokenLocation,id,tt_identifier,getMainPackage);
-    getMainPackage^.resolveRuleId(token,true);
+    getMainPackage^.resolveRuleId(token,nil);
     case token.tokType of
       tt_intrinsicRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;

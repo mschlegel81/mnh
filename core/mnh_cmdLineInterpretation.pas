@@ -3,7 +3,7 @@ INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
      mnh_doc,lclintf,mySys,mnh_html;
 PROCEDURE parseCmdLine;
-VAR displayTime:boolean=false;
+VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
@@ -14,15 +14,7 @@ VAR fileOrCommandToInterpret:ansistring='';
 
 PROCEDURE parseCmdLine;
   PROCEDURE makeAndShowDoc;
-    VAR i:longint;
     begin
-      for i:=0 to length(outAdapter)-1 do if outAdapter[i]<>nil then with outAdapter[i]^.outputBehaviour do begin
-        doEchoInput:=false;
-        doEchoDeclaration:=false;
-        doShowExpressionOut:=false;
-        doShowTimingInfo:=false;
-        minErrorLevel:=6;
-      end;
       findAndDocumentAllPackages;
       OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
     end;
@@ -66,53 +58,51 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE tryToRunSetup;
     CONST setupFile='setup.mnh';
-    VAR i:longint;
+    VAR context:T_evaluationContext;
     begin
+      context.create(P_adapters(@consoleAdapters));
       if not(fileExists(setupFile)) then exit;
-      for i:=0 to length(outAdapter)-1 do if outAdapter[i]<>nil then with outAdapter[i]^.outputBehaviour do begin
-        doEchoInput:=false;
-        doEchoDeclaration:=false;
-        doShowExpressionOut:=false;
-        doShowTimingInfo:=false;
-        minErrorLevel:=2;
-      end;
       mainPackageProvider.setPath(setupFile);
       setLength(parameters,0);
-      callMainInMain(parameters);
+      callMainInMain(parameters,context);
+      context.destroy;
     end;
 
   PROCEDURE fileMode;
-    VAR startTime:double;
+    VAR context:T_evaluationContext;
     begin
-      startTime:=now;
       mainPackageProvider.setPath(fileOrCommandToInterpret);
       if wantHelpDisplay then begin
         displayHelp;
-        printMainPackageDocText;
+        printMainPackageDocText(consoleAdapters);
         halt;
       end;
-      callMainInMain(parameters);
-      if displayTime then writeln('time: ',myTimeToStr(now-startTime));
-      mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
+      context.create(P_adapters(@consoleAdapters));
+      callMainInMain(parameters,context);
+      context.destroy;
+      halt;
     end;
 
   PROCEDURE doDirect;
-    VAR startTime:double;
+    VAR context:T_evaluationContext;
     begin
-      startTime:=now;
+      context.create(P_adapters(@consoleAdapters));
       mainPackageProvider.clear;
       mainPackageProvider.appendLine(fileOrCommandToInterpret);
-      reloadMainPackage(lu_forDirectExecution);
-      if displayTime then writeln('time: ',myTimeToStr(now-startTime));
-      mnh_out_adapters.haltWithAdaptedSystemErrorLevel;
+      reloadMainPackage(lu_forDirectExecution,context);
+      context.destroy;
+      halt;
     end;
 
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       i    :longint;
       minEL:longint=2;
+
       htmlAdapter:P_htmlOutAdapter;
   begin
+    consoleAdapters.create;
+    consoleAdapters.addConsoleOutAdapter;
     setLength(parameters,0);
     for i:=1 to paramCount do begin
     if (fileOrCommandToInterpret='') or directExecutionMode then begin
@@ -124,7 +114,7 @@ PROCEDURE parseCmdLine;
         else if paramStr(i)='-cmd'  then directExecutionMode:=true
         else if startsWith(paramStr(i),'-html:') then begin
           new(htmlAdapter,create(copy(paramStr(i),7,length(paramStr(i))-6)));
-          addOutAdapter(htmlAdapter);
+          consoleAdapters.addOutAdapter(htmlAdapter);
         end else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
@@ -155,24 +145,12 @@ PROCEDURE parseCmdLine;
       end;
     end;
     //-----------------------------------------------------
-    displayTime:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
-    if (echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode) then begin
-      for i:=0 to length(outAdapter)-1 do if outAdapter[i]<>nil then with outAdapter[i]^.outputBehaviour do begin
-        doEchoInput:=true;
-        doEchoDeclaration:=true;
-        doShowExpressionOut:=true;
-        doShowTimingInfo:=displayTime;
-        minErrorLevel:=minEL;
-      end;
-    end else begin
-      for i:=0 to length(outAdapter)-1 do if outAdapter[i]<>nil then with outAdapter[i]^.outputBehaviour do begin
-        doEchoInput:=false;
-        doEchoDeclaration:=false;
-        doShowExpressionOut:=false;
-        doShowTimingInfo:=displayTime;
-        minErrorLevel:=minEL;
-      end;
-    end;
+    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowTimingInfo:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
+    consoleAdapters.minErrorLevel:=minEL;
+
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect
                               else fileMode;
@@ -183,5 +161,8 @@ PROCEDURE parseCmdLine;
     end;
     tryToRunSetup;
   end;
+
+FINALIZATION
+  consoleAdapters.destroy;
 
 end.

@@ -2,10 +2,7 @@ UNIT mnh_plotData;
 
 INTERFACE
 
-USES sysutils, math, mnh_litVar, mnh_tokens, mnh_constants,
-  mnh_out_adapters, mnh_tokLoc,
-  mnh_funcs,
-  Interfaces, ExtCtrls, Graphics, types;
+USES sysutils, math, mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters,mnh_funcs,  Interfaces, ExtCtrls, Graphics, types;
 TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
 
@@ -80,19 +77,10 @@ TYPE
   end;
 
   T_sampleRow = object
-    //nonpersistent:
-    computed: record  temp: array of T_sampleWithTime;
-      xRule, yRule: P_expressionLiteral;
-      t0, t1: double;
-      maxSamples: longint;
-    end;
-    //persistent:
     style: T_style;
     sample: T_dataRow;
     CONSTRUCTOR create(CONST index: byte);
     PROCEDURE getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
-    PROCEDURE setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
-    PROCEDURE computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
     PROCEDURE addSample(CONST x, y: double);
     DESTRUCTOR destroy;
   end;
@@ -166,19 +154,18 @@ TYPE
       PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
   end;
 
-VAR
-  activePlot: T_plot;
-  plotCS:TRTLCriticalSection;
+VAR activePlot: T_plot;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
 IMPLEMENTATION
+VAR plotCS:TRTLCriticalSection;
 
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
@@ -199,13 +186,6 @@ CONSTRUCTOR T_sampleRow.create(CONST index: byte);
   begin
     style.create(index);
     setLength(sample, 0);
-    with computed do
-      begin
-      computed.xRule:=nil;
-      computed.yRule:=nil;
-      computed.t0:=0;
-      computed.t1:=1;
-      end;
   end;
 
 PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
@@ -234,213 +214,6 @@ PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_bound
         (y>box['y', 1])) then
         box['y', 1]:=y;
       end;
-  end;
-
-PROCEDURE T_sampleRow.setRules(CONST forXOrNil, forY: P_expressionLiteral; CONST t0, t1: double; CONST maxSamples: longint; VAR recycler:T_tokenRecycler);
-  begin
-    if maxSamples>100
-    then computed.maxSamples:=maxSamples
-    else computed.maxSamples:=100;
-    computed.xRule:=forXOrNil;
-    computed.yRule:=forY;
-    if forXOrNil<>nil then forXOrNil^.rereference;
-    if forY     <>nil then forY     ^.rereference;
-    if t1>t0 then begin
-      computed.t0:=t0;
-      computed.t1:=t1;
-    end else begin
-      computed.t0:=t1;
-      computed.t1:=t0;
-    end;
-    computeSamplesInActivePlot(false,recycler);
-  end;
-
-PROCEDURE T_sampleRow.computeSamplesInActivePlot(CONST secondPass: boolean; VAR recycler:T_tokenRecycler);
-  CONST
-    initialSampleCount = 100;
-
-  VAR
-    xRule, yRule: P_expressionLiteral;
-
-  FUNCTION getSampleWithTime(CONST atTime: double; VAR recycler:T_tokenRecycler): T_sampleWithTime; inline;
-    VAR
-      pt: T_realLiteral;
-      L: P_literal;
-    begin
-      result.t:=atTime;
-      pt.create(atTime);
-      if xRule = nil then
-        result.x:=atTime
-      else
-        begin
-        L:=P_subrule(xRule^.value)^.directEvaluateUnary(@pt,xRule, 0,recycler);
-        result.x:=fReal(L);
-        if L<>nil then disposeLiteral(L);
-        end;
-        begin
-        L:=P_subrule(yRule^.value)^.directEvaluateUnary(@pt,yRule, 0,recycler);
-        result.y:=fReal(L);
-        if L<>nil then disposeLiteral(L);
-        end;
-      pt.destroy;
-    end;
-
-  VAR
-    refineTemp: array of T_sampleWithTime;
-
-  PROCEDURE addRefine(CONST sample: T_sampleWithTime); inline;
-    begin
-      setLength(refineTemp, length(refineTemp)+1);
-      refineTemp[length(refineTemp)-1]:=sample;
-    end;
-
-  FUNCTION mergeTemp: boolean;
-    VAR
-      tempCopy: array of T_sampleWithTime;
-      i, j, k: longint;
-    begin
-      if length(refineTemp) = 0 then
-        exit(false);
-
-      setLength(tempCopy, length(computed.temp));
-      for i:=0 to length(tempCopy)-1 do
-        tempCopy[i]:=computed.temp[i];
-
-      setLength(computed.temp, length(tempCopy)+length(refineTemp));
-      i:=0;
-      j:=0;
-      k:=0;
-      while (i<length(refineTemp)) and (j<length(tempCopy)) do
-        if refineTemp[i].t<tempCopy[j].t then
-          begin
-          computed.temp[k]:=refineTemp[i];
-          inc(i);
-          inc(k);
-          end
-        else
-          begin
-          computed.temp[k]:=tempCopy[j];
-          inc(j);
-          inc(k);
-          end;
-      while (i<length(refineTemp)) do
-        begin
-        computed.temp[k]:=refineTemp[i];
-        inc(i);
-        inc(k);
-        end;
-      while (j<length(tempCopy)) do
-        begin
-        computed.temp[k]:=tempCopy[j];
-        inc(j);
-        inc(k);
-        end;
-      setLength(tempCopy, 0);
-      setLength(refineTemp, 0);
-      result:=true;
-    end;
-
-  FUNCTION curvature(CONST i: longint): double;
-    VAR
-      p0, p1, p2: T_point;
-    begin
-      with computed do
-        begin
-        if (i<=0) or (i>=length(temp)-1) then exit(0);
-        p0:=activePlot.realToScreen(temp[i-1].x, temp[i-1].y);
-        p1:=activePlot.realToScreen(temp[i].x, temp[i].y);
-        p2:=activePlot.realToScreen(temp[i+1].x, temp[i+1].y);
-        if (p0[0]<0) and  (p1[0]<0) and  (p2[0]<0) or
-          (p0[0]>activePlot.screenWidth) and
-          (p1[0]>activePlot.screenWidth) and  (p2[0]>activePlot.screenWidth) or
-          (p0[1]<0) and  (p1[1]<0) and  (p2[1]<0) or
-          (p0[1]>activePlot.screenHeight) and
-          (p1[1]>activePlot.screenHeight) and  (p2[1]>activePlot.screenHeight) then exit(0);
-        end;
-      result:=sqr(p0[0]-2*p1[0]+p2[0])+sqr(p0[1]-2*p1[1]+p2[1]);
-      if isNan(result) or isInfinite(result) then
-        result:=0;
-    end;
-
-  PROCEDURE copyTempToData;
-    VAR
-      i: longint;
-    begin
-      with computed do
-        begin
-        setLength(sample, length(temp));
-        for i:=0 to length(temp)-1 do
-          begin
-          if isInfinite(temp[i].x) then
-            sample[i, 0]:=Nan
-          else
-            sample[i, 0]:=temp[i].x;
-          if isInfinite(temp[i].y) then
-            sample[i, 1]:=Nan
-          else
-            sample[i, 1]:=temp[i].y;
-          end;
-        end;
-    end;
-
-  VAR
-    i: longint;
-    curvatureThreshold: double;
-  begin
-    if (computed.yRule<>nil) and (length(sample) = 0) and not (secondPass) then
-      begin
-      if computed.xRule = nil then
-        xRule:=nil
-      else
-        xRule:=computed.xRule;
-      yRule:=computed.yRule;
-
-      setLength(computed.temp, initialSampleCount+1);
-      with computed do
-        for i:=0 to initialSampleCount do
-          if noErrors then
-            computed.temp[i] :=
-              getSampleWithTime(t0+(t1-t0)*i/initialSampleCount,recycler);
-
-      copyTempToData;
-      end
-    else if (computed.yRule<>nil) and (length(sample)>0) and secondPass then
-      begin
-      if computed.xRule = nil then
-        xRule:=nil
-      else
-        xRule:=computed.xRule;
-      yRule:=computed.yRule;
-
-      curvatureThreshold:=0;
-      for i:=1 to length(computed.temp)-1 do
-        curvatureThreshold:=curvatureThreshold+curvature(i);
-      curvatureThreshold:=1E3*curvatureThreshold/(length(computed.temp)-1);
-      setLength(refineTemp, 0);
-
-      repeat
-        i:=0;
-        for i:=0 to length(computed.temp)-1 do
-          if (noErrors) and
-            ((curvature(i)>curvatureThreshold) or
-            (curvature(i+1)>curvatureThreshold)) then
-            addRefine(getSampleWithTime(
-              (computed.temp[i].t+computed.temp[i+1].t)*0.5,recycler));
-
-        if not (mergeTemp) then
-          curvatureThreshold:=curvatureThreshold*0.9;
-      until (length(computed.temp)>=computed.maxSamples) or
-        not(noErrors);
-
-      copyTempToData;
-      setLength(computed.temp, 0);
-
-      if computed.xRule<>nil then
-        disposeLiteral(computed.xRule);
-      disposeLiteral(computed.yRule);
-      computed.xRule:=nil;
-      computed.yRule:=nil;
-    end;
   end;
 
 PROCEDURE T_sampleRow.addSample(CONST x, y: double);
@@ -783,7 +556,6 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
       i: longint;
       center, extend: double;
       boundingBox: T_boundingBox;
-      recycler:T_tokenRecycler;
     begin
       for axis:='x' to 'y' do
         for i:=0 to 1 do
@@ -857,10 +629,6 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
           range[axis, 1]:=center+1E-60;
           end;
         end;
-      recycler.create;
-      for i:=0 to length(row)-1 do
-        row[i].computeSamplesInActivePlot(true,recycler);
-      recycler.destroy;
     end;
 
   PROCEDURE initTics(CONST axis: char);
@@ -1256,11 +1024,11 @@ FUNCTION T_plot.getRange: P_listLiteral;
       append(
         newListLiteral^.
         appendReal(oex(range ['x', 0]))^.
-        appendReal(oex(range ['x', 1])),false)^.
+        appendReal(oex(range ['x', 1])),false,nullAdapter)^.
       append(
         newListLiteral^.
         appendReal(oey(range ['y', 0]))^.
-        appendReal(oey(range ['y', 1])),false);
+        appendReal(oey(range ['y', 1])),false,nullAdapter);
   end;
 
 PROCEDURE T_plot.setAxisStyle(CONST x, y: longint);
@@ -1804,33 +1572,11 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       end;
   end;
 
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
       rowId, i, iMax: longint;
       X, Y: P_listLiteral;
-
-  FUNCTION isValidExpression(CONST p:P_literal; VAR recycler:T_tokenRecycler):boolean;
-    VAR s:P_subrule;
-        par:T_realLiteral;
-        res:P_literal;
-    begin
-      if p^.literalType<>lt_expression then exit(false);
-      s:=P_expressionLiteral(p)^.value;
-      par.create(random);
-      res:=s^.directEvaluateUnary(@par,P_expressionLiteral(s),0,recycler);
-      if res=nil then begin
-        raiseError('Expression to plot '+p^.toString+' is not a valid unary FUNCTION.',tokenLocation);
-        result:=false;
-      end else if not(res^.literalType in [lt_int,lt_real]) then begin
-        raiseError('Expression to plot '+p^.toString+' returns '+C_typeString[res^.literalType]+'; should be int or real.',tokenLocation);
-        result:=false;
-      end else result:=true;
-      if res<>nil then disposeLiteral(res);
-      par.destroy;
-    end;
-
-  VAR recycler:T_tokenRecycler;
 
   begin
     system.enterCriticalSection(plotCS);
@@ -1873,66 +1619,24 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocati
         iMax:=min(X^.size, Y^.size);
         for i:=0 to iMax-1 do activePlot.row[rowId].addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         result:=newVoidLiteral;
-      end else if (sizeWithoutOptions = 4) and
-                  (params^.value(0)^.literalType = lt_expression) and
-                  (params^.value(1)^.literalType in [lt_int, lt_real]) and
-                  (params^.value(2)^.literalType in [lt_int, lt_real]) and
-                  (params^.value(3)^.literalType = lt_int) then begin
-        recycler.create;
-        if not(isValidExpression(params^.value(0),recycler)) then begin
-          recycler.destroy;
-          system.leaveCriticalSection(plotCS);
-          exit(nil);
-        end;
-        rowId:=activePlot.addRow(options);
-        activePlot.row[rowId].setRules(
-          nil,
-          P_expressionLiteral(params^.value(0)),
-          fReal(params^.value(1)),
-          fReal(params^.value(2)),
-          round(fReal(params^.value(3))),
-          recycler);
-        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
-        recycler.destroy;
-        result:=newVoidLiteral;
-      end else if (sizeWithoutOptions = 5) and
-                  (params^.value(0)^.literalType = lt_expression) and
-                  (params^.value(1)^.literalType = lt_expression) and
-                  (params^.value(2)^.literalType in [lt_int, lt_real]) and
-                  (params^.value(3)^.literalType in [lt_int, lt_real]) and
-                  (params^.value(4)^.literalType = lt_int) then begin
-        recycler.create;
-        if not(isValidExpression(params^.value(0),recycler)) then begin recycler.destroy; system.leaveCriticalSection(plotCS); exit(nil); end;
-        if not(isValidExpression(params^.value(1),recycler)) then begin recycler.destroy; system.leaveCriticalSection(plotCS); exit(nil); end;
-        rowId:=activePlot.addRow(options);
-        activePlot.row[rowId].setRules(
-          P_expressionLiteral(params^.value(0)),
-          P_expressionLiteral(params^.value(1)),
-          fReal(params^.value(2)),
-          fReal(params^.value(3)),
-          round(fReal(params^.value(4))),
-          recycler);
-        if not(activePlot.autoscale['x']) and not (activePlot.autoscale['y']) then activePlot.row[rowId].computeSamplesInActivePlot(true,recycler);
-        recycler.destroy;
-        result:=newVoidLiteral;
-      end else raiseError('Functions plot and addPlot cannot be applied to parameter list'+
+      end else adapters.raiseError('Functions plot and addPlot cannot be applied to parameter list'+
                                                 params^.toParameterListString(true),
                                                 tokenLocation);
-    end else raiseError('Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
+    end else adapters.raiseError('Functions plot and addPlot cannot be applied to empty parameter list',tokenLocation);
     system.leaveCriticalSection(plotCS);
   end;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     system.enterCriticalSection(plotCS);
     activePlot.clear;
-    if (params<>nil) and (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
+    if (params=nil) or (params^.size=0) or (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
     then result:=newVoidLiteral
-    else result:=addPlot(params, tokenLocation);
+    else result:=addPlot(params, tokenLocation,adapters);
     system.leaveCriticalSection(plotCS);
   end;
 
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
@@ -1945,20 +1649,20 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(
+      adapters.raiseError(
         'Function setPlotAutoscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
 
-FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getAutoscale
-    else raiseError('Function getAutoscale is nullary.',tokenLocation);
+    else adapters.raiseError('Function getAutoscale is nullary.',tokenLocation);
   end;
 
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
@@ -1971,20 +1675,20 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLo
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(
+      adapters.raiseError(
         'Function setPlotLogscale expects a list of 2 booleans as parameter.',
         tokenLocation);
   end;
 
-FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=activePlot.getLogscale
-    else raiseError('Function getLogscale is nullary.',tokenLocation);
+    else adapters.raiseError('Function getLogscale is nullary.',tokenLocation);
   end;
 
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR
     x, y: P_literal;
     x0, y0, x1, y1: double;
@@ -2007,20 +1711,19 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
           activePlot.setRange(x0, y0, x1, y1);
           result:=newVoidLiteral;
           system.leaveCriticalSection(plotCS);
-        end else raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
-      end else raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
-    end else raiseError( 'Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+        end else adapters.raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+      end else adapters.raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
+    end else adapters.raiseError('Function setPlotRange expects a list of structure [[x0,x1],[y0,y1]] as parameter. Infinite and NaN values are forbidden.',tokenLocation);
   end;
 
-FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=activePlot.getRange
-    else raiseError('Function getPlotRange is nullary.',tokenLocation);
+    then result:=activePlot.getRange;
   end;
 
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2032,18 +1735,17 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenL
         P_intLiteral(P_listLiteral(params^.value(0))^.value(1))^.value);
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
-    end else raiseError( 'Function setPlotAxisStyle expects a list of 2 integers as parameter.', tokenLocation);
+    end;
   end;
 
-FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
-    then result:=activePlot.getAxisStyle
-    else raiseError('Function getAxisStyle is nullary.',tokenLocation);
+    then result:=activePlot.getAxisStyle;
   end;
 
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size = 1) and
@@ -2052,15 +1754,15 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_t
       activePlot.setPreserveAspect(P_boolLiteral(params^.value(0))^.value);
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
-    end else raiseError('Function setPlotPreserveAspect expects a boolean as parameter.', tokenLocation);
+    end;
   end;
 
-FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=activePlot.getPreserveAspect;
   end;
 
-FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR
     plotImage, storeImage: TImage;
     fileName: ansistring;
@@ -2081,7 +1783,7 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       if params^.size>3 then supersampling:=P_intLiteral(params^.value(3))^.value
                         else supersampling:=1;
       if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
-        raiseError(
+        adapters.raiseError(
           'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
           tokenLocation);
         system.leaveCriticalSection(plotCS);
@@ -2101,14 +1803,14 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation: T_t
       rect.Bottom:=height;
       storeImage.Canvas.CopyRect(rect, plotImage.Canvas, rect);
       storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
-      raiseCustomMessage(mt_imageCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+      adapters.raiseCustomMessage(mt_imageCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
       storeImage.free;
 
       plotImage.free;
       result:=newVoidLiteral;
       system.leaveCriticalSection(plotCS);
     end else
-      raiseError(
+      adapters.raiseError(
         'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
         tokenLocation);
   end;

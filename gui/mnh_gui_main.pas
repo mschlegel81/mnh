@@ -216,10 +216,10 @@ TYPE
 
 VAR
   MnhForm: TMnhForm;
-
 PROCEDURE lateInitialization;
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
+    guiAdapters: T_adapters;
     plotSubsystem:record
       rendering:boolean;
       mouseUpTriggersPlot:boolean;
@@ -489,10 +489,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.lines.append('       at: '+{$I %TIME%});
     OutputEdit.lines.append('       with FPC'+{$I %FPCVERSION%});
     OutputEdit.lines.append('       for '+{$I %FPCTARGET%});
-    {$ifndef debugMode}
-    removeOutAdapter(@consoleOutAdapter);
+    {$ifdef debugMode}
+    guiAdapters.addConsoleOutAdapter;
     {$endif}
-    addOutAdapter(@guiOutAdapter);
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -509,7 +508,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
-    mnh_out_adapters.setDefaultCallbacks;
+    guiAdapters.removeOutAdapter(@guiOutAdapter);
     inputHighlighter.destroy;
     outputHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
@@ -1150,53 +1149,53 @@ begin
   pushSettingsToPlotContainer(true);
 end;
 
-FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.plot(params,tokenLocation);
+    result:=mnh_plotData.plot(params,tokenLocation,adapters);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     activePlot.setScreenSize(MnhForm.PlotTabSheet.width,
                              MnhForm.PlotTabSheet.height);
-    result:=mnh_plotData.addPlot(params,tokenLocation);
+    result:=mnh_plotData.addPlot(params,tokenLocation,adapters);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
-FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAutoscale(params,tokenLocation);
+    result:=mnh_plotData.setAutoscale(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setLogscale(params,tokenLocation);
+    result:=mnh_plotData.setLogscale(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPlotRange(params,tokenLocation);
+    result:=mnh_plotData.setPlotRange(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAxisStyle(params,tokenLocation);
+    result:=mnh_plotData.setAxisStyle(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
-FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPreserveAspect(params,tokenLocation);
+    result:=mnh_plotData.setPreserveAspect(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
@@ -1231,10 +1230,14 @@ PROCEDURE debugForm_debuggingStep;
 
 INITIALIZATION
   guiOutAdapter.create;
+  guiAdapters.create;
+  guiAdapters.addOutAdapter(@guiOutAdapter);
+  mnh_evalThread.guiOutAdapters:=@guiAdapters;
   StopDebuggingCallback:=@debugForm_stopDebugging;
   DebuggingStepCallback:=@debugForm_debuggingStep;
 
 FINALIZATION
+  guiAdapters.destroy;
   guiOutAdapter.destroy;
 end.
 

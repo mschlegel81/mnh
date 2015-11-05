@@ -40,7 +40,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
     result := options [i];
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation): P_literal;
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters):  P_literal;
   VAR opt: T_arrayOfString;
       i: longint;
   begin

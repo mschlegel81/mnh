@@ -2,7 +2,7 @@ UNIT mnh_funcs_mnh;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil;
 IMPLEMENTATION
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -11,7 +11,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         lt_list..lt_listWithError: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
+            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false,adapters);
         end;
         else begin
           x^.rereference;
@@ -25,7 +25,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0));
   end;
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -36,7 +36,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
@@ -46,20 +46,20 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=newStringLiteral(paramStr(0));
   end;
 
-FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
     begin
       P_listLiteral(result)^.append(
         newListLiteral^.
         appendString(el0)^.
-        appendString(el1),false);
+        appendString(el1),false,adapters);
     end;
   VAR name:string;
       i:longint;
@@ -80,21 +80,21 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true);
-        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation),false);
+        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true,adapters);
+        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,adapters),false,adapters);
         disposeLiteral(tmpParam);
       end;
     end;
   end;
 
-FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=newIntLiteral(params^.value(0)^.hash);
   end;
 
-FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR keys:T_arrayOfString;
       i:longint;
   begin
@@ -107,14 +107,14 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    if (params=nil) or (params^.size=0) then raiseError('Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then raiseError(params^.value(0)^.toString,tokenLocation);
+    if (params=nil) or (params^.size=0) then adapters.raiseError('Fail.',tokenLocation)
+    else if (params<>nil) and (params^.size=1) then adapters.raiseError(params^.value(0)^.toString,tokenLocation);
     result:=nil;
   end;
 
-FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -126,11 +126,11 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));
-        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation));
+        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation,adapters));
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
-            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+          for i:=0 to P_listLiteral(x)^.size-1 do if adapters.noErrors then
+            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,adapters);
         end;
       end;
     end;

@@ -3,14 +3,14 @@ INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,
      myStringUtil,Classes,mySys;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
   intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 
 IMPLEMENTATION
 VAR print_cs:system.TRTLCriticalSection;
@@ -29,14 +29,14 @@ PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST
     registerImp(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name);
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation);
+PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
-    raiseError(complaintText,tokenLocation);
+    adapters.raiseError(complaintText,tokenLocation);
   end;
 
-FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   {$MACRO ON}
 {$define INNER_FORMATTING:=
   VAR resultString:T_arrayOfString;
@@ -126,29 +126,29 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   INNER_FORMATTING;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
       decomposeFormatString(P_stringLiteral(params^.value(0))^.value);
       system.enterCriticalSection(print_cs);
-      printOut(formatTabs(reSplit(resultString)));
+      adapters.printOut(formatTabs(reSplit(resultString)));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
     end;
   end;
 {$undef INNER_FORMATTING}
 
-FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     system.enterCriticalSection(print_cs);
-    clearPrint();
+    adapters.clearPrint();
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -161,7 +161,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.enterCriticalSection(print_cs);
-    printOut(formatTabs(split(stringToPrint)));
+    adapters.printOut(formatTabs(split(stringToPrint)));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;

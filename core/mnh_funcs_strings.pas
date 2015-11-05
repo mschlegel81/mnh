@@ -3,7 +3,7 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils;
 IMPLEMENTATION
 {$MACRO ON}
-FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR i:longint;
   begin
     result:=nil;
@@ -19,7 +19,7 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION posInt(x,y:P_literal):P_intLiteral;
     begin
       result:=newIntLiteral(pos(P_stringLiteral(x)^.value,
@@ -40,27 +40,27 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
           result:=newListLiteral;
           for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
             P_listLiteral(result)^.append(posInt(              params^.value(0),
-                                                 P_listLiteral(params^.value(1))^.value(i)),false);
+                                                 P_listLiteral(params^.value(1))^.value(i)),false,adapters);
         end;
       end else begin
         if params^.value(1)^.literalType=lt_string then begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
             P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
-                                                               params^.value(1)           ),false);
+                                                               params^.value(1)           ),false,adapters);
         end else begin
           if P_listLiteral(params^.value(0))^.size=P_listLiteral(params^.value(1))^.size then begin
             result:=newListLiteral;
             for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
               P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
-                                                   P_listLiteral(params^.value(1))^.value(i)),false);
-          end else raiseError('Incompatible list lengths for function pos.',tokenLocation)
+                                                   P_listLiteral(params^.value(1))^.value(i)),false,adapters);
+          end else adapters.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
     end;
   end;
 
-FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
       i1,i:longint;
@@ -120,7 +120,7 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION chars_internal(CONST input:P_literal):P_listLiteral;
     VAR i:longint;
         txt:ansistring;
@@ -136,14 +136,14 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=chars_internal(params^.value(0));
     end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_stringList) then begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do P_listLiteral(result)^.append(chars_internal(P_listLiteral(params^.value(0))^.value(i)),false);
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do P_listLiteral(result)^.append(chars_internal(P_listLiteral(params^.value(0))^.value(i)),false,adapters);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
     end;
   end;
 
-FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR splitters:T_arrayOfString;
   PROCEDURE initSplitters;
     VAR i:longint;
@@ -176,7 +176,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         rest:ansistring;
     begin
       firstSplitterPos(s^.value,sp0,sp1);
-      if sp0<0 then exit(newOneElementListLiteral(s,true));
+      if sp0<0 then exit(newOneElementListLiteral(s,true,adapters));
       result:=newListLiteral;
       rest:=s^.value;
       while sp0>0 do begin
@@ -194,10 +194,10 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         lt_string: result:=splitOneString(P_stringLiteral(p));
         lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(p)^.size-1 do if noErrors then
-            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
+          for i:=0 to P_listLiteral(p)^.size-1 do if adapters.noErrors then
+            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false,adapters);
         end
-       else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation);
+       else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation,adapters);
       end;
     end;
 
@@ -211,7 +211,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION stringOfLit(CONST L:P_literal):ansistring;
     begin
       case L^.literalType of
@@ -251,14 +251,14 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_string: result:=P_stringLiteral(x)^.CALL_MACRO;
       lt_list,lt_stringList,lt_emptyList:  begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
-          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        for i:=0 to P_listLiteral(x)^.size-1 do if adapters.noErrors then
+          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,adapters);
         if result^.literalType = lt_listWithError then begin
           disposeLiteral(result);
           result:=newErrorLiteral;
         end;
       end;
-      else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation);
+      else result:=newErrorLiteralRaising('Cannot apply '+ID_MACRO+' to literal of type '+C_typeString[x^.literalType],tokenLocation,adapters);
     end;
   end;
 
@@ -269,37 +269,37 @@ begin
 end}
 
 
-FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trim_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=trim}
 {$define ID_MACRO:='trim'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimLeft_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trimLeft_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=trimLeft}
 {$define ID_MACRO:='trimLeft'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION trimRight_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trimRight_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=trimRight}
 {$define ID_MACRO:='trimRight'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION upper_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=upper}
 {$define ID_MACRO:='upper'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION lower_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=lower}
 {$define ID_MACRO:='lower'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION unbrace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION unbrace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=unbrace}
 {$define ID_MACRO:='unbrace'}
 STRINGLITERAL_ROUTINE;
 
-FUNCTION escape_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION escape_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=escape}
 {$define ID_MACRO:='escape'}
 STRINGLITERAL_ROUTINE;
@@ -367,7 +367,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
     setLength(replaceBy,0);
   end;
 
-FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -378,7 +378,7 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -389,7 +389,7 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR sub,res:ansistring;
       i:longint;
   begin
@@ -404,7 +404,7 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   //clean(input,whitelist,instead)
   VAR whiteList:set of char;
       instead:char;
@@ -435,7 +435,7 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         tmp:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
         if length(tmp)=1 then Include(whiteList,tmp[1])
         else begin
-          raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
+          adapters.raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
           exit(nil);
         end;
       end;
@@ -450,7 +450,7 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR stringToSplit:ansistring;
       i0,i1:longint;
 

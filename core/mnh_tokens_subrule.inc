@@ -18,32 +18,32 @@
 
       PROCEDURE updatePatternForInline;
       PROCEDURE embrace;
-      FUNCTION needEmbrace:boolean;
+      FUNCTION needEmbrace(VAR adapters:T_adapters):boolean;
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR recycler:T_tokenRecycler);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext);
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
-      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR recycler:T_tokenRecycler);
-      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR recycler:T_tokenRecycler);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
+      CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
-      CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token);
+      CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
       FUNCTION toString:ansistring;
-      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
-      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
-      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
-      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+      FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
+      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION getInlineValue:P_literal;
-      FUNCTION complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean):boolean;
+      FUNCTION complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
       FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
       FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
   end;
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenRecycler);
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext);
   VAR t:P_token;
       inlineLiteral:P_literal;
   begin
@@ -53,7 +53,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token:=t^;
-        t^.tokType:=tt_EOL; t:=recycler.disposeToken(t);
+        t^.tokType:=tt_EOL; t:=context.disposeToken(t);
         token.next:=nil;
         if token.tokType=tt_optionalParameters then begin
           parIdx:=REMAINING_PARAMETERS_IDX;
@@ -64,7 +64,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
           end else begin
-            if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,true);
+            if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,nil);
             if (token.tokType in [tt_localUserRule,tt_importedUserRule]) and
                ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList,tt_listToParameterList])) //rule must not be followed by an opening bracket, indicating a call with parameters
             then begin
@@ -81,7 +81,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR recycler:T_tokenR
     end;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
   begin
     called:=false;
     if isPrivate then typ:=srt_normal_private
@@ -90,19 +90,19 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declA
     pattern.finalizeRefs;
     declaredAt:=declAt;
 
-    constructExpression(rep,recycler);
-    if needEmbrace then embrace;
+    constructExpression(rep,context);
+    if needEmbrace(context.adapters^) then embrace;
   end;
 
-CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
   begin
     called:=false;
     typ:=srt_inline_for_each;
     pattern.create;
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
-    constructExpression(rep,recycler);
-    if needEmbrace then embrace;
+    constructExpression(rep,context);
+    if needEmbrace(context.adapters^) then embrace;
   end;
 
 
@@ -121,7 +121,7 @@ PROCEDURE T_subrule.embrace;
     end;
   end;
 
-FUNCTION T_subrule.needEmbrace:boolean;
+FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
   VAR bracketStack:array of longint;
   PROCEDURE push(CONST index:longint);
     begin
@@ -140,13 +140,13 @@ FUNCTION T_subrule.needEmbrace:boolean;
 
     begin
       if length(bracketStack)=0 then begin
-        raiseError('Unbalanced paranthesis: missing opening bracket',preparedBody[index].token.location);
+        adapters.raiseError('Unbalanced paranthesis: missing opening bracket',preparedBody[index].token.location);
         exit;
       end;
       if not(compatible(preparedBody[bracketStack[length(bracketStack)-1]].token.tokType,
                         preparedBody[index                               ].token.tokType)) then begin
-        raiseError('Unbalanced paranthesis: bracket mismatch (open)' ,preparedBody[bracketStack[length(bracketStack)-1]].token.location);
-        raiseError('Unbalanced paranthesis: bracket mismatch (close)',preparedBody[index                               ].token.location);
+        adapters.raiseError('Unbalanced paranthesis: bracket mismatch (open)' ,preparedBody[bracketStack[length(bracketStack)-1]].token.location);
+        adapters.raiseError('Unbalanced paranthesis: bracket mismatch (close)',preparedBody[index                               ].token.location);
       end;
       setLength(bracketStack,length(bracketStack)-1);
     end;
@@ -155,7 +155,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     VAR i:longint;
     begin
       if length(bracketStack)>0 then for i:=0 to length(bracketStack)-1 do
-        raiseError('Unbalanced paranthesis: missing closing bracket',preparedBody[bracketStack[i]].token.location);
+        adapters.raiseError('Unbalanced paranthesis: missing closing bracket',preparedBody[bracketStack[i]].token.location);
       setLength(bracketStack,0);
     end;
 
@@ -231,7 +231,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR recycler:T_tokenRecycler);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluationContext);
   VAR t:P_token;
   begin
     called:=false;
@@ -247,16 +247,16 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR recycler:T_tokenRe
       with preparedBody[length(preparedBody)-1] do begin
         token:=t^;
         t^.tokType:=tt_EOL;
-        t:=recycler.disposeToken(t);
+        t:=context.disposeToken(t);
         token.next:=nil;
         parIdx:=-1;
       end;
     end;
-    if needEmbrace then embrace;
+    if needEmbrace(context.adapters^) then embrace;
     updatePatternForInline;
   end;
 
-CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
+CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
   VAR dummyBool:boolean;
       funcPtr:T_intFuncCallback=nil;
   begin
@@ -278,7 +278,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
     end else if (tok^.tokType in [tt_identifier,tt_intrinsicRule,tt_localUserRule,tt_importedUserRule]) then begin
       if (T_intFuncCallback(tok^.data)=BUILTIN_MIN) or (T_intFuncCallback(tok^.data)=BUILTIN_MAX) then funcPtr:=T_intFuncCallback(tok^.data)
       else begin
-        raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
+        context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
         exit;
       end;
 
@@ -291,7 +291,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token);
       with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
       with preparedBody[4] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
       with preparedBody[5] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
-    end else raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
+    end else context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
   end;
 
 DESTRUCTOR T_subrule.destroy;
@@ -303,10 +303,10 @@ DESTRUCTOR T_subrule.destroy;
     setLength(preparedBody,0);
   end;
 
-FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token):P_expressionLiteral;
+FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
   VAR subRule:P_subrule;
   begin
-    new(subRule,createPrimitiveAggregator(tok));
+    new(subRule,createPrimitiveAggregator(tok,context));
     result:=newExpressionLiteral(subRule);
   end;
 
@@ -316,7 +316,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR recycler:T_tokenRecycler):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
   VAR t:P_token;
       i:longint;
       remaining:P_listLiteral=nil;
@@ -336,18 +336,18 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
           end;
           L:=remaining;
         end else L:=param^.value(index);
-        if L=nil then exit(recycler.newToken(@original));
-        result:=recycler.newToken(original.location,'',tt_literal,L);
+        if L=nil then exit(context.newToken(@original));
+        result:=context.newToken(original.location,'',tt_literal,L);
         L^.rereference;
       end else begin
-        if (original.tokType in [tt_identifier,tt_identifier_pon]) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,true);
-        result:=recycler.newToken(@original);
+        if (original.tokType in [tt_identifier,tt_identifier_pon]) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,nil);
+        result:=context.newToken(@original);
       end;
     end;
 
   begin
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
+       (param<>nil) and pattern.matches(param^,selfLiteral<>nil,context.adapters^) then begin
       called:=true;
       with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
@@ -361,20 +361,20 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
             and (length(preparedBody)=1)
             and (preparedBody[0].token.tokType=tt_literal)
             and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
-            and (P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.pattern.matches(param^,true))
+            and (P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.pattern.matches(param^,true,context.adapters^))
     then begin
-      result:=P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.replaces(param,P_expressionLiteral(preparedBody[0].token.data),firstRep,lastRep,recycler);
+      result:=P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.replaces(param,P_expressionLiteral(preparedBody[0].token.data),firstRep,lastRep,context);
       called:=called or result;
     end else begin
       result:=false;
       case typ of
         srt_inline_for_each: begin
-          if param=nil then raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                       else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
         srt_inline_for_literal: begin
-          if param=nil then raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
-                       else raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
+          if param=nil then context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
+                       else context.adapters^.raiseError('Cannot evaluate inline function '+toString+' with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
       end;
     end;
@@ -508,95 +508,95 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(nil,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
-      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+    if replaces(nil,selfLiteral,firstRep,lastRep,context) then begin
+      reduceExpression(firstRep,callDepth+1,context);
+      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError('Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+        context.adapters^.raiseError('Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
-      recycler.cascadeDisposeToken(firstRep);
+      context.cascadeDisposeToken(firstRep);
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
   begin
     param.create;
-    param.append(x,true);
-    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
-      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+    param.append(x,true,context.adapters^);
+    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
+      reduceExpression(firstRep,callDepth+1,context);
+      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
       end else begin
         result:=newErrorLiteral;
-        raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
-        raiseError('The failed function is:'+toString,declaredAt);
-        raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
+        context.adapters^.raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
+        context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
+        context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
       end;
-      recycler.cascadeDisposeToken(firstRep);
+      context.cascadeDisposeToken(firstRep);
     end else result:=nil;
     param.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):boolean;
+FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
   begin
     param.create;
-    param.append(x,true);
-    param.append(y,true);
-    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
-      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
+    param.append(x,true,context.adapters^);
+    param.append(y,true,context.adapters^);
+    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
+      reduceExpression(firstRep,callDepth+1,context);
+      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
       then begin
         result:=P_boolLiteral(firstRep^.data)^.value;
       end else begin
         result:=false;
-        raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
+        context.adapters^.raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
       end;
-      recycler.cascadeDisposeToken(firstRep);
+      context.cascadeDisposeToken(firstRep);
     end else result:=false;
     param.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR recycler:T_tokenRecycler):P_literal;
+FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
       param:T_listLiteral;
   begin
     param.create;
-    param.append(x,true);
-    param.append(y,true);
-    if replaces(@param,selfLiteral,firstRep,lastRep,recycler) then begin
-      reduceExpression(firstRep,callDepth+1,recycler);
-      if (noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
+    param.append(x,true,context.adapters^);
+    param.append(y,true,context.adapters^);
+    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
+      reduceExpression(firstRep,callDepth+1,context);
+      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
         result:=firstRep^.data;
         result^.rereference;
       end else begin
         result:=nil;
-        raiseError('Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
+        context.adapters^.raiseError('Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
       end;
-      recycler.cascadeDisposeToken(firstRep);
+      context.cascadeDisposeToken(firstRep);
     end else result:=nil;
     param.destroy;
   end;
 
-FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal):boolean;
-  VAR tempRecycler:T_tokenRecycler;
+FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
+  VAR tempcontext:T_evaluationContext;
   begin
-    tempRecycler.create;
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempRecycler);
-    tempRecycler.destroy;
+    tempcontext.create(P_adapters(@adapters));
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempcontext);
+    tempcontext.destroy;
   end;
 
 
@@ -610,10 +610,10 @@ FUNCTION T_subrule.getInlineValue:P_literal;
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean):boolean;
+FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
   begin
     result:=not(called) and (typ=srt_normal_private);
-    if inMainPackage and result then raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
+    if inMainPackage and result then adapters.raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 
 FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;

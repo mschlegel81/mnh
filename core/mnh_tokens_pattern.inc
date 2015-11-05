@@ -21,7 +21,7 @@
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
-    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -136,7 +136,7 @@ FUNCTION T_pattern.matchesNilPattern:boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
+FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
   VAR i:longint;
       L:P_literal;
   begin
@@ -164,7 +164,7 @@ FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:bool
               or not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx)) ))
               then exit(false);
             end else begin
-              L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation);
+              L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation,adapters);
               if not(L^.literalType=lt_boolean) or not(P_boolLiteral(L)^.value) then begin
                 disposeLiteral(L);
                 exit(false);

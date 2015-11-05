@@ -3,7 +3,7 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters;
 IMPLEMENTATION
 
-FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType in C_validListTypes) then begin
@@ -11,7 +11,7 @@ FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         result:=params^.value(0);
         result^.rereference;
       end else result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.append(params^.value(1),true);
+      P_listLiteral(result)^.append(params^.value(1),true,adapters);
     end;
   end;
 
@@ -25,29 +25,29 @@ begin
   end;
 end}
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=head}
 {$define ID_MACRO:='head'}
 SUB_LIST_IMPL;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=tail}
 {$define ID_MACRO:='tail'}
 SUB_LIST_IMPL;
 
-FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=leading}
 {$define ID_MACRO:='leading'}
 SUB_LIST_IMPL;
 
-FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=trailing}
 {$define ID_MACRO:='trailing'}
 SUB_LIST_IMPL;
 
 {$undef SUB_LIST_IMPL}
 
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
@@ -57,18 +57,18 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
             and (params^.value(0)^.literalType in C_validListTypes)
             and (params^.value(1)^.literalType=lt_expression) then begin
       result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)));
+      P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)),adapters);
     end;
   end;
 
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)
     then result:=P_listLiteral(params^.value(0))^.sortPerm;
   end;
 
-FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
@@ -77,7 +77,7 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
@@ -86,13 +86,13 @@ FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_
     end;
   end;
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   PROCEDURE recurse_flatten(CONST L:P_listLiteral);
     VAR i:longint;
     begin
       for i:=0 to L^.size-1 do
       if L^.value(i)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]
-      then P_listLiteral(result)^.append(L^.value(i),true)
+      then P_listLiteral(result)^.append(L^.value(i),true,adapters)
       else recurse_flatten(P_listLiteral(L^.value(i)));
     end;
 
@@ -103,7 +103,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else result:=nil;
   end;
 
-FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -114,7 +114,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR B:P_literal;
       i,c:longint;
   begin

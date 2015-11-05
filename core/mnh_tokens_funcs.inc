@@ -13,9 +13,9 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,adapters);
       end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,adapters);
     end;
   end;
 
@@ -25,54 +25,54 @@ begin
   then result:=recurse(params^.value(0));
 end}
 
-FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sqrt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=sqrt}
 {$define ID_MACRO:='sqrt'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=sin}
 {$define ID_MACRO:='sin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arcsin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=arcsin}
 {$define ID_MACRO:='arcsin'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION cos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=cos}
 {$define ID_MACRO:='cos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arccos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=arccos}
 {$define ID_MACRO:='arccos'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION tan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=tan}
 {$define ID_MACRO:='tan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arctan_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=arctan}
 {$define ID_MACRO:='arctan'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION exp_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=exp}
 {$define ID_MACRO:='exp'}
 UNARY_NUM_TO_REAL;
 
-FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ln_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=ln}
 {$define ID_MACRO:='ln'}
 UNARY_NUM_TO_REAL;
 
 {$undef UNARY_NUM_TO_REAL}
 
-FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION not_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -84,9 +84,9 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_list,lt_booleanList, lt_intList, lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
+            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false,adapters);
         end;
-        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation);
+        else raiseNotApplicableError('not',x^.literalType,'',tokenLocation,adapters);
       end;
     end;
 
@@ -108,9 +108,9 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,adapters);
       end;
-      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+      else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,adapters);
     end;
   end;
 
@@ -120,12 +120,12 @@ begin
   then result:=recurse(params^.value(0));
 end}
 
-FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION abs_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=abs}
 {$define ID_MACRO:='abs'}
 UNARY_NUM_TO_SAME;
 
-FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sqr_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=sqr}
 {$define ID_MACRO:='sqr'}
 UNARY_NUM_TO_SAME;
@@ -144,9 +144,9 @@ UNARY_NUM_TO_SAME;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false,adapters);
         end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation);
+        else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,adapters);
       end;
     end;
 
@@ -172,23 +172,23 @@ UNARY_NUM_TO_SAME;
           lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
           lt_list,lt_intList,lt_emptyList: begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
+            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false,adapters);
           end;
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
+          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,adapters);
         end;
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: case y^.literalType of
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
           lt_int: begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false,adapters);
           end;
           lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
-          end else raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
-          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation);
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false,adapters);
+          end else adapters.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
+          else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,adapters);
         end;
-        else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation);
+        else raiseNotApplicableError(ID_MACRO,x^.literalType,' (first parameter)',tokenLocation,adapters);
       end;
     end;
 
@@ -198,23 +198,23 @@ UNARY_NUM_TO_SAME;
     if (params<>nil) and (params^.size=2) then result:=recurse2(params^.value(0),params^.value(1));
   end}
 
-FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION round_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=round}
 {$define ID_MACRO:='round'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION ceil_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=ceil}
 {$define ID_MACRO:='ceil'}
 ROUND_IMPLEMENTATION;
 
-FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION floor_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 {$define CALL_MACRO:=floor}
 {$define ID_MACRO:='floor'}
 ROUND_IMPLEMENTATION;
 {$undef ROUND_IMPLEMENTATION}
 
-FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION sign_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -226,9 +226,9 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false,adapters);
         end;
-        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation);
+        else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation,adapters);
       end;
     end;
 
@@ -239,41 +239,41 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   end;
 
 
-FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR res:P_literal;
       profiler:TEpikTimer;
       t:double;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     begin
-      P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false),false);
+      P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false,adapters),false,adapters);
     end;
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
-    VAR tempRecycler:T_tokenRecycler;
+    VAR tempcontext:T_evaluationContext;
     begin
-      tempRecycler.create;
+      tempcontext.create(P_adapters(@adapters));
       profiler.start;
-      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempRecycler);
+      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempcontext);
       t:=profiler.Elapsed;
-      tempRecycler.destroy;
+      tempcontext.destroy;
     end;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
-    VAR tempRecycler:T_tokenRecycler;
+    VAR tempcontext:T_evaluationContext;
         first:P_token;
     begin
-      tempRecycler.create;
-      first:=tempRecycler.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
-      first^.next:=tempRecycler.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
+      tempcontext.create(P_adapters(@adapters));
+      first:=tempcontext.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
+      first^.next:=tempcontext.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
       profiler.start;
-      reduceExpression(first,0,tempRecycler);
+      reduceExpression(first,0,tempcontext);
       t:=profiler.Elapsed;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
       then begin result:=first^.data; result^.rereference; end
       else result:=nil;
-      if first<>nil then tempRecycler.cascadeDisposeToken(first);
-      tempRecycler.destroy;
+      if first<>nil then tempcontext.cascadeDisposeToken(first);
+      tempcontext.destroy;
     end;
 
   begin
@@ -295,7 +295,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   CONST SECONDS_PER_DAY=24*60*60;
   VAR sleepUntil:double;
       sleepInt:longint;
@@ -307,7 +307,7 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       if params^.value(0)^.literalType=lt_int
       then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value/SECONDS_PER_DAY
       else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value/SECONDS_PER_DAY;
-      while (now<sleepUntil) and (noErrors) do begin
+      while (now<sleepUntil) and (adapters.noErrors) do begin
         sleepInt:=round(900*(sleepUntil-now)*SECONDS_PER_DAY);
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
@@ -315,25 +315,25 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
     VAR first,last,temp:P_token;
 
-        recycler:T_tokenRecycler;
+        context:T_evaluationContext;
         exTokens:T_tokenArray;
         package:P_package;
         dummyForLastComment:ansistring='';
     begin
-      recycler.create;
+      context.create(P_adapters(@adapters));
 
       package:=guessPackageForProvider(tokenLocation.fileName);
-      exTokens:=tokenizeAll(s,location,package);
+      exTokens:=tokenizeAll(s,location,package,adapters);
       exTokens.step(package,dummyForLastComment);
-      first:=recycler.newToken(exTokens.current);
+      first:=context.newToken(exTokens.current);
       last:=first;
       exTokens.step(package,dummyForLastComment);
       while not(exTokens.atEnd) do begin
-        last^.next:=recycler.newToken(exTokens.current);
+        last^.next:=context.newToken(exTokens.current);
         last:=last^.next;
         exTokens.step(package,dummyForLastComment);
       end;
@@ -341,30 +341,30 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
 
       if first^.tokType<>tt_expBraceOpen then begin
-        temp:=recycler.newToken(location,'',tt_expBraceOpen);
+        temp:=context.newToken(location,'',tt_expBraceOpen);
         temp^.next:=first; first:=temp;
-        last^.next:=recycler.newToken(location,'',tt_expBraceClose);
+        last^.next:=context.newToken(location,'',tt_expBraceClose);
         last:=last^.next;
       end;
 
-      digestInlineExpression(first,recycler);
-      if (noErrors) and (first^.next<>nil) then raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-      if not(noErrors) then begin
-        recycler.cascadeDisposeToken(first);
-        recycler.destroy;
+      digestInlineExpression(first,context);
+      if (adapters.noErrors) and (first^.next<>nil) then adapters.raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+      if not(adapters.noErrors) then begin
+        context.cascadeDisposeToken(first);
+        context.destroy;
         exit(newErrorLiteral);
       end;
       if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-        recycler.disposeToken(first);
-        raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-        recycler.destroy;
+        context.disposeToken(first);
+        adapters.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+        context.destroy;
         exit(newErrorLiteral);
       end;
       result:=P_expressionLiteral(first^.data);
       first^.tokType:=tt_EOL;
       first^.data:=nil;
-      recycler.disposeToken(first);
-      recycler.destroy;
+      context.disposeToken(first);
+      context.destroy;
     end;
 
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
@@ -375,10 +375,10 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation);
         lt_list,lt_stringList,lt_emptyList:  begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if noErrors then
-            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
+          for i:=0 to P_listLiteral(x)^.size-1 do if adapters.noErrors then
+            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false,adapters);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation);
+        else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation,adapters);
       end;
     end;
 
@@ -388,7 +388,7 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     then result:=expression_rec(params^.value(0));
   end;
 
-FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION getArity(CONST subruleLiteral:P_expressionLiteral):longint;
     begin
       result:=length(P_subrule(subruleLiteral^.value)^.pattern.sig);
@@ -400,7 +400,7 @@ FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     then result:=newIntLiteral(getArity(P_expressionLiteral(params^.value(0))));
   end;
 
-FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION getNames(CONST subRule:P_subrule):P_listLiteral;
     VAR i:longint;
     begin
@@ -414,7 +414,7 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     then result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
   end;
 
-FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
@@ -423,7 +423,7 @@ FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end;
   end;
 
-FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   TYPE T_group=record
          key:P_literal;
          resultLiteral:P_literal;
@@ -432,7 +432,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       keyList:array of P_literal;
       groups:array of T_group;
       aggregator:P_expressionLiteral;
-      tempContext:T_tokenRecycler;
+      tempContext:T_evaluationContext;
 
   PROCEDURE makeKeysByList(CONST list:P_listLiteral);
     VAR i:longint;
@@ -472,7 +472,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       with resultGroup do begin
         if aggregator=nil then begin
           if resultLiteral=nil then resultLiteral:=newListLiteral;
-          P_listLiteral(resultLiteral)^.append(L,true);
+          P_listLiteral(resultLiteral)^.append(L,true,adapters);
         end else begin
           if resultLiteral=nil then begin
             resultLiteral:=L; L^.rereference;
@@ -481,7 +481,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
             if newLit<>nil then begin
               disposeLiteral(resultLiteral);
               resultLiteral:=newLit;
-            end else raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
+            end else adapters.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
           end;
         end;
       end;
@@ -504,15 +504,15 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
                           else aggregator:=nil;
 
-      tempContext.create;
-      for inputIndex:=0 to length(keyList)-1 do if noErrors then begin
+      tempContext.create(P_adapters(@adapters));
+      for inputIndex:=0 to length(keyList)-1 do if adapters.noErrors then begin
         outputIndex:=getGroupIndexByKey(keyList[inputIndex]);
         addToAggregation(groups[outputIndex],listToGroup^.value(inputIndex));
       end;
       tempContext.destroy;
 
       result:=newListLiteral;
-      for outputIndex:=0 to length(groups)-1 do P_listLiteral(result)^.append(groups[outputIndex].resultLiteral,false);
+      for outputIndex:=0 to length(groups)-1 do P_listLiteral(result)^.append(groups[outputIndex].resultLiteral,false,adapters);
     end;
   end;
 

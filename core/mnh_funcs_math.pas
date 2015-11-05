@@ -1,10 +1,10 @@
 UNIT mnh_funcs_math;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:T_intFuncCallback;
 IMPLEMENTATION
-FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -19,7 +19,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end;
   end;
 
-FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -40,7 +40,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x:P_literal;
       i:longint;
   begin
@@ -55,7 +55,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end;
   end;
 
-FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x,xMin:P_scalarLiteral;
       L:P_listLiteral;
       i,iMin:longint;
@@ -76,7 +76,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR i:longint;
       L:P_listLiteral;
       x:P_literal;
@@ -104,7 +104,7 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR i:longint;
       L:P_listLiteral;
       x:P_literal;
@@ -132,7 +132,7 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation):P_literal;
+FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR r0,r1:T_myFloat;
   FUNCTION inRange(CONST L:P_literal):boolean; inline;
     VAR i:int64;
