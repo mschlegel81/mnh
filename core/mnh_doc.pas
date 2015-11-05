@@ -11,7 +11,7 @@ TYPE
     example:T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
-    PROCEDURE writeToFile(VAR outFile:text);
+    FUNCTION getHtml:ansistring;
   end;
 
   P_userPackageDocumentation = ^T_userPackageDocumentation;
@@ -39,7 +39,8 @@ TYPE
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
- PROCEDURE writeBuiltInDoc(CONST id:ansistring);
+PROCEDURE writeBuiltInDoc(CONST id:ansistring);
+FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
 
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
@@ -172,7 +173,7 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
     setLength(example,0);
   end;
 
-PROCEDURE T_intrinsicFunctionDocumentation.writeToFile(VAR outFile: text);
+FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   FUNCTION prettyHtml(s: ansistring): ansistring;
     VAR lines: T_arrayOfString;
       i: longint;
@@ -194,11 +195,10 @@ PROCEDURE T_intrinsicFunctionDocumentation.writeToFile(VAR outFile: text);
     end;
   VAR i:longint;
   begin
-    writeln(outFile,'<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description));
+    result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
     if length(example)>0 then begin
-      writeln(outFile,'<br>Examples:<code>');
-      for i:=0 to length(example)-1 do writeln(outFile,example[i]);
-      writeln(outFile,'</code>');
+      result:=result+'<br>Examples:';
+      for i:=0 to length(example)-1 do result:=result+'<br><code>'+example[i]+'</code>';
     end;
 
   end;
@@ -248,24 +248,28 @@ PROCEDURE prepareBuiltInDocs;
     builtInDocsReady:=true;
   end;
 
-PROCEDURE writeBuiltInDoc(CONST id:ansistring);
-  VAR outFile:text;
-      n:T_namespace;
+FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
+  VAR n:T_namespace;
       i:longint;
   begin
     prepareBuiltInDocs;
     if not(builtInDocsEnhanced) then makeHtmlFromTemplate(true);
+    result:=HTML_FILE_START;
+    if isQualified(id) then begin
+      n:=namespace(id);
+      for i:=0 to length(builtInDoc[n])-1 do if builtInDoc[n][i].id=id then result:=result+builtInDoc[n][i].getHtml;
+    end else for n:=low(T_namespace) to high(T_namespace) do
+    for i:=0 to length(builtInDoc[n])-1 do
+    if shortName(builtInDoc[n][i].id)=id then result:=result+builtInDoc[n][i].getHtml;
+    result:=result+LineEnding+HTML_FILE_END;
+  end;
+
+PROCEDURE writeBuiltInDoc(CONST id:ansistring);
+  VAR outFile:text;
+  begin
 
     assign(outFile,htmlRoot+'\_tmp_doc_.html');
     rewrite(outFile);
-    writeln(outFile,HTML_FILE_START);
-
-    if isQualified(id) then begin
-      n:=namespace(id);
-      for i:=0 to length(builtInDoc[n])-1 do if builtInDoc[n][i].id=id then builtInDoc[n][i].writeToFile(outFile);
-    end else for n:=low(T_namespace) to high(T_namespace) do
-    for i:=0 to length(builtInDoc[n])-1 do
-    if shortName(builtInDoc[n][i].id)=id then builtInDoc[n][i].writeToFile(outFile);
     close(outFile);
   end;
 
@@ -315,7 +319,7 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
 
       for n:=low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
-        for i:=0 to length(builtInDoc[n])-1 do builtInDoc[n][i].writeToFile(outFile);
+        for i:=0 to length(builtInDoc[n])-1 do write(outFile,builtInDoc[n][i].getHtml);
       end;
     end;
 

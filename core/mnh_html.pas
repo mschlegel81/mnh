@@ -8,8 +8,8 @@ CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equi
   'able} .oben    { vertical-align:top} .red {color:#FF0000} .ruleHead  { vertical-align:top; background-co'+
   'lor: #DDDDDD} .identifier{color:#0000FF} .builtin{color:#0000FF;font-weight:bold} .modifier{color:#FF880'+
   '0;font-weight:bold} .stringLiteral{color:#008800} .literal{color:#FF0000} .operator{color:#000088;font-w'+
-  'eight:bold} .comment{color:#666666;font-style:italic} </style> </head><body><table>';
-
+  'eight:bold} .comment{color:#666666;font-style:italic} </style> </head><body>';
+  HTML_FILE_END='</body></html>';
 TYPE
   P_htmlOutAdapter=^T_htmlOutAdapter;
   T_htmlOutAdapter=object(T_collectingOutAdapter)
@@ -194,7 +194,7 @@ PROCEDURE T_htmlOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
         append(handle);
       end else begin
         rewrite(handle);
-        writeln(handle,HTML_FILE_START);
+        writeln(handle,HTML_FILE_START,'<table>');
         writeln(handle,'<!--This is: ',outputFileName,'-->');
       end;
       for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
