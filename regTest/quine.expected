@@ -1,2 +1,1 @@
-main->print(fileContents(myPath));
-
+main:={print('main:=',main)}

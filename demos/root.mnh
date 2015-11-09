@@ -14,7 +14,7 @@ regulaFalsi(F:expression,x0input:numeric,x1input>x0input,steps>0)->begin
       void;
     end
   );
-  round(abs(f1)<abs(f0) ? x1 : x0, 12);
+  abs(f1)<abs(f0) ? x1 : x0;
 end;
 
 roots(F:expression,x0:numeric,x1:numeric)->begin

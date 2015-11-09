@@ -7,7 +7,7 @@ private NEED_PLOT_IDX:=3;
 
 mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
-synchronized private addFailedTest(scriptName)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName),lastResultName(scriptName)),1,0);
+synchronized private addFailedTest(scriptName,is32Bit)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName,is32Bit),lastResultName(scriptName,is32Bit)),1,0);
 
 private expectedResultName  (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".expected");
 private lastResultName      (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".last");
@@ -34,7 +34,7 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
         expectedResult(scriptName,SRF)==scriptOutput
         ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeHash,scriptTime))
         : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
-                                                   addFailedTest(scriptName) &
+                                                   addFailedTest(scriptName,SRF) &
                                                    storeResult(lastResultName(scriptName,SRF),scriptOutput));
       end
     : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
@@ -56,7 +56,7 @@ main(exe,...)->begin
   local testCases:=sort(each(case,
                    expression(fileContents(TESTS_STORE))(),
                    (currentExeCanPlot OR not(case%NEED_PLOT_IDX)) and
-                   (testFilter==[] OR each(f,testFilter,OR,pos(f,case%0)>=0)) ? case%[0..3] : void));
+                   (testFilter==[] OR each(f,testFilter,OR,pos(f,case%0)>=0)) ? case%[0..2,4] : void));
 
   //count already passed tests and remove them from the list
   testCases:=each(test,testCases,
