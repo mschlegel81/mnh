@@ -60,6 +60,10 @@ FUNCTION getMainPackage:P_package;
 PROCEDURE findAndDocumentAllPackages;
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
 
+PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
+FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
+FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
+
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
 VAR mainPackageProvider:T_codeProvider;
@@ -72,6 +76,70 @@ VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
     mainPackage      :T_package;
     packagesAreFinalized:boolean=false;
     pendingTasks:T_taskQueue;
+
+PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
+  VAR context:T_evaluationContext;
+      codeProvider:P_codeProvider;
+      package:T_package;
+  begin
+    context.create(adapter);
+    new(codeProvider,create);
+    codeProvider^.setLines(input);
+    package.create(codeProvider);
+    package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+    package.destroy;
+    context.destroy;
+  end;
+
+FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
+  VAR collector:T_collectingOutAdapter;
+      adapter:T_adapters;
+      i:longint;
+  begin
+    collector.create;
+    adapter.create;
+    adapter.addOutAdapter(@collector,false);
+    adapter.minErrorLevel:=0;
+    adapter.doEchoDeclaration:=true;
+    adapter.doEchoInput:=true;
+    adapter.doShowExpressionOut:=true;
+    adapter.doShowTimingInfo:=true;
+
+    runAlone(input,@adapter);
+
+    setLength(result,length(collector.storedMessages));
+    for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
+
+    adapter.destroy;
+    collector.destroy;
+  end;
+
+FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
+  VAR messages:T_storedMessages;
+      i:longint;
+      tmp:ansistring;
+  begin
+    messages:=runAlone(input);
+    setLength(result,0);
+    for i:=0 to length(input)-1 do begin
+      tmp:=trim(input[i]);
+      if copy(tmp,1,2)='//'
+      then append(result,StringOfChar(' ',length(C_errorLevelTxt[mt_echo_input])+1)+toHtmlCode(tmp))
+      else append(result,                        C_errorLevelTxt[mt_echo_input]+' '+toHtmlCode(tmp));
+    end;
+    for i:=0 to length(messages)-1 do with messages[i] do case messageType of
+      mt_printline: append(result,multiMessage);
+      mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage));
+      mt_el1_note,
+      mt_el2_warning,
+      mt_el3_evalError,
+      mt_el3_noMatchingMain,
+      mt_el3_stackTrace,
+      mt_el4_parsingError,
+      mt_el5_systemError,
+      mt_el5_haltMessageReceived: append(result,C_errorLevelTxt[messageType]+' '+simpleMessage);
+    end;
+  end;
 
 FUNCTION guessPackageForProvider(CONST providerPath:ansistring):P_package;
   VAR packId:string;
@@ -784,7 +852,7 @@ PROCEDURE findAndDocumentAllPackages;
       addPackageDoc(p.getDoc);
       p.destroy;
     end;
-    makeHtmlFromTemplate(false);
+    makeHtmlFromTemplate;
     context.destroy;
     nullAdapter.clearErrors;
   end;
@@ -802,6 +870,9 @@ INITIALIZATION
   subruleToStringCallback:=@subruleToStringImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   evaluateCompatorCallback:=@evaluateComparator;
+  //callbacks in doc
+  demoCodeToHtmlCallback:=@demoCallToHtml;
+  //worker thread setup
   MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=getNumberOfCPUs-1;
   if MAX_NUMBER_OF_SECONDARY_WORKER_THREADS<1 then
      MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=1;

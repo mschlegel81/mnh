@@ -3,21 +3,20 @@ INTERFACE
 USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
 VAR htmlRoot: string;
 TYPE
-
-  { T_intrinsicFunctionDocumentation }
-
+  T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
+VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
+TYPE
   T_intrinsicFunctionDocumentation = object
-    id, description: ansistring;
-    example:T_arrayOfString;
+    id, unqualifiedId, description: ansistring;
+    unqualifiedAccess:boolean;
+    example: T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
+    PROCEDURE addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
   end;
 
   P_userPackageDocumentation = ^T_userPackageDocumentation;
-
-  { T_userPackageDocumentation }
-
   T_userPackageDocumentation = object
     uid: ansistring;
     id: ansistring;
@@ -38,8 +37,7 @@ TYPE
 
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
-PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
-PROCEDURE writeBuiltInDoc(CONST id:ansistring);
+PROCEDURE makeHtmlFromTemplate;
 FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
 
 IMPLEMENTATION
@@ -50,8 +48,6 @@ PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
     setLength(packages,length(packages)+1);
     packages[length(packages)-1]:=doc;
   end;
-
-{ T_userPackageDocumentation }
 
 CONSTRUCTOR T_userPackageDocumentation.create(CONST path, name: ansistring);
   begin
@@ -159,10 +155,29 @@ FUNCTION T_userPackageDocumentation.getHref: ansistring;
     result:='<a href="#'+docFileName+'"><code>'+id+'</code></a>';
   end;
 
+FUNCTION namespace(CONST id:ansistring):T_namespace;
+  VAR useId:ansistring;
+      n:T_namespace;
+  begin
+    if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
+    for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
+  end;
+
+FUNCTION shortName(CONST id:ansistring):ansistring;
+  begin
+    if isQualified(id) then result:=split(id,'.')[1] else result:=id;
+  end;
+
+
 CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
+  VAR f1,f2:T_intFuncCallback;
   begin
     id:=funcName;
+    unqualifiedId:=shortName(funcName);
     description:=intrinsicRuleExplanationMap.get(id);
+    f1:=intrinsicRuleMap.get(id);
+    f2:=intrinsicRuleMap.get(unqualifiedId);
+    unqualifiedAccess:=(f1=f2);
     setLength(example,0);
   end;
 
@@ -197,34 +212,53 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   begin
     result:='<h4><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
     if length(example)>0 then begin
-      result:=result+'<br>Examples:';
-      for i:=0 to length(example)-1 do result:=result+'<br><code>'+example[i]+'</code>';
-    end;
+      result:=result+'<br>Examples:<code>';
+      for i:=0 to length(example)-1 do result:=result+LineEnding+example[i];
+      result:=result+'</code>';
+    end
+  end;
 
+PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
+  VAR isRelevant:boolean=false;
+      i,j:longint;
+      words:T_arrayOfString;
+  begin
+    for i:=0 to length(exampleSource)-1 do if not(isRelevant) and (copy(trim(exampleSource[i]),1,2)<>'//') then begin
+      words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
+      for j:=0 to length(words)-1 do isRelevant:=isRelevant or
+        (words[j]=id) or
+        (unqualifiedAccess) and (words[j]=unqualifiedId);
+      setLength(words,0);
+    end;
+    if isRelevant then append(example,exampleHtml);
   end;
 
 VAR builtInDoc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
     builtInDocsReady:boolean=false;
-    builtInDocsEnhanced:boolean=false;
-
-FUNCTION namespace(CONST id:ansistring):T_namespace;
-  VAR useId:ansistring;
-      n:T_namespace;
-  begin
-    if isQualified(id) then useId:=split(id,'.')[0] else useId:=id;
-    for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
-  end;
-
-FUNCTION shortName(CONST id:ansistring):ansistring;
-  begin
-    if isQualified(id) then result:=split(id,'.')[1] else result:=id;
-  end;
 
 PROCEDURE prepareBuiltInDocs;
+  CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
   VAR ids: T_arrayOfString;
       i,j: longint;
       n: T_namespace;
       swapTmp: T_intrinsicFunctionDocumentation;
+
+      examplesFile:text;
+      line:ansistring;
+      code:T_arrayOfString;
+  PROCEDURE processExample;
+    VAR html:T_arrayOfString;
+        n: T_namespace;
+        i:longint;
+    begin
+      if (length(code)<=0) then exit;
+      html:=demoCodeToHtmlCallback(code);
+      for n:=low(T_namespace) to high(T_namespace) do
+        for i:=1 to length(builtInDoc[n])-1 do
+          builtInDoc[n][i].addExampleIfRelevant(code,html);
+      setLength(code,0);
+      setLength(html,0);
+    end;
 
   begin
     if builtInDocsReady then exit;
@@ -245,7 +279,20 @@ PROCEDURE prepareBuiltInDocs;
       swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
     end;
     //-------------------------------------------------------------:Prepare and sort data
+    //Read examples:---------------------------------------------------------------------
+    assign(examplesFile, htmlRoot+EXAMPLES_NAME_SUFFIX);
+    reset(examplesFile);
+    setLength(code,0);
+    repeat
+      readln(examplesFile,line);
+      if trim(line)=''
+      then processExample
+      else append(code,line);
+    until eof(examplesFile);
+    processExample;
+    close(examplesFile);
     builtInDocsReady:=true;
+    //---------------------------------------------------------------------:Read examples
   end;
 
 FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
@@ -253,7 +300,7 @@ FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
       i:longint;
   begin
     prepareBuiltInDocs;
-    if not(builtInDocsEnhanced) then makeHtmlFromTemplate(true);
+    //if not(builtInDocsEnhanced) then makeHtmlFromTemplate(true);
     result:=HTML_FILE_START;
     if isQualified(id) then begin
       n:=namespace(id);
@@ -262,15 +309,6 @@ FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
     for i:=0 to length(builtInDoc[n])-1 do
     if shortName(builtInDoc[n][i].id)=id then result:=result+builtInDoc[n][i].getHtml;
     result:=result+LineEnding+HTML_FILE_END;
-  end;
-
-PROCEDURE writeBuiltInDoc(CONST id:ansistring);
-  VAR outFile:text;
-  begin
-
-    assign(outFile,htmlRoot+'\_tmp_doc_.html');
-    rewrite(outFile);
-    close(outFile);
   end;
 
 PROCEDURE finalizeBuiltInDocs;
@@ -284,7 +322,7 @@ PROCEDURE finalizeBuiltInDocs;
     builtInDocsReady:=false;
   end;
 
-PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
+PROCEDURE makeHtmlFromTemplate();
   PROCEDURE writeUserPackageDocumentations(VAR outFile:text);
     VAR i: longint;
     begin
@@ -337,24 +375,17 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
       end;
       includes:array of T_include;
       context:record
-        mode:(none,beautifying,definingInclude,definingExample);
+        mode:(none,beautifying,definingInclude);
         include:T_include;
       end;
 
   FUNCTION contextEnds(CONST txt:ansistring) :boolean;
     CONST END_CONTEXT_CMD='<!--end-->';
-    VAR ns:T_namespace;
-        i:longint;
     begin
       if trim(txt)=END_CONTEXT_CMD then begin
         if context.mode = definingInclude then begin
           setLength(includes,length(includes)+1);
           includes[length(includes)-1]:=context.include;
-        end else if context.mode = definingExample then begin
-          for ns:=low(T_namespace) to high(T_namespace) do
-          for i:=0 to length(builtInDoc[ns])-1 do
-            if   builtInDoc[ns][i].id      =context.include.includeTag
-            then builtInDoc[ns][i].example:=context.include.content;
         end;
         context.mode:=none;
         exit(true);
@@ -378,7 +409,6 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
 
     CONST FILE_SWITCH_PREFIX  ='<!--file ';
           START_INCLUDE_PREFIX='<!--begin ';
-          START_EXAMPLE_PREFIX='<!--example ';
           START_BEAUTIFY_CMD  ='<!--mnh-->';
           BUILTIN_DOC_CMD     ='<!--BUILTIN-->';
           PACKAGE_DOC_CMD     ='<!--USERPKG-->';
@@ -393,19 +423,17 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
         with outFile do begin
           if isOpen then close(handle);
           assign(handle,htmlRoot+'\'+cmdParam);
-          if not(prepareOnly) then begin
-            rewrite(handle);
-            isOpen:=true;
-          end;
+          rewrite(handle);
+          isOpen:=true;
         end;
         exit(true);
       end;
       if cmd=BUILTIN_DOC_CMD then begin
-        if not(prepareOnly) then documentBuiltIns(outFile.handle);
+        documentBuiltIns(outFile.handle);
         exit(true);
       end;
       if cmd=PACKAGE_DOC_CMD then begin
-        if not(prepareOnly) then writeUserPackageDocumentations(outFile.handle);
+        writeUserPackageDocumentations(outFile.handle);
         exit(true);
       end;
       if cmd=START_BEAUTIFY_CMD then begin
@@ -418,14 +446,8 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
         setLength(context.include.content,0);
         exit(true);
       end;
-      if startsWith(cmd,START_EXAMPLE_PREFIX) then begin
-        context.mode:=definingExample;
-        context.include.includeTag:=cmdParam;
-        setLength(context.include.content,0);
-        exit(true);
-      end;
       for i:=0 to length(includes)-1 do if includes[i].includeTag=cmd then begin
-        with outFile do if isOpen and not(prepareOnly) then for j:=0 to length(includes[i].content)-1 do writeln(handle,includes[i].content[j]);
+        with outFile do if isOpen then for j:=0 to length(includes[i].content)-1 do writeln(handle,includes[i].content[j]);
         exit(true);
       end;
       result:=false;
@@ -445,12 +467,10 @@ PROCEDURE makeHtmlFromTemplate(CONST prepareOnly:boolean);
         none:            if not(handleCommand(txt)) and outFile.isOpen then writeln(outFile.handle,txt);
         beautifying:     if not(contextEnds(txt))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(txt));
         definingInclude: if not(contextEnds(txt))   then append(context.include.content,txt);
-        definingExample: if not(contextEnds(txt))   then append(context.include.content,toHtmlCode(txt))
       end;
     end;
     close(templateFile);
     with outFile do if isOpen then close(handle);
-    builtInDocsEnhanced:=true;
   end;
 
 

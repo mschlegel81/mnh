@@ -329,6 +329,10 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       package:=guessPackageForProvider(tokenLocation.fileName);
       exTokens:=tokenizeAll(s,location,package,adapters);
       exTokens.step(package,dummyForLastComment);
+      if exTokens.atEnd then begin
+        adapters.raiseError('The parsed expression appears to be empty',tokenLocation);
+        exit(nil);
+      end;
       first:=context.newToken(exTokens.current);
       last:=first;
       exTokens.step(package,dummyForLastComment);

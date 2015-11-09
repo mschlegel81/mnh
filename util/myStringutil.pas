@@ -3,11 +3,14 @@ UNIT myStringUtil;
 INTERFACE
 USES math, strutils, sysutils,  myGenerics;
 
+TYPE charSet=set of char;
+
 CONST
   C_lineBreakChar = chr(10);
   C_carriageReturnChar = chr(13);
   C_tabChar = chr(9);
   BLANK_TEXT = '';
+  IDENTIFIER_CHARS:charSet=['a'..'z','A'..'Z','0'..'9','.','_'];
 
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
 FUNCTION isBlank(CONST s: ansistring): boolean;
@@ -23,6 +26,8 @@ FUNCTION split(CONST s:ansistring):T_arrayOfString;
 FUNCTION reSplit(CONST s:T_arrayOfString):T_arrayOfString;
 FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
 FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
+FUNCTION cleanString(CONST s:ansistring; CONST whiteList:charSet; CONST instead:char):ansistring;
+
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
 FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
@@ -335,6 +340,19 @@ FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
   begin
     if length(lines)>0 then result:=lines[0] else result:='';
     for i:=1 to length(lines)-1 do result:=result+joiner+lines[i];
+  end;
+
+FUNCTION cleanString(CONST s:ansistring; CONST whiteList:charSet; CONST instead:char):ansistring;
+  VAR k:longint;
+      tmp:shortString;
+  begin
+    if length(s)<=255 then begin
+      tmp:=s;
+      for k:=1 to length(s) do if not(tmp[k] in whiteList) then tmp[k]:=instead;
+      exit(tmp);
+    end;
+    result:='';
+    for k:=1 to length(s) do if s[k] in whiteList then result:=result+s[k] else result:=result+instead;
   end;
 
 FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;

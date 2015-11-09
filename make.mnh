@@ -9,7 +9,7 @@ memoized private
 currentCodeHash->begin
   //update code hash
   local result:=pEach(filename,relevantFiles,+,hash(fileContents(filename))).hex;
-  fileContents('core/code_hash.inc')="writeln(':"&result&"');" ? void : begin
+  fileContents('core/code_hash.inc')=="writeln(':"&result&"');" ? void : begin
     //If the hash has changed, checkstyle fixes might be necessary
     checkstyle.main('fix');
     //update result after checkstyle fixes
@@ -38,19 +38,22 @@ exeHasWrongVersion(FI) ? begin
 
   local compiler:=bin64 ? 'C:/lazarus64/fpc/2.6.4/bin/x86_64-win64/fpc.exe'
                         : 'C:/lazarus32/fpc/2.6.4/bin/i386-win32/fpc.exe';
+  local exeName:=binName(FI);
   local parameters:=
        (full ? ['gui\mnh_gui.lpr','-dfullVersion'] : 'consoles\mnh_console.pas')|
-       ('-o'&binName(FI))|
+       ('-o'&exeName)|
        (debug ? ['-gl','-ddebugMode']
               : ['-O3','-CX','-XX','-Si']) |
        ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore','-vewnhi'] |
        (bin64 ? ['-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64','-FuC:\lazarus64\components\lazutils\lib\x86_64-win64','-FuC:\lazarus64\packager\units\x86_64-win64','-dversion64bit']
               : ['-FuC:\lazarus32\components\synedit\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32'  ,'-FuC:\lazarus32\components\lazutils\lib\i386-win32'  ,'-FuC:\lazarus32\packager\units\i386-win32']);
-  execPipeless(compiler,parameters);
-  execPipeless('C:\lazarus64\fpc\2.6.4\bin\x86_64-win64\delp',['.','core','util','test','consoles','bin32','gui\lib\i386-win32','gui\lib\x86_64-win64','gui']);
-  each(file,
-       files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),
-       print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  deleteFile(exeName);
+  local logName:='make_'&replace(exeName,['.exe','/','\','.','__'],['','_','_','','_'])&'.log.txt';
+  printf('Compiling %X25% logging to %X%',exeName,logName);
+  writeFileLines(logName,exec(compiler,parameters));
+
+  exec('C:\lazarus64\fpc\2.6.4\bin\x86_64-win64\delp',['.','core','util','test','consoles','bin32','gui\lib\i386-win32','gui\lib\x86_64-win64','gui']);
+  each(file,files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj'),deleteFile(file));
   not(exeHasWrongVersion(FI));
 end : true;
 

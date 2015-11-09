@@ -406,22 +406,10 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 
 FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   //clean(input,whitelist,instead)
-  VAR whiteList:set of char;
+  VAR whiteList:charSet;
       instead:char;
       tmp:ansistring;
       i:longint;
-  FUNCTION cleanString(CONST s:ansistring):ansistring;
-    VAR k:longint;
-        tmp:shortString;
-    begin
-      if length(s)<=255 then begin
-        tmp:=s;
-        for k:=1 to length(s) do if not(tmp[k] in whiteList) then tmp[k]:=instead;
-        exit(tmp);
-      end;
-      result:='';
-      for k:=1 to length(s) do if s[k] in whiteList then result:=result+s[k] else result:=result+instead;
-    end;
 
   begin
     result:=nil;
@@ -441,11 +429,11 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       end;
       instead:=P_stringLiteral(params^.value(2))^.value[1];
       if params^.value(0)^.literalType=lt_string then begin
-        result:=newStringLiteral(cleanString(P_stringLiteral(params^.value(0))^.value));
+        result:=newStringLiteral(cleanString(P_stringLiteral(params^.value(0))^.value,whiteList,instead));
       end else begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
+        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value,whiteList,instead));
       end;
     end;
   end;

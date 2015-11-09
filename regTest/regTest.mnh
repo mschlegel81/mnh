@@ -79,9 +79,8 @@ main(exe,...)->begin
       void;
     end;
   end);
-  first ? setErrorlevel(1) : print(testsFailed);
-  testsFailed<>'' ? setErrorlevel(2) : void;
-
+  first ? void : print(testsFailed);
+  
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
     //displayUncoveredTests:--------------

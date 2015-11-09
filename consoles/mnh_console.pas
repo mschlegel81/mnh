@@ -1,10 +1,9 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_cmdLineInterpretation, mnh_tokens, sysutils, mnh_constants;
+USES mnh_cmdLineInterpretation, mnh_tokens, sysutils, mnh_constants, mnh_out_adapters;
 
 PROCEDURE interactiveMode;
-  VAR time:double;
-      hasExitSignal:boolean=false;
+  VAR hasExitSignal:boolean=false;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
@@ -25,20 +24,21 @@ PROCEDURE interactiveMode;
       until false;
     end;
   VAR i:longint;
+      context:T_evaluationContext;
   begin
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
     writeln('end a line with a \ to continue the input.');
+    context.create(P_adapters(@consoleAdapters));
 
     readInputFromConsole;
     while not(hasExitSignal) do begin
-      time:=now;
-      reloadMainPackage(lu_forDirectExecution);
-      if displayTime then writeln('time: ',(now-time)*24*60*60:0:3,'sec');
+      reloadMainPackage(lu_forDirectExecution,context);
       readInputFromConsole;
     end;
+    context.destroy;
   end;
 
 begin

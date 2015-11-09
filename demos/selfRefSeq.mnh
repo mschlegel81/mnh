@@ -1,13 +1,17 @@
-memoized
-step(s:string)->step_(s.chars);
-step_(S:stringList)->each(digit,unique(S),&,trueCount(S=digit),digit);
+private memoized //use memoization because this will be called again...
+step_new(s:string)->
+  s .chars            //split the string in characters
+    .elementFrequency //transform characters to a list [[count1,char1],[count2,char2],...]
+    .flatten          //flatten to [count1,char1,count2,char2,...]
+    .join;            //join the list to one string
+
 series(i:int)->begin
   local s:=string(i);
   s:=each(c,sort(copy(s,[0..length(s)-1],1)),&);
   local result:=[];
   while(not(s in result),begin
     result|=s;
-    s:=step(s);
+    s:=step_new(s);
   end);
   result;
 end;

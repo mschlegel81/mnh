@@ -31,29 +31,30 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE displayHelp;
     begin
-      writeln('MNH5 ',{$ifdef fullVersion}'(full'{$else}'(light'{$endif},
-                      {$ifdef debugMode}',debug)'{$else}')'{$endif},' by Martin Schlegel');
-      writeln('compiled on: ',{$I %DATE%});
-      writeln('         at: ',{$I %TIME%});
-      writeln('FPC version: ',{$I %FPCVERSION%});
-      writeln('Target CPU : ',{$I %FPCTARGET%});
-      writeln;
-      writeln('Accepted parameters: ');
-      writeln('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');
-      writeln('  filename : if present the file is interpreted; parameters are passed if present');
-      writeln('             if not present, interactive mode is entered');
-      writeln('  +echo    : force echo on (default for interactive mode)');
-      writeln('  -echo    : force echo off (default for interpretation mode)');
-      writeln('  +time    : force time on (default for interactive mode)');
-      writeln('  -time    : force time off (default for interpretation mode)');
-      writeln('  -el#     : set minimum error level for output; valid values: [0..5], default=2');
-      writeln('  -h       : display this help and quit');
-      writeln('  -det     : force deterministic "random" numbers');
-      writeln('  -version : show version info and exit');
-      writeln('  -codeHash: show codeHash and exit');
-      writeln('  -cmd     : directly execute the following command');
-      writeln('  -doc     : regenerate and show documentation');
-      writeln('  -html:<filename> : write html output to the given file');
+      consoleAdapters.printOut('MNH5 '+{$ifdef fullVersion}'(full'{$else}'(light'{$endif}+
+                      {$ifdef debugMode}',debug)'{$else}')'{$endif}+' by Martin Schlegel');
+      consoleAdapters.printOut('compiled on: '+{$I %DATE%});
+      consoleAdapters.printOut('         at: '+{$I %TIME%});
+      consoleAdapters.printOut('FPC version: '+{$I %FPCVERSION%});
+      consoleAdapters.printOut('Target CPU : '+{$I %FPCTARGET%});
+      consoleAdapters.printOut('');
+      consoleAdapters.printOut('Accepted parameters: ');
+      consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');
+      consoleAdapters.printOut('  filename          if present the file is interpreted; parameters are passed if present');
+      consoleAdapters.printOut('                    if not present, interactive mode is entered');
+      consoleAdapters.printOut('  +echo             force echo on (default for interactive mode)');
+      consoleAdapters.printOut('  -echo             force echo off (default for interpretation mode)');
+      consoleAdapters.printOut('  +time             force time on (default for interactive mode)');
+      consoleAdapters.printOut('  -time             force time off (default for interpretation mode)');
+      consoleAdapters.printOut('  -el#              set minimum error level for output; valid values: [0..5], default=2');
+      consoleAdapters.printOut('  -h                display this help and quit');
+      consoleAdapters.printOut('  -det              force deterministic "random" numbers');
+      consoleAdapters.printOut('  -version          show version info and exit');
+      consoleAdapters.printOut('  -codeHash         show codeHash and exit');
+      consoleAdapters.printOut('  -cmd              directly execute the following command');
+      consoleAdapters.printOut('  -doc              regenerate and show documentation');
+      consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
+      consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
     end;
 
   PROCEDURE tryToRunSetup;
@@ -94,15 +95,18 @@ PROCEDURE parseCmdLine;
       halt;
     end;
 
+  PROCEDURE addOutfile(CONST fileName:ansistring);
+    begin
+      if uppercase(extractFileExt(fileName))='.HTML'
+      then addHtmlOutAdapter(consoleAdapters,fileName)
+      else consoleAdapters.addFileOutAdapter(fileName);
+    end;
+
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       i    :longint;
       minEL:longint=2;
-
-      htmlAdapter:P_htmlOutAdapter;
   begin
-    consoleAdapters.create;
-    consoleAdapters.addConsoleOutAdapter;
     setLength(parameters,0);
     for i:=1 to paramCount do begin
     if (fileOrCommandToInterpret='') or directExecutionMode then begin
@@ -112,10 +116,8 @@ PROCEDURE parseCmdLine;
         else if paramStr(i)='-time' then time:=t_forcedOff
         else if paramStr(i)='-det'  then randseed:=0
         else if paramStr(i)='-cmd'  then directExecutionMode:=true
-        else if startsWith(paramStr(i),'-html:') then begin
-          new(htmlAdapter,create(copy(paramStr(i),7,length(paramStr(i))-6)));
-          consoleAdapters.addOutAdapter(htmlAdapter);
-        end else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
+        else if startsWith(paramStr(i),'-out:') then addOutfile(copy(paramStr(i),6,length(paramStr(i))-5))
+        else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
@@ -145,10 +147,10 @@ PROCEDURE parseCmdLine;
       end;
     end;
     //-----------------------------------------------------
-    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowTimingInfo:=((time=t_forcedOn) or (echo=e_default) and (fileOrCommandToInterpret=''));
+    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
     consoleAdapters.minErrorLevel:=minEL;
 
     if fileOrCommandToInterpret<>'' then begin
@@ -162,6 +164,9 @@ PROCEDURE parseCmdLine;
     tryToRunSetup;
   end;
 
+INITIALIZATION
+  consoleAdapters.create;
+  consoleAdapters.addConsoleOutAdapter;
 FINALIZATION
   consoleAdapters.destroy;
 

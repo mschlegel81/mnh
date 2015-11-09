@@ -10,7 +10,7 @@ USES
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
-  myGenerics,mnh_fileWrappers,mySys;
+  myGenerics,mnh_fileWrappers,mySys,mnh_html;
 
 CONST
   STATE_SAVE_INTERVAL=ONE_MINUTE;
@@ -251,7 +251,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       case messageType of
         mt_clearConsole: syn.lines.clear;
-        mt_printline: for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+        mt_printline:
+          for j:=0 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
         mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
           MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
@@ -1231,7 +1232,7 @@ PROCEDURE debugForm_debuggingStep;
 INITIALIZATION
   guiOutAdapter.create;
   guiAdapters.create;
-  guiAdapters.addOutAdapter(@guiOutAdapter);
+  guiAdapters.addOutAdapter(@guiOutAdapter,false);
   mnh_evalThread.guiOutAdapters:=@guiAdapters;
   StopDebuggingCallback:=@debugForm_stopDebugging;
   DebuggingStepCallback:=@debugForm_debuggingStep;

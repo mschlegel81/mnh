@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils;
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil;
 
 TYPE
   T_storedMessage = record
@@ -11,6 +11,7 @@ TYPE
     multiMessage: T_arrayOfString;
     location: T_tokenLocation;
   end;
+  T_storedMessages = array of T_storedMessage;
 
   T_outputBehaviour= record
     doEchoInput: boolean;
@@ -24,6 +25,7 @@ TYPE
   T_abstractOutAdapter = object
     outputBehaviour:T_outputBehaviour;
     CONSTRUCTOR create;
+    DESTRUCTOR destroy; virtual; abstract;
     PROCEDURE clearConsole; virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
@@ -32,7 +34,7 @@ TYPE
   P_consoleOutAdapter = ^T_consoleOutAdapter;
   T_consoleOutAdapter = object(T_abstractOutAdapter)
     CONSTRUCTOR create;
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
@@ -40,15 +42,30 @@ TYPE
 
   P_collectingOutAdapter = ^T_collectingOutAdapter;
   T_collectingOutAdapter = object(T_abstractOutAdapter)
-    storedMessages:array of T_storedMessage;
+    storedMessages:T_storedMessages;
     cs:TRTLCriticalSection;
     CONSTRUCTOR create;
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE errorOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
     PROCEDURE appendSingleMessage(CONST message:T_storedMessage); virtual;
     PROCEDURE clearMessages;
+  end;
+
+  P_textFileOutAdapter = ^T_textFileOutAdapter;
+
+  { T_textFileOutAdapter }
+
+  T_textFileOutAdapter = object(T_collectingOutAdapter)
+    lastFileFlushTime:double;
+    outputFileName:ansistring;
+    longestLineUpToNow:longint;
+    lastWasEndOfEvaluation:boolean;
+    CONSTRUCTOR create(CONST fileName:ansistring);
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE appendSingleMessage(CONST message: T_storedMessage); virtual;
+    PROCEDURE flush;
   end;
 
   P_adapters=^T_adapters;
@@ -59,7 +76,7 @@ TYPE
     private
       stackTraceCount:longint;
       maxErrorLevel: shortint;
-      adapter:array of P_abstractOutAdapter;
+      adapter:array of record ad:P_abstractOutAdapter; doDestroy:boolean; end;
       FUNCTION  getEchoInput                    : boolean;
       PROCEDURE setEchoInput        (CONST value: boolean );
       FUNCTION  getEchoDeclaration              : boolean;
@@ -89,11 +106,13 @@ TYPE
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
+      PROCEDURE clearAll;
       FUNCTION noErrors: boolean; inline;
       PROCEDURE haltEvaluation;
 
-      PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter);
+      PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
+      PROCEDURE addFileOutAdapter(CONST fileName:ansistring);
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
   end;
 
@@ -122,72 +141,149 @@ VAR
   {$ifdef fullVersion}stepper:T_stepper;{$endif}
   nullAdapter:T_adapters;
 
+FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
+FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
 IMPLEMENTATION
-VAR consoleOutAdapter:T_consoleOutAdapter;
+
+FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
+  begin
+    with message do if (length(simpleMessage)=0) and (length(multiMessage)>0)
+    then result:=defaultFormatting(messageType,join(multiMessage,C_lineBreakChar),location)
+    else result:=defaultFormatting(messageType,simpleMessage,location);
+  end;
+
+FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
+  begin
+    case messageType of
+      mt_printline: result:=message;
+      mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
+           result:=C_errorLevelTxt[messageType]+ansistring(location)+' '+message;
+      else result:=C_errorLevelTxt[messageType]+' '+message;
+    end;
+  end;
+
+CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
+  begin
+    inherited create;
+    lastWasEndOfEvaluation:=true;
+    longestLineUpToNow:=0;
+    outputFileName:=expandFileName(fileName);
+    lastFileFlushTime:=now;
+    with outputBehaviour do begin
+      doEchoDeclaration  :=true;
+      doEchoInput        :=true;
+      doShowExpressionOut:=true;
+      doShowTimingInfo   :=true;
+      minErrorLevel      :=2;
+    end;
+  end;
+
+DESTRUCTOR T_textFileOutAdapter.destroy;
+  begin errorOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
+
+PROCEDURE T_textFileOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+  begin
+    if (message.messageType<>mt_clearConsole) then inherited appendSingleMessage(message);
+    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
+  end;
+
+PROCEDURE T_textFileOutAdapter.flush;
+  VAR handle:text;
+      i,j:longint;
+  PROCEDURE myWrite(CONST s:ansistring);
+    begin
+      if length(s)>=longestLineUpToNow then longestLineUpToNow:=length(s);
+      writeln(handle,s);
+    end;
+
+  begin
+    if length(storedMessages)=0 then exit;
+    assign(handle,outputFileName);
+    if fileExists(outputFileName)
+    then system.append(handle)
+    else rewrite(handle);
+    for i:=0 to length(storedMessages)-1 do begin
+      with storedMessages[i] do case messageType of
+        mt_clearConsole, mt_reloadRequired,mt_imageCreated: begin end;
+        mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
+        mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+        mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+        mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+        mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+        mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
+        else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
+          myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+      end;
+      lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
+    end;
+    close(handle);
+    clearMessages;
+    lastFileFlushTime:=now;
+  end;
 
 FUNCTION T_adapters.getEchoInput: boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do if adapter[i]^.outputBehaviour.doEchoInput then exit(true);
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.outputBehaviour.doEchoInput then exit(true);
     result:=false;
   end;
 
 PROCEDURE T_adapters.setEchoInput(CONST value: boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.outputBehaviour.doEchoInput:=value;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.outputBehaviour.doEchoInput:=value;
   end;
 
 FUNCTION T_adapters.getEchoDeclaration: boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do if adapter[i]^.outputBehaviour.doEchoDeclaration then exit(true);
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.outputBehaviour.doEchoDeclaration then exit(true);
     result:=false;
   end;
 
 PROCEDURE T_adapters.setEchoDeclaration(CONST value: boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.outputBehaviour.doEchoDeclaration:=value;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.outputBehaviour.doEchoDeclaration:=value;
   end;
 
 FUNCTION T_adapters.getShowExpressionOut: boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do if adapter[i]^.outputBehaviour.doShowExpressionOut then exit(true);
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.outputBehaviour.doShowExpressionOut then exit(true);
     result:=false;
   end;
 
 PROCEDURE T_adapters.setShowExpressionOut(CONST value: boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.outputBehaviour.doShowExpressionOut:=value;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.outputBehaviour.doShowExpressionOut:=value;
   end;
 
 FUNCTION T_adapters.getShowTimingInfo: boolean;
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do if adapter[i]^.outputBehaviour.doShowTimingInfo then exit(true);
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.outputBehaviour.doShowTimingInfo then exit(true);
     result:=false;
   end;
 
 PROCEDURE T_adapters.setShowTimingInfo(CONST value: boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.outputBehaviour.doShowTimingInfo:=value;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.outputBehaviour.doShowTimingInfo:=value;
   end;
 
 FUNCTION T_adapters.getMinErrorLevel: shortint;
   VAR i:longint;
   begin
     result:=100;
-    for i:=0 to length(adapter)-1 do if adapter[i]^.outputBehaviour.minErrorLevel<result then result:=adapter[i]^.outputBehaviour.minErrorLevel;
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.outputBehaviour.minErrorLevel<result then result:=adapter[i].ad^.outputBehaviour.minErrorLevel;
   end;
 
 PROCEDURE T_adapters.setMinErrorLevel(CONST value: shortint);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.outputBehaviour.minErrorLevel:=value;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.outputBehaviour.minErrorLevel:=value;
   end;
 
 CONSTRUCTOR T_adapters.create;
@@ -196,7 +292,9 @@ CONSTRUCTOR T_adapters.create;
   end;
 
 DESTRUCTOR T_adapters.destroy;
+  VAR i:longint;
   begin
+    for i:=0 to length(adapter)-1 do if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
     setLength(adapter,0);
   end;
 
@@ -211,7 +309,8 @@ PROCEDURE T_adapters.clearErrors;
     stackTraceCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
+  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -221,46 +320,55 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
       inc(stackTraceCount);
       if stackTraceCount>30 then exit;
     end;
-    for i:=0 to length(adapter)-1 do adapter[i]^.errorOut(thisErrorLevel,errorMessage,errorLocation);
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.errorOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
+  CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el3_evalError] then
        maxErrorLevel:=C_errorLevelForMessageType[mt_el3_evalError];
     hasMessageOfType[mt_el3_evalError]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i]^.errorOut(mt_el3_evalError,errorMessage,errorLocation);
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.errorOut(mt_el3_evalError,errorMessage,errorLocation);
   end;
 
-PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring;
+  CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el2_warning] then
        maxErrorLevel:=C_errorLevelForMessageType[mt_el2_warning];
     hasMessageOfType[mt_el2_warning]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i]^.errorOut(mt_el2_warning,errorMessage,errorLocation);
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.errorOut(mt_el2_warning,errorMessage,errorLocation);
   end;
 
-PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring;
+  CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el1_note] then
        maxErrorLevel:=C_errorLevelForMessageType[mt_el1_note];
     hasMessageOfType[mt_el1_note]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i]^.errorOut(mt_el1_note,errorMessage,errorLocation);
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.errorOut(mt_el1_note,errorMessage,errorLocation);
   end;
 
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.printOut(s);
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.printOut(s);
   end;
 
 PROCEDURE T_adapters.clearPrint;
   VAR i:longint;
   begin
-    for i:=0 to length(adapter)-1 do adapter[i]^.clearConsole;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.clearConsole;
+  end;
+
+PROCEDURE T_adapters.clearAll;
+  begin
+    clearPrint;
+    clearErrors;
   end;
 
 FUNCTION T_adapters.noErrors: boolean;
@@ -273,28 +381,36 @@ PROCEDURE T_adapters.haltEvaluation;
     raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
   end;
 
-PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter);
+PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt:boolean);
   begin
     setLength(adapter,length(adapter)+1);
-    adapter[length(adapter)-1]:=p;
+    adapter[length(adapter)-1].ad:=p;
+    adapter[length(adapter)-1].doDestroy:=destroyIt;
   end;
 
 PROCEDURE T_adapters.addConsoleOutAdapter;
+  VAR consoleOutAdapter:P_consoleOutAdapter;
   begin
-    addOutAdapter(@consoleOutAdapter);
+    new(consoleOutAdapter,create);
+    addOutAdapter(consoleOutAdapter,true);
+  end;
+
+PROCEDURE T_adapters.addFileOutAdapter(CONST fileName: ansistring);
+  VAR fileOutAdapter:P_textFileOutAdapter;
+  begin
+    new(fileOutAdapter,create(fileName));
+    addOutAdapter(fileOutAdapter,true);
   end;
 
 PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
   VAR i,j:longint;
   begin
-    for i:=0 to length(adapter)-1 do if adapter[i]=p then begin
+    for i:=0 to length(adapter)-1 do if adapter[i].ad=p then begin
       for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
       setLength(adapter,length(adapter)-1);
       exit;
     end;
   end;
-
-{ T_abstractOutAdapter }
 
 CONSTRUCTOR T_abstractOutAdapter.create;
   begin
@@ -306,8 +422,6 @@ CONSTRUCTOR T_abstractOutAdapter.create;
       minErrorLevel:=3;
     end;
   end;
-
-{ T_consoleOutAdapter }
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
@@ -340,7 +454,7 @@ PROCEDURE T_consoleOutAdapter.errorOut(CONST messageType: T_messageType;
     or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     if messageType in [mt_debug_step,mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived]
     then writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ', errorMessage)
-    else writeln(stdErr,                              ansistring(errorLocation),' ', errorMessage);
+    else writeln(stdErr, C_errorLevelTxt[messageType],                          ' ', errorMessage);
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;
@@ -482,7 +596,6 @@ PROCEDURE T_stepper.onAbort;
 {$endif}
 
 INITIALIZATION
-  consoleOutAdapter.create;
   nullAdapter.create;
   {$ifdef fullVersion}
   stepper.create;
@@ -493,5 +606,4 @@ FINALIZATION
   stepper.destroy;
   {$endif}
   nullAdapter.destroy;
-  consoleOutAdapter.destroy;
 end.

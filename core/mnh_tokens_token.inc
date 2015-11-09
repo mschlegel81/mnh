@@ -699,7 +699,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
 
     FUNCTION parseBodyOk:boolean;
-      VAR bracketLevel,i:longint;
+      VAR i:longint;
           t,p:P_token;
           bodyParts:T_bodyParts;
       begin

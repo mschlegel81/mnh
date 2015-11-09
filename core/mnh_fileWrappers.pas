@@ -340,7 +340,9 @@ FUNCTION T_codeProvider.getLines: T_arrayOfString;
   VAR i: longint;
   begin
     setLength(result, length(lineData));
-    for i := 0 to length(lineData)-1 do result[i] := lineData [i];
+    for i := 0 to length(lineData)-1 do begin
+      result[i] := lineData [i];
+    end;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
@@ -408,6 +410,7 @@ PROCEDURE T_codeProvider.replaceCode(CONST line0, col0:longint; line1:longint; C
 CONSTRUCTOR T_codeProvider.create;
   begin
     clear;
+    filePath:='';
     outOfSync:=false;
   end;
 

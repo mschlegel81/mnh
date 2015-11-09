@@ -180,9 +180,9 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   end;
 
 INITIALIZATION
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(searchString,regex); //returns true if string/-list searchString matches string/-list regex#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(searchString,regex); //returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(searchString,regex); //splits the string/-list searchString using string/-list regex#;If lists are given they must have equal sizes.',true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(searchString,regex,replaceString); //replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#;If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(searchString,regex);#splits the string/-list searchString using string/-list regex#If lists are given they must have equal sizes.',true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(searchString,regex,replaceString);#replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#If lists are given they must have equal sizes.',true);
 
 end.

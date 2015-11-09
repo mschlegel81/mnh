@@ -1,27 +1,28 @@
 USE inputs;
 
-private IGNORE_CHARS:=each(c,chars,c in ['A'..'Z','a'..'z',"'",' '] ? void : c);
-private cleanString(s:string)->s.replace(IGNORE_CHARS," ").replace("  "," ").trim.lower;
-private cleanSplit(s:string)->s='' ? void : split(s,' ');
-
-private fileWords(filename)->pEach(l,fileLines(filename),cleanSplit(cleanString(l))).flatten;
-
-private analyze(wordList)->begin
-  local total:=size(wordList);
-  print('Words total:    ',total);
-  local hist:=elementFrequency(wordList);
-  print('Distinct words: ',size(hist));
-  local top50:=head(hist.sort({$x%0>=$y%0}),50);
+private cleanSplitString(s:string)->each(token,s.lower.clean(['a'..'z'],' ').split(' '),token='' ? void : token);
+private processLinesInChunks(lines:stringList,chunkSize)->
+  pEach(chunk,
+        group(lines,[0..size(lines)-1] div chunkSize,aggregator(&)),
+        cleanSplitString(chunk)).flatten.elementFrequency;
+        
+private analyze(lines:stringList)->begin
+  local wordCount:=processLinesInChunks(lines,500).sort({$x%0>=$y%0});
+  print('Words total:    ',local total:=each(w,wordCount%%0,+));
+  print('Distinct words: ',size(wordCount));
+  local top50:=head(wordCount,50);
   print('Most frequent:');
   printf("%X%\t%X%\t%X%",
     'word' |(top50%%1),
     'count'|(top50%%0),
     '%'    |round(top50%%0/total*100,2));
+
 end;
 
-private filesWords(pattern)->each(f,files(pattern),|,fileWords(f));
+private filesWords(pattern)->each(f,files(pattern),|,fileLines(f));
 
 //*Displays a short info on words in kjv.txt
-main->analyze(fileWords(inputs.kjv));
+main->analyze(fileLines(inputs.kjv));
 //*Displays a short info on words in the given file or files matching a search pattern
 main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));
+
