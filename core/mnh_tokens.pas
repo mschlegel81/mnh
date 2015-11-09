@@ -139,7 +139,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
       mt_el5_systemError,
       mt_el5_haltMessageReceived: append(result,span('error',C_errorLevelTxt[messageType]+' '+simpleMessage));
       mt_imageCreated: begin
-        tmp:=ExtractFileName(simpleMessage);
+        tmp:=extractFileName(simpleMessage);
         CopyFile(simpleMessage,htmlRoot+DirectorySeparator+tmp);
         append(result,'Image created: '+imageTag(tmp));
       end;

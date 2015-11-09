@@ -24,7 +24,7 @@ TYPE
 
 PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansistring);
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
-FUNCTION imageTag(CONST filename:ansistring):ansistring;
+FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
@@ -41,9 +41,9 @@ FUNCTION span(CONST sc,txt:ansistring):ansistring;
     result:='<span class="'+sc+'">'+txt+'</span>';
   end;
 
-FUNCTION imageTag(CONST filename:ansistring):ansistring;
+FUNCTION imageTag(CONST fileName:ansistring):ansistring;
   begin
-    result:='<img src="'+filename+'" alt="'+filename+'">';
+    result:='<img src="'+fileName+'" alt="'+fileName+'">';
   end;
 
 FUNCTION toHtmlCode(line:ansistring):ansistring;
