@@ -1082,8 +1082,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^.value(0)^.literalType=lt_expression) then begin
-          firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,parameterListLiteral^.value(0));
-          parameterListLiteral^.value(0)^.rereference;
+
+          if parameterListLiteral^.value(0)^.getReferenceCount=1 then begin
+            newLiteral:=parameterListLiteral^.value(0);
+            newLiteral^.rereference;
+            inlineRule:=P_expressionLiteral(newLiteral)^.value;
+          end else begin
+            new(inlineRule,clone(P_subrule(P_expressionLiteral(parameterListLiteral^.value(0))^.value)));
+            newLiteral:=newExpressionLiteral(inlineRule);
+          end;
+          inlineRule^.pattern.appendOptional;
+
+          firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
+
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin

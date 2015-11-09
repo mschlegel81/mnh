@@ -12,6 +12,7 @@
     hasOptionals:boolean;
 
     CONSTRUCTOR create;
+    CONSTRUCTOR clone(original:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
@@ -31,6 +32,18 @@
 {$ifdef include_implementation}
 CONSTRUCTOR T_pattern.create;
   begin clear; end;
+
+CONSTRUCTOR T_pattern.clone(original:T_pattern);
+  VAR i:longint;
+  begin
+    containsSelfPointer:=original.containsSelfPointer;
+    hasOptionals:=original.hasOptionals;
+    setLength(sig,length(original.sig));
+    for i:=0 to length(sig)-1 do begin
+      sig[i]:=original.sig[i];
+      if sig[i].restrictionScalar<>nil then sig[i].restrictionScalar^.rereference;
+    end;
+  end;
 
 PROCEDURE T_pattern.clear;
   begin

@@ -28,6 +28,7 @@
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
+      CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
       FUNCTION toString:ansistring;
@@ -292,6 +293,26 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
       with preparedBody[4] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
       with preparedBody[5] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
     end else context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
+  end;
+
+CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
+  VAR i:longint;
+  begin
+    comment:=original^.comment;
+    called:=false;
+    typ:=original^.typ;
+    declaredAt:=original^.declaredAt;
+    pattern.clone(original^.pattern);
+
+    setLength(preparedBody,length(original^.preparedBody));
+    for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
+      token:=original^.preparedBody[i].token;
+      case token.tokType of
+        tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: P_literal(token.data)^.rereference;
+        tt_each,tt_parallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
+      end;
+      parIdx:=original^.preparedBody[i].parIdx;
+    end;
   end;
 
 DESTRUCTOR T_subrule.destroy;
