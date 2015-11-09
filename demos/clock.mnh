@@ -83,7 +83,7 @@ private glyphs:=[['0',['  _/_/_/    ',
                     '  ',
                     ' ',
                     '']]];
-private printTime(time:real)->printf('%X%',each(g,glyphs%copy(format(' %hh:nn:ss%',time),[0..8],1),&));
+private printTime(time:real)->printf('%X%',each(g,glyphs%chars(format(' %hh:nn:ss%',time)),&));
 //*For regtest
 main->begin
   print('Call with any string parameter for continuous run.');

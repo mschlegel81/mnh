@@ -18,18 +18,18 @@ private printVampire(i:int)->begin
   fangs==[]
   ? false
   : begin
-      print(i," is a vampire. It's fangs are: ",each(f,fangs,aggregator({$x&" or "&$y}),string(f)));
+      print(i," is a vampire. It's fangs are: ",join(fangs," or "));
       true;
     end;
 end;
 
 private verbosePrintVampire(i)->printVampire(i) OR print(i,' is not a vampire.');
 
-private step(99    ):=1000;
-private step(9999  ):=100000;
+private step(99  ):=1000;
+private step(9999):=100000;
 private step(k)->k+1;
 
-printFirstKVampires(k:int)->begin
+private printFirstKVampires(k:int)->begin
   local found:=0;
   local toTest:=9;
   while(found<k,printVampire(toTest:=step(toTest)) ? found+=1 : void);

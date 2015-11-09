@@ -166,7 +166,7 @@ ln(3);
 
 ln({1+$x});
 
-in(-0.92);
+ln(-0.92);
 
 sin(3);
 
@@ -261,11 +261,11 @@ chars%100;
 
 clean('+21/232/2116-11',['0'..'9'],' ');
 
-join('a','b','c');
+join(['a','b','c']);
 
 join([1..5],' ');
 
-lenght('Test');
+length('Test');
 
 length(['Text','AbC']);
 

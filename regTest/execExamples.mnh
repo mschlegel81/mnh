@@ -1,0 +1,17 @@
+
+printExecute(code:stringList)->begin
+  local out:=each(message,sandBoxExecute(code),message%0=="timing_info" ? void : message);
+  printf("%X%\t%X%",out%%0,out%%2);
+end;
+
+
+examplesFile:=splitFileName(myPath)%"directory"&'/../doc/examples.txt';
+
+main->begin
+  local codeToExecute:=[];
+  each(line,fileLines(examplesFile),
+    line=='' ? begin
+      printExecute(codeToExecute);
+      codeToExecute:=[];
+    end : codeToExecute|=line);
+end;
