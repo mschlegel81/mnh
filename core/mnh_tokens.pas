@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, //utilities
+USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_html, //even more specific
@@ -138,6 +138,11 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
       mt_el4_parsingError,
       mt_el5_systemError,
       mt_el5_haltMessageReceived: append(result,span('error',C_errorLevelTxt[messageType]+' '+simpleMessage));
+      mt_imageCreated: begin
+        tmp:=ExtractFileName(simpleMessage);
+        CopyFile(simpleMessage,htmlRoot+DirectorySeparator+tmp);
+        append(result,'Image created: '+imageTag(tmp));
+      end;
     end;
   end;
 

@@ -276,3 +276,8 @@ lower(['Text','AbC']);
 upper('Test');
 
 upper(['Text','AbC']);
+
+pi:=4*arctan(1);
+t:=[0..1000]/1000*2*pi;
+plot(t,sin(t));
+plot.renderToFile('plotDemo1.png',600,300,4);

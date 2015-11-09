@@ -24,6 +24,7 @@ TYPE
 
 PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansistring);
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
+FUNCTION imageTag(CONST filename:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
@@ -38,6 +39,11 @@ PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansist
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
   begin
     result:='<span class="'+sc+'">'+txt+'</span>';
+  end;
+
+FUNCTION imageTag(CONST filename:ansistring):ansistring;
+  begin
+    result:='<img src="'+filename+'" alt="'+filename+'">';
   end;
 
 FUNCTION toHtmlCode(line:ansistring):ansistring;
@@ -254,9 +260,8 @@ PROCEDURE T_htmlOutAdapter.flush;
 
         mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
         mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
-        mt_imageCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><img src="',
-                                 extractRelativePath(outputFileName,simpleMessage),
-                                 '" alt="',simpleMessage,'"></td></tr>');
+        mt_imageCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
+                                 imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
         else writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
       end;
       lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
