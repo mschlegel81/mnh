@@ -277,7 +277,6 @@ upper('Test');
 
 upper(['Text','AbC']);
 
-pi:=4*arctan(1);
-t:=[0..1000]/1000*2*pi;
+t:=[0..1000]*0.006283;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,4);

@@ -78,4 +78,4 @@
 [ "packages/turtleGfx.mnh",      "packages/turtleGfx.png",    true,          true,         false],
 [ "regTest/hash.mnh",            "",                          false,         false,        false],
 [ "regTest/opTest.mnh",          "",                          false,         false,        false],
-[ "regTest/execExamples.mnh",    "",                          false,         false,        true]]
+[ "regTest/execExamples.mnh",    "",                          false,         true ,        true]]

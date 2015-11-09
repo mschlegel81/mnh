@@ -10,7 +10,6 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in>                expression('');
 Error               The parsed expression appears to be empty
-Error               Cannot apply intrinsic rule expression to parameter list ('')
 Error [stack trace] 0:  || expression('')
 out>                expression('')
  in> not(true);
@@ -224,12 +223,10 @@ out> " 3.2157\n 5.00  "
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
 Error               Fail.
-Error               Cannot apply intrinsic rule fail to empty parameter list
 Error [stack trace] 0:  || fail
 out>                fail
  in>                fail("Told you this wouldn't work!");
 Error               "Told you this wouldn't work!"
-Error               Cannot apply intrinsic rule fail to parameter list ('Told ... work')
 Error [stack trace] 0:  || fail('Told ... work')
 out>                fail('Told ... work')
  in> hash(1);
@@ -268,3 +265,5 @@ out> 'test'
 out> ['text','abc']
  in> upper('Test');
 out> 'TEST'
+ in> upper(['Text','AbC']);
+out> ['TEXT','ABC']
