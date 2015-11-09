@@ -28,6 +28,7 @@ table { display: inline-table}
 .literal{color:#FF0000}
 .operator{color:#000088;font-weight:bold}
 .comment{color:#666666;font-style:italic}
+.error{color:#FF0000; background-color:#FFFF00}
 <!--file index.html-->
 <!--begin commonHead-->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">

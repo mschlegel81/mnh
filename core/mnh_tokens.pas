@@ -131,13 +131,13 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
       mt_printline: append(result,multiMessage);
       mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage));
       mt_el1_note,
-      mt_el2_warning,
+      mt_el2_warning: append(result,C_errorLevelTxt[messageType]+' '+simpleMessage);
       mt_el3_evalError,
       mt_el3_noMatchingMain,
       mt_el3_stackTrace,
       mt_el4_parsingError,
       mt_el5_systemError,
-      mt_el5_haltMessageReceived: append(result,C_errorLevelTxt[messageType]+' '+simpleMessage);
+      mt_el5_haltMessageReceived: append(result,span('error',C_errorLevelTxt[messageType]+' '+simpleMessage));
     end;
   end;
 

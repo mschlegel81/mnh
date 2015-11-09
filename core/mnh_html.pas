@@ -8,7 +8,7 @@ CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equi
   'able} .oben    { vertical-align:top} .red {color:#FF0000} .ruleHead  { vertical-align:top; background-co'+
   'lor: #DDDDDD} .identifier{color:#0000FF} .builtin{color:#0000FF;font-weight:bold} .modifier{color:#FF880'+
   '0;font-weight:bold} .stringLiteral{color:#008800} .literal{color:#FF0000} .operator{color:#000088;font-w'+
-  'eight:bold} .comment{color:#666666;font-style:italic} </style> </head><body>';
+  'eight:bold} .comment{color:#666666;font-style:italic} .error{color:#FF0000; background-color:#FFFF00} </style> </head><body>';
   HTML_FILE_END='</body></html>';
 TYPE
   P_htmlOutAdapter=^T_htmlOutAdapter;
@@ -23,6 +23,7 @@ TYPE
   end;
 
 PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansistring);
+FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
@@ -34,12 +35,13 @@ PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansist
     adapters.addOutAdapter(htmlOutAdapter,true);
   end;
 
+FUNCTION span(CONST sc,txt:ansistring):ansistring;
+  begin
+    result:='<span class="'+sc+'">'+txt+'</span>';
+  end;
+
 FUNCTION toHtmlCode(line:ansistring):ansistring;
   VAR parsedLength:longint=0;
-  FUNCTION span(CONST sc,txt:ansistring):ansistring;
-    begin
-      result:='<span class="'+sc+'">'+txt+'</span>';
-    end;
 
   FUNCTION leadingIdLength(CONST allowQualified:boolean):longint;
     VAR i:longint;
