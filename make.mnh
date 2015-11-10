@@ -243,7 +243,7 @@ main('clean')->begin
            print('Deleting ',f);
            deleteDir(f);
          end
-       : void)´;
+       : void);
   each(file,
        files(allFolders('.')&'/*.exe')|
        files(allFolders('.')&'/*.png')|

@@ -299,7 +299,10 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
-FUNCTION getElementFreqency(CONST list:P_listLiteral):P_listLiteral;
+FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 IMPLEMENTATION
 
 VAR
@@ -2155,7 +2158,7 @@ FUNCTION T_namedVariable.getValue:P_literal;
     result^.rereference;
   end;
 
-FUNCTION getElementFreqency(CONST list:P_listLiteral):P_listLiteral;
+FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
     begin result:=newListLiteral^.appendInt(count)^.append(value,true,nullAdapter); end;
 
@@ -2163,14 +2166,92 @@ FUNCTION getElementFreqency(CONST list:P_listLiteral):P_listLiteral;
   VAR freqMap:T_freqMap;
       freqList:T_freqMap.KEY_VALUE_LIST;
       i:longint;
+      list:P_listLiteral;
 
   begin
+    if not((params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)) then exit(nil);
+    list:=P_listLiteral(params^.value(0));
+
     freqMap.create;
     for i:=0 to length(list^.element)-1 do freqMap.put(list^.element[i],freqMap.get(list^.element[i],0)+1);
     freqList:=freqMap.keyValueList;
     result:=newListLiteral;
-    for i:=0 to length(freqList)-1 do result^.append(pair(freqList[i].value,freqList[i].key),false,nullAdapter);
+    for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false,nullAdapter);
     freqMap.destroy;
+  end;
+
+FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR rhsSet:specialize G_literalKeyMap<boolean>;
+      i:longint;
+      lhs,rhs:P_listLiteral;
+  begin
+    if not((params<>nil) and
+           (length(params^.element)=2) and
+           (params^.element[0]^.literalType in C_validListTypes) and
+           (params^.element[1]^.literalType in C_validListTypes))
+    then exit(nil);
+
+    lhs:=P_listLiteral(params^.element[0]);
+    rhs:=P_listLiteral(params^.element[1]);
+    rhsSet.create;
+    for i:=0 to length(rhs^.element)-1 do rhsSet.put(rhs^.element[i],true);
+    result:=newListLiteral;
+    for i:=0 to length(lhs^.element)-1 do
+      if not(rhsSet.get(lhs^.element[i],false))
+      then P_listLiteral(result)^.append(lhs^.element[i],true,nullAdapter);
+    rhsSet.destroy;
+  end;
+
+FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  TYPE T_set=specialize G_literalKeyMap<longint>;
+  VAR resultSet:T_set;
+      resultList:T_set.KEY_VALUE_LIST;
+      i,j:longint;
+  begin
+    if not((params<>nil) and (length(params^.element)>=1)) then exit(nil);
+    for i:=0 to length(params^.element)-1 do if not(params^.element[i]^.literalType in C_validListTypes) then exit(nil);
+    if length(params^.element)=1 then begin
+      result:=params^.element[0];
+      result^.rereference;
+    end;
+
+    resultSet.create;
+    for i:=0 to length(params^.element)-1 do
+      with P_listLiteral(params^.element[i])^ do
+        for j:=0 to length(element)-1 do if resultSet.get(element[i],0)=i then resultSet.put(element[i],i+1);
+
+    i:=length(params^.element);
+    resultList:=resultSet.keyValueList;
+    result:=newListLiteral;
+    for j:=0 to length(resultList)-1 do if resultList[j].value=i then
+      P_listLiteral(result)^.append(resultList[j].key,true,nullAdapter);
+    setLength(resultList,0);
+    resultSet.destroy;
+  end;
+
+FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  TYPE T_set=specialize G_literalKeyMap<boolean>;
+  VAR resultSet:T_set;
+      resultList:T_set.KEY_VALUE_LIST;
+      i,j:longint;
+  begin
+    if not((params<>nil) and (length(params^.element)>=1)) then exit(nil);
+    for i:=0 to length(params^.element)-1 do if not(params^.element[i]^.literalType in C_validListTypes) then exit(nil);
+    if length(params^.element)=1 then begin
+      result:=params^.element[0];
+      result^.rereference;
+    end;
+
+    resultSet.create;
+    for i:=0 to length(params^.element)-1 do
+      with P_listLiteral(params^.element[i])^ do
+        for j:=0 to length(element)-1 do resultSet.put(element[i],true);
+
+    result:=newListLiteral;
+    resultList:=resultSet.keyValueList;
+    for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true,nullAdapter);
+    setLength(resultList,0);
+    resultSet.destroy;
   end;
 
 VAR

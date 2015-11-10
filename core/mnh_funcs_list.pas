@@ -51,12 +51,18 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
+      if (params^.value(0)^.getReferenceCount=1) then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.sort;
     end else if (params<>nil) and (params^.size=2)
             and (params^.value(0)^.literalType in C_validListTypes)
             and (params^.value(1)^.literalType=lt_expression) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
+      if (params^.value(0)^.getReferenceCount=1) then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)),adapters);
     end;
   end;
@@ -72,16 +78,11 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
+      if (params^.value(0)^.getReferenceCount=1) then begin
+        result:=params^.value(0);
+        result^.rereference;
+      end else result:=P_listLiteral(params^.value(0))^.clone;
       P_listLiteral(result)^.unique;
-    end;
-  end;
-
-FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      result:=getElementFreqency(P_listLiteral(params^.value(0)));
     end;
   end;
 
@@ -142,7 +143,10 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
   registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L);#Returns list L sorted ascending and without duplicates');
-  registerRule(LIST_NAMESPACE,'elementFrequency',@elementFrequency_imp,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
+  registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
+  registerRule(LIST_NAMESPACE,'union',@setUnion,'union(A,...);#Returns a union of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'intersect',@setIntersect,'intersect(A,...);#Returns an intersection of all given parameters. All parameters must be lists.');
+  registerRule(LIST_NAMESPACE,'minus',@setMinus,'minus(A,B);#Returns the asymmetric set difference of A and B. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
