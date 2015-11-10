@@ -1,13 +1,22 @@
 USE inputs;
 
-private cleanSplitString(s:string)->each(token,s.lower.clean(['a'..'z'],' ').split(' '),token='' ? void : token);
+private cleanSplitString(s:stringList)->begin
+  local result:=join(s,' ')           //join lines -> processing one long string
+               .lower                 //convert to lowercase
+               .clean(['a'..'z'],' ') //retain only letters
+               .split(' ');           //split at spaces
+  result%(result<>''); //return those elements from the result list which are not empty strings
+end;
+
 private processLinesInChunks(lines:stringList,chunkSize)->
   pEach(chunk,
-        group(lines,[0..size(lines)-1] div chunkSize,aggregator(&)),
-        cleanSplitString(chunk)).flatten.elementFrequency;
+        group(lines,[0..size(lines)-1] div chunkSize),
+        cleanSplitString(chunk))
+ .flatten
+ .elementFrequency;
         
 private analyze(lines:stringList)->begin
-  local wordCount:=processLinesInChunks(lines,500).sort({$x%0>=$y%0});
+  local wordCount:=processLinesInChunks(lines,100).sort({$x%0>=$y%0});
   print('Words total:    ',local total:=each(w,wordCount%%0,+));
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);
@@ -25,4 +34,3 @@ private filesWords(pattern)->each(f,files(pattern),|,fileLines(f));
 main->analyze(fileLines(inputs.kjv));
 //*Displays a short info on words in the given file or files matching a search pattern
 main(fileOrPattern:string)->analyze(filesWords(fileOrPattern));
-

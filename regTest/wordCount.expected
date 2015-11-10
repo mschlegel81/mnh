@@ -1,11 +1,11 @@
-Words total:    948006
-Distinct words: 15150
+Words total:    948069
+Distinct words: 15107
 Most frequent:
 word   count %
-the    74500 7.86
+the    74518 7.86
 and    60838 6.42
-of     40606 4.28
-to     16772 1.77
+of     40634 4.29
+to     16780 1.77
 that   16091 1.7
 in     15112 1.59
 he     12510 1.32
@@ -20,8 +20,8 @@ lord    8762 0.92
 be      8497 0.9
 is      8402 0.89
 them    7945 0.84
-him     7902 0.83
 not     7902 0.83
+him     7902 0.83
 with    7463 0.79
 it      7175 0.76
 all     6777 0.71

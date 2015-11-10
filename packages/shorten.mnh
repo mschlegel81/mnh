@@ -30,16 +30,19 @@ shorten(s:string,subLength)->begin
     local alphabet:=unique(workString.chars);
     alphabet:=each(c,[' '..'[',']'..'´'],c in alphabet ? void : c);
     each(alphabetChar,alphabet,proceed ? begin
-      local subStrings:=unique(copy(workString,[0..length(workString)-subLength],subLength));
-      local bestIdx:=argMax(pEach(sub,subStrings,length(workString)-length(replace(workString,sub,alphabetChar))-length(sub)-1));
-      replacements:=subStrings%bestIdx|replacements;
-      alphabetOut:=alphabetChar|alphabetOut;
-      workString:=replace(workString,subStrings%bestIdx,alphabetChar);
-      local oldLen:=length(result)=0 ? 2^62 : length(result);
-      result:='replace('&escape(workString)&','&
-              'chars('&escape(each(c,alphabetOut ,&))&'),'&
-              'copy(' &escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
-      length(result)>=oldLen ? proceed:=false : void;
+      local subStrings:=copy(workString,[0..length(workString)-subLength],subLength).elementFrequency;
+      subStrings:=subStrings%(subStrings%%0>3)%%1;
+      size(subStrings)=0 ? proceed:=false : begin
+        local bestIdx:=argMax(pEach(sub,subStrings,length(workString)-length(replace(workString,sub,alphabetChar))-length(sub)-1));
+        replacements:=subStrings%bestIdx|replacements;
+        alphabetOut:=alphabetChar|alphabetOut;
+        workString:=replace(workString,subStrings%bestIdx,alphabetChar);
+        local oldLen:=length(result)=0 ? 2^62 : length(result);
+        result:='replace('&escape(workString)&','&
+                'chars('&escape(each(c,alphabetOut ,&))&'),'&
+                'copy(' &escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
+        length(result)>=oldLen ? proceed:=false : void;
+      end;
       void;
     end : void); 
   end);

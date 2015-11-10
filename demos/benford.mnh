@@ -1,5 +1,5 @@
 USE stringFib;
 //*See <a href="http://rosettacode.org/wiki/Benford%27s_law">Benford's law on Rosetta Code</a>
 main->printf('%I6% %###0.00%',
-             'actual'|elementFrequency(each(i,[1..1000],softCast(copy(stringFib(i),0,1))))%%0,
+             'actual'|elementFrequency(each(i,[1..1000],softCast(copy(stringFib(i),0,1)))).sort({$x%1<=$y%1})%%0,
              'expected'|(ln(1+1/[1..9])/ln(10)*1000));

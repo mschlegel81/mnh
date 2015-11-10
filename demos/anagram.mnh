@@ -2,23 +2,7 @@ USE inputs;
 
 readDict(filename)->pEach(word,fileLines(filename),[each(char,word.chars.sort,&),word]).sort;
 
-anagramsInDict(list)->begin
-  local SL:=sort(list);
-  local result:=[];
-  local currentGroup:=[];
-  local lastNormalForm:="";
-  each(e,SL,begin
-    e%0=lastNormalForm ? currentGroup|=(e%1) : begin
-      lastNormalForm:=e%0;
-      size(currentGroup)>1 
-      ? result|=[currentGroup]
-      : void;
-      currentGroup:=[e%1];
-    end;
-    void;
-  end);
-  result;
-end;
+anagramsInDict(list)->pEach(gr,pEach(word,fileLines(inputs.dict),[each(char,word.chars.sort,&),word]).group(0),size(gr)<=1 ? void : gr%%1);
 
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);
@@ -27,3 +11,4 @@ main->main(inputs.dict);
 main(filename:string)->each(set,
                             readDict(filename).anagramsInDict.sort({size($x)<=size($y)}),
                             print(each(el,set,aggregator({$x&", "&$y}))));
+
