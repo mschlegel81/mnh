@@ -380,6 +380,7 @@ FUNCTION NullHardwareTicks:TickType; begin result:=0 end;
 FUNCTION SystemTicks: TickType;
 {$IFDEF WINDOWS}
 begin
+  result:=0;
   QueryPerformanceCounter(result);
 {$ELSE}
   {$IFDEF LINUX}

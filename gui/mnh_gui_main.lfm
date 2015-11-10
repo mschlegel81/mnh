@@ -1326,6 +1326,7 @@ object MnhForm: TMnhForm
   end
   object UpdateTimeTimer: TTimer
     Enabled = False
+    Interval = 10
     OnTimer = UpdateTimeTimerTimer
     left = 88
     top = 19

@@ -85,7 +85,7 @@ PROCEDURE getFileInfo(CONST filePath:string;
       isSystem,
       isHidden:boolean);
   VAR f:file of byte;
-      Attr:word;
+      Attr:word=0;
       ft:longint;
   begin
     time:=-1;

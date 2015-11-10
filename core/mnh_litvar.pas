@@ -231,7 +231,6 @@ TYPE
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
-    PROCEDURE toElementFrequency;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValuePair: boolean;
     FUNCTION clone:P_listLiteral;
@@ -259,6 +258,21 @@ TYPE
       FUNCTION getValue:P_literal;
   end;
 
+  GENERIC G_literalKeyMap<VALUE_TYPE>=object
+    CONST CACHE_MOD=2047;
+    TYPE CACHE_ENTRY=record
+           key:P_literal;
+           value:VALUE_TYPE;
+         end;
+         KEY_VALUE_LIST=array of CACHE_ENTRY;
+    VAR dat:array[0..CACHE_MOD] of KEY_VALUE_LIST;
+    CONSTRUCTOR create();
+    DESTRUCTOR destroy;
+    FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
+    FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+    FUNCTION keyValueList:KEY_VALUE_LIST;
+  end;
+
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer): string;
@@ -279,12 +293,13 @@ FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral; inline
 FUNCTION newListLiteral: P_listLiteral; inline;
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters): P_listLiteral; inline;
 FUNCTION newErrorLiteral: P_scalarLiteral; inline;
-FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; inline;
-FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; inline;
+FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
+FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
 FUNCTION newVoidLiteral: P_voidLiteral; inline;
-FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; inline;
+FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; OUT parsedLength: longint): P_scalarLiteral; inline;
 
+FUNCTION getElementFreqency(CONST list:P_listLiteral):P_listLiteral;
 IMPLEMENTATION
 
 VAR
@@ -412,6 +427,55 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         if suppressOutput then exit(nil);
         result:=newIntLiteral(StrToInt64Def(copy(input, offset, parsedLength), 0));
       end;
+    end;
+  end;
+
+//=====================================================================================================================
+
+CONSTRUCTOR G_literalKeyMap.create();
+  VAR i:longint;
+  begin
+    for i:=0 to CACHE_MOD do setLength(dat[i],0);
+  end;
+
+DESTRUCTOR G_literalKeyMap.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to CACHE_MOD do setLength(dat[i],0);
+  end;
+
+FUNCTION G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
+  VAR binIdx:longint;
+      j:longint;
+  begin
+    binIdx:=key^.hash and CACHE_MOD;
+    j:=0;
+    while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(key)) do inc(j);
+    if j>=length(dat[binIdx]) then begin
+      setLength(dat[binIdx],j+1);
+      result:=true;
+      dat[binIdx,j].key:=key;
+    end else result:=false;
+    dat[binIdx,j].value:=value;
+  end;
+
+FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+  VAR binIdx:longint;
+      j:longint;
+  begin
+    binIdx:=key^.hash and CACHE_MOD;
+    result:=fallbackIfNotFound;
+    for j:=0 to length(dat[binIdx])-1 do if dat[binIdx,j].key^.equals(key) then exit(dat[binIdx,j].value);
+  end;
+
+FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
+  VAR i,j,k:longint;
+  begin
+    k:=0;
+    for i:=0 to CACHE_MOD do for j:=0 to length(dat[i])-1 do begin
+      setLength(result,k+1);
+      result[k]:=dat[i,j];
+      inc(k);
     end;
   end;
 
@@ -1064,6 +1128,7 @@ FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longin
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
     {$Q-}
+    result:=0;
     move(val, result, sizeOf(result));
     result:=result xor longint(lt_real);
     {$Q+}
@@ -1608,35 +1673,6 @@ PROCEDURE T_listLiteral.unique;
     setLength(element, i+1);
   end;
 
-PROCEDURE T_listLiteral.toElementFrequency;
-  FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
-    begin result:=newListLiteral^.appendInt(count)^.append(value,false,nullAdapter); end;
-
-  VAR i,j:longint;
-      currentValue:P_literal=nil;
-      count:longint;
-  begin
-    if length(element)=0 then exit;
-    sort;
-    i:=0;
-    count:=1;
-    currentValue:=element[0];
-    element[0]:=nil;
-    for j:=1 to length(element)-1 do
-    if element[j]^.equals(currentValue) then begin
-      inc(count);
-      disposeLiteral(element[j]);
-    end else begin
-      element[i]:=pair(count,currentValue);
-      inc(i);
-      count:=1;
-      currentValue:=element[j];
-      element[j]:=nil;
-    end;
-    element[i]:=pair(count,currentValue);
-    setLength(element,i+1);
-  end;
-
 FUNCTION T_listLiteral.isKeyValuePair: boolean;
   begin
     result:=(length(element)=2)
@@ -2117,6 +2153,24 @@ FUNCTION T_namedVariable.getValue:P_literal;
   begin
     result:=value;
     result^.rereference;
+  end;
+
+FUNCTION getElementFreqency(CONST list:P_listLiteral):P_listLiteral;
+  FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
+    begin result:=newListLiteral^.appendInt(count)^.append(value,true,nullAdapter); end;
+
+  TYPE T_freqMap=specialize G_literalKeyMap<longint>;
+  VAR freqMap:T_freqMap;
+      freqList:T_freqMap.KEY_VALUE_LIST;
+      i:longint;
+
+  begin
+    freqMap.create;
+    for i:=0 to length(list^.element)-1 do freqMap.put(list^.element[i],freqMap.get(list^.element[i],0)+1);
+    freqList:=freqMap.keyValueList;
+    result:=newListLiteral;
+    for i:=0 to length(freqList)-1 do result^.append(pair(freqList[i].value,freqList[i].key),false,nullAdapter);
+    freqMap.destroy;
   end;
 
 VAR

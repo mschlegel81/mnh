@@ -535,12 +535,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         startTime:=now;
         reduceExpression(t,0,context);
         timeForInterpretation:=timeForInterpretation+now-startTime;
-        //special handling if main returns an expression:
+        //error handling if main returns more than one token:------------------
+        if (t=nil) or (t^.next<>nil) then
+          context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
+        //------------------:error handling if main returns more than one token
+        //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
           P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,context);
         end;
-        //:special handling if main returns an expression
+        //----------------------:special handling if main returns an expression
         if context.adapters^.hasMessageOfType[mt_el3_noMatchingMain] then begin
           context.adapters^.printOut('');
           context.adapters^.printOut('Try one of the following:');

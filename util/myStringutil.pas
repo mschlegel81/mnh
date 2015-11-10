@@ -215,6 +215,7 @@ FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parse
     if length(input)>=offset+1 then begin //need at least a leading and a trailing delimiter
       if input[offset]=SQ then begin
         i:=offset+1; continue:=true;
+        result:='';
         while (i<=length(input)) and continue do begin
           if (input[i]=SQ) then begin
             if (i<length(input)) and (input[i+1]=SQ) then begin

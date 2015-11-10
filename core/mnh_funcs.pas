@@ -40,7 +40,6 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   {$MACRO ON}
 {$define INNER_FORMATTING:=
   VAR resultString:T_arrayOfString;
-      resultIsList:boolean=false;
       literalIterator:longint=1;
 
   FUNCTION nextLiteral:P_literal;
@@ -64,7 +63,6 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     PROCEDURE appendTo(CONST index:longint; CONST suffix:ansistring);
       VAR k:longint;
       begin
-        resultIsList:=true;
         if index>=length(resultString) then begin
           k:=length(resultString);
           setLength(resultString,index+1);
@@ -142,6 +140,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
+    if (params<>nil) and (params^.size>0) then exit(nil);
     system.enterCriticalSection(print_cs);
     adapters.clearPrint();
     system.leaveCriticalSection(print_cs);

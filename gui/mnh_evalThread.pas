@@ -145,10 +145,9 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
 
 PROCEDURE ad_haltEvaluation;
   begin
-    guiOutAdapters^.haltEvaluation;
     if evaluationState.value=es_running then stepper.onAbort;
-    pendingRequest.value:=er_none;
-    while evaluationState.value=es_running do begin pendingRequest.value:=er_none; sleep(1); end;
+    while not(guiOutAdapters^.hasMessageOfType[mt_el5_haltMessageReceived]) do guiOutAdapters^.haltEvaluation;
+    repeat pendingRequest.value:=er_none; until pendingRequest.value=er_none;
   end;
 
 PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);

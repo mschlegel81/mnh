@@ -81,8 +81,7 @@ FUNCTION elementFrequency_imp(CONST params:P_listLiteral; CONST tokenLocation:T_
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.toElementFrequency;
+      result:=getElementFreqency(P_listLiteral(params^.value(0)));
     end;
   end;
 

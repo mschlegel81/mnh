@@ -700,7 +700,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
-          t,p:P_token;
+          t:P_token;
           bodyParts:T_bodyParts;
       begin
         //first token is <each>-Token
@@ -936,7 +936,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
-          p:P_token;
           bodyParts:T_bodyParts;
           emptyPattern:T_pattern;
       begin

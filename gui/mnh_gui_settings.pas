@@ -47,7 +47,7 @@ TYPE
     PROCEDURE saveSettings;
     PROCEDURE setFileContents(CONST data: TStrings);
     PROCEDURE getFileContents(CONST data: TStrings);
-    FUNCTION setFileInEditor(CONST fileName: ansistring): boolean;
+    FUNCTION setFileInEditor(fileName: ansistring): boolean;
     FUNCTION getFileInEditor: ansistring;
     FUNCTION polishHistory: boolean;
   end;
@@ -149,6 +149,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         height := 480;
         end;
     end;
+    polishHistory;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
@@ -248,31 +249,28 @@ PROCEDURE TSettingsForm.getFileContents(CONST data: TStrings);
       data.append(fileContents [i]);
   end;
 
-FUNCTION TSettingsForm.setFileInEditor(CONST fileName: ansistring): boolean;
+FUNCTION TSettingsForm.setFileInEditor(fileName: ansistring): boolean;
   VAR
     i: longint;
     tmp: ansistring;
   begin
-    if fileInEditor<>'' then
-      begin
+    fileName:=expandFileName(fileName);
+    if fileInEditor<>'' then begin
       polishHistory;
       i := 0;
       while (i<length(fileHistory)) and (fileHistory [i]<>fileInEditor) do inc(i);
-      if (i>=length(fileHistory)) then
-        begin
+      if (i>=length(fileHistory)) then begin
         i := length(fileHistory)-1;
         fileHistory[i] := fileInEditor;
-        end;
-      while (i>0) do
-        begin
+      end;
+      while (i>0) do begin
         tmp := fileHistory [i];
         fileHistory[i] := fileHistory [i-1];
         fileHistory[i-1] := tmp;
         dec(i);
-        end;
+      end;
       result := true;
-      end
-    else result := polishHistory;
+    end else result := polishHistory;
     fileInEditor := fileName;
   end;
 
@@ -284,6 +282,10 @@ FUNCTION TSettingsForm.getFileInEditor: ansistring;
 FUNCTION TSettingsForm.polishHistory: boolean;
   VAR i, j: longint;
   begin
+
+    for i:=1 to length(fileHistory)-1 do for j:=0 to i-1 do
+      if (fileHistory[i]<>'') and (expandFileName(fileHistory[i])=expandFileName(fileHistory[j])) then fileHistory[i]:='';
+
     result := false;
     for i := 0 to length(fileHistory)-1 do if (fileHistory [i]<>'') and not(fileExists(fileHistory [i])) then begin
       for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];

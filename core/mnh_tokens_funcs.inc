@@ -431,7 +431,6 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   VAR src:T_arrayOfString;
       i,j:longint;
       messages:T_storedMessages;
-      messageLit:P_listLiteral;
 
   FUNCTION headByMessageType(CONST messageType:T_messageType):P_listLiteral;
     begin
@@ -463,15 +462,13 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
   end;
 
 FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  TYPE T_group=record
-         key:P_literal;
-         resultLiteral:P_literal;
-       end;
+  TYPE T_groupMap=specialize G_literalKeyMap<P_literal>;
   VAR listToGroup:P_listLiteral;
       keyList:array of P_literal;
-      groups:array of T_group;
       aggregator:P_expressionLiteral;
       tempContext:T_evaluationContext;
+      groupMap:T_groupMap;
+      groupList:T_groupMap.KEY_VALUE_LIST;
 
   PROCEDURE makeKeysByList(CONST list:P_listLiteral);
     VAR i:longint;
@@ -494,36 +491,30 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       disposeLiteral(dummy);
     end;
 
-  FUNCTION getGroupIndexByKey(CONST key:P_literal):longint;
-    begin
-      result:=0;
-      while (result<length(groups)) and not(groups[result].key^.equals(key)) do inc(result);
-      if result>=length(groups) then begin
-        setLength(groups,result+1);
-        groups[result].key:=key;
-        groups[result].resultLiteral:=nil;
-      end;
-    end;
-
-  PROCEDURE addToAggregation(VAR resultGroup:T_group; CONST L:P_literal); inline;
+  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); inline;
     VAR newLit:P_literal;
+        resultLiteral:P_literal;
     begin
-      with resultGroup do begin
-        if aggregator=nil then begin
-          if resultLiteral=nil then resultLiteral:=newListLiteral;
-          P_listLiteral(resultLiteral)^.append(L,true,adapters);
+      resultLiteral:=groupMap.get(groupKey,nil);
+
+      if aggregator=nil then begin
+        if resultLiteral=nil then resultLiteral:=newListLiteral;
+        P_listLiteral(resultLiteral)^.append(L,true,adapters);
+      end else begin
+        if resultLiteral=nil then begin
+          resultLiteral:=L; L^.rereference;
         end else begin
-          if resultLiteral=nil then begin
-            resultLiteral:=L; L^.rereference;
+          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,tempContext);
+          if newLit<>nil then begin
+            disposeLiteral(resultLiteral);
+            resultLiteral:=newLit;
           end else begin
-            newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,tempContext);
-            if newLit<>nil then begin
-              disposeLiteral(resultLiteral);
-              resultLiteral:=newLit;
-            end else adapters.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
+            adapters.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
+            exit;
           end;
         end;
       end;
+      groupMap.put(groupKey,resultLiteral);
     end;
 
   VAR inputIndex,outputIndex:longint;
@@ -543,15 +534,16 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       if (params^.size=3) then aggregator:=P_expressionLiteral(params^.value(2))
                           else aggregator:=nil;
 
+      groupMap.create();
       tempContext.create(P_adapters(@adapters));
-      for inputIndex:=0 to length(keyList)-1 do if adapters.noErrors then begin
-        outputIndex:=getGroupIndexByKey(keyList[inputIndex]);
-        addToAggregation(groups[outputIndex],listToGroup^.value(inputIndex));
-      end;
+      for inputIndex:=0 to length(keyList)-1 do if adapters.noErrors then
+        addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
+      groupList:=groupMap.keyValueList;
+      result:=newListLiteral;
+      for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false,adapters);
+      groupMap.destroy;
       tempContext.destroy;
 
-      result:=newListLiteral;
-      for outputIndex:=0 to length(groups)-1 do P_listLiteral(result)^.append(groups[outputIndex].resultLiteral,false,adapters);
     end;
   end;
 
