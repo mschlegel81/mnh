@@ -200,13 +200,13 @@ end;
 packages\*.mnh
 demos\*.mnh
 doc\html_template.txt
+doc\examples.txt
 setup.mnh
 mnh.exe
 mnh_light.exe
 regTest\*.expected
 regTest\*.mnh
 regTest\regTestCases.dat
-regTest\t.bat
 doTests.bat
 //!BLOB END
   );
@@ -236,25 +236,28 @@ main('build')->each(i,[0..7],AND,build(i));
 main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
-main('clean')->
-each(f,allFolders('.'),
-     splitFileName(f)%'filename'="nppBackup"
-     ? begin
-         print('Deleting ',f);
-         deleteDir(f);
-       end
-     : void)|
-each(file,
-     files(allFolders('.')&'/*.exe')|
-     files(allFolders('.')&'/*.png')|
-     files('doc/*.html')|
-     files('doc/*.css')|
-     files('doTests.bat')|
-     files('setup.mnh')|
-     files('demos/inputs/*.txt')|
-     files('regTest/*.last'),
-     print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
-
+main('clean')->begin
+  each(f,allFolders('.'),
+       splitFileName(f)%'filename'="nppBackup"
+       ? begin
+           print('Deleting ',f);
+           deleteDir(f);
+         end
+       : void)´;
+  each(file,
+       files(allFolders('.')&'/*.exe')|
+       files(allFolders('.')&'/*.png')|
+       files(allFolders('.')&'/*.bak')|
+       files('doc/*.html')|
+       files('doc/*.css')|
+       files('doTests.bat')|
+       files('setup.mnh')|
+       files('demos/inputs/*.txt')|
+       files('regTest/*.last'),
+       print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  sandBoxExecute('USE passedTestsStore; passedTestsStore.main("clear");');
+end;
+     
 //*Tests all files
 main('test')->each(i,[0..3],AND, 
   build(i), 
@@ -275,3 +278,4 @@ main(...)->each(p,...,
   : p in ['distro','build','clean','test','quicktest']
     ? main(p)
     : void);
+

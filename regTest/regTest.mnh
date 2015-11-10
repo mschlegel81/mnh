@@ -18,7 +18,7 @@ private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void
 //*Executes all tests with current interpreter
 main->main(executor);
 
-private memoized is64Bit(exe)->'x86_64'==(exec(exe,['-version']).split(' ').trailing.trailing);
+private is64Bit(exe)->'x86_64'==(exec(exe,['-version']).split(' ').trailing.trailing);
 
 private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,separate32BitOutput,FMT_STRING)->
   begin
