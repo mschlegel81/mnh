@@ -1,5 +1,5 @@
-mutable cached_primes:=[2,3];
-mutable max_cached:=3;
+private mutable cached_primes:=[2,3];
+private mutable max_cached:=3;
 
 //*Return prime numbers <= n
 synchronized

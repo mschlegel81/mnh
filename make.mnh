@@ -48,7 +48,7 @@ exeHasWrongVersion(FI) ? begin
        (bin64 ? ['-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64','-FuC:\lazarus64\components\lazutils\lib\x86_64-win64','-FuC:\lazarus64\packager\units\x86_64-win64','-dversion64bit']
               : ['-FuC:\lazarus32\components\synedit\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32'  ,'-FuC:\lazarus32\components\lazutils\lib\i386-win32'  ,'-FuC:\lazarus32\packager\units\i386-win32']);
   deleteFile(exeName);
-  local logName:='make_'&replace(exeName,['.exe','/','\','.','__'],['','_','_','','_'])&'.log.txt';
+  local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
   printf('Compiling %X25% logging to %X%',exeName,logName);
   writeFileLines(logName,exec(compiler,parameters));
 

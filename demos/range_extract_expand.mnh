@@ -5,7 +5,7 @@ private exampleList:=
   37, 38, 39];
 private exampleRange:="-6,-3--1,3-5,7-11,14,15,17-20";
 
-private extractRange(L:intList)->extractRange(L,-1|[0..size(L)-2]%(head(L,size(L)-1)+1<>tail(L))|(size(L)-1));
+private extractRange(L:intList)->extractRange(L,-1|[0..size(L)-2]%(leading(L)+1<>tail(L))|(size(L)-1));
 private extractRange(L,I)->each(k,[0..size(I)-2],[L%(I%k+1),L%(I%(k+1))]);
 
 private mnhForm   (R)->"["&each(run,R,aggregator({$x&","&$y}),{$x=$y ? $x : $x&".."&$y}@run)&"]";
@@ -20,13 +20,13 @@ private expandRange(s:string)->each(run,split(s,","),|,range@softCast(split(repl
 //*See <a href="http://rosettacode.org/wiki/Range_expansion">http://rosettacode.org/wiki/Range_expansion</a>
 //*and <a href="http://rosettacode.org/wiki/Range_expansion">http://rosettacode.org/wiki/Range_expansion</a>
 main->print("Canonical form (as given by rosettacode.org):")|
-      print("  The list\t",exampleList,
-            "\n  can be represented as\t",normalForm(extractRange(exampleList)),
+      print("  The list\t"               ,                                    exampleList,
+            "\n  can be represented as\t",            normalForm(extractRange(exampleList)),
             "\n  and be re-expanded to\t",expandRange(normalForm(extractRange(exampleList)))) |
-      print("\n  The range\t",exampleRange,
-            "\n  can be expanded to\t",expandRange(exampleRange),
+      print("\n  The range\t"              ,                                    exampleRange,
+            "\n  can be expanded to\t"     ,                        expandRange(exampleRange),
             "\n  and be re-compressed to\t",normalForm(extractRange(expandRange(exampleRange))) )|
       print("\nMNH form:")|
-      print("  The list\t",exampleList,
-            "\n  can be represented as\t",mnhForm(extractRange(exampleList)),
+      print("  The list\t"               ,                                exampleList,
+            "\n  can be represented as\t",           mnhForm(extractRange(exampleList)),
             "\n  and be re-expanded to\t",expression(mnhForm(extractRange(exampleList)))());

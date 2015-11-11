@@ -5,7 +5,7 @@ contains(fullString,subString)->pos(subString,fullString)>=0;
 ignore('myGenerics.pas(20,30) Hint: Value parameter "value" is assigned but never used')->true;
 ignore('consoleAsk.pas(43,54) Hint: Parameter "tokenLocation" not used')->true;
 ignore('consoleAsk.pas(43,90) Hint: Parameter "adapters" not used')->true;
-ignore('mnh_tokens_futureTask.inc(43,27) Hint: Parameter "p" not used')->true;
+ignore('mnh_tokens_futureTask.inc(44,27) Hint: Parameter "p" not used')->true;
 ignore('mySys.pas(20,29) Hint: Local variable "SystemInfo" does not seem to be initialized')->true;
 ignore(s)->copy(s,0,10)="Compiling "
         OR contains(s,'mnh_fileWrappers') AND (

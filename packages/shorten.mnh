@@ -25,35 +25,40 @@ shorten(s:string,subLength)->begin
   local workString:=s;
   local replacements:=[];
   local proceed:=true;
-  local result:='';
+  local result:=escape(s);
+  local prevResult:=result;
   each(run,[0..9],begin
-    local alphabet:=unique(workString.chars);
-    alphabet:=each(c,[' '..'[',']'..'´'],c in alphabet ? void : c);
-    each(alphabetChar,alphabet,proceed ? begin
-      local subStrings:=copy(workString,[0..length(workString)-subLength],subLength).elementFrequency;
-      subStrings:=subStrings%(subStrings%%0>3)%%1;
-      size(subStrings)=0 ? proceed:=false : begin
-        local bestIdx:=argMax(pEach(sub,subStrings,length(workString)-length(replace(workString,sub,alphabetChar))-length(sub)-1));
-        replacements:=subStrings%bestIdx|replacements;
-        alphabetOut:=alphabetChar|alphabetOut;
-        workString:=replace(workString,subStrings%bestIdx,alphabetChar);
-        local oldLen:=length(result)=0 ? 2^62 : length(result);
-        result:='replace('&escape(workString)&','&
-                'chars('&escape(each(c,alphabetOut ,&))&'),'&
-                'copy(' &escape(each(r,replacements,&))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
-        length(result)>=oldLen ? proceed:=false : void;
-      end;
-      void;
-    end : void); 
+    each(alphabetChar,chars.minus(workString.chars).minus(chars%[26]),
+    proceed
+    ? begin
+        local subStrings:=copy(workString,[0..length(workString)-subLength],subLength).elementFrequency;
+        subStrings:=subStrings%(subStrings%%0>=3)%%1;
+        size(subStrings)=0
+        ? proceed:=false
+        : begin
+            local bestIdx:=argMin(each(sub,subStrings,length(replace(workString,sub,alphabetChar))));
+            replacements:=subStrings%bestIdx|replacements;
+            alphabetOut:=alphabetChar|alphabetOut;
+            workString:=replace(workString,subStrings%bestIdx,alphabetChar);
+            result:='replace('&escape(workString)&','&
+                      'chars('&escape(join(alphabetOut ))&'),'&
+                       'copy('&escape(join(replacements))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
+            length(result)>=length(prevResult)
+            ? proceed:=false 
+            : prevResult:=result;
+          end;
+        void;
+      end
+    : void);
   end);
-  result;
+  prevResult;
 end;
 
 //*For regression test
 main->begin
   local input:=fileContents(myPath);
-  local shortCmd:=expression(shorten(input));
-  print('Can reconstruct correctly : ',shortCmd()=input);
+  local shortCmd:=shorten(input);
+  print('Can reconstruct correctly : ',expression(shortCmd)()=input);
 end;
 //*Shorten the given input file
 main(filename)->shorten(fileContents(filename));
