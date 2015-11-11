@@ -881,6 +881,8 @@ INITIALIZATION
   evaluateCompatorCallback:=@evaluateComparator;
   //callbacks in doc
   demoCodeToHtmlCallback:=@demoCallToHtml;
+  //callbacks in html
+  rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   //worker thread setup
   MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=getNumberOfCPUs-1;
   if MAX_NUMBER_OF_SECONDARY_WORKER_THREADS<1 then

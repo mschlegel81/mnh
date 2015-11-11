@@ -17,6 +17,7 @@
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
     FUNCTION singleTokenToString:ansistring;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
+    FUNCTION getRawToken:T_rawToken;
   end;
 
   T_tokenArray=object
@@ -25,10 +26,11 @@
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE append(CONST newTok:T_token);
-    PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring);
+    PROCEDURE step(CONST package:P_package; OUT lastComment:ansistring);
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
+    FUNCTION getRawTokensUndefining:T_rawTokenArray;
   end;
 
 {$endif}
@@ -136,7 +138,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_intrinsicRule,
       tt_rulePutCacheValue,
       tt_parameterIdentifier,
-      tt_blockLocalVariable: result:=txt;
+      tt_blockLocalVariable,
+      tt_blank: result:=txt;
       else result:=C_tokenString[tokType];
     end;
     if length(result)<1 then begin
@@ -152,6 +155,8 @@ FUNCTION T_token.singleTokenToString:ansistring;
   VAR dummy:boolean;
   begin
     result:=toString(false,dummy);
+    if tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse]
+    then result:=trim(result);
   end;
 
 FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
@@ -168,6 +173,20 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
       end;
       t:=t^.next;
     end;
+  end;
+
+FUNCTION T_token.getRawToken:T_rawToken;
+  VAR intrinsicFuncPtr:T_intFuncCallback;
+  begin
+    result.tokType:=tokType;
+    if tokType in [tt_identifier,tt_identifier_pon] then begin
+      if intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then begin
+        if tokType=tt_identifier_pon
+        then result.tokType:=tt_intrinsicRule_pon
+        else result.tokType:=tt_intrinsicRule;
+      end;
+    end;
+    result.txt:=singleTokenToString;
   end;
 
 CONSTRUCTOR T_tokenArray.create;
@@ -188,13 +207,13 @@ PROCEDURE T_tokenArray.append(CONST newTok:T_token);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring);
+PROCEDURE T_tokenArray.step(CONST package:P_package; OUT lastComment:ansistring);
   begin
     repeat
       inc(i);
       if (i<length(t)) then case t[i].tokType of
         tt_EOL: if (t[i].txt<>'') then lastComment:=t[i].txt;
-        tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
+        tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
           inc(i);
           t[i].txt:=t[i-1].txt+'.'+t[i].txt;
@@ -237,7 +256,22 @@ FUNCTION T_tokenArray.atEnd:boolean;
     result:=i>=length(t);
   end;
 
-FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters):T_token;
+FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
+  VAR k:longint;
+      lastComment:ansistring;
+  begin
+    setLength(result,0);
+    repeat
+      step(nil,lastComment);
+      if not(atEnd) then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=current.getRawToken;
+      end;
+    until atEnd;
+    for k:=0 to length(t)-1 do t[k].undefine;
+  end;
+
+FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(CONST message:ansistring);
@@ -265,12 +299,6 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
       result:=copy(line,lineLocation.column,parsedLength);
     end;
 
-  PROCEDURE removeLeadingBlanks(); inline;
-    begin
-      while (lineLocation.column<=length(line)) and
-            (line[lineLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(lineLocation.column);
-    end;
-
   FUNCTION startsWith(CONST c:char):boolean;
     begin result:=line[lineLocation.column]=c; end;
   FUNCTION startsWith(CONST prefix:string):boolean;
@@ -279,12 +307,26 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
   VAR id:ansistring;
       tt:T_tokenType;
   begin
-    removeLeadingBlanks;
     result.location:=lineLocation;
     result.txt:='';
     result.tokType:=tt_EOL;
     result.data:=nil;
     result.next:=nil;
+    if retainBlanks then begin
+      while (lineLocation.column<=length(line)) and
+            (line[lineLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do begin
+        result.txt:=result.txt+line[lineLocation.column];
+        inc(lineLocation.column);
+      end;
+      if result.txt<>'' then begin
+        result.tokType:=tt_blank;
+        exit(result);
+      end;
+    end else begin
+      while (lineLocation.column<=length(line)) and
+            (line[lineLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(lineLocation.column);
+      result.location:=lineLocation;
+    end;
     if length(line)<lineLocation.column then exit(result);
     case line[lineLocation.column] of
       '0'..'9': begin
@@ -331,10 +373,15 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
       '/': if startsWith('//') then begin //comments
         parsedLength:=2;
         while (parsedLength+lineLocation.column<=length(line)) and not(line[parsedLength+lineLocation.column] in [C_lineBreakChar,C_carriageReturnChar]) do inc(parsedLength);
-        result.tokType:=tt_EOL;
-        if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
-        else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
-        else if startsWith(SPECIAL_COMMENT_BLOB_END)   then result.txt:=SPECIAL_COMMENT_BLOB_END;
+        if retainBlanks then begin
+          result.tokType:=tt_blank;
+          result.txt:=copy(line,lineLocation.column,length(line));
+        end else begin
+          result.tokType:=tt_EOL;
+          if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
+          else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
+          else if startsWith(SPECIAL_COMMENT_BLOB_END)   then result.txt:=SPECIAL_COMMENT_BLOB_END;
+        end;
       end else if startsWith(C_tokenString[tt_cso_assignDiv]) then begin
         parsedLength:=2;
         result.tokType:=tt_cso_assignDiv;
@@ -429,7 +476,7 @@ FUNCTION firstToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CON
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-FUNCTION tokenizeAll(inputString:ansistring; location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters):T_tokenArray;
+FUNCTION tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters):T_tokenArray;
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
@@ -437,16 +484,35 @@ FUNCTION tokenizeAll(inputString:ansistring; location:T_tokenLocation;  CONST in
     workLocation:=location;
     workLocation.column:=1;
     while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
-      next:=firstToken(inputString,workLocation,inPackage,adapters);
+      next:=getToken(inputString,workLocation,inPackage,adapters);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
-          inputString:='';
+          workLocation.column:=length(inputString)+1;
         end else begin
-          next.location:=location;
+          next.location:=workLocation;
           result.append(next);
         end;
       end;
     end;
+  end;
+
+FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
+  VAR tokenArray:T_tokenArray;
+      next:T_token;
+      location:T_tokenLocation;
+      adapters:T_adapters;
+  begin
+    tokenArray.create;
+    adapters.create;
+    location.column:=1;
+    while (location.column<=length(inputString)) and (adapters.noErrors) do begin
+      next:=getToken(inputString,location,nil,adapters,true);
+      next.location:=location;
+      tokenArray.append(next);
+    end;
+    adapters.destroy;
+    result:=tokenArray.getRawTokensUndefining;
+    tokenArray.destroy;
   end;
 
 FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters):T_tokenArray;
@@ -481,7 +547,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; V
           else blob.text:=blob.text+C_lineBreakChar+lines[lineIndex];
         end;
       end else while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
-        next:=firstToken(lines[lineIndex],location,inPackage,adapters);
+        next:=getToken(lines[lineIndex],location,inPackage,adapters);
         if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
           if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
             level:=1;

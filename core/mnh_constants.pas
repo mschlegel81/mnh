@@ -102,7 +102,11 @@ TYPE
     tt_modifier_synchronized,
     tt_modifier_local,
     //special: [E]nd [O]f [L]ine
-    tt_EOL);
+    tt_EOL,
+    tt_blank);
+
+  T_rawToken=record txt:string; tokType:T_tokenType; end;
+  T_rawTokenArray=array of T_rawToken;
 
   T_literalType = (
     lt_error,
@@ -211,7 +215,7 @@ CONST
     'persistent',
     'synchronized',
     'local',
-    '');
+    '','');
 
   C_typeString: array[T_literalType] of string = (
     'error',

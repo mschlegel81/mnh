@@ -44,7 +44,7 @@ table { display: inline-table}
 <h4><a href="types.html">Types</a></h4>
 <h4><a href="operators.html">Operators</a></h4>
 <h4><a href="functions.html">Functions</a></h4>
-<h4><a href="each.html"><code>each</code> and <code>pEach</code></a></h4>
+<h4><a href="specials.html">Special constructs</a></h4>
 <h4><a href="builtin.html">Built-in Functions</a></h4>
 <h4><a href="packages.html">User packages</a></h4>
 <tr bgcolor="#FFFACD">
@@ -66,7 +66,6 @@ table { display: inline-table}
   <li><h4><a href="#importing">Importing a package</a></h4></li>
   <li><h4><a href="#executables">Executable packages</a></h4></li>
   <li><h4><a href="#comments">Comments</a></h4></li>
-  <li><h4><a href="#batchmode">Batch mode</a></h4></li>
 </ul>
 <h3><a href="#defined">Currently defined packages</a></h3>
 
@@ -116,10 +115,6 @@ A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments a
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
 <code>  mnh_console -h </code><i>packageName</i><code>.mnh</code>
-
-<h4><a name="batchmode">Batch mode</a></h4>
-By default only the main rule is actually evaluated when a script is interpreted; in interactive mode on the other hand every statement is interpreted.<br>
-To enable <i>batch mode</i>, use the special (pseuco-)comment <code>//!BATCH ON</code>. Batch mode can be disabled again using <code>//!BATCH OFF</code>.
 
 <h3><a name="defined">Currently defined packages</a></h3>
 <!--USERPKG-->
@@ -433,7 +428,7 @@ For obvious reasons the right hand side operands must be a list.<br>
 <!--mnh-->
 x in [y0,y1,...] -> x==y0 or x==y1 or ...;
 <!--end-->
-</code> or, if you are already famliar with the <a href="each.html">each-construct</a>:<code>
+</code> or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:<code>
 <!--mnh-->
 x in Y -> each(y,Y,or,x==y);
 <!--end-->
@@ -764,7 +759,7 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
   end;
 <!--end-->
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
-Note, that parallel processing via <code>pEach</code> is disabled within Begin-End-Blocks. Occuring <code>pEach</code>-statements will silently be converted
+Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
 to <code>each</code>-statements.
 
 <h3><a name="modifiers">Modifiers</a></h3>
@@ -902,7 +897,7 @@ Expressions allow for anonymous recursion via the <code>$self</code> pseudo-lite
 </code>
 
 <h4><a name="void">void</a></h4>
-The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="each.html">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
+The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
 <!--mnh-->
  in> each(i,[2..7*7],(i>2 and i mod 2=0) or
                      (i>3 and i mod 3=0) or
@@ -945,31 +940,47 @@ You can just start an executable of any flavour and start typing. Most of the in
 fork bombs and other "pathologic" examples).<br>
 <br>
 The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
+<!--mnh-->
 1+2;
+<!--end-->
 </code> Or an assignment<code>
+<!--mnh-->
 x:=1;
+<!--end-->
 </code> Or a declaration<code>
+<!--mnh-->
 f(x)->sin(x);
+<!--end-->
 
 <!--commonFoot-->
-<!--file each.html-->
+<!--file specials.html-->
 <!--commonHead-->
-<title>MNH 5 - each and pEach</title>
+<title>MNH 5 - Special constructs</title>
 </head>
 <body>
-<h2 align="center"><a href="index.html">MNH 5</a> - each and pEach</h3>
+<h2 align="center"><a href="index.html">MNH 5</a> - Special constructs</h3>
 <div align="right"><hr> </div>
-<h4><a href="#syntax">Syntax</a></h4>
-<h4><a href="#construction">List construction</a></h4>
-<h4><a href="#aggregation">List aggregation</a></h4>
-<h4><a href="#consAgg">List construction and aggregation</a></h4>
-<h4><a href="#parallelization">Parallelization</a></h4>
+<h3><a href="#each">each and pEach</a></h3>
+<ul>
+<li><h4><a href="#syntax">Syntax</a></h4></li>
+<li><h4><a href="#construction">List construction</a></h4></li>
+<li><h4><a href="#aggregation">List aggregation</a></h4></li>
+<li><h4><a href="#consAgg">List construction and aggregation</a></h4></li>
+<li><h4><a href="#parallelization">Parallelization</a></h4></li>
+</ul>
+<h3><a href="#aggregator">aggregator</a></h3>
+<h3><a href="#while">while</a></h3>
+<h3><a href="#when">when</a></h3>
 
 <div align="right"><hr> </div>
+<h3><a name="each">each and pEach</a></h3>
 <h4><a name="syntax">Syntax</a></h4>
-The general syntax is: <br>
-<code>   each(id,list,aggregator,body)
-  pEach(id,list,aggregator,body)</code><br>
+The general syntax is: <code>
+<!--mnh-->
+  each(id,list,aggregator,body)
+  pEach(id,list,aggregator,body)
+<!--end-->
+</code>
 Where <code>id</code> is an identifier,<br>
 <code>list</code> is a list or an expression returning a list,<br>
 <code>aggregator</code> (optional) is a full aggregator expression or a binary operator and<br>
@@ -977,46 +988,181 @@ Where <code>id</code> is an identifier,<br>
 
 <h4><a name="construction">List construction</a></h4>
 To construct a list, ommit the aggregator. The body part is mandatory.<br>
-Simple example: return the input list<br>
-<code>  each(i,[0..3],i) </code> (returns <code>[0..3]</code>)<br>
-Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<br>
-<code>  each(i,[0..3],f(i)) </code> (returns <code>[f(0),f(1),f(2),f(3)]</code>)<br>
-More complex: a function returning the intersection of sets A and B<br>
-<code>  intersect(A:list,B:list) -> A%each(a,A,a in B)</code>
+Simple example: return the input list<code>
+<!--mnh-->
+   in> each(i,[0..3],i);
+  out> [0,1,2,3]
+<!--end-->
+</code>
+You can also use multiple body parts. These are then interlaced in the resulting list:<code>  
+<!--mnh-->
+   in> each(c,['a'..'c'],c,upper(c));
+  out> ['a','A','b','B','c','C']
+<!--end-->
+</code>
+Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<code>  
+<!--mnh-->
+   in> f(i)->-2*i;
+   in> each(i,[0..3],f(i));
+  out> [0,-2,-4,-6]
+<!--end-->
+</code>
+More complex: a function returning the intersection of sets A and B<code>  
+<!--mnh-->
+   in> intersect(A,B)->A%each(a,A,a in B);
+   in> intersect(2*[0..10],3*[0..10]);
+  out> [0,6,12,18]
+<!--end-->
+</code>
+
 
 <h4><a name="aggregation">List aggregation</a></h4>
 To aggregate a list, use an aggregator but no body.<br>
 Restriction: the list must not be empty!<br>
-Simple example: a function returing the sum of the argument:<br>
-<code>  sum([]):=0;
-  sum(L<>[])->each(e,L,+);
-</code><br>
-For later use: factorial<code>
-  fak(n<1)->1;
-  fak(n)->each(i,[1..n],*);
-</code><br>
-
-A full aggregator is written as <code>aggregator(<i>expression</i>)</code>, where <i>expression</i> is a binary expression.<br>
-
-Full aggregator: join a list of strings using a line break as separator:<br>
-Here the aggregator expression takes the left hand side argument and the right hand side argument and concatenates them with an additional line break in between.
-<code>
-  join([])->"";
-  join(L:stringList)->each(e,L,aggregator({$x&"\n"&$y}));</code><br>
-
+Simple example: a function returing the sum of the argument:<code>
+<!--mnh-->
+   in> sum([]):=0;
+   in> sum(L<>[])->each(e,L,+);
+   in> sum([1,5,-2,7]);
+  out> 11
+<!--end-->
+</code>
+Generally an aggregator is an expression expecting two parameters. Given an aggregator <code>a</code>, aggregation will be performed as follows:<code>
+<!--mnh-->
+   in> each(x,[x0,x1,x2,x3,...],a);
+  out> a(...a(a(a(x0,x1),x2),x3),...)
+<!--end-->
+</code>
 
 <h4><a name="consAgg">List construction and aggregation</a></h4>
 You can also use aggregator and body in the same each-/pEach clause.<br><br>
-Nested each: construct a cross product:<br>
-<code>  each(i,[0..9],each(j,[0..9],[i,j]))</code><br>
-This returns a nested list <code>[[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]</code>,<br> which is probably one level deeper than intended.<br>
-<code>
-  each(i,[0..9],|,each(j,[0..9],[i,j]))</code><br>
-This returns a nested list <code>[[0,0],...,[0,9],[1,0],...,[1,9],...]</code>.<br><br>
+Nested each: construct a cross product:<code>  
+<!--mnh-->
+   in> each(i,[0..9],each(j,[0..9],[i,j]));
+  out> [[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]
+<!--end-->
+</code>
+This returns a nested list which is probably one level deeper than intended.<code>
+<!--mnh-->
+   in> each(i,[0..9],|,each(j,[0..9],[i,j]));
+  out> [[0,0],...,[0,9],[1,0],...,[1,9],...];
+<!--end-->
+</code>
+This returns a nested list.<br><br>
 Compute Euler's number based on inverse factorials<code>
-  each(n,[0..20],+,1/fak(n))</code>
+<!--mnh-->
+   in> fak(n<1)->1;
+   in> fak(n :int)->each(i,[1..n],*);
+   in> each(n,[0..20],+,1/fak(n));
+  out> 2.71828182845905
+<!--end-->
+</code>
 
 <h4><a name="parallelization">Parallelization</a></h4>
 This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
+
+<h3><a name="aggregator">aggregator</a></h3>
+The <code>aggregator</code> construct can be used to mark an expression for the use within an each-/pEach-clause.<code>
+<!--mnh-->
+       //A simple expression, interpreted as each-body
+   in> each(x,[1..5],{1/$x+$y});
+  out> [{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)}]
+       //An aggregator, interpreted as such           
+   in> each(x,[1..5],aggregator({1/$x+$y}));
+  out> 5.23255813953488
+<!--end-->
+</code>
+<br>
+As an additional effect, the expression is modified to accept an arbitrary number of parameters. This means that you can construct an aggregator using the
+first argument only. Again the comparison with and without the <code>aggregator</code> keyword:
+<code>
+<!--mnh-->
+   in> {$x}(1,2);
+  Error  @:1,2 Cannot evaluate inline function {$x} with the given number of parameters; Got 2, expected 1
+  Error [stack trace] @:1,1 0:  || {$x}(1,2)    
+   in> aggregator({$x})(1,2);
+  out> 1
+<!--end-->
+</code>
+<br>
+Finally you can use the <code>aggregator</code> keyword to construct simple binary expressions. For this you can use operators and the built-in functions 
+<code>min</code> and <code>max</code>:<code>
+<!--mnh-->
+   in> aggregator(+);
+  out> {($x+$y)}
+   in> aggregator(min);
+  out> {min($x,$y)}
+<!--end-->
+</code>
+In each construct you should prefer passing a single operator as aggregator instead of a full blown expression for preformance reasons:<code>
+<!--mnh-->
+   in> list:=random(1000);
+       //Run with "complex" aggregator
+   in> run1:=time({each(x,list,aggregator(+))});
+       //Run with "simple" aggregator
+   in> run2:=time({each(x,list,           + )});
+       //Are results equivalent ?
+   in> run1%'result'==run2%'result';
+  out> true
+       //Relative cost:
+   in> run1%'time'/run2%'time';
+  out> 5.99899703090362
+<!--end-->
+</code>
+
+<h3><a name="while">while</a></h3>
+The <code>while</code> construct can be used to construct head-controlled loops. The general syntax is:<code>
+<!--mnh-->
+  while(condition,body);
+<!--end-->
+</code> 
+Where <code>condition</code> is an expression returning a boolean value and body is one expression.<code>
+<!--mnh-->
+ in> greatestCommonDivisor(xIn:int,yIn:int)->
+       begin
+         local x:=xIn;
+         local y:=yIn;
+         while(
+           x!=0!=y,
+           x>y ? x:=x mod y
+               : y:=y mod x);
+         max(x,y);
+       end;
+ in> greatestCommonDivisor(12,102);
+out> 6
+<!--end-->
+</code> 
+
+<h3><a name="when">when</a></h3>
+The <code>when</code> construct is an alternative to using cascaded if-then-else statements.<br>
+With an odd number of arguments, the last arument will be interpreted as fallback statement if none of the condition statements returns true:
+<code>
+<!--mnh-->
+  when(condition1,statement1,
+       condition2,statement2,
+                  elseStatement);
+<!--end-->
+</code> 
+is equivalent to:
+<code>
+<!--mnh-->
+  condition1 ? statement1 :
+  condition2 ? statement2 : elseStatement;
+<!--end-->
+</code> 
+With an even number of arguments, <code>void</code> will be returned if none of the condition statements returns true:
+<code>
+<!--mnh-->
+  when(condition1,statement1,
+       condition2,statement2);
+<!--end-->
+</code> 
+is equivalent to:
+<code>
+<!--mnh-->
+  condition1 ? statement1 :
+  condition2 ? statement2 : void;
+<!--end-->
+</code> 
 
 <!--commonFoot-->
