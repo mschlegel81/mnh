@@ -58,7 +58,7 @@ PROCEDURE parseCmdLine;
     end;
 
   PROCEDURE tryToRunSetup;
-    CONST setupFile='setup.mnh';
+    CONST setupFile='install.mnh';
     VAR context:T_evaluationContext;
     begin
       context.create(P_adapters(@consoleAdapters));

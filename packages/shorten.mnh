@@ -11,6 +11,27 @@ shortenSilently(s:string)->begin
   result;
 end;
 
+shortenWithLittleOutput(s:string)->begin
+  local result:=shorten(s,2);
+  printf('    Sub-Length=%I2%; ratio=%##0.00%%%',2,length(result)/length(escape(s))*100);
+  local tryOn:=length(result)<length(escape(s));
+  each(subLen,[3..32],tryOn ? begin
+    local newResult:=shorten(s,subLen);
+    printf('    Sub-Length=%I2%; ratio=%##0.00%%%',subLen,length(newResult)/length(escape(s))*100);
+    length(newResult)<length(result)
+    ? result:=newResult
+    : tryOn:=false;
+    void;
+  end : void);
+  result;
+end;
+
+private bestSubString(s:string,len:int)->
+  pEach(ef,
+        copy(s,[0..length(s)-len],len).elementFrequency,
+        aggregator({$x%0<$y%0 ? $y : $x}),
+        [(length(escape(ef%1))-2)*(ef%0-1)-1,ef%1]);
+
 shorten(s:string)->begin
   local result:=shortenSilently(s);
   print ('Input length  : ',length(escape(s)));
@@ -20,7 +41,7 @@ shorten(s:string)->begin
   result;
 end;
 
-shorten(s:string,subLength)->begin
+private shorten(s:string,subLength)->begin
   local alphabetOut:=[];
   local workString:=s;
   local replacements:=[];
@@ -31,15 +52,13 @@ shorten(s:string,subLength)->begin
     each(alphabetChar,chars.minus(workString.chars).minus(chars%[26]),
     proceed
     ? begin
-        local subStrings:=copy(workString,[0..length(workString)-subLength],subLength).elementFrequency;
-        subStrings:=subStrings%(subStrings%%0>=3)%%1;
-        size(subStrings)=0
+        local sub:=bestSubString(workString,subLength);
+        sub%0<=0
         ? proceed:=false
         : begin
-            local bestIdx:=argMin(each(sub,subStrings,length(replace(workString,sub,alphabetChar))));
-            replacements:=subStrings%bestIdx|replacements;
+            replacements:=sub%1|replacements;
             alphabetOut:=alphabetChar|alphabetOut;
-            workString:=replace(workString,subStrings%bestIdx,alphabetChar);
+            workString:=replace(workString,sub%1,alphabetChar);
             result:='replace('&escape(workString)&','&
                       'chars('&escape(join(alphabetOut ))&'),'&
                        'copy('&escape(join(replacements))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
