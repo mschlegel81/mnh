@@ -1137,7 +1137,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
 
   PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: longint);
     VAR
-      rowId, i, x, y, yBaseLine, lastX, lastY: longint;
+      rowId, i, x, y, yBaseLine:longint;
+      lastX: longint = 0;
+      lastY: longint = 0;
       symSize: double;
       lastWasValid, currentIsValid: boolean;
       sample: T_point;
@@ -1245,30 +1247,25 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           target.Pen.width:=row [rowId].style.getIntLineWidth(scalingFactor);
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
-          for i:=0 to length(row [rowId].sample)-1 do
-            begin
+          for i:=0 to length(row [rowId].sample)-1 do begin
             sample:=row [rowId].sample [i];
             currentIsValid:=isSampleValid(sample);
-            if currentIsValid then
-              begin
+            if currentIsValid then begin
               sample:=realToScreen(sample);
               x:=round(sample [0]*scalingFactor);
               y:=round(sample [1]*scalingFactor);
-              if lastWasValid then
-                begin
+              if lastWasValid then begin
                 target.LineTo(x, y);
                 if row [rowId].style.wantFill then
                   drawPatternRect(lastX, lastY, x, y);
-                end
-              else
+              end else
                 target.MoveTo(x, y);
               lastX:=x;
               lastY:=y;
-              end;
-            lastWasValid:=currentIsValid;
             end;
-          end
-        else if row [rowId].style.wantLeftSteps then
+            lastWasValid:=currentIsValid;
+          end;
+        end else if row [rowId].style.wantLeftSteps then
           begin
           target.Pen.style:=psSolid;
           target.Pen.color:=rowColor;

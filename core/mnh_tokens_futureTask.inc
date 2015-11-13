@@ -42,6 +42,8 @@ VAR poolThreadsRunning:longint=0;
 
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
+  //means that 0.511 seconds have passed since the last activity
+  CONST SLEEP_TIME_TO_QUIT=73;
   VAR sleepTime:longint;
       currentTask:P_futureTask;
       tempcontext:T_evaluationContext;
@@ -58,7 +60,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         currentTask^.evaluate(0,tempcontext);
         sleepTime:=0;
       end;
-    until (sleepTime>=50) or (pendingTasks.destructionPending);
+    until (sleepTime>=SLEEP_TIME_TO_QUIT) or (pendingTasks.destructionPending);
     tempcontext.destroy;
     result:=0;
     InterLockedDecrement(poolThreadsRunning);

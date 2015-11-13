@@ -1,23 +1,8 @@
 shortenSilently(s:string)->begin
   local result:=shorten(s,2);
-  local tryOn:=true;
-  each(subLen,[3..32],tryOn ? begin
-    local newResult:=shorten(s,subLen);
-    length(newResult)<length(result)
-    ? result:=newResult
-    : tryOn:=false;
-    void;
-  end : void);
-  result;
-end;
-
-shortenWithLittleOutput(s:string)->begin
-  local result:=shorten(s,2);
-  printf('    Sub-Length=%I2%; ratio=%##0.00%%%',2,length(result)/length(escape(s))*100);
   local tryOn:=length(result)<length(escape(s));
   each(subLen,[3..32],tryOn ? begin
     local newResult:=shorten(s,subLen);
-    printf('    Sub-Length=%I2%; ratio=%##0.00%%%',subLen,length(newResult)/length(escape(s))*100);
     length(newResult)<length(result)
     ? result:=newResult
     : tryOn:=false;
@@ -31,6 +16,11 @@ private bestSubString(s:string,len:int)->
         copy(s,[0..length(s)-len],len).elementFrequency,
         aggregator({$x%0<$y%0 ? $y : $x}),
         [(length(escape(ef%1))-2)*(ef%0-1)-1,ef%1]);
+
+defaultResultConstructor:={'replace('&escape($workString)&','&
+                            'chars('&escape(join($alphabetOut ))&'),'&
+                             'copy('&escape(join($replacements))&',[0..'&(size($replacements)-1)&']*'&$subLength&','&$subLength&'))'};
+splitResultConstructor:={[escape($workString),escape(join($alphabetOut)),escape(join($replacements)),$subLength]};
 
 shorten(s:string)->begin
   local result:=shortenSilently(s);

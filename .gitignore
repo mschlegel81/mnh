@@ -19,3 +19,4 @@ gui/lib/i386-win32/*
 gui/lib/x86_64-win64/*
 regTest/*.last
 setup.mnh
+ingored/*

@@ -231,7 +231,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
       result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
       valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'You cannot mutate an immutable rule!',C_nilTokenLocation);
+    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',location);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;
