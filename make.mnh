@@ -12,10 +12,11 @@ private tryPack(filename)->begin
   print(filename);
   local oldContents:=fileContents(filename);
   filename='regTest/passedTestsStore.mnh' 
-  ? moveFile('regTest/passedTestsStore.mnh.stashed','regTest/passedTestsStore.mnh')
+  ?                                      deleteFile('regTest/passedTestsStore.mnh') AND
+    moveFile('regTest/passedTestsStore.mnh.stashed','regTest/passedTestsStore.mnh')
   : void;
 
-  local newContents:=shortenWithLittleOutput(oldContents);
+  local newContents:=shortenSilently(oldContents);
   local oldContents:=escape(oldContents);
   'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
   (length(newContents)<length(oldContents)
@@ -24,7 +25,6 @@ private tryPack(filename)->begin
 end;
 
 private ensureInstall->fileExists('install.mnh') ? void : begin
-  stashPassedTestsStore;
   writeFileLines('install.mnh','main->begin'|each(file,
     'doTests.bat'|
     'ensureMnhFileAssociations.mnh'|
@@ -41,7 +41,6 @@ private ensureInstall->fileExists('install.mnh') ? void : begin
     ["deleteFile(myPath);",
      "execPipeless(executor,['-doc']);",
      "end;"]);
-  unstashPassedTestsStore;
 end;
 
 
@@ -104,8 +103,8 @@ end : true;
 
 
 private compress(suffix)->
-  (size(files('regTest/*.last'))=0 AND regTest.main('mnh.exe','randomSample') AND regTest.main('mnh_light.exe','randomSample')) OR
-  regTest.main('mnh.exe') AND regTest.main('mnh_light.exe') 
+  (size(files('regTest/*.last'))=0 ? regTest.main('mnh.exe','randomSample') AND regTest.main('mnh_light.exe','randomSample')
+                                   : regTest.main('mnh.exe')                AND regTest.main('mnh_light.exe'))
   ? begin
       ensureInstall;
       writeFileLines('distro.list',['install.mnh','mnh.exe','mnh_light.exe']);
@@ -150,8 +149,8 @@ main('clean')->begin
        files(allFolders('.')&'/*.bak')|
        files('doc/*.html')|
        files('doc/*.css')|
-       files('doTests.bat')|
-       files('setup.mnh')|
+       files('install.mnh')|
+       files('make*.log.txt')|
        files('demos/inputs/*.txt')|
        files('regTest/*.last'),
        print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
@@ -178,4 +177,3 @@ main(...)->each(p,...,
   : p in ['distro','build','clean','test','quicktest']
     ? main(p)
     : void);
-
