@@ -129,6 +129,7 @@ TYPE
 
 CONST
   C_validListTypes: set of T_literalType=[lt_list..lt_flatList];
+  C_validScalarTypes: set of T_literalType=[lt_boolean..lt_expression];
   C_operatorsForAggregators: set of T_tokenType=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
   C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
     tt_identifier,

@@ -230,15 +230,16 @@ FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType=lt_string)) and
-       (params^.value(0)^.literalType in C_validListTypes) then begin
-
-      if P_listLiteral(params^.value(0))^.size=0 then exit(newStringLiteral(''));
+    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType=lt_string)) then begin
       if params^.size=2 then joiner:=P_stringLiteral(params^.value(1))^.value;
-      resTxt:=stringOfLit(P_listLiteral(params^.value(0))^.value(0));
-      for i:=1 to P_listLiteral(params^.value(0))^.size-1 do
-        resTxt:=resTxt+joiner+stringOfLit(P_listLiteral(params^.value(0))^.value(i));
-      result:=newStringLiteral(resTxt);
+      if (params^.value(0)^.literalType in C_validListTypes) then begin
+        if P_listLiteral(params^.value(0))^.size=0 then exit(newStringLiteral(''));
+        resTxt:=stringOfLit(P_listLiteral(params^.value(0))^.value(0));
+        for i:=1 to P_listLiteral(params^.value(0))^.size-1 do
+          resTxt:=resTxt+joiner+stringOfLit(P_listLiteral(params^.value(0))^.value(i));
+        result:=newStringLiteral(resTxt);
+      end else if (params^.value(0)^.literalType in C_validScalarTypes) then
+        result:=newStringLiteral(stringOfLit(params^.value(0)));
     end;
   end;
 
