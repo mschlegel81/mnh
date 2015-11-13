@@ -15,7 +15,9 @@ synchronized markAsPassed(case,exeHash,runTime)->begin
   void;
 end;
 
-synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,fileHash(case)] in passedTests%%[0..2];
+private memoized memFileHash(case)->fileHash(ROOT_DIRECTORY&case);
+
+synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,memFileHash(case)] in passedTests%%[0..2];
 
 //*Clear all passed tests
 main('clear')->(passedTests:=[]);

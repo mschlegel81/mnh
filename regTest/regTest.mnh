@@ -82,7 +82,7 @@ main(exe,...)->begin
       void;
     end;
   end);
-  first ? void : print(testsFailed);
+  first ? print('All tests have been passed by ',exe) : print(testsFailed);
   
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');

@@ -17,10 +17,9 @@ private bestSubString(s:string,len:int)->
         aggregator({$x%0<$y%0 ? $y : $x}),
         [(length(escape(ef%1))-2)*(ef%0-1)-1,ef%1]);
 
-defaultResultConstructor:={'replace('&escape($workString)&','&
-                            'chars('&escape(join($alphabetOut ))&'),'&
-                             'copy('&escape(join($replacements))&',[0..'&(size($replacements)-1)&']*'&$subLength&','&$subLength&'))'};
-splitResultConstructor:={[escape($workString),escape(join($alphabetOut)),escape(join($replacements)),$subLength]};
+SHORTEN_FORMAT:="replace(%{escape($0)}%,chars(%{escape(join($1))}%),copy(%{escape(join($2))}%,[0..%{size($2)-1}%]*%{$3}%,%{$3}%))";
+
+fallbackResult(s:string)->[s,[' '],[' '],1];
 
 shorten(s:string)->begin
   local result:=shortenSilently(s);
@@ -36,10 +35,10 @@ private shorten(s:string,subLength)->begin
   local workString:=s;
   local replacements:=[];
   local proceed:=true;
-  local result:=escape(s);
+  local result:=fallbackResult(s);
   local prevResult:=result;
   each(run,[0..9],begin
-    each(alphabetChar,chars.minus(workString.chars).minus(chars%[26]),
+    each(alphabetChar,chars.minus(workString.chars).minus(chars%[0,26]),
     proceed
     ? begin
         local sub:=bestSubString(workString,subLength);
@@ -49,10 +48,8 @@ private shorten(s:string,subLength)->begin
             replacements:=sub%1|replacements;
             alphabetOut:=alphabetChar|alphabetOut;
             workString:=replace(workString,sub%1,alphabetChar);
-            result:='replace('&escape(workString)&','&
-                      'chars('&escape(join(alphabetOut ))&'),'&
-                       'copy('&escape(join(replacements))&',[0..'&(size(replacements)-1)&']*'&subLength&','&subLength&'))';
-            length(result)>=length(prevResult)
+            result:=[workString,alphabetOut,replacements,subLength];
+            length(format@(SHORTEN_FORMAT|result))>=length(format@(SHORTEN_FORMAT|prevResult))
             ? proceed:=false 
             : prevResult:=result;
           end;

@@ -11,5 +11,3 @@ testUnbiasing(n:int)->printf('%X% %00.00%%% %00.00%%%',N:=n,
 
 //*See <a href="http://rosettacode.org/wiki/Unbias_a_random_generator">http://rosettacode.org/wiki/Unbias_a_random_generator</a>
 main->print('I biased unbiased') and each(i,[3..6],testUnbiasing(i));
-
-main;
