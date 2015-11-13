@@ -32,6 +32,7 @@
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
       FUNCTION toString:ansistring;
+      FUNCTION directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
@@ -526,10 +527,10 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(nil,selfLiteral,firstRep,lastRep,context) then begin
+    if replaces(params,selfLiteral,firstRep,lastRep,context) then begin
       reduceExpression(firstRep,callDepth+1,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -537,75 +538,54 @@ FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; 
         result^.rereference;
       end else begin
         result:=nil;
-        context.adapters^.raiseError('Cannot directly resolve nullary call. Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
-      end;
-      context.cascadeDisposeToken(firstRep);
-    end else result:=nil;
-  end;
-
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-  VAR firstRep,lastRep:P_token;
-      param:T_listLiteral;
-  begin
-    param.create;
-    param.append(x,true,context.adapters^);
-    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
-      reduceExpression(firstRep,callDepth+1,context);
-      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
-      then begin
-        result:=firstRep^.data;
-        result^.rereference;
-      end else begin
-        result:=newErrorLiteral;
-        context.adapters^.raiseError('Cannot directly resolve unary call with parameter '+x^.toString+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
+        if (params<>nil) and (params^.size>0)
+        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt)
+        else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
         context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
         context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
       end;
       context.cascadeDisposeToken(firstRep);
     end else result:=nil;
+  end;
+
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=directEvaluate(selfLiteral,nil,callDepth,context);
+  end;
+
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+  VAR param:T_listLiteral;
+  begin
+    param.create;
+    param.append(x,true,context.adapters^);
+    result:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
   end;
 
 FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
-  VAR firstRep,lastRep:P_token;
-      param:T_listLiteral;
+  VAR param:T_listLiteral;
+      lit:P_literal;
   begin
     param.create;
     param.append(x,true,context.adapters^);
     param.append(y,true,context.adapters^);
-    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
-      reduceExpression(firstRep,callDepth+1,context);
-      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) and (P_literal(firstRep^.data)^.literalType=lt_boolean)
-      then begin
-        result:=P_boolLiteral(firstRep^.data)^.value;
-      end else begin
-        result:=false;
-        context.adapters^.raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
-      end;
-      context.cascadeDisposeToken(firstRep);
-    end else result:=false;
+    lit:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
+    if (context.adapters^.noErrors) and (lit<>nil) and (lit^.literalType=lt_boolean) then result:=P_boolLiteral(lit)^.value
+    else begin
+      result:=false;
+      context.adapters^.raiseError('Cannot directly resolve comparator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a boolean literal.',declaredAt);
+    end;
+    if lit<>nil then disposeLiteral(lit);
   end;
 
 FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-  VAR firstRep,lastRep:P_token;
-      param:T_listLiteral;
+  VAR param:T_listLiteral;
   begin
     param.create;
     param.append(x,true,context.adapters^);
     param.append(y,true,context.adapters^);
-    if replaces(@param,selfLiteral,firstRep,lastRep,context) then begin
-      reduceExpression(firstRep,callDepth+1,context);
-      if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
-      then begin
-        result:=firstRep^.data;
-        result^.rereference;
-      end else begin
-        result:=nil;
-        context.adapters^.raiseError('Cannot directly resolve aggregator call with parameters ('+x^.toString+','+y^.toString+'). Make sure the function can be resolved without errors, returning only a literal.',declaredAt);
-      end;
-      context.cascadeDisposeToken(firstRep);
-    end else result:=nil;
+    result:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
   end;
 

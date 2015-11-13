@@ -315,68 +315,68 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation):P_scalarLiteral;
-    VAR first,last,temp:P_token;
+FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_scalarLiteral;
+  VAR first,last,temp:P_token;
 
-        context:T_evaluationContext;
-        exTokens:T_tokenArray;
-        package:P_package;
-        dummyForLastComment:ansistring='';
-    begin
-      context.create(P_adapters(@adapters));
+      context:T_evaluationContext;
+      exTokens:T_tokenArray;
+      package:P_package;
+      dummyForLastComment:ansistring='';
+  begin
+    context.create(P_adapters(@adapters));
 
-      package:=guessPackageForProvider(tokenLocation.fileName);
-      exTokens:=tokenizeAll(s,location,package,adapters);
+    package:=guessPackageForProvider(location.fileName);
+    exTokens:=tokenizeAll(s,location,package,adapters);
+    exTokens.step(package,dummyForLastComment);
+    if exTokens.atEnd then begin
+      adapters.raiseError('The parsed expression appears to be empty',location);
+      exit(nil);
+    end;
+    first:=context.newToken(exTokens.current);
+    last:=first;
+    exTokens.step(package,dummyForLastComment);
+    while not(exTokens.atEnd) do begin
+      last^.next:=context.newToken(exTokens.current);
+      last:=last^.next;
       exTokens.step(package,dummyForLastComment);
-      if exTokens.atEnd then begin
-        adapters.raiseError('The parsed expression appears to be empty',tokenLocation);
-        exit(nil);
-      end;
-      first:=context.newToken(exTokens.current);
-      last:=first;
-      exTokens.step(package,dummyForLastComment);
-      while not(exTokens.atEnd) do begin
-        last^.next:=context.newToken(exTokens.current);
-        last:=last^.next;
-        exTokens.step(package,dummyForLastComment);
-      end;
-      exTokens.destroy;
+    end;
+    exTokens.destroy;
 
 
-      if first^.tokType<>tt_expBraceOpen then begin
-        temp:=context.newToken(location,'',tt_expBraceOpen);
-        temp^.next:=first; first:=temp;
-        last^.next:=context.newToken(location,'',tt_expBraceClose);
-        last:=last^.next;
-      end;
-
-      digestInlineExpression(first,context);
-      if (adapters.noErrors) and (first^.next<>nil) then adapters.raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
-      if not(adapters.noErrors) then begin
-        context.cascadeDisposeToken(first);
-        context.destroy;
-        exit(newErrorLiteral);
-      end;
-      if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
-        context.disposeToken(first);
-        adapters.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-        context.destroy;
-        exit(newErrorLiteral);
-      end;
-      result:=P_expressionLiteral(first^.data);
-      first^.tokType:=tt_EOL;
-      first^.data:=nil;
-      context.disposeToken(first);
-      context.destroy;
+    if first^.tokType<>tt_expBraceOpen then begin
+      temp:=context.newToken(location,'',tt_expBraceOpen);
+      temp^.next:=first; first:=temp;
+      last^.next:=context.newToken(location,'',tt_expBraceClose);
+      last:=last^.next;
     end;
 
+    digestInlineExpression(first,context);
+    if (adapters.noErrors) and (first^.next<>nil) then adapters.raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
+    if not(adapters.noErrors) then begin
+      context.cascadeDisposeToken(first);
+      context.destroy;
+      exit(newErrorLiteral);
+    end;
+    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
+      context.disposeToken(first);
+      adapters.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
+      context.destroy;
+      exit(newErrorLiteral);
+    end;
+    result:=P_expressionLiteral(first^.data);
+    first^.tokType:=tt_EOL;
+    first^.data:=nil;
+    context.disposeToken(first);
+    context.destroy;
+  end;
+
+FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
       result:=nil;
       case x^.literalType of
-        lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation);
+        lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation,adapters);
         lt_list,lt_stringList,lt_emptyList:  begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if adapters.noErrors then
@@ -543,9 +543,197 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false,adapters);
       groupMap.destroy;
       tempContext.destroy;
-
     end;
   end;
+
+FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):T_arrayOfString;
+  FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
+    VAR i,j:longint;
+    begin
+      result:=split(formatString,'%');
+      i:=0;
+      while i<length(result) do begin
+        if odd(i) and (result[i]='') then begin
+          result[i-1]:=result[i-1]+'%';
+          if i+1<length(result) then result[i-1]:=result[i-1]+result[i+1];
+          for j:=i to length(result)-3 do result[j]:=result[j+2];
+          if i<length(result)-2 then setLength(result,length(result)-2)
+                                else setLength(result,i);
+        end else inc(i);
+      end;
+    end;
+
+  FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_literal;
+    VAR i,k:longint;
+        needSubRule:boolean=false;
+        expressionString:ansistring;
+
+    PROCEDURE splitPart(VAR part:ansistring; CONST index:longint);
+      VAR i:longint;
+          expPart:ansistring;
+      begin
+        if pos('{',part)<=0 then begin
+          if pos('}',part)>0 then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
+          expPart:='$'+intToStr(index);
+        end else begin
+          expPart:=copy(part,2,pos('}',part)-2);
+          part:=copy(part,pos('}',part)+1,length(part));
+          if (pos('{',part)>0) or (pos('}',part)>0) then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
+        end;
+        if expressionString=''
+        then expressionString:=                 '['+expPart
+        else expressionString:=expressionString+','+expPart;
+        if part='' then part:='X';
+      end;
+
+    begin
+      //Check if a rule is needed at all:
+      for i:=0 to length(parts)-1 do if odd(i) and (copy(trim(parts[i]),1,1)='{') then needSubRule:=true;
+      if not(needSubRule) then exit(nil);
+
+      expressionString:='';
+      k:=0;
+      for i:=0 to length(parts)-1 do begin
+        if odd(i) then begin
+          if parts[i]<>'' then begin
+            splitPart(parts[i],k);
+            inc(k);
+          end;
+        end;
+      end;
+      if adapters.noErrors
+      then result:=stringToExpression('{'+expressionString+']}',
+                                      tokenLocation,
+                                      adapters)
+      else result:=nil;
+    end;
+
+  VAR parts:T_arrayOfString;
+      formatSubrule:P_literal;
+      i:longint;
+      listSize:longint=-1;
+      context:T_evaluationContext;
+
+  FUNCTION getFormattedString(CONST index:longint):ansistring;
+    FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
+      VAR i,k:longint;
+          L:P_literal;
+      begin
+        result:='';
+        k:=0;
+        for i:=0 to length(parts)-1 do if odd(i) then begin
+          if k<p.size then begin
+            L:=p.value(k);
+            case L^.literalType of
+              lt_int   : result:=result+myFormat(parts[i],P_intLiteral   (L)^.value);
+              lt_real  : result:=result+myFormat(parts[i],P_realLiteral  (L)^.value);
+              lt_string: result:=result+myFormat(parts[i],P_stringLiteral(L)^.value);
+              else       result:=result+myFormat(parts[i],L^.toString);
+            end;
+          end else result:=result+'%'+parts[i]+'%';
+          inc(k);
+        end else result:=result+parts[i];
+      end;
+    VAR fpar:P_listLiteral;
+        temp:P_literal;
+        k:longint;
+    begin
+      //prepare parameters
+      fpar:=newListLiteral;
+      for k:=1 to params^.size-1 do
+      if params^.value(k)^.literalType in C_validListTypes
+      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true,adapters)
+      else fpar^.append(              params^.value(k)               ,true,adapters);
+
+      if formatSubrule<>nil then begin
+        temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
+          P_expressionLiteral(formatSubrule),
+          fpar,
+          0,
+          context);
+        disposeLiteral(fpar);
+        if (temp<>nil) and (temp^.literalType in C_validListTypes)
+        then fpar:=P_listLiteral(temp)
+        else begin
+          if temp<>nil then disposeLiteral(temp);
+          exit(''); //One of the called routines already raised a proper error
+        end;
+      end;
+      result:=simpleFormat(parts,fpar^);
+      disposeLiteral(fpar);
+    end;
+
+begin
+  setLength(result,0);
+  if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+    for i:=1 to params^.size-1 do if params^.value(i)^.literalType in C_validListTypes then begin
+      if listSize=-1 then listSize:=P_listLiteral(params^.value(i))^.size
+                  else if listSize<>P_listLiteral(params^.value(i))^.size then begin
+        adapters.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
+        exit;
+      end;
+    end;
+    if listSize=-1 then listSize:=1;
+    parts:=splitFormatString(P_stringLiteral(params^.value(0))^.value);
+    formatSubrule:=getFormatSubrule(parts);
+    if (formatSubrule<>nil) and (formatSubrule^.literalType<>lt_expression) then begin
+      disposeLiteral(formatSubrule);
+      exit;
+    end;
+    if formatSubrule=nil
+    then i:=length(parts) shr 1
+    else i:=length(P_subrule(P_expressionLiteral(formatSubrule)^.value)^.pattern.sig);
+    if i<>(params^.size-1) then begin
+      adapters.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
+      if formatSubrule<>nil then adapters.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
+      exit;
+    end;
+    if (formatSubrule<>nil) then context.create(P_adapters(@adapters));
+    setLength(result,listSize);
+    for i:=0 to listSize-1 do result[i]:=getFormattedString(i);
+    if (formatSubrule<>nil) then context.destroy;
+  end;
+end;
+
+FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then
+      result:=newStringLiteral(join(formatTabs(reSplit(inner_formatting(params,tokenLocation,adapters))),C_lineBreakChar));
+  end;
+
+FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      system.enterCriticalSection(print_cs);
+      adapters.printOut(formatTabs(reSplit(inner_formatting(params,tokenLocation,adapters))));
+      system.leaveCriticalSection(print_cs);
+      result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR stringToPrint:ansistring='';
+      i:longint;
+  begin
+    if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
+      lt_boolean,
+      lt_int,
+      lt_real,
+      lt_string,
+      lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
+      lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
+    end;
+    system.enterCriticalSection(print_cs);
+    adapters.printOut(formatTabs(split(stringToPrint)));
+    system.leaveCriticalSection(print_cs);
+    result:=newVoidLiteral;
+  end;
+
+
+
+
 
 {$endif}
 {$ifdef include_initialization}
@@ -579,4 +767,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
+  registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
+
 {$endif}
