@@ -451,7 +451,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(ruleBody);
           ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
         end else begin
-          rulePattern.toParameterIds(ruleBody);
+          rulePattern.toParameterIds(ruleBody,context.adapters^);
           if evaluateBody then reduceExpression(ruleBody,0,context);
         end;
 

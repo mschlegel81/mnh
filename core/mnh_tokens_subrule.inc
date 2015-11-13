@@ -59,7 +59,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
         if token.tokType=tt_optionalParameters then begin
           parIdx:=REMAINING_PARAMETERS_IDX;
         end else if token.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule] then begin
-          parIdx:=pattern.indexOfId(token.txt);
+          parIdx:=pattern.indexOfId(token.txt,token.location,context.adapters^);
           if parIdx>=0 then begin
             if parIdx>=REMAINING_PARAMETERS_IDX
             then token.tokType:=tt_parameterIdentifier
@@ -222,10 +222,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     pattern.clear;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfId(token.txt); //reuse ID
-      if parIdx<0 then parIdx:=pattern.appendFreeId(token.txt) //new parameter
-      else if parIdx=SELF_TOKEN_PAR_IDX then pattern.containsSelfPointer:=true
-      else if parIdx=REMAINING_PARAMETERS_IDX then pattern.hasOptionals:=true;
+      parIdx:=pattern.indexOfIdForInline(token.txt);
     end else if token.tokType=tt_optionalParameters then begin
       parIdx:=REMAINING_PARAMETERS_IDX;
       pattern.hasOptionals:=true;

@@ -20,13 +20,14 @@
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
     PROCEDURE appendOptional;
-    FUNCTION indexOfId(CONST id:ansistring):longint;
+    FUNCTION indexOfId(CONST id:ansistring; CONST location:T_tokenLocation; VAR adapters:T_adapters):longint;
+    FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
-    PROCEDURE toParameterIds(CONST tok:P_token);
+    PROCEDURE toParameterIds(CONST tok:P_token; VAR adapters:T_adapters);
   end;
 {$endif}
 {$ifdef include_implementation}
@@ -114,14 +115,36 @@ PROCEDURE T_pattern.appendOptional;
     hasOptionals:=true;
   end;
 
-FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
+FUNCTION T_pattern.indexOfId(CONST id:ansistring; CONST location:T_tokenLocation; VAR adapters:T_adapters):longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
     if id=ALL_PARAMETERS_TOKEN_TEXT then exit(ALL_PARAMETERS_PAR_IDX);
+    result:=strToIntDef(copy(id,2,length(id)-1),-1);
+    if (copy(id,1,1)='$') and (result>=0) then begin
+      if result<length(sig) then exit(result);
+      adapters.raiseError('Trying to access paramete '+id+'; Maximum allowed is: $'+intToStr(length(sig)-1),location);
+    end;
     for i:=0 to length(sig)-1 do if sig[i].id=id then exit(i);
     result:=-1;
   end;
+
+FUNCTION T_pattern.indexOfIdForInline(CONST id:ansistring):longint;
+  VAR i:longint;
+  begin
+    if id=SELF_TOKEN_TEXT           then begin containsSelfPointer:=true; exit(SELF_TOKEN_PAR_IDX); end;
+    if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals       :=true; exit(ALL_PARAMETERS_PAR_IDX); end;
+    result:=strToIntDef(copy(id,2,length(id)-1),-1);
+    if (copy(id,1,1)='$') and (result>=0) then begin
+      while length(sig)<result+1 do appendFreeId('');
+      exit(result);
+    end;
+    for i:=0 to length(sig)-1 do
+    if sig[i].id=id then                      exit(i) else
+    if sig[i].id='' then begin sig[i].id:=id; exit(i); end;
+    result:=appendFreeId(id);
+  end;
+
 
 PROCEDURE T_pattern.finalizeRefs;
   VAR i,j:longint;
@@ -255,13 +278,13 @@ FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
                        and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar));
   end;
 
-PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);
+PROCEDURE T_pattern.toParameterIds(CONST tok:P_token; VAR adapters:T_adapters);
   VAR t:P_token;
   begin
     t:=tok;
     while t<>nil do begin
       if (t^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
-      and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
+      and (indexOfId(t^.txt,t^.location,adapters)>=0) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
   end;
