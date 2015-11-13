@@ -209,46 +209,46 @@ FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parse
   {$define exitFailing:=begin parsedLength:=0; exit(''); end}
   CONST SQ='''';
         DQ='"';
-  VAR i: longint;
+  VAR i,i0,i1: longint;
       continue:boolean;
   begin
     if length(input)>=offset+1 then begin //need at least a leading and a trailing delimiter
       if input[offset]=SQ then begin
-        i:=offset+1; continue:=true;
-        result:='';
-        while (i<=length(input)) and continue do begin
-          if (input[i]=SQ) then begin
-            if (i<length(input)) and (input[i+1]=SQ) then begin
-              result:=result+SQ;
-              inc(i,2);
-            end else continue:=false;
-          end else begin
-            result:=result+input[i];
-            inc(i);
-          end;
+        i0:=offset+1; i:=i0; i1:=offset; continue:=true; result:='';
+        while (i<=length(input)) and continue do if input[i]=SQ then begin
+          if (i<length(input)) and (input[i+1]=SQ) then begin
+            result:=result+copy(input,i0,i1-i0+1)+SQ;
+            inc(i,2);
+            i0:=i;
+            i1:=i0-1;
+          end else continue:=false;
+        end else begin
+          i1:=i;
+          inc(i);
         end;
+        if continue then exitFailing;
+        result:=result+copy(input,i0,i1-i0+1);
         parsedLength:=i+1-offset;
         exit(result);
       end else if input[offset]=DQ then begin
-        i:=offset+1;
-        while (i<=length(input)) and (input[i]<>DQ) do
-        if (input[i] = '\') then begin
-          if i<length(input) then case input [i+1] of
-            '\': begin result := result+'\';                  inc(i,2); end;
-            't': begin result := result+C_tabChar;            inc(i,2); end;
-            'n': begin result := result+C_lineBreakChar;      inc(i,2); end;
-            'r': begin result := result+C_carriageReturnChar; inc(i,2); end;
-            DQ : begin result := result+DQ;                   inc(i,2); end;
-            else exitFailing;
+        i0:=offset+1; i:=i0; i1:=offset; continue:=true; result:='';
+        while (i<=length(input)) and (input[i]<>DQ) do if input[i]='\' then begin
+          if (i<length(input)) and (input[i+1] in ['\','t','n','r',DQ]) then begin
+            case input[i+1] of
+              't': result:=result+copy(input,i0,i1-i0+1)+C_tabChar;
+              'n': result:=result+copy(input,i0,i1-i0+1)+C_lineBreakChar;
+              'r': result:=result+copy(input,i0,i1-i0+1)+C_carriageReturnChar;
+              else result:=result+copy(input,i0,i1-i0+1)+input[i+1];
+            end;
+            inc(i,2);
+            i0:=i;
+            i1:=i0-1;
           end else exitFailing;
         end else begin
-          if input [i] in [C_carriageReturnChar, C_lineBreakChar, C_tabChar] then begin
-            parsedLength := 0;
-            exit('');
-          end;
-          result:=result+input[i];
+          i1:=i;
           inc(i);
         end;
+        result:=result+copy(input,i0,i1-i0+1);
         parsedLength:=i+1-offset;
         exit(result);
       end;
