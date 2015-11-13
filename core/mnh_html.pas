@@ -89,6 +89,10 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
         else result:=result+txt;
       end;
     end;
+    result:=replaceOne(
+            replaceOne(result,
+                       '<span class="identifier">out</span><span class="operator">></span>','out>'),
+                       '<span class="operator">in</span><span class="operator">></span>','in>');
   end;
 
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
