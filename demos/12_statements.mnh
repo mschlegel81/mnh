@@ -1,6 +1,19 @@
-private txt:=split(replace(" 1KisC a ON list: twelve+) 2?3:@last 6;A3?2:@even-ON;A4(IfG5CJ/n+ 6L7*eDA5Ke 3 preceding; all false) 6?4:@odd-ON;A7(Ei/rG2 or 3CJbut notD) 8(IfG7CJ/n 5L6*eDA9?3:@first 6;H0Ke next two;DH1?1:+ 7, 8L9*eH2?4:@preceding;'.\"",
-copy("ONMLKJHGFDCBA@?>=<;:/+*)('&%$#!",[0..30],1),
-copy("numMedberFd (Th', ')1%t  anBth is bo')  / >y =tl<ac(Ex+*e ofthe%ts ar.\"\n. \"&ue tr$en#em!at st",[0..30]*3,3)),"\n");
+private txt:=split(
+//!BLOB START
+ 1. "This is a numbered list of twelve statements."
+ 2. "Exactly 3 of the last 6 statements are true."
+ 3. "Exactly 2 of the even-numbered statements are true."
+ 4. "If statement 5 is true, then statements 6 and 7 are both true."
+ 5. "The 3 preceding statements are all false."
+ 6. "Exactly 4 of the odd-numbered statements are true."
+ 7. "Either statement 2 or 3 is true, but not both."
+ 8. "If statement 7 is true, then 5 and 6 are both true."
+ 9. "Exactly 3 of the first 6 statements are true."
+10. "The next two statements are both true."
+11. "Exactly 1 of statements 7, 8 and 9 are true."
+12. "Exactly 4 of the preceding statements are true."
+//!BLOB END
+,"\n");
 
 private
 check(T:booleanList)->T==[false,
@@ -16,7 +29,7 @@ check(T:booleanList)->T==[false,
                           T%11 AND T%12,
                           trueCount(T%[7,8,9])=1,
                           trueCount(T%[1..11])=4];
-private printBits(i)->print(each(j,[0..11],aggregator({$x&"\n"&$y}),(txt%j)&"\tis "&((i and (2^j))>0)));
+private printBits(i)->printf("%X%",each(j,[0..11],(txt%j)&"\tis "&((i and (2^j))>0)));
 
 private bits(i)->false|each(j,2^[0..11],(i and j)>0);
 //*See <a href="http://rosettacode.org/wiki/Twelve_statements">http://rosettacode.org/wiki/Twelve_statements</a>
