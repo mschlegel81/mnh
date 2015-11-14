@@ -2218,7 +2218,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     resultSet.create;
     for i:=0 to length(params^.element)-1 do
       with P_listLiteral(params^.element[i])^ do
-        for j:=0 to length(element)-1 do if resultSet.get(element[i],0)=i then resultSet.put(element[i],i+1);
+        for j:=0 to length(element)-1 do if resultSet.get(element[j],0)=i then resultSet.put(element[j],i+1);
 
     i:=length(params^.element);
     resultList:=resultSet.keyValueList;
@@ -2245,7 +2245,7 @@ FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     resultSet.create;
     for i:=0 to length(params^.element)-1 do
       with P_listLiteral(params^.element[i])^ do
-        for j:=0 to length(element)-1 do resultSet.put(element[i],true);
+        for j:=0 to length(element)-1 do resultSet.put(element[j],true);
 
     result:=newListLiteral;
     resultList:=resultSet.keyValueList;
