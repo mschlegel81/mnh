@@ -1,5 +1,4 @@
 {$ifdef include_implementation}
-
 {$MACRO ON}
 {$define UNARY_NUM_TO_REAL:=
 FUNCTION recurse(CONST x:P_literal):P_literal;
@@ -548,18 +547,40 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
 FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):T_arrayOfString;
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
-    VAR i,j:longint;
+    VAR i:longint=1;
+        partStart:longint=1;
+        bracketLevel:longint=0;
+        part:ansistring;
     begin
-      result:=split(formatString,'%');
-      i:=0;
-      while i<length(result) do begin
-        if odd(i) and (result[i]='') then begin
-          result[i-1]:=result[i-1]+'%';
-          if i+1<length(result) then result[i-1]:=result[i-1]+result[i+1];
-          for j:=i to length(result)-3 do result[j]:=result[j+2];
-          if i<length(result)-2 then setLength(result,length(result)-2)
-                                else setLength(result,i);
-        end else inc(i);
+      part:='';
+      setLength(result,0);
+      while i<=length(formatString) do begin
+        case formatString[i] of
+          '{': begin
+                 if odd(length(result)) then inc(bracketLevel);
+                 part:=part+formatString[i];
+               end;
+          '}': begin
+                 if odd(length(result)) then dec(bracketLevel);
+                 part:=part+formatString[i];
+               end;
+          '%': if bracketLevel>0 then part:=part+formatString[i]
+               else if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
+                 part:=part+'%';
+                 inc(i);
+               end else begin
+                 if bracketLevel>0 then adapters.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
+                 setLength(result,length(result)+1);
+                 result[length(result)-1]:=part;
+                 part:='';
+               end;
+          else part:=part+formatString[i];
+        end;
+        inc(i);
+      end;
+      if part<>'' then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=part;
       end;
     end;
 
@@ -712,29 +733,6 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       result:=newVoidLiteral;
     end;
   end;
-
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  VAR stringToPrint:ansistring='';
-      i:longint;
-  begin
-    if params<>nil then for i:=0 to params^.size-1 do case params^.value(i)^.literalType of
-      lt_boolean,
-      lt_int,
-      lt_real,
-      lt_string,
-      lt_expression: stringToPrint:=stringToPrint + P_scalarLiteral(params^.value(i))^.stringForm;
-      lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
-    end;
-    system.enterCriticalSection(print_cs);
-    adapters.printOut(formatTabs(split(stringToPrint)));
-    system.leaveCriticalSection(print_cs);
-    result:=newVoidLiteral;
-  end;
-
-
-
-
-
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
