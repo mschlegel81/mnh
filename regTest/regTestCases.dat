@@ -1,6 +1,7 @@
 //Regression test cases
 //script name                  output                     delete output? use plotting? spearate 32/64-bit results
-[["demos/12_statements.mnh",   "",                        false,         false,        false],
+[["demos/100doors.mnh",        "",                        false,         false,        false],
+["demos/12_statements.mnh",    "",                        false,         false,        false],
 [ "demos/24.mnh",              "",                        false,         false,        false],
 [ "demos/99bottles.mnh",       "",                        false,         false,        false],
 [ "demos/ackermann.mnh",       "",                        false,         false,        false],

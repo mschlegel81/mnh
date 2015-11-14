@@ -1,0 +1,2 @@
+//See http://rosettacode.org/wiki/100_doors
+main->print(unbrace(string([1..100]%each(pass,[1..100],xor,[1..100] mod pass=0))));

@@ -207,18 +207,53 @@ out> "'a'"
 out> '"\t"'
  in> format('%X5% is a string or something left aligned',true);
 out> 'true  is a string or something left aligned'
+ in>      printf('%X5% is a string or something left aligned',true);
+printline true  is a string or something left aligned
+out>      void
  in> format('%I5% is a string or something right aligned',true);
 out> ' true is a string or something right aligned'
+ in>      printf('%I5% is a string or something right aligned',true);
+printline  true is a string or something right aligned
+out>      void
  in> format('%I%',3);
 out> '3'
  in> format('%dd.mm.yyyy%',3.21);
 out> '02.01.1900'
  in> format('%hh:nn:ss%',3.21);
 out> '05:02:24'
+ in>      printf('%dd.mm.yyyy%',3.21);
+printline 02.01.1900
+out>      void
+ in>      printf('%hh:nn:ss%',3.21);
+printline 05:02:24
+out>      void
  in> format('%00.000%',3.21);
 out> '03.210'
+ in>      printf('%00.000%',3.21);
+printline 03.210
+out>      void
  in> format('%#0.00##%',[3.21567,5]);
 out> " 3.2157\n 5.00  "
+ in>      printf('%#0.00##%',[3.21567,5]);
+printline  3.2157
+ 5.00
+out>      void
+ in> format('%+0.000;-0.0;Zero%',[1/3,0,-1/3]);
+out> "+0.333\nZero\n-0.3"
+ in>      printf('%+0.000;-0.0;Zero%',[1/3,0,-1/3]);
+printline +0.333
+Zero
+-0.3
+out>      void
+ in>             printf('sin(%{$0}0.000%)=%{sin($0)}0.000%',1/[1..5]);
+printline        sin(1.000)=0.841
+sin(0.500)=0.479
+sin(0.333)=0.327
+sin(0.250)=0.247
+sin(0.200)=0.199
+out>             void
+ in> format('sin(%{$0}0.000%)=%{sin($0)}0.000%',1/[1..5]);
+out> "sin(1.000)=0.841\nsin(0.500)=0.479\nsin(0.333)=0.327\nsin(0.250)=0.247\nsin(0.200)=0.199"
  in> group([1..10],[1..10] mod 3=0);
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
@@ -267,3 +302,110 @@ out> ['text','abc']
 out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
+ in>   t :=[0..1000]*0.006283;
+ in>   plot(t,sin(t));
+out>   void
+ in>   plot.renderToFile('plotDemo1.png',600,300,4);
+Image: D:\dev\mnh5\plotDemo1.png
+out>   void
+ in>                                            printf('%X%',each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),join(message,"\t")));
+printline                                        in>        @:1,1  f(x<1)->random;
+ in>        @:1,17 f(x)->f(x-1)+random;
+ in>        @:1,38 f(3);
+out>        @:1,30 2.75506309582852
+timing_info        Tokenizing time      0.00sec
+timing_info        Declaration time     0.00sec
+timing_info        Interpretation time  0.00sec
+out>                                            void
+ in>                                            abs({$x});
+out>                                            {abs($x)}
+ in> abs(3);
+out> 3
+ in> abs(-5/7);
+out> 0.714285714285714
+ in> abs([-2..2]);
+out> [2,1,0,1,2]
+ in> chars('Test');
+out> ['T','e','s','t']
+ in> pos('o','Hello World');
+out> 4
+ in> pos(',',['Hello','Test','1,2,3']);
+out> [-1,-1,1]
+ in> pos(['a','b'],'cdb');
+out> [-1,2]
+ in> repeat('-',10);
+out> '----------'
+ in> replace('[[][]][]][][','[]','');
+out> ']['
+ in> replace('aba','b','bb');
+out> 'abba'
+ in> replaceOne('[[][]][]][][','[]','');
+out> '[[]][]][]['
+ in> replaceOne('1:.-.; 2:.-.; 3:.-.','.',['a'..'e']);
+out> '1:a-b; 2:c-d; 3:e-.'
+ in> split('1,2,3;4,5,6',',');
+out> ['1','2','3;4','5','6']
+ in> split('1,2,3;4,5,6',';');
+out> ['1,2,3','4,5,6']
+ in> split('1,2,3;4,5,6',[';',',']);
+out> ['1','2','3','4','5','6']
+ in> tokenSplit('f(x)->x+1; //Stupid, but just an example...','mnh');
+out> ['f','(','x',')','->','x','+','1',';',' ','//Stupid, but just an example...']
+ in> trim(" \tA B C\t ");
+out> 'A B C'
+ in> trimLeft(" \tA B C\t ");
+out> "A B C\t "
+ in> trimRight(" \tA B C\t ");
+out> " \tA B C"
+ in> unbrace('3');
+out> '3'
+ in> unbrace('(3)');
+out> '3'
+ in> unbrace('(3]');
+out> '(3]'
+ in> unbrace('"3"');
+out> '"3"'
+ in> add([[1],[2]],[3]);
+out> [[1],[2],[3]]
+ in> chars('Testtext').elementFrequency;
+out> [[1,'T'],[2,'e'],[1,'s'],[3,'t'],[1,'x']]
+ in> flatten([1,[2,[3,4],[5]],6]);
+out> [1,2,3,4,5,6]
+ in> head(['A'..'Z']);
+out> 'A'
+ in> head(['A'..'Z'],3);
+out> ['A','B','C']
+ in> tail(['A'..'Z']);
+out> ['B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+ in> tail(['A'..'Z'],3);
+out> ['D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+ in> leading(['A'..'Z']);
+out> ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y']
+ in> leading(['A'..'Z'],3);
+out> ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W']
+ in> trailing(['A'..'Z']);
+out> 'Z'
+ in> trailing(['A'..'Z'],3);
+out> ['X','Y','Z']
+ in> minus([1..10]^2,2*[0..50]);
+out> [1,9,25,49,81]
+ in> sort(intRandom(10,5));
+out> [1,2,3,5,9]
+ in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
+out> ['01','1','10','010','100']
+ in> sortPerm(random(10));
+out> [0,2,3,4,8,7,9,5,6,1]
+ in> sortPerm(['a'..'c'..'a']);
+out> [0,4,1,3,2]
+ in> intersect([0..1000]^2,[0..1000]^3);
+out> [0,4096,262144,1,64,1000000,729,117649,531441,15625,46656]
+ in> union(1/[1..5],2/[2..6]);
+out> [1.0,0.5,0.25,0.333333333333333,0.666666666666667,0.2,0.4]
+Error @regTest/../regTest/execExamples.mnh:3,27 Cannot apply intrinsic rule sandBoxExecute to parameter list ([])
+Error [stack trace] 2: (begin begin local out:=each(message, || sandBoxExecute([]),message%0=='timing_info' ? void : message);printf("%X%\t%X%",out%%0,out%%2);end;codeToExecute:=[];end)
+Error @regTest/../regTest/execExamples.mnh:13,5 Cannot directly resolve call with parameters (''). Make sure the function can be resolved without errors, returning only a literal. 
+Error @regTest/../regTest/execExamples.mnh:13,5 The failed function is:(line){(line=='' ? begin printExecute(codeToExecute);codeToExecute:=[];end : codeToExecute|=line)}
+Error @regTest/../regTest/execExamples.mnh:13,5 The resulting expression is: (begin begin local out:=each(message,sandBoxExecute([]),message%0=='timing_info' ? void : message);printf("%X%\t%X%",out%%0,out%%2);end;codeToExecute:=[];end)
+Error @regTest/../regTest/execExamples.mnh:12,12 Error performing aggregation in each-construct - NIL literal encountered
+Error [stack trace] 0: begin || [['arity({3});'],[],['arity({sin($x)/$x});'],[],['arity({sin($x)/$y});'],[],['//For variadic functions only the non-optional parameters are counted:'],['//For variadic functions only the non-optional parameters are counted:',"arity({printf('%X%%X%',$a,...)});"],[],['expression("$x-$x^2+$x^3");'],[],['expression("");'],[],['not(true);'],[],['not([true, false, true]);'],[],['not({$x});'],[],['not(7);'],[],['parameterNames({3});'],[],['parameterNames({sin($x)/$x});'],[],['parameterNames({sin($x)/$y});'],[],['//For variadic functions only the non-optional parameters are counted:'],['//For variadic functions only the non-optional parameters are counted:','parameterNames({printf("%X%%X%", $a, ...)});'],[],['ord(3);'],[],['ord(true);'],[],['ord(false);'],[],['ord("A");'],[],['ord("abc");'],[],['ord(2.1);'],[],['softCast("A");'],[],['softCast(''"B"'');'],[],['softCast(3);'],[],['softCast([1, "2", "true", "''TEXT''", "1.5", "2,6"]);'],[],['splitFileName("../test.txt");'],[],["string('a');"],[],['string(234);'],[],['string([1, 2.6, "a", true, {$x}]);'],[],['abs(-0.92);'],[],['abs(3);'],[],['abs({1+$x});'],[],['arccos(-0.92);'],[],['//Out of function domain'],['//Out of function domain','arccos(3);'],[],['arccos({1+$x});'],[],['arcsin(-0.92);'],[],['//Out of function domain'],['//Out of function domain','arcsin(3);'],[],['arcsin({1+$x});'],[],['tan(-0.92);'],[],['tan(3);'],[],['tan({1+$x});'],[],['tan(2*arctan(1));'],[],['arctan(-0.92);'],[],['pi:=4*arctan(1);'],['pi:=4*arctan(1);','pi;'],[],['arctan({$x});'],[],['argMax(sin([0..10]));'],[],['argMax([1, 3, 3, 0, 2]);'],[],['argMin(sin([0..10]));'],[],['argMin([1, 3, 3, 0, 2]);'],[],['ceil(20/3);'],[],['ceil([0..3]/3);'],[],['ceil([0..3]/3, 2);'],[],['ceil(20/3, [-1..3]);'],[],['floor(20/3);'],[],['floor([0..3]/3);'],[],['floor([0..3]/3, 2);'],[],['floor(20/3, [-1..3]);'],[],['round(20/3);'],[],['//Numbers with ambiguous rounding result are rounded towards even numbers'],['//Numbers with ambiguous rounding result are rounded towards even numbers','round([0.5, 1.5, 2.5, 3.5]);'],[],['round([0..3]/3, 2);'],[],['round(20/3, [-1..3]);'],[],['isInRange(7, 0, 10);'],[],['//You can use infinite ranges'],['//You can use infinite ranges','isInRange(7, 0.3,  Inf);'],[],['//The first argument can be a list'],['//The first argument can be a list','isInRange([0..9]/10, 0.3, 0.57);'],[],['isInfinite(Nan);'],[],['isInfinite(+Inf);'],[],['isInfinite(-Inf);'],[],['isInfinite([-3.4344, Nan, +Inf]);'],[],['isNan(Nan);'],[],['isNan(+Inf);'],[],['isNan(-Inf);'],[],['isNan([-3.4344, Nan, +Inf]);'],[],['cos(-0.92);'],[],['cos(3);'],[],['cos({1+$x});'],[],['exp(-0.92);'],[],['exp(3);'],[],['exp({1+$x});'],[],['ln(-0.92);'],[],['ln(3);'],[],['ln({1+$x});'],[],['ln(-0.92);'],[],['sin(3);'],[],['sin({1+$x});'],[],['sqr(-0.92);'],[],['sqr(3);'],[],['sqr({1+$x});'],[],['sqrt(-0.92);'],[],['sqrt(3);'],[],['sqrt({1+$x});'],[],['sign(-0.92);'],[],['sign(3);'],[],['sign({1+$x});'],[],['max(["a".."z"]);'],[],['max([0..9]/2);'],[],['max(true, false);'],[],['min(["a".."z"]);'],[],['min([0..9]/2);'],[],['min(true, false);'],[],['copy("abcde", 1, 3);'],[],['escape("a");'],[],['escape("\t");'],[],['//Use %X% for a left aligned output.'],['//Use %X% for a left aligned output.','//A number after the X will be interpreted as text width'],['//Use %X% for a left aligned output.','//A number after the X will be interpreted as text width','format("%X5% is a string or something left aligned", true);'],[],['//Use %X% for a left aligned output.'],['//Use %X% for a left aligned output.','//A number after the X will be interpreted as text width'],['//Use %X% for a left aligned output.','//A number after the X will be interpreted as text width','printf("%X5% is a string or something left aligned", true);'],[],['//Use %I% for right aligned output.'],['//Use %I% for right aligned output.','//A number after the I will be interpreted as text width'],['//Use %I% for right aligned output.','//A number after the I will be interpreted as text width','format("%I5% is a string or something right aligned", true);'],[],['//Use %I% for right aligned output.'],['//Use %I% for right aligned output.','//A number after the I will be interpreted as text width'],['//Use %I% for right aligned output.','//A number after the I will be interpreted as text width','printf("%I5% is a string or something right aligned", true);'],[],['format("%I%", 3);'],[],['//You can use special placeholders to format dates and times.'],['//You can use special placeholders to format dates and times.','//Note that "mm" corresponds to month and "nn" corresponds to minutes.'],['//You can use special placeholders to format dates and times.','//Note that "mm" corresponds to month and "nn" corresponds to minutes.','format("%dd.mm.yyyy%", 3.21);'],[],['format("%hh:nn:ss%", 3.21);'],[],['//You can use special placeholders to format dates and times.'],['//You can use special placeholders to format dates and times.','//Note that "mm" corresponds to month and "nn" corresponds to minutes.'],['//You can use special placeholders to format dates and times.','//Note that "mm" corresponds to month and "nn" corresponds to minutes.','printf("%dd.mm.yyyy%", 3.21);'],[],['printf("%hh:nn:ss%", 3.21);'],[],['//Use a "picture clause" to format floating point numbers'],['//Use a "picture clause" to format floating point numbers','format("%00.000%", 3.21);'],[],['//Use a "picture clause" to format floating point numbers'],['//Use a "picture clause" to format floating point numbers','printf("%00.000%", 3.21);'],[],['//Use # to specify optionally visible digits.'],['//Use # to specify optionally visible digits.','//If the second (or further) arguments are lists, the result will be a list.'],['//Use # to specify optionally visible digits.','//If the second (or further) arguments are lists, the result will be a list.','format("%#0.00##%", [3.21567, 5]);'],[],['//Use # to specify optionally visible digits.'],['//Use # to specify optionally visible digits.','//If the second (or further) arguments are lists, the result will be a list.'],['//Use # to specify optionally visible digits.','//If the second (or further) arguments are lists, the result will be a list.','printf("%#0.00##%", [3.21567, 5]);'],[],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero'],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero','//If the second (or further) arguments are lists, the result will be a list.'],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero','//If the second (or further) arguments are lists, the result will be a list.','format("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);'],[],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero'],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero','//If the second (or further) arguments are lists, the result will be a list.'],['//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero','//If the second (or further) arguments are lists, the result will be a list.','printf("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);'],[],['//Use inline expressions for the advanced stuff:'],['//Use inline expressions for the advanced stuff:','printf("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);'],[],['//Use inline expressions for the advanced stuff:'],['//Use inline expressions for the advanced stuff:','format("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);'],[],['//Group a list of numbers by divisibility by 3'],['//Group a list of numbers by divisibility by 3','group([1..10],[1..10] mod 3=0);'],[],['fail;'],[],['fail("Told you this wouldn''t work!");'],[],['hash(1);'],[],['hash([1..3]);'],[],['hash("a");'],[],["each(func,listBuiltin,copy(func,0,4)=='mnh.' ? func : void);"],[],['//Group to join element frequencies'],['//Group to join element frequencies',"group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']],1,aggregator({[$x%0+$y%0,$x%1]}));"],[],['abs(3);'],[],['abs(-3);'],[],['abs([-2..2]/2); '],[],["chars('This is a test.');"],[],['chars%100;'],[],["clean('+21/232/2116-11',['0'..'9'],' ');"],[],["join(['a','b','c']);"],[],["join([1..5],' ');"],[],["length('Test');"],[],["length(['Text','AbC']);"],[],["lower('Test');"],[],["lower(['Text','AbC']);"],[],["upper('Test');"],[],["upper(['Text','AbC']);"],[],['t:=[0..1000]*0.006283;'],['t:=[0..1000]*0.006283;','plot(t,sin(t));'],['t:=[0..1000]*0.006283;','plot(t,sin(t));',"plot.renderToFile('plotDemo1.png',600,300,4);"],[],['printf("%X%",'],['printf("%X%",','each(message,'],['printf("%X%",','each(message,',"     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),"],['printf("%X%",','each(message,',"     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),",'     join(message,"\t")));'],['printf("%X%",','each(message,',"     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),",'     join(message,"\t")));','     '],['printf("%X%",','each(message,',"     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),",'     join(message,"\t")));','     ','abs({$x});'],[],['abs(3);'],[],['abs(-5/7);'],[],['abs([-2..2]);'],[],["chars('Test');"],[],["pos('o','Hello World');"],[],["pos(',',['Hello','Test','1,2,3']);"],[],["pos(['a','b'],'cdb');"],[],["repeat('-',10);"],[],['//Simple test for correct bracketing:'],['//Simple test for correct bracketing:',"replace('[[][]][]][][','[]','');"],[],['//Iteration will not take place if it is infinite:'],['//Iteration will not take place if it is infinite:',"replace('aba','b','bb');"],[],["replaceOne('[[][]][]][][','[]','');"],[],["replaceOne('1:.-.; 2:.-.; 3:.-.','.',['a'..'e']);"],[],["split('1,2,3;4,5,6',',');"],[],["split('1,2,3;4,5,6',';');"],[],["split('1,2,3;4,5,6',[';',',']);"],[],["tokenSplit('f(x)->x+1; //Stupid, but just an example...','mnh');"],[],['trim(" \tA B C\t ");'],[],['trimLeft(" \tA B C\t ");'],[],['trimRight(" \tA B C\t ");'],[],["unbrace('3');"],[],["unbrace('(3)');"],[],["unbrace('(3]');"],[],['unbrace(''"3"'');'],[],['//Note that ([[1],[2]]|[3]) returns a different result'],['//Note that ([[1],[2]]|[3]) returns a different result','add([[1],[2]],[3]);'],[],["chars('Testtext').elementFrequency;"],[],['flatten([1,[2,[3,4],[5]],6]);'],[],["head(['A'..'Z']);"],[],["head(['A'..'Z'],3);"],[],["tail(['A'..'Z']);"],[],["tail(['A'..'Z'],3);"],[],["leading(['A'..'Z']);"],[],["leading(['A'..'Z'],3);"],[],["trailing(['A'..'Z']);"],[],["trailing(['A'..'Z'],3);"],[],['//Odd squares'],['//Odd squares','minus([1..10]^2,2*[0..50])'],[],['sort(intRandom(10,5));'],[],["sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});"],[],['//A random permutation:'],['//A random permutation:','sortPerm(random(10));'],[],["sortPerm(['a'..'c'..'a']);"],[],['intersect([0..1000]^2,[0..1000]^3);'],[],['union(1/[1..5],2/[2..6]);'],[]];end
+Error @regTest/../regTest/execExamples.mnh:1,1 Evaluation of main seems to be incomplete or erroneous.

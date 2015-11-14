@@ -1,14 +1,14 @@
 shortenSilently(s:string)->begin
   local result:=shorten(s,2);
-  local tryOn:=length(result)<length(escape(s));
+  local tryOn:=length(format@(SHORTEN_FORMAT|result))<length(escape(s));
   each(subLen,[3..32],tryOn ? begin
     local newResult:=shorten(s,subLen);
-    length(newResult)<length(result)
+    length(format@(SHORTEN_FORMAT|newResult))<length(format@(SHORTEN_FORMAT|result))
     ? result:=newResult
     : tryOn:=false;
     void;
   end : void);
-  result;
+  format@(SHORTEN_FORMAT|result);
 end;
 
 private bestSubString(s:string,len:int)->

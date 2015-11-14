@@ -212,9 +212,17 @@ escape("\t");
 //A number after the X will be interpreted as text width
 format("%X5% is a string or something left aligned", true);
 
+//Use %X% for a left aligned output.
+//A number after the X will be interpreted as text width
+printf("%X5% is a string or something left aligned", true);
+
 //Use %I% for right aligned output.
 //A number after the I will be interpreted as text width
 format("%I5% is a string or something right aligned", true);
+
+//Use %I% for right aligned output.
+//A number after the I will be interpreted as text width
+printf("%I5% is a string or something right aligned", true);
 
 format("%I%", 3);
 
@@ -224,12 +232,39 @@ format("%dd.mm.yyyy%", 3.21);
 
 format("%hh:nn:ss%", 3.21);
 
+//You can use special placeholders to format dates and times.
+//Note that "mm" corresponds to month and "nn" corresponds to minutes.
+printf("%dd.mm.yyyy%", 3.21);
+
+printf("%hh:nn:ss%", 3.21);
+
 //Use a "picture clause" to format floating point numbers
 format("%00.000%", 3.21);
+
+//Use a "picture clause" to format floating point numbers
+printf("%00.000%", 3.21);
 
 //Use # to specify optionally visible digits.
 //If the second (or further) arguments are lists, the result will be a list.
 format("%#0.00##%", [3.21567, 5]);
+
+//Use # to specify optionally visible digits.
+//If the second (or further) arguments are lists, the result will be a list.
+printf("%#0.00##%", [3.21567, 5]);
+
+//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero
+//If the second (or further) arguments are lists, the result will be a list.
+format("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);
+
+//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero
+//If the second (or further) arguments are lists, the result will be a list.
+printf("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);
+
+//Use inline expressions for the advanced stuff:
+printf("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);
+
+//Use inline expressions for the advanced stuff:
+format("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);
 
 //Group a list of numbers by divisibility by 3
 group([1..10],[1..10] mod 3=0);
@@ -280,3 +315,101 @@ upper(['Text','AbC']);
 t:=[0..1000]*0.006283;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,4);
+
+printf("%X%",
+each(message,
+     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),
+     join(message,"\t")));
+     
+abs({$x});
+
+abs(3);
+
+abs(-5/7);
+
+abs([-2..2]);
+
+chars('Test');
+
+pos('o','Hello World');
+
+pos(',',['Hello','Test','1,2,3']);
+
+pos(['a','b'],'cdb');
+
+repeat('-',10);
+
+//Simple test for correct bracketing:
+replace('[[][]][]][][','[]','');
+
+//Iteration will not take place if it is infinite:
+replace('aba','b','bb');
+
+replaceOne('[[][]][]][][','[]','');
+
+replaceOne('1:.-.; 2:.-.; 3:.-.','.',['a'..'e']);
+
+split('1,2,3;4,5,6',',');
+
+split('1,2,3;4,5,6',';');
+
+split('1,2,3;4,5,6',[';',',']);
+
+tokenSplit('f(x)->x+1; //Stupid, but just an example...','mnh');
+
+trim(" \tA B C\t ");
+
+trimLeft(" \tA B C\t ");
+
+trimRight(" \tA B C\t ");
+
+unbrace('3');
+
+unbrace('(3)');
+
+unbrace('(3]');
+
+unbrace('"3"');
+
+//Note that ([[1],[2]]|[3]) returns a different result
+add([[1],[2]],[3]);
+
+chars('Testtext').elementFrequency;
+
+flatten([1,[2,[3,4],[5]],6]);
+
+head(['A'..'Z']);
+
+head(['A'..'Z'],3);
+
+tail(['A'..'Z']);
+
+tail(['A'..'Z'],3);
+
+leading(['A'..'Z']);
+
+leading(['A'..'Z'],3);
+
+trailing(['A'..'Z']);
+
+trailing(['A'..'Z'],3);
+
+//Odd squares
+minus([1..10]^2,2*[0..50])
+
+sort(intRandom(10,5));
+
+sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
+
+//A random permutation:
+sortPerm(random(10));
+
+sortPerm(['a'..'c'..'a']);
+
+intersect([0..1000]^2,[0..1000]^3);
+
+union(1/[1..5],2/[2..6]);
+
+
+
+
