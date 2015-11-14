@@ -147,10 +147,11 @@ PROCEDURE parseCmdLine;
       end;
     end;
     //-----------------------------------------------------
-    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and (paramCount>0) and ((fileOrCommandToInterpret='') or directExecutionMode);
+
+    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    consoleAdapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
     consoleAdapters.minErrorLevel:=minEL;
 
     if fileOrCommandToInterpret<>'' then begin
