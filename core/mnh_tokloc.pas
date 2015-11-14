@@ -14,7 +14,7 @@ CONST
 
 FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
 OPERATOR := (x: T_tokenLocation): ansistring;
-
+FUNCTION guessLocationFromString(CONST s:ansistring):T_tokenLocation;
 IMPLEMENTATION
 
 FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
@@ -30,5 +30,20 @@ OPERATOR := (x: T_tokenLocation): ansistring;
     result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
   end;
 
+FUNCTION guessLocationFromString(CONST s:ansistring):T_tokenLocation;
+  VAR i0,i1,i2:longint;
+  begin
+    result:=C_nilTokenLocation;
+    i0:=1;
+    while (i0<=length(s)) and (s[i0]<>'@') do inc(i0);
+    while (i0<=length(s)) and (s[i0]<>':') do inc(i0);
+    i1:=i0+1;
+    while (i1<=length(s)) and (s[i1] in ['0'..'9']) do inc(i1);
+    if (i1>length(s)) or (s[i1]<>',') then exit(C_nilTokenLocation);
+    i2:=i1+1;
+    while (i1<=length(s)) and (s[i2] in ['0'..'9']) do inc(i2);
+    result.line  :=strToIntDef(copy(s,i0+1,i1-i0-1),0);
+    result.column:=strToIntDef(copy(s,i1+1,i2-i1-1),0);
+  end;
 
 end.

@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   sysutils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_litVar,mnh_constants,myGenerics;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_constants,myGenerics;
 
 TYPE
   TtkTokenKind = (
@@ -57,7 +57,6 @@ TYPE
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
     FUNCTION GetEol: boolean; override;
     FUNCTION getRange: pointer; override;
-    FUNCTION GetTokenID: TtkTokenKind;
     FUNCTION GetToken: string; override;
     PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
     FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
@@ -172,7 +171,6 @@ PROCEDURE TSynMnhSyn.next;
     begin
       result:=length(prefix)>0;
       for k:=1 to length(prefix) do begin
-        //writeln('Checking prefix "',prefix,'" @',k,'="',prefix[k],'"');
         if fLine[k-1]<>prefix[k] then exit(false);
       end;
     end;
@@ -300,7 +298,6 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then begin
-      writeln('Marked token @pos ',fTokenPos,'..',run-1,' (',markedToken.column, ')');
       fTokenId:=tkHighlightedItem;
     end;
   end;
@@ -328,11 +325,6 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer)
   begin
     TokenLength := run-fTokenPos;
     TokenStart := fLine+fTokenPos;
-  end;
-
-FUNCTION TSynMnhSyn.GetTokenID: TtkTokenKind;
-  begin
-    result := fTokenId;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;

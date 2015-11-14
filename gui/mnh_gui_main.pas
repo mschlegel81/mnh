@@ -801,8 +801,14 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
 
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
+  VAR loc:T_tokenLocation;
   begin
     if (key>=37) and (key<=40) then setUnderCursor(OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY));
+    loc:=guessLocationFromString(OutputEdit.lines[OutputEdit.CaretY-1]);
+    if loc.column>0
+    then inputHighlighter.setMarkedToken(loc.line-1,loc.column-1)
+    else inputHighlighter.setMarkedToken(-1,-1);
+    InputEdit.Repaint;
   end;
 
 
@@ -971,19 +977,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
     //================================================================:slow ones
-
-
-
-
-    ////paint marks:--------------------------------------------------------------
-    //if (now>doNotMarkWordBefore) then begin
-    //  needMarkPaint:=false;
-    //  doNotMarkWordBefore:=now+ONE_SECOND;
-    //  Repaint;
-    //end;
-    ////--------------------------------------------------------------:paint marks
-
-
     //if (now>doNotCheckFileBefore) and ad_needReload then begin
     //  writeln(StdErr,'Opening modal dialog.');
     //  UpdateTimeTimer.Enabled:=false;

@@ -227,7 +227,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSou
       words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
       for j:=0 to length(words)-1 do isRelevant:=isRelevant or
         (words[j]=id) or
-        (unqualifiedAccess) and (words[j]=unqualifiedId);
+        (unqualifiedAccess) and (words[j]=unqualifiedId) or (words[j]='.'+unqualifiedId);
       setLength(words,0);
     end;
     if isRelevant then append(example,exampleHtml);
@@ -254,7 +254,7 @@ PROCEDURE prepareBuiltInDocs;
       if (length(code)<=0) then exit;
       html:=demoCodeToHtmlCallback(code);
       for n:=low(T_namespace) to high(T_namespace) do
-        for i:=1 to length(builtInDoc[n])-1 do
+        for i:=0 to length(builtInDoc[n])-1 do
           builtInDoc[n][i].addExampleIfRelevant(code,html);
       setLength(code,0);
       setLength(html,0);
