@@ -23,9 +23,13 @@ FUNCTION getNumberOfCPUs:longint;
 
 FUNCTION getEnvironment:T_arrayOfString;
   VAR i:longint;
+      s:string;
   begin
     setLength(result,0);
-    for i:=1 to GetEnvironmentVariableCount do append(result,GetEnvironmentString(i));
+    for i:=1 to GetEnvironmentVariableCount do begin
+      s:=GetEnvironmentString(i);
+      if copy(s,1,1)<>'=' then append(result,s);
+    end;
   end;
 
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;

@@ -505,12 +505,29 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
 FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR e:T_arrayOfString;
       i:longint;
+  FUNCTION environmentPair(CONST envString:ansistring):P_listliteral;
+    VAR env:T_arrayOfString;
+        inner:P_listLiteral;
+        k:longint;
+    begin
+      env:=split(envString,'=');
+      result:=newListLiteral^.appendString(env[0]);
+      if length(env)>=2 then begin
+        env:=split(env[1],';');
+        if length(env)=1 then exit(result^.appendString(env[0])) else begin
+          inner:=newListLiteral;
+          for k:=0 to length(env)-1 do inner^.appendString(env[k]);
+          result:=result^.append(inner,false,adapters);
+        end;
+      end;
+    end;
+
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       e:=getEnvironment;
       result:=newListLiteral;
-      for i:=0 to length(e)-1 do P_listLiteral(result)^.appendString(e[i]);
+      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false,adapters);
       setLength(e,0);
     end;
   end;
@@ -541,7 +558,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.');
 
 FINALIZATION
   lockedFiles.destroy;
