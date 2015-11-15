@@ -460,8 +460,20 @@ PROCEDURE T_consoleOutAdapter.clearConsole;
 
 PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR i:longint;
+      compound:ansistring;
   begin
-    for i:=0 to length(s)-1 do writeln(s[i]);
+    if (length(s)>0) and (s[0]=C_formFeedChar) then begin
+      mySys.clearConsole;
+      if length(s)>1 then begin
+        compound:=s[1];
+        for i:=2 to length(s)-1 do compound:=compound+LineEnding+s[i];
+        writeln(compound);
+      end;
+    end else if length(s)>0 then begin
+      compound:=s[0];
+      for i:=1 to length(s)-1 do compound:=compound+LineEnding+s[i];
+      writeln(compound);
+    end;
   end;
 
 PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType;

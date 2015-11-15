@@ -60,17 +60,19 @@ FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
     recursePath(rootPath);
   end;
 
+VAR clearConsoleProcess:TProcess=nil;
 PROCEDURE clearConsole;
-  VAR tempProcess: TProcess;
   begin
+    if clearConsoleProcess=nil then begin
+      clearConsoleProcess := TProcess.create(nil);
+      clearConsoleProcess.options:=clearConsoleProcess.options+[poWaitOnExit];
+      clearConsoleProcess.executable := CMD_PATH.value;
+      clearConsoleProcess.parameters.add('/C');
+      clearConsoleProcess.parameters.add('cls');
+    end;
     try
-      tempProcess := TProcess.create(nil);
-      tempProcess.options:=tempProcess.options+[poWaitOnExit];
-      tempProcess.executable := CMD_PATH.value;
-      tempProcess.parameters.add('/C');
-      tempProcess.parameters.add('cls');
-      tempProcess.execute;
-      tempProcess.free;
+      Flush(StdOut);
+      clearConsoleProcess.execute;
     except
     end;
   end;
