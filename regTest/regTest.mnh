@@ -5,9 +5,7 @@ private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
 private TESTS_STORE       :=TEST_DIRECTORY&'regTestCases.dat';
 private NEED_PLOT_IDX:=3;
 
-mutable testsFailed:="";
 mutable previouslyPassedTests:=0;
-synchronized private addFailedTest(scriptName,is32Bit)->copy(testsFailed:=testsFailed&format("\nkdiff %X% %X%",expectedResultName(scriptName,is32Bit),lastResultName(scriptName,is32Bit)),1,0);
 
 private expectedResultName  (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".expected");
 private lastResultName      (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".last");
@@ -29,22 +27,30 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
     local startTime:=systime;
     local scriptOutput:=exec(executor,["-det",ROOT_DIRECTORY&scriptName]) | (outputFileName="" ? [] : fileHash(ROOT_DIRECTORY&outputFileName));
     local scriptTime:=(systime-startTime)*24*60*60;
-    expectedResultExists(scriptName,SRF)
-    ? begin
-        expectedResult(scriptName,SRF)==scriptOutput
-        ? printf(FMT_STRING,scriptName,scriptTime,'o.k.' | markAsPassed(scriptName,exeHash,scriptTime))
-        : printf(FMT_STRING,scriptName,scriptTime,"Results differ!" &
-                                                   addFailedTest(scriptName,SRF) &
-                                                   storeResult(lastResultName(scriptName,SRF),scriptOutput));
-      end
-    : printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
+    when(
+      not(expectedResultExists(scriptName,SRF)),
+        begin
+          printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
+          []; //Test did not fail, so it is interpreted as passed
+        end,
+      expectedResult(scriptName,SRF)==scriptOutput,
+        begin
+          printf(FMT_STRING,scriptName,scriptTime,'o.k.');
+          markAsPassed(scriptName,exeHash,scriptTime);
+          [];
+        end,
+        begin
+          printf(FMT_STRING,scriptName,scriptTime,"Results differ!");
+          storeResult(lastResultName(scriptName,SRF),scriptOutput);
+          [expectedResultName(scriptName,SRF),
+           lastResultName    (scriptName,SRF)];
+        end);
   end;
 
 
 //*Executes tests; 
 //*Optionals can be: "randomSample" or (parts of) test case names
 main(exe,...)->begin
-  testsFailed:="";
   previouslyPassedTests:=0;
   local testFilter       := ...;
   local currentExeInfo   := exe.exec(["-version"] ).head;
@@ -68,21 +74,45 @@ main(exe,...)->begin
     testCases:=testCases%sortPerm(size(testCases).random);
     stopAtTime:=systime+5/(24*60*60);
   end : void;
-  local FMT_STRING:="%X"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"% %###0.00%sec %X%";
+  local FMT_STRING:="%-"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"s %7.2fsec %s";
   local first:=true;
-  each(test,testCases, (systime>stopAtTime) OR (testsFailed<>'') ? void : begin
-    begin
-      first
-      ? print("---------------------------------------------------------\n",
-             "Starting test runs with executable ",exe,"\n",currentExeInfo,
-             "\n---------------------------------------------------------")
-      : void;
-      first:=false;
-      runTest@(exe|currentExeHash|test|FMT_STRING);
-      void;
+  local failedTestOut:=[];
+  local allPassed:=true;
+  size(testCases)<=0 ? void :
+  each(test,testCases,AND,systime>stopAtTime ? false : begin
+    first ? begin
+      local msg1:="| Starting test runs with executable "&exe;
+      local msg2:="| "&currentExeInfo;
+      msg1&=repeat(' ',length(msg2)-length(msg1));
+      msg2&=repeat(' ',length(msg1)-length(msg2))&' |';
+      msg1&=' |';
+      local msg3:='+'&repeat('-',length(msg1)-2)&'+';
+      printf('%s',[msg3,msg1,msg2,msg3]);
+    end : void;
+    first:=false;
+    local testOutput:=runTest@(exe|currentExeHash|test|FMT_STRING);
+    testOutput==[] OR begin
+      allPassed:=false;
+      fileExists('kdiff.bat')
+      ? ask("Expected output is : "&testOutput%0&
+          "\n    Last output is : "&testOutput%1&
+          "\nDo you want to view the diff?",['No','Yes'])='Yes'
+        ? begin 
+            execPipeless('cmd',['/c','kdiff.bat']|testOutput);
+            ask('Shall the last result be the new expected result?',['No','Yes'])='Yes' 
+            ? begin
+                deleteFile(testOutput%0);
+                moveFile(testOutput%1,testOutput%0);
+                allPassed:=true;
+              end
+            : void;
+          end
+        : void
+      : printf@('Compare files %s and %s'|testOutput);      
+      allPassed;
     end;
   end);
-  first ? print('All tests have been passed by ',exe) : print(testsFailed);
+  first ? print('All tests have been passed by ',exe) : void;
   
   size(testCases)>0 ? begin
     print(previouslyPassedTests,' Tests were already marked as passed.');
@@ -101,6 +131,5 @@ main(exe,...)->begin
     //--------------:displayUncoveredTests
     first ? print('There are no scrips uncovered by tests') : void;
   end : void;
-
-  testsFailed='';
+  allPassed;
 end;
