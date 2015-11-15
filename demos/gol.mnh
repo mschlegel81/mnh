@@ -2,7 +2,7 @@ worldHeight:=40;
 worldWidth:=120;
 
 initWorld->ord(random(worldHeight*worldWidth)<0.5);
-printWorld(w:intList)->printf("%s",copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
+printWorld(w:intList)->printf("%s","\f"|copy(each(c,[' ','#']%w,&),worldWidth*[0..worldHeight-1],worldWidth));
 
 memoized
 shift(di,dj)->flatten(each(i,[0..worldHeight-1],
@@ -22,13 +22,12 @@ step(w,t)->each(i,[0..size(w)-1],t%%i%(w%i));
 play->play(initWorld);
 play(w)->print("\n\n\n")|printWorld(w)|sleep(0.1)|play(step(w));
 
-mutable sleepTime:=0.01;
+mutable sleepTime:=0.05;
 mutable wantQuit:=false;
 
 playUntilStatic(w)->begin
   local world:=w;
   while(not(wantQuit),begin
-    clearPrint;
     printWorld(world);
     sleep(sleepTime);
     local newWorld:=step(world);

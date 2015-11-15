@@ -26,7 +26,7 @@ main->begin
     {begin //B1
        while(not(timerCancelled) AND systime<timeOut,
        begin
-         printf('%hh:nn:ss% - press Enter to cancel',timeOut-systime);
+         print(formatTime('hh:mm:ss',timeOut-systime),' - press Enter to cancel');
          sleep(1);
          clearPrint;
        end);

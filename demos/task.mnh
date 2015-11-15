@@ -8,7 +8,7 @@ begin
   allTasks:=each(t,allTasks,
                  t%0=runningTask%0
                  ? begin
-                     printf('Task %X% finished after %hh:nn:ss%; total time spent: %hh:nn:ss%',
+                     printf("Task %s finished after %{formatTime('hh:nn:ss',$1)}s; total time spent: %{formatTime('hh:nn:ss',$2)}s",
                       t%0,systime-runningTask%2,t%1+systime-runningTask%2);
                      [t%0,                      t%1+systime-runningTask%2];
                    end
@@ -20,7 +20,7 @@ end;
 main()->begin
   endTask;
   print('All tasks:');
-  printf("  %X%\t%hh:nn:ss%",
+  printf("  %s\t%{$1:string?$1:formatTime('hh:nn:ss',$1)}s",
     'Task'      | allTasks%%0,
     'Time spent'| allTasks%%1);
 end;
