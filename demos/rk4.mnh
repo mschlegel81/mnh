@@ -18,7 +18,7 @@ private exact  :={1/16*($t^2+4)^2};
 //*Solves the Runge-Kutta task from <fga href="http://rosettacode.org/wiki/Runge-Kutta_method">Rosetta Code</a>
 main->begin
   local steps:=each(p,rk4evolve(df,initial,0.1,10),[p%0,p%1,abs(p%1-exact(p%0))]);
-  printf("%#0.0%\t%X%\t%X%",
+  printf("%4.1f\t%g\t%e",
          'time'|steps%%0,
          'approximation'|steps%%1,
          'error'|steps%%2);

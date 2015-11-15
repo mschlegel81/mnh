@@ -8,6 +8,6 @@ private synchronized nextHarshad->begin
 end;
 //*See http://rosettacode.org/wiki/Harshad_or_Niven_series
 main->begin
-  printf("%I2%",each(i,[1..20], nextHarshad));
+  printf("%2d",each(i,[1..20], nextHarshad));
   print("The first Harshad Number >",(lastHarshad:=1000)," is ",nextHarshad);
 end;

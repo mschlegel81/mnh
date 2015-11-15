@@ -8,7 +8,7 @@ median(X:numericList)->sort(X)%(size(X) div 2);
 
 decils(L)->sort(L)%round([0..10]/10*(size(L)-1));
 
-private testEx(e:expression)->printf("%X31% = %X%",unbrace(string(e)),string(e()));
+private testEx(e:expression)->printf("%-29s = %s",unbrace(string(e)),string(e()));
 main->testEx({mean([1,2,3.2,-1.8])}) |
       testEx({variance([1,2,3.2,-1.8])})|
       testEx({median(random(100))}) |

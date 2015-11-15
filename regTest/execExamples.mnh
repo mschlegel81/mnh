@@ -1,7 +1,8 @@
+printExecute([])->void;
 
 printExecute(code:stringList)->begin
   local out:=each(message,sandBoxExecute(code),message%0=="timing_info" ? void : message);
-  printf("%X%\t%X%",out%%0,out%%2);
+  printf("%s\t%s",out%%0,out%%2);
 end;
 
 
@@ -14,4 +15,5 @@ main->begin
       printExecute(codeToExecute);
       codeToExecute:=[];
     end : codeToExecute|=line);
+  printExecute(codeToExecute);
 end;

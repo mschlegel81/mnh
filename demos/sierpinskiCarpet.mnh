@@ -1,2 +1,2 @@
 //*See <a href="http://rosettacode.org/wiki/Sierpinski_carpet">http://rosettacode.org/wiki/Sierpinski_carpet</a>
-main->printf("%X%", each(i,[0..80],each(j,[0..80],&,{($ix mod 3)<>1 OR ($iy mod 3)<>1 ? ($ix>2<$iy ? $self($ix div 3,$iy div 3) : "[]") : "  "}(i,j))));
+main->printf("%s", each(i,[0..80],each(j,[0..80],&,{($ix mod 3)<>1 OR ($iy mod 3)<>1 ? ($ix>2<$iy ? $self($ix div 3,$iy div 3) : "[]") : "  "}(i,j))));

@@ -11,7 +11,7 @@ begin
 end;
 
 //*See  http://rosettacode.org/wiki/Count_the_coins
-main->printf("There are %X% ways to make a dollar from coins\n"&
-             "  and %X% ways to make a euro from coins.",
+main->printf("There are %d ways to make a dollar from coins\n"&
+             "  and %d ways to make a euro from coins.",
              change(100,[100,50,25,10,5,1]),
              change(100,[100,50,20,10,5,2,1]));

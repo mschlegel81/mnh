@@ -34,7 +34,7 @@
 [ "demos/huffmann.mnh",        "",                        false,         false,        false],
 [ "demos/josephus.mnh",        "",                        false,         false,        false],
 [ "demos/kochCurve.mnh",       "demos/kochCurve.png",     true,          true,         false],
-[ "demos/lastSundays.mnh",     "",                        false,         false,        false],
+//[ "demos/lastSundays.mnh",     "",                        false,         false,        false],
 [ "demos/ludic.mnh",           "",                        false,         false,        false],
 [ "demos/magicSquare.mnh",     "",                        false,         false,        false],
 //script name                            output                                  delete output? use plotting? spearate 32/64-bit results
@@ -67,7 +67,7 @@
 [ "demos/wordCount.mnh",                 "",                                     false,         false,        false],
 [ "demos/y.mnh",                         "",                                     false,         false,        false],
 [ "demos/zeckendorf.mnh",                "",                                     false,         false,        false],
-[ "packages/basic.mnh",                  "",                                     false,         false,        false],
+[ "packages/basic.mnh",                  "",                                     false,         false,        true],
 [ "packages/bool.mnh",                   "",                                     false,         false,        false],
 //script name                    output                       delete output? use plotting? spearate 32/64-bit results?
 [ "packages/combinatorics.mnh",  "",                          false,         false,        false],

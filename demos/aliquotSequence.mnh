@@ -27,7 +27,7 @@ private classify(n:int)->
 main->begin
   local input:=[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488];
   local class:=each(n,input,classify(n));
-    printf("%I%\t|\t%X%\t|\t%X%",
+    printf("%d\t|\t%s\t|\t%s",
      "start @"| input,
      "classification"|( class%%0),
      "sequence"|(class%%1));

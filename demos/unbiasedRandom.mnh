@@ -5,7 +5,7 @@ private unbias(x,x)->unbiasedRandom;
 private unbias(x,y)->x;
 
 private
-testUnbiasing(n:int)->printf('%X% %00.00%%% %00.00%%%',N:=n,
+testUnbiasing(n:int)->printf('%d %5.2f%% %5.2f%%',N:=n,
                              each(i,[1..10000],+,  biasedRandom)/100,
                              each(i,[1..10000],+,unbiasedRandom)/100);
 

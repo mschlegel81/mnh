@@ -41,4 +41,4 @@ begin
 end;
 
 //*See http://rosettacode.org/wiki/Maze_generation
-main->printf("%X%",makeMaze(20,20));
+main->printf("%s",makeMaze(20,20));

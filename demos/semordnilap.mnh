@@ -11,6 +11,6 @@ private findSemordnilaps->
 //*See <a href="http://rosettacode.org/wiki/Semordnilap">http://rosettacode.org/wiki/Semordnilap</a>
 main->begin
   local fullList:=findSemordnilaps;
-  printf('Found %I% Semordnilaps',size(fullList));
-  printf("%X%\t%X%",['Examples:','','','',''],fullList%intRandom(size(fullList),5));
+  printf('Found %d Semordnilaps',size(fullList));
+  printf("%s\t%s",['Examples:','','','',''],fullList%intRandom(size(fullList),5));
 end;

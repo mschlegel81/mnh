@@ -40,6 +40,6 @@ end;
 
 main('plot')->doPlot and renderToFile(replace(myPath&"#",".mnh#",".png"),768,768,4);
 
-main->printf('%0.000000000000000% %0.000000000000000%',errors1,errors2);
+main->printf('%17.15f %17.15f',errors1,errors2);
 
 doPlot;

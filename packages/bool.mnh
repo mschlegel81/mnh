@@ -6,30 +6,30 @@ private trueParams(f,Params)->pEach(p,Params,f@p ? p : void);
 private //*All 16 binary operators with format string
 BIN:=[[trueParams({$x or $y or true}),    "true"],
       [trueParams({$x and $y and false}), "false"],
-      [trueParams({$x or $x and $y}),     "%X%"],
-      [trueParams({$x ? $y : $y}),        "%X0%%X%"],
-      [trueParams({not($x or $x and $y)}),"not(%X%)"],
-      [trueParams({not($x ? $y : $y)}),   "not(%X0%%X%)"],
-      [trueParams({$x  or $y}),           "%X% or %X%"],
-      [trueParams({$x and $y}),           "%X% and %X%"],
-      [trueParams({not($x  or $y)}),      "not(%X% or %X%)"],
-      [trueParams({not($x and $y)}),      "not(%X% and %X%)"],
-      [trueParams({$x xor $y}),           "%X% xor %X%"],
-      [trueParams({$x  =  $y}),           "%X%=%X%"],
-      [trueParams({$x  >  $y}),           "%X%>%X%"],
-      [trueParams({$x  <  $y}),           "%X%<%X%"],
-      [trueParams({$x >=  $y}),           "%X%>=%X%"],
-      [trueParams({$x <=  $y}),           "%X%<=%X%"]];
+      [trueParams({$x or $x and $y}),     "%s"],
+      [trueParams({$x ? $y : $y}),        "%{$1}s"],
+      [trueParams({not($x or $x and $y)}),"not(%s)"],
+      [trueParams({not($x ? $y : $y)}),   "not(%{$1}s)"],
+      [trueParams({$x  or $y}),           "%s or %s"],
+      [trueParams({$x and $y}),           "%s and %s"],
+      [trueParams({not($x  or $y)}),      "not(%s or %s)"],
+      [trueParams({not($x and $y)}),      "not(%s and %s)"],
+      [trueParams({$x xor $y}),           "%s xor %s"],
+      [trueParams({$x  =  $y}),           "%s=%s"],
+      [trueParams({$x  >  $y}),           "%s>%s"],
+      [trueParams({$x  <  $y}),           "%s<%s"],
+      [trueParams({$x >=  $y}),           "%s>=%s"],
+      [trueParams({$x <=  $y}),           "%s<=%s"]];
 private //*All 4 unary operators with format string
-UN:=[[trueParams({$x}),            "%X%"],
-     [trueParams({not($x)}),       "not(%X%)"],
+UN:=[[trueParams({$x}),            "%s"],
+     [trueParams({not($x)}),       "not(%s)"],
      [trueParams({$x or not($x)}), "true"],
      [trueParams({$x and not($x)}),"false"]];
 
 //*Returns the konjunctive normal form as a string
 normalForm(f:expression)->each(par,trueParams(f)   ,aggregator({$x&" or "&$y}),
                           each(i  ,[0..size(par)-1],aggregator({$x&" and "&$y}),
-                               format(par%i ? "%X%" : "not(%X%)",parameterNames(f)%i)));
+                               format(par%i ? "%s" : "not(%s)",parameterNames(f)%i)));
 //*Returns a compact representation of boolean function f as string
 compactForm(f:expression)->compactForm(trueParams(f),arity(f),head(parameterNames(f),arity(f)));
 private compactForm(TL:list,arity=1,IDs)->each(un ,UN ,&,un %0==TL ? format(un %1,IDs%0      ) : void);

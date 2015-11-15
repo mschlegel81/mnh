@@ -3,4 +3,4 @@ private shuffle(s:string)->s|shuffle(chars(s));
 private shuffle(s:stringList)->{$x%(argMin($x%%1))}(each(perm,each(i,[0..size(s)^2],sortPerm(random(size(s)))),[join(s%perm),trueCount(s%perm = s)]));
 private inputs:=['abracadabra', 'seesaw', 'elk', 'grrrrrr', 'up', 'a'];
 //*See <a href="http://rosettacode.org/wiki/Best_shuffle">http://rosettacode.org/wiki/Best_shuffle</a>
-main->each(i,inputs,printf@('%X11%, %X11%, (%I%)'|shuffle(i)));
+main->each(i,inputs,printf@('%-11s, %-11s, (%d)'|shuffle(i)));

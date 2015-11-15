@@ -64,7 +64,7 @@ checkConsistency(fileList)->begin
 end; 
 
 allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
-pattern:='checkstyle: %X'&max(length(allFiles))&'% (%I5% lines) ';
+private pattern:='checkstyle: %-'&max(length(allFiles))&'s (%4d lines) ';
 
 fix(filename,readOnly)->begin
   local oldLines:=fileLines(filename);
@@ -75,7 +75,7 @@ fix(filename,readOnly)->begin
     diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&">\n   >"&(newLines%i)&'<' : void);
     readOnly ? void : writeFileLines(filename,newLines);
   end;
-  printf('%X%',diffOut);
+  printf('%s',diffOut);
 end;
 
 //*Check all files, writing out potential fixes

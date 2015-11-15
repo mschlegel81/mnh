@@ -1,34 +1,44 @@
 shortenSilently(s:string)->begin
   local result:=shorten(s,2);
-  local tryOn:=length(format@(SHORTEN_FORMAT|result))<length(escape(s));
+  local tryOn:=length(formatResult(result))<length(escape(s));
   each(subLen,[3..32],tryOn ? begin
     local newResult:=shorten(s,subLen);
-    length(format@(SHORTEN_FORMAT|newResult))<length(format@(SHORTEN_FORMAT|result))
+    length(formatResult(newResult))<length(formatResult(result))
     ? result:=newResult
     : tryOn:=false;
     void;
   end : void);
-  format@(SHORTEN_FORMAT|result);
+  result;
 end;
 
-private bestSubString(s:string,len:int)->
-  pEach(ef,
-        copy(s,[0..length(s)-len],len).elementFrequency,
-        aggregator({$x%0<$y%0 ? $y : $x}),
-        [(length(escape(ef%1))-2)*(ef%0-1)-1,ef%1]);
+private bestSubString(s:string,len:int)->begin
+  local freq:=copy(s,[0..length(s)-len],len).elementFrequency;
+  local benefits:=(length(escape(freq%%1))-2)*(freq%%0-1)-1;
+  local best:=argMax(benefits);
+  [benefits%best,freq%best%1];
+end;
 
-SHORTEN_FORMAT:="replace(%{escape($0)}%,chars(%{escape(join($1))}%),copy(%{escape(join($2))}%,[0..%{size($2)-1}%]*%{$3}%,%{$3}%))";
+formatResult(result:list)->
+  format('replace(%s,chars(%s),copy(%s,[0..%d]*%d,%d))',
+         escape(result%0),
+         escape(join(result%1)),
+         escape(join(result%2)),
+         size(result%2)-1,
+         result%3,
+         result%3);
 
-fallbackResult(s:string)->[s,[' '],[' '],1];
+private fallbackResult(s:string)->[s,[' '],[' '],1];
 
 shorten(s:string)->begin
   local result:=shortenSilently(s);
   print ('Input length  : ',length(escape(s)));
-  print ('Result length : ',length(result));
-  printf('Ratio         :%##0.00%%%',length(result)/length(escape(s))*100);
-  print (result);
+  print ('Result length : ',length(formatResult(result)));
+  printf('Ratio         :%6.2f%%',length(formatResult(result))/length(escape(s))*100);
+  print (formatResult(result));
   result;
 end;
+
+shorten(nonString)->shorten(string(nonString));
 
 private shorten(s:string,subLength)->begin
   local alphabetOut:=[];
@@ -38,7 +48,7 @@ private shorten(s:string,subLength)->begin
   local result:=fallbackResult(s);
   local prevResult:=result;
   each(run,[0..9],begin
-    each(alphabetChar,chars.minus(workString.chars).minus(chars%[0,26]),
+    each(alphabetChar,(chars%[33..91,93..255,0..8,11..25,27..32,9,10,92]).minus(workString.chars).minus(chars%[0,26]),
     proceed
     ? begin
         local sub:=bestSubString(workString,subLength);
@@ -49,7 +59,7 @@ private shorten(s:string,subLength)->begin
             alphabetOut:=alphabetChar|alphabetOut;
             workString:=replace(workString,sub%1,alphabetChar);
             result:=[workString,alphabetOut,replacements,subLength];
-            length(format@(SHORTEN_FORMAT|result))>=length(format@(SHORTEN_FORMAT|prevResult))
+            length(formatResult(result))>=length(formatResult(prevResult))
             ? proceed:=false 
             : prevResult:=result;
           end;
@@ -63,7 +73,7 @@ end;
 //*For regression test
 main->begin
   local input:=fileContents(myPath);
-  local shortCmd:=shorten(input);
+  local shortCmd:=formatResult(shorten(input));
   print('Can reconstruct correctly : ',expression(shortCmd)()=input);
 end;
 //*Shorten the given input file

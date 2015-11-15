@@ -21,7 +21,7 @@ private analyze(lines:stringList)->begin
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);
   print('Most frequent:');
-  printf("%X%\t%X%\t%X%",
+  printf("%s\t%s\t%s",
     'word' |(top50%%1),
     'count'|(top50%%0),
     '%'    |round(top50%%0/total*100,2));

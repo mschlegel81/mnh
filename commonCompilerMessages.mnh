@@ -22,12 +22,12 @@ main->begin
   print("------------------------------------------------------------------------\n",
         "----------------------- ALL COMMON MESSAGES ----------------------------\n",
         "------------------------------------------------------------------------");
-  printf("%X%",commonOnly);
+  printf("%s",commonOnly);
   print("------------------------------------------------------------------------\n",
         "-------------------- FILTERED COMMON MESSAGES --------------------------\n",
         "------------------------------------------------------------------------");
-  printf("%X%",filter(commonOnly));
+  printf("%s",filter(commonOnly));
 end;
 
 //*Prints filtered messages for given log file name
-main(filename)->printf('%X%',filter(fileLines(filename)));
+main(filename)->printf('%s',filter(fileLines(filename)));

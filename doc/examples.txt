@@ -5,7 +5,7 @@ arity({sin($x)/$x});
 arity({sin($x)/$y});
 
 //For variadic functions only the non-optional parameters are counted:
-arity({printf('%X%%X%',$a,...)});
+arity({printf('%s%s',$a,...)});
 
 expression("$x-$x^2+$x^3");
 
@@ -26,7 +26,7 @@ parameterNames({sin($x)/$x});
 parameterNames({sin($x)/$y});
 
 //For variadic functions only the non-optional parameters are counted:
-parameterNames({printf("%X%%X%", $a, ...)});
+parameterNames({printf("%s%s", $a, ...)});
 
 ord(3);
 
@@ -208,64 +208,6 @@ escape("a");
 
 escape("\t");
 
-//Use %X% for a left aligned output.
-//A number after the X will be interpreted as text width
-format("%X5% is a string or something left aligned", true);
-
-//Use %X% for a left aligned output.
-//A number after the X will be interpreted as text width
-printf("%X5% is a string or something left aligned", true);
-
-//Use %I% for right aligned output.
-//A number after the I will be interpreted as text width
-format("%I5% is a string or something right aligned", true);
-
-//Use %I% for right aligned output.
-//A number after the I will be interpreted as text width
-printf("%I5% is a string or something right aligned", true);
-
-format("%I%", 3);
-
-//You can use special placeholders to format dates and times.
-//Note that "mm" corresponds to month and "nn" corresponds to minutes.
-format("%dd.mm.yyyy%", 3.21);
-
-format("%hh:nn:ss%", 3.21);
-
-//You can use special placeholders to format dates and times.
-//Note that "mm" corresponds to month and "nn" corresponds to minutes.
-printf("%dd.mm.yyyy%", 3.21);
-
-printf("%hh:nn:ss%", 3.21);
-
-//Use a "picture clause" to format floating point numbers
-format("%00.000%", 3.21);
-
-//Use a "picture clause" to format floating point numbers
-printf("%00.000%", 3.21);
-
-//Use # to specify optionally visible digits.
-//If the second (or further) arguments are lists, the result will be a list.
-format("%#0.00##%", [3.21567, 5]);
-
-//Use # to specify optionally visible digits.
-//If the second (or further) arguments are lists, the result will be a list.
-printf("%#0.00##%", [3.21567, 5]);
-
-//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero
-//If the second (or further) arguments are lists, the result will be a list.
-format("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);
-
-//Use mulitple "picture" clauses to specify variants for positive and negative numbers and zero
-//If the second (or further) arguments are lists, the result will be a list.
-printf("%+0.000;-0.0;Zero%", [1/3, 0, -1/3]);
-
-//Use inline expressions for the advanced stuff:
-printf("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);
-
-//Use inline expressions for the advanced stuff:
-format("sin(%{$0}0.000%)=%{sin($0)}0.000%",1/[1..5]);
-
 //Group a list of numbers by divisibility by 3
 group([1..10],[1..10] mod 3=0);
 
@@ -316,7 +258,7 @@ t:=[0..1000]*0.006283;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,4);
 
-printf("%X%",
+printf("%s",
 each(message,
      sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),
      join(message,"\t")));

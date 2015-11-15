@@ -19,5 +19,5 @@ arabic(s:string)->expression(replace(s,['CM','CD','M','D',
 private roman_input:=['MMXV','MCMXC','MMVIII','MDCLXVI'];
 private arabic_input:=[2000,1989,23,1666];
 
-main->printf('%X10% (roman)  = %I10% (arabic)',roman_input,arabic(roman_input)) |
-      printf('%I10% (arabic) = %X10% (roman)',arabic_input,roman(arabic_input));
+main->printf('%-10s (roman)  = %10d (arabic)',roman_input,arabic(roman_input)) |
+      printf('%10d (arabic) = %-10s (roman)',arabic_input,roman(arabic_input));
