@@ -19,7 +19,8 @@ private tryPack(filename)->begin
   local newContents:=shortenSilently(oldContents);
   local oldContents:=escape(oldContents);
   'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
-  (length(newContents)<length(oldContents)
+
+  (length(shorten.formatResult(newContents))<length(oldContents)
    ? newContents
    : oldContents)&');';
 end;
