@@ -5,7 +5,6 @@ USES math, strutils, sysutils,  myGenerics;
 
 TYPE charSet=set of char;
 
-
 { T_format }
 
 T_format=object
@@ -27,9 +26,10 @@ T_format=object
 end;
 
 CONST
-  C_lineBreakChar = chr(10);
-  C_carriageReturnChar = chr(13);
-  C_tabChar = chr(9);
+  C_lineBreakChar = #10;
+  C_carriageReturnChar = #13;
+  C_tabChar = #9;
+  C_formFeedChar = #12;
   BLANK_TEXT = '';
   IDENTIFIER_CHARS:charSet=['a'..'z','A'..'Z','0'..'9','.','_'];
   FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
@@ -198,13 +198,18 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
     end;
 
   FUNCTION javaStyle:ansistring;
+    CONST escapes:array[0..34,0..1] of char=
+         (('\','\'),
+          (#0 ,'0'),(#1 ,'1'),(#2 ,'2'),(#3 ,'3'),(#4 ,'4'),(#5 ,'5'),(#6 ,'6'),(#7 ,'a'),
+          (#8 ,'b'),(#9 ,'t'),(#10,'n'),(#11,'v'),(#12,'f'),(#13,'r'),(#14,'S'),(#15,'s'),
+          (#16,'d'),(#17,'A'),(#18,'B'),(#19,'C'),(#20,'D'),(#21,'N'),(#22,'X'),(#23,'T'),
+          (#24,'Z'),(#25,'M'),(#26,'Y'),(#27,'x'),(#28,'F'),(#29,'G'),(#30,'R'),(#31,'U'),
+          (#127,'-'),('"','"'));
+    VAR i:longint;
     begin
-      result:='"'+replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(
-                                s, '\', '\\'),
-                             C_tabChar, '\t'),
-                       C_lineBreakChar, '\n'),
-                  C_carriageReturnChar, '\r'),
-                                   '"', '\"')+'"';
+      result:=s;
+      for i:=0 to length(escapes)-1 do result:=replaceAll(result,escapes[i,0],'\'+escapes[i,1]);
+      result:='"'+result+'"';
     end;
 
   VAR tmp:ansistring;
@@ -249,11 +254,41 @@ FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parse
       end else if input[offset]=DQ then begin
         i0:=offset+1; i:=i0; i1:=offset; continue:=true; result:='';
         while (i<=length(input)) and (input[i]<>DQ) do if input[i]='\' then begin
-          if (i<length(input)) and (input[i+1] in ['\','t','n','r',DQ]) then begin
+          if (i<length(input)) then begin
             case input[i+1] of
-              't': result:=result+copy(input,i0,i1-i0+1)+C_tabChar;
-              'n': result:=result+copy(input,i0,i1-i0+1)+C_lineBreakChar;
-              'r': result:=result+copy(input,i0,i1-i0+1)+C_carriageReturnChar;
+              '0': result:=result+copy(input,i0,i1-i0+1)+#0  ;
+              '1': result:=result+copy(input,i0,i1-i0+1)+#1  ;
+              '2': result:=result+copy(input,i0,i1-i0+1)+#2  ;
+              '3': result:=result+copy(input,i0,i1-i0+1)+#3  ;
+              '4': result:=result+copy(input,i0,i1-i0+1)+#4  ;
+              '5': result:=result+copy(input,i0,i1-i0+1)+#5  ;
+              '6': result:=result+copy(input,i0,i1-i0+1)+#6  ;
+              'a': result:=result+copy(input,i0,i1-i0+1)+#7  ;
+              'b': result:=result+copy(input,i0,i1-i0+1)+#8  ;
+              't': result:=result+copy(input,i0,i1-i0+1)+#9  ;
+              'n': result:=result+copy(input,i0,i1-i0+1)+#10 ;
+              'v': result:=result+copy(input,i0,i1-i0+1)+#11 ;
+              'f': result:=result+copy(input,i0,i1-i0+1)+#12 ;
+              'r': result:=result+copy(input,i0,i1-i0+1)+#13 ;
+              'S': result:=result+copy(input,i0,i1-i0+1)+#14 ;
+              's': result:=result+copy(input,i0,i1-i0+1)+#15 ;
+              'd': result:=result+copy(input,i0,i1-i0+1)+#16 ;
+              'A': result:=result+copy(input,i0,i1-i0+1)+#17 ;
+              'B': result:=result+copy(input,i0,i1-i0+1)+#18 ;
+              'C': result:=result+copy(input,i0,i1-i0+1)+#19 ;
+              'D': result:=result+copy(input,i0,i1-i0+1)+#20 ;
+              'N': result:=result+copy(input,i0,i1-i0+1)+#21 ;
+              'X': result:=result+copy(input,i0,i1-i0+1)+#22 ;
+              'T': result:=result+copy(input,i0,i1-i0+1)+#23 ;
+              'Z': result:=result+copy(input,i0,i1-i0+1)+#24 ;
+              'M': result:=result+copy(input,i0,i1-i0+1)+#25 ;
+              'Y': result:=result+copy(input,i0,i1-i0+1)+#26 ;
+              'x': result:=result+copy(input,i0,i1-i0+1)+#27 ;
+              'F': result:=result+copy(input,i0,i1-i0+1)+#28 ;
+              'G': result:=result+copy(input,i0,i1-i0+1)+#29 ;
+              'R': result:=result+copy(input,i0,i1-i0+1)+#30 ;
+              'U': result:=result+copy(input,i0,i1-i0+1)+#31 ;
+              '-': result:=result+copy(input,i0,i1-i0+1)+#127;
               else result:=result+copy(input,i0,i1-i0+1)+input[i+1];
             end;
             inc(i,2);
