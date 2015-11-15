@@ -108,6 +108,8 @@ TYPE
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+    PROCEDURE InputEditProcessUserCommand(Sender: TObject;
+      VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
@@ -615,6 +617,21 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shi
     point.x:=x;
     point.y:=y;
     inputEditReposition(InputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
+  end;
+
+PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+  VAR i:longint;
+      commented:boolean=true;
+  begin
+    if (Command=ecUserDefinedFirst) and (InputEdit.BlockBegin.y>=1) then begin
+      for i:=InputEdit.BlockBegin.y-1 to InputEdit.BlockEnd.y-1 do
+        commented:=commented and (copy(trim(InputEdit.lines[i]),1,2)='//');
+      if commented
+      then for i:=InputEdit.BlockBegin.y-1 to InputEdit.BlockEnd.y-1 do
+        inputEdit.lines[i]:=replaceOne(inputEdit.lines[i],'//','')
+      else for i:=InputEdit.BlockBegin.y-1 to InputEdit.BlockEnd.y-1 do
+      inputEdit.lines[i]:='//'+inputEdit.lines[i];
+    end;
   end;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);

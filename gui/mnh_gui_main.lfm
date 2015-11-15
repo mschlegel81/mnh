@@ -353,59 +353,7 @@ object MnhForm: TMnhForm
               ShortCut = 24633
             end          
             item
-              Command = EcFoldLevel1
-              ShortCut = 41009
-            end          
-            item
-              Command = EcFoldLevel2
-              ShortCut = 41010
-            end          
-            item
-              Command = EcFoldLevel1
-              ShortCut = 41011
-            end          
-            item
-              Command = EcFoldLevel1
-              ShortCut = 41012
-            end          
-            item
-              Command = EcFoldLevel1
-              ShortCut = 41013
-            end          
-            item
-              Command = EcFoldLevel6
-              ShortCut = 41014
-            end          
-            item
-              Command = EcFoldLevel7
-              ShortCut = 41015
-            end          
-            item
-              Command = EcFoldLevel8
-              ShortCut = 41016
-            end          
-            item
-              Command = EcFoldLevel9
-              ShortCut = 41017
-            end          
-            item
-              Command = EcFoldCurrent
-              ShortCut = 41005
-            end          
-            item
-              Command = EcUnFoldCurrent
-              ShortCut = 41003
-            end          
-            item
-              Command = EcToggleMarkupWord
-              ShortCut = 32845
-            end          
-            item
-              Command = ecNormalSelect
-              ShortCut = 24654
-            end          
-            item
-              Command = ecColumnSelect
+              Command = ecUserDefined0
               ShortCut = 24643
             end          
             item
@@ -513,6 +461,8 @@ object MnhForm: TMnhForm
           LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
+          OnProcessCommand = InputEditProcessUserCommand
+          OnProcessUserCommand = InputEditProcessUserCommand
           inline SynLeftGutterPartList1: TSynGutterPartList
             object SynGutterLineNumber1: TSynGutterLineNumber
               Width = 17
