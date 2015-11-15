@@ -2022,7 +2022,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             P_listLiteral(result)^.append(P_listLiteral(LHS)^.element [i], true,adapters);
           checkedExit;
         end;
-        lt_string: if LHS^.literalType=lt_keyValueList then begin
+        lt_string: if LHS^.literalType in [lt_keyValueList,lt_emptyList] then begin
           key:=P_stringLiteral(RHS)^.value;
           for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
           if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then begin
@@ -2032,7 +2032,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           end;
           exit(newListLiteral);
         end else exit(newErrorLiteralRaising('Operator % with a string as second operand can only be applied to key-value-lists!', tokenLocation,adapters));
-        lt_stringList: if LHS^.literalType=lt_keyValueList then begin
+        lt_stringList: if LHS^.literalType in [lt_keyValueList,lt_emptyList] then begin
           result:=newListLiteral;
           for j:=0 to P_listLiteral(RHS)^.size-1 do begin
             key:=P_stringLiteral(P_listLiteral(RHS)^.element [j])^.value;
