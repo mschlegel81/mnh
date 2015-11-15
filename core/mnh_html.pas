@@ -127,7 +127,7 @@ CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   end;
 
 DESTRUCTOR T_htmlOutAdapter.destroy;
-  begin errorOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
+  begin messageOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
 
 PROCEDURE T_htmlOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
   begin

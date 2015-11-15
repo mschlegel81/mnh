@@ -62,7 +62,7 @@ object MnhForm: TMnhForm
           ParentShowHint = False
           TabOrder = 0
           OnKeyUp = InputEditKeyDown
-          OnMouseMove = InputEditMouseMove
+          OnMouseDown = InputEditMouseDown
           Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
@@ -561,7 +561,8 @@ object MnhForm: TMnhForm
           ParentFont = False
           TabOrder = 2
           OnKeyUp = OutputEditKeyDown
-          OnMouseMove = OutputEditMouseMove
+          OnMouseDown = OutputEditMouseDown
+          OnMouseUp = OutputEditMouseUp
           Gutter.Width = 19
           Gutter.MouseActions = <>
           RightGutter.Width = 0
@@ -1075,6 +1076,7 @@ object MnhForm: TMnhForm
     top = 48
     object MenuItem1: TMenuItem
       Caption = 'File'
+      ShortCut = 32838
       object mi_settings: TMenuItem
         Caption = 'Settings'
         ShortCut = 16464
@@ -1154,6 +1156,7 @@ object MnhForm: TMnhForm
     end
     object MenuItem2: TMenuItem
       Caption = 'Evaluation'
+      ShortCut = 32837
       object miHaltEvalutaion: TMenuItem
         Caption = 'HALT EVALUATION!'
         Enabled = False
@@ -1190,6 +1193,7 @@ object MnhForm: TMnhForm
     end
     object submenuEditorAppearance: TMenuItem
       Caption = 'Appearance'
+      ShortCut = 32833
       object miExpressionEcho: TMenuItem
         Caption = 'Expression echo'
         OnClick = miExpressionEchoClick
@@ -1202,6 +1206,39 @@ object MnhForm: TMnhForm
         Caption = 'Declaration echo'
         Checked = True
         OnClick = miDeclarationEchoClick
+      end
+      object miTimingInfo: TMenuItem
+        Caption = 'Show timing info'
+        OnClick = miTimingInfoClick
+      end
+      object MenuItem4: TMenuItem
+        Caption = 'Error display...'
+        object miMinErrorlevel1: TMenuItem
+          Caption = '1: Show all'
+          RadioItem = True
+          OnClick = miMinErrorlevel1Click
+        end
+        object miMinErrorlevel2: TMenuItem
+          Caption = '2: Show warnings and errors'
+          RadioItem = True
+          OnClick = miMinErrorlevel2Click
+        end
+        object miMinErrorlevel3: TMenuItem
+          Caption = '3: Show all errors'
+          Checked = True
+          RadioItem = True
+          OnClick = miMinErrorlevel3Click
+        end
+        object miMinErrorlevel4: TMenuItem
+          Caption = '4: Show parsing and system errors'
+          RadioItem = True
+          OnClick = miMinErrorlevel4Click
+        end
+        object miMinErrorlevel5: TMenuItem
+          Caption = '5: Show system errors only'
+          RadioItem = True
+          OnClick = miMinErrorlevel5Click
+        end
       end
       object miIncFontSize: TMenuItem
         Caption = 'Increase Font Size'
@@ -1216,6 +1253,7 @@ object MnhForm: TMnhForm
     end
     object submenuPlotOptions: TMenuItem
       Caption = 'Plot options'
+      ShortCut = 32848
       Visible = False
       object miAntiAliasingOff: TMenuItem
         AutoCheck = True
@@ -1255,6 +1293,7 @@ object MnhForm: TMnhForm
     end
     object submenuPlotGrid: TMenuItem
       Caption = 'Grid'
+      ShortCut = 32839
       Visible = False
       object MenuItem17: TMenuItem
         Caption = 'x'
@@ -1289,6 +1328,7 @@ object MnhForm: TMnhForm
     end
     object submenuPlotScaling: TMenuItem
       Caption = 'Scaling'
+      ShortCut = 32851
       Visible = False
       object miPreserveAspect: TMenuItem
         Caption = 'Preserve aspect ratio'
@@ -1313,13 +1353,15 @@ object MnhForm: TMnhForm
     end
     object miHelpExternally: TMenuItem
       Caption = 'Help'
-      ShortCut = 112
+      ShortCut = 32840
       object miHelp: TMenuItem
         Caption = 'Display help popup'
+        ShortCut = 112
         OnClick = miHelpClick
       end
       object MenuItem3: TMenuItem
         Caption = 'Open documentation'
+        ShortCut = 8304
         OnClick = miHelpExternallyClick
       end
     end

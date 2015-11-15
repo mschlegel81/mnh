@@ -6,6 +6,7 @@ object DebugForm: TDebugForm
   Caption = 'Debug'
   ClientHeight = 220
   ClientWidth = 320
+  FormStyle = fsStayOnTop
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate

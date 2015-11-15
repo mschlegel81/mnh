@@ -36,7 +36,12 @@ FUNCTION guessLocationFromString(CONST s:ansistring):T_tokenLocation;
     result:=C_nilTokenLocation;
     i0:=1;
     while (i0<=length(s)) and (s[i0]<>'@') do inc(i0);
-    while (i0<=length(s)) and (s[i0]<>':') do inc(i0);
+    result.fileName:='';
+    inc(i0);
+    while (i0<=length(s)) and (s[i0]<>':') do begin
+      result.fileName:=result.fileName+s[i0];
+      inc(i0);
+    end;
     i1:=i0+1;
     while (i1<=length(s)) and (s[i1] in ['0'..'9']) do inc(i1);
     if (i1>length(s)) or (s[i1]<>',') then exit(C_nilTokenLocation);

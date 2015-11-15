@@ -20,3 +20,4 @@ gui/lib/x86_64-win64/*
 regTest/*.last
 setup.mnh
 ingored/*
+gui/mnh_gui.lps

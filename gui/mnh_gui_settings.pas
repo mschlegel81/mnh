@@ -91,6 +91,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         doEchoInput := ff.readBoolean;
         doEchoDeclaration := ff.readBoolean;
         doShowExpressionOut := ff.readBoolean;
+        doShowTimingInfo:= ff.readBoolean;
+        minErrorLevel:=ff.readShortint;
       end;
       instantEvaluation := ff.readBoolean;
       resetPlotOnEvaluation := ff.readBoolean;
@@ -124,6 +126,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         doEchoInput := true;
         doEchoDeclaration := true;
         doShowExpressionOut := true;
+        doShowTimingInfo:=false;
+        minErrorLevel:=3;
       end;
       instantEvaluation := true;
       resetPlotOnEvaluation := false;
@@ -196,20 +200,20 @@ PROCEDURE TSettingsForm.saveSettings;
     ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
-    with mainForm do
-      begin
+    with mainForm do begin
       ff.writeLongint(top);
       ff.writeLongint(left);
       ff.writeLongint(width);
       ff.writeLongint(height);
       ff.writeBoolean(isFullscreen);
-      end;
-    with outputBehaviour do
-      begin
+    end;
+    with outputBehaviour do begin
       ff.writeBoolean(doEchoInput);
       ff.writeBoolean(doEchoDeclaration);
       ff.writeBoolean(doShowExpressionOut);
-      end;
+      ff.writeBoolean(doShowTimingInfo);
+      ff.writeShortint(minErrorLevel);
+    end;
     ff.writeBoolean(instantEvaluation);
     ff.writeBoolean(resetPlotOnEvaluation);
     for i := 0 to 9 do
@@ -282,10 +286,8 @@ FUNCTION TSettingsForm.getFileInEditor: ansistring;
 FUNCTION TSettingsForm.polishHistory: boolean;
   VAR i, j: longint;
   begin
-
     for i:=1 to length(fileHistory)-1 do for j:=0 to i-1 do
       if (fileHistory[i]<>'') and (expandFileName(fileHistory[i])=expandFileName(fileHistory[j])) then fileHistory[i]:='';
-
     result := false;
     for i := 0 to length(fileHistory)-1 do if (fileHistory [i]<>'') and not(fileExists(fileHistory [i])) then begin
       for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];

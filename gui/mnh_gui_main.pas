@@ -20,7 +20,14 @@ TYPE
   { TMnhForm }
 
   TMnhForm = class(TForm)
+    miMinErrorlevel5: TMenuItem;
     MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    miMinErrorlevel1: TMenuItem;
+    miMinErrorlevel2: TMenuItem;
+    miMinErrorlevel3: TMenuItem;
+    miMinErrorlevel4: TMenuItem;
+    miTimingInfo: TMenuItem;
     miStartAnotherInstance: TMenuItem;
     miDebugFrom: TMenuItem;
     miDebug: TMenuItem;
@@ -104,8 +111,8 @@ TYPE
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
-    PROCEDURE InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: integer);
+    PROCEDURE InputEditMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
@@ -132,10 +139,16 @@ TYPE
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
+    procedure miMinErrorlevel1Click(Sender: TObject);
+    procedure miMinErrorlevel2Click(Sender: TObject);
+    procedure miMinErrorlevel3Click(Sender: TObject);
+    procedure miMinErrorlevel4Click(Sender: TObject);
+    procedure miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miStartAnotherInstanceClick(Sender: TObject);
+    procedure miTimingInfoClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE miAntialiasingOffClick(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
@@ -152,8 +165,10 @@ TYPE
     PROCEDURE miYTicsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
-    PROCEDURE OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-      Y: integer);
+    PROCEDURE OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
+    PROCEDURE OutputEditMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE plotImageMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
@@ -183,6 +198,7 @@ TYPE
       start:double;
       deferredUntil:double;
     end;
+    forceInputEditFocusOnOutputEditMouseUp:boolean;
 
     doNotMarkWordBefore:double;
     doNotCheckFileBefore:double;
@@ -199,6 +215,8 @@ TYPE
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
     PROCEDURE doStartEvaluation;
+    PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
+    PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     { private declarations }
   public
     { public declarations }
@@ -211,7 +229,6 @@ TYPE
     DESTRUCTOR destroy;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
     PROCEDURE flushClear;
-    PROCEDURE loadSettings;
   end;
 
 VAR
@@ -291,12 +308,7 @@ PROCEDURE T_guiOutAdapter.flushClear;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_guiOutAdapter.loadSettings;
-  begin
-    outputBehaviour:=SettingsForm.outputBehaviour;
-  end;
-
-FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
+FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
   CONST SAMPLE_TEXT='1!gPQ|';
   VAR temp,
       idealInputHeight,
@@ -345,7 +357,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     InputEdit.SetFocus;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST wordText:ansistring);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring);
   begin
     if not(isIdentifier(wordText,true)) then exit;
     if (inputHighlighter.setMarkedWord(wordText) and outputHighlighter.setMarkedWord(wordText)) then InputEdit.Repaint;
@@ -455,12 +467,48 @@ PROCEDURE TMnhForm.doStartEvaluation;
     end else stepper.setFreeRun;
   end;
 
+PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump:boolean);
+  VAR wordUnderCursor:string;
+      newCaret:TPoint;
+  begin
+    wordUnderCursor:=InputEdit.GetWordAtRowCol(caret);
+    setUnderCursor(wordUnderCursor);
+    if not(doJump) then exit;
+    if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
+    if (underCursor.tokenText<>wordUnderCursor) or
+       (underCursor.location.column<=0) then exit;
+    newCaret.x:=underCursor.location.column;
+    newCaret.y:=underCursor.location.line;
+    InputEdit.CaretXY:=newCaret;
+  end;
+
+PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump:boolean);
+  VAR loc:T_tokenLocation;
+      newCaret:TPoint;
+  begin
+    forceInputEditFocusOnOutputEditMouseUp:=false;
+    setUnderCursor(OutputEdit.GetWordAtRowCol(caret));
+    loc:=guessLocationFromString(OutputEdit.lines[caret.y-1]);
+    if (loc.column>0) and (loc.fileName=mainPackageProvider.getPath)
+    then begin
+      inputHighlighter.setMarkedToken(loc.line-1,loc.column-1);
+      if doJump then begin
+        newCaret.x:=loc.column;
+        newCaret.y:=loc.line;
+        InputEdit.CaretXY:=newCaret;
+        forceInputEditFocusOnOutputEditMouseUp:=true;
+        exit;
+      end;
+    end else inputHighlighter.setMarkedToken(-1,-1);
+    InputEdit.Repaint;
+  end;
+
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
+    forceInputEditFocusOnOutputEditMouseUp:=false;
     subTimerCounter:=0;
-
     with settings do begin
       ready:=false;
       storedAt:=now;
@@ -564,16 +612,15 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key>=37) and (key<=40) then setUnderCursor(InputEdit.GetWordAtRowCol(InputEdit.CaretXY));
+    if (key>=37) and (key<=40) or ((key=13) and (ssCtrl in Shift)) then inputEditReposition(InputEdit.CaretXY,(key=13) and (ssCtrl in Shift));
   end;
 
-PROCEDURE TMnhForm.InputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: integer);
+PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(InputEdit.GetWordAtRowCol(InputEdit.PixelsToRowColumn(point)));
+    inputEditReposition(InputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
   end;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
@@ -650,7 +697,7 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
     if settings.ready then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
       with SettingsForm.outputBehaviour do doEchoDeclaration:=miDeclarationEcho.Checked;
-      guiOutAdapter.loadSettings;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
     end;
   end;
 
@@ -703,7 +750,7 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
     if settings.ready then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
       with SettingsForm.outputBehaviour do doEchoInput:=miExpressionEcho.Checked;
-      guiOutAdapter.loadSettings;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
     end;
   end;
 
@@ -712,7 +759,7 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
     if settings.ready then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
       with SettingsForm.outputBehaviour do doShowExpressionOut:=miExpressionResult.Checked;
-      guiOutAdapter.loadSettings;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
     end;
   end;
 
@@ -750,6 +797,51 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     if settings.ready then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
       processSettings;
+    end;
+  end;
+
+procedure TMnhForm.miMinErrorlevel1Click(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miMinErrorlevel1.Checked:=true;
+      SettingsForm.outputBehaviour.minErrorLevel:=1;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    end;
+  end;
+
+procedure TMnhForm.miMinErrorlevel2Click(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miMinErrorlevel2.Checked:=true;
+      SettingsForm.outputBehaviour.minErrorLevel:=2;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    end;
+  end;
+
+procedure TMnhForm.miMinErrorlevel3Click(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miMinErrorlevel3.Checked:=true;
+      SettingsForm.outputBehaviour.minErrorLevel:=3;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    end;
+  end;
+
+procedure TMnhForm.miMinErrorlevel4Click(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miMinErrorlevel4.Checked:=true;
+      SettingsForm.outputBehaviour.minErrorLevel:=4;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    end;
+  end;
+
+procedure TMnhForm.miMinErrorlevel5Click(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miMinErrorlevel5.Checked:=true;
+      SettingsForm.outputBehaviour.minErrorLevel:=5;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
     end;
   end;
 
@@ -793,6 +885,15 @@ PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
     runCommandAsyncOrPipeless(paramStr(0),C_EMPTY_STRING_ARRAY,true);
   end;
 
+procedure TMnhForm.miTimingInfoClick(Sender: TObject);
+  begin
+    if settings.ready then begin
+      miTimingInfo.Checked:=not(miTimingInfo.Checked);
+      with SettingsForm.outputBehaviour do doShowTimingInfo:=miTimingInfo.Checked;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    end;
+end;
+
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin
     SettingsForm.ShowModal;
@@ -801,25 +902,27 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
 
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
-  VAR loc:T_tokenLocation;
   begin
-    if (key>=37) and (key<=40) then setUnderCursor(OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY));
-    loc:=guessLocationFromString(OutputEdit.lines[OutputEdit.CaretY-1]);
-    if loc.column>0
-    then inputHighlighter.setMarkedToken(loc.line-1,loc.column-1)
-    else inputHighlighter.setMarkedToken(-1,-1);
-    InputEdit.Repaint;
+    if (key>=37) and (key<=40) or ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,(key=13) and (ssCtrl in Shift));
+    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=InputEdit;
+    forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-
-PROCEDURE TMnhForm.OutputEditMouseMove(Sender: TObject; Shift: TShiftState; X,
-  Y: integer);
+PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
     point.y:=y;
-    setUnderCursor(OutputEdit.GetWordAtRowCol(OutputEdit.PixelsToRowColumn(point)));
+    outputEditReposition(OutputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
   end;
+
+PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
+begin
+  if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=InputEdit;
+  forceInputEditFocusOnOutputEditMouseUp :=false;
+end;
+
 
 PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
 begin
@@ -863,7 +966,8 @@ PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
     end;
   end;
 
-PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();
@@ -873,7 +977,8 @@ PROCEDURE TMnhForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift
     end;
   end;
 
-PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
+PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
+  VAR CloseAction: TCloseAction);
   begin
     miHelp.Checked:=false;
   end;
@@ -1016,7 +1121,13 @@ PROCEDURE TMnhForm.processSettings;
       miDeclarationEcho.Checked:=doEchoDeclaration;
       miExpressionEcho.Checked:=doEchoInput;
       miExpressionResult.Checked:=doShowExpressionOut;
-      guiOutAdapter.loadSettings;
+      miTimingInfo.Checked:=doShowTimingInfo;
+      miMinErrorlevel1.Checked:=minErrorLevel<=1;
+      miMinErrorlevel2.Checked:=minErrorLevel=2;
+      miMinErrorlevel3.Checked:=minErrorLevel=3;
+      miMinErrorlevel4.Checked:=minErrorLevel=4;
+      miMinErrorlevel5.Checked:=minErrorLevel>=5;
+      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
     end;
     if not(settings.ready) then begin
       if SettingsForm.mainForm.isFullscreen then WindowState:=wsMaximized;

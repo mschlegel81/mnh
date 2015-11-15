@@ -6,6 +6,7 @@ TYPE
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
+    location:T_tokenLocation;
   end;
 
 PROCEDURE ad_clearFile;
@@ -199,9 +200,8 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
       hasBuiltinNamespace:boolean;
       token:T_token;
   begin
-    if id=info.tokenText then exit;
-
     info.tokenText:=id;
+    info.location:=C_nilTokenLocation;
     reservedWordClass:=isReservedWord(id);
     case reservedWordClass of
       rwc_specialLiteral:   begin info.tokenExplanation:='Reserved word: special literal';   exit; end;
@@ -241,6 +241,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
       tt_localUserRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
+        info.location:=P_rule(token.data)^.getLocationOfDeclaration;
       end;
     end;
   end;
