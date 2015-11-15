@@ -227,8 +227,9 @@ TYPE
     PROCEDURE flushClear;
   end;
 
-VAR
-  MnhForm: TMnhForm;
+VAR MnhForm: TMnhForm;
+    locationToOpenOnFormStartup:T_tokenLocation;
+
 PROCEDURE lateInitialization;
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
@@ -273,8 +274,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           end;
         mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
-          MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
-          MnhForm.InputEdit.Repaint;
+          if location.fileName=ad_currentFile then begin
+            MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
+            MnhForm.InputEdit.Repaint;
+          end;
         end;
         mt_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
@@ -479,9 +482,13 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
     if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
     if (underCursor.tokenText<>wordUnderCursor) or
        (underCursor.location.column<=0) then exit;
-    newCaret.x:=underCursor.location.column;
-    newCaret.y:=underCursor.location.line;
-    InputEdit.CaretXY:=newCaret;
+    if underCursor.location.fileName=ad_currentFile then begin
+      newCaret.x:=underCursor.location.column;
+      newCaret.y:=underCursor.location.line;
+      InputEdit.CaretXY:=newCaret;
+    end else begin
+      runCommandAsyncOrPipeless(paramStr(0),'-open'+ansistring(underCursor.location),true);
+    end;
   end;
 
 PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
@@ -491,7 +498,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
     setUnderCursor(OutputEdit.GetWordAtRowCol(caret));
-    loc:=guessLocationFromString(OutputEdit.lines[caret.y-1]);
+    loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
     if (loc.column>0) and (loc.fileName=mainPackageProvider.getPath)
     then begin
       inputHighlighter.setMarkedToken(loc.line-1,loc.column-1);
@@ -533,6 +540,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
     {$endif}
+    if (locationToOpenOnFormStartup.fileName<>'') and fileExists(locationToOpenOnFormStartup.fileName) then begin
+      ad_setFile(expandFileName(locationToOpenOnFormStartup.fileName),InputEdit.lines);
+    end;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -583,10 +593,21 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
+  VAR newCaret:TPoint;
   begin
     if not(settingsReady) then begin
       processSettings;
       InputEdit.SetFocus;
+      if (locationToOpenOnFormStartup.fileName<>'') and fileExists(locationToOpenOnFormStartup.fileName) then begin
+        SettingsForm.setFileInEditor(locationToOpenOnFormStartup.fileName);
+        ad_setFile(expandFileName(locationToOpenOnFormStartup.fileName),InputEdit.lines);
+        SettingsForm.setFileContents(InputEdit.lines);
+        newCaret.x:=locationToOpenOnFormStartup.column;
+        if newCaret.x<=0 then newCaret.x:=1;
+        newCaret.y:=locationToOpenOnFormStartup.line;
+        if newCaret.y<=0 then newCaret.y:=1;
+        InputEdit.CaretXY:=newCaret;
+      end;
     end;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
@@ -1129,11 +1150,11 @@ PROCEDURE TMnhForm.processSettings;
       miEvalModeDirect.Checked:=not(SettingsForm.wantInstantEvaluation);
       miEvalModeDirectOnKeypress.Checked:=SettingsForm.wantInstantEvaluation;
     end;
-    if ad_currentFile<>SettingsForm.getFileInEditor then begin
-      if SettingsForm.getFileInEditor=''
-      then ad_clearFile
-      else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
-    end;
+    //if ad_currentFile<>SettingsForm.getFileInEditor then begin
+    //  if SettingsForm.getFileInEditor=''
+    //  then ad_clearFile
+    //  else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
+    //end;
     if not(settingsReady) then processFileHistory;
     settingsReady:=true;
   end;
@@ -1299,8 +1320,24 @@ FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
+PROCEDURE debugForm_stopDebugging;
+  begin
+    MnhForm.miDebug.Checked:=false;
+  end;
+
+PROCEDURE debugForm_debuggingStep;
+  begin
+    MnhForm.UpdateTimeTimerTimer(nil);
+    MnhForm.UpdateTimeTimer.Interval:=20;
+  end;
+
 PROCEDURE lateInitialization;
   begin
+    guiAdapters.addOutAdapter(@guiOutAdapter,false);
+    mnh_evalThread.guiOutAdapters:=@guiAdapters;
+    StopDebuggingCallback:=@debugForm_stopDebugging;
+    DebuggingStepCallback:=@debugForm_debuggingStep;
+
     plotSubsystem.renderNotBefore:=now;
     plotSubsystem.state:=pss_neutral;
     plotSubsystem.rendering:=false;
@@ -1317,24 +1354,10 @@ PROCEDURE lateInitialization;
     mnh_evalThread.initUnit;
   end;
 
-PROCEDURE debugForm_stopDebugging;
-  begin
-    MnhForm.miDebug.Checked:=false;
-  end;
-
-PROCEDURE debugForm_debuggingStep;
-  begin
-    MnhForm.UpdateTimeTimerTimer(nil);
-    MnhForm.UpdateTimeTimer.Interval:=20;
-  end;
-
 INITIALIZATION
   guiOutAdapter.create;
   guiAdapters.create;
-  guiAdapters.addOutAdapter(@guiOutAdapter,false);
-  mnh_evalThread.guiOutAdapters:=@guiAdapters;
-  StopDebuggingCallback:=@debugForm_stopDebugging;
-  DebuggingStepCallback:=@debugForm_debuggingStep;
+  locationToOpenOnFormStartup:=C_nilTokenLocation;
 
 FINALIZATION
   guiAdapters.destroy;

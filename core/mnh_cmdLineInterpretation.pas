@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
      mnh_doc,lclintf,mySys,mnh_html;
-PROCEDURE parseCmdLine;
+FUNCTION parseCmdLine:T_tokenLocation;
 VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -12,7 +12,7 @@ VAR fileOrCommandToInterpret:ansistring='';
     directExecutionMode:boolean=false;
 //---------------:by command line parameters
 
-PROCEDURE parseCmdLine;
+FUNCTION parseCmdLine:T_tokenLocation;
   PROCEDURE makeAndShowDoc;
     begin
       findAndDocumentAllPackages;
@@ -55,6 +55,9 @@ PROCEDURE parseCmdLine;
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
       consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
+      {$ifdef fullVersion}
+      consoleAdapters.printOut('  -open<location>  Open the given file at location');
+      {$endif}
     end;
 
   PROCEDURE tryToRunSetup;
@@ -107,6 +110,7 @@ PROCEDURE parseCmdLine;
       i    :longint;
       minEL:longint=2;
   begin
+    result:=C_nilTokenLocation;
     setLength(parameters,0);
     for i:=1 to paramCount do begin
     if (fileOrCommandToInterpret='') or directExecutionMode then begin
@@ -117,6 +121,7 @@ PROCEDURE parseCmdLine;
         else if paramStr(i)='-det'  then randseed:=0
         else if paramStr(i)='-cmd'  then directExecutionMode:=true
         else if startsWith(paramStr(i),'-out:') then addOutfile(copy(paramStr(i),6,length(paramStr(i))-5))
+        else if startsWith(paramStr(i),'-open@') then result:=guessLocationFromString(paramStr(i),true)
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},

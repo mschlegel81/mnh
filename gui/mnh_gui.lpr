@@ -20,8 +20,9 @@ FUNCTION GetConsoleWindow: HWND; stdcall; external kernel32;
 {$endif}
 
 begin
-  parseCmdLine;
+  locationToOpenOnFormStartup:=parseCmdLine;
   {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_HIDE); {$endif}
+
   mnh_gui_main.lateInitialization;
   Application.Title:='MNH5 - GUI';
   RequireDerivedFormResource := True;
