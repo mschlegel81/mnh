@@ -1758,7 +1758,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: exit(newBoolLiteral(P_scalarLiteral(LHS)^.isInRelationTo(op,P_scalarLiteral(RHS))));
             //scalar X scalar
-            lt_list: begin
+            lt_list,lt_keyValueList: begin
               //scalar X nested list
               result:=newListLiteral;
               for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
@@ -1772,7 +1772,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               end;
               checkedExit;
             end;
-            lt_booleanList..lt_flatList: begin
+            lt_booleanList..lt_emptyList,lt_flatList: begin
               //scalar X flat list
               result:=newListLiteral;
               for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
@@ -1782,7 +1782,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               checkedExit;
             end;
           end;
-          lt_list: case RHS^.literalType of
+          lt_list,lt_keyValueList: case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: begin
               //nested list X scalar
               result:=newListLiteral;
@@ -1808,7 +1808,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               end else invalidLengthExit;
             end;
           end;
-          lt_booleanList..lt_flatList: case RHS^.literalType of
+          lt_booleanList..lt_emptyList,lt_flatList: case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: begin
               //flat list X scalar
               result:=newListLiteral;
@@ -1818,7 +1818,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   false,adapters);
               checkedExit;
             end;
-            lt_list: begin
+            lt_list,lt_keyValueList: begin
               //flat list X nested list
               i:=length(P_listLiteral(LHS)^.element);
               i1:=length(P_listLiteral(RHS)^.element);
@@ -1832,7 +1832,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 checkedExit;
               end else invalidLengthExit;
             end;
-            lt_booleanList..lt_flatList: begin
+            lt_booleanList..lt_emptyList,lt_flatList: begin
               //flat list X flat list
               i:=length(P_listLiteral(LHS)^.element);
               i1:=length(P_listLiteral(RHS)^.element);
@@ -1870,7 +1870,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_operatorStrConcat: exit(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters));
               end;
             //scalar X scalar
-            lt_list: begin
+            lt_list,lt_keyValueList: begin
               //scalar X nested list
               result:=newListLiteral;
               for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
@@ -1880,7 +1880,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   false,adapters);
               checkedExit;
             end;
-            lt_booleanList..lt_flatList: begin
+            lt_booleanList..lt_emptyList,lt_flatList: begin
               //scalar X flat list
               result:=newListLiteral;
               case op of
@@ -1899,7 +1899,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               checkedExit;
             end;
           end;
-          lt_list: case RHS^.literalType of
+          lt_list,lt_keyValueList: case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: begin
               //nested list X scalar
               result:=newListLiteral;
@@ -1925,7 +1925,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               end else invalidLengthExit;
             end;
           end;
-          lt_booleanList..lt_flatList: case RHS^.literalType of
+          lt_booleanList..lt_emptyList,lt_flatList: case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: begin
               //flat list X scalar
               result:=newListLiteral;
@@ -1944,7 +1944,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               end;
               checkedExit;
             end;
-            lt_list: begin
+            lt_list,lt_keyValueList: begin
               //flat list X nested list
               i:=length(P_listLiteral(LHS)^.element);
               i1:=length(P_listLiteral(RHS)^.element);
@@ -1958,7 +1958,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 checkedExit;
               end else invalidLengthExit;
             end;
-            lt_booleanList..lt_flatList: begin
+            lt_booleanList..lt_emptyList,lt_flatList: begin
               //flat list X flat list
               i:=length(P_listLiteral(LHS)^.element);
               i1:=length(P_listLiteral(RHS)^.element);
