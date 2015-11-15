@@ -1,12 +1,12 @@
 USE anagram,inputs;
 
-private a_is_b_reversed(a:string,b:string)->each(char,copy(b,[length(b)-1..0],1),&)=a;
-
 private findSemordnilaps->
   pEach(anagramGroup,
-        readDict(inputs.dict).anagramsInDict,|,
-        each(i,[1..size(anagramGroup)-1],|,
-        each(j,[0..i-1],a_is_b_reversed@(anagramGroup%[i,j]) ? anagramGroup%[i,j] : void)));
+        readDict(inputs.dict).anagramsInDict,
+        begin
+          local semordnilapGroup:=intersect(anagramGroup,reverseString(anagramGroup));
+          size(semordnilapGroup)==0 ? void : semordnilapGroup;
+        end);
 
 //*See <a href="http://rosettacode.org/wiki/Semordnilap">http://rosettacode.org/wiki/Semordnilap</a>
 main->begin

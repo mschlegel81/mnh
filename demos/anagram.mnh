@@ -1,6 +1,6 @@
 USE inputs;
 
-readDict(filename)->pEach(word,fileLines(filename),[each(char,word.chars.sort,&),word]).sort;
+readDict(filename)->pEach(word,fileLines(filename),[join(word.chars.sort),word]);
 
 anagramsInDict(list)->pEach(gr,pEach(word,fileLines(inputs.dict),[each(char,word.chars.sort,&),word]).group(0),size(gr)<=1 ? void : gr%%1);
 
@@ -8,7 +8,4 @@ anagramsInDict(list)->pEach(gr,pEach(word,fileLines(inputs.dict),[each(char,word
 main->main(inputs.dict);
 
 //*Finds anagrams in a custom dictionary, sort by anagrams per group and print them out (one line per group)
-main(filename:string)->each(set,
-                            readDict(filename).anagramsInDict.sort({size($x)<=size($y)}),
-                            print(each(el,set,aggregator({$x&", "&$y}))));
-
+main(filename:string)->printf("%{join($0,', ')}s",readDict(filename).anagramsInDict.sort({size($x)<=size($y)}));
