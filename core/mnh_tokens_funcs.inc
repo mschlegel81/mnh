@@ -665,18 +665,21 @@ FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       begin
         result:='';
         k:=0;
-        for i:=0 to length(parts)-1 do if odd(i) then begin
-          if k<p.size then begin
-            L:=p.value(k);
-            case L^.literalType of
-              lt_int   : result:=result+formats[i].format(P_intLiteral   (L)^.value);
-              lt_real  : result:=result+formats[i].format(P_realLiteral  (L)^.value);
-              lt_string: result:=result+formats[i].format(P_stringLiteral(L)^.value);
-              else       result:=result+formats[i].format(L^.toString);
-            end;
-          end else result:=result+'%'+parts[i]+'%';
-          inc(k);
-        end else result:=result+parts[i];
+        try
+          for i:=0 to length(parts)-1 do if odd(i) then begin
+            if k<p.size then begin
+              L:=p.value(k);
+              case L^.literalType of
+                lt_int   : result:=result+formats[i].format(P_intLiteral   (L)^.value);
+                lt_real  : result:=result+formats[i].format(P_realLiteral  (L)^.value);
+                lt_string: result:=result+formats[i].format(P_stringLiteral(L)^.value);
+                else       result:=result+formats[i].format(L^.toString);
+              end;
+            end else result:=result+'%'+parts[i]+'%';
+            inc(k);
+          end else result:=result+parts[i];
+        except on E:Exception do adapters.raiseError('Error during formatting: '+e.message,tokenLocation);
+        end;
       end;
     VAR fpar:P_listLiteral;
         temp:P_literal;
@@ -792,7 +795,7 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         lt_int:  result:=fmtIt(P_intLiteral (params^.value(1))^.value);
         lt_real: result:=fmtIt(P_realLiteral(params^.value(1))^.value);
         lt_emptyList: result:=newListLiteral;
-        lt_numList: begin
+        lt_realList,lt_intList,lt_numList: begin
           result:=newListLiteral;
           L:=P_listLiteral(params^.value(1));
           for i:=0 to L^.size-1 do case(L^.value(i)^.literalType) of
@@ -804,6 +807,67 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
+FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR format:ansistring;
+  FUNCTION encodeDateTime(input:ansistring):double;
+    CONST digits:charSet=['0'..'9'];
+    VAR yStr:string='';
+        mStr:string='';
+        dStr:string='';
+        hStr:string='';
+        nStr:string='';
+        sStr:string='';
+        zStr:string='';
+        i:word;
+        yNum,mNum,dNum:word;
+        hNum:word=0;
+        nNum:word=0;
+        sNum:word=0;
+        zNum:word=0;
+    begin
+      if length(format)<>length(input) then begin
+        adapters.raiseError('parseTime expects two strings of equal length as parameters',tokenLocation);
+        exit;
+      end;
+      input:=cleanString(input,digits,'0');
+      for i:=1 to length(format) do case format[i] of
+        'Y': yStr:=yStr+input[i];
+        'M': mStr:=mStr+input[i];
+        'D': dStr:=dStr+input[i];
+        'H': hStr:=hStr+input[i];
+        'N': nStr:=nStr+input[i];
+        'S': sStr:=sStr+input[i];
+        'Z': zStr:=zStr+input[i];
+      end;
+      DecodeDate(now,yNum,mNum,dNum);
+      yNum:=strToIntDef(yStr,yNum);
+      mNum:=strToIntDef(mStr,mNum);
+      dNum:=strToIntDef(dStr,dNum);
+      hNum:=strToIntDef(hStr,hNum);
+      nNum:=strToIntDef(nStr,nNum);
+      sNum:=strToIntDef(sStr,sNum);
+      zNum:=strToIntDef(zStr,zNum);
+      try
+        result:=EncodeDate(yNum,mNum,dNum)+EncodeTime(hNum,nNum,sNum,zNum);
+      except
+        on E:exception do adapters.raiseError('parseTime failed:'+E.message,tokenLocation);
+      end;
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) then begin
+      format:= uppercase(P_stringLiteral(params^.value(0))^.value);
+      if (params^.value(1)^.literalType=lt_string) then
+        result:=newRealLiteral(encodeDateTime(P_stringLiteral(params^.value(1))^.value))
+      else if (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value));
+      end;
+    end;
+  end;
 
 {$endif}
 {$ifdef include_initialization}
@@ -840,4 +904,5 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void');
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters');
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string.');
+  registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input');
 {$endif}
