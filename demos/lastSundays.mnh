@@ -1,13 +1,12 @@
-strToDate(s:string         )->strToDate(s,-1,1);
-strToDate(s:string,t0,t1)->format("%yyyy-mm-dd%",t0)>s ? strToDate(s,t0-(t1-t0),t1) :
-                           format("%yyyy-mm-dd%",t1)<s ? strToDate(s,t0,t1+(t1-t0)) :
-                                                         strToDate(s,t0,(t1+t0) div 2,t1);
-strToDate(s:string,t0,t1,t2)->format("%yyyy-mm-dd%",t1)>s ? strToDate(s,t0,(t0+t1) div 2,t1) :
-                              format("%yyyy-mm-dd%",t1)<s ? strToDate(s,t1,(t1+t2) div 2,t2) : t1;
-sundayBefore(t:int)->each(d,floor(t)-[1..7],d mod 7 = 1 ? d : void);
-lastSundays(year:int)->printf("%yyyy-mm-dd%",each(month,[2..12],|,sundayBefore(strToDate(format("%0000%-%00%-01",year,month))))|sundayBefore(strToDate(format("%0000%-01-01",year+1))));
+private lastSundaysInYear(year:int)->begin
+  local lastDays:=floor(parseTime('yyyymmdd',format('%4.4d%2.2d01',year,[2..12])|format('%4.4d0101',year+1)))-1;
+  local numberOfDaysAfterSuday:=(lastDays+6) mod 7;
+  lastDays-numberOfDaysAfterSuday;
+end;
+
+private DATE_FMT:='%{formatTime("dd.mm.yyyy",$0)}s';
 
 //*Print out the last sundays of each month in 2015
-main->lastSundays(2015);
+main->printf(DATE_FMT,lastSundaysInYear(2015));
 //*Print out the last sundays of each month in given year
-main(year:string)->lastSundays(softCast(year));
+main(year:string)->printf(DATE_FMT,lastSundaysInYear(softCast(year)));
