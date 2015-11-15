@@ -133,6 +133,17 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
+FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.literalType in C_validListTypes) then begin
+      result:=newListLiteral;
+      for i:=P_listLiteral(params^.value(0))^.size-1 downto 0 do
+        P_listLiteral(result)^.append(P_listLiteral(params^.value(0))^.value(i),true,adapters);
+    end;
+  end;
+
 INITIALIZATION
   //Functions on lists:
   registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended');
@@ -150,4 +161,5 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
+  registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
 end.

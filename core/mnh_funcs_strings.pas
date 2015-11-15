@@ -541,6 +541,36 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
+FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  FUNCTION rev(CONST L:P_literal):ansistring;
+    FUNCTION revShort(CONST s:shortString):shortString; inline;
+      VAR i:longint;
+      begin
+        result:=s;
+        for i:=1 to length(s) do result[i]:=s[length(s)+1-i];
+      end;
+
+    VAR s:ansistring;
+        i:longint;
+    begin
+      s:=P_stringLiteral(L)^.value;
+      if length(s)<=255 then exit(revShort(s));
+      result:='';
+      for i:=length(s) downto 1 do result:=result+s[i];
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case params^.value(0)^.literalType of
+      lt_string: result:=newStringLiteral(rev(params^.value(0)));
+      lt_stringList,lt_emptyList: begin
+        result:=newListLiteral;
+        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+          P_listLiteral(result)^.appendString(rev(P_listLiteral(params^.value(0))^.value(i)));
+      end;
+    end;
+  end;
 
 INITIALIZATION
   //Functions on Strings:
@@ -562,4 +592,5 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
   registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
   registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
 end.
