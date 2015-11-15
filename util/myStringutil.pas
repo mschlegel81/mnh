@@ -5,12 +5,34 @@ USES math, strutils, sysutils,  myGenerics;
 
 TYPE charSet=set of char;
 
+
+{ T_format }
+
+T_format=object
+  category:(fmtCat_decimal,
+            fmtCat_scientific,
+            fmtCat_fixedPoint,
+            fmtCat_general,
+            fmtCat_currency,
+            fmtCat_number,
+            fmtCat_string,
+            fmtCat_hex);
+  intFmt,realFmt,strFmt:string;
+
+  CONSTRUCTOR create(CONST formatString:string);
+  FUNCTION format(CONST s:string):string;
+  FUNCTION format(CONST i:int64):string;
+  FUNCTION format(CONST e:extended):string;
+  DESTRUCTOR destroy;
+end;
+
 CONST
   C_lineBreakChar = chr(10);
   C_carriageReturnChar = chr(13);
   C_tabChar = chr(9);
   BLANK_TEXT = '';
   IDENTIFIER_CHARS:charSet=['a'..'z','A'..'Z','0'..'9','.','_'];
+  FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
 
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
 FUNCTION isBlank(CONST s: ansistring): boolean;
@@ -27,12 +49,6 @@ FUNCTION reSplit(CONST s:T_arrayOfString):T_arrayOfString;
 FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfString;
 FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 FUNCTION cleanString(CONST s:ansistring; CONST whiteList:charSet; CONST instead:char):ansistring;
-
-
-FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
-
 FUNCTION myTimeToStr(dt:double):string;
 
 IMPLEMENTATION
@@ -356,72 +372,6 @@ FUNCTION cleanString(CONST s:ansistring; CONST whiteList:charSet; CONST instead:
     for k:=1 to length(s) do if s[k] in whiteList then result:=result+s[k] else result:=result+instead;
   end;
 
-FUNCTION myFormat(CONST formatString, stringData:ansistring):ansistring;
-  VAR targetLength:longint;
-  begin
-    if (length(formatString)>=1) and (formatString[1] in ['X','x','I','i']) then begin
-      if length(formatString)>1
-      then targetLength:=strToIntDef(trim(copy(formatString,2,length(formatString)-1)),length(stringData))
-      else targetLength:=length(stringData);
-      result:=stringData;
-      if length(result)>targetLength
-      then result:=copy(result,1,targetLength)
-      else while length(result)<targetLength do begin
-        if formatString[1] in ['I','i']
-        then result:=' '+result
-        else result:=result+' ';
-      end;
-    end else result:=stringData;
-  end;
-
-FUNCTION isTimeFormat(CONST s:ansistring):boolean;
-  VAR i:longint;
-  begin
-    for i:=1 to length(s) do if s[i] in ['y','m','d','h','n','s','z'] then exit(true);
-    result:=false;
-  end;
-
-FUNCTION fixedFormatFloat(formatString:ansistring; CONST value:extended):ansistring;
-  VAR i,destLen:longint;
-  begin
-    result:=formatFloat(formatString,value);
-    i:=1;
-    while (i<length(formatString)) and (formatString[i]='#') do begin
-      formatString[i]:='0';
-      inc(i);
-    end;
-    destLen:=length(formatFloat(formatString,value));
-    while length(result)<destLen do result:=' '+result;
-    destLen:=length(formatFloat(replaceAll(formatString,'#','0'),value));
-    while length(result)<destLen do result:=result+' ';
-  end;
-
-FUNCTION myFormat(CONST formatString:ansistring; CONST intData:int64):ansistring;
-  begin
-    if (length(formatString)>0) and (formatString[1] in ['X','x','I','i'])
-    then exit(myFormat(formatString,intToStr(intData)));
-    try
-      if isTimeFormat(formatString)
-      then DateTimeToString(result,formatString,intData)
-      else result:=fixedFormatFloat(formatString,intData);
-    except
-      result:=myFormat(formatString,intToStr(intData));
-    end;
-  end;
-
-FUNCTION myFormat(CONST formatString:ansistring; CONST realData:extended):ansistring;
-  begin
-    if (length(formatString)>0) and (formatString[1] in ['X','x','I','i'])
-    then exit(myFormat(formatString,FloatToStr(realData)));
-    try
-      if isTimeFormat(formatString)
-      then DateTimeToString(result,formatString,realData)
-      else result:=fixedFormatFloat(formatString,realData);
-    except
-      result:=myFormat(formatString,FloatToStr(realData));
-    end;
-  end;
-
 FUNCTION myTimeToStr(dt:double):string;
   CONST oneMinute=1/(24*60);
         oneSecond=oneMinute/60;
@@ -438,6 +388,89 @@ FUNCTION myTimeToStr(dt:double):string;
         dt:=(dt-floor(dt))*60; result:=result+formatFloat('00',floor(dt));
       end
     else result:=timeToStr(dt);
+  end;
+
+{ T_format }
+
+CONSTRUCTOR T_format.create(CONST formatString: string);
+  begin
+    if length(formatString)>0 then case formatString[length(formatString)] of
+      'd','D': begin
+        category:=fmtCat_decimal;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'e','E': begin
+        category:=fmtCat_scientific;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'f','F': begin
+        category:=fmtCat_fixedPoint;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'g','G': begin
+        category:=fmtCat_general;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'm','M': begin
+        category:=fmtCat_currency;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'n','N': begin
+        category:=fmtCat_number;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      's','S': begin
+        category:=fmtCat_string;
+        strFmt :=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'x','X': begin
+        category:=fmtCat_hex;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      else begin
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+    end;
+  end;
+
+FUNCTION T_format.format(CONST s: string): string;
+  begin
+    result:=sysutils.format(strFmt,[s]);
+  end;
+
+FUNCTION T_format.format(CONST i: int64): string;
+  begin
+    if category in [fmtCat_scientific..fmtCat_number]
+      then result:=sysutils.format(realFmt,[extended(i)])
+      else result:=sysutils.format(intFmt,[i]);
+  end;
+
+FUNCTION T_format.format(CONST e: extended): string;
+  begin
+    result:=sysutils.format(realFmt,[e]);
+  end;
+
+DESTRUCTOR T_format.destroy;
+  begin
+
   end;
 
 end.
