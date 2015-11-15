@@ -16,7 +16,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
     begin
       for j := 0 to length(options)-1 do if trim(options [j]) = trim(s) then exit(j);
       result := strToIntDef(s, -1);
-      if result>=0 then exit(result);
+      if (result>=0) and (result<length(options)) then exit(result) else result:=-1;
       for j := 0 to length(options)-1 do if copy(options[j],1,length(s))=s then begin
         if result=-1 then result:=j else result:=-2;
       end;
