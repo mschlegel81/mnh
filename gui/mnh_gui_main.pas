@@ -12,9 +12,6 @@ USES
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
   myGenerics,mnh_fileWrappers,mySys,mnh_html;
 
-CONST
-  STATE_SAVE_INTERVAL=ONE_MINUTE;
-
 TYPE
 
   { TMnhForm }
@@ -185,12 +182,8 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 
   private
-    subTimerCounter:longint;
     underCursor:T_tokenInfo;
-    settings:record
-      ready:boolean;
-      storedAt:double;
-    end;
+    settingsReady:boolean;
     evaluation:record
       required:boolean;
       start:double;
@@ -215,6 +208,7 @@ TYPE
     PROCEDURE doStartEvaluation;
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
+    PROCEDURE _setErrorlevel_(CONST i: byte);
     { private declarations }
   public
     { public declarations }
@@ -267,7 +261,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       case messageType of
         mt_clearConsole: syn.lines.clear;
         mt_printline:
-          for j:=0 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
+          begin
+            if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
+              syn.lines.clear;
+              for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
+            end else for j:=0 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
+          end;
         mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
           MnhForm.inputHighlighter.setMarkedToken(location.line-1,location.column-1);
@@ -433,14 +432,14 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   VAR mr:integer;
   begin
-    if fileExists(SettingsForm.fileHistory[historyIdx]) then begin
+    if fileExists(SettingsForm.historyItem(historyIdx)) then begin
       if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
         mr:=closeDialogForm.showOnLoad;
         if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
         if mr=mrCancel then exit;
       end;
-      ad_setFile(SettingsForm.fileHistory[historyIdx],InputEdit.lines);
-      if SettingsForm.setFileInEditor(SettingsForm.fileHistory[historyIdx]) then processFileHistory;
+      ad_setFile(SettingsForm.historyItem(historyIdx),InputEdit.lines);
+      if SettingsForm.setFileInEditor(SettingsForm.historyItem(historyIdx)) then processFileHistory;
     end else if SettingsForm.polishHistory then processFileHistory;
   end;
 
@@ -473,7 +472,6 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump:boolean
     setUnderCursor(wordUnderCursor);
     if not(doJump) then exit;
     if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
-    writeln('Token Location is: ',ansistring(underCursor.location));
     if (underCursor.tokenText<>wordUnderCursor) or
        (underCursor.location.column<=0) then exit;
     newCaret.x:=underCursor.location.column;
@@ -507,11 +505,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
-    subTimerCounter:=0;
-    with settings do begin
-      ready:=false;
-      storedAt:=now;
-    end;
+    settingsReady:=false;
     with evaluation do begin
       required:=false;
       deferredUntil:=now;
@@ -550,7 +544,6 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
       if mr=mrCancel then CloseAction:=caNone;
     end;
-    SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.lines);
   end;
 
@@ -574,13 +567,15 @@ begin
 end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
+  VAR formPosition:T_formPosition;
   begin
-    if settings.ready then begin
-      SettingsForm.mainForm.top   :=top;
-      SettingsForm.mainForm.left  :=left;
-      SettingsForm.mainForm.width :=width;
-      SettingsForm.mainForm.height:=height;
-      SettingsForm.mainForm.isFullscreen:=(WindowState=wsMaximized);
+    if settingsReady then begin
+      formPosition.top   :=top;
+      formPosition.left  :=left;
+      formPosition.width :=width;
+      formPosition.height:=height;
+      formPosition.isFullscreen:=(WindowState=wsMaximized);
+      SettingsForm.mainFormPosition:=formPosition;
       if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
         then plotSubsystem.state:=pss_plotOnShow
         else doPlot();
@@ -590,7 +585,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
-    if not(settings.ready) then begin
+    if not(settingsReady) then begin
       processSettings;
       InputEdit.SetFocus;
     end;
@@ -652,7 +647,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       miDebug.Checked:=true;
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
-      SettingsForm.instantEvaluation:=false;
+      SettingsForm.wantInstantEvaluation:=false;
       if ad_evaluationRunning then begin
         DebugForm.debugEdit.ClearAll;
         InputEdit.readonly:=true;
@@ -675,7 +670,7 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
       miDebug.Checked:=true;
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
-      SettingsForm.instantEvaluation:=false;
+      SettingsForm.wantInstantEvaluation:=false;
 
       doStartEvaluation;
       stepper.setBreakpoint(mainPackageProvider.fileName,lineIdx);
@@ -685,7 +680,7 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       SettingsForm.fontSize:=SettingsForm.fontSize-1;
       processSettings;
     end;
@@ -693,10 +688,10 @@ PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
-      with SettingsForm.outputBehaviour do doEchoDeclaration:=miDeclarationEcho.Checked;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+      guiAdapters.doEchoDeclaration:=miDeclarationEcho.Checked;
+      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -705,7 +700,7 @@ PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
     miEvalModeDirectOnKeypress.Checked:=false;
-    SettingsForm.instantEvaluation:=false;
+    SettingsForm.wantInstantEvaluation:=false;
   end;
 
 PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
@@ -714,7 +709,7 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
     miDebug.Checked:=false;
     miEvalModeDirect.Checked:=false;
     miEvalModeDirectOnKeypress.Checked:=true;
-    SettingsForm.instantEvaluation:=true;
+    SettingsForm.wantInstantEvaluation:=true;
   end;
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
@@ -746,19 +741,19 @@ PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
-      with SettingsForm.outputBehaviour do doEchoInput:=miExpressionEcho.Checked;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+      guiAdapters.doEchoInput:=miExpressionEcho.Checked;
+      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
 PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
-      with SettingsForm.outputBehaviour do doShowExpressionOut:=miExpressionResult.Checked;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+      guiAdapters.doShowExpressionOut:=miExpressionResult.Checked;
+      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -793,56 +788,32 @@ PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       SettingsForm.fontSize:=SettingsForm.fontSize+1;
       processSettings;
     end;
   end;
 
-PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject);
+PROCEDURE TMnhForm._setErrorlevel_(CONST i:byte);
   begin
-    if settings.ready then begin
-      miMinErrorlevel1.Checked:=true;
-      SettingsForm.outputBehaviour.minErrorLevel:=1;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+    if settingsReady then begin
+      case i of
+        1: miMinErrorlevel1.Checked:=true;
+        2: miMinErrorlevel2.Checked:=true;
+        3: miMinErrorlevel3.Checked:=true;
+        4: miMinErrorlevel4.Checked:=true;
+        5: miMinErrorlevel5.Checked:=true;
+      end;
+      guiAdapters.minErrorLevel:=i;
+      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
-PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject);
-  begin
-    if settings.ready then begin
-      miMinErrorlevel2.Checked:=true;
-      SettingsForm.outputBehaviour.minErrorLevel:=2;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject);
-  begin
-    if settings.ready then begin
-      miMinErrorlevel3.Checked:=true;
-      SettingsForm.outputBehaviour.minErrorLevel:=3;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject);
-  begin
-    if settings.ready then begin
-      miMinErrorlevel4.Checked:=true;
-      SettingsForm.outputBehaviour.minErrorLevel:=4;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
-    end;
-  end;
-
-PROCEDURE TMnhForm.miMinErrorlevel5Click(Sender: TObject);
-  begin
-    if settings.ready then begin
-      miMinErrorlevel5.Checked:=true;
-      SettingsForm.outputBehaviour.minErrorLevel:=5;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
-    end;
-  end;
+PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin _setErrorlevel_(1); end;
+PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject); begin _setErrorlevel_(2); end;
+PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject); begin _setErrorlevel_(3); end;
+PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject); begin _setErrorlevel_(4); end;
+PROCEDURE TMnhForm.miMinErrorlevel5Click(Sender: TObject); begin _setErrorlevel_(5); end;
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
   VAR mr:integer;
@@ -865,7 +836,6 @@ PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
     if SaveDialog.execute then begin
       ad_saveFile(expandFileName(SaveDialog.fileName),InputEdit.lines);
       if SettingsForm.setFileInEditor(expandFileName(SaveDialog.fileName)) then processFileHistory;
-      SettingsForm.saveSettings;
     end;
   end;
 
@@ -875,7 +845,6 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
     else begin
       ad_saveFile(ad_currentFile,InputEdit.lines);
       if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
-      SettingsForm.saveSettings;
     end;
   end;
 
@@ -886,12 +855,12 @@ PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
   begin
-    if settings.ready then begin
+    if settingsReady then begin
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
-      with SettingsForm.outputBehaviour do doShowTimingInfo:=miTimingInfo.Checked;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+      guiAdapters.doShowTimingInfo:=miTimingInfo.Checked;
+      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
     end;
-end;
+  end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
   begin
@@ -1050,36 +1019,29 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //--------------------------------------------------:Halt/Run enabled states
 
     //================================================================:fast ones
-    inc(subTimerCounter);
     //slow ones:================================================================
-    if subTimerCounter and 3=0 then begin
-      if not(isEvaluationRunning) then InputEdit.readonly:=false;
-      flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
-      autosizingDone:=autosizeBlocks(isEvaluationRunning);
+    if not(isEvaluationRunning) then InputEdit.readonly:=false;
+    flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
+    autosizingDone:=autosizeBlocks(isEvaluationRunning);
 
-      if ((plotSubsystem.state=pss_plotAfterCalculation) or
-          (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
-         not(ad_evaluationRunning) and
-         not(plotSubsystem.rendering) and
-         not(now<plotSubsystem.renderNotBefore) then doPlot();
+    if ((plotSubsystem.state=pss_plotAfterCalculation) or
+        (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
+       not(ad_evaluationRunning) and
+       not(plotSubsystem.rendering) and
+       not(now<plotSubsystem.renderNotBefore) then doPlot();
 
-      if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
-      if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
-        doStartEvaluation;
-        ad_evaluate(InputEdit.lines);
-        UpdateTimeTimer.Interval:=MIN_INTERVALL;
-      end;
-
-      if (now>settings.storedAt+STATE_SAVE_INTERVAL) then begin
-        settings.storedAt:=now;
-        SettingsForm.saveSettings;
-      end;
-
-      if not(flushPerformed) and not(autosizingDone) then begin
-        UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
-        if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
-      end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
+    if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
+    if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
+      doStartEvaluation;
+      ad_evaluate(InputEdit.lines);
+      UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
+    SettingsForm.saveSettingsMaybe;
+
+    if not(flushPerformed) and not(autosizingDone) then begin
+      UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
+      if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
+    end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
     //================================================================:slow ones
     //if (now>doNotCheckFileBefore) and ad_needReload then begin
     //  writeln(StdErr,'Opening modal dialog.');
@@ -1095,8 +1057,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.processSettings;
+  VAR formPosition:T_formPosition;
   begin
-    if not(settings.ready) then begin
+    if not(settingsReady) then begin
       InputEdit.BeginUpdate();
       SettingsForm.getFileContents(InputEdit.lines);
       InputEdit.EndUpdate();
@@ -1111,12 +1074,16 @@ PROCEDURE TMnhForm.processSettings;
     OutputEdit.Font         :=InputEdit.Font;
     DebugForm.debugEdit.Font:=InputEdit.Font;
 
-    top   :=SettingsForm.mainForm.top;
-    left  :=SettingsForm.mainForm.left;
-    width :=SettingsForm.mainForm.width;
-    height:=SettingsForm.mainForm.height;
+    formPosition:=SettingsForm.mainFormPosition;
 
-    with SettingsForm.outputBehaviour do begin
+
+    top   :=formPosition.top;
+    left  :=formPosition.left;
+    width :=formPosition.width;
+    height:=formPosition.height;
+    if formPosition.isFullscreen then WindowState:=wsMaximized;
+
+    with SettingsForm.behaviour do begin
       miDeclarationEcho.Checked:=doEchoDeclaration;
       miExpressionEcho.Checked:=doEchoInput;
       miExpressionResult.Checked:=doShowExpressionOut;
@@ -1126,21 +1093,20 @@ PROCEDURE TMnhForm.processSettings;
       miMinErrorlevel3.Checked:=minErrorLevel=3;
       miMinErrorlevel4.Checked:=minErrorLevel=4;
       miMinErrorlevel5.Checked:=minErrorLevel>=5;
-      guiAdapters.outputBehaviour:=SettingsForm.outputBehaviour;
+      guiAdapters.outputBehaviour:=SettingsForm.behaviour;
     end;
-    if not(settings.ready) then begin
-      if SettingsForm.mainForm.isFullscreen then WindowState:=wsMaximized;
+    if not(settingsReady) then begin
       miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
-      miEvalModeDirect.Checked:=not(SettingsForm.instantEvaluation);
-      miEvalModeDirectOnKeypress.Checked:=SettingsForm.instantEvaluation;
+      miEvalModeDirect.Checked:=not(SettingsForm.wantInstantEvaluation);
+      miEvalModeDirectOnKeypress.Checked:=SettingsForm.wantInstantEvaluation;
     end;
     if ad_currentFile<>SettingsForm.getFileInEditor then begin
       if SettingsForm.getFileInEditor=''
       then ad_clearFile
       else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
     end;
-    if not(settings.ready) then processFileHistory;
-    settings.ready:=true;
+    if not(settingsReady) then processFileHistory;
+    settingsReady:=true;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1161,12 +1127,13 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 9 do if SettingsForm.fileHistory[i]='' then begin
+    for i:=0 to 9 do if SettingsForm.historyItem(i)='' then begin
       historyMenuItem(i).Enabled:=false;
-      historyMenuItem(i).Caption:=intToStr(i)+': <no file>';
+      historyMenuItem(i).Visible:=false;
     end else begin
       historyMenuItem(i).Enabled:=true;
-      historyMenuItem(i).Caption:=intToStr(i)+': '+SettingsForm.fileHistory[i];
+      historyMenuItem(i).Visible:=true;
+      historyMenuItem(i).Caption:=intToStr(i)+': '+SettingsForm.historyItem(i);
     end;
   end;
 

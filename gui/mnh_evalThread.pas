@@ -261,15 +261,10 @@ PROCEDURE ad_doReload(CONST L: TStrings);
   VAR lines:T_arrayOfString;
       i:longint;
   begin
-    writeln(stdErr,'  reload: clearing lines');
     L.clear;
-    writeln(stdErr,'  reload: refresh code provider');
     if mainPackageProvider.fileHasChanged then mainPackageProvider.load;
-    writeln(stdErr,'  reload: get lines');
     lines:=mainPackageProvider.getLines;
-    writeln(stdErr,'  reload: copy lines');
     for i:=0 to length(lines)-1 do L.append(lines[i]);
-    writeln(stdErr,'  reload: done');
   end;
 
 PROCEDURE initIntrinsicRuleList;
