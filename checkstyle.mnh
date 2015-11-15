@@ -1,4 +1,21 @@
-language:='Pascal';
+private language:='Pascal';
+persistent fileCheckedAtTime:=[];
+
+private synchronized fileMustBeChecked(filename:string)->begin
+  local checkTime:=fileCheckedAtTime%filename;
+  checkTime==[] OR //One second tolerance:
+  checkTime+1/(24*60*60)<fileInfo(filename)%'time';
+end;
+
+private synchronized fileWasChecked(filename:string)->
+  begin
+    local updatedEntry:=[filename,fileInfo(filename)%'time'];
+    fileCheckedAtTime%filename==[]
+    ? fileCheckedAtTime:=fileCheckedAtTime.add([filename,fileInfo(filename)%'time'])
+    : fileCheckedAtTime:=each(entry,fileCheckedAtTime,entry%0=filename ? updatedEntry : entry);
+  end;
+
+private
 myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT','INTERFACE',
          'IMPLEMENTATION','INITIALIZATION','FINALIZATION','if','then','else','case','begin','end','repeat','until',
          'while','do','to','in','ansistring','of','try','except','finally','true','false','value','word','longint',
@@ -66,7 +83,7 @@ end;
 allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
 private pattern:='checkstyle: %-'&max(length(allFiles))&'s (%4d lines) ';
 
-fix(filename,readOnly)->begin
+fix(filename,readOnly)->readOnly OR fileMustBeChecked(filename) ? begin
   local oldLines:=fileLines(filename);
   local newLines:=fixFileLines(oldLines);
   local diffOut:=format(pattern,filename,size(oldLines));
@@ -75,8 +92,9 @@ fix(filename,readOnly)->begin
     diffOut|=each(i,[0..size(newLines)-1],oldLines%i<>newLines%i ? '   <'&(oldLines%i)&">\n   >"&(newLines%i)&'<' : void);
     readOnly ? void : writeFileLines(filename,newLines);
   end;
+  readOnly ? void : fileWasChecked(filename);
   printf('%s',diffOut);
-end;
+end : void;
 
 //*Check all files, writing out potential fixes
 main("check")->begin
