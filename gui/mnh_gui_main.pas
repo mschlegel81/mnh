@@ -211,6 +211,8 @@ TYPE
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
+    FUNCTION _doSaveAs_:boolean;
+    FUNCTION _doSave_:boolean;
     { private declarations }
   public
     { public declarations }
@@ -220,7 +222,7 @@ TYPE
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
     CONSTRUCTOR create;
-    DESTRUCTOR destroy;
+    DESTRUCTOR destroy; virtual;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
     PROCEDURE flushClear;
   end;
@@ -435,9 +437,9 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   VAR mr:integer;
   begin
     if fileExists(SettingsForm.historyItem(historyIdx)) then begin
-      if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
+      if (ad_needSave(InputEdit.lines)) then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
+        if mr=mrOk then if not(_doSave_) then exit;
         if mr=mrCancel then exit;
       end;
       ad_setFile(SettingsForm.historyItem(historyIdx),InputEdit.lines);
@@ -466,7 +468,8 @@ PROCEDURE TMnhForm.doStartEvaluation;
     end else stepper.setFreeRun;
   end;
 
-PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump:boolean);
+PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
+  CONST doJump: boolean);
   VAR wordUnderCursor:string;
       newCaret:TPoint;
   begin
@@ -481,7 +484,8 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump:boolean
     InputEdit.CaretXY:=newCaret;
   end;
 
-PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump:boolean);
+PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
+  CONST doJump: boolean);
   VAR loc:T_tokenLocation;
       newCaret:TPoint;
   begin
@@ -504,6 +508,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump:boolea
 
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
+  CONST MSG='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   VAR i:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
@@ -523,16 +528,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     InputEdit.highlighter:=inputHighlighter;
     OutputEdit.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
-    StatusBar.SimpleText:=
-      'compiled on: '+{$I %DATE%}+
-      ' at: '+{$I %TIME%}+
-      ' with FPC'+{$I %FPCVERSION%}+
-      ' for '+{$I %FPCTARGET%};
+    endOfEvaluationText.value:=MSG;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
-    OutputEdit.lines.append('       compiled on: '+{$I %DATE%});
-    OutputEdit.lines.append('       at: '+{$I %TIME%});
-    OutputEdit.lines.append('       with FPC'+{$I %FPCVERSION%});
-    OutputEdit.lines.append('       for '+{$I %FPCTARGET%});
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
     {$endif}
@@ -543,7 +540,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
       mr:=closeDialogForm.showOnQuit;
-      if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
+      if mr=mrOk then if not(_doSave_) then CloseAction:=caNone;
       if mr=mrCancel then CloseAction:=caNone;
     end;
     if CloseAction<>caNone then SettingsForm.setFileContents(InputEdit.lines);
@@ -611,7 +608,8 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if ((key=13) and (ssCtrl in Shift)) then inputEditReposition(InputEdit.CaretXY,true);
   end;
 
-PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -619,7 +617,8 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shi
     inputEditReposition(InputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
   end;
 
-PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
+  VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   VAR i:longint;
       commented:boolean=true;
   begin
@@ -646,9 +645,9 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   VAR mr:integer;
   begin
-    if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
+    if (ad_needSave(InputEdit.lines)) then begin
       mr:=closeDialogForm.showOnLoad;
-      if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
+      if mr=mrOk then if not(_doSave_) then exit;
       if mr=mrCancel then exit;
     end;
     ad_clearFile;
@@ -811,7 +810,7 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm._setErrorlevel_(CONST i:byte);
+PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
   begin
     if settingsReady then begin
       case i of
@@ -823,6 +822,25 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i:byte);
       end;
       guiAdapters.minErrorLevel:=i;
       SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+    end;
+  end;
+
+FUNCTION TMnhForm._doSaveAs_: boolean;
+  begin
+    if SaveDialog.execute then begin
+      ad_saveFile(expandFileName(SaveDialog.fileName),InputEdit.lines);
+      if SettingsForm.setFileInEditor(expandFileName(SaveDialog.fileName)) then processFileHistory;
+      result:=true;
+    end else result:=false;
+  end;
+
+FUNCTION TMnhForm._doSave_: boolean;
+  begin
+    if ad_currentFile='' then result:=_doSaveAs_
+    else begin
+      ad_saveFile(ad_currentFile,InputEdit.lines);
+      if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
+      result:=true;
     end;
   end;
 
@@ -838,9 +856,9 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
     then begin
-      if (ad_currentFile<>'') and (ad_needSave(InputEdit.lines)) then begin
+      if (ad_needSave(InputEdit.lines)) then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then MnhForm.InputEdit.lines.saveToFile(ad_currentFile);
+        if mr=mrOk then if not(_doSave_) then exit;
         if mr=mrCancel then exit;
       end;
       ad_setFile(expandFileName(OpenDialog.fileName),InputEdit.lines);
@@ -850,19 +868,12 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
-    if SaveDialog.execute then begin
-      ad_saveFile(expandFileName(SaveDialog.fileName),InputEdit.lines);
-      if SettingsForm.setFileInEditor(expandFileName(SaveDialog.fileName)) then processFileHistory;
-    end;
+    _doSaveAs_;
   end;
 
 PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
-    if ad_currentFile='' then miSaveAsClick(Sender)
-    else begin
-      ad_saveFile(ad_currentFile,InputEdit.lines);
-      if SettingsForm.setFileInEditor(ad_currentFile) then processFileHistory;
-    end;
+    _doSave_;
   end;
 
 PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
@@ -893,7 +904,8 @@ PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;

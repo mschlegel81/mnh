@@ -102,7 +102,7 @@ TYPE
       v :ENTRY_TYPE;
       saveCS:TRTLCriticalSection;
       FUNCTION getValue:ENTRY_TYPE;
-      PROCEDURE setValue(newValue:ENTRY_TYPE);
+      PROCEDURE setValue(CONST newValue:ENTRY_TYPE);
     public
       CONSTRUCTOR create(CONST intialValue:ENTRY_TYPE);
       DESTRUCTOR destroy;
@@ -307,7 +307,7 @@ FUNCTION G_safeVar.getValue: ENTRY_TYPE;
     system.leaveCriticalSection(saveCS);
   end;
 
-PROCEDURE G_safeVar.setValue(newValue: ENTRY_TYPE);
+PROCEDURE G_safeVar.setValue(CONST newValue: ENTRY_TYPE);
   begin
     system.enterCriticalSection(saveCS);
     v:=newValue;

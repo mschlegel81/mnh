@@ -65,18 +65,16 @@ FUNCTION main(p:pointer):ptrint;
       startOfEvaluation:=now;
     end;
 
-  PROCEDURE postEval(CONST silent:boolean);
+  PROCEDURE postEval;
     begin
       getMainPackage^.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
-      if not(silent) then begin
-        if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
-        then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
-        else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
-      end;
-      if not(mainEvaluationContext.adapters^.hasMessageOfType[mt_endOfEvaluation])
-      then mainEvaluationContext.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+      if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
+      then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
+      else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
+      while not(mainEvaluationContext.adapters^.hasMessageOfType[mt_endOfEvaluation])
+      do mainEvaluationContext.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
       sleepTime:=0;
     end;
 
@@ -89,11 +87,11 @@ FUNCTION main(p:pointer):ptrint;
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         preEval;
         reloadMainPackage(lu_forDirectExecution,mainEvaluationContext);
-        postEval(false);
+        postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
         callMainInMain(parametersForMainCall,mainEvaluationContext);
-        postEval(false);
+        postEval;
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);
@@ -252,9 +250,13 @@ FUNCTION ad_needReload: boolean;
   end;
 
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
+  VAR i:longint;
   begin
     mainPackageProvider.setLines(L);
-    result:=mainPackageProvider.fileIsOutOfSync;
+    if mainPackageProvider.getPath='' then begin
+      result:=false;
+      for i:=0 to L.count-1 do result:=result or (trim(L[i])<>'');
+    end else result:=mainPackageProvider.fileIsOutOfSync;
   end;
 
 PROCEDURE ad_doReload(CONST L: TStrings);
