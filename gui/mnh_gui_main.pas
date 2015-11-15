@@ -109,10 +109,8 @@ TYPE
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
-    PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word;
-      Shift: TShiftState);
-    PROCEDURE InputEditMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: integer);
+    PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
@@ -139,16 +137,16 @@ TYPE
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miHelpExternallyClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
-    procedure miMinErrorlevel1Click(Sender: TObject);
-    procedure miMinErrorlevel2Click(Sender: TObject);
-    procedure miMinErrorlevel3Click(Sender: TObject);
-    procedure miMinErrorlevel4Click(Sender: TObject);
-    procedure miMinErrorlevel5Click(Sender: TObject);
+    PROCEDURE miMinErrorlevel1Click(Sender: TObject);
+    PROCEDURE miMinErrorlevel2Click(Sender: TObject);
+    PROCEDURE miMinErrorlevel3Click(Sender: TObject);
+    PROCEDURE miMinErrorlevel4Click(Sender: TObject);
+    PROCEDURE miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miStartAnotherInstanceClick(Sender: TObject);
-    procedure miTimingInfoClick(Sender: TObject);
+    PROCEDURE miTimingInfoClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE miAntialiasingOffClick(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
@@ -475,6 +473,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump:boolean
     setUnderCursor(wordUnderCursor);
     if not(doJump) then exit;
     if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
+    writeln('Token Location is: ',ansistring(underCursor.location));
     if (underCursor.tokenText<>wordUnderCursor) or
        (underCursor.location.column<=0) then exit;
     newCaret.x:=underCursor.location.column;
@@ -612,7 +611,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key>=37) and (key<=40) or ((key=13) and (ssCtrl in Shift)) then inputEditReposition(InputEdit.CaretXY,(key=13) and (ssCtrl in Shift));
+    if ((key=13) and (ssCtrl in Shift)) then inputEditReposition(InputEdit.CaretXY,true);
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -800,7 +799,7 @@ PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miMinErrorlevel1Click(Sender: TObject);
+PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject);
   begin
     if settings.ready then begin
       miMinErrorlevel1.Checked:=true;
@@ -809,7 +808,7 @@ procedure TMnhForm.miMinErrorlevel1Click(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miMinErrorlevel2Click(Sender: TObject);
+PROCEDURE TMnhForm.miMinErrorlevel2Click(Sender: TObject);
   begin
     if settings.ready then begin
       miMinErrorlevel2.Checked:=true;
@@ -818,7 +817,7 @@ procedure TMnhForm.miMinErrorlevel2Click(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miMinErrorlevel3Click(Sender: TObject);
+PROCEDURE TMnhForm.miMinErrorlevel3Click(Sender: TObject);
   begin
     if settings.ready then begin
       miMinErrorlevel3.Checked:=true;
@@ -827,7 +826,7 @@ procedure TMnhForm.miMinErrorlevel3Click(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miMinErrorlevel4Click(Sender: TObject);
+PROCEDURE TMnhForm.miMinErrorlevel4Click(Sender: TObject);
   begin
     if settings.ready then begin
       miMinErrorlevel4.Checked:=true;
@@ -836,7 +835,7 @@ procedure TMnhForm.miMinErrorlevel4Click(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.miMinErrorlevel5Click(Sender: TObject);
+PROCEDURE TMnhForm.miMinErrorlevel5Click(Sender: TObject);
   begin
     if settings.ready then begin
       miMinErrorlevel5.Checked:=true;
@@ -885,7 +884,7 @@ PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
     runCommandAsyncOrPipeless(paramStr(0),C_EMPTY_STRING_ARRAY,true);
   end;
 
-procedure TMnhForm.miTimingInfoClick(Sender: TObject);
+PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
   begin
     if settings.ready then begin
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
@@ -903,7 +902,7 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
 PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key>=37) and (key<=40) or ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,(key=13) and (ssCtrl in Shift));
+    if ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,true);
     if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=InputEdit;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
@@ -1022,7 +1021,7 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
-  CONST MIN_INTERVALL=20;
+  CONST MIN_INTERVALL=1;
         MAX_INTERVALL=250;
   VAR aid:ansistring;
       isEvaluationRunning:boolean;
@@ -1053,7 +1052,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //================================================================:fast ones
     inc(subTimerCounter);
     //slow ones:================================================================
-    if subTimerCounter and 15=0 then begin
+    if subTimerCounter and 3=0 then begin
       if not(isEvaluationRunning) then InputEdit.readonly:=false;
       flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
       autosizingDone:=autosizeBlocks(isEvaluationRunning);

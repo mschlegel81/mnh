@@ -471,6 +471,10 @@ object MnhForm: TMnhForm
             item
               Command = ecColSelEditorBottom
               ShortCut = 57379
+            end          
+            item
+              Command = ecBlockIndent
+              ShortCut = 24649
             end>
           MouseActions = <>
           MouseTextActions = <>

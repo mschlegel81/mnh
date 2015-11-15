@@ -202,8 +202,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evalua
 
 FUNCTION T_rule.getLocationOfDeclaration: T_tokenLocation;
   begin
-    if length(subrules)>0 then result:=subrules[0]^.declaredAt
-                          else result:=C_nilTokenLocation;
+    result:=declarationStart;
   end;
 
 FUNCTION T_rule.getSubRuleHeaders:ansistring;
@@ -278,7 +277,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.fileName;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
     if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then
-      result:=result+'declared '+ansistring(declarationStart);
+      result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
   end;
 
 FUNCTION T_rule.getDocHtml:ansistring;

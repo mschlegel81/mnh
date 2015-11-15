@@ -330,7 +330,7 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer)
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
-    if isMarked then result.FrameColor:=$00888888
+    if isMarked then result.FrameColor:=$000000FF
                 else result.FrameColor:=clNone;
   end;
 

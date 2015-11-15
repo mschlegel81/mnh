@@ -612,8 +612,7 @@ FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         expressionString:ansistring;
 
     PROCEDURE splitPart(VAR part:ansistring; CONST index:longint);
-      VAR i:longint;
-          expPart:ansistring;
+      VAR expPart:ansistring;
       begin
         part:=trim(part);
         if pos('{',part)<=0 then begin
