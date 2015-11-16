@@ -327,9 +327,8 @@ PROCEDURE TSettingsForm.getFileContents(CONST data: TStrings);
   end;
 
 FUNCTION TSettingsForm.setFileInEditor(fileName: ansistring): boolean;
-  VAR
-    i: longint;
-    tmp: ansistring;
+  VAR i: longint;
+      tmp: ansistring;
   begin
     fileName:=expandFileName(fileName);
     if fileInEditor<>'' then begin
@@ -377,7 +376,7 @@ FUNCTION TSettingsForm.polishHistory: boolean;
       fileHistory[length(fileHistory)-1] := '';
       result := true;
     end;
-    changedSinceStore:=true;
+    changedSinceStore:=changedSinceStore or result;
   end;
 
 FUNCTION TSettingsForm.historyItem(CONST index: longint): ansistring;

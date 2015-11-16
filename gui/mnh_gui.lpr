@@ -24,7 +24,7 @@ begin
   {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_HIDE); {$endif}
 
   mnh_gui_main.lateInitialization;
-  Application.Title:='MNH5 - GUI';
+  Application.Title:='MNH5';
   RequireDerivedFormResource := True;
   Application.Initialize;
 

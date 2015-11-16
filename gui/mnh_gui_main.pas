@@ -540,9 +540,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
     {$endif}
-    if (locationToOpenOnFormStartup.fileName<>'') and fileExists(locationToOpenOnFormStartup.fileName) then begin
-      ad_setFile(expandFileName(locationToOpenOnFormStartup.fileName),InputEdit.lines);
-    end;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -598,7 +595,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     if not(settingsReady) then begin
       processSettings;
       InputEdit.SetFocus;
-      if (locationToOpenOnFormStartup.fileName<>'') and fileExists(locationToOpenOnFormStartup.fileName) then begin
+      if (locationToOpenOnFormStartup.fileName<>'') and
+         (locationToOpenOnFormStartup.fileName<>C_nilTokenLocation.fileName) and
+         fileExists(locationToOpenOnFormStartup.fileName) then begin
         SettingsForm.setFileInEditor(locationToOpenOnFormStartup.fileName);
         ad_setFile(expandFileName(locationToOpenOnFormStartup.fileName),InputEdit.lines);
         SettingsForm.setFileContents(InputEdit.lines);
@@ -1113,6 +1112,38 @@ PROCEDURE TMnhForm.processSettings;
       InputEdit.BeginUpdate();
       SettingsForm.getFileContents(InputEdit.lines);
       InputEdit.EndUpdate();
+
+      formPosition:=SettingsForm.mainFormPosition;
+      top   :=formPosition.top;
+      left  :=formPosition.left;
+      width :=formPosition.width;
+      height:=formPosition.height;
+      if formPosition.isFullscreen then WindowState:=wsMaximized;
+
+      with SettingsForm.behaviour do begin
+        miDeclarationEcho.Checked:=doEchoDeclaration;
+        miExpressionEcho.Checked:=doEchoInput;
+        miExpressionResult.Checked:=doShowExpressionOut;
+        miTimingInfo.Checked:=doShowTimingInfo;
+        miMinErrorlevel1.Checked:=minErrorLevel<=1;
+        miMinErrorlevel2.Checked:=minErrorLevel=2;
+        miMinErrorlevel3.Checked:=minErrorLevel=3;
+        miMinErrorlevel4.Checked:=minErrorLevel=4;
+        miMinErrorlevel5.Checked:=minErrorLevel>=5;
+        guiAdapters.outputBehaviour:=SettingsForm.behaviour;
+      end;
+
+      miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
+      miEvalModeDirect.Checked:=not(SettingsForm.wantInstantEvaluation);
+      miEvalModeDirectOnKeypress.Checked:=SettingsForm.wantInstantEvaluation;
+
+      if ad_currentFile<>SettingsForm.getFileInEditor then begin
+        if SettingsForm.getFileInEditor=''
+        then ad_clearFile
+        else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
+      end;
+      processFileHistory;
+      settingsReady:=true;
     end;
 
     InputEdit.Font.name:=SettingsForm.getEditorFontName;
@@ -1123,40 +1154,6 @@ PROCEDURE TMnhForm.processSettings;
 
     OutputEdit.Font         :=InputEdit.Font;
     DebugForm.debugEdit.Font:=InputEdit.Font;
-
-    formPosition:=SettingsForm.mainFormPosition;
-
-
-    top   :=formPosition.top;
-    left  :=formPosition.left;
-    width :=formPosition.width;
-    height:=formPosition.height;
-    if formPosition.isFullscreen then WindowState:=wsMaximized;
-
-    with SettingsForm.behaviour do begin
-      miDeclarationEcho.Checked:=doEchoDeclaration;
-      miExpressionEcho.Checked:=doEchoInput;
-      miExpressionResult.Checked:=doShowExpressionOut;
-      miTimingInfo.Checked:=doShowTimingInfo;
-      miMinErrorlevel1.Checked:=minErrorLevel<=1;
-      miMinErrorlevel2.Checked:=minErrorLevel=2;
-      miMinErrorlevel3.Checked:=minErrorLevel=3;
-      miMinErrorlevel4.Checked:=minErrorLevel=4;
-      miMinErrorlevel5.Checked:=minErrorLevel>=5;
-      guiAdapters.outputBehaviour:=SettingsForm.behaviour;
-    end;
-    if not(settingsReady) then begin
-      miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
-      miEvalModeDirect.Checked:=not(SettingsForm.wantInstantEvaluation);
-      miEvalModeDirectOnKeypress.Checked:=SettingsForm.wantInstantEvaluation;
-    end;
-    //if ad_currentFile<>SettingsForm.getFileInEditor then begin
-    //  if SettingsForm.getFileInEditor=''
-    //  then ad_clearFile
-    //  else ad_setFile(SettingsForm.getFileInEditor,InputEdit.lines);
-    //end;
-    if not(settingsReady) then processFileHistory;
-    settingsReady:=true;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
