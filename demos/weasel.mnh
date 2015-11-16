@@ -1,31 +1,32 @@
-target:="METHINKS IT IS LIKE A WEASEL";
-start->mutate(target,1);
-fitness(s:string)->each(delta,
-                        abs(ord(target.chars)-
-                            ord(     s.chars)),+);
-fitness(S:stringList)->each(s,S,fitness(s));
-CHARSET:=['A'..'Z',' '];
-randomCharacter->CHARSET%intRandom(size(CHARSET));
+private target:="METHINKS IT IS LIKE A WEASEL";
+private fitness(s:string)->each(delta,
+                            abs(ord(target.chars)-
+                                ord(     s.chars)),+);
+private CHARSET:=['A'..'Z',' '];
+private randomCharacter->CHARSET%intRandom(size(CHARSET));
 
-mutate(s:string, mutateProb>0)->each(c,s.chars,&,
-                                     random<mutateProb ? randomCharacter : c);
+private multiplyAndSelect(parent:string,offspringCount, mutateProb)->
+   each(i,[0..offspringCount],
+        aggregator({$x%1<=$y%1 ? $x : $y}), //Selection: the fittest survives this aggregator ;-)
+        begin
+          local individual:=i=0 ? parent : each(c,parent.chars,random<mutateProb ? randomCharacter : c).join;
+          [individual,fitness(individual)];
+        end)%0;
 
-procreate(s:string, offspringCount, mutateProb)->each(i,[0..offspringCount],i=0 ? s : mutate(s,mutateProb));
-
-theFittest(S:stringList)->theFittest(S,fitness(S));
-theFittest(S:stringList,F:intList)->[S%argMin(F),min(F)];
-
-evolve(parent:string,mutRate,offspringCount,generations  )->evolve(theFittest(procreate(parent,offspringCount,mutRate)),
-                                                                   max(mutRate*0.99,0.05),
-                                                                   offspringCount,
-                                                                   generations+1);
-evolve(parent,mutRate,offspringCount,generations<100000)->((generations mod 20)=0 or parent%1 = 0  ? print(generations,' ',string(parent)) : void) and  true ?
-                                                            (parent%1 > 0 ?
-                                                            evolve(theFittest(procreate(parent%0,offspringCount,mutRate)),
-                                                                   max(mutRate*0.99,0.05),
-                                                                   offspringCount,
-                                                                   generations+1) : false) : false;
-evolve(parent,mutRate,offspringCount,generations  )->print(string(parent));
+private evolve(mutationFalloff,offspringCount,generationLimit)->begin
+  local parent:=join(each(i,[0..length(target)-1],randomCharacter));
+  local generationCount:=0;
+  local mutationRate:=1;
+  while(parent<>target AND generationCount<generationLimit,
+  begin
+    parent:=multiplyAndSelect(parent,offspringCount,mutationRate);
+    mutationRate:=max(0.05,mutationRate*mutationFalloff);
+    (generationCount+=1) mod 20 = 0
+    ? printf('%4d %s (%3d)',generationCount,parent,fitness(parent))
+    : void;
+  end);
+  printf('%4d %s',generationCount,parent);
+end;
 
 //*See <a href="http://rosettacode.org/wiki/Evolutionary_algorithm">http://rosettacode.org/wiki/Evolutionary_algorithm</a>
-main->evolve(start,1,20,0);
+main->evolve(0.96,20,10000);

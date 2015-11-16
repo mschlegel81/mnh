@@ -21,12 +21,12 @@ private tryPack(filename)->begin
   'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
 
   (length(shorten.formatResult(newContents))<length(oldContents)
-   ? newContents
+   ? shorten.formatResult(newContents)
    : oldContents)&');';
 end;
 
 private ensureInstall->fileExists('install.mnh') ? void : begin
-  writeFileLines('install.mnh','main->begin'|each(file,
+  writeFileLines('install.mnh','main->begin'|pEach(file,
     'doTests.bat'|
     'ensureMnhFileAssociations.mnh'|
     'ensureNotepad++Highlighting.mnh'|
@@ -108,9 +108,9 @@ private compress(suffix)->
                                    : regTest.main('mnh.exe')                AND regTest.main('mnh_light.exe'))
   ? begin
       ensureInstall;
-      writeFileLines('distro.list',['install.mnh','mnh.exe','mnh_light.exe']);
-      execPipeless("c:/Program Files/7-Zip/7z.exe",['a','-mx=9',format('versions/mnh5_%yyyymmdd%_%X%.7z',systime,suffix),'@distro.list']);
-      execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",['a','-mx=9',format('versions/mnh5_%yyyymmdd%_%X%.7z',systime,suffix),'@distro.list']);
+      local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix),'install.mnh','mnh.exe','mnh_light.exe'];
+      execPipeless("c:/Program Files/7-Zip/7z.exe",zipParams);
+      execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",zipParams);
       deleteFile('distro.list');
     end
   : ask("Regression test failed! Distro will not be created!\nPress Enter.");
@@ -124,9 +124,12 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
 main('distro')->
   each(i,[0..3],AND,build(i)) ? begin
     compress('64bit');
-    each(pair,movePairs,moveFile@pair);
-    compress('32bit');
-    each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+    each(pair,movePairs,AND,moveFile@pair)
+    ? begin
+        compress('32bit');
+        each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+      end
+    : print('Error moving files! 32bit distro has not been created!');
   end : void;
 
 //*Build - ignoring potentially existing executables

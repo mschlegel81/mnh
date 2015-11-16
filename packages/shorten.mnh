@@ -47,8 +47,11 @@ private shorten(s:string,subLength)->begin
   local proceed:=true;
   local result:=fallbackResult(s);
   local prevResult:=result;
-  each(run,[0..9],begin
-    each(alphabetChar,(chars%[33..91,93..255,0..8,11..25,27..32,9,10,92]).minus(workString.chars).minus(chars%[0,26]),
+  each(run,[0..19],begin
+    run=10 ? proceed:=true : void;
+    each(alphabetChar,(run<10
+                       ? chars%[33..91,93..126]
+                       : chars%[33..91,93..126,128..255,0..32,92,127]).minus(workString.chars),
     proceed
     ? begin
         local sub:=bestSubString(workString,subLength);

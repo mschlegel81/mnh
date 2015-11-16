@@ -1,8 +1,9 @@
+private POWERS_OF_TEN:=10^[0..6];
 memoized
 private digitSquareFinal(1)->1;
 private digitSquareFinal(89)->89;
-private digitSquareFinal(x)->digitSquareFinal(each(d,sqr((x div 10^[0..6]) mod 10),+));
+private digitSquareFinal(x)->digitSquareFinal(each(d,sqr((x div POWERS_OF_TEN) mod 10),+));
 
-private count89->trueCount(pEach(i,[1..100000],digitSquareFinal(i)=89));
+private count89->trueCount(each(i,[1..100000],digitSquareFinal(i))=89);
 //*See <a href="http://rosettacode.org/wiki/Iterated_digits_squaring">Iterated_digits_squaring</a>
 main->print(count89);
