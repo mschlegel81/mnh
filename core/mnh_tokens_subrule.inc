@@ -359,7 +359,6 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         result:=context.newToken(original.location,'',tt_literal,L);
         L^.rereference;
       end else begin
-        if (original.tokType in [tt_identifier,tt_identifier_pon]) and (original.data<>nil) then P_package(original.data)^.resolveRuleId(original,nil);
         result:=context.newToken(@original);
       end;
     end;
