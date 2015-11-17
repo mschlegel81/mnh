@@ -34,6 +34,12 @@ main('retest')->begin
   print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? void : pt)),' passed tests remain.');
 end;
 
+//*Remove passed tests related to versions with equal (!) code hashes and containing one of the given test name parts
+main('retest',...)->begin
+  local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
+  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash AND trueCount(pos(...,pt%1)>=0)>0 ? void : pt)),' passed tests remain.');
+end;
+
 //*Shows statistics on passed tests
 main('compare')->main('compare','');
 
@@ -50,11 +56,12 @@ end;
 
 private average(L:numericList)->each(x,L,+)/size(L);
 //*Shows statistics on passed tests containing infix
-main('compare',infix:string)->
+main('compare',infix,...)->
 begin
   local filteredPassedTests:=(infix='')
                              ? passedTests
-                             : passedTests%(pos(infix,passedTests%%1)>=0);
+                             : each(test,passedTests,trueCount(pos(infix|...,test%1)>=0)>0 ? test : void);
+
   size(filteredPassedTests)<=0 ? print('No tests ',infix='' ? '' : 'matching "'&infix&'" ','have been passed.') : begin
     print('Calculating statistics over ',size(filteredPassedTests)," passed tests.\n");
   
