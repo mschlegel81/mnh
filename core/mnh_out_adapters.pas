@@ -91,7 +91,7 @@ TYPE
       PROCEDURE setOutputBehaviour  (CONST value: T_outputBehaviour);
     public
       hasMessageOfType:array[T_messageType] of boolean;
-
+      currentlyDebugging:boolean;
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROPERTY doEchoInput        : boolean  read getEchoInput         write setEchoInput        ;
@@ -103,6 +103,7 @@ TYPE
 
       PROCEDURE clearErrors;
       PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+      PROCEDURE raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -329,8 +330,7 @@ PROCEDURE T_adapters.clearErrors;
     stackTraceCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
-  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -343,8 +343,15 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
-  CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+  VAR i:longint;
+  begin
+    hasMessageOfType[mt_debug_step]:=true;
+    currentlyDebugging:=true;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_debug_step,errorMessage,errorLocation);
+  end;
+
+PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el3_evalError] then

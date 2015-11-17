@@ -22,7 +22,7 @@
     public
       CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
-      FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
+      FUNCTION doPutCache(CONST param:P_listLiteral; VAR context:T_evaluationContext):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
@@ -77,9 +77,12 @@ DESTRUCTOR T_rule.destroy;
     id:='';
   end;
 
-FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
+FUNCTION T_rule.doPutCache(CONST param:P_listLiteral; VAR context:T_evaluationContext):P_literal;
   begin
     enterCriticalSection(rule_cs);
+    {$ifdef fullVersion}
+    if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache put for memoized rule',declarationStart);
+    {$endif}
     cache^.put(P_listLiteral(param^.value(0)),
                param^.value(1));
     leaveCriticalSection(rule_cs);
@@ -114,6 +117,9 @@ exit}
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
         if system.TryEnterCriticalsection(rule_cs)=0 then begin
+          {$ifdef fullVersion}
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//entering critical section for memoized rule failed - memoization disabled',declarationStart);
+          {$endif}
           result:=false;
           for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
           if result then begin
@@ -126,16 +132,25 @@ exit}
 
         lit:=cache^.get(useParam);
         if lit<>nil then begin
+          {$ifdef fullVersion}
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache get for memoized rule succeeded',declarationStart);
+          {$endif}
           lit^.rereference;
           firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,lit);
           lastRep:=firstRep;
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context) then begin
+          {$ifdef fullVersion}
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache get for memoized rule failed',declarationStart);
+          {$endif}
           if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
             cache^.put(useParam,lit);
+            {$ifdef fullVersion}
+            if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache put for memoized rule',declarationStart);
+            {$endif}
           end;
           lastRep:=firstRep^.last;
           if not(context.adapters^.noErrors) then begin

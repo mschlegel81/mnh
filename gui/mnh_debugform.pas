@@ -91,7 +91,6 @@ PROCEDURE TDebugForm.miStepClick(Sender: TObject);
 PROCEDURE TDebugForm.rollingAppend(CONST line: ansistring);
   VAR i:longint;
   begin
-    writeln(line);
     if debugEdit.lines.count<ROLLING_LINE_COUNT
     then debugEdit.lines.append(line)
     else begin

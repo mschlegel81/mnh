@@ -1144,7 +1144,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           exit;
         end;
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
-        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
+        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral,context);
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
@@ -1415,18 +1415,28 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     end;
 
   FUNCTION stateToString:ansistring;
-    VAR i:longint;
+    VAR i,i0:longint;
         idLike:boolean=false;
         p:P_token;
     begin
-      result:='';
-      for i:=0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
+      if length(stack)>16 then begin
+        result:='... ';
+        i0:=length(stack)-16;
+      end else begin
+        result:='';
+        i0:=0;
+      end;
+      for i:=i0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
+
       result:=result+' || ';
+      i:=0;
       p:=first;
-      while p<>nil do begin
+      while (p<>nil) and (i<16) do begin
         result:=result+p^.toString(idLike,idLike);
         p:=p^.next;
+        inc(i);
       end;
+      if (p<>nil) then result:=result+' ...';
     end;
 
 {$MACRO ON}
@@ -1463,7 +1473,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then context.adapters^.raiseCustomMessage(mt_debug_step,stateToString,first^.location); {$endif}
+      {$ifdef fullVersion} if stepper.stepping(first^.location) then context.adapters^.raiseDebugMessage(stateToString,first^.location) else context.adapters^.currentlyDebugging:=false; {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin

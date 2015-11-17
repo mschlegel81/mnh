@@ -249,7 +249,6 @@ VAR guiOutAdapter: T_guiOutAdapter;
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
     inherited create;
-    outputBehaviour.doShowTimingInfo:=false;
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
