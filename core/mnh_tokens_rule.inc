@@ -81,7 +81,6 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
     enterCriticalSection(rule_cs);
     cache^.put(P_listLiteral(param^.value(0)),
-               cache^.getBinIdx(P_listLiteral(param^.value(0))),
                param^.value(1));
     leaveCriticalSection(rule_cs);
     result:=param^.value(1);
@@ -96,7 +95,6 @@ exit}
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
-      binIdx:longint;
 
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
@@ -116,31 +114,29 @@ exit}
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
-        binIdx:=cache^.getBinIdx(useParam);
         if (callDepth>=STACK_DEPTH_LIMIT) or (system.TryEnterCriticalsection(rule_cs)=0) then begin
           result:=false;
           for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
           if result then begin
             used:=true;
             wrapResultInPutCacheRule;
-            if param=nil then disposeLiteral(useParam);
           end;
+          if param=nil then disposeLiteral(useParam);
           exit(result);
         end;
 
-        lit:=cache^.get(useParam,binIdx);
+        lit:=cache^.get(useParam);
         if lit<>nil then begin
           lit^.rereference;
           firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,lit);
           lastRep:=firstRep;
-          used:=true;
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
-            cache^.put(useParam,binIdx,lit);
+            cache^.put(useParam,lit);
           end;
           lastRep:=firstRep^.last;
           if not(context.adapters^.noErrors) then begin

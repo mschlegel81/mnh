@@ -7,6 +7,7 @@ FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
 PROCEDURE clearConsole;
 PROCEDURE getFileInfo(CONST filePath:string; OUT time:double; OUT size:int64; OUT isExistent, isArchive, isDirectory, isReadOnly, isSystem, isHidden:boolean);
 FUNCTION getNumberOfCPUs:longint;
+FUNCTION MemoryUsed: int64;
 
 VAR CMD_PATH,
     SEVEN_ZIP_PATH,
@@ -120,6 +121,11 @@ PROCEDURE getFileInfo(CONST filePath:string;
         size:=-2;
       end;
     end;
+  end;
+
+FUNCTION MemoryUsed: int64;
+  begin
+    result:=GetHeapStatus.TotalAllocated;
   end;
 
 INITIALIZATION
