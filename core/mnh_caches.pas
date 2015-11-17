@@ -5,12 +5,11 @@ INTERFACE
 USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       POLISH_FREQUENCY=64;
-      MEM_LIMIT:int64=2000000000;
-                      //{$ifdef CPU32}
-                      //1073741824
-                      //{$else}
-                      //maxlongint;
-                      //{$endif}
+      MEM_LIMIT:int64={$ifdef CPU32}
+                      1000000000;
+                      {$else}
+                      int64(maxLongint)*2;
+                      {$endif}
 
 TYPE
   T_cacheEntry = record
@@ -32,7 +31,6 @@ TYPE
   public
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
-    //FUNCTION getBinIdx(CONST key: P_listLiteral):longint;
     PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal);
     FUNCTION get(CONST key: P_listLiteral): P_literal;
     PROCEDURE clear;
@@ -71,12 +69,6 @@ DESTRUCTOR T_cache.destroy;
       setLength(allCaches, length(allCaches)-1);
     end;
   end;
-
-
-//FUNCTION T_cache.getBinIdx(CONST key: P_listLiteral):longint;
-//  begin
-//    result:=key^.hash and (length(cached)-1);
-//  end;
 
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
   PROCEDURE resortBin(CONST binIdx:longint);
