@@ -99,10 +99,9 @@ exit}
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
+      useParam^.rereference; //rereference useParam because it is used below
       newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=context.newToken(firstRep^.location, '', tt_braceOpen); t:=newFirst^.next;
-      t       ^.next:=context.newToken(firstRep^.location, '', tt_literal, useParam); useParam^.rereference; t:=t^.next;
-      t       ^.next:=context.newToken(firstRep^.location, '', tt_separatorComma); t:=t^.next;
+      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newOneElementListLiteral(useParam,true,context.adapters^)); t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
       lastRep^.next:=context.newToken(firstRep^.location, '', tt_braceClose);
@@ -114,7 +113,7 @@ exit}
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
-        if (callDepth>=STACK_DEPTH_LIMIT) or (system.TryEnterCriticalsection(rule_cs)=0) then begin
+        if system.TryEnterCriticalsection(rule_cs)=0 then begin
           result:=false;
           for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
           if result then begin
