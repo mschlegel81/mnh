@@ -1,7 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
-     mnh_doc,lclintf,mySys,mnh_html;
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData,mnh_doc{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
+     lclintf,mySys,mnh_html;
 FUNCTION parseCmdLine:T_tokenLocation;
 VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
@@ -13,11 +13,13 @@ VAR fileOrCommandToInterpret:ansistring='';
 //---------------:by command line parameters
 
 FUNCTION parseCmdLine:T_tokenLocation;
+  {$ifdef fullVersion}
   PROCEDURE makeAndShowDoc;
     begin
       findAndDocumentAllPackages;
       OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
     end;
+  {$endif}
 
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
@@ -60,6 +62,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
       {$endif}
     end;
 
+  {$ifdef fullVersion}
   PROCEDURE tryToRunSetup;
     CONST setupFile='install.mnh';
     VAR context:T_evaluationContext;
@@ -71,13 +74,14 @@ FUNCTION parseCmdLine:T_tokenLocation;
       callMainInMain(parameters,context);
       context.destroy;
     end;
+  {$endif}
 
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
     begin
       mainPackageProvider.setPath(fileOrCommandToInterpret);
       if wantHelpDisplay then begin
-        displayHelp;
+        //displayHelp;
         printMainPackageDocText(consoleAdapters);
         halt;
       end;
@@ -127,7 +131,9 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
                                                                      {$I %FPCTARGET%}); {$include code_hash.inc} halt; end
+        {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
+        {$endif}
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
           if (minEL<0) or (minEL>5) then begin
@@ -167,7 +173,9 @@ FUNCTION parseCmdLine:T_tokenLocation;
       displayHelp;
       halt;
     end;
+    {$ifdef fullVersion}
     tryToRunSetup;
+    {$endif}
   end;
 
 INITIALIZATION

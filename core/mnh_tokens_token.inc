@@ -26,7 +26,7 @@
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE append(CONST newTok:T_token);
-    PROCEDURE step(CONST package:P_package; OUT lastComment:ansistring);
+    PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring);
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
@@ -207,12 +207,16 @@ PROCEDURE T_tokenArray.append(CONST newTok:T_token);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package:P_package; OUT lastComment:ansistring);
+PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring);
   begin
     repeat
       inc(i);
       if (i<length(t)) then case t[i].tokType of
-        tt_EOL: if (t[i].txt<>'') then lastComment:=t[i].txt;
+        tt_EOL: if (t[i].txt<>'') then begin
+           if lastComment=''
+           then lastComment:=t[i].txt
+           else lastComment:=lastComment+C_lineBreakChar+t[i].txt;
+        end;
         tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
           inc(i);
@@ -258,7 +262,7 @@ FUNCTION T_tokenArray.atEnd:boolean;
 
 FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
   VAR k:longint;
-      lastComment:ansistring;
+      lastComment:ansistring='';
   begin
     setLength(result,0);
     repeat
@@ -1675,7 +1679,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT));
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and not(context.isSandbox));
         tt_mutate: stack_push;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin

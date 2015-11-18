@@ -618,13 +618,18 @@ FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
     result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
     result:=result+ruleId+pattern.toString+';';
-    if comment<>'' then result:=result+C_tabChar+'//'+comment;
+    if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
   end;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
+  CONST shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
   begin
     result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
-    if comment<>'' then result:=result+'<i>'+comment+'</i><br>';
+    if comment<>'' then begin
+      if pos(C_lineBreakChar,comment)>0
+      then result:=result+'<br>'+shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+shift)+'</i><br>'
+      else result:=result+'<i>'+comment+'</i><br>';
+    end;
     result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
   end;
 

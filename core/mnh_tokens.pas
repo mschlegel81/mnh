@@ -83,6 +83,7 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
       package:T_package;
   begin
     context.create(adapter);
+    context.isSandbox:=true;
     new(codeProvider,create);
     codeProvider^.setLines(input);
     package.create(codeProvider);
@@ -778,7 +779,7 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
   VAR ruleList:array of P_rule;
       i:longint;
   begin
-    new(result,create(codeProvider^.getPath,codeProvider^.id));
+    new(result,create(codeProvider^.getPath,codeProvider^.id,codeProvider^.getLines));
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       result^.addRuleDoc(ruleList[i]^.getDocHtml);

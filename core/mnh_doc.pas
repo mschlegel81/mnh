@@ -1,6 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html;
+USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
 VAR htmlRoot: string;
 TYPE
   T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
@@ -23,25 +23,26 @@ TYPE
     docFileName: ansistring;
     rawUses: T_arrayOfString;
     usesPackage, usedByPackage: array of P_userPackageDocumentation;
-    rulesDoc: array of ansistring;
+    rulesDoc: T_arrayOfString;
     isExecutable:boolean;
-    CONSTRUCTOR create(CONST path, name: ansistring);
+    sourceCode: T_arrayOfString;
+    CONSTRUCTOR create(CONST path, name: ansistring; CONST code:T_arrayOfString);
     DESTRUCTOR destroy;
     PROCEDURE addUses(OtherUid: ansistring);
     PROCEDURE addUsed(other: P_userPackageDocumentation);
     PROCEDURE resolveUses;
-    FUNCTION toHtml: ansistring;
+    PROCEDURE writePackageDoc;
     PROCEDURE addRuleDoc(CONST htmlDoc:ansistring);
-    FUNCTION getHref: ansistring;
+    FUNCTION getHref(CONST fromHtmlRoot:boolean): ansistring;
   end;
 
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 PROCEDURE makeHtmlFromTemplate;
-FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
 
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
+CONST PACKAGE_DOC_SUBFOLDER='package_doc';
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
   begin
@@ -49,13 +50,14 @@ PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
     packages[length(packages)-1]:=doc;
   end;
 
-CONSTRUCTOR T_userPackageDocumentation.create(CONST path, name: ansistring);
+CONSTRUCTOR T_userPackageDocumentation.create(CONST path, name: ansistring; CONST code:T_arrayOfString);
   begin
     isExecutable:=false;
     id:=name;
     uid:=expandFileName(path);
-    docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
-      '/', '_'), '.', '_');
+    docFileName:=replaceAll(replaceAll(replaceAll(replaceAll(replaceAll(uid, ':', '_'), '\', '_'),
+                    '/', '_'), '.', '_'), '__','_')+'.html';
+    sourceCode:=code;
     setLength(rawUses, 0);
     setLength(usedByPackage, 0);
     setLength(usedByPackage, 0);
@@ -107,7 +109,7 @@ PROCEDURE T_userPackageDocumentation.resolveUses;
     setLength(rawUses, 0);
   end;
 
-FUNCTION T_userPackageDocumentation.toHtml: ansistring;
+PROCEDURE T_userPackageDocumentation.writePackageDoc;
   FUNCTION getUses: ansistring;
     VAR i: longint;
     begin
@@ -116,7 +118,7 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
       for i:=0 to length(usesPackage)-1 do
         begin
         if result<>'' then result:=result+', ';
-        result:=result+usesPackage [i]^.getHref;
+        result:=result+usesPackage [i]^.getHref(false);
         end;
     end;
 
@@ -128,20 +130,27 @@ FUNCTION T_userPackageDocumentation.toHtml: ansistring;
       for i:=0 to length(usedByPackage)-1 do
         begin
         if result<>'' then result:=result+', ';
-        result:=result+usedByPackage [i]^.getHref;
+        result:=result+usedByPackage [i]^.getHref(false);
         end;
     end;
-
-  VAR i: longint;
-
+  VAR handle:text;
+      i:longint;
   begin
-    result:='<h4><a name="'+docFileName+'">'+id+'</a></h4><table class="oben">'+
-      '<tr class="oben"><td>Path: </td><td><a href="file:///'+replaceAll(uid,'\','/')+'"><code>'+uid+'</code></a></td></tr>'+
-      '<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>'+
-      '<tr class="oben"><td>Publishes: </td><td>';
-    for i:=0 to length(rulesDoc)-1 do result:=result+rulesDoc[i];
-    result:=result+'</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+
-      getUsed+'</td></tr></table>';
+    assign(handle,htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
+    rewrite(handle);
+    writeln(handle,'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">');
+    writeln(handle,'<html><head><link rel="stylesheet" href="../style.css" type="text/css"><META http-equiv="Content-Type" content="text/html; charset=ASCII">');
+    writeln(handle,'<title>',id,'</title></head><body>');
+    writeln(handle,'<h4>'+id+'</h4><table class="oben">');
+    writeln(handle,'<tr class="oben"><td>Path: </td><td><a href="file:///'+replaceAll(uid,'\','/')+'"><code>'+uid+'</code></a></td></tr>');
+    writeln(handle,'<tr class="oben"><td>Uses: </td><td>'+getUses+'</td></tr>');
+    writeln(handle,'<tr class="oben"><td>Publishes: </td><td>');
+    for i:=0 to length(rulesDoc)-1 do writeln(handle,rulesDoc[i]);
+    writeln(handle, '</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+getUsed+'</td></tr></table>');
+    writeln(handle,'<div align="right"> <hr> </div><code>');
+    for i:=0 to length(sourceCode)-1 do writeln(handle,toHtmlCode(sourceCode[i]));
+    writeln(handle,'</code><div align="right"> <hr> </div> </body> </html>');
+    close(handle);
   end;
 
 PROCEDURE T_userPackageDocumentation.addRuleDoc(CONST htmlDoc:ansistring);
@@ -150,9 +159,11 @@ PROCEDURE T_userPackageDocumentation.addRuleDoc(CONST htmlDoc:ansistring);
     rulesDoc[length(rulesDoc)-1]:=htmlDoc;
   end;
 
-FUNCTION T_userPackageDocumentation.getHref: ansistring;
+FUNCTION T_userPackageDocumentation.getHref(CONST fromHtmlRoot:boolean): ansistring;
   begin
-    result:='<a href="#'+docFileName+'"><code>'+id+'</code></a>';
+    if fromHtmlRoot
+    then result:='<a href="'+PACKAGE_DOC_SUBFOLDER+'/'+docFileName+'">'+id+'</a>'
+    else result:='<a href="'+                          docFileName+'">'+id+'</a>';
   end;
 
 FUNCTION namespace(CONST id:ansistring):T_namespace;
@@ -233,113 +244,101 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSou
     if isRelevant then append(example,exampleHtml);
   end;
 
-VAR builtInDoc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
-    builtInDocsReady:boolean=false;
-
-PROCEDURE prepareBuiltInDocs;
-  CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
-  VAR ids: T_arrayOfString;
-      i,j: longint;
-      n: T_namespace;
-      swapTmp: T_intrinsicFunctionDocumentation;
-
-      examplesFile:text;
-      line:ansistring;
-      code:T_arrayOfString;
-  PROCEDURE processExample;
-    VAR html:T_arrayOfString;
-        n: T_namespace;
-        i:longint;
-    begin
-      if (length(code)<=0) then exit;
-      html:=demoCodeToHtmlCallback(code);
-      for n:=low(T_namespace) to high(T_namespace) do
-        for i:=0 to length(builtInDoc[n])-1 do
-          builtInDoc[n][i].addExampleIfRelevant(code,html);
-      setLength(code,0);
-      setLength(html,0);
-    end;
-
-  begin
-    if builtInDocsReady then exit;
-    //Prepare and sort data:-------------------------------------------------------------
-    for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
-    ids:=intrinsicRuleExplanationMap.keySet;
-    for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
-      n:=namespace(ids[i]);
-      j:=length(builtInDoc[n]);
-      setLength(builtInDoc[n],j+1);
-      builtInDoc[n][j].create(ids[i]);
-    end;
-    setLength(ids,0);
-
-    for n:=low(T_namespace) to high(T_namespace) do
-    for i:=1 to length(builtInDoc[n])-1 do for j:=0 to i-1 do
-    if builtInDoc[n][i].id < builtInDoc[n][j].id then begin
-      swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
-    end;
-    //-------------------------------------------------------------:Prepare and sort data
-    //Read examples:---------------------------------------------------------------------
-    assign(examplesFile, htmlRoot+EXAMPLES_NAME_SUFFIX);
-    reset(examplesFile);
-    setLength(code,0);
-    repeat
-      readln(examplesFile,line);
-      if trim(line)=''
-      then processExample
-      else append(code,line);
-    until eof(examplesFile);
-    processExample;
-    close(examplesFile);
-    builtInDocsReady:=true;
-    //---------------------------------------------------------------------:Read examples
-  end;
-
-FUNCTION getBuiltInDocTxt(CONST id:ansistring):ansistring;
-  VAR n:T_namespace;
-      i:longint;
-  begin
-    prepareBuiltInDocs;
-    //if not(builtInDocsEnhanced) then makeHtmlFromTemplate(true);
-    result:=HTML_FILE_START;
-    if isQualified(id) then begin
-      n:=namespace(id);
-      for i:=0 to length(builtInDoc[n])-1 do if builtInDoc[n][i].id=id then result:=result+builtInDoc[n][i].getHtml;
-    end else for n:=low(T_namespace) to high(T_namespace) do
-    for i:=0 to length(builtInDoc[n])-1 do
-    if shortName(builtInDoc[n][i].id)=id then result:=result+builtInDoc[n][i].getHtml;
-    result:=result+LineEnding+HTML_FILE_END;
-  end;
-
-PROCEDURE finalizeBuiltInDocs;
-  VAR i:longint;
-      n: T_namespace;
-  begin
-    for n:=low(T_namespace) to high(T_namespace) do begin
-      for i:=0 to length(builtInDoc[n])-1 do builtInDoc[n][i].destroy;
-      setLength(builtInDoc[n],0);
-    end;
-    builtInDocsReady:=false;
-  end;
-
 PROCEDURE makeHtmlFromTemplate();
+  VAR builtInDoc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
+
+  PROCEDURE prepareBuiltInDocs;
+    CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
+    VAR ids: T_arrayOfString;
+        i,j: longint;
+        n: T_namespace;
+        swapTmp: T_intrinsicFunctionDocumentation;
+
+        examplesFile:text;
+        line:ansistring;
+        code:T_arrayOfString;
+    PROCEDURE processExample;
+      VAR html:T_arrayOfString;
+          n: T_namespace;
+          i:longint;
+      begin
+        if (length(code)<=0) then exit;
+        html:=demoCodeToHtmlCallback(code);
+        for n:=low(T_namespace) to high(T_namespace) do
+          for i:=0 to length(builtInDoc[n])-1 do
+            builtInDoc[n][i].addExampleIfRelevant(code,html);
+        setLength(code,0);
+        setLength(html,0);
+      end;
+
+    begin
+      //Prepare and sort data:-------------------------------------------------------------
+      for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
+      ids:=intrinsicRuleExplanationMap.keySet;
+      for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
+        n:=namespace(ids[i]);
+        j:=length(builtInDoc[n]);
+        setLength(builtInDoc[n],j+1);
+        builtInDoc[n][j].create(ids[i]);
+      end;
+      setLength(ids,0);
+
+      for n:=low(T_namespace) to high(T_namespace) do
+      for i:=1 to length(builtInDoc[n])-1 do for j:=0 to i-1 do
+      if builtInDoc[n][i].id < builtInDoc[n][j].id then begin
+        swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
+      end;
+      //-------------------------------------------------------------:Prepare and sort data
+      //Read examples:---------------------------------------------------------------------
+      assign(examplesFile, htmlRoot+EXAMPLES_NAME_SUFFIX);
+      reset(examplesFile);
+      setLength(code,0);
+      repeat
+        readln(examplesFile,line);
+        if trim(line)=''
+        then processExample
+        else append(code,line);
+      until eof(examplesFile);
+      processExample;
+      close(examplesFile);
+      //---------------------------------------------------------------------:Read examples
+    end;
+
+  PROCEDURE finalizeBuiltInDocs;
+    VAR i:longint;
+        n: T_namespace;
+    begin
+      for n:=low(T_namespace) to high(T_namespace) do begin
+        for i:=0 to length(builtInDoc[n])-1 do builtInDoc[n][i].destroy;
+        setLength(builtInDoc[n],0);
+      end;
+    end;
+
   PROCEDURE writeUserPackageDocumentations(VAR outFile:text);
+    PROCEDURE clearPackageSubFolder;
+      VAR files:T_arrayOfString;
+          i:longint;
+      begin
+        CreateDir(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
+        files:=find(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true);
+        for i:=0 to length(files) do DeleteFile(files[i]);
+      end;
+
     VAR i: longint;
     begin
+      clearPackageSubFolder;
       for i:=0 to length(packages)-1 do packages[i]^.resolveUses;
       write(outFile, '<table>');
-      for i:=0 to length(packages)-1 do
-        begin
+      for i:=0 to length(packages)-1 do begin
         if odd(i) then write(outFile, '<tr>')
         else write(outFile, '<tr class="ruleHead">');
-        write(outFile, '<td>', packages [i]^.getHref, '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
+        write(outFile, '<td>', packages [i]^.getHref(true), '</td><td><a href="file:///'+replaceAll(packages [i]^.uid,'\','/')+'"><code>'+packages [i]^.uid+'</code></a></td>');
         if packages [i]^.isExecutable then
           write(outFile, '<td>executable</td>') else write(outFile, '<td>&nbsp;</td>');
         writeln(outFile, '</tr>');
-        end;
+      end;
       write(outFile, '</table>');
-
-      for i:=0 to length(packages)-1 do writeln(outFile, packages [i]^.toHtml);
+      for i:=0 to length(packages)-1 do packages[i]^.writePackageDoc;
       for i:=0 to length(packages)-1 do dispose(packages [i], destroy);
       setLength(packages, 0);
     end;
@@ -393,6 +392,13 @@ PROCEDURE makeHtmlFromTemplate();
       end else result:=false;
     end;
 
+  CONST BUILTIN_FILE_NAME='builtin.html';
+
+  FUNCTION builtInReady:boolean;
+    begin
+      result:=fileExists(htmlRoot+DirectorySeparator+BUILTIN_FILE_NAME);
+    end;
+
   FUNCTION handleCommand(cmd:ansistring):boolean;
     FUNCTION commandParameter(CONST txt:ansistring):ansistring;
       VAR i:longint;
@@ -422,18 +428,21 @@ PROCEDURE makeHtmlFromTemplate();
       if startsWith(cmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
-          assign(handle,htmlRoot+'\'+cmdParam);
-          rewrite(handle);
-          isOpen:=true;
+          if not((cmdParam=BUILTIN_FILE_NAME) and builtInReady) then begin
+            assign(handle,htmlRoot+'\'+cmdParam);
+            rewrite(handle);
+            isOpen:=true;
+          end else isOpen:=false;
+
         end;
         exit(true);
       end;
       if cmd=BUILTIN_DOC_CMD then begin
-        documentBuiltIns(outFile.handle);
+        if outFile.isOpen then documentBuiltIns(outFile.handle);
         exit(true);
       end;
       if cmd=PACKAGE_DOC_CMD then begin
-        writeUserPackageDocumentations(outFile.handle);
+        if outFile.isOpen then writeUserPackageDocumentations(outFile.handle);
         exit(true);
       end;
       if cmd=START_BEAUTIFY_CMD then begin
@@ -454,7 +463,7 @@ PROCEDURE makeHtmlFromTemplate();
     end;
 
   begin
-    prepareBuiltInDocs;
+    if not(builtInReady) then prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
@@ -486,6 +495,4 @@ PROCEDURE locateHtml;
 
 INITIALIZATION
   locateHtml;
-FINALIZATION
-  finalizeBuiltInDocs;
 end.
