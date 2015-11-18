@@ -196,11 +196,14 @@ TYPE
     doNotMarkWordBefore:double;
     doNotCheckFileBefore:double;
 
+    wordsInEditor:T_listOfString;
+
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
     PROCEDURE positionHelpNotifier;
     PROCEDURE setUnderCursor(CONST wordText:ansistring);
+    PROCEDURE ensureWordsInEditorForCompletion;
 
     PROCEDURE doPlot();
     PROCEDURE pullPlotSettingsToGui();
@@ -517,6 +520,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   CONST MSG='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   VAR i:longint;
   begin
+    wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     settingsReady:=false;
     with evaluation do begin
@@ -558,6 +562,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     inputHighlighter.destroy;
     outputHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
+    wordsInEditor.destroy;
   end;
 
 PROCEDURE TMnhForm.FormKeyPress(Sender: TObject; VAR key: char);
@@ -1005,35 +1010,49 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
      autosizeToggleBox.top:=OutputEdit.top;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
-  sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
   Shift: TShiftState);
   begin
     if (pos('.',value)>0) then begin
-      if pos(sourceValue,value)<>1 then begin
+      if pos(sourceValue,value)<>1 then
         value:=copy(value,pos('.',value)+1,length(value));
-      end;
     end;
+    wordsInEditor.clear;
+  end;
+
+PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
+  VAR i:longint;
+      caret:TPoint;
+  begin
+    if wordsInEditor.size>0 then exit;
+    caret:=InputEdit.CaretXY;
+    for i:=0 to InputEdit.lines.count-1 do
+      if i+1=caret.y then collectIdentifiers(InputEdit.lines[i],wordsInEditor,caret.x)
+                     else collectIdentifiers(InputEdit.lines[i],wordsInEditor,-1);
+    wordsInEditor.addAll(completionList.elementArray);
+    wordsInEditor.unique;
   end;
 
 PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
   VAR i:longint;
       s:string;
   begin
+    ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
-    for i:=0 to completionList.size-1 do
-      if (s='') or (pos(s,completionList[i])=1) then SynCompletion.ItemList.add(completionList[i]);
+    for i:=0 to wordsInEditor.size-1 do
+      if (s='') or (pos(s,wordsInEditor[i])=1) then SynCompletion.ItemList.add(wordsInEditor[i]);
   end;
 
 PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
   VAR i:longint;
       s:string;
   begin
+    ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
-    for i:=0 to completionList.size-1 do
-      if pos(s,completionList[i])=1 then SynCompletion.ItemList.add(completionList[i]);
+    for i:=0 to wordsInEditor.size-1 do
+      if pos(s,wordsInEditor[i])=1 then SynCompletion.ItemList.add(wordsInEditor[i]);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
   end;
 
