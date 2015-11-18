@@ -70,21 +70,6 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
         tt_typeCheckScalar..tt_typeCheckKeyValueList: result:=result+span('builtin',txt);
         tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);
         tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
-
-        ////lists and list constructors
-        //tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
-        //tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
-        //tt_expBraceOpen, tt_expBraceClose,
-        ////separators
-        //tt_separatorComma, tt_separatorCnt
-        //
-        //    //type checks:
-        //
-        //    tt_semicolon,
-        //    tt_optionalParameters,
-        //    //modifiers:
-        //    //special: [E]nd [O]f [L]ine
-        //    tt_EOL,
         tt_blank: if (copy(trim(txt),1,2)='//') then result:=result+span('comment',txt) else result:=result+txt;
         else result:=result+txt;
       end;

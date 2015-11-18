@@ -120,11 +120,6 @@ FUNCTION T_pattern.indexOfId(CONST id:ansistring; CONST location:T_tokenLocation
   begin
     if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
     if id=ALL_PARAMETERS_TOKEN_TEXT then exit(ALL_PARAMETERS_PAR_IDX);
-    result:=strToIntDef(copy(id,2,length(id)-1),-1);
-    if (copy(id,1,1)='$') and (result>=0) then begin
-      if result<length(sig) then exit(result);
-      adapters.raiseError('Trying to access paramete '+id+'; Maximum allowed is: $'+intToStr(length(sig)-1),location);
-    end;
     for i:=0 to length(sig)-1 do if sig[i].id=id then exit(i);
     result:=-1;
   end;

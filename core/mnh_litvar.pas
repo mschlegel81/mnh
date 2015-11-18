@@ -1141,7 +1141,7 @@ FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}
-    result:=longint(lt_string)+length(val);
+    result:=T_hashInt(lt_string)+length(val);
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     {$Q+}
   end;
@@ -1152,7 +1152,7 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
   begin
     {$Q-}
     s:= toString;
-    result:=longint(lt_expression)+length(s);
+    result:=T_hashInt(lt_expression)+length(s);
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}
   end;
@@ -1161,7 +1161,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     {$Q-}
-    result:=longint(lt_list)+length(element);
+    result:=T_hashInt(lt_list)+length(element);
     for i:=0 to length(element)-1 do result:=result*31+element [i]^.hash;
     {$Q+}
   end;

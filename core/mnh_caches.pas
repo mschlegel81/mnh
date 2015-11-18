@@ -22,7 +22,6 @@ TYPE
 
   T_cache = object
   private
-    memoryDistressSignalPending:boolean;
     fill: longint;
     putCounter:longint;
     cached: array of record
@@ -86,7 +85,6 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
 
   PROCEDURE polish;
     VAR binIdx,i,j: longint;
-        swapTmp:T_cacheEntry;
     begin
       for binIdx:=0 to length(cached)-1 do
       with cached[binIdx] do begin
@@ -122,7 +120,6 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       for i:=0 to length(cached)-1 do with cached[i] do setLength(data,0);
       for k:=0 to length(redistribute)-1 do begin
         i:=redistribute[k].key^.hash and (length(cached)-1);
-
         with cached[i] do begin
           j:=length(data);
           setLength(data,j+1);

@@ -34,6 +34,7 @@ CONST
   IDENTIFIER_CHARS:charSet=['a'..'z','A'..'Z','0'..'9','.','_'];
   FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
 
+
 FUNCTION formatTabs(CONST s: T_arrayOfString): T_arrayOfString;
 FUNCTION isBlank(CONST s: ansistring): boolean;
 FUNCTION replaceAll(CONST original, lookFor, replaceBy: ansistring): ansistring; inline;
@@ -42,6 +43,7 @@ FUNCTION replaceOne(CONST original, lookFor, replaceBy: ansistring): ansistring;
 FUNCTION escapeString(CONST s: ansistring): ansistring;
 FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parsedLength: longint): ansistring;
 FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
+PROCEDURE collectIdentifiers(CONST s:ansistring; VAR list:T_listOfString; CONST skipWordAtPosition:longint);
 FUNCTION startsWith(CONST input, head: ansistring): boolean;
 FUNCTION unbrace(CONST s:ansistring):ansistring;
 FUNCTION split(CONST s:ansistring):T_arrayOfString;
@@ -315,7 +317,7 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
     result := (length(s)>=1) and (s [1] in ['a'..'z', 'A'..'Z']);
     i := 2;
     while result and (i<=length(s)) do
-      if (s [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) then
+      if (s [i] in IDENTIFIER_CHARS) then
         inc(i)
       else if (s [i] = '.') and dotAllowed then
         begin
@@ -324,6 +326,20 @@ FUNCTION isIdentifier(CONST s: ansistring; CONST allowDot: boolean): boolean;
         end
       else
         result := false;
+  end;
+
+PROCEDURE collectIdentifiers(CONST s:ansistring; VAR list:T_listOfString; CONST skipWordAtPosition:longint);
+  VAR i,i0:longint;
+  begin
+    i:=1;
+    while i<=length(s) do begin
+      if s[i] in ['a'..'z','A'..'Z'] then begin
+        i0:=i;
+        while (i<=length(s)) and (s[i] in IDENTIFIER_CHARS) do inc(i);
+        if not((i0<=skipWordAtPosition) and (i>=skipWordAtPosition)) then list.add(copy(s,i0,i-i0));
+      end else if (s[i]='/') and (i+1<=length(s)) and (s[i+1]='/') then exit
+      else inc(i);
+    end;
   end;
 
 FUNCTION startsWith(CONST input, head: ansistring): boolean;

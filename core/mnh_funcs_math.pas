@@ -4,6 +4,14 @@ USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:T_intFuncCallback;
 IMPLEMENTATION
+{$MACRO ON}
+{$define arg0:=params^.value(0)}
+{$define real0:=P_realLiteral(params^.value(0))}
+{$define int0:=P_intLiteral(params^.value(0))}
+{$define bool0:=P_boolLiteral(params^.value(0))}
+{$define str0:=P_stringLiteral(params^.value(0))}
+{$define list0:=P_listLiteral(params^.value(0))}
+
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x:P_literal;
       i:longint;
@@ -26,7 +34,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      L:=P_listLiteral(params^.value(0));
+      L:=list0;
       iMin:=0;
       xMin:=P_scalarLiteral(L^.value(0));
       for i:=1 to L^.size-1 do begin
@@ -62,7 +70,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
-      L:=P_listLiteral(params^.value(0));
+      L:=list0;
       iMin:=0;
       xMin:=P_scalarLiteral(L^.value(0));
       for i:=1 to L^.size-1 do begin
@@ -85,15 +93,15 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
       case params^.value(0)^.literalType of
-        lt_real: exit(newBoolLiteral(isNan(P_realLiteral(params^.value(0))^.value)));
+        lt_real: exit(newBoolLiteral(isNan(real0^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+          for i:=0 to list0^.size-1 do
             P_listLiteral(result)^.appendBool(false);
         end;
         else begin
-          L:=P_listLiteral(params^.value(0));
+          L:=list0;
           result:=newListLiteral;
           for i:=0 to L^.size-1 do begin
             x:=L^.value(i);
@@ -113,15 +121,15 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     if (params<>nil) and (params^.size=1) and
        (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
       case params^.value(0)^.literalType of
-        lt_real: exit(newBoolLiteral(isInfinite(P_realLiteral(params^.value(0))^.value)));
+        lt_real: exit(newBoolLiteral(isInfinite(real0^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
+          for i:=0 to list0^.size-1 do
             P_listLiteral(result)^.appendBool(false);
         end;
         else begin
-          L:=P_listLiteral(params^.value(0));
+          L:=list0;
           result:=newListLiteral;
           for i:=0 to L^.size-1 do begin
             x:=L^.value(i);
@@ -163,8 +171,8 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       if params^.value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.value(0))))
       else begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-          P_listLiteral(result)^.appendBool(inRange(P_listLiteral(params^.value(0))^.value(i)));
+        for i:=0 to list0^.size-1 do
+          P_listLiteral(result)^.appendBool(inRange(list0^.value(i)));
       end;
     end;
   end;
