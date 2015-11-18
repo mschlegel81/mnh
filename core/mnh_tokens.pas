@@ -82,8 +82,7 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
       codeProvider:P_codeProvider;
       package:T_package;
   begin
-    context.create(adapter);
-    context.isSandbox:=true;
+    context.createSanboxContext(adapter);
     new(codeProvider,create);
     codeProvider^.setLines(input);
     package.create(codeProvider);
@@ -832,7 +831,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluat
 PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
   VAR silentContext:T_evaluationContext;
   begin
-    silentContext.create(P_adapters(@nullAdapter));
+    silentContext.createSanboxContext(P_adapters(@nullAdapter));
     nullAdapter.clearErrors;
     mainPackageProvider.load;
     reloadMainPackage(lu_forDocGeneration,silentContext);
@@ -852,7 +851,7 @@ PROCEDURE findAndDocumentAllPackages;
       provider:P_codeProvider;
       context:T_evaluationContext;
   begin
-    context.create(P_adapters(@nullAdapter));
+    context.createSanboxContext(P_adapters(@nullAdapter));
     sourceNames:=locateSources;
     for i:=0 to length(sourceNames)-1 do begin
       new(provider,create(sourceNames[i]));

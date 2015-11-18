@@ -1679,7 +1679,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and not(context.isSandbox));
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation);
         tt_mutate: stack_push;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin

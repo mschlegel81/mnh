@@ -31,7 +31,7 @@ PROCEDURE interactiveMode;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" to quit.');
     writeln('end a line with a \ to continue the input.');
-    context.create(P_adapters(@consoleAdapters));
+    context.createNormalContext(P_adapters(@consoleAdapters));
 
     readInputFromConsole;
     while not(hasExitSignal) do begin

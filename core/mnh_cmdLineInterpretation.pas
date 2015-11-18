@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_plotData,mnh_doc{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
      lclintf,mySys,mnh_html;
 FUNCTION parseCmdLine:T_tokenLocation;
 VAR consoleAdapters:T_adapters;
@@ -67,7 +67,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
     CONST setupFile='install.mnh';
     VAR context:T_evaluationContext;
     begin
-      context.create(P_adapters(@consoleAdapters));
+      context.createNormalContext(P_adapters(@consoleAdapters));
       if not(fileExists(setupFile)) then exit;
       mainPackageProvider.setPath(setupFile);
       setLength(parameters,0);
@@ -85,7 +85,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         printMainPackageDocText(consoleAdapters);
         halt;
       end;
-      context.create(P_adapters(@consoleAdapters));
+      context.createNormalContext(P_adapters(@consoleAdapters));
       callMainInMain(parameters,context);
       context.destroy;
       halt;
@@ -94,7 +94,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
   PROCEDURE doDirect;
     VAR context:T_evaluationContext;
     begin
-      context.create(P_adapters(@consoleAdapters));
+      context.createNormalContext(P_adapters(@consoleAdapters));
       mainPackageProvider.clear;
       mainPackageProvider.appendLine(fileOrCommandToInterpret);
       reloadMainPackage(lu_forDirectExecution,context);

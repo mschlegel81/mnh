@@ -591,7 +591,7 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
 FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
   VAR tempcontext:T_evaluationContext;
   begin
-    tempcontext.create(P_adapters(@adapters));
+    tempcontext.createNormalContext(P_adapters(@adapters));
     result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempcontext);
     tempcontext.destroy;
   end;

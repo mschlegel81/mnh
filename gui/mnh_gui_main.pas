@@ -10,7 +10,7 @@ USES
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
-  myGenerics,mnh_fileWrappers,mySys,mnh_html;
+  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs;
 
 TYPE
 
@@ -238,7 +238,6 @@ IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
     plotSubsystem:record
-      rendering:boolean;
       mouseUpTriggersPlot:boolean;
       renderNotBefore:double;
       state:(pss_neutral, pss_plotAfterCalculation, pss_plotOnShow);
@@ -380,51 +379,54 @@ PROCEDURE TMnhForm.doPlot;
   begin
     plotSubsystem.state:=pss_neutral;
     PageControl.ActivePageIndex:=1;
-    plotSubsystem.rendering:=true;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
     else if miAntiAliasing3.Checked then factor:=3
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
-    activePlot.setScreenSize(PlotTabSheet.width,PlotTabSheet.height);
-    activePlot.renderPlot(plotImage,factor);
-    plotSubsystem.rendering:=false;
+    guiAdapters.plot.setScreenSize(PlotTabSheet.width,PlotTabSheet.height);
+    guiAdapters.plot.renderPlot(plotImage,factor);
   end;
 
 PROCEDURE TMnhForm.pullPlotSettingsToGui;
+  VAR o:T_scalingOptions;
   begin
-    miXTics.Checked         :=(activePlot.axisStyle['x'] and C_tics)=C_tics;
-    miXGrid.Checked         :=(activePlot.axisStyle['x'] and C_grid)=C_grid;
-    miXFinerGrid.Checked    :=(activePlot.axisStyle['x'] and C_finerGrid)=C_finerGrid;
-    miYTics.Checked         :=(activePlot.axisStyle['y'] and C_tics)=C_tics;
-    miYGrid.Checked         :=(activePlot.axisStyle['y'] and C_grid)=C_grid;
-    miYFinerGrid.Checked    :=(activePlot.axisStyle['y'] and C_finerGrid)=C_finerGrid;
-    miPreserveAspect.Checked:=activePlot.preserveAspect;
-    miAutoscaleX.Checked    :=activePlot.autoscale['x'];
-    miAutoscaleY.Checked    :=activePlot.autoscale['y'];
-    miLogscaleX.Checked     :=activePlot.logscale['x'];
-    miLogscaleY.Checked     :=activePlot.logscale['y'];
+    o:=guiAdapters.plot.options;
+    miXTics.Checked         :=(o.axisStyle['x'] and C_tics)=C_tics;
+    miXGrid.Checked         :=(o.axisStyle['x'] and C_grid)=C_grid;
+    miXFinerGrid.Checked    :=(o.axisStyle['x'] and C_finerGrid)=C_finerGrid;
+    miYTics.Checked         :=(o.axisStyle['y'] and C_tics)=C_tics;
+    miYGrid.Checked         :=(o.axisStyle['y'] and C_grid)=C_grid;
+    miYFinerGrid.Checked    :=(o.axisStyle['y'] and C_finerGrid)=C_finerGrid;
+    miPreserveAspect.Checked:=o.preserveAspect;
+    miAutoscaleX.Checked    :=o.autoscale['x'];
+    miAutoscaleY.Checked    :=o.autoscale['y'];
+    miLogscaleX.Checked     :=o.logscale['x'];
+    miLogscaleY.Checked     :=o.logscale['y'];
   end;
 
 PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
   VAR aidX,aidY:longint;
+      o:T_scalingOptions;
   begin
-    aidX:=0;
-    if miXTics.Checked      then aidX:=C_tics;
-    if miXGrid.Checked      then aidX:=aidX or C_grid;
-    if miXFinerGrid.Checked then aidX:=aidX or C_finerGrid;
-    aidY:=0;
-    if miYTics.Checked      then aidY:=C_tics;;
-    if miYGrid.Checked      then aidY:=aidY or C_grid;
-    if miYFinerGrid.Checked then aidY:=aidY or C_finerGrid;
-    activePlot.setAxisStyle(aidX,aidY);
-
-    activePlot.setPreserveAspect(miPreserveAspect.Checked);
-    activePlot.setLogscale(miLogscaleX.Checked,miLogscaleY.Checked);
-    activePlot.setAutoscale(miAutoscaleX.Checked,miAutoscaleY.Checked);
+    o:=guiAdapters.plot.options;
+    o.axisStyle['x']:=0;
+    if miXTics.Checked      then o.axisStyle['x']:=C_tics;
+    if miXGrid.Checked      then o.axisStyle['x']:=o.axisStyle['x'] or C_grid;
+    if miXFinerGrid.Checked then o.axisStyle['x']:=o.axisStyle['x'] or C_finerGrid;
+    o.axisStyle['y']:=0;
+    if miYTics.Checked      then o.axisStyle['y']:=C_tics;;
+    if miYGrid.Checked      then o.axisStyle['y']:=o.axisStyle['y'] or C_grid;
+    if miYFinerGrid.Checked then o.axisStyle['y']:=o.axisStyle['y'] or C_finerGrid;
+    o.preserveAspect:=miPreserveAspect.Checked;
+    o.logscale['x']:=miLogscaleX.Checked;
+    o.logscale['y']:=miLogscaleY.Checked;
+    o.autoscale['x']:=miAutoscaleX.Checked;
+    o.autoscale['y']:=miAutoscaleY.Checked;
+    guiAdapters.plot.options:=o;
     pullPlotSettingsToGui();
     if plotImmediately then begin
-      if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
+      if ad_evaluationRunning or (PageControl.ActivePageIndex<>1)
          then plotSubsystem.state:=pss_plotOnShow
          else doPlot();
     end else plotSubsystem.state:=pss_plotAfterCalculation;
@@ -433,7 +435,7 @@ PROCEDURE TMnhForm.pushSettingsToPlotContainer(CONST plotImmediately: boolean);
 PROCEDURE TMnhForm.doConditionalPlotReset;
   begin
     if miAutoReset.Checked then begin
-      activePlot.setDefaults;
+      guiAdapters.plot.setDefaults;
       pullPlotSettingsToGui();
     end;
   end;
@@ -520,6 +522,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   CONST MSG='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   VAR i:longint;
   begin
+    writeln('FormCreate started');
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     settingsReady:=false;
@@ -543,6 +546,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
     {$endif}
+    writeln('FormCreate done');
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -566,15 +570,15 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormKeyPress(Sender: TObject; VAR key: char);
-begin
-  if (PageControl.ActivePageIndex=1) and (key in ['+','-']) then begin
-    if key='+' then activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
-               else activePlot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
-    pullPlotSettingsToGui();
-    plotSubsystem.state:=pss_plotOnShow;
-    plotSubsystem.renderNotBefore:=now+(1/(24*60*60));
+  begin
+    if (PageControl.ActivePageIndex=1) and (key in ['+','-']) then begin
+      if key='+' then guiAdapters.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
+                 else guiAdapters.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
+      pullPlotSettingsToGui();
+      plotSubsystem.state:=pss_plotOnShow;
+      plotSubsystem.renderNotBefore:=now+(1/(24*60*60));
+    end;
   end;
-end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
   VAR formPosition:T_formPosition;
@@ -586,7 +590,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
       formPosition.height:=height;
       formPosition.isFullscreen:=(WindowState=wsMaximized);
       SettingsForm.mainFormPosition:=formPosition;
-      if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
+      if ad_evaluationRunning or (PageControl.ActivePageIndex<>1)
         then plotSubsystem.state:=pss_plotOnShow
         else doPlot();
     end else pullPlotSettingsToGui();
@@ -596,6 +600,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   VAR newCaret:TPoint;
   begin
+    writeln('FormShow started');
     if not(settingsReady) then begin
       processSettings;
       InputEdit.SetFocus;
@@ -614,6 +619,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     end;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
+    writeln('FormShow done');
   end;
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
@@ -975,10 +981,10 @@ PROCEDURE TMnhForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: integer);
   VAR p:T_point;
   begin
-    p:=activePlot.screenToReal(x,y);
+    p:=guiAdapters.plot.screenToReal(x,y);
     StatusBar.SimpleText:='x='+FloatToStr(p[0])+'; y='+FloatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
-      activePlot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
+      guiAdapters.plot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
       mouseUpTriggersPlot:=true;
     end;
     with plotSubsystem do begin
@@ -1094,7 +1100,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if ((plotSubsystem.state=pss_plotAfterCalculation) or
         (plotSubsystem.state=pss_plotOnShow) and (PageControl.ActivePageIndex=1)) and
        not(ad_evaluationRunning) and
-       not(plotSubsystem.rendering) and
        not(now<plotSubsystem.renderNotBefore) then doPlot();
 
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
@@ -1204,7 +1209,7 @@ PROCEDURE TMnhForm.processFileHistory;
 
 PROCEDURE TMnhForm.miAntialiasingOffClick(Sender: TObject);
   begin
-    if ad_evaluationRunning or plotSubsystem.rendering or (PageControl.ActivePageIndex<>1)
+    if ad_evaluationRunning or (PageControl.ActivePageIndex<>1)
        then plotSubsystem.state:=pss_plotOnShow
        else doPlot();
   end;
@@ -1287,51 +1292,45 @@ end;
 
 FUNCTION plot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.plot(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.plot(params,tokenLocation,adapters);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
 FUNCTION addPlot(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    activePlot.setScreenSize(MnhForm.PlotTabSheet.width,
-                             MnhForm.PlotTabSheet.height);
-    result:=mnh_plotData.addPlot(params,tokenLocation,adapters);
+    guiAdapters.plot.setScreenSize(MnhForm.PlotTabSheet.width,
+                                   MnhForm.PlotTabSheet.height);
+    result:=mnh_plotFuncs.addPlot(params,tokenLocation,adapters);
     if result<>nil then plotSubsystem.state:=pss_plotAfterCalculation;
   end;
 
 FUNCTION setAutoscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAutoscale(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.setAutoscale(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
 FUNCTION setLogscale(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setLogscale(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.setLogscale(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
 FUNCTION setPlotRange(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPlotRange(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.setPlotRange(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
 FUNCTION setAxisStyle(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setAxisStyle(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.setAxisStyle(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
 FUNCTION setPreserveAspect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    while plotSubsystem.rendering do sleep(1);
-    result:=mnh_plotData.setPreserveAspect(params,tokenLocation,adapters);
+    result:=mnh_plotFuncs.setPreserveAspect(params,tokenLocation,adapters);
     if result<>nil then MnhForm.pullPlotSettingsToGui();
   end;
 
@@ -1348,14 +1347,14 @@ PROCEDURE debugForm_debuggingStep;
 
 PROCEDURE lateInitialization;
   begin
+    writeln('late init started');
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     StopDebuggingCallback:=@debugForm_stopDebugging;
     DebuggingStepCallback:=@debugForm_debuggingStep;
 
-    plotSubsystem.renderNotBefore:=now;
+    plotSubsystem.renderNotBefore:=now+ONE_SECOND;
     plotSubsystem.state:=pss_neutral;
-    plotSubsystem.rendering:=false;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,
       'ask(q:string);#Asks the user question q and returns the user input#'+
       'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
@@ -1367,6 +1366,7 @@ PROCEDURE lateInitialization;
     mnh_funcs.registerRule(PLOT_NAMESPACE,'setAxisStyle',@setAxisStyle,'');
     mnh_funcs.registerRule(PLOT_NAMESPACE,'setPreserveAspect',@setPreserveAspect,'');
     mnh_evalThread.initUnit;
+    writeln('late init done');
   end;
 
 INITIALIZATION

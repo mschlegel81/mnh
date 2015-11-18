@@ -49,7 +49,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
       tempcontext:T_evaluationContext;
   begin
     sleepTime:=0;
-    tempcontext.create(P_adapters(nil));
+    tempcontext.createNormalContext(nil);
     repeat
       currentTask:=pendingTasks.dequeue;
       if currentTask=nil then begin

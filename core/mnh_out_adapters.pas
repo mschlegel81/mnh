@@ -2,7 +2,7 @@ UNIT mnh_out_adapters;
 
 INTERFACE
 
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil;
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif};
 
 TYPE
   T_storedMessage = record
@@ -91,7 +91,10 @@ TYPE
       PROCEDURE setOutputBehaviour  (CONST value: T_outputBehaviour);
     public
       hasMessageOfType:array[T_messageType] of boolean;
+      {$ifdef fullVersion}
       currentlyDebugging:boolean;
+      plot:T_plot;
+      {$endif}
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROPERTY doEchoInput        : boolean  read getEchoInput         write setEchoInput        ;
@@ -103,7 +106,9 @@ TYPE
 
       PROCEDURE clearErrors;
       PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+      {$ifdef fullVersion}
       PROCEDURE raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+      {$endif}
       PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -309,6 +314,10 @@ PROCEDURE T_adapters.setOutputBehaviour(CONST value: T_outputBehaviour);
 
 CONSTRUCTOR T_adapters.create;
   begin
+    {$ifdef fullVersion}
+    currentlyDebugging:=false;
+    plot.createWithDefaults;
+    {$endif}
     setLength(adapter,0);
   end;
 
@@ -317,6 +326,9 @@ DESTRUCTOR T_adapters.destroy;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
     setLength(adapter,0);
+    {$ifdef fullVersion}
+    plot.destroy;
+    {$endif}
   end;
 
 PROCEDURE T_adapters.clearErrors;
@@ -343,6 +355,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
+{$ifdef fullVersion}
 PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
@@ -350,6 +363,7 @@ PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring; CONST err
     currentlyDebugging:=true;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_debug_step,errorMessage,errorLocation);
   end;
+{$endif}
 
 PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;

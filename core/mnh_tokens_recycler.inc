@@ -20,13 +20,13 @@
   T_evaluationContext=object
     dat:array[0..2047] of P_token;
     fill:longint;
-
     parentContext:P_evaluationContext;
     scopeStack:T_valueStore;
     adapters:P_adapters;
+    allowDelegation:boolean;
 
-    CONSTRUCTOR create(CONST parent:P_evaluationContext);
-    CONSTRUCTOR create(CONST outAdapters:P_adapters);
+    CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
+    CONSTRUCTOR createSanboxContext(CONST outAdapters:P_adapters);
     PROCEDURE adopt(CONST parent:P_evaluationContext);
     DESTRUCTOR destroy;
     //Recycler routines:
@@ -126,15 +126,15 @@ FUNCTION T_valueStoreElement.getValueOrNull(CONST idx:longint):P_literal;
     end;
   end;
 
-CONSTRUCTOR T_evaluationContext.create(CONST parent:P_evaluationContext);
-  VAR i:longint;
-  begin
-    parentContext:=parent;
-    adapters:=parent^.adapters;
-    for i:=0 to length(dat)-1 do dat[i]:=nil;
-    fill:=0;
-    setLength(scopeStack,0);
-  end;
+//CONSTRUCTOR T_evaluationContext.create(CONST parent:P_evaluationContext);
+//  VAR i:longint;
+//  begin
+//    parentContext:=parent;
+//    adapters:=parent^.adapters;
+//    for i:=0 to length(dat)-1 do dat[i]:=nil;
+//    fill:=0;
+//    setLength(scopeStack,0);
+//  end;
 
 PROCEDURE T_evaluationContext.adopt(CONST parent:P_evaluationContext);
   begin
@@ -142,7 +142,7 @@ PROCEDURE T_evaluationContext.adopt(CONST parent:P_evaluationContext);
     adapters:=parent^.adapters;
   end;
 
-CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
+CONSTRUCTOR T_evaluationContext.createNormalContext(CONST outAdapters:P_adapters);
   VAR i:longint;
   begin
     parentContext:=nil;
@@ -150,7 +150,20 @@ CONSTRUCTOR T_evaluationContext.create(CONST outAdapters:P_adapters);
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
     setLength(scopeStack,0);
+    allowDelegation:=true;
   end;
+
+CONSTRUCTOR T_evaluationContext.createSanboxContext(CONST outAdapters:P_adapters);
+  VAR i:longint;
+  begin
+    parentContext:=nil;
+    adapters:=outAdapters;
+    for i:=0 to length(dat)-1 do dat[i]:=nil;
+    fill:=0;
+    setLength(scopeStack,0);
+    allowDelegation:=false;
+  end;
+
 
 DESTRUCTOR T_evaluationContext.destroy;
   begin

@@ -251,7 +251,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     VAR tempcontext:T_evaluationContext;
     begin
-      tempcontext.create(P_adapters(@adapters));
+      tempcontext.createNormalContext(P_adapters(@adapters));
       profiler.start;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempcontext);
       t:=profiler.Elapsed;
@@ -262,7 +262,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR tempcontext:T_evaluationContext;
         first:P_token;
     begin
-      tempcontext.create(P_adapters(@adapters));
+      tempcontext.createNormalContext(P_adapters(@adapters));
       first:=tempcontext.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=tempcontext.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
       profiler.start;
@@ -322,7 +322,7 @@ FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR ad
       package:P_package;
       dummyForLastComment:ansistring='';
   begin
-    context.create(P_adapters(@adapters));
+    context.createNormalContext(P_adapters(@adapters));
 
     package:=guessPackageForProvider(location.fileName);
     exTokens:=tokenizeAll(s,location,package,adapters);
@@ -534,7 +534,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
                           else aggregator:=nil;
 
       groupMap.create();
-      tempContext.create(P_adapters(@adapters));
+      tempContext.createNormalContext(P_adapters(@adapters));
       for inputIndex:=0 to length(keyList)-1 do if adapters.noErrors then
         addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
       groupList:=groupMap.keyValueList;
@@ -740,7 +740,7 @@ FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       end;
       setLength(formats,length(parts));
       for i:=0 to length(parts)-1 do if odd(i) then formats[i].create(parts[i]);
-      if (formatSubrule<>nil) then context.create(P_adapters(@adapters));
+      if (formatSubrule<>nil) then context.createNormalContext(P_adapters(@adapters));
       setLength(result,listSize);
       for i:=0 to listSize-1 do if (adapters.noErrors) then result[i]:=getFormattedString(i);
       for i:=0 to length(parts)-1 do if odd(i) then formats[i].destroy;

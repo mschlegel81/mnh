@@ -79,7 +79,7 @@ FUNCTION main(p:pointer):ptrint;
     end;
 
   begin
-    mainEvaluationContext.create(guiOutAdapters);
+    mainEvaluationContext.createNormalContext(guiOutAdapters);
     result:=0;
     evaluationState.value:=es_idle;
     updateCompletionList;

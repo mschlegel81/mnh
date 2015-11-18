@@ -43,7 +43,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="36">
+    <Units Count="37">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -231,6 +231,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="mnh_html"/>
       </Unit35>
+      <Unit36>
+        <Filename Value="..\core\mnh_plotfuncs.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="mnh_plotFuncs"/>
+      </Unit36>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
