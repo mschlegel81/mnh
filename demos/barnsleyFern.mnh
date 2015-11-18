@@ -1,20 +1,26 @@
 private interlace(X,Y)->each(i,[0..size(X)-1],[X%i,Y%i]);
 
-private barnsleyFern(sampleCount)->barnsleyFern([random],[random],sampleCount);
-private barnsleyFern(x,y,sampleCount)->sampleCount>size(x) ? barnsleyFern(x,y,sampleCount,random(size(x))<0.02,random(size(x))<0.1,random(size(x))<0.1)
-                                                           : interlace(x,y);
-private barnsleyFern(x,y,sampleCount,p1,p2,p3)->barnsleyFern(
-  flatten(   0*x%p1, 0.85*x+0.04*y    ,0.20*x%p2-0.26*y%p2    ,-0.15*x%p3+0.28*y%p3     ),
-  flatten(0.16*y%p1,-0.04*x+0.85*y+1.6,0.23*x%p2+0.22*y%p2+1.6, 0.26*x%p3+0.24*y%p3+0.44),
-  sampleCount);
+private barnsleyFern(sampleCount)->begin
+  local x:=random(1);
+  local y:=random(1);
+  while (size(x)<=sampleCount, begin
+    local p1:=random(size(x))<0.01;
+    local p2:=random(size(x))<0.11;
+    local xNew:=flatten(   0*x%p1, 0.85*x+0.04*y    ,0.20*x%p2-0.26*y%p2    ,-0.15*x%p2+0.28*y%p2     );
+    y:=         flatten(0.16*y%p1,-0.04*x+0.85*y+1.6,0.23*x%p2+0.22*y%p2+1.6, 0.26*x%p2+0.24*y%p2+0.44);
+    x:=xNew;
+  end);
+  interlace(x,y);
+end;
 
-private main_impl(filename:string,xRes:int,yRes:int)->
-  plot.setAutoscale([true,true]) and
-  plot.setLogscale([false,false]) and
-  plot.setPreserveAspect(true) and
-  plot.setAxisStyle([0,0]) and
-  plot.plot(barnsleyFern(200000),"0.2 . green") and
+private main_impl(filename:string,xRes:int,yRes:int)->begin
+  plot.setAutoscale([true,true]);
+  plot.setLogscale([false,false]);
+  plot.setPreserveAspect(true);
+  plot.setAxisStyle([0,0]);
+  plot.plot(barnsleyFern(100000),"0.2 . green");
   plot.renderToFile(filename,xRes,yRes,10);
+end;
 
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
 main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));
