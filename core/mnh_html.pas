@@ -155,8 +155,11 @@ PROCEDURE T_htmlOutAdapter.flush;
 
         mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
         mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
-        mt_imageCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
+        {$ifdef fullVersion}
+        mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
                                  imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
+        mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged: begin end;
+        {$endif}
         else writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
       end;
       lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;

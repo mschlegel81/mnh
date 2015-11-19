@@ -253,12 +253,14 @@ out> ['text','abc']
 out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
- in>   t :=[0..1000]*0.006283;
- in>   plot(t,sin(t));
-out>   void
- in>   plot.renderToFile('plotDemo1.png',600,300,4);
-Image: D:\dev\mnh5\plotDemo1.png
-out>   void
+ in>                  t :=[0..1000]*0.006283;
+ in>                  plot(t,sin(t));
+Deferred plot request
+Deferred plot request
+out>                  void
+ in>                  plot.renderToFile('plotDemo1.png',600,300,4);
+Image:                D:\dev\mnh5\plotDemo1.png
+out>                  void
  in>                                            printf('%s',each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),join(message,"\t")));
 printline                                        in>        @:1,1  f(x<1)->random;
  in>        @:1,17 f(x)->f(x-1)+random;

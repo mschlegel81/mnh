@@ -7,8 +7,10 @@ TYPE
                STRINGS_NAMESPACE        ,
                LIST_NAMESPACE           ,
                REGEX_NAMESPACE          ,
-               SYSTEM_BUILTIN_NAMESPACE ,
-               PLOT_NAMESPACE);
+               SYSTEM_BUILTIN_NAMESPACE
+               {$ifdef fullVersion},
+               PLOT_NAMESPACE
+               {$endif});
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
                        rwc_specialConstruct,
@@ -24,7 +26,7 @@ CONST
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.MNH';
-  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','plot');
+  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system'{$ifdef fullVersion},'plot'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
 
 FUNCTION isQualified(CONST s:string):boolean;
@@ -260,8 +262,13 @@ TYPE
     mt_el5_haltMessageReceived,
     mt_endOfEvaluation,
     mt_reloadRequired,
-    mt_timing_info,
-    mt_imageCreated);
+    mt_timing_info
+    {$ifdef fullVersion},
+    mt_plotFileCreated,
+    mt_plotCreatedWithDeferredDisplay,
+    mt_plotCreatedWithInstantDisplay,
+    mt_plotSettingsChanged
+    {$endif});
 
 CONST
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
@@ -275,14 +282,14 @@ CONST
     2,//mt_el2_warning,
     3,//mt_el3_evalError,
     3,//mt_el3_noMatchingMain
-    3,
+    3,//mt_el3_stackTrace
     4,//mt_el4_parsingError,
     5,//mt_el5_systemError,
     5,//mt_el5_haltMessageReceived
    -1,//mt_endOfEvaluation
    -1,//mt_reloadRequired
-   -1,//mt_timing_info
-   -1);
+   -1 //mt_timing_info
+   {$ifdef fullVersion},-1,-1,-1,-1{$endif});
 
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
@@ -307,8 +314,13 @@ CONST
     'Evaluation haltet (most probably by user).',
     '',
     '',
-    '',
-    'Image:');
+    ''
+    {$ifdef fullVersion},
+    'Image:',
+    'Deferred plot request',
+    'Instant plot request',
+    'Plot settings changed'
+    {$endif});
 
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB START';

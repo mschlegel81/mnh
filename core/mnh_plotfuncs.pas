@@ -60,6 +60,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
                        else addSample(Nan,Nan);
         end else addSample(Nan,Nan);
         adapters.plot.addRow(options,row);
+        adapters.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         setLength(row,0);
         exit(newVoidLiteral);
       end;
@@ -67,6 +68,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
         with P_listLiteral(params^.value(0))^ do
         for i:=0 to size-1 do addSample(i,fReal(value(i)));
         adapters.plot.addRow(options,row);
+        adapters.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         setLength(row,0);
         exit(newVoidLiteral);
       end;
@@ -78,6 +80,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
         iMax:=min(X^.size, Y^.size);
         for i:=0 to iMax-1 do addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         adapters.plot.addRow(options,row);
+        adapters.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         setLength(row,0);
         exit(newVoidLiteral);
       end;
@@ -87,6 +90,7 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     adapters.plot.clear;
+    adapters.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
     if (params=nil) or (params^.size=0) or (params^.size = 1) and (params^.value(0)^.literalType = lt_emptyList)
     then result:=newVoidLiteral
     else result:=addPlot(params, tokenLocation,adapters);
@@ -103,6 +107,7 @@ FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLo
       o.autoscale['x']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value;
       o.autoscale['y']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value;
       adapters.plot.options:=o;
+      adapters.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -130,6 +135,7 @@ FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoc
       o.logscale['x']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value;
       o.logscale['y']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value;
       adapters.plot.options:=o;
+      adapters.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -164,6 +170,7 @@ FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLo
         o.range['y',0]:=fReal(P_listLiteral(y)^.value(0));
         o.range['y',1]:=fReal(P_listLiteral(y)^.value(1));
         adapters.plot.options:=o;
+        adapters.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
         result:=newVoidLiteral;
       end;
     end;
@@ -196,6 +203,7 @@ FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLo
       o.axisStyle['x']:=P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value and 255;
       o.axisStyle['y']:=P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value and 255;
       adapters.plot.options:=o;
+      adapters.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -221,6 +229,7 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_to
       o:=adapters.plot.options;
       o.preserveAspect:=P_boolLiteral(params^.value(0))^.value;
       adapters.plot.options:=o;
+      adapters.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
@@ -253,11 +262,17 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
         exit(nil);
       end;
       adapters.plot.renderToFile(fileName,width,height,supersampling);
-      adapters.raiseCustomMessage(mt_imageCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+      adapters.raiseCustomMessage(mt_plotFileCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
       result:=newVoidLiteral;
     end;
   end;
 
+FUNCTION display_imp(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  begin
+    adapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    adapters.raiseCustomMessage(mt_plotCreatedWithInstantDisplay,'',tokenLocation);
+    result:=newVoidLiteral;
+  end;
 
 INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'plot', @plot,
@@ -304,8 +319,8 @@ INITIALIZATION
     'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
-  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide,
-    exOverflow, exUnderflow, exPrecision]);
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp,
+    'display;#Displays the plot as soon as possible, even during evaluation.');
 
 end.
 

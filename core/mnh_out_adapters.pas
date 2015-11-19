@@ -212,7 +212,7 @@ PROCEDURE T_textFileOutAdapter.flush;
     else rewrite(handle);
     for i:=0 to length(storedMessages)-1 do begin
       with storedMessages[i] do case messageType of
-        mt_clearConsole, mt_reloadRequired,mt_imageCreated: begin end;
+        mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
         mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
         mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
         mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
@@ -501,7 +501,7 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType;
   CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   begin
     if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
-    or (messageType in [mt_endOfEvaluation,mt_reloadRequired,mt_imageCreated])
+    or (messageType in [mt_endOfEvaluation,mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}])
     or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
     or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
     or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)

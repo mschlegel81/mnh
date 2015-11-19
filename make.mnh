@@ -162,12 +162,12 @@ main('clean')->begin
 end;
      
 //*Tests all files
-main('test')->each(i,[0..3],AND, 
+main('test')->each(i,[3..0],AND, 
   build(i), 
   regTest.main(binName(i)));
 
 //*Tests some files - randomly
-main('quicktest')->each(i,[0..3],AND,
+main('quicktest')->each(i,[3..0],AND,
   build(i),
   regTest.main(binName(i),'randomSample'));
 

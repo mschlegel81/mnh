@@ -138,11 +138,13 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
       mt_el4_parsingError,
       mt_el5_systemError,
       mt_el5_haltMessageReceived: append(result,span('error',C_errorLevelTxt[messageType]+' '+simpleMessage));
-      mt_imageCreated: begin
+      {$ifdef fullVersion}
+      mt_plotFileCreated: begin
         tmp:=extractFileName(simpleMessage);
         CopyFile(simpleMessage,htmlRoot+DirectorySeparator+tmp);
         append(result,'Image created: '+imageTag(tmp));
       end;
+      {$endif}
     end;
   end;
 
