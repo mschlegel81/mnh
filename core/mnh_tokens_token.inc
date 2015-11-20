@@ -1484,7 +1484,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       {$endif}
       begin
         context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
-        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,infoMessage ,first^.location);
+        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,replaceAll(infoMessage,#28,' '),first^.location);
       end;
     end;
 

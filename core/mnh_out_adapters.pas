@@ -192,6 +192,7 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 PROCEDURE T_textFileOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited appendSingleMessage(message);
+    with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
 
@@ -211,16 +212,18 @@ PROCEDURE T_textFileOutAdapter.flush;
     then system.append(handle)
     else rewrite(handle);
     for i:=0 to length(storedMessages)-1 do begin
-      with storedMessages[i] do case messageType of
-        mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
-        mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
-        mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-        mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-        mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-        mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-        mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
-        else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
-          myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+      with storedMessages[i] do begin
+        case messageType of
+          mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
+          mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
+          mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+          mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+          mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+          mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+          mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
+          else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
+            myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+        end;
       end;
       lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
     end;
@@ -506,9 +509,14 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType;
     or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
     or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
     or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
-    if messageType in [mt_debug_step,mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived]
-    then writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ', errorMessage)
-    else writeln(stdErr, C_errorLevelTxt[messageType],                          ' ', errorMessage);
+    case messageType of
+      mt_debug_step,mt_el3_stackTrace:
+        writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',replaceAll(errorMessage,#28,' '));
+      mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
+        writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',           errorMessage         );
+      else
+        writeln(stdErr, C_errorLevelTxt[messageType],' ', errorMessage);
+    end;
   end;
 
 CONSTRUCTOR T_collectingOutAdapter.create;

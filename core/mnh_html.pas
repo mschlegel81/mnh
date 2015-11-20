@@ -117,6 +117,7 @@ DESTRUCTOR T_htmlOutAdapter.destroy;
 PROCEDURE T_htmlOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited appendSingleMessage(message);
+    with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
 

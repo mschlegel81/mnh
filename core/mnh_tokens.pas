@@ -108,7 +108,10 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     runAlone(input,@adapter);
 
     setLength(result,length(collector.storedMessages));
-    for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
+    for i:=0 to length(result)-1 do begin
+      result[i]:=collector.storedMessages[i];
+      with result[i] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
+    end;
 
     adapter.destroy;
     collector.destroy;
