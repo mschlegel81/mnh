@@ -185,11 +185,9 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_ev
   VAR i,j:longint;
       used:T_listOfString;
   begin
-    clearAllCaches;
     context.adapters^.clearErrors;
     mainPackage.load(usecase,context,C_EMPTY_STRING_ARRAY);
     //housekeeping:-------------------------------------------------------------
-    clearAllCaches;
     used.create;
     for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
     for i:=0 to length(secondaryPackages)-1 do
@@ -213,7 +211,6 @@ PROCEDURE finalizePackages;
     if packagesAreFinalized then exit;
     mainPackage.destroy;
     mainPackageProvider.destroy;
-    clearAllCaches;
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
     setLength(secondaryPackages,0);
     packagesAreFinalized:=true;
@@ -668,7 +665,10 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
 
   begin
     ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do if ruleList[i]^.writeBack(codeProvider^,adapters) then wroteBack:=true;
+    for i:=0 to length(ruleList)-1 do begin
+      if ruleList[i]^.writeBack(codeProvider^,adapters) then wroteBack:=true;
+      if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
+    end;
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;

@@ -4,6 +4,7 @@ INTERFACE
 
 USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys;
 CONST MAX_ACCEPTED_COLLISIONS=10;
+      MIN_BIN_COUNT=128;
       POLISH_FREQUENCY=64;
       MEM_LIMIT:int64={$ifdef CPU32}
                       1000000000;
@@ -35,38 +36,16 @@ TYPE
     PROCEDURE clear;
   end;
 
-PROCEDURE clearAllCaches;
-
 IMPLEMENTATION
-
-VAR
-  allCaches: array of P_cache;
-
-PROCEDURE clearAllCaches;
-  VAR i: longint;
-  begin
-    for i:=0 to length(allCaches)-1 do
-      allCaches[i]^.clear;
-  end;
-
 CONSTRUCTOR T_cache.create();
   begin
     fill := 0;
-    setLength(cached,1024);
-    setLength(allCaches, length(allCaches)+1);
-    allCaches[length(allCaches)-1] := @self;
+    setLength(cached,MIN_BIN_COUNT);
   end;
 
 DESTRUCTOR T_cache.destroy;
-  VAR i: longint;
   begin
     clear;
-    i := 0;
-    while (i<length(allCaches)) and (allCaches [i]<>@self) do inc(i);
-    if (i<length(allCaches)) then begin
-      allCaches[i] := allCaches [length(allCaches)-1];
-      setLength(allCaches, length(allCaches)-1);
-    end;
   end;
 
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
@@ -183,7 +162,7 @@ PROCEDURE T_cache.clear;
       end;
       setLength(data, 0);
     end;
-    setLength(cached,1);
+    setLength(cached,MIN_BIN_COUNT);
     fill := 0;
     putCounter:=0;
   end;
