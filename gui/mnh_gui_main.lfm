@@ -250,7 +250,7 @@ object MnhForm: TMnhForm
             end          
             item
               Command = ecBlockUnindent
-              ShortCut = 24661
+              ShortCut = 16469
             end          
             item
               Command = ecPaste
@@ -422,7 +422,7 @@ object MnhForm: TMnhForm
             end          
             item
               Command = ecBlockIndent
-              ShortCut = 24649
+              ShortCut = 16457
             end>
           MouseActions = <>
           MouseTextActions = <>
