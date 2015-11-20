@@ -84,14 +84,33 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
   VAR context:T_evaluationContext;
       codeProvider:P_codeProvider;
       package:T_package;
+      stash:T_packageEnvironment;
+      i:longint;
   begin
+    //stash current environment
+    stash.mainPackage:=environment.mainPackage;
+    stash.mainPackageProvider:=environment.mainPackageProvider;
+    setLength(stash.secondaryPackages,length(environment.secondaryPackages));
+    for i:=0 to length(stash.secondaryPackages)-1 do stash.secondaryPackages[i]:=environment.secondaryPackages[i];
+    setLength(environment.secondaryPackages,0);
+
     context.createSanboxContext(adapter);
     new(codeProvider,create);
     codeProvider^.setLines(input);
     package.create(codeProvider);
+    environment.mainPackage:=@package;
+    environment.mainPackageProvider:=codeProvider;
     package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
     package.destroy;
     context.destroy;
+    for i:=length(environment.secondaryPackages)-1 downto 0 do dispose(environment.secondaryPackages[i],destroy);
+    setLength(environment.secondaryPackages,0);
+
+    //unstash environment
+    environment.mainPackage:=stash.mainPackage;
+    environment.mainPackageProvider:=stash.mainPackageProvider;
+    setLength(environment.secondaryPackages,length(stash.secondaryPackages));
+    for i:=0 to length(environment.secondaryPackages)-1 do environment.secondaryPackages[i]:=stash.secondaryPackages[i];
   end;
 
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
