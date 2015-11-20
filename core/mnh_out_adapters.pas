@@ -75,6 +75,7 @@ TYPE
   T_adapters=object
     private
       stackTraceCount:longint;
+      errorCount:longint;
       maxErrorLevel: shortint;
       adapter:array of record ad:P_abstractOutAdapter; doDestroy:boolean; end;
       FUNCTION  getEchoInput                    : boolean;
@@ -114,7 +115,7 @@ TYPE
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
-      PROCEDURE clearAll;
+      PROCEDURE ClearAll;
       FUNCTION noErrors: boolean; inline;
       PROCEDURE haltEvaluation;
 
@@ -152,7 +153,6 @@ VAR
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
 IMPLEMENTATION
-
 FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
   begin
     with message do if (length(simpleMessage)=0) and (length(multiMessage)>0)
@@ -343,6 +343,7 @@ PROCEDURE T_adapters.clearErrors;
       then maxErrorLevel:=C_errorLevelForMessageType[mt]-1;
     end;
     stackTraceCount:=0;
+    errorCount:=0;
   end;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -354,6 +355,10 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
     if (thisErrorLevel=mt_el3_stackTrace) then begin
       inc(stackTraceCount);
       if stackTraceCount>30 then exit;
+    end;
+    if (thisErrorLevel in [mt_el3_evalError,mt_el3_noMatchingMain,mt_el4_parsingError,mt_el5_haltMessageReceived,mt_el5_systemError]) then begin
+      inc(errorCount);
+      if errorCount>30 then exit;
     end;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
   end;
@@ -409,7 +414,7 @@ PROCEDURE T_adapters.clearPrint;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.clearConsole;
   end;
 
-PROCEDURE T_adapters.clearAll;
+PROCEDURE T_adapters.ClearAll;
   begin
     clearPrint;
     clearErrors;
