@@ -422,7 +422,7 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       whiteList:=[];
       for i:=0 to P_listLiteral(params^.value(1))^.size-1 do begin
         tmp:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-        if length(tmp)=1 then Include(whiteList,tmp[1])
+        if length(tmp)=1 then include(whiteList,tmp[1])
         else begin
           adapters.raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
           exit(nil);

@@ -3,7 +3,7 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil;
 IMPLEMENTATION
-VAR lockedFiles:specialize G_stringKeyMap<TThreadId>;
+VAR lockedFiles:specialize G_stringKeyMap<TThreadID>;
 
 PROCEDURE obtainLock(CONST fileName:ansistring);
   VAR lockedBy:TThreadID;
@@ -425,7 +425,7 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       try
         resultText:=TFPCustomHTTPClient.SimpleGet(P_stringLiteral(params^.value(0))^.value);
       except
-        On E : Exception do begin
+        on E : Exception do begin
           resultText:='';
           adapters.raiseCustomMessage(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
         end;
@@ -505,7 +505,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
 FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR e:T_arrayOfString;
       i:longint;
-  FUNCTION environmentPair(CONST envString:ansistring):P_listliteral;
+  FUNCTION environmentPair(CONST envString:ansistring):P_listLiteral;
     VAR env:T_arrayOfString;
         inner:P_listLiteral;
         k:longint;

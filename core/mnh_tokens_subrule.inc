@@ -132,12 +132,12 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
     end;
 
   PROCEDURE pop(CONST index:longint);
-    FUNCTION compatible(CONST oT,cT:T_tokenType):boolean;
+    FUNCTION compatible(CONST oT,ct:T_tokenType):boolean;
       begin
         result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
              or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
              or (oT=tt_expBraceOpen) and (ct=tt_expBraceClose)
-             or (ot=tt_begin) and (ct=tt_end);
+             or (oT=tt_begin) and (ct=tt_end);
       end;
 
     begin
@@ -622,12 +622,12 @@ FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
   end;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
-  CONST shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+  CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
   begin
     result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
     if comment<>'' then begin
       if pos(C_lineBreakChar,comment)>0
-      then result:=result+'<br>'+shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+shift)+'</i><br>'
+      then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
       else result:=result+'<i>'+comment+'</i><br>';
     end;
     result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';

@@ -72,7 +72,7 @@ PROCEDURE clearConsole;
       clearConsoleProcess.parameters.add('cls');
     end;
     try
-      Flush(StdOut);
+      flush(StdOut);
       clearConsoleProcess.execute;
     except
     end;

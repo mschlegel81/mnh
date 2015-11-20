@@ -61,7 +61,7 @@ TYPE
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
     FUNCTION GetEol: boolean; override;
     FUNCTION getRange: pointer; override;
-    FUNCTION GetToken: string; override;
+    FUNCTION getToken: string; override;
     PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
     FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
     FUNCTION GetTokenKind: integer; override;
@@ -120,11 +120,11 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkBultinRule      ].foreground:=$00FF0000;
     styleTable[tkSpecialRule     ].foreground:=$00FF0000;
     styleTable[tkOperator        ].foreground:=$00880000;
-    styleTable[tkNonStringLiteral].foreground:=$000000FF;
+    styleTable[tkNonStringLiteral].foreground:=$000000ff;
     styleTable[tkString          ].foreground:=$00008800;
-    styleTable[tkModifier        ].foreground:=$000088FF;
+    styleTable[tkModifier        ].foreground:=$000088ff;
     styleTable[tkNull            ].foreground:=$00000000;
-    styleTable[tkError           ].foreground:=$000000FF; styleTable[tkError].background:=$0000FFFF;
+    styleTable[tkError           ].foreground:=$000000ff; styleTable[tkError].background:=$0000FFFF;
     styleTable[tkHighlightedItem ].foreground:=$00000000;
     styleTable[tkHighlightedItem ].background:=$0000FFFF;
     styleTable[tkWhiteOnWhite    ].foreground:=$00FFFFFF;
@@ -337,13 +337,13 @@ FUNCTION TSynMnhSyn.getRange: pointer;
     result := nil;
   end;
 
-FUNCTION TSynMnhSyn.GetToken: string;
+FUNCTION TSynMnhSyn.getToken: string;
   VAR
-    Len: longint;
+    len: longint;
   begin
-    Len := run-fTokenPos;
+    len := run-fTokenPos;
     result := '';
-    SetString(result, (fLine+fTokenPos), Len);
+    SetString(result, (fLine+fTokenPos), len);
   end;
 
 PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer);
@@ -355,7 +355,7 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer)
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
-    if isMarked then result.FrameColor:=$000000FF
+    if isMarked then result.FrameColor:=$000000ff
                 else if fTokenId<>tkDebugInfo then result.FrameColor:=clNone;
   end;
 

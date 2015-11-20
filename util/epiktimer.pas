@@ -226,8 +226,8 @@ TYPE
       PROCEDURE start(VAR T:TimerData); overload;
 
       //Stop or pause a timer
-      PROCEDURE Stop; overload;
-      PROCEDURE Stop(VAR T:TimerData); overload;
+      PROCEDURE stop; overload;
+      PROCEDURE stop(VAR T:TimerData); overload;
 
       //Return elapsed time in seconds as an extended type
       FUNCTION Elapsed:extended; overload;
@@ -493,7 +493,7 @@ begin
     end
 end;
 
-PROCEDURE TEpikTimer.Stop(VAR T: TimerData);
+PROCEDURE TEpikTimer.stop(VAR T: TimerData);
   VAR CurTicks:TickType;
 begin
   if T.running then
@@ -524,13 +524,13 @@ end;
 
 FUNCTION TEpikTimer.ElapsedDHMS(VAR T: TimerData): string;
 VAR
-  tmp, MS: extended;
+  tmp, ms: extended;
   D, H, M, S: integer;
   P, SM: string;
 begin
   tmp := Elapsed(T);
   P := intToStr(FSPrecision);
-  MS := frac(tmp); SM:=format('%0.'+P+'f',[MS]); delete(SM,1,1);
+  ms := frac(tmp); SM:=format('%0.'+P+'f',[ms]); delete(SM,1,1);
   D := trunc(tmp / 86400); tmp:=trunc(tmp) mod 86400;
   H := trunc(tmp / 3600); tmp:=trunc(tmp) mod 3600;
   M := trunc(tmp / 60); S:=(trunc(tmp) mod 60);
@@ -576,7 +576,7 @@ end;
 
 PROCEDURE TEpikTimer.clear; begin clear(BuiltInTimer) end;
 PROCEDURE TEpikTimer.start; begin start(BuiltInTimer) end;
-PROCEDURE TEpikTimer.Stop;  begin Stop(BuiltInTimer) end;
+PROCEDURE TEpikTimer.stop;  begin stop(BuiltInTimer) end;
 FUNCTION  TEpikTimer.Elapsed: extended; begin result:=Elapsed(BuiltInTimer) end;
 FUNCTION  TEpikTimer.ElapsedStr: string; begin result:=ElapsedStr(BuiltInTimer) end;
 FUNCTION  TEpikTimer.ElapsedDHMS: string; begin result:=ElapsedDHMS(BuiltInTimer) end;

@@ -466,7 +466,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   VAR listToGroup:P_listLiteral;
       keyList:array of P_literal;
       aggregator:P_expressionLiteral;
-      tempContext:T_evaluationContext;
+      tempcontext:T_evaluationContext;
       groupMap:T_groupMap;
       groupList:T_groupMap.KEY_VALUE_LIST;
 
@@ -504,7 +504,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,tempContext);
+          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,tempcontext);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
@@ -535,14 +535,14 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
                           else aggregator:=nil;
 
       groupMap.create();
-      tempContext.createNormalContext(P_adapters(@adapters));
+      tempcontext.createNormalContext(P_adapters(@adapters));
       for inputIndex:=0 to length(keyList)-1 do if adapters.noErrors then
         addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
       groupList:=groupMap.keyValueList;
       result:=newListLiteral;
       for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false,adapters);
       groupMap.destroy;
-      tempContext.destroy;
+      tempcontext.destroy;
     end;
   end;
 
@@ -851,7 +851,7 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       try
         result:=EncodeDate(yNum,mNum,dNum)+EncodeTime(hNum,nNum,sNum,zNum);
       except
-        on E:exception do adapters.raiseError('parseTime failed:'+E.message,tokenLocation);
+        on E:Exception do adapters.raiseError('parseTime failed:'+E.message,tokenLocation);
       end;
     end;
 
