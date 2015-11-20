@@ -24,7 +24,6 @@
     scopeStack:T_valueStore;
     adapters:P_adapters;
     allowDelegation:boolean;
-
     CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
     CONSTRUCTOR createSanboxContext(CONST outAdapters:P_adapters);
     PROCEDURE adopt(CONST parent:P_evaluationContext);
@@ -125,16 +124,6 @@ FUNCTION T_valueStoreElement.getValueOrNull(CONST idx:longint):P_literal;
       result:=data[idx].getValue;
     end;
   end;
-
-//CONSTRUCTOR T_evaluationContext.create(CONST parent:P_evaluationContext);
-//  VAR i:longint;
-//  begin
-//    parentContext:=parent;
-//    adapters:=parent^.adapters;
-//    for i:=0 to length(dat)-1 do dat[i]:=nil;
-//    fill:=0;
-//    setLength(scopeStack,0);
-//  end;
 
 PROCEDURE T_evaluationContext.adopt(CONST parent:P_evaluationContext);
   begin

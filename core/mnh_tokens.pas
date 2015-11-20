@@ -335,7 +335,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;
 
-
         //plausis:
         if (ruleBody=nil) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
@@ -385,7 +384,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             n  :=first^.next;
             nn :=n    ^.next;
             nnn:=nn   ^.next;
-            if (first^.tokType=tt_identifier)
+            if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
             and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendFreeId(first^.txt);
               first:=context.disposeToken(first);
@@ -410,14 +409,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_identifier)
+            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList, tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList, tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList, tt_typeCheckKeyValueList])
                      and (nn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendTypeCheck(first^.txt,n^.tokType);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_identifier)
+            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
                      and (nn^.tokType=tt_literal) and (P_literal(nn^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
@@ -426,9 +425,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_identifier)
+            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (nn^.tokType=tt_identifier)
+                     and (nn^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendComparison(first^.txt,n^.tokType,nn^.txt);
               first:=context.disposeToken(first);
@@ -568,9 +567,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if ((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider))
     and codeProvider^.fileHasChanged then codeProvider^.load;
     startTime:=now;
-    fileTokens:=tokenizeAll(codeProvider,@self,context.adapters^);
+    fileTokens.create;
+    fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     timeForTokenizing:=now-startTime;
-    fileTokens.step(@self,lastComment);
+    fileTokens.step(@self,lastComment,context.adapters^);
     first:=nil;
     last :=nil;
     localIdStack.create;
@@ -586,12 +586,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
         localIdStack.clear;
         localIdStack.scopePush;
-        fileTokens.step(@self,lastComment);
+        fileTokens.step(@self,lastComment,context.adapters^);
         while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
           case fileTokens.current.tokType of
             tt_begin: localIdStack.scopePush;
             tt_end  : localIdStack.scopePop;
-            tt_identifier: if (last^.tokType=tt_modifier_local) then begin
+            tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule: if (last^.tokType=tt_modifier_local) then begin
               fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
               localIdStack.addId(fileTokens.current.txt);
             end else if (localIdStack.hasId(fileTokens.current.txt)) then
@@ -599,14 +599,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
-          fileTokens.step(@self,lastComment);
+          fileTokens.step(@self,lastComment,context.adapters^);
         end;
 
       end else if (fileTokens.current.tokType=tt_semicolon) then begin
         if first<>nil then interpret(first,fileTokens.current.location);
         last:=nil;
         first:=nil;
-        fileTokens.step(@self,lastComment);
+        fileTokens.step(@self,lastComment,context.adapters^);
       end else begin
         if first=nil then begin
           first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
@@ -616,7 +616,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           last      :=last^.next;
         end;
         last^.next:=nil;
-        fileTokens.step(@self,lastComment);
+        fileTokens.step(@self,lastComment,context.adapters^);
       end;
     end;
     localIdStack.destroy;

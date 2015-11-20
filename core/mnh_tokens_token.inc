@@ -21,16 +21,21 @@
   end;
 
   T_tokenArray=object
-    T:array of T_token;
-    i:longint;
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    PROCEDURE append(CONST newTok:T_token);
-    PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring);
-    FUNCTION current:T_token;
-    PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
-    FUNCTION atEnd:boolean;
-    FUNCTION getRawTokensUndefining:T_rawTokenArray;
+    private
+      T:array of T_token;
+      i:longint;
+      FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE append(CONST newTok:T_token);
+      PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
+      FUNCTION current:T_token;
+      PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
+      FUNCTION atEnd:boolean;
+      FUNCTION getRawTokensUndefining:T_rawTokenArray;
+      PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters);
+      PROCEDURE tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
   end;
 
 {$endif}
@@ -148,7 +153,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
     if lastWasIdLike and (result[1] in ['a'..'z','A'..'Z','?',':','0'..'9'])
       or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse])
     then result:=' '+result;
-    idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']);
+    idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
 
 FUNCTION T_token.singleTokenToString:ansistring;
@@ -207,7 +212,7 @@ PROCEDURE T_tokenArray.append(CONST newTok:T_token);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring);
+PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
   begin
     repeat
       inc(i);
@@ -222,8 +227,9 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
           inc(i);
           t[i].txt:=t[i-1].txt+'.'+t[i].txt;
           t[i].tokType:=tt_identifier;
-        end;
-        tt_each,tt_parallelEach:       if (i<length(t)-3) and
+          package^.resolveRuleId(t[i],nil);
+        end else if package<>nil then package^.resolveRuleId(t[i],nil);
+        tt_each,tt_parallelEach: if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
          (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
          (t[i+3].tokType=tt_separatorComma) then begin
@@ -266,7 +272,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
   begin
     setLength(result,0);
     repeat
-      step(nil,lastComment);
+      step(nil,lastComment,nullAdapter);
       if not(atEnd) then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=current.getRawToken;
@@ -275,7 +281,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
     for k:=0 to length(t)-1 do t[k].undefine;
   end;
 
-FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
+FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(CONST message:ansistring);
@@ -353,13 +359,10 @@ FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST
       end;
       'a'..'z','A'..'Z': begin
         id:=leadingId(false);
-
-        //parsedLength:=length(id);
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
         if id=C_tokenString[tt] then begin
           result.tokType:=tt;
-          result.data:=nil;
           result.txt:='';
         end;
         if result.tokType=tt_identifier then begin
@@ -480,11 +483,10 @@ FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-FUNCTION tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters):T_tokenArray;
+PROCEDURE T_tokenArray.tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters);
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
-    result.create;
     workLocation:=location;
     workLocation.column:=1;
     while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
@@ -494,7 +496,7 @@ FUNCTION tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocatio
           workLocation.column:=length(inputString)+1;
         end else begin
           next.location:=workLocation;
-          result.append(next);
+          append(next);
         end;
       end;
     end;
@@ -502,24 +504,20 @@ FUNCTION tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocatio
 
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR tokenArray:T_tokenArray;
-      next:T_token;
       location:T_tokenLocation;
       adapters:T_adapters;
   begin
+    location:=C_nilTokenLocation;
+    location.column:=1;
     tokenArray.create;
     adapters.create;
-    location.column:=1;
-    while (location.column<=length(inputString)) and (adapters.noErrors) do begin
-      next:=getToken(inputString,location,nil,adapters,true);
-      next.location:=location;
-      tokenArray.append(next);
-    end;
+    tokenArray.tokenizeAll(inputString,location,nil,adapters);
     adapters.destroy;
     result:=tokenArray.getRawTokensUndefining;
     tokenArray.destroy;
   end;
 
-FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters):T_tokenArray;
+PROCEDURE T_TokenArray.tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
   VAR location:T_tokenLocation;
       lineIndex:longint;
       next:T_token;
@@ -533,7 +531,6 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; V
   begin
     blob.level:=0;
     lines:=provider^.getLines;
-    result.create;
     location.fileName:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
@@ -544,7 +541,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; V
         if blob.level=0 then begin
           next.create;
           next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
-          result.append(next);
+          append(next);
         end else begin
           if blob.text=C_carriageReturnChar
           then blob.text:=                          lines[lineIndex]
@@ -559,7 +556,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; V
             text:=C_carriageReturnChar;
             lines[lineIndex]:='';
           end else begin
-            result.append(next);
+            append(next);
           end;
         end;
       end;
@@ -568,7 +565,7 @@ FUNCTION tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; V
     if blob.level>0 then begin
       next.create;
       next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
-      result.append(next);
+      append(next);
     end;
   end;
 
@@ -579,7 +576,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier: if inPackage<>nil then begin
+        tt_identifier,tt_localUserRule,tt_importedUserRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
             inPackage^.resolveRuleId(t^,nil);
@@ -1418,29 +1415,69 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-  FUNCTION stateToString:ansistring;
+  PROCEDURE currentStateMessage(CONST debug:boolean);
     VAR i,i0:longint;
         idLike:boolean=false;
         p:P_token;
+        tokenMessage,infoMessage:ansistring;
+    PROCEDURE addMessage(CONST token:P_token);
+      VAR tokenPart,infoPart:ansistring;
+      begin
+        tokenPart:=trimLeft(token^.toString(idLike,idLike));
+        case token^.tokType of
+          tt_identifier,tt_identifier_pon: infoPart:='id';
+          tt_parameterIdentifier: infoPart:='paramId';
+          tt_localUserRule,tt_importedUserRule,tt_localUserRule_pon,tt_importedUserRule_pon:
+            infoPart:='rule'+ansistring(P_rule(token^.data)^.getLocationOfDeclaration);
+          tt_intrinsicRule: infoPart:='builtin';
+          tt_rulePutCacheValue: infoPart:='put-cache';
+          tt_blockLocalVariable: infoPart:='local var';
+          tt_parList_constructor: infoPart:='parameter list constructor';
+          tt_parList: infoPart:='parameter list';
+          tt_list_constructor: infoPart:='list constructor';
+          tt_assignNewBlockLocal: infoPart:='new local var';
+          tt_assignExistingBlockLocal, tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend:
+            infoPart:='assign var';
+          tt_typeCheckScalar..tt_typeCheckKeyValueList: infoPart:='type check';
+          tt_literal: infoPart:=C_typeString[P_literal(token^.data)^.literalType]+' literal';
+          else infoPart:='';
+        end;
+        if (infoPart<>'') and (length(tokenPart)>=2*length(infoPart)) then tokenPart:=copy(tokenPart,1,2*length(infoPart)-3)+'...';
+        tokenPart:=tokenPart+StringOfChar(' ',length(infoPart)+1-length(tokenPart));
+        infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1)+'|';
+        tokenMessage:=tokenMessage+tokenPart;
+        infoMessage:=infoMessage+infoPart;
+      end;
+
     begin
       if length(stack)>16 then begin
-        result:='... ';
+        tokenMessage:='... ';
+        infoMessage :='#   ';
         i0:=length(stack)-16;
       end else begin
-        result:='';
+        tokenMessage:=' ';
+        infoMessage :='#';
         i0:=0;
       end;
-      for i:=i0 to length(stack)-1 do result:=result+stack[i]^.toString(idLike,idLike);
-
-      result:=result+' || ';
+      for i:=i0 to length(stack)-1 do addMessage(stack[i]);
+      tokenMessage:=tokenMessage+' || ';
+      infoMessage :=infoMessage +' || ';
       i:=0;
       p:=first;
       while (p<>nil) and (i<16) do begin
-        result:=result+p^.toString(idLike,idLike);
+        addMessage(p);
         p:=p^.next;
         inc(i);
       end;
-      if (p<>nil) then result:=result+' ...';
+      if (p<>nil) then tokenMessage:=tokenMessage+' ...';
+      if debug then begin
+        context.adapters^.raiseDebugMessage(tokenMessage,first^.location);
+        context.adapters^.raiseDebugMessage(infoMessage ,first^.location);
+      end else begin
+        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
+        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,infoMessage ,first^.location);
+      end;
+
     end;
 
 {$MACRO ON}
@@ -1477,7 +1514,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then context.adapters^.raiseDebugMessage(stateToString,first^.location) else context.adapters^.currentlyDebugging:=false; {$endif}
+      {$ifdef fullVersion} if stepper.stepping(first^.location) then currentStateMessage(true) else context.adapters^.currentlyDebugging:=false; {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1735,7 +1772,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     end;
     {$endif}
 
-    if not(context.adapters^.noErrors) and (first<>nil) then context.adapters^.raiseCustomMessage(mt_el3_stackTrace,intToStr(callDepth)+': '+stateToString,first^.location);
+    if not(context.adapters^.noErrors) and (first<>nil) then currentStateMessage(false);
     if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin

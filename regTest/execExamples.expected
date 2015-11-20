@@ -10,11 +10,12 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in>                expression('');
 Error               The parsed expression appears to be empty
-Error [stack trace] 0:  || expression('')
+Error [stack trace]   || expression('')
+Error [stack trace] # || builtin  |parameter list|
 out>                expression('')
  in> not(true);
 out> false
- in> not([true,false,true]);
+ in> not([true, false, true]);
 out> [false,true,false]
  in> not({$x});
 out> {not($x)}
@@ -40,7 +41,8 @@ out> 65
 out> -1
  in>                ord(2.1);
 Error               ord can only be applied to booleans, ints and strings
-Error [stack trace] 0:  || <ERR>
+Error [stack trace]   || <ERR>
+Error [stack trace] # || error literal|
 out>                <ERR>
  in> softCast('A');
 out> 'A'
@@ -56,7 +58,7 @@ out> [['input','../test.txt'],['expanded','D:/dev/test.txt'],['relative','../tes
 out> 'a'
  in> string(234);
 out> '234'
- in> string([1,2.6,'a',true,{$x}]);
+ in> string([1, 2.6,'a', true,{$x}]);
 out> "[1,2.6,'a',true,{$x}]"
  in> abs(-0.92);
 out> 0.92
@@ -93,17 +95,17 @@ out> 3.14159265358979
 out> {arctan($x)}
  in> argMax(sin([0..10]));
 out> 8
- in> argMax([1,3,3,0,2]);
+ in> argMax([1, 3, 3, 0, 2]);
 out> 1
  in> argMin(sin([0..10]));
 out> 5
- in> argMin([1,3,3,0,2]);
+ in> argMin([1, 3, 3, 0, 2]);
 out> 3
  in> ceil(20/3);
 out> 7
  in> ceil([0..3]/3);
 out> [0,1,1,1]
- in> ceil([0..3]/3,2);
+ in> ceil([0..3]/3, 2);
 out> [0.0,0.34,0.67,1.0]
  in> ceil(20/3,[-1..3]);
 out> [10.0,7.0,6.7,6.67,6.667]
@@ -111,23 +113,23 @@ out> [10.0,7.0,6.7,6.67,6.667]
 out> 6
  in> floor([0..3]/3);
 out> [0,0,0,1]
- in> floor([0..3]/3,2);
+ in> floor([0..3]/3, 2);
 out> [0.0,0.33,0.66,1.0]
  in> floor(20/3,[-1..3]);
 out> [0.0,6.0,6.6,6.66,6.666]
  in> round(20/3);
 out> 7
- in> round([0.5,1.5,2.5,3.5]);
+ in> round([0.5, 1.5, 2.5, 3.5]);
 out> [0,2,2,4]
- in> round([0..3]/3,2);
+ in> round([0..3]/3, 2);
 out> [0.0,0.33,0.67,1.0]
  in> round(20/3,[-1..3]);
 out> [10.0,7.0,6.7,6.67,6.667]
- in> isInRange(7,0,10);
+ in> isInRange(7, 0, 10);
 out> true
- in> isInRange(7,0.3,+Inf);
+ in> isInRange(7, 0.3,+Inf);
 out> true
- in> isInRange([0..9]/10,0.3,0.57);
+ in> isInRange([0..9]/10, 0.3, 0.57);
 out> [false,false,false,true,true,true,false,false,false,false]
  in> isInfinite(Nan);
 out> false
@@ -135,7 +137,7 @@ out> false
 out> true
  in> isInfinite(-+Inf);
 out> true
- in> isInfinite([-3.4344,Nan,+Inf]);
+ in> isInfinite([-3.4344, Nan,+Inf]);
 out> [false,false,true]
  in> isNan(Nan);
 out> true
@@ -143,7 +145,7 @@ out> true
 out> false
  in> isNan(-+Inf);
 out> false
- in> isNan([-3.4344,Nan,+Inf]);
+ in> isNan([-3.4344, Nan,+Inf]);
 out> [false,true,false]
  in> cos(-0.92);
 out> 0.605820156643463
@@ -191,15 +193,15 @@ out> {sign(1+$x)}
 out> 'z'
  in> max([0..9]/2);
 out> 4.5
- in> max(true,false);
+ in> max(true, false);
 out> true
  in> min(['a'..'z']);
 out> 'a'
  in> min([0..9]/2);
 out> 0.0
- in> min(true,false);
+ in> min(true, false);
 out> false
- in> copy('abcde',1,3);
+ in> copy('abcde', 1, 3);
 out> 'bcd'
  in> escape('a');
 out> "'a'"
@@ -209,11 +211,13 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
 Error               Fail.
-Error [stack trace] 0:  || fail
+Error [stack trace]   || fail
+Error [stack trace] # || builtin|
 out>                fail
  in>                fail("Told you this wouldn't work!");
 Error               "Told you this wouldn't work!"
-Error [stack trace] 0:  || fail('Told ... work')
+Error [stack trace]   || fail    ('Told ... work')
+Error [stack trace] # || builtin|parameter list  |
 out>                fail('Told ... work')
  in> hash(1);
 out> 3
@@ -221,9 +225,9 @@ out> 3
 out> 271003
  in> hash('a');
 out> 252
- in> each(func,listBuiltin,copy(func,0,4)=='mnh.' ? func : void);
+ in> each(func,listBuiltin, copy(func, 0, 4)=='mnh.' ? func : void);
 out> ['mnh.string','mnh.executor','mnh.sandBoxExecute','mnh.fail','mnh.expression','mnh.group','mnh.parameterNames','mnh.myPath','mnh.not','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.listBuiltin','mnh.ord','mnh.softCast','mnh.hash']
- in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']],1,aggregator({[$x%0+$y%0,$x%1]}));
+ in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x%0+$y%0,$x%1]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
 out> 3
@@ -254,14 +258,14 @@ out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
  in>                  t :=[0..1000]*0.006283;
- in>                  plot(t,sin(t));
+ in>                  plot(t, sin(t));
 Deferred plot request
 Deferred plot request
 out>                  void
- in>                  plot.renderToFile('plotDemo1.png',600,300,4);
+ in>                  plot.renderToFile('plotDemo1.png', 600, 300, 4);
 Image:                D:\dev\mnh5\plotDemo1.png
 out>                  void
- in>                                            printf('%s',each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),join(message,"\t")));
+ in>                                            printf('%s', each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'), join(message,"\t")));
 printline                                        in>        @:1,1  f(x<1)->random;
  in>        @:1,17 f(x)->f(x-1)+random;
  in>        @:1,38 f(3);
@@ -286,7 +290,7 @@ out> 4
 out> [-1,-1,1]
  in> pos(['a','b'],'cdb');
 out> [-1,2]
- in> repeat('-',10);
+ in> repeat('-', 10);
 out> '----------'
  in> replace('[[][]][]][][','[]','');
 out> ']['
@@ -322,27 +326,27 @@ out> '"3"'
 out> [[1],[2],[3]]
  in> chars('Testtext').elementFrequency;
 out> [[1,'T'],[2,'e'],[1,'s'],[3,'t'],[1,'x']]
- in> flatten([1,[2,[3,4],[5]],6]);
+ in> flatten([1,[2,[3, 4],[5]], 6]);
 out> [1,2,3,4,5,6]
  in> head(['A'..'Z']);
 out> 'A'
- in> head(['A'..'Z'],3);
+ in> head(['A'..'Z'], 3);
 out> ['A','B','C']
  in> tail(['A'..'Z']);
 out> ['B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
- in> tail(['A'..'Z'],3);
+ in> tail(['A'..'Z'], 3);
 out> ['D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
  in> leading(['A'..'Z']);
 out> ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y']
- in> leading(['A'..'Z'],3);
+ in> leading(['A'..'Z'], 3);
 out> ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W']
  in> trailing(['A'..'Z']);
 out> 'Z'
- in> trailing(['A'..'Z'],3);
+ in> trailing(['A'..'Z'], 3);
 out> ['X','Y','Z']
- in> minus([1..10]^2,2*[0..50]);
+ in> minus([1..10]^2, 2*[0..50]);
 out> [1,9,25,49,81]
- in> sort(intRandom(10,5));
+ in> sort(intRandom(10, 5));
 out> [1,2,3,5,9]
  in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
 out> ['01','1','10','010','100']
@@ -352,5 +356,5 @@ out> [0,2,3,4,8,7,9,5,6,1]
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);
 out> [0,4096,262144,1,64,1000000,729,117649,531441,15625,46656]
- in> union(1/[1..5],2/[2..6]);
+ in> union(1/[1..5], 2/[2..6]);
 out> [1.0,0.5,0.25,0.2,0.4,0.333333333333333,0.666666666666667]
