@@ -2272,6 +2272,7 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       then map^.rereference
       else map:=map^.clone;
       key:=P_stringLiteral(params^.element[1]);
+      value:=params^.element[2];
       for i:=0 to length(map^.element)-1 do begin
         keyValuePair:=P_listLiteral(map^.element[i]);
         if keyValuePair^.element[0]^.equals(key) then begin
@@ -2283,7 +2284,7 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       end;
       map^.append(
         newListLiteral^
-       .append(key,true,adapters)^
+       .append(key  ,true,adapters)^
        .append(value,true,adapters),false,adapters);
       result:=map;
     end;
