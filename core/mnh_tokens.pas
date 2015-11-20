@@ -103,7 +103,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     adapter.doEchoDeclaration:=true;
     adapter.doEchoInput:=true;
     adapter.doShowExpressionOut:=true;
-    adapter.doShowTimingInfo:=true;
+    adapter.doShowTimingInfo:=false;
 
     runAlone(input,@adapter);
 
@@ -260,9 +260,13 @@ DESTRUCTOR T_packageReference.destroy;
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
   VAR isFirstLine:boolean=true;
       lastComment:ansistring;
-      timeForTokenizing:double=0;
-      timeForDeclarations:double=0;
-      timeForInterpretation:double=0;
+      profiler:record
+        active:boolean;
+        importing,
+        tokenizing,
+        declarations,
+        interpretation:TEpikTimer;
+      end;
 
   PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
     PROCEDURE interpretUseClause;
@@ -295,7 +299,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           temp:=first; first:=context.disposeToken(temp);
         end;
         if usecase<>lu_forDocGeneration then begin
+          with profiler do if active then importing.start;
           for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
+          with profiler do if active then importing.stop;
           i:=0;
           while i<length(packageUses) do begin
             if packageUses[i].pack=nil then begin
@@ -476,7 +482,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         else
           first:=nil;
       end;
-    VAR startTime:double;
+
     begin
       if first=nil then exit;
       if isFirstLine then begin
@@ -492,18 +498,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken<>nil then begin
-        startTime:=now;
+        with profiler do if active then declarations.start;
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first,maxLongint)+';',first^.location);
         parseRule;
-        timeForDeclarations:=timeForDeclarations+now-startTime;
-      end else begin
+        with profiler do if active then declarations.stop;
+      end else if context.adapters^.noErrors then begin
         if (usecase=lu_forDirectExecution) then begin
-          startTime:=now;
+          with profiler do if active then interpretation.start;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
           reduceExpression(first,0,context);
-          timeForInterpretation:=timeForInterpretation+now-startTime;
+          with profiler do if active then interpretation.stop;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first,maxLongint),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -518,7 +524,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain:P_listLiteral=nil;
         t:P_token;
         i:longint;
-        startTime:double;
     begin
       if not(ready) or not(context.adapters^.noErrors) then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
@@ -533,9 +538,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
-        startTime:=now;
+        with profiler do if active then interpretation.start;
         reduceExpression(t,0,context);
-        timeForInterpretation:=timeForInterpretation+now-startTime;
+        with profiler do if active then interpretation.stop;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then
           context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
@@ -560,15 +565,22 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
   VAR localIdStack:T_idStack;
       first,last:P_token;
-      startTime:double;
   begin
+    if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]) then with profiler do begin
+      importing     :=TEpikTimer.create(nil); importing.clear;
+      tokenizing    :=TEpikTimer.create(nil); tokenizing.clear;
+      declarations  :=TEpikTimer.create(nil); declarations.clear;
+      interpretation:=TEpikTimer.create(nil); interpretation.clear;
+      active:=true;
+    end else profiler.active:=false;
+
     clear;
     if ((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider))
     and codeProvider^.fileHasChanged then codeProvider^.load;
-    startTime:=now;
+    with profiler do if active then tokenizing.start;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
-    timeForTokenizing:=now-startTime;
+    with profiler do if active then tokenizing.stop;
     fileTokens.step(@self,lastComment,context.adapters^);
     first:=nil;
     last :=nil;
@@ -631,6 +643,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+myTimeToStr(timeForTokenizing),C_nilTokenLocation);
       context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+myTimeToStr(timeForDeclarations),C_nilTokenLocation);
       context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+myTimeToStr(timeForInterpretation),C_nilTokenLocation);
+    with profiler do if active then begin
+      if importing     .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+profilerTimeToStr(importing.Elapsed),C_nilTokenLocation);
+      if tokenizing    .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+profilerTimeToStr(tokenizing.Elapsed),C_nilTokenLocation);
+      if declarations  .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+profilerTimeToStr(declarations.Elapsed),C_nilTokenLocation);
+      if interpretation.Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+profilerTimeToStr(interpretation.Elapsed),C_nilTokenLocation);
+      importing     .destroy;
+      tokenizing    .destroy;
+      declarations  .destroy;
+      interpretation.destroy;
     end;
   end;
 
