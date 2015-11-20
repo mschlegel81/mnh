@@ -10,6 +10,7 @@ object DebugForm: TDebugForm
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnKeyPress = FormKeyPress
   LCLVersion = '1.2.6.0'
   inline debugEdit: TSynEdit
