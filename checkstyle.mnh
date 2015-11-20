@@ -15,72 +15,52 @@ private synchronized fileWasChecked(filename:string)->
     : fileCheckedAtTime:=each(entry,fileCheckedAtTime,entry%0=filename ? updatedEntry : entry);
   end;
 
-private
-myDict:=unique(['UNIT','PROGRAM','PROCEDURE','FUNCTION','CONSTRUCTOR','DESTRUCTOR','VAR','CONST','OUT','INTERFACE',
-         'IMPLEMENTATION','INITIALIZATION','FINALIZATION','if','then','else','case','begin','end','repeat','until',
-         'while','do','to','in','ansistring','of','try','except','finally','true','false','value','word','longint',
-         'result','assign','reset','rewrite','close','object','record','create','destroy','toString','inherited',
-         'setLength','USES','TYPE','array','with','class','C_ID_QUALIFY_CHARACTER','inc','dec',
-         "add","append","ARect","Attr","background","beginThread","boolean","bufferSize",
-         "callDepth","char","Classes","clear","color","correlation","count","data","dotPos",
-         "drive","dword","enterCriticalSection","eof","executable","execute","exit","exitStatus",
-         "expandFileName","expression","extended","extractFileExt","extractFileName",
-         "extractFilePath","extractRelativePath","factor","file","fileAge","fileExists",
-         "fileList","fileName","filePath","fLine","for","foreground","format","formatFloat",
-         "free","fTokenId","getEnumName","getRange","hashMask","height","high","hour",
-         "index","int64","integer","intToStr","isNan","isUnique","key","leaveCriticalSection",
-         "left","line","lines","lowercase","math","maxLongint","message","mnh_litVar","mnh_tokLoc",
-         "mrOk","myGenerics","name","Nan","newValue","next","now","oldLen","options","ord","outFile",
-         "output","override","paramCount","parameters","paramStr","PByte","point","pointer","poWaitOnExit",
-         "PROPERTY","pSize","P_literal","P_token","rereference","round","running","saveToFile","screen",
-         "section","self","setRange","shortString","showing","size","sleep","sourceValue","split","start",
-         "startTime","stdErr","string","strToFloatDef","strToIntDef","style","subRule","sysutils","text",
-         "textFile","time","title","tmp","top","trim","trimLeft","trimRight","trunc","tt_EOL","T_file","T_token",
-         "uppercase","virtual","width","windows","write","writeln","xor",'read',
-         'doneCriticalSection','FeatureFlags','highlighter','HWTickSupportAvailable','initCriticalSection','inputString',
-         'isInfinite','length','low','min','myStringUtil','pop','push','read','readMode','readonly','rect','run','sec',
-         'shortint','sizeOf','SystemTimeBase','TickType','TimeBase','TimeBaseCorrelationData','TimeBaseData',
-         'TimeBaseSelector','TimeBaseUsed','tokType']);
-upperDict:=upper(myDict);
-fixToken(s:string)->upper(s) in upperDict and not(s in myDict) ? head(myDict%(upper(myDict)=upper(s))) : s;
-fixLine(s:string)->trim(s)="" ? "" : trimRight(each(token,tokenSplit(s,language),&,fixToken(token)));
+fixToken(s:string)->autoDict.get(upper(s),s);
+fixLine(s:string)->trim(s)="" ? "" : each(token,tokenSplit(s,language),fixToken(token)).join.trimRight;
 fixFileLines(S:stringList)->pEach(s,S,fixLine(s));
 
-isIdentifier(x:string)->length(x)>1 and regex.matches(x,'^[a-zA-Z_]+');
-isLiteral(x:string)->copy(x,0,1) in ["'",'0'..'9'];
+private significance(count:int,literal:string)->max(0,count-1)*max(0,length(literal)-10);
+
+allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
+
+autoDict:=begin
+  local result:=flatten(pEach(file,allFiles,fileContents(file).tokenSplit('pascal')));
+  result:=elementFrequency(result%(regex.matches(result,'^[a-zA-Z][a-zA-Z_]+')));
+  result:=pEach(idsGroup,group(result,upper(result%%1)),
+      idsGroup.size>1
+      ? [upper(idsGroup%0%1),idsGroup%argMax(idsGroup%%0)%1]
+      : void);
+end;
 
 checkConsistency(fileList)->begin
-  local allIds:=[];
-  local allLiterals:=[];
-  
-  each(token,flatten(pEach(file,fileList,fileContents(file).tokenSplit('pascal'))),
-  begin
-    isLiteral(token) 
-    ? allLiterals|=token
-    : isIdentifier(token) AND not(token in upperDict) 
-      ? allIds|=token 
-      : void;
-    void;
-  end);
-  allIds:=unique(allIds);
+  local allTokens:=flatten(pEach(file,fileList,fileContents(file).tokenSplit('pascal')));
+  print('Collected ',size(allTokens),' tokens');
+  local allIds     :=allTokens%(regex.matches(allTokens,'^[a-zA-Z][a-zA-Z_]+'));
+  print('Filtered ',size(allIds),' identifiers and keywords');
+  local allLiterals:=allTokens%(regex.matches(allTokens,"^['0-9]"));
+  print('Filtered ',size(allLiterals),' literals');
+  allIds:=elementFrequency(allIds);
   
   local anyComplaints:=false;
-  each(x,unique(upper(allIds)),
-  trueCount(upper(allIds)=x)>1
-  ? begin
-      anyComplaints:=true;
-      print('Inconsistent spelling: ',allIds%(upper(allIds)=x));
-    end
-  : void);
-  not(anyComplaints) ? print('Spelling is consistent.') : void;  
+  each(idsGroup,group(allIds,upper(allIds%%1)),
+    idsGroup.size>1
+    ? begin
+        anyComplaints:=true;
+        print('Inconsistent spelling: ',idsGroup.sort);
+      end
+    : void);
 
-  allLiterals:=allLiterals .elementFrequency .sort.trailing(50);
-  print('Most frequent literals: ');
-  printf("%X%\t%X%",allLiterals%%0,allLiterals%%1);
+  not(anyComplaints) ? print('Spelling is consistent.') : void;
+  allLiterals:=pEach(fp,allLiterals.elementFrequency,begin
+                       local s:=significance@fp;
+                       s>0 ? (-s)|fp
+                           : void;
+                     end).sort.head(20);
+  print('Most significant literals: ');
+  printf("%s\t%s\t%s",-(allLiterals%%0),allLiterals%%1,allLiterals%%2);
   void;
 end; 
 
-allFiles:=files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
 private pattern:='checkstyle: %-'&max(length(allFiles))&'s (%4d lines) ';
 
 fix(filename,readOnly)->readOnly OR fileMustBeChecked(filename) ? begin
@@ -102,7 +82,6 @@ main("check")->begin
   print('Checking spelling consistency in MNH sources');
   checkConsistency(allFiles);
 end;
-
 
 //*Fix all files, writing out fixes
 main("fix")->pEach(s,allFiles,fix(s,false));

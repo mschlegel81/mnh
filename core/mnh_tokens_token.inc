@@ -517,7 +517,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     tokenArray.destroy;
   end;
 
-PROCEDURE T_TokenArray.tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
+PROCEDURE T_tokenArray.tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
   VAR location:T_tokenLocation;
       lineIndex:longint;
       next:T_token;
@@ -931,10 +931,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if finalizing then begin
           finalizeAggregation;
           setLength(future,0);
-        end else begin
-          if (nextFuture-initializedFutures<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) and
-             (maxFutureForwardInitialization<16*MAX_NUMBER_OF_SECONDARY_WORKER_THREADS)
-          then inc(maxFutureForwardInitialization,maxFutureForwardInitialization);
         end;
       end;
 
@@ -1200,8 +1196,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1213,8 +1209,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1377,8 +1373,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;
@@ -1392,8 +1388,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_Begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_End  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;

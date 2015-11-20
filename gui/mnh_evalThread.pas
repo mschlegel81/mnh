@@ -38,6 +38,7 @@ IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
     parametersForMainCall:T_arrayOfString;
+    intrinsicRulesForCompletion:T_listOfString;
 
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
@@ -50,11 +51,8 @@ FUNCTION main(p:pointer):ptrint;
         i:longint;
     begin
       completionList.clear;
-      list:=reservedWordsByClass(rwc_not_reserved);
-      for i:=0 to list.size-1 do completionList.add(list[i]);
-      list.destroy;
       completionList.addAll(userRules.elementArray);
-      completionList.addAll(intrinsicRules.elementArray);
+      completionList.addAll(intrinsicRulesForCompletion.elementArray);
       completionList.unique;
     end;
 
@@ -273,14 +271,27 @@ PROCEDURE ad_doReload(CONST L: TStrings);
 PROCEDURE initIntrinsicRuleList;
   VAR ids:T_arrayOfString;
       i:longint;
+      list:T_listOfString;
   begin
     ids:=mnh_funcs.intrinsicRuleMap.keySet;
     intrinsicRules.clear;
     for i:=0 to length(ids)-1 do begin
-      intrinsicRules.add(ids[i]);
-      if pos('.',ids[i])<=0 then intrinsicRules.add('.'+ids[i]);
+      if pos('.',ids[i])<=0 then begin
+        intrinsicRules.add(    ids[i]);
+        intrinsicRulesForCompletion.add(ids[i]);
+      end else begin
+        intrinsicRules.add(split(ids[i],'.')[0]);
+        intrinsicRules.add(split(ids[i],'.')[1]);
+        intrinsicRulesForCompletion.add(ids[i]);
+        intrinsicRulesForCompletion.add(split(ids[i],'.')[0]);
+        intrinsicRulesForCompletion.add(split(ids[i],'.')[1]);
+      end;
     end;
+    list:=reservedWordsByClass(rwc_not_reserved);
+    for i:=0 to list.size-1 do intrinsicRulesForCompletion.add(list[i]);
+    list.destroy;
     intrinsicRules.unique;
+    intrinsicRulesForCompletion.unique;
   end;
 
 PROCEDURE initUnit;
@@ -289,6 +300,7 @@ PROCEDURE initUnit;
     evaluationState.create(es_dead);
     endOfEvaluationText.create('');
     intrinsicRules.create;
+    intrinsicRulesForCompletion.create;
     initIntrinsicRuleList;
     userRules.create;
     completionList.create;
@@ -302,6 +314,7 @@ FINALIZATION
     pendingRequest.destroy;
     evaluationState.destroy;
     endOfEvaluationText.destroy;
+    intrinsicRulesForCompletion.destroy;
     intrinsicRules.destroy;
     userRules.destroy;
     completionList.destroy;

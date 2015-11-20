@@ -517,7 +517,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
 
 { TMnhForm }
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
-  CONST MSG='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
+  CONST msg='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   VAR i:longint;
   begin
     wordsInEditor.create;
@@ -538,7 +538,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     InputEdit.highlighter:=inputHighlighter;
     OutputEdit.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
-    endOfEvaluationText.value:=MSG;
+    endOfEvaluationText.value:=msg;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
@@ -649,9 +649,9 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
         commented:=commented and (copy(trim(InputEdit.lines[i]),1,2)='//');
       if commented
       then for i:=InputEdit.BlockBegin.y-1 to InputEdit.BlockEnd.y-1 do
-        inputEdit.lines[i]:=replaceOne(inputEdit.lines[i],'//','')
+        InputEdit.lines[i]:=replaceOne(InputEdit.lines[i],'//','')
       else for i:=InputEdit.BlockBegin.y-1 to InputEdit.BlockEnd.y-1 do
-      inputEdit.lines[i]:='//'+inputEdit.lines[i];
+      InputEdit.lines[i]:='//'+InputEdit.lines[i];
     end;
   end;
 

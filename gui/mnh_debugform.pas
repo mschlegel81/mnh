@@ -25,7 +25,7 @@ TYPE
 
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
+    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE miCancelClick(Sender: TObject);
     PROCEDURE miMultistepClick(Sender: TObject);
@@ -62,10 +62,10 @@ PROCEDURE TDebugForm.FormCreate(Sender: TObject);
     debugEdit.highlighter:=highlighter;
   end;
 
-procedure TDebugForm.FormDestroy(Sender: TObject);
+PROCEDURE TDebugForm.FormDestroy(Sender: TObject);
   begin
     highlighter.destroy;
-    debugEdit.Highlighter:=nil;
+    debugEdit.highlighter:=nil;
   end;
 
 PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);
