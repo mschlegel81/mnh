@@ -258,6 +258,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
+      instantPlotRequested:boolean=false;
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
@@ -265,7 +266,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       case messageType of
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: MnhForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: mnhForm.doPlot;
+        mt_plotCreatedWithInstantDisplay: instantPlotRequested:=true;
         mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
@@ -303,6 +304,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
+    if instantPlotRequested then MnhForm.doPlot();
     system.leaveCriticalSection(cs);
   end;
 

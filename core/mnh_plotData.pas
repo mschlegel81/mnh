@@ -167,12 +167,12 @@ CONST
       name: string;
       color: array[T_colorChannel] of byte
     end =
-    ((name: 'black'; color: (0, 0, 0)),
-     (name: 'red'; color: (255, 0, 0)),
-     (name: 'blue'; color: (0, 0, 255)),
-     (name: 'green'; color: (0, 128, 0)),
-     (name: 'purple'; color: (192, 0, 192)),
-     (name: 'orange'; color: (255, 96, 0)));
+    ((name: 'black' ; color:(  0,  0,  0)),
+     (name: 'red'   ; color:(255,  0,  0)),
+     (name: 'blue'  ; color:(  0,  0,255)),
+     (name: 'green' ; color:(  0,128,  0)),
+     (name: 'purple'; color:(192,  0,192)),
+     (name: 'orange'; color:(255, 96,  0)));
 
 CONSTRUCTOR T_style.create(CONST index: byte);
   begin
@@ -187,17 +187,12 @@ DESTRUCTOR T_style.destroy;
   end;
 
 PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
-
   FUNCTION parseColorOption(colorOption: string; OUT r, g, b: byte): boolean;
-
-    PROCEDURE HSV2RGB(H, S, V: single; OUT r, g, b: byte);
-      VAR
-        hi, p, q, t: byte;
+    PROCEDURE HSV2RGB(H,S,V: single; OUT r,g,b: byte);
+      VAR hi,p,q,t: byte;
       begin
-        while H<0 do
-          H:=H+1;
-        while H>1 do
-          H:=H-1;
+        while H<0 do H:=H+1;
+        while H>1 do H:=H-1;
         hi:=trunc(H*6);
         H:=H*6-hi;
         V:=V*255;
@@ -205,155 +200,105 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         q:=round(V*(1-S*H));
         t:=round(V*(1-S*(1-H)));
         case hi of
-          0, 6: begin
-            r:=round(V);
-            g:=t;
-            b:=p;
-            end;
-          1: begin
-            r:=q;
-            g:=round(V);
-            b:=p;
-            end;
-          2: begin
-            r:=p;
-            g:=round(V);
-            b:=t;
-            end;
-          3: begin
-            r:=p;
-            g:=q;
-            b:=round(V);
-            end;
-          4: begin
-            r:=t;
-            g:=p;
-            b:=round(V);
-            end;
-          5: begin
-            r:=round(V);
-            g:=p;
-            b:=q;
-            end;
-          end;
+          0, 6: begin r:=round(V); g:=t; b:=p; end;
+          1:    begin r:=q; g:=round(V); b:=p; end;
+          2:    begin r:=p; g:=round(V); b:=t; end;
+          3:    begin r:=p; g:=q; b:=round(V); end;
+          4:    begin r:=t; g:=p; b:=round(V); end;
+          5:    begin r:=round(V); g:=p; b:=q; end;
+        end;
       end;
 
-    VAR
-      rStr: string = '';
-      gStr: string = '';
-      bStr: string = '';
-      i: longint;
-      isHSV: boolean;
+    VAR rStr: string = '';
+        gStr: string = '';
+        bStr: string = '';
+        i: longint;
+        isHSV: boolean;
     begin
       result:=false;
       for i:=0 to length(C_defaultColor)-1 do
-        if colorOption = C_defaultColor[i].name then
-          begin
+      if colorOption = C_defaultColor[i].name then begin
           color:=C_defaultColor[i].color;
           result:=true;
-          end;
-      if not(result) and ((copy(colorOption, 1, 3) = 'RGB') or
-        (copy(colorOption, 1, 3) = 'HSV')) then
-        begin
+        end;
+      if not(result) and ((copy(colorOption, 1, 3) = 'RGB') or (copy(colorOption, 1, 3) = 'HSV')) then begin
         isHSV:=(copy(colorOption, 1, 3) = 'HSV');
         colorOption:=copy(colorOption, 4, length(colorOption)-3);
         i:=pos(',', colorOption);
-        if i>0 then
-          begin
+        if i>0 then begin
           rStr:=copy(colorOption, 1, i-1);
           colorOption:=copy(colorOption, i+1, length(colorOption));
           i:=pos(',', colorOption);
-          end;
-        if i>0 then
-          begin
+        end;
+        if i>0 then begin
           gStr:=copy(colorOption, 1, i-1);
           colorOption:=copy(colorOption, i+1, length(colorOption));
           i:=pos(',', colorOption);
-          end;
-        if i>0 then
-          begin
+        end;
+        if i>0 then begin
           bStr:=copy(colorOption, 1, i-1);
           colorOption:=copy(colorOption, i+1, length(colorOption));
           i:=pos(',', colorOption);
-          end
-        else
-          bStr:=colorOption;
-        if (rStr<>'') and (gStr<>'') and (bStr<>'') then
-          begin
-          if isHSV then
-            HSV2RGB(
-              strToFloatDef(rStr, 0),
-              max(0, min(1, strToFloatDef(gStr, 0))),
-              max(0, min(1, strToFloatDef(bStr, 0))), r, g, b)
-          else
-            begin
+        end else bStr:=colorOption;
+        if (rStr<>'') and (gStr<>'') and (bStr<>'') then begin
+          if isHSV then HSV2RGB(strToFloatDef(rStr,0),
+                    max(0,min(1,strToFloatDef(gStr,0))),
+                    max(0,min(1,strToFloatDef(bStr,0))), r, g, b)
+          else begin
             r:=round(255*max(0, min(1, strToFloatDef(rStr, 0))));
             g:=round(255*max(0, min(1, strToFloatDef(gStr, 0))));
             b:=round(255*max(0, min(1, strToFloatDef(bStr, 0))));
-            end;
-          result:=true;
           end;
+          result:=true;
         end;
-      if not(result) and (copy(colorOption, 1, 3) = 'HUE') then
-        begin
+      end;
+      if not(result) and (copy(colorOption, 1, 3) = 'HUE') then begin
         colorOption:=copy(colorOption, 4, length(colorOption)-3);
         HSV2RGB(strToFloatDef(colorOption, 0), 1, 1, r, g, b);
         result:=true;
-        end;
-      if not(result) and (copy(colorOption, 1, 4) = 'GREY') then
-        begin
+      end;
+      if not(result) and (copy(colorOption, 1, 4) = 'GREY') then begin
         colorOption:=copy(colorOption, 5, length(colorOption)-4);
         r:=round(255*max(0, min(1, strToFloatDef(colorOption, 0))));
         g:=r;
         b:=r;
         result:=true;
-        end;
+      end;
     end;
 
-  VAR
-    part, options: ansistring;
-    sp: longint;
-    i: longint;
-    size: T_myFloat;
-    mightBeColor: boolean;
+  VAR part, options: ansistring;
+      sp: longint;
+      i: longint;
+      size: T_myFloat;
+      mightBeColor: boolean;
   begin
     style:=0;
     options:=trim(styleString);
     repeat
       sp:=pos(' ', options);
-      if sp<=0 then
-        begin
+      if sp<=0 then begin
         part:=options;
         options:='';
-        end
-      else
-        begin
+      end else begin
         part:=copy(options, 1, sp-1);
         options:=trim(copy(options, sp+1, length(options)));
-        end;
+      end;
       mightBeColor:=true;
       size:=strToFloatDef(part, Nan);
-      if not(isNan(size)) then
-        begin
+      if not(isNan(size)) then begin
         styleModifier:=size;
         mightBeColor:=false;
-        end;
-      for i:=0 to length(C_styleName)-1 do
-        with C_styleName[i] do
-          if (part = name[0]) or (part = name[1]) then
-            begin
-            if idx in[C_lineStyle_box, C_lineStyle_bar, C_lineStyle_straight,
-              C_lineStyle_stepRight, C_lineStyle_stepLeft] then
-              style:=style and not(C_anyLineStyle) or idx
-            else
-              style:=style or idx;
-            mightBeColor:=false;
-            end;
-      if mightBeColor then
-        parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
+      end;
+      for i:=0 to length(C_styleName)-1 do with C_styleName[i] do
+      if (part = name[0]) or (part = name[1]) then begin
+        if idx in[C_lineStyle_box, C_lineStyle_bar, C_lineStyle_straight, C_lineStyle_stepRight, C_lineStyle_stepLeft]
+        then style:=style and not(C_anyLineStyle) or idx
+        else style:=style or idx;
+        mightBeColor:=false;
+      end;
+      if mightBeColor then parseColorOption(part, color[cc_red], color[cc_green], color[cc_blue]);
     until options = '';
-    if style = 0 then
-      style:=C_lineStyle_straight;
+    if style = 0 then style:=C_lineStyle_straight;
   end;
 
 FUNCTION T_style.getTColor: longint;
@@ -364,10 +309,8 @@ FUNCTION T_style.getTColor: longint;
 FUNCTION T_style.getIntLineWidth(CONST scalingFactor: double): longint;
   begin
     result:=trunc(styleModifier*scalingFactor);
-    if (random<frac(styleModifier*scalingFactor)) then
-      inc(result);
-    if result<0 then
-      result:=0;
+    if (random<frac(styleModifier*scalingFactor)) then inc(result);
+    if result<0 then result:=0;
   end;
 
 FUNCTION T_style.getSymbolWidth: double;
@@ -548,99 +491,75 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
       VAR screenPos: double;
       begin
         screenPos:=realToScreen(axis, realPos);
-        if not(isNan(screenPos)) and not(isInfinite(screenPos)) and  not(screenPos<0) and not((axis = 'y') and
-             (screenPos>screenHeight)) and not((axis = 'x') and
-          (screenPos>screenWidth)) then
-          begin
+        if not(isNan(screenPos)) and
+           not(isInfinite(screenPos)) and
+           not(screenPos<0) and
+           not((axis = 'y') and (screenPos>screenHeight)) and
+           not((axis = 'x') and (screenPos>screenWidth ))
+        then begin
           setLength(tic[axis], length(tic[axis])+1);
-          with tic[axis][length(tic[axis])-1] do
-            begin
+          with tic[axis][length(tic[axis])-1] do begin
             pos:=screenPos;
             major:=isMajorTic;
-            if major then
-              txt:=realTxt
-            else
-              txt:='';
-            end;
+            if major then txt:=realTxt
+                     else txt:='';
           end;
+        end;
       end;
 
     FUNCTION pot10(y: int64): T_myFloat; inline;
-      VAR
-        p10: T_myFloat;
+      VAR p10: T_myFloat;
       begin
-        if y>=0 then
-          p10:=10
-        else
-          begin
+        if y>=0 then p10:=10 else begin
           p10:=0.1;
           y:=-y;
-          end;
+        end;
         result:=1;
-        while y>0 do
-          begin
-          if odd(y) then
-            result:=result*p10;
+        while y>0 do begin
+          if odd(y) then result:=result*p10;
           p10:=p10*p10;
           y:=y shr 1;
-          end;
+        end;
       end;
 
     FUNCTION niceText(CONST value, scale: longint): string;
-      CONST
-        suf: array[0..3] of string = ('', '0', '00', '000');
+      CONST suf: array[0..3] of string = ('', '0', '00', '000');
       begin
-        if value = 0 then
-          exit('0');
-        if (scale>=-3) and (scale<0) then
-          begin
+        if value = 0 then exit('0');
+        if (scale>=-3) and (scale<0) then begin
           result:=intToStr(value);
-          while length(result)<-scale do
-            result:='0'+result;
-          exit(copy(result, 1, length(result)+scale)+'.'+
-            copy(result, length(result)+1+scale, -scale));
-          end
-        else if (scale>=0) and (scale<3) then
-          exit(intToStr(value)+suf[scale])
-        else
-          exit(intToStr(value)+'E'+intToStr(scale));
+          while length(result)<-scale do result:='0'+result;
+          exit(copy(result, 1, length(result)+scale)+'.'+copy(result, length(result)+1+scale, -scale));
+        end else if (scale>=0) and (scale<3)
+        then exit(intToStr(value)+suf[scale])
+        else exit(intToStr(value)+'E'+intToStr(scale));
       end;
 
     FUNCTION tooManyTotalTics: boolean;
-      CONST
-        distanceTol = 5;
-      VAR
-        i: longint;
-        lastPos: double;
+      CONST distanceTol = 5;
+      VAR i: longint;
+          lastPos: double;
       begin
         lastPos:=-1E50;
-        for i:=0 to length(tic[axis])-1 do
-          begin
-          if abs(tic[axis][i].pos-lastPos)<distanceTol then
-            exit(true);
+        for i:=0 to length(tic[axis])-1 do begin
+          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
           lastPos:=tic[axis][i].pos;
-          end;
+        end;
         result:=false;
       end;
 
     FUNCTION tooManyMajorTics: boolean;
-      VAR
-        i: longint;
-        distanceTol: longint;
-        lastPos: double;
+      VAR i: longint;
+          distanceTol: longint;
+          lastPos: double;
       begin
-        if axis = 'y' then
-          distanceTol:=(screenHeight-yOffset)
-        else
-          distanceTol:=xOffset;
+        if axis = 'y' then distanceTol:=(screenHeight-yOffset)
+                      else distanceTol:=xOffset;
         lastPos:=-1E50;
-        for i:=0 to length(tic[axis])-1 do
-          if tic[axis][i].major then
-            begin
-            if abs(tic[axis][i].pos-lastPos)<distanceTol then
-              exit(true);
-            lastPos:=tic[axis][i].pos;
-            end;
+        for i:=0 to length(tic[axis])-1 do if tic[axis][i].major then begin
+          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
+          lastPos:=tic[axis][i].pos;
+        end;
         result:=false;
       end;
 
@@ -656,105 +575,69 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
 
     VAR i, j: longint;
     begin with scalingOptions do begin
-      if logscale[axis] then
-        begin
+      if logscale[axis] then begin
         setLength(tic[axis], 0);
-        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
-          for j:=1 to 9 do
-            addTic(pot10(i)*j, niceText(j, i), true);
-        if not(tooManyMajorTics) and not(tooManyTotalTics) then
-          exit;
+        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+          addTic(pot10(i)*j, niceText(j, i), true);
+        if not(tooManyMajorTics) and not(tooManyTotalTics) then exit;
 
         setLength(tic[axis], 0);
-        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
-          for j:=1 to 9 do
-            addTic(pot10(i)*j, niceText(j, i), (j = 1) or (j = 2) or (j = 5));
-        if not(tooManyMajorTics) and not(tooManyTotalTics) then
-          exit;
+        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+          addTic(pot10(i)*j, niceText(j, i), (j = 1) or (j = 2) or (j = 5));
+        if not(tooManyMajorTics) and not(tooManyTotalTics) then exit;
 
         setLength(tic[axis], 0);
-        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
-          for j:=1 to 9 do
-            addTic(pot10(i)*j, niceText(j, i), j = 1);
+        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+          addTic(pot10(i)*j, niceText(j, i), j = 1);
 
-        if not(tooManyMajorTics) then
-          begin
-          if tooManyTotalTics then
-            begin
+        if not(tooManyMajorTics) then begin
+          if tooManyTotalTics then begin
             setLength(tic[axis], 0);
-            for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
-              begin
+            for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do begin
               addTic(pot10(i), niceText(1, i), true);
               addTic(pot10(i)*2, niceText(2, i), false);
               addTic(pot10(i)*5, niceText(5, i), false);
-              end;
-            end
-          else
-            exit;
+            end;
+          end else exit;
           exit;
-          end;
+        end;
 
-        for j:=2 to 10 do
-          begin
-          if not(tooManyMajorTics) then
-            exit
-          else
-            setLength(tic[axis], 0);
+        for j:=2 to 10 do begin
+          if not(tooManyMajorTics) then exit else setLength(tic[axis], 0);
           for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
             addTic(pot10(i), niceText(1, i), (i mod j) = 0);
-          end;
-        end
-      else
-        begin
+        end;
+      end else begin
         i:=floor(ln(range[axis, 1]-range[axis, 0])/ln(10))-3;
         repeat
           initLinearTics(i, 10, 1);
-          if not(tooManyMajorTics) then
-            begin
-            if tooManyTotalTics then
-              initLinearTics(i, 10, 2)
-            else
-              exit;
-            if tooManyTotalTics then
-              initLinearTics(i, 10, 5)
-            else
-              exit;
-            end;
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i, 10, 2)
+                                else exit;
+            if tooManyTotalTics then initLinearTics(i, 10, 5)
+                                else exit;
+          end;
           initLinearTics(i, 20, 1);
-          if not(tooManyMajorTics) then
-            begin
-            if tooManyTotalTics then
-              initLinearTics(i, 20, 2)
-            else
-              exit;
-            if tooManyTotalTics then
-              initLinearTics(i, 20, 5)
-            else
-              exit;
-            if tooManyTotalTics then
-              initLinearTics(i, 20, 10)
-            else
-              exit;
-            end;
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i, 20, 2)
+                                else exit;
+            if tooManyTotalTics then initLinearTics(i, 20, 5)
+                                else exit;
+            if tooManyTotalTics then initLinearTics(i, 20, 10)
+                                else exit;
+          end;
           initLinearTics(i, 50, 1);
-          if not(tooManyMajorTics) then
-            begin
-            if tooManyTotalTics then
-              initLinearTics(i, 50, 2)
-            else
-              exit;
-            if tooManyTotalTics then
-              initLinearTics(i, 50, 5)
-            else
-              exit;
-            if tooManyTotalTics then
-              initLinearTics(i, 50, 10)
-            else
-              exit;
-            end;
+          if not(tooManyMajorTics) then begin
+            if tooManyTotalTics then initLinearTics(i, 50, 2)
+                                else exit;
+            if tooManyTotalTics then initLinearTics(i, 50, 5)
+                                else exit;
+            if tooManyTotalTics then initLinearTics(i, 50, 10)
+                                else exit;
+          end;
           inc(i);
         until false;
-        end;
+      end;
     end; end;
 
   begin
@@ -770,16 +653,12 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
   end;
 
 FUNCTION T_plot.longtestYTic: ansistring;
-  VAR
-    i: longint;
+  VAR i: longint;
   begin
     result:='';
-    for i:=0 to length(tic['y'])-1 do
-      with tic['y', i] do
-        if length(txt)>length(result) then
-          result:=txt;
-    if result = '' then
-      result:='.0E';
+    for i:=0 to length(tic['y'])-1 do with tic['y', i] do
+    if length(txt)>length(result) then result:=txt;
+    if result = '' then result:='.0E';
   end;
 
 FUNCTION T_plot.setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
