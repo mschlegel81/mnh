@@ -648,8 +648,8 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
   begin
     if length(element) = 0 then if isFinalized then exit('()')
                                                else exit('(');
-    result:=element [0]^.toShorterString;
-    for i:=1 to length(element)-1 do result:=result+','+element [i]^.toShorterString;
+    result:=element [0]^.toString;
+    for i:=1 to length(element)-1 do result:=result+','+element [i]^.toString;
     if isFinalized then result:='('+result+')'
     else result:='('+result+',';
   end;

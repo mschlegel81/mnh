@@ -1415,7 +1415,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-  PROCEDURE currentStateMessage(CONST debug:boolean);
+  PROCEDURE currentStateMessage({$ifdef fullVersion}CONST debug:boolean{$endif});
     VAR i,i0:longint;
         idLike:boolean=false;
         p:P_token;
@@ -1423,7 +1423,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     PROCEDURE addMessage(CONST token:P_token);
       VAR tokenPart,infoPart:ansistring;
       begin
-        tokenPart:=trimLeft(token^.toString(idLike,idLike));
+        tokenPart:=token^.toString(idLike,idLike);
         case token^.tokType of
           tt_identifier,tt_identifier_pon: infoPart:='id';
           tt_parameterIdentifier: infoPart:='paramId';
@@ -1439,12 +1439,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           tt_assignExistingBlockLocal, tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend:
             infoPart:='assign var';
           tt_typeCheckScalar..tt_typeCheckKeyValueList: infoPart:='type check';
-          tt_literal: infoPart:=C_typeString[P_literal(token^.data)^.literalType]+' literal';
+          tt_literal: begin
+            infoPart:=C_typeString[P_literal(token^.data)^.literalType]+' literal';
+            if (length(tokenPart)>=2*length(infoPart)) then begin
+              tokenPart:=P_literal(token^.data)^.toShorterString;
+              infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1);
+            end;
+          end
           else infoPart:='';
         end;
         if (infoPart<>'') and (length(tokenPart)>=2*length(infoPart)) then tokenPart:=copy(tokenPart,1,2*length(infoPart)-3)+'...';
         tokenPart:=tokenPart+StringOfChar(' ',length(infoPart)+1-length(tokenPart));
-        infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1)+'|';
+        infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1)+#28;
         tokenMessage:=tokenMessage+tokenPart;
         infoMessage:=infoMessage+infoPart;
       end;
@@ -1461,7 +1467,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       for i:=i0 to length(stack)-1 do addMessage(stack[i]);
       tokenMessage:=tokenMessage+' || ';
-      infoMessage :=infoMessage +' || ';
+      infoMessage :=infoMessage +#28+#28+#28+#28;
       i:=0;
       p:=first;
       while (p<>nil) and (i<16) do begin
@@ -1470,14 +1476,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         inc(i);
       end;
       if (p<>nil) then tokenMessage:=tokenMessage+' ...';
+      {$ifdef fullVersion}
       if debug then begin
         context.adapters^.raiseDebugMessage(tokenMessage,first^.location);
         context.adapters^.raiseDebugMessage(infoMessage ,first^.location);
-      end else begin
+      end else
+      {$endif}
+      begin
         context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
         context.adapters^.raiseCustomMessage(mt_el3_stackTrace,infoMessage ,first^.location);
       end;
-
     end;
 
 {$MACRO ON}
@@ -1772,7 +1780,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     end;
     {$endif}
 
-    if not(context.adapters^.noErrors) and (first<>nil) then currentStateMessage(false);
+    if not(context.adapters^.noErrors) and (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
     if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin

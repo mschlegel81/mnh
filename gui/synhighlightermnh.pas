@@ -24,7 +24,10 @@ TYPE
     tkModifier,
     tkNull,
     tkError,
-    tkHighlightedItem);
+    tkHighlightedItem,
+    tkDebugInfo,
+    tkWhiteOnWhite);
+  T_mnhSynFlavour=(msf_input,msf_output,msf_debugger);
 
 TYPE
   { TSynMnhSyn }
@@ -32,8 +35,9 @@ TYPE
   TSynMnhSyn = class(TSynCustomHighlighter)
   private
 
-    isMarked:    boolean;
-    defaultToPrint:boolean;
+    isMarked,
+    isDebugInfoLine :boolean;
+    flavour :T_mnhSynFlavour;
 
     fLine: PChar;
     styleTable: array[TtkTokenKind] of TSynHighlighterAttributes;
@@ -52,7 +56,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: string; override;
   public
-    CONSTRUCTOR create(AOwner: TComponent; forOutput:boolean);
+    CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     DESTRUCTOR destroy; override;
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
     FUNCTION GetEol: boolean; override;
@@ -76,10 +80,10 @@ VAR modifierStrings:T_listOfString;
     specialLiteralStrings:T_listOfString;
     specialConstructStrings:T_listOfString;
 
-CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
+CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   begin
     inherited create(AOwner);
-    defaultToPrint:=forOutput;
+    flavour:=flav;
     styleTable[tkComment         ]:=TSynHighlighterAttributes.create('Comment');
     styleTable[tkDocComment      ]:=TSynHighlighterAttributes.create('DocComment');
     styleTable[tkSpecialComment  ]:=TSynHighlighterAttributes.create('SpecialComment');
@@ -95,6 +99,8 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
     styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
     styleTable[tkHighlightedItem ]:=TSynHighlighterAttributes.create('Highlighted');
+    styleTable[tkDebugInfo       ]:=TSynHighlighterAttributes.create('DebugInfo');
+    styleTable[tkWhiteOnWhite    ]:=TSynHighlighterAttributes.create('WhiteOnWhite');
 
     styleTable[tkComment         ].style:=[fsItalic];
     styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
@@ -121,17 +127,18 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; forOutput:boolean);
     styleTable[tkError           ].foreground:=$000000FF; styleTable[tkError].background:=$0000FFFF;
     styleTable[tkHighlightedItem ].foreground:=$00000000;
     styleTable[tkHighlightedItem ].background:=$0000FFFF;
+    styleTable[tkWhiteOnWhite    ].foreground:=$00FFFFFF;
+    styleTable[tkWhiteOnWhite    ].background:=$00FEFEFE;
+    styleTable[tkDebugInfo       ].FrameColor:=$00FF0000;
 
     markedWord:='';
     setMarkedToken(-1,-1);
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
-  VAR
-    tk: TtkTokenKind;
+  VAR tk: TtkTokenKind;
   begin
-    for tk := tkComment to tkNull do
-      styleTable[tk].destroy;
+    for tk := low(TtkTokenKind) to high(TtkTokenKind) do styleTable[tk].destroy;
     inherited destroy;
   end; { Destroy }
 
@@ -179,18 +186,36 @@ PROCEDURE TSynMnhSyn.next;
     isMarked:=false;
     fTokenId := tkDefault;
     fTokenPos := run;
-    if defaultToPrint and (run = 0) then begin
-      specialLineCase:=mt_clearConsole;
-      i:=-1;
-      for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
-        specialLineCase:=lc;
-        i:=length(C_errorLevelTxt[lc]);
+    if (run = 0) then begin
+      if flavour=msf_output then begin// in [msf_output,msf_debugger] and
+        specialLineCase:=mt_clearConsole;
+        i:=-1;
+        for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
+          specialLineCase:=lc;
+          i:=length(C_errorLevelTxt[lc]);
+        end;
+        if i>=0 then run:=i+1;
+        if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError
+                                                          else fTokenId:=tkDefault;
+        if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
+        if run>0 then exit;
+      end else if (flavour=msf_debugger) and (fLine[run]='#') then begin
+        isDebugInfoLine:=true;
+        fTokenId:=tkWhiteOnWhite;
+        inc(run);
+        exit;
+      end else isDebugInfoLine:=false;
+    end;
+    if (flavour=msf_debugger) and (isDebugInfoLine) then begin
+      if fLine[run]=#0 then begin
+        fTokenId := tkNull;
+      end else begin
+        while not(fLine[run] in [#0,#28]) do inc(run);
+        if fLine[run]=#28 then inc(run);
+        if run>fTokenPos+1 then fTokenId:=tkDebugInfo
+                           else fTokenId:=tkWhiteOnWhite;
       end;
-      if i>=0 then run:=i+1;
-      if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError
-                                                        else fTokenId:=tkDefault;
-      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
-      if run>0 then exit;
+      exit;
     end;
 
     case fLine [run] of
@@ -331,7 +356,7 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
     if isMarked then result.FrameColor:=$000000FF
-                else result.FrameColor:=clNone;
+                else if fTokenId<>tkDebugInfo then result.FrameColor:=clNone;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;
@@ -347,6 +372,7 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
     isMarked:=false;
+    isDebugInfoLine:=false;
   end;
 
 PROCEDURE TSynMnhSyn.setRange(value: pointer);

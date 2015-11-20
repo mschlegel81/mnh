@@ -6,10 +6,10 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls,
-  Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread;
+  Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread,SynEditKeyCmds;
 
 CONST
-  ROLLING_LINE_COUNT=40;
+  ROLLING_LINE_COUNT=200;
 
 TYPE
 
@@ -57,7 +57,7 @@ PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
 PROCEDURE TDebugForm.FormCreate(Sender: TObject);
   begin
-    highlighter:=TSynMnhSyn.create(nil,false);
+    highlighter:=TSynMnhSyn.create(nil,msf_debugger);
     debugEdit.highlighter:=highlighter;
   end;
 
@@ -78,7 +78,7 @@ PROCEDURE TDebugForm.miCancelClick(Sender: TObject);
 
 PROCEDURE TDebugForm.miMultistepClick(Sender: TObject);
   begin
-    stepper.doMultiStep(ROLLING_LINE_COUNT-1);
+    stepper.doMultiStep(ROLLING_LINE_COUNT div 3);
     if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
@@ -97,6 +97,9 @@ PROCEDURE TDebugForm.rollingAppend(CONST line: ansistring);
       for i:=0 to ROLLING_LINE_COUNT-2 do debugEdit.lines[i]:=debugEdit.lines[i+1];
       debugEdit.lines[ROLLING_LINE_COUNT-1]:=line;
     end;
+    debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
+    debugEdit.ExecuteCommand(ecLineStart,' ',nil);
+
   end;
 
 end.

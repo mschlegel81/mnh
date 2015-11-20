@@ -199,14 +199,14 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
       result:=DELIM+replaceAll(s,DELIM,DELIM+DELIM)+DELIM;
     end;
 
+  CONST escapes:array[0..34,0..1] of char=
+       (('\','\'),
+        (#0 ,'0'),(#1 ,'1'),(#2 ,'2'),(#3 ,'3'),(#4 ,'4'),(#5 ,'5'),(#6 ,'6'),(#7 ,'a'),
+        (#8 ,'b'),(#9 ,'t'),(#10,'n'),(#11,'v'),(#12,'f'),(#13,'r'),(#14,'S'),(#15,'s'),
+        (#16,'d'),(#17,'A'),(#18,'B'),(#19,'C'),(#20,'D'),(#21,'N'),(#22,'X'),(#23,'T'),
+        (#24,'Z'),(#25,'M'),(#26,'Y'),(#27,'x'),(#28,'F'),(#29,'G'),(#30,'R'),(#31,'U'),
+        (#127,'-'),('"','"'));
   FUNCTION javaStyle:ansistring;
-    CONST escapes:array[0..34,0..1] of char=
-         (('\','\'),
-          (#0 ,'0'),(#1 ,'1'),(#2 ,'2'),(#3 ,'3'),(#4 ,'4'),(#5 ,'5'),(#6 ,'6'),(#7 ,'a'),
-          (#8 ,'b'),(#9 ,'t'),(#10,'n'),(#11,'v'),(#12,'f'),(#13,'r'),(#14,'S'),(#15,'s'),
-          (#16,'d'),(#17,'A'),(#18,'B'),(#19,'C'),(#20,'D'),(#21,'N'),(#22,'X'),(#23,'T'),
-          (#24,'Z'),(#25,'M'),(#26,'Y'),(#27,'x'),(#28,'F'),(#29,'G'),(#30,'R'),(#31,'U'),
-          (#127,'-'),('"','"'));
     VAR i:longint;
     begin
       result:=s;
@@ -215,16 +215,12 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
     end;
 
   VAR tmp:ansistring;
+      i:longint;
   begin
-    //choose the delimiter leading to a shorter representation
-    if (pos(C_tabChar,s)>0) or
-       (pos(C_lineBreakChar,s)>0) or
-       (pos(C_carriageReturnChar,s)>0) then result:=javaStyle
-    else begin
-      tmp:=javaStyle;
-      result:=pascalStyle;
-      if length(tmp)<length(result) then result:=tmp;
-    end;
+    for i:=0 to length(escapes)-1 do if pos(escapes[i,0],s)>0 then exit(javaStyle);
+    tmp:=javaStyle;
+    result:=pascalStyle;
+    if length(tmp)<length(result) then result:=tmp;
   end;
 
 FUNCTION unescapeString(CONST input: ansistring; CONST offset:longint; OUT parsedLength: longint): ansistring;

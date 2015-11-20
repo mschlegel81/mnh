@@ -13,9 +13,6 @@ USES
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs;
 
 TYPE
-
-  { TMnhForm }
-
   TMnhForm = class(TForm)
     miMinErrorlevel5: TMenuItem;
     MenuItem3: TMenuItem;
@@ -380,7 +377,6 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring);
 PROCEDURE TMnhForm.doPlot;
   VAR factor:longint;
   begin
-    //plotSubsystem.state:=pss_neutral;
     PageControl.ActivePageIndex:=1;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
@@ -537,8 +533,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     doNotCheckFileBefore:=now+10*ONE_SECOND;
     OpenDialog.fileName:=paramStr(0);
     SaveDialog.fileName:=paramStr(0);
-    inputHighlighter:=TSynMnhSyn.create(nil,false);
-    outputHighlighter:=TSynMnhSyn.create(nil,true);
+    inputHighlighter:=TSynMnhSyn.create(nil,msf_input);
+    outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     InputEdit.highlighter:=inputHighlighter;
     OutputEdit.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
@@ -575,8 +571,6 @@ PROCEDURE TMnhForm.FormKeyPress(Sender: TObject; VAR key: char);
       if key='+' then guiAdapters.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
                  else guiAdapters.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
       guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
-      //plotSubsystem.state:=pss_plotOnShow;
-      //plotSubsystem.renderNotBefore:=now+(1/(24*60*60));
     end;
   end;
 
