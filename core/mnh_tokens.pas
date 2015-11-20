@@ -550,10 +550,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           mainPackage.printHelpOnMain(context.adapters^);
         end;
         context.cascadeDisposeToken(t);
+        disposeLiteral(parametersForMain);
+        parametersForMain:=nil;
       end;
-      disposeLiteral(parametersForMain);
-      parametersForMain:=nil;
-
     end;
 
   VAR localIdStack:T_idStack;
