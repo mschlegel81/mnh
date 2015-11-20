@@ -67,7 +67,7 @@ FUNCTION main(p:pointer):ptrint;
 
   PROCEDURE postEval;
     begin
-      getMainPackage^.updateLists(userRules);
+      environment.mainPackage^.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
       if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
@@ -105,12 +105,12 @@ PROCEDURE ad_clearFile;
   begin
     if evaluationState.value=es_running then guiOutAdapters^.haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
-    mainPackageProvider.clear;
+    environment.mainPackageProvider^.clear;
   end;
 
 PROCEDURE ad_evaluate(CONST L: TStrings);
   begin
-    mainPackageProvider.setLines(L);
+    environment.mainPackageProvider^.setLines(L);
     pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -134,7 +134,7 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
       end;
     end;
 
-    mainPackageProvider.setLines(L);
+    environment.mainPackageProvider^.setLines(L);
     pendingRequest.value:=er_callMain;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -154,30 +154,30 @@ PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
       LL:T_arrayOfString;
   begin
     ad_haltEvaluation;
-    if path<>mainPackageProvider.getPath then begin
-      mainPackageProvider.setPath(path);
-      mainPackageProvider.load;
+    if path<>environment.mainPackageProvider^.getPath then begin
+      environment.mainPackageProvider^.setPath(path);
+      environment.mainPackageProvider^.load;
       L.clear;
-      LL:=mainPackageProvider.getLines;
+      LL:=environment.mainPackageProvider^.getLines;
       for i:=0 to length(LL)-1 do L.append(LL[i]);
       setLength(LL,0);
-      getMainPackage^.clear;
+      environment.mainPackage^.clear;
     end;
   end;
 
 PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
   begin
     L.saveToFile(path);
-    if path<>mainPackageProvider.getPath then begin
-      mainPackageProvider.setPath(path);
+    if path<>environment.mainPackageProvider^.getPath then begin
+      environment.mainPackageProvider^.setPath(path);
     end;
-    mainPackageProvider.setLines(L);
-    mainPackageProvider.save;
+    environment.mainPackageProvider^.setLines(L);
+    environment.mainPackageProvider^.save;
   end;
 
 FUNCTION ad_currentFile: string;
   begin
-    result:=mainPackageProvider.getPath;
+    result:=environment.mainPackageProvider^.getPath;
   end;
 
 FUNCTION ad_evaluationRunning: boolean;
@@ -220,13 +220,13 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     if not(hasBuiltinNamespace) then begin
-      packageReference:=getMainPackage^.getPackageReferenceForId(id,guiOutAdapters^);
+      packageReference:=environment.mainPackage^.getPackageReferenceForId(id,guiOutAdapters^);
       if packageReference.id<>'' then info.tokenExplanation:='Imported package ('+packageReference.path+')';
     end;
 
     token.create;
-    token.define(C_nilTokenLocation,id,tt_identifier,getMainPackage);
-    getMainPackage^.resolveRuleId(token,nil);
+    token.define(C_nilTokenLocation,id,tt_identifier,environment.mainPackage);
+    environment.mainPackage^.resolveRuleId(token,nil);
     case token.tokType of
       tt_intrinsicRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
@@ -247,17 +247,17 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
 
 FUNCTION ad_needReload: boolean;
   begin
-    result:=not(ad_evaluationRunning) and (ad_currentFile<>'') and mainPackageProvider.fileHasChanged;
+    result:=not(ad_evaluationRunning) and (ad_currentFile<>'') and environment.mainPackageProvider^.fileHasChanged;
   end;
 
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
   VAR i:longint;
   begin
-    mainPackageProvider.setLines(L);
-    if mainPackageProvider.getPath='' then begin
+    environment.mainPackageProvider^.setLines(L);
+    if environment.mainPackageProvider^.getPath='' then begin
       result:=false;
       for i:=0 to L.count-1 do result:=result or (trim(L[i])<>'');
-    end else result:=mainPackageProvider.fileIsOutOfSync;
+    end else result:=environment.mainPackageProvider^.fileIsOutOfSync;
   end;
 
 PROCEDURE ad_doReload(CONST L: TStrings);
@@ -265,8 +265,8 @@ PROCEDURE ad_doReload(CONST L: TStrings);
       i:longint;
   begin
     L.clear;
-    if mainPackageProvider.fileHasChanged then mainPackageProvider.load;
-    lines:=mainPackageProvider.getLines;
+    if environment.mainPackageProvider^.fileHasChanged then environment.mainPackageProvider^.load;
+    lines:=environment.mainPackageProvider^.getLines;
     for i:=0 to length(lines)-1 do L.append(lines[i]);
   end;
 

@@ -69,7 +69,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
     begin
       context.createNormalContext(P_adapters(@consoleAdapters));
       if not(fileExists(setupFile)) then exit;
-      mainPackageProvider.setPath(setupFile);
+      environment.mainPackageProvider^.setPath(setupFile);
       setLength(parameters,0);
       callMainInMain(parameters,context);
       context.destroy;
@@ -79,7 +79,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
     begin
-      mainPackageProvider.setPath(fileOrCommandToInterpret);
+      environment.mainPackageProvider^.setPath(fileOrCommandToInterpret);
       if wantHelpDisplay then begin
         //displayHelp;
         printMainPackageDocText(consoleAdapters);
@@ -95,8 +95,8 @@ FUNCTION parseCmdLine:T_tokenLocation;
     VAR context:T_evaluationContext;
     begin
       context.createNormalContext(P_adapters(@consoleAdapters));
-      mainPackageProvider.clear;
-      mainPackageProvider.appendLine(fileOrCommandToInterpret);
+      environment.mainPackageProvider^.clear;
+      environment.mainPackageProvider^.appendLine(fileOrCommandToInterpret);
       reloadMainPackage(lu_forDirectExecution,context);
       context.destroy;
       halt;

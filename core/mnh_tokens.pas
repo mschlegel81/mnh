@@ -56,7 +56,6 @@ TYPE
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
 PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
-FUNCTION getMainPackage:P_package;
 PROCEDURE findAndDocumentAllPackages;
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
 
@@ -66,16 +65,20 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
-VAR mainPackageProvider:T_codeProvider;
+TYPE T_packageEnvironment=record
+       mainPackageProvider:P_codeProvider;
+       secondaryPackages:array of P_package;
+       mainPackage      :P_package;
+     end;
+
+
+VAR environment:T_packageEnvironment;
 
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
-    secondaryPackages:array of P_package;
-    mainPackage      :T_package;
-    packagesAreFinalized:boolean=false;
-    pendingTasks:T_taskQueue;
+    pendingTasks     :T_taskQueue;
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
   VAR context:T_evaluationContext;
@@ -154,20 +157,20 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 FUNCTION guessPackageForProvider(CONST providerPath:ansistring):P_package;
   VAR packId:string;
       i:longint;
-  begin
-    if providerPath=mainPackage.codeProvider^.getPath then exit(@mainPackage);
+  begin with environment do begin
+    if providerPath=mainPackage^.codeProvider^.getPath then exit(mainPackage);
     for i:=0 to length(secondaryPackages)-1 do
       if providerPath=secondaryPackages[i]^.codeProvider^.getPath then exit(secondaryPackages[i]);
-    if (providerPath='?') or (providerPath='') then exit(@mainPackage);
+    if (providerPath='?') or (providerPath='') then exit(mainPackage);
     packId:=filenameToPackageId(providerPath);
-    if packId=mainPackageProvider.id then exit(@mainPackage);
-    if packId=mainPackage.codeProvider^.id then exit(@mainPackage);
-    for i:=0 to length(mainPackage.packageUses)-1 do
-      if packId=mainPackage.packageUses[i].id then exit(mainPackage.packageUses[i].pack);
+    if packId=mainPackageProvider^.id then exit(mainPackage);
+    if packId=mainPackage^.codeProvider^.id then exit(mainPackage);
+    for i:=0 to length(mainPackage^.packageUses)-1 do
+      if packId=mainPackage^.packageUses[i].id then exit(mainPackage^.packageUses[i].pack);
     for i:=0 to length(secondaryPackages)-1 do
       if packId=secondaryPackages[i]^.codeProvider^.id then exit(secondaryPackages[i]);
-    result:=@mainPackage;
-  end;
+    result:=mainPackage;
+  end; end;
 
 FUNCTION guessPackageForToken(CONST token:T_token):P_package;
   begin
@@ -187,12 +190,12 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
   VAR i,j:longint;
       used:T_listOfString;
-  begin
+  begin with environment do begin
     context.adapters^.clearErrors;
-    mainPackage.load(usecase,context,C_EMPTY_STRING_ARRAY);
+    mainPackage^.load(usecase,context,C_EMPTY_STRING_ARRAY);
     //housekeeping:-------------------------------------------------------------
     used.create;
-    for j:=0 to length(mainPackage.packageUses)-1 do used.add(mainPackage.packageUses[j].id);
+    for j:=0 to length(mainPackage^.packageUses)-1 do used.add(mainPackage^.packageUses[j].id);
     for i:=0 to length(secondaryPackages)-1 do
     for j:=0 to length(secondaryPackages[i]^.packageUses)-1 do used.add(secondaryPackages[i]^.packageUses[j].id);
     used.unique;
@@ -206,23 +209,12 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_ev
     used.destroy;
     //-------------------------------------------------------------:housekeeping
     context.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
-  end;
-
-PROCEDURE finalizePackages;
-  VAR i:longint;
-  begin
-    if packagesAreFinalized then exit;
-    mainPackage.destroy;
-    mainPackageProvider.destroy;
-    for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
-    setLength(secondaryPackages,0);
-    packagesAreFinalized:=true;
-  end;
+  end; end;
 
 PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   VAR i:longint;
       newSource:P_codeProvider=nil;
-  begin
+  begin with environment do begin
     for i:=0 to length(secondaryPackages)-1 do
       if secondaryPackages[i]^.codeProvider^.id = pack.id then begin
         if secondaryPackages[i]^.ready then begin
@@ -239,7 +231,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
     setLength(secondaryPackages,length(secondaryPackages)+1);
     secondaryPackages[length(secondaryPackages)-1]:=pack.pack;
     pack.pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-  end;
+  end; end;
 
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
   begin
@@ -459,7 +451,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
         end else begin
           rulePattern.toParameterIds(ruleBody,context.adapters^);
-          if evaluateBody then reduceExpression(ruleBody,0,context);
+          if evaluateBody and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
         end;
 
         if context.adapters^.noErrors then begin
@@ -527,17 +519,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     begin
       if not(ready) or not(context.adapters^.noErrors) then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
-        context.destroy;
         exit;
       end;
       if not(packageRules.containsKey('main',mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',fileTokenLocation(codeProvider));
       end else begin
-        t:=context.newToken(fileTokenLocation(@mainPackageProvider),'main',tt_localUserRule,mainRule);
+        t:=context.newToken(fileTokenLocation(environment.mainPackageProvider),'main',tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
-        t^.next:=context.newToken(fileTokenLocation(@mainPackageProvider),'',tt_parList,parametersForMain);
+        t^.next:=context.newToken(fileTokenLocation(environment.mainPackageProvider),'',tt_parList,parametersForMain);
         with profiler do if active then interpretation.start;
         reduceExpression(t,0,context);
         with profiler do if active then interpretation.stop;
@@ -555,7 +546,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.adapters^.printOut('');
           context.adapters^.printOut('Try one of the following:');
           context.adapters^.printOut('');
-          mainPackage.printHelpOnMain(context.adapters^);
+          printHelpOnMain(context.adapters^);
         end;
         context.cascadeDisposeToken(t);
         disposeLiteral(parametersForMain);
@@ -575,8 +566,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end else profiler.active:=false;
 
     clear;
-    if ((usecase=lu_forCallingMain) or (codeProvider<>@mainPackageProvider))
-    and codeProvider^.fileHasChanged then codeProvider^.load;
+
+    if ((usecase=lu_forCallingMain) or (codeProvider<>environment.mainPackageProvider)) and codeProvider^.fileHasChanged then codeProvider^.load;
     with profiler do if active then tokenizing.start;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
@@ -630,6 +621,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         fileTokens.step(@self,lastComment,context.adapters^);
       end;
     end;
+    fileTokens.destroy;
     localIdStack.destroy;
     if (context.adapters^.noErrors)
     then begin if first<>nil then interpret(first,C_nilTokenLocation); end
@@ -637,12 +629,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     ready:=usecase<>lu_forDocGeneration;
 
     if usecase=lu_forCallingMain then executeMain;
-    if usecase in [lu_forDirectExecution,lu_forCallingMain] then begin
-      if context.adapters^.noErrors then complainAboutUncalled(true,context.adapters^);
-      if context.adapters^.noErrors then finalize(context.adapters^);
-      context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+myTimeToStr(timeForTokenizing),C_nilTokenLocation);
-      context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+myTimeToStr(timeForDeclarations),C_nilTokenLocation);
-      context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+myTimeToStr(timeForInterpretation),C_nilTokenLocation);
+    if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
+    then complainAboutUncalled(true,context.adapters^);
+    if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forDocGeneration])
+    then finalize(context.adapters^);
+
     with profiler do if active then begin
       if importing     .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+profilerTimeToStr(importing.Elapsed),C_nilTokenLocation);
       if tokenizing    .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+profilerTimeToStr(tokenizing.Elapsed),C_nilTokenLocation);
@@ -653,6 +644,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       declarations  .destroy;
       interpretation.destroy;
     end;
+
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
@@ -695,7 +687,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      if @self=@mainPackage then adapters.raiseCustomMessage(mt_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
+      if @self=environment.mainPackage then adapters.raiseCustomMessage(mt_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
@@ -703,7 +695,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
 DESTRUCTOR T_package.destroy;
   begin
     clear;
-    if codeProvider<>@mainPackageProvider then dispose(codeProvider,destroy);
+    if codeProvider<>environment.mainPackageProvider then dispose(codeProvider,destroy);
     packageRules.destroy;
     importedRules.destroy;
     setLength(packageUses,0);
@@ -849,7 +841,7 @@ FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
   begin
     context.adapters^.clearErrors;
-    mainPackage.load(lu_forCallingMain,context,parameters);
+    environment.mainPackage^.load(lu_forCallingMain,context,parameters);
     context.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
   end;
 
@@ -858,15 +850,9 @@ PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
   begin
     silentContext.createSanboxContext(P_adapters(@nullAdapter));
     nullAdapter.clearErrors;
-    mainPackageProvider.load;
     reloadMainPackage(lu_forDocGeneration,silentContext);
-    mainPackage.printHelpOnMain(adapters);
+    environment.mainPackage^.printHelpOnMain(adapters);
     silentContext.destroy;
-  end;
-
-FUNCTION getMainPackage: P_package;
-  begin
-    result:=@mainPackage;
   end;
 
 PROCEDURE findAndDocumentAllPackages;
@@ -892,11 +878,14 @@ PROCEDURE findAndDocumentAllPackages;
   end;
 
 {$undef include_implementation}
+VAR i:longint;
 INITIALIZATION
 {$define include_initialization}
-  mainPackageProvider.create;
-  mainPackage.create(@mainPackageProvider);
-  setLength(secondaryPackages,0);
+  with environment do begin
+    new(mainPackageProvider,create);
+    new(mainPackage,create(mainPackageProvider));
+    setLength(secondaryPackages,0);
+  end;
   pendingTasks.create;
 
   //callbacks in mnh_litvar:
@@ -916,6 +905,11 @@ INITIALIZATION
 
 FINALIZATION
   pendingTasks.destroy;
-  finalizePackages;
+  with environment do begin
+    dispose(mainPackage,destroy);
+    dispose(mainPackageProvider,destroy);
+    for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
+    setLength(secondaryPackages,0);
+  end;
 
 end.

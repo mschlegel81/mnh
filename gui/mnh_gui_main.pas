@@ -501,7 +501,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     setUnderCursor(OutputEdit.GetWordAtRowCol(caret));
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
-    if (loc.column>0) and (loc.fileName=mainPackageProvider.getPath)
+    if (loc.column>0) and (loc.fileName=environment.mainPackageProvider^.getPath)
     then begin
       inputHighlighter.setMarkedToken(loc.line-1,loc.column-1);
       if doJump then begin
@@ -711,7 +711,7 @@ PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
       SettingsForm.wantInstantEvaluation:=false;
 
       doStartEvaluation;
-      stepper.setBreakpoint(mainPackageProvider.fileName,lineIdx);
+      stepper.setBreakpoint(environment.mainPackageProvider^.fileName,lineIdx);
       ad_evaluate(InputEdit.lines);
     end else askForm.getLastAnswerReleasing;
   end;

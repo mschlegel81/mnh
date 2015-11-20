@@ -7,7 +7,7 @@ PROCEDURE interactiveMode;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
-      mainPackageProvider.clear;
+      environment.mainPackageProvider^.clear;
       repeat
         write('>'); readln(nextInput);
         nextInput:=trim(nextInput);
@@ -16,9 +16,9 @@ PROCEDURE interactiveMode;
           exit;
         end;
         if (length(nextInput)>0) and (nextInput[length(nextInput)]='\') then begin
-          mainPackageProvider.appendLine(copy(nextInput,1,length(nextInput)-1));
+          environment.mainPackageProvider^.appendLine(copy(nextInput,1,length(nextInput)-1));
         end else begin
-          mainPackageProvider.appendLine(nextInput);
+          environment.mainPackageProvider^.appendLine(nextInput);
           exit;
         end;
       until false;
