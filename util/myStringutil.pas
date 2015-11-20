@@ -217,7 +217,7 @@ FUNCTION escapeString(CONST s: ansistring): ansistring;
   VAR tmp:ansistring;
       i:longint;
   begin
-    for i:=0 to length(escapes)-1 do if pos(escapes[i,0],s)>0 then exit(javaStyle);
+    for i:=1 to length(escapes)-2 do if pos(escapes[i,0],s)>0 then exit(javaStyle);
     tmp:=javaStyle;
     result:=pascalStyle;
     if length(tmp)<length(result) then result:=tmp;
