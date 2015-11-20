@@ -303,6 +303,8 @@ FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_to
 FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 IMPLEMENTATION
 
 VAR
@@ -1585,6 +1587,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral; VAR 
         while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
+      if not(adapters.noErrors) then exit;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
       if (scale<length(element)) and adapters.noErrors then begin
@@ -2183,7 +2186,7 @@ FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_to
 FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR rhsSet:specialize G_literalKeyMap<boolean>;
       i:longint;
-      lhs,rhs:P_listLiteral;
+      LHS,RHS:P_listLiteral;
   begin
     if not((params<>nil) and
            (length(params^.element)=2) and
@@ -2191,14 +2194,14 @@ FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
            (params^.element[1]^.literalType in C_validListTypes))
     then exit(nil);
 
-    lhs:=P_listLiteral(params^.element[0]);
-    rhs:=P_listLiteral(params^.element[1]);
+    LHS:=P_listLiteral(params^.element[0]);
+    RHS:=P_listLiteral(params^.element[1]);
     rhsSet.create;
-    for i:=0 to length(rhs^.element)-1 do rhsSet.put(rhs^.element[i],true);
+    for i:=0 to length(RHS^.element)-1 do rhsSet.put(RHS^.element[i],true);
     result:=newListLiteral;
-    for i:=0 to length(lhs^.element)-1 do
-      if not(rhsSet.get(lhs^.element[i],false))
-      then P_listLiteral(result)^.append(lhs^.element[i],true,nullAdapter);
+    for i:=0 to length(LHS^.element)-1 do
+      if not(rhsSet.get(LHS^.element[i],false))
+      then P_listLiteral(result)^.append(LHS^.element[i],true,nullAdapter);
     rhsSet.destroy;
   end;
 
@@ -2252,6 +2255,67 @@ FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true,nullAdapter);
     setLength(resultList,0);
     resultSet.destroy;
+  end;
+
+FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR map,keyValuePair:P_listLiteral;
+      key:P_stringLiteral;
+      value:P_literal;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (length(params^.element)=3) and
+       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.element[1]^.literalType=lt_string) then begin
+      map:=P_listLiteral(params^.element[0]);
+      if map^.numberOfReferences=1
+      then map^.rereference
+      else map:=map^.clone;
+      key:=P_stringLiteral(params^.element[1]);
+      for i:=0 to length(map^.element)-1 do begin
+        keyValuePair:=P_listLiteral(map^.element[i]);
+        if keyValuePair^.element[0]^.equals(key) then begin
+          disposeLiteral(keyValuePair^.element[1]);
+          keyValuePair^.element[1]:=value;
+          value^.rereference;
+          exit(map);
+        end;
+      end;
+      map^.append(
+        newListLiteral^
+       .append(key,true,adapters)^
+       .append(value,true,adapters),false,adapters);
+      result:=map;
+    end;
+  end;
+
+FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR map,keyValuePair:P_listLiteral;
+      key:P_stringLiteral;
+      fallback,
+      value:P_literal;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and ((length(params^.element)=2) or (length(params^.element)=3)) and
+       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.element[1]^.literalType=lt_string) then begin
+      map:=P_listLiteral(params^.element[0]);
+      key:=P_stringLiteral(params^.element[1]);
+      if length(params^.element)=3 then fallback:=params^.element[2]
+                                   else fallback:=nil;
+      for i:=0 to length(map^.element)-1 do begin
+        keyValuePair:=P_listLiteral(map^.element[i]);
+        if keyValuePair^.element[0]^.equals(key) then begin
+          result:=keyValuePair^.element[1];
+          result^.rereference;
+          exit(result);
+        end;
+      end;
+      if fallback=nil then exit(newListLiteral);
+      result:=fallback;
+      fallback^.rereference;
+    end;
   end;
 
 VAR
