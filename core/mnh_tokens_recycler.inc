@@ -260,7 +260,8 @@ PROCEDURE T_evaluationContext.setLocalValue(CONST id:ansistring; CONST value:P_l
         exit;
       end;
     end;
-    scopeStack[length(scopeStack)-1].declareValue(id,value,true);
+    if parentContext<>nil then parentContext^.setLocalValue(id,value)
+                          else scopeStack[length(scopeStack)-1].declareValue(id,value,true);
   end;
 
 FUNCTION T_evaluationContext.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
@@ -270,6 +271,7 @@ FUNCTION T_evaluationContext.mutateInline(CONST id:ansistring; CONST mutation:T_
       j:=scopeStack[i].indexOfId(id);
       if j>=0 then exit(scopeStack[i].mutateInline(j,mutation,RHS,location,adapters^));
     end;
+    if parentContext<>nil then exit(parentContext^.mutateInline(id,mutation,RHS,location));
     result:=nil;
   end;
 
@@ -288,7 +290,8 @@ FUNCTION T_evaluationContext.hasId(CONST id:ansistring):boolean;
   VAR i:longint;
   begin
     for i:=length(scopeStack)-1 downto 0 do if scopeStack[i].indexOfId(id)>=0 then exit(true);
-    result:=false;
+    if parentContext<>nil then result:=parentContext^.hasId(id)
+                          else result:=false;
   end;
 
 {$endif}
