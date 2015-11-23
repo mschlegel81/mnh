@@ -1,22 +1,23 @@
-mutable proceed:=true;
 private glyphs:=expression(replace("[['0'@***C1'(=! _/)  _/  )===!!#;2'@=G%EDH ;3'@>+/)>C4'(G%# )I==!!#;5'(IEE$H)>>$H#;6'@E$/_<C7'(I>>=G%#.-(8'@*+<C9'@?$/%>C:'(BB&B&B!; '(!!\"!%B!\"% \"-]",chars('IHGFEDCBA@?>=<;.-+*)(&%$#"!'),copy('D/&/_/!AF" A#."$/$?#;! " #!(+<*+/. &!!)/)* -(!! '']]  $#!&# ",[''_/%  "_/__/!'',''   ',[0..26]*3,3)))();
 private printTime(time:real)->printf('%s',each(g,glyphs%chars(formatTime(' hh:nn:ss',time)),&));
 //*For regtest
 main->begin
   print('Call with any string parameter for continuous run.');
-  proceed:=false;
   printTime(0.123);
 end;
 
 main(...)->
-pEach(task,[
-  {begin
-    ask('');
-    proceed:=false;
-  end},
-  {while(proceed,begin
-    clearPrint;
-    print('Press enter to quit.');
-    printTime(systime);
-    sleep(1);
-  end)}],task());
+begin
+  local proceed:=true;
+  pEach(task,[
+    {begin
+      ask('Press enter to quit.');
+      proceed:=false;
+    end},
+    {while(proceed,begin
+      clearPrint;
+      print('Press enter to quit.');
+      printTime(systime);
+      sleep(1);
+    end)}],task());
+end;

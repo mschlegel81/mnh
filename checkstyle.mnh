@@ -18,7 +18,7 @@ private significance(count:int,literal:string)->max(0,count-1)*max(0,length(lite
 
 memoized allFiles->files((allFolders('.')&'/*.pas')|(allFolders('.')&'/*.inc'));
 mutable autoDict:=void;
-prepareDict->autoDict:=
+synchronized prepareDict->autoDict:=
 begin
   local result:=flatten(pEach(file,allFiles,fileContents(file).tokenSplit('pascal')));
   result:=elementFrequency(result%(regex.matches(result,'^[a-zA-Z][a-zA-Z_]+')));
@@ -38,7 +38,7 @@ private checkConsistency(fileList)->begin
   allIds:=elementFrequency(allIds);
   
   local anyComplaints:=false;
-  each(idsGroup,group(allIds,upper(allIds%%1)),
+  pEach(idsGroup,group(allIds,upper(allIds%%1)),
     idsGroup.size>1
     ? begin
         anyComplaints:=true;
@@ -70,7 +70,7 @@ private fix(filename:string,readOnly:boolean)->begin
   end;
   readOnly ? void : fileWasChecked(filename);
   printf('%s',diffOut);
-end : void;
+end;
 
 //*Check all files, writing out potential fixes
 main("check")->begin
