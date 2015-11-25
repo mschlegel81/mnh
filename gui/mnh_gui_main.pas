@@ -1297,9 +1297,7 @@ PROCEDURE lateInitialization;
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     StopDebuggingCallback:=@debugForm_stopDebugging;
     DebuggingStepCallback:=@debugForm_debuggingStep;
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,
-      'ask(q:string);#Asks the user question q and returns the user input#'+
-      'ask(q:string,options:stringList);#Asks the user question q, giving the passed options and returns the chosen option');
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit;
   end;
 

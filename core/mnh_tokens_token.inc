@@ -659,7 +659,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newLit:P_literal;
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
-      maxFutureForwardInitialization:longint=16;
 
   PROCEDURE initTokTypes; inline;
     begin
@@ -757,6 +756,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
+  PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation);
+    begin
+      context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',location);
+    end;
+
   PROCEDURE resolveEach(inParallel:boolean);
     VAR bracketClosingEach:P_token;
         bodyRule:array of P_subrule;
@@ -764,6 +768,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         aggregatorToken:T_tokenType;
         aggregatorExpression:P_expressionLiteral;
         aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
+        maxFutureForwardInitialization:longint=16;
 
     FUNCTION parseBodyOk:boolean;
       VAR i:longint;
@@ -843,7 +848,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             tt_operatorLazyAnd: if resultLiteral=nil then begin
               if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else context.adapters^.raiseError( 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              else raiseLazyBooleanError(aggregatorLocation);
               if not(booleanResult) then begin
                 lazyAbort:=true;
                 resultLiteral:=L;
@@ -852,7 +857,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             tt_operatorLazyOr: if resultLiteral=nil then begin
               if (L^.literalType=lt_boolean) then booleanResult:=P_boolLiteral(L)^.value
-              else context.adapters^.raiseError( 'Lazy boolean operators can only be applied to scalar booleans.',aggregatorLocation);
+              else raiseLazyBooleanError(aggregatorLocation);
               if booleanResult then begin
                 lazyAbort:=true;
                 resultLiteral:=L;
@@ -1381,7 +1386,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first^.next:=p;
             didSubstitution:=true;
           end;
-        end else context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        end else raiseLazyBooleanError(first^.next^.location);
         tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
           if (P_boolLiteral(first^.data)^.value) then begin
             //true OR ... -> true
@@ -1401,7 +1406,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first:=context.disposeToken(first); //drop OR
             didSubstitution:=true;
           end;
-        end else context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',first^.next^.location);
+        end else raiseLazyBooleanError(first^.next^.location);
         else begin
           setLength(stack,length(stack)+2);
           stack[length(stack)-2]:=first; first:=first^.next;

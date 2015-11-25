@@ -54,17 +54,29 @@ FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   end;
 
 
-FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders:boolean):P_listLiteral;
+FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolders,recurseSubDirs:boolean):P_listLiteral;
   VAR i,j:longint;
       found:T_arrayOfString;
+  FUNCTION searchString(CONST index:longint):ansistring;
+    begin
+      if pathOrPathList^.literalType=lt_string
+      then result:=P_stringLiteral(pathOrPathList)^.value
+      else result:=P_stringLiteral(P_listLiteral(pathOrPathList)^.value(index))^.value;
+      if not(filesAndNotFolders) and recurseSubDirs and (pos('*',result)<=0) then result:=result+DirectorySeparator+'*';
+    end;
+
   begin
     result:=newListLiteral;
     if pathOrPathList^.literalType=lt_string then begin
-      found:=find(P_stringLiteral(pathOrPathList)^.value,filesAndNotFolders);
+      found:=find(searchString(0),filesAndNotFolders,recurseSubDirs);
+      if recurseSubDirs and DirectoryExists(P_stringLiteral(pathOrPathList)^.value)
+                                        then result^.append(pathOrPathList,true,nullAdapter);
       for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
-        found:=find(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value,filesAndNotFolders);
+        found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
+        if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value)
+                                          then result^.append(P_listLiteral(pathOrPathList)^.value(j),true,nullAdapter);
         for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
       end;
     end;
@@ -74,14 +86,14 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
-    then result:=filesOrDirs_impl(params^.value(0),true);
+    then result:=filesOrDirs_impl(params^.value(0),true,false);
   end;
 
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
-    then result:=filesOrDirs_impl(params^.value(0),false);
+    then result:=filesOrDirs_impl(params^.value(0),false,false);
   end;
 
 FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
@@ -89,15 +101,8 @@ FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=newListLiteral;
-      if DirectoryExists(P_stringLiteral(params^.value(0))^.value) then begin
-        P_listLiteral(result)^.append(params^.value(0),true,adapters);
-        resultList:=FindAllDirectories(P_stringLiteral(params^.value(0))^.value);
-        for i:=0 to resultList.count-1 do P_listLiteral(result)^.appendString(replaceAll(resultList[i],'\','/'));
-        resultList.free;
-      end;
-    end;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(params^.value(0),false,true);
   end;
 
 FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
@@ -329,7 +334,7 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       obtainLock(P_stringLiteral(params^.value(0))^.value);
-      result:=newBoolLiteral(DeleteDirectory(P_stringLiteral(params^.value(0))^.value,false));
+      result:=newBoolLiteral(DeleteDirectory(UTF8Encode(P_stringLiteral(params^.value(0))^.value),false));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
     end;
   end;
@@ -342,8 +347,8 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       obtainLock(P_stringLiteral(params^.value(1))^.value);
       ensurePath(P_stringLiteral(params^.value(1))^.value);
       result:=newBoolLiteral(
-      FileUtil.CopyFile(P_stringLiteral(params^.value(0))^.value,
-                        P_stringLiteral(params^.value(1))^.value,true));
+      FileUtil.CopyFile(UTF8Encode(P_stringLiteral(params^.value(0))^.value),
+                        UTF8Encode(P_stringLiteral(params^.value(1))^.value),true));
       releaseLock(P_stringLiteral(params^.value(0))^.value);
       releaseLock(P_stringLiteral(params^.value(1))^.value);
     end;

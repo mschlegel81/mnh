@@ -87,6 +87,50 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end;
   end;
 
+FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) then case params^.value(0)^.literalType of
+      lt_string: case params^.value(1)^.literalType of
+        lt_string: exit(newStringLiteral(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(params^.value(0))^.value+'/',
+                                P_stringLiteral(params^.value(1))^.value),
+            '\','/')));
+        lt_stringList,lt_emptyList: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(              params^.value(0)           )^.value+'/',
+                                P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value),
+            '\','/'));
+        end;
+      end;
+      lt_stringList,lt_emptyList: case params^.value(1)^.literalType of
+        lt_string: begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value+'/',
+                                P_stringLiteral(              params^.value(1)           )^.value),
+            '\','/'));
+        end;
+        lt_stringList,lt_emptyList: if  P_listLiteral(params^.value(0))^.size= P_listLiteral(params^.value(1))^.size then begin
+          result:=newListLiteral;
+          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value+'/',
+                                P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value),
+            '\','/'));
+        end;
+      end;
+    end;
+  end;
+
 FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
@@ -147,6 +191,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');

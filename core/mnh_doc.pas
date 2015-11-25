@@ -320,8 +320,8 @@ PROCEDURE makeHtmlFromTemplate();
           i:longint;
       begin
         CreateDir(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
-        files:=find(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true);
-        for i:=0 to length(files) do DeleteFile(files[i]);
+        files:=find(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true,false);
+        for i:=0 to length(files)-1 do DeleteFile(files[i]);
       end;
 
     VAR i: longint;

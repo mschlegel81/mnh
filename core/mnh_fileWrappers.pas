@@ -43,7 +43,7 @@ FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfStri
 FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
-FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
@@ -288,23 +288,22 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     end;
   end;
 
-FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders: boolean): T_arrayOfString;
+FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
   VAR info: TSearchRec;
     path: ansistring;
   begin
     path := extractFilePath(pattern);
     setLength(result, 0);
-    if findFirst(pattern, faAnyFile, info) = 0 then
-      repeat
-        if (info.name<>'.') and (info.name<>'..') and
-          (((info.Attr and faDirectory) = faDirectory) and not
-          (filesAndNotFolders) or  ((info.Attr and faDirectory)<>faDirectory) and
-          filesAndNotFolders) then
-          begin
-          setLength(result, length(result)+1);
-          result[length(result)-1] := path+info.name;
-          end;
-      until (findNext(info)<>0);
+    if findFirst(pattern, faAnyFile, info) = 0 then repeat
+      if (info.name<>'.') and
+         (info.name<>'..') and
+        (((info.Attr and faDirectory) =faDirectory) and not(filesAndNotFolders) or
+         ((info.Attr and faDirectory)<>faDirectory) and     filesAndNotFolders) then begin
+        setLength(result, length(result)+1);
+        result[length(result)-1] := path+info.name;
+        if recurseSubDirs and not(filesAndNotFolders) then append(result,find(path+info.name+DirectorySeparator+'*',false,true));
+      end;
+    until (findNext(info)<>0);
     sysutils.findClose(info);
   end;
 

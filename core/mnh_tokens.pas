@@ -334,6 +334,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     VAR assignmentToken:P_token;
 
     PROCEDURE parseRule;
+      CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
       VAR p,n,nn,nnn:P_token;
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
@@ -397,7 +398,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           first:=context.disposeToken(first);
           if (first<>nil) and (first^.tokType=tt_braceClose) then first:=context.disposeToken(first);
           while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
-            if rulePattern.hasOptionals then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
+            if rulePattern.hasOptionals then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,ruleDeclarationStart);
             n  :=first^.next;
             nn :=n    ^.next;
             nnn:=nn   ^.next;
@@ -408,7 +409,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               first:=context.disposeToken(first);
             end else if (first^.tokType=tt_optionalParameters)
                      and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              if n^.tokType=tt_separatorComma then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Optional parameters are allowed only as last entry in a function head declaration.',ruleDeclarationStart);
+              if n^.tokType=tt_separatorComma then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,ruleDeclarationStart);
               rulePattern.appendOptional;
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
@@ -650,7 +651,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if usecase=lu_forCallingMain then executeMain;
     if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
     then complainAboutUncalled(true,context.adapters^);
-    if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forDocGeneration])
+    if (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then finalize(context.adapters^);
 
     with profiler do if active then begin
