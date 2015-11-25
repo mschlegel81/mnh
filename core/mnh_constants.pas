@@ -139,7 +139,6 @@ CONST
     tt_importedUserRule,
     tt_intrinsicRule);
 
-  C_bracketPrecedence: byte = 8; //must be one higher than highest operator precedence
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
    (6, 6, 6, 6, 6, 6, 6, //comparators
     8, 9, 9,             //logical operators

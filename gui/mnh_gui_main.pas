@@ -627,7 +627,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if ((key=13) and (ssCtrl in Shift)) then inputEditReposition(InputEdit.CaretXY,true);
+    if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift)) then inputEditReposition(InputEdit.CaretXY,ssCtrl in Shift);
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton;
