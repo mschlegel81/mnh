@@ -60,7 +60,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
         if token.tokType=tt_optionalParameters then begin
           parIdx:=REMAINING_PARAMETERS_IDX;
         end else if token.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule] then begin
-          parIdx:=pattern.indexOfId(token.txt,token.location,context.adapters^);
+          parIdx:=pattern.indexOfId(token.txt);
           if parIdx>=0 then begin
             if parIdx>=REMAINING_PARAMETERS_IDX
             then token.tokType:=tt_parameterIdentifier

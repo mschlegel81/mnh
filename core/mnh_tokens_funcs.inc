@@ -327,18 +327,18 @@ FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR ad
     package:=guessPackageForProvider(location.fileName);
     exTokens.create;
     exTokens.tokenizeAll(s,location,package,adapters);
-    exTokens.step(package,dummyForLastComment,adapters);
+    exTokens.step(package,dummyForLastComment);
     if exTokens.atEnd then begin
       adapters.raiseError('The parsed expression appears to be empty',location);
       exit(nil);
     end;
     first:=context.newToken(exTokens.current);
     last:=first;
-    exTokens.step(package,dummyForLastComment,adapters);
+    exTokens.step(package,dummyForLastComment);
     while not(exTokens.atEnd) do begin
       last^.next:=context.newToken(exTokens.current);
       last:=last^.next;
-      exTokens.step(package,dummyForLastComment,adapters);
+      exTokens.step(package,dummyForLastComment);
     end;
     exTokens.destroy;
 

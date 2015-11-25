@@ -470,7 +470,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(ruleBody);
           ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
         end else begin
-          rulePattern.toParameterIds(ruleBody,context.adapters^);
+          rulePattern.toParameterIds(ruleBody);
           if evaluateBody and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
         end;
 
@@ -592,7 +592,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     with profiler do if active then tokenizing.stop;
-    fileTokens.step(@self,lastComment,context.adapters^);
+    fileTokens.step(@self,lastComment);
     first:=nil;
     last :=nil;
     localIdStack.create;
@@ -608,7 +608,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
         localIdStack.clear;
         localIdStack.scopePush;
-        fileTokens.step(@self,lastComment,context.adapters^);
+        fileTokens.step(@self,lastComment);
         while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
           case fileTokens.current.tokType of
             tt_begin: localIdStack.scopePush;
@@ -621,14 +621,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
-          fileTokens.step(@self,lastComment,context.adapters^);
+          fileTokens.step(@self,lastComment);
         end;
 
       end else if (fileTokens.current.tokType=tt_semicolon) then begin
         if first<>nil then interpret(first,fileTokens.current.location);
         last:=nil;
         first:=nil;
-        fileTokens.step(@self,lastComment,context.adapters^);
+        fileTokens.step(@self,lastComment);
       end else begin
         if first=nil then begin
           first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
@@ -638,7 +638,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           last      :=last^.next;
         end;
         last^.next:=nil;
-        fileTokens.step(@self,lastComment,context.adapters^);
+        fileTokens.step(@self,lastComment);
       end;
     end;
     fileTokens.destroy;

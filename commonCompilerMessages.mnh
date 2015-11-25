@@ -2,19 +2,9 @@ intersect(A,B)->each(a,A,a in B ? a : void);
 intersect(A,...)->intersect(A,intersect@...);
 contains(fullString,subString)->pos(subString,fullString)>=0;
 
-ignore('myGenerics.pas(20,30) Hint: Value parameter "value" is assigned but never used')->true;
-ignore('consoleAsk.pas(43,54) Hint: Parameter "tokenLocation" not used')->true;
-ignore('consoleAsk.pas(43,90) Hint: Parameter "adapters" not used')->true;
-ignore('mnh_tokens_futureTask.inc(44,27) Hint: Parameter "p" not used')->true;
-ignore('mySys.pas(20,29) Hint: Local variable "SystemInfo" does not seem to be initialized')->true;
-ignore(s)->copy(s,0,10)="Compiling "
-        OR contains(s,'mnh_fileWrappers') AND (
-          contains(s,'Local variable "actuallyRead" does not seem to be initialized') OR
-          contains(s,'Local variable "block" does not seem to be initialized')) 
-        OR contains(s,'mnh_litvar.pas') AND contains(s,'Hint: Parameter "') 
-        OR (contains(s,'mnh_funcs') OR contains(s,'mnh_tokens_funcs.inc') OR contains(s,'mnh_plotData.pas')) AND (contains(s,'Hint: Parameter "tokenLocation" not used') OR contains(s,'Hint: Parameter "adapters" not used'))
-        OR contains(s,'mnh_gui_main.pas') AND contains(s,'Hint: Parameter "Sender" not used');
+ignore(s)->s.matches('^(mnh_litvar|mnh_funcs|mnh_tokens_funcs).* Hint: Parameter "(other|tokenLocation|adapters)" not used$');
 filter(S:stringList)->each(s,S,ignore(s) ? void : s);
+
 
 //*Prints messages contained in all found make*log.txt files
 main->begin

@@ -20,14 +20,14 @@
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
     FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
     PROCEDURE appendOptional;
-    FUNCTION indexOfId(CONST id:ansistring; CONST location:T_tokenLocation; VAR adapters:T_adapters):longint;
+    FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
-    PROCEDURE toParameterIds(CONST tok:P_token; VAR adapters:T_adapters);
+    PROCEDURE toParameterIds(CONST tok:P_token);
   end;
 {$endif}
 {$ifdef include_implementation}
@@ -115,7 +115,7 @@ PROCEDURE T_pattern.appendOptional;
     hasOptionals:=true;
   end;
 
-FUNCTION T_pattern.indexOfId(CONST id:ansistring; CONST location:T_tokenLocation; VAR adapters:T_adapters):longint;
+FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
@@ -273,13 +273,13 @@ FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
                        and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar));
   end;
 
-PROCEDURE T_pattern.toParameterIds(CONST tok:P_token; VAR adapters:T_adapters);
+PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);
   VAR t:P_token;
   begin
     t:=tok;
     while t<>nil do begin
       if (t^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
-      and (indexOfId(t^.txt,t^.location,adapters)>=0) then t^.tokType:=tt_parameterIdentifier;
+      and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
   end;

@@ -29,7 +29,7 @@
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE append(CONST newTok:T_token);
-      PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
+      PROCEDURE step(CONST package:P_package; VAR lastComment:ansistring);
       FUNCTION current:T_token;
       PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
       FUNCTION atEnd:boolean;
@@ -212,7 +212,7 @@ PROCEDURE T_tokenArray.append(CONST newTok:T_token);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
+PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring);
   begin
     repeat
       inc(i);
@@ -272,7 +272,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
   begin
     setLength(result,0);
     repeat
-      step(nil,lastComment,nullAdapter);
+      step(nil,lastComment);
       if not(atEnd) then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=current.getRawToken;

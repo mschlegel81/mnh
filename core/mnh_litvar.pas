@@ -2293,8 +2293,7 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR map,keyValuePair:P_listLiteral;
       key:P_stringLiteral;
-      fallback,
-      value:P_literal;
+      fallback:P_literal;
       i:longint;
   begin
     result:=nil;

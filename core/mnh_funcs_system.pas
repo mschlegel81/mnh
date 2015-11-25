@@ -97,8 +97,6 @@ FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   end;
 
 FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  VAR resultList:TStringList;
-      i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
