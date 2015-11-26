@@ -240,7 +240,6 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR res:P_literal;
-      profiler:TEpikTimer;
       t:double;
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
@@ -252,9 +251,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     VAR tempcontext:T_evaluationContext;
     begin
       tempcontext.createNormalContext(P_adapters(@adapters));
-      profiler.start;
+      t:=timer.value.Elapsed;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,tempcontext);
-      t:=profiler.Elapsed;
+      t:=timer.value.Elapsed-t;
       tempcontext.destroy;
     end;
 
@@ -265,9 +264,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       tempcontext.createNormalContext(P_adapters(@adapters));
       first:=tempcontext.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=tempcontext.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      profiler.start;
+      t:=timer.value.Elapsed;
       reduceExpression(first,0,tempcontext);
-      t:=profiler.Elapsed;
+      t:=timer.value.Elapsed-t;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
       then begin result:=first^.data; result^.rereference; end
       else result:=nil;
@@ -275,15 +274,14 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
       tempcontext.destroy;
     end;
 
+
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(timer.value.Elapsed))
+    else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
-      profiler := TEpikTimer.create(nil);
-      profiler.clear;
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
                         else res:=evaluateNullary(P_expressionLiteral(params^.value(0)));
-      profiler.free;
       if res<>nil then begin
         result:=newListLiteral;
         appendPair(result,'expression',newStringLiteral(params^.value(0)^.toString));
@@ -893,7 +891,8 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
   //round might be binary...
   registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
+                                                         'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S');

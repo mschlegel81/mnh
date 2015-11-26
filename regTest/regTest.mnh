@@ -24,9 +24,9 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
     delOutputBefore and outputFileName<>''
     ? deleteFile(ROOT_DIRECTORY&outputFileName)
     : void;
-    local startTime:=systime;
+    local startTime:=time;
     local scriptOutput:=exec(executor,["-det",ROOT_DIRECTORY&scriptName]) | (outputFileName="" ? [] : fileHash(ROOT_DIRECTORY&outputFileName));
-    local scriptTime:=(systime-startTime)*24*60*60;
+    local scriptTime:=time-startTime;
     when(
       not(expectedResultExists(scriptName,SRF)),
         begin

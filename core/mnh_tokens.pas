@@ -79,6 +79,7 @@ IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
     pendingTasks     :T_taskQueue;
+    timer: specialize G_lazyVar<TEpikTimer>;
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
   VAR context:T_evaluationContext;
@@ -276,8 +277,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         importing,
         tokenizing,
         declarations,
-        interpretation:TEpikTimer;
-      end;
+        interpretation:double;
+      end = (active:false;importing:0;tokenizing:0;declarations:0;interpretation:0);
 
   PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
     PROCEDURE interpretUseClause;
@@ -310,9 +311,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           temp:=first; first:=context.disposeToken(temp);
         end;
         if usecase<>lu_forDocGeneration then begin
-          with profiler do if active then importing.start;
+          with profiler do if active then importing:=timer.value.Elapsed;
           for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
-          with profiler do if active then importing.stop;
+          with profiler do if active then importing:=timer.value.Elapsed-importing;
           i:=0;
           while i<length(packageUses) do begin
             if packageUses[i].pack=nil then begin
@@ -510,18 +511,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if assignmentToken<>nil then begin
-        with profiler do if active then declarations.start;
+        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first,maxLongint)+';',first^.location);
         parseRule;
-        with profiler do if active then declarations.stop;
+        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
       end else if context.adapters^.noErrors then begin
         if (usecase=lu_forDirectExecution) then begin
-          with profiler do if active then interpretation.start;
+          with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
           reduceExpression(first,0,context);
-          with profiler do if active then interpretation.stop;
+          with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first,maxLongint),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -549,9 +550,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(fileTokenLocation(environment.mainPackageProvider),'',tt_parList,parametersForMain);
-        with profiler do if active then interpretation.start;
+        with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
         reduceExpression(t,0,context);
-        with profiler do if active then interpretation.stop;
+        with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then
           context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
@@ -577,21 +578,19 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
-    if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]) then with profiler do begin
-      importing     :=TEpikTimer.create(nil); importing.clear;
-      tokenizing    :=TEpikTimer.create(nil); tokenizing.clear;
-      declarations  :=TEpikTimer.create(nil); declarations.clear;
-      interpretation:=TEpikTimer.create(nil); interpretation.clear;
-      active:=true;
+    if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]) then begin
+      profiler.active:=true;
+      timer.value.clear;
+      timer.value.start;
     end else profiler.active:=false;
 
     clear;
 
     if ((usecase=lu_forCallingMain) or (codeProvider<>environment.mainPackageProvider)) and codeProvider^.fileHasChanged then codeProvider^.load;
-    with profiler do if active then tokenizing.start;
+    with profiler do if active then tokenizing:=timer.value.Elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
-    with profiler do if active then tokenizing.stop;
+    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     fileTokens.step(@self,lastComment);
     first:=nil;
     last :=nil;
@@ -655,14 +654,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then finalize(context.adapters^);
 
     with profiler do if active then begin
-      if importing     .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+profilerTimeToStr(importing.Elapsed),C_nilTokenLocation);
-      if tokenizing    .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+profilerTimeToStr(tokenizing.Elapsed),C_nilTokenLocation);
-      if declarations  .Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+profilerTimeToStr(declarations.Elapsed),C_nilTokenLocation);
-      if interpretation.Elapsed>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+profilerTimeToStr(interpretation.Elapsed),C_nilTokenLocation);
-      importing     .destroy;
-      tokenizing    .destroy;
-      declarations  .destroy;
-      interpretation.destroy;
+      if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+profilerTimeToStr(importing),C_nilTokenLocation);
+      if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+profilerTimeToStr(tokenizing),C_nilTokenLocation);
+      if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+profilerTimeToStr(declarations),C_nilTokenLocation);
+      if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+profilerTimeToStr(interpretation),C_nilTokenLocation);
     end;
 
   end;
@@ -897,9 +892,17 @@ PROCEDURE findAndDocumentAllPackages;
     nullAdapter.clearErrors;
   end;
 
+FUNCTION initTimer:TEpikTimer;
+  begin
+    result:=TEpikTimer.create(nil);
+    result.clear;
+    result.start;
+  end;
+
 {$undef include_implementation}
 VAR i:longint;
 INITIALIZATION
+  timer.create(@initTimer);
 {$define include_initialization}
   with environment do begin
     new(mainPackageProvider,create);
