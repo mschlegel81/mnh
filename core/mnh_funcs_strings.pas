@@ -30,8 +30,8 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList]) then begin
+       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       if params^.value(0)^.literalType=lt_string then begin
         if params^.value(1)^.literalType=lt_string then begin
           result:=posInt(params^.value(0),
@@ -97,13 +97,13 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType in [lt_string,lt_stringList])
-                                          and (params^.value(1)^.literalType in [lt_int   ,lt_intList])
-                                          and (params^.value(2)^.literalType in [lt_int   ,lt_intList]) then begin
+    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList])
+                                          and (params^.value(1)^.literalType in [lt_int   ,lt_intList   ,lt_emptyList])
+                                          and (params^.value(2)^.literalType in [lt_int   ,lt_intList   ,lt_emptyList]) then begin
       anyList:=false;
-      if params^.value(0)^.literalType=lt_stringList then checkLength(params^.value(0));
-      if params^.value(1)^.literalType=lt_intList    then checkLength(params^.value(1));
-      if params^.value(2)^.literalType=lt_intList    then checkLength(params^.value(2));
+      if params^.value(0)^.literalType in [lt_stringList,lt_emptyList] then checkLength(params^.value(0));
+      if params^.value(1)^.literalType in [lt_intList   ,lt_emptyList] then checkLength(params^.value(1));
+      if params^.value(2)^.literalType in [lt_intList   ,lt_emptyList] then checkLength(params^.value(2));
       if not(allOkay) then exit(nil)
       else if not(anyList) then
         result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
@@ -134,7 +134,7 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
       result:=chars_internal(params^.value(0));
-    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_stringList) then begin
+    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to P_listLiteral(params^.value(0))^.size-1 do P_listLiteral(result)^.append(chars_internal(P_listLiteral(params^.value(0))^.value(i)),false,adapters);
     end else if (params=nil) or (params^.size=0) then begin
@@ -372,9 +372,9 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
-       (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
+       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(2)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       result:=replace_one_or_all(params,false);
     end;
   end;
@@ -383,9 +383,9 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList]) and
-       (params^.value(2)^.literalType in [lt_string,lt_stringList]) then begin
+       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (params^.value(2)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       result:=replace_one_or_all(params,true);
     end;
   end;
