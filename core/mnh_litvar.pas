@@ -306,7 +306,6 @@ FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 IMPLEMENTATION
-
 VAR
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-127..128] of T_intLiteral;
@@ -746,8 +745,8 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
     if other^.literalType<>lt_string then exit(false);
     ovl:=P_stringLiteral(other)^.val;
     result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
-           or (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
-           or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+         or (val<ovl) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+         or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
 FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
@@ -1701,20 +1700,17 @@ FUNCTION T_listLiteral.clone:P_listLiteral;
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
 
   FUNCTION equals(CONST LHS, RHS: P_literal): boolean;
-    VAR
-      i: longint;
+    VAR i: longint;
     begin
-      if LHS = RHS then
-        exit(true);
+      if LHS = RHS then exit(true);
       case LHS^.literalType of
-        lt_int, lt_real, lt_boolean, lt_string, lt_expression: if RHS^.literalType in
-            [lt_int, lt_real, lt_boolean, lt_string, lt_expression] then
-            exit(P_scalarLiteral(LHS)^.isInRelationTo(tt_comparatorEq,
-              P_scalarLiteral(RHS)))
-          else
-            exit(false);
-        lt_list..lt_flatList: if (RHS^.literalType in C_validListTypes) and
-                                 (length(P_listLiteral(LHS)^.element) =length(P_listLiteral(RHS)^.element)) then begin
+        lt_int, lt_real, lt_boolean, lt_string, lt_expression:
+          if RHS^.literalType in [lt_int, lt_real, lt_boolean, lt_string, lt_expression]
+          then exit(P_scalarLiteral(LHS)^.isInRelationTo(tt_comparatorEq,P_scalarLiteral(RHS)))
+          else exit(false);
+        lt_list..lt_flatList:
+          if (RHS^.literalType in C_validListTypes) and (length(P_listLiteral(LHS)^.element) =length(P_listLiteral(RHS)^.element))
+          then begin
             result:=true;
             i:=0;
             while result and (i<length(P_listLiteral(LHS)^.element)) do begin
@@ -1749,7 +1745,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     exit(result)}
   {$define invalidLengthExit:=exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString [op], tokenLocation,adapters))}
 
-
   VAR i, i1, j: longint;
       key: ansistring;
   begin
@@ -1757,7 +1752,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     case op of
       tt_comparatorEq,tt_comparatorNeq,tt_comparatorLeq,tt_comparatorGeq,tt_comparatorLss,tt_comparatorGrt:
       case LHS^.literalType of
-        lt_boolean, lt_int, lt_real, lt_string, lt_expression:
+        lt_boolean, lt_int, lt_real, lt_string:
           case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string: exit(newBoolLiteral(P_scalarLiteral(LHS)^.isInRelationTo(op,P_scalarLiteral(RHS))));
             //scalar X scalar
@@ -1769,19 +1764,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   resolveOperator(LHS, op, P_listLiteral(RHS)^.element [i],
                   tokenLocation,adapters),
                   false,adapters);
-              if result^.literalType = lt_listWithError then begin
-                disposeLiteral(result);
-                result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,op, tokenLocation,adapters);
-              end;
               checkedExit;
             end;
             lt_booleanList..lt_emptyList,lt_flatList: begin
               //scalar X flat list
               result:=newListLiteral;
               for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
-                P_listLiteral(result)^.append(
-                  newBoolLiteral(P_scalarLiteral(LHS)^.isInRelationTo(op, P_scalarLiteral(P_listLiteral(RHS)^.element [i]))),
-                  false,adapters);
+                P_listLiteral(result)^.appendBool(P_scalarLiteral(LHS)^.isInRelationTo(op, P_scalarLiteral(P_listLiteral(RHS)^.element [i])));
               checkedExit;
             end;
           end;
@@ -1816,9 +1805,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               //flat list X scalar
               result:=newListLiteral;
               for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-                P_listLiteral(result)^.append(
-                  newBoolLiteral(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.isInRelationTo(op, P_scalarLiteral(RHS))),
-                  false,adapters);
+                P_listLiteral(result)^.appendBool(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.isInRelationTo(op, P_scalarLiteral(RHS)));
               checkedExit;
             end;
             lt_list,lt_keyValueList: begin
@@ -2026,9 +2013,9 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           checkedExit;
         end;
         lt_string: if LHS^.literalType in [lt_keyValueList,lt_emptyList] then begin
-          key:=P_stringLiteral(RHS)^.value;
+          key:=P_stringLiteral(RHS)^.val;
           for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-          if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then begin
+          if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.val = key then begin
             result:=P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [1];
             result^.rereference;
             checkedExit;
