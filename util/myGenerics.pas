@@ -876,6 +876,7 @@ DESTRUCTOR G_stringKeyMap.destroy;
 FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE): boolean;
   VAR i,j:longint;
   begin
+    system.enterCriticalSection(cs);
     i:=hashOfAnsiString(key) and bitMask;
     j:=0;
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
@@ -883,17 +884,18 @@ FUNCTION G_stringKeyMap.containsKey(CONST key: ansistring; OUT value: VALUE_TYPE
       value:=bucket[i][j].value;
       result:=true;
     end else result:=false;
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.containsKey(CONST key:ansistring):boolean;
   VAR i,j:longint;
   begin
+    system.enterCriticalSection(cs);
     i:=hashOfAnsiString(key) and bitMask;
     j:=0;
     while (j<length(bucket[i])) and (bucket[i][j].key<>key) do inc(j);
-    if (j<length(bucket[i])) then begin
-      result:=true;
-    end else result:=false;
+    result:=(j<length(bucket[i]));
+    system.leaveCriticalSection(cs);
   end;
 
 FUNCTION G_stringKeyMap.get(CONST key: ansistring): VALUE_TYPE;
