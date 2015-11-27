@@ -180,6 +180,19 @@ FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     end;
   end;
 
+FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR i:longint;
+      R:P_listLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_booleanList,lt_emptyList]) then begin
+      R:=newListLiteral;
+      with P_listLiteral(params^.value(0))^ do for i:=0 to size-1 do if P_boolLiteral(value(i))^.value
+        then R^.appendInt(i);
+      result:=R;
+    end;
+  end;
+
 INITIALIZATION
   //Functions on lists:
   registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended');
@@ -203,4 +216,5 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'put',@mapPut,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
   registerRule(LIST_NAMESPACE,'get',@mapGet,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
                                             'get(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
+  registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
 end.
