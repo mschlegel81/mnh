@@ -293,19 +293,18 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   end;
 
 FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  CONST SECONDS_PER_DAY=24*60*60;
   VAR sleepUntil:double;
       sleepInt:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=now;
+      sleepUntil:=timer.value.Elapsed;
       result:=newVoidLiteral;
       if params^.value(0)^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value/SECONDS_PER_DAY
-      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value/SECONDS_PER_DAY;
-      while (now<sleepUntil) and (adapters.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-now)*SECONDS_PER_DAY);
+      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
+      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
+      while (timer.value.Elapsed<sleepUntil) and (adapters.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-timer.value.Elapsed));
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
       end;
