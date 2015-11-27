@@ -98,7 +98,7 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
-    inherited create;
+    inherited create(at_htmlFile);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;
     lastWasEndOfEvaluation:=true;

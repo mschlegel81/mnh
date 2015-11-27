@@ -10,7 +10,7 @@ USES
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
-  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs;
+  myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation;
 
 TYPE
   TMnhForm = class(TForm)
@@ -245,7 +245,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
 
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    inherited create;
+    inherited create(at_gui);
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -1292,8 +1292,13 @@ PROCEDURE debugForm_debuggingStep;
   end;
 
 PROCEDURE lateInitialization;
+  VAR i:longint;
   begin
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
+    for i:=0 to consoleAdapters.adapterCount-1 do
+      if consoleAdapters.getAdapter(i)^.adapterType in [at_textFile,at_htmlFile] then
+        guiAdapters.addOutAdapter(consoleAdapters.getAdapter(i),false);
+
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     StopDebuggingCallback:=@debugForm_stopDebugging;
     DebuggingStepCallback:=@debugForm_debuggingStep;

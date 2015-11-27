@@ -21,10 +21,13 @@ TYPE
     minErrorLevel: shortint;
   end;
 
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui);
+
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
+    adapterType:T_adapterType;
     outputBehaviour:T_outputBehaviour;
-    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST typ:T_adapterType);
     DESTRUCTOR destroy; virtual; abstract;
     PROCEDURE clearConsole; virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
@@ -44,7 +47,7 @@ TYPE
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
     cs:TRTLCriticalSection;
-    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST typ:T_adapterType);
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
@@ -57,7 +60,7 @@ TYPE
 
   { T_textFileOutAdapter }
 
-  T_textFileOutAdapter = object(T_collectingOutAdapter)
+  T_textFileOutAdapter = object(T_collectingOutAdapter) //TYPE 1
     lastFileFlushTime:double;
     outputFileName:ansistring;
     longestLineUpToNow:longint;
@@ -123,6 +126,9 @@ TYPE
       PROCEDURE addConsoleOutAdapter;
       PROCEDURE addFileOutAdapter(CONST fileName:ansistring);
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
+
+      FUNCTION adapterCount:longint;
+      FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
   end;
 
   {$ifdef fullVersion}
@@ -172,7 +178,7 @@ FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ans
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
   begin
-    inherited create;
+    inherited create(at_textFile);
     lastWasEndOfEvaluation:=true;
     longestLineUpToNow:=0;
     outputFileName:=expandFileName(fileName);
@@ -346,7 +352,8 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
+  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -364,7 +371,8 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring;
+  CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     hasMessageOfType[mt_debug_step]:=true;
@@ -373,7 +381,8 @@ PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring; CONST err
   end;
 {$endif}
 
-PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
+  CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el3_evalError] then
@@ -462,8 +471,19 @@ PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
     end;
   end;
 
-CONSTRUCTOR T_abstractOutAdapter.create;
+FUNCTION T_adapters.adapterCount: longint;
   begin
+    result:=length(adapter);
+  end;
+
+FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;
+  begin
+    result:=adapter[index].ad;
+  end;
+
+CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
+  begin
+    adapterType:=typ;
     with outputBehaviour do begin
       doEchoDeclaration:=false;
       doEchoInput:=false;
@@ -475,7 +495,7 @@ CONSTRUCTOR T_abstractOutAdapter.create;
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
-    inherited create;
+    inherited create(at_console);
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -524,8 +544,9 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType;
     end;
   end;
 
-CONSTRUCTOR T_collectingOutAdapter.create;
+CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType);
   begin
+    inherited create(typ);
     system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
