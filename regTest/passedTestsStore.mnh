@@ -49,7 +49,7 @@ private printComparison(testFile)->begin
   printf("%s\t:\t%s\t%6.4f\t \t%g",
     split(relAvgTimePerBin%%0,':')%%0,
     split(relAvgTimePerBin%%0,':')%%1,
-    round(relAvgTimePerBin%%1,3),
+    relAvgTimePerBin%%1,
     relAvgTimePerBin%%2);
   print;
 end;
