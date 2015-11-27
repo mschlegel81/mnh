@@ -164,7 +164,7 @@ TYPE
 
   CorrelationModes=(Manual, OnTimebaseSelect, OnGetElapsed);
 
-  (* * * * * * * * * * * Timer data record structure  * * * * * * * * * * *)
+  (* * * * * * * * * * * timer data record structure  * * * * * * * * * * *)
 
   // This is the timer data context. There is an internal declaration of this
   // record and overloaded methods if you only want to use the component for a

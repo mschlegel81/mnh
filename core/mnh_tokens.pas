@@ -274,11 +274,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       lastComment:ansistring;
       profiler:record
         active:boolean;
+        unaccounted,
         importing,
         tokenizing,
         declarations,
         interpretation:double;
-      end = (active:false;importing:0;tokenizing:0;declarations:0;interpretation:0);
+      end = (active:false;unaccounted:0;importing:0;tokenizing:0;declarations:0;interpretation:0);
 
   PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
     PROCEDURE interpretUseClause;
@@ -575,6 +576,59 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
     end;
 
+  PROCEDURE prettyPrintTime;
+    VAR largest:double=0;
+        importing_     ,
+        tokenizing_    ,
+        declarations_  ,
+        interpretation_,
+        unaccounted_   ,
+        timeUnit:string;
+        longest:longint=0;
+        formatString:ansistring;
+
+    FUNCTION fmt(CONST d:double):string;
+      begin
+        result:=formatFloat(formatString,d);
+        if length(result)>longest then longest:=length(result);
+      end;
+    FUNCTION fmt(CONST s:string):string;
+      begin
+        result:=StringOfChar(' ',longest-length(s))+s+timeUnit;
+      end;
+
+    begin
+      with profiler do begin
+        if importing     >largest then largest:=importing     ;
+        if tokenizing    >largest then largest:=tokenizing    ;
+        if declarations  >largest then largest:=declarations  ;
+        if interpretation>largest then largest:=interpretation;
+        if unaccounted   >largest then largest:=unaccounted   ;
+        if largest<1 then begin
+          importing     :=importing     *1000;
+          tokenizing    :=tokenizing    *1000;
+          declarations  :=declarations  *1000;
+          interpretation:=interpretation*1000;
+          unaccounted   :=unaccounted   *1000;
+          timeUnit:='ms';
+          formatString:='0.000';
+        end else begin
+          timeUnit:='s';
+          formatString:='0.000000';
+        end;
+        importing_     :=fmt(importing     );
+        tokenizing_    :=fmt(tokenizing    );
+        declarations_  :=fmt(declarations  );
+        interpretation_:=fmt(interpretation);
+        unaccounted_   :=fmt(unaccounted   );
+        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),C_nilTokenLocation);
+        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),C_nilTokenLocation);
+        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),C_nilTokenLocation);
+        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),C_nilTokenLocation);
+        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),C_nilTokenLocation);
+      end;
+    end;
+
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
@@ -582,6 +636,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       profiler.active:=true;
       timer.value.clear;
       timer.value.start;
+      profiler.unaccounted:=timer.value.Elapsed;
     end else profiler.active:=false;
 
     clear;
@@ -590,8 +645,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     with profiler do if active then tokenizing:=timer.value.Elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
-    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     fileTokens.step(@self,lastComment);
+    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     first:=nil;
     last :=nil;
     localIdStack.create;
@@ -607,7 +662,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
         localIdStack.clear;
         localIdStack.scopePush;
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
         fileTokens.step(@self,lastComment);
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+
         while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
           case fileTokens.current.tokType of
             tt_begin: localIdStack.scopePush;
@@ -620,14 +678,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
+          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
           fileTokens.step(@self,lastComment);
+          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
         end;
 
       end else if (fileTokens.current.tokType=tt_semicolon) then begin
         if first<>nil then interpret(first,fileTokens.current.location);
         last:=nil;
         first:=nil;
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
         fileTokens.step(@self,lastComment);
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
       end else begin
         if first=nil then begin
           first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
@@ -637,7 +699,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           last      :=last^.next;
         end;
         last^.next:=nil;
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
         fileTokens.step(@self,lastComment);
+        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
       end;
     end;
     fileTokens.destroy;
@@ -654,10 +718,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then finalize(context.adapters^);
 
     with profiler do if active then begin
-      if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+profilerTimeToStr(importing),C_nilTokenLocation);
-      if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+profilerTimeToStr(tokenizing),C_nilTokenLocation);
-      if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+profilerTimeToStr(declarations),C_nilTokenLocation);
-      if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+profilerTimeToStr(interpretation),C_nilTokenLocation);
+      unaccounted:=timer.value.Elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
+      prettyPrintTime;
     end;
 
   end;

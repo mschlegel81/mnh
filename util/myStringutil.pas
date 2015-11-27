@@ -52,7 +52,6 @@ FUNCTION split(CONST s:ansistring; CONST splitters:T_arrayOfString):T_arrayOfStr
 FUNCTION join(CONST lines:T_arrayOfString; CONST joiner:ansistring):ansistring;
 FUNCTION cleanString(CONST s:ansistring; CONST whiteList:charSet; CONST instead:char):ansistring;
 FUNCTION myTimeToStr(dt:double):string;
-FUNCTION profilerTimeToStr(CONST dt:double):string;
 
 IMPLEMENTATION
 
@@ -436,14 +435,6 @@ FUNCTION myTimeToStr(dt:double):string;
         dt:=(dt-floor(dt))*60; result:=result+formatFloat('00',floor(dt));
       end
     else result:=timeToStr(dt);
-  end;
-
-FUNCTION profilerTimeToStr(CONST dt:double):string;
-  begin
-    result:=formatFloat('0.000',dt    )+'s' ;     if pos('0.0',result)<=0 then exit;
-    result:=formatFloat('0.000',dt*1E3)+'ms';     if pos('0.0',result)<=0 then exit;
-    result:=formatFloat('0.000',dt*1E6)+'micros'; if pos('0.0',result)<=0 then exit;
-    result:=formatFloat('0.000',dt*1E9)+'ns';
   end;
 
 { T_format }
