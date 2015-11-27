@@ -67,12 +67,13 @@ FUNCTION parseCmdLine:T_tokenLocation;
     CONST setupFile='install.mnh';
     VAR context:T_evaluationContext;
     begin
-      context.createNormalContext(P_adapters(@consoleAdapters));
       if not(fileExists(setupFile)) then exit;
+      context.createNormalContext(@nullAdapter);
       environment.mainPackageProvider^.setPath(setupFile);
       setLength(parameters,0);
       callMainInMain(parameters,context);
       context.destroy;
+      nullAdapter.ClearAll;
     end;
   {$endif}
 
