@@ -226,7 +226,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> each(func,listBuiltin, copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.string','mnh.executor','mnh.sandBoxExecute','mnh.fail','mnh.expression','mnh.group','mnh.parameterNames','mnh.myPath','mnh.not','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.ord','mnh.softCast','mnh.hash']
+out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x%0+$y%0,$x%1]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
