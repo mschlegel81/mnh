@@ -313,6 +313,7 @@ PROCEDURE T_guiOutAdapter.flushClear;
     system.leaveCriticalSection(cs);
   end;
 
+VAR inputHeightSpeed:longint=0;
 FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
   CONST SAMPLE_TEXT='1!gPQ|';
   VAR temp,
@@ -347,7 +348,14 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
         end;
       end;
       if idealInputHeight<>InputEdit.height then begin
-        InputEdit.height:=idealInputHeight;
+        if idealInputHeight<InputEdit.Height then begin
+          if inputHeightSpeed>=0 then inputHeightSpeed:=-1
+                                 else dec(inputHeightSpeed);
+        end else begin
+          if inputHeightSpeed<=0 then inputHeightSpeed:=1
+                                 else inc(inputHeightSpeed);
+        end;
+        InputEdit.height:=InputEdit.height+inputHeightSpeed;
         if PopupNotifier1.Visible then positionHelpNotifier;
         autosizeToggleBox.top:=OutputEdit.top;
         result:=true;
@@ -1004,7 +1012,8 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if PopupNotifier1.Visible then positionHelpNotifier;
-     autosizeToggleBox.top:=OutputEdit.top;
+    autosizeToggleBox.top:=OutputEdit.top;
+    autosizeToggleBox.Checked:=false;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
