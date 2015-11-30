@@ -1375,60 +1375,53 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR ad
     case strictType of
       lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
       lt_booleanList  : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_flatList: strictType:=lt_list;
-  	                    lt_boolean: begin end;
-  						else strictType:=lt_flatList;
-  	                  end;
+  	                  lt_boolean: begin end;
+  			  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
+  	                  else                                strictType:=lt_flatList;
+                        end;
       lt_intList      : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_flatList: strictType:=lt_list;
-  	                    lt_int: begin end;
-  						lt_real: strictType:=lt_numList;
-  						else strictType:=lt_flatList;
-  	                  end;
+                          lt_int: begin end;
+  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
+                          lt_real:                            strictType:=lt_numList;
+  			  else                                strictType:=lt_flatList;
+  	                end;
       lt_realList     : case L^.literalType of
-  	                    lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  						lt_list..lt_flatList: strictType:=lt_list;
-  	                    lt_real: begin end;
-  						lt_int: strictType:=lt_numList;
-  						else strictType:=lt_flatList;
-  	                  end;
-      lt_numList      :
-        case L^.literalType of
-  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  	  lt_list..lt_flatList: strictType:=lt_list;
-  	  lt_int,lt_real: begin end;
-  	  else strictType:=lt_flatList;
-  	end;
-      lt_stringList   :
-        case L^.literalType of
-  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  	  lt_list..lt_flatList:              strictType:=lt_list;
-  	  lt_string: begin end;
-  	  else                               strictType:=lt_flatList;
-  	end;
-      lt_emptyList    :
-        case L^.literalType of
-  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-          lt_boolean:                        strictType:=lt_booleanList;
-          lt_int:                            strictType:=lt_intList;
-          lt_real:                           strictType:=lt_realList;
-          lt_string:                         strictType:=lt_stringList;
-          lt_expression:                     strictType:=lt_flatList;
-          lt_list..lt_flatList: if P_listLiteral(L)^.isKeyValuePair
-                                then strictType:=lt_keyValueList
-                                else strictType:=lt_list;
-  	end;
-      lt_keyValueList:
-        if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then strictType:=lt_list;
-      lt_flatList     :
-        case L^.literalType of
-  	  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  	  lt_list..lt_flatList:              strictType:=lt_list;
-  	  else begin end;
-  	end;
-      lt_listWithError: begin end;
+  	                  lt_real: begin end;
+  			  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
+  	                  lt_int:                             strictType:=lt_numList;
+  			  else                                strictType:=lt_flatList;
+                        end;
+      lt_numList      : case L^.literalType of
+                          lt_int,lt_real: begin end;
+  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
+  	                  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
+  	                  else                                strictType:=lt_flatList;
+  	                end;
+      lt_stringList   : case L^.literalType of
+	                  lt_string: begin end;
+  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
+  	                  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
+  	                  else                                strictType:=lt_flatList;
+  	                end;
+      lt_emptyList    : case L^.literalType of
+  	                  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+                          lt_boolean:                        strictType:=lt_booleanList;
+                          lt_int:                            strictType:=lt_intList;
+                          lt_real:                           strictType:=lt_realList;
+                          lt_string:                         strictType:=lt_stringList;
+                          lt_expression:                     strictType:=lt_list;
+                          lt_list..lt_flatList: if P_listLiteral(L)^.isKeyValuePair
+                                                then strictType:=lt_keyValueList
+                                                else strictType:=lt_list;
+                        end;
+      lt_keyValueList: if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then strictType:=lt_list;
+      lt_flatList:     case L^.literalType of
+  	                 lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
+  	                 lt_list..lt_flatList:              strictType:=lt_list;
+                       end;
     end;
   end;
 
@@ -1736,6 +1729,78 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
     end;
 
+  FUNCTION areInRelEqual(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val=P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val=P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val=P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val=P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
+  FUNCTION areInRelNeq(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val<>P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val<>P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val<>P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val<>P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val<>P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val<>P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
+  FUNCTION areInRelGeq(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val>=P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val>=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val>=P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val>=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val>=P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val>=P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
+  FUNCTION areInRelLeq(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val<=P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val<=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val<=P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val<=P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val<=P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val<=P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
+  FUNCTION areInRelLesser(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val<P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val<P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val<P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val<P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val<P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val<P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
+  FUNCTION areInRelGreater(CONST LHS,RHS:P_literal):boolean; inline;
+    begin
+      case LHS^.literalType of
+        lt_boolean: result:=(RHS^.literalType=lt_boolean) and (P_boolLiteral  (LHS)^.val>P_boolLiteral  (RHS)^.val);
+        lt_int:     result:=(RHS^.literalType=lt_int)     and (P_intLiteral   (LHS)^.val>P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_intLiteral   (LHS)^.val>P_realLiteral  (RHS)^.val);
+        lt_real:    result:=(RHS^.literalType=lt_int)     and (P_realLiteral  (LHS)^.val>P_intLiteral   (RHS)^.val) or
+                            (RHS^.literalType=lt_real)    and (P_realLiteral  (LHS)^.val>P_realLiteral  (RHS)^.val);
+        lt_string:  result:=(RHS^.literalType=lt_string)  and (P_stringLiteral(LHS)^.val>P_stringLiteral(RHS)^.val);
+      end;
+    end;
+
   {$MACRO ON}
   {$define checkedExit:=
     if result^.literalType = lt_listWithError then begin
@@ -1759,12 +1824,12 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           case RHS^.literalType of
             lt_boolean, lt_int, lt_real, lt_string:
               case op of
-                tt_comparatorEq,
-                tt_comparatorNeq,
-                tt_comparatorLeq,
-                tt_comparatorGeq,
-                tt_comparatorLss,
-                tt_comparatorGrt:     exit(newBoolLiteral(P_scalarLiteral(LHS)^.isInRelationTo(op,P_scalarLiteral(RHS))));
+                tt_comparatorEq:      exit(newBoolLiteral(areInRelEqual  (LHS,RHS)));
+                tt_comparatorNeq:     exit(newBoolLiteral(areInRelNeq    (LHS,RHS)));
+                tt_comparatorLeq:     exit(newBoolLiteral(areInRelLeq    (LHS,RHS)));
+                tt_comparatorGeq:     exit(newBoolLiteral(areInRelGeq    (LHS,RHS)));
+                tt_comparatorLss:     exit(newBoolLiteral(areInRelLesser (LHS,RHS)));
+                tt_comparatorGrt:     exit(newBoolLiteral(areInRelGreater(LHS,RHS)));
                 tt_operatorAnd:       exit(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters));
                 tt_operatorOr:        exit(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters));
                 tt_operatorXor:       exit(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters));
@@ -1792,12 +1857,12 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               //scalar X flat list
               result:=newListLiteral;
               case op of
-                tt_comparatorEq,
-                tt_comparatorNeq,
-                tt_comparatorLeq,
-                tt_comparatorGeq,
-                tt_comparatorLss,
-                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(P_scalarLiteral(LHS)^.isInRelationTo(op, P_scalarLiteral(P_listLiteral(RHS)^.element [i])));
+                tt_comparatorEq:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (LHS,P_listLiteral(RHS)^.element[i]));
+                tt_comparatorNeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (LHS,P_listLiteral(RHS)^.element[i]));
+                tt_comparatorLeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (LHS,P_listLiteral(RHS)^.element[i]));
+                tt_comparatorGeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (LHS,P_listLiteral(RHS)^.element[i]));
+                tt_comparatorLss:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (LHS,P_listLiteral(RHS)^.element[i]));
+                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(LHS,P_listLiteral(RHS)^.element[i]));
                 tt_operatorAnd:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
                 tt_operatorOr:         for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
                 tt_operatorXor:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
@@ -1844,12 +1909,12 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               //flat list X scalar
               result:=newListLiteral;
               case op of
-                tt_comparatorEq,
-                tt_comparatorNeq,
-                tt_comparatorLeq,
-                tt_comparatorGeq,
-                tt_comparatorLss,
-                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.isInRelationTo(op, P_scalarLiteral(RHS)));
+                tt_comparatorEq:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.element [i],RHS));
+                tt_comparatorNeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.element [i],RHS));
+                tt_comparatorLeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.element [i],RHS));
+                tt_comparatorGeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element [i],RHS));
+                tt_comparatorLss:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element [i],RHS));
+                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element [i],RHS));
                 tt_operatorAnd:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
                 tt_operatorOr:         for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
                 tt_operatorXor:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
@@ -1885,12 +1950,12 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               if i = i1 then begin
                 result:=newListLiteral;
                 case op of
-                  tt_comparatorEq,
-                  tt_comparatorNeq,
-                  tt_comparatorLeq,
-                  tt_comparatorGeq,
-                  tt_comparatorLss,
-                  tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.append(newBoolLiteral(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.isInRelationTo(op,P_scalarLiteral(P_listLiteral(RHS)^.element [i]))),false,adapters);
+                  tt_comparatorEq:       for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
+                  tt_comparatorNeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
+                  tt_comparatorLeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
+                  tt_comparatorGeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
+                  tt_comparatorLss:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
+                  tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
                   tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
                   tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
                   tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
