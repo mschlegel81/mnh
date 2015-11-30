@@ -530,7 +530,7 @@ VAR
 begin
   tmp := Elapsed(T);
   P := intToStr(FSPrecision);
-  ms := frac(tmp); SM:=format('%0.'+P+'f',[ms]); delete(SM,1,1);
+  ms := frac(tmp); SM:=format('%0.'+P+'f',[ms]); Delete(SM,1,1);
   D := trunc(tmp / 86400); tmp:=trunc(tmp) mod 86400;
   H := trunc(tmp / 3600); tmp:=trunc(tmp) mod 3600;
   M := trunc(tmp / 60); S:=(trunc(tmp) mod 60);

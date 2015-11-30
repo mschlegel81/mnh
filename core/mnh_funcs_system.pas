@@ -233,14 +233,14 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         tempProcess.CloseInput;
         while tempProcess.running and adapters.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.output.read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
                  else begin inc(sleepTime); sleep(sleepTime); end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
-          n := tempProcess.output.read((memStream.Memory+BytesRead)^, READ_BYTES);
+          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
         result := (tempProcess.exitStatus = 0);

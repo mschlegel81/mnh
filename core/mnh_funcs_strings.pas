@@ -1,6 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,Diff;
 IMPLEMENTATION
 {$MACRO ON}
 FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
@@ -572,6 +572,71 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end;
   end;
 
+FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR aHashes,bHashes:PInteger;
+      aTxt,bTxt:ansistring;
+      aLen,bLen:integer;
+      Diff:TDiff;
+      i:longint;
+
+      comp:P_listLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+       ((params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) and
+        (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) or
+        (params^.value(0)^.literalType=lt_string) and
+        (params^.value(1)^.literalType=lt_string)) then begin
+      Diff:=TDiff.create();
+      if (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) and
+         (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
+        with P_listLiteral(params^.value(0))^ do begin
+          aLen:=size;
+          GetMem(aHashes,aLen*sizeOf(integer));
+          for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
+        end;
+        with P_listLiteral(params^.value(1))^ do begin
+          bLen:=size;
+          GetMem(bHashes,bLen*sizeOf(integer));
+          for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
+        end;
+        Diff.execute(aHashes,bHashes,aLen,bLen);
+        freeMem(aHashes,aLen*sizeOf(integer));
+        freeMem(bHashes,bLen*sizeOf(integer));
+      end else if (params^.value(0)^.literalType=lt_string) and
+                  (params^.value(1)^.literalType=lt_string) then begin
+        aTxt:=P_stringLiteral(params^.value(0))^.value; UniqueString(aTxt);
+        bTxt:=P_stringLiteral(params^.value(1))^.value; UniqueString(bTxt);
+        Diff.execute(PChar(aTxt),PChar(bTxt),length(aTxt)+1,length(bTxt)+1);
+      end;
+
+      result:=newListLiteral^
+             .append(newListLiteral^
+                    .appendString('adds')^
+                    .appendInt(Diff.DiffStats.adds),false,adapters)^
+             .append(newListLiteral^
+                    .appendString('deletes')^
+                    .appendInt(Diff.DiffStats.deletes),false,adapters)^
+             .append(newListLiteral^
+                    .appendString('matches')^
+                    .appendInt(Diff.DiffStats.matches),false,adapters)^
+             .append(newListLiteral^
+                    .appendString('modifies')^
+                    .appendInt(Diff.DiffStats.modifies),false,adapters);
+      comp:=newListLiteral;
+      for i:=0 to Diff.count-1 do begin
+        case Diff.Compares[i].kind of
+          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,adapters);
+          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,adapters);
+          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,adapters);
+          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,adapters);
+        end;
+      end;
+      P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false,adapters),false,adapters);
+      Diff.destroy;
+    end;
+  end;
+
 INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S');
@@ -593,4 +658,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
   registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
+  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script between strings A and B or string lists A and B');
+
 end.

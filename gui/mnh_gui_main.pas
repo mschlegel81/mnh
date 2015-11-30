@@ -348,7 +348,7 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
         end;
       end;
       if idealInputHeight<>InputEdit.height then begin
-        if idealInputHeight<InputEdit.Height then begin
+        if idealInputHeight<InputEdit.height then begin
           if inputHeightSpeed>=0 then inputHeightSpeed:=-1
                                  else dec(inputHeightSpeed);
         end else begin
