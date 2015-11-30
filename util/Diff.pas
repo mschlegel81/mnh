@@ -13,11 +13,6 @@ TYPE
   PDiags = ^TDiags;
   TDiags = array [-MAX_DIAGONAL .. MAX_DIAGONAL] of integer;
 
-  PIntArray = ^TIntArray;
-  TIntArray = array[0 .. MAXINT div sizeOf(integer) -1] of integer;
-  PChrArray = ^TChrArray;
-  TChrArray = array[0 .. MAXINT div sizeOf(char) -1] of char;
-
   TChangeKind = (ckNone, ckAdd, ckDelete, ckModify);
 
   PCompareRec = ^TCompareRec;
@@ -45,7 +40,7 @@ TYPE
     modifies : integer;
   end;
 
-  TDiff = class
+  TDiff = object
   private
     fCompareList: TList;
     fDiffList: TList;      //this TList circumvents the need for recursion
@@ -54,26 +49,26 @@ TYPE
     DiagBufferF: pointer;
     DiagBufferB: pointer;
     DiagF, DiagB: PDiags;
-    Ints1, Ints2: PIntArray;
-    Chrs1, Chrs2: PChrArray;
+    Ints1, Ints2: PInteger;
+    Chrs1, Chrs2: PChar;
     fDiffStats: TDiffStats;
     fLastCompareRec: TCompareRec;
-    PROCEDURE PushDiff(offset1, offset2, len1, len2: integer);
+    PROCEDURE PushDiff(CONST offset1, offset2, len1, len2: integer);
     FUNCTION  PopDiff: boolean;
-    PROCEDURE InitDiagArrays(len1, len2: integer);
+    PROCEDURE InitDiagArrays(CONST len1, len2: integer);
     PROCEDURE DiffInt(offset1, offset2, len1, len2: integer);
     PROCEDURE DiffChr(offset1, offset2, len1, len2: integer);
-    FUNCTION SnakeChrF(k,offset1,offset2,len1,len2: integer): boolean;
-    FUNCTION SnakeChrB(k,offset1,offset2,len1,len2: integer): boolean;
-    FUNCTION SnakeIntF(k,offset1,offset2,len1,len2: integer): boolean;
-    FUNCTION SnakeIntB(k,offset1,offset2,len1,len2: integer): boolean;
-    PROCEDURE AddChangeChr(offset1, range: integer; ChangeKind: TChangeKind);
-    PROCEDURE AddChangeInt(offset1, range: integer; ChangeKind: TChangeKind);
+    FUNCTION SnakeChrF(CONST k,offset1,offset2,len1,len2: integer): boolean;
+    FUNCTION SnakeChrB(CONST k,offset1,offset2,len1,len2: integer): boolean;
+    FUNCTION SnakeIntF(CONST k,offset1,offset2,len1,len2: integer): boolean;
+    FUNCTION SnakeIntB(CONST k,offset1,offset2,len1,len2: integer): boolean;
+    PROCEDURE AddChangeChr(CONST offset1, range: integer; ChangeKind: TChangeKind);
+    PROCEDURE AddChangeInt(CONST offset1, range: integer; ChangeKind: TChangeKind);
     FUNCTION GetCompareCount: integer;
-    FUNCTION GetCompare(index: integer): TCompareRec;
+    FUNCTION GetCompare(CONST index: integer): TCompareRec;
   public
     CONSTRUCTOR create;
-    DESTRUCTOR destroy; override;
+    DESTRUCTOR destroy;
 
     //compare either and array of characters or an array of integers ...
     FUNCTION execute(pints1, pints2: PInteger; len1, len2: integer): boolean; overload;
@@ -193,7 +188,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-PROCEDURE TDiff.PushDiff(offset1, offset2, len1, len2: integer);
+PROCEDURE TDiff.PushDiff(CONST offset1, offset2, len1, len2: integer);
   VAR DiffVars: PDiffVars;
   begin
     new(DiffVars);
@@ -223,7 +218,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-PROCEDURE TDiff.InitDiagArrays(len1, len2: integer);
+PROCEDURE TDiff.InitDiagArrays(CONST len1, len2: integer);
 VAR
   i: integer;
 begin
@@ -243,12 +238,12 @@ VAR
   p, k, delta: integer;
 begin
   //trim matching bottoms ...
-  while (len1 > 0) and (len2 > 0) and (Ints1^[offset1] = Ints2^[offset2]) do
+  while (len1 > 0) and (len2 > 0) and (Ints1[offset1] = Ints2[offset2]) do
   begin
     inc(offset1); inc(offset2); dec(len1); dec(len2);
   end;
   //trim matching tops ...
-  while (len1 > 0) and (len2 > 0) and (Ints1^[offset1+len1-1] = Ints2^[offset2+len2-1]) do begin
+  while (len1 > 0) and (len2 > 0) and (Ints1[offset1+len1-1] = Ints2[offset2+len2-1]) do begin
     dec(len1); dec(len2);
   end;
 
@@ -382,7 +377,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.SnakeChrF(k,offset1,offset2,len1,len2: integer): boolean;
+FUNCTION TDiff.SnakeChrF(CONST k,offset1,offset2,len1,len2: integer): boolean;
 VAR
   x,y: integer;
 begin
@@ -405,7 +400,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.SnakeChrB(k,offset1,offset2,len1,len2: integer): boolean;
+FUNCTION TDiff.SnakeChrB(CONST k,offset1,offset2,len1,len2: integer): boolean;
 VAR
   x,y: integer;
 begin
@@ -427,7 +422,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.SnakeIntF(k,offset1,offset2,len1,len2: integer): boolean;
+FUNCTION TDiff.SnakeIntF(CONST k,offset1,offset2,len1,len2: integer): boolean;
 VAR
   x,y: integer;
 begin
@@ -436,7 +431,7 @@ begin
     y := DiagF^[k-1]+1;
   x := y - k;
   while (x < len1-1) and (y < len2-1) and
-    (Ints1^[offset1+x+1] = Ints2^[offset2+y+1]) do
+    (Ints1[offset1+x+1] = Ints2[offset2+y+1]) do
   begin
     inc(x); inc(y);
   end;
@@ -450,7 +445,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.SnakeIntB(k,offset1,offset2,len1,len2: integer): boolean;
+FUNCTION TDiff.SnakeIntB(CONST k,offset1,offset2,len1,len2: integer): boolean;
 VAR
   x,y: integer;
 begin
@@ -458,7 +453,7 @@ begin
     y := DiagB^[k-1] else
     y := DiagB^[k+1]-1;
   x := y - k;
-  while (x >= 0) and (y >= 0) and (Ints1^[offset1+x] = Ints2^[offset2+y]) do
+  while (x >= 0) and (y >= 0) and (Ints1[offset1+x] = Ints2[offset2+y]) do
   begin
     dec(x); dec(y);
   end;
@@ -472,7 +467,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-PROCEDURE TDiff.AddChangeChr(offset1, range: integer; ChangeKind: TChangeKind);
+PROCEDURE TDiff.AddChangeChr(CONST offset1, range: integer; ChangeKind: TChangeKind);
 VAR
   i,j: integer;
   compareRec: PCompareRec;
@@ -485,8 +480,8 @@ begin
       kind := ckNone;
       inc(oldIndex1);
       inc(oldIndex2);
-      chr1 := Chrs1^[oldIndex1];
-      chr2 := Chrs2^[oldIndex2];
+      chr1 := Chrs1[oldIndex1];
+      chr2 := Chrs2[oldIndex2];
     end;
     new(compareRec);
     compareRec^ := fLastCompareRec;
@@ -503,8 +498,8 @@ begin
           kind := ckNone;
           inc(oldIndex1);
           inc(oldIndex2);
-          chr1 := Chrs1^[oldIndex1];
-          chr2 := Chrs2^[oldIndex2];
+          chr1 := Chrs1[oldIndex1];
+          chr2 := Chrs2[oldIndex2];
         end;
         new(compareRec);
         compareRec^ := fLastCompareRec;
@@ -531,7 +526,7 @@ begin
               inc(fDiffStats.modifies);
               inc(fLastCompareRec.oldIndex2);
               PCompareRec(fCompareList[j])^.oldIndex2 := fLastCompareRec.oldIndex2;
-              PCompareRec(fCompareList[j])^.chr2 := Chrs2^[oldIndex2];
+              PCompareRec(fCompareList[j])^.chr2 := Chrs2[oldIndex2];
               if j = fCompareList.count-1 then fLastCompareRec.kind := ckModify;
               continue;
             end;
@@ -539,7 +534,7 @@ begin
             kind := ckAdd;
             chr1 := #0;
             inc(oldIndex2);
-            chr2 := Chrs2^[oldIndex2]; //ie what we added
+            chr2 := Chrs2[oldIndex2]; //ie what we added
           end;
           new(compareRec);
           compareRec^ := fLastCompareRec;
@@ -566,7 +561,7 @@ begin
               inc(fDiffStats.modifies);
               inc(fLastCompareRec.oldIndex1);
               PCompareRec(fCompareList[j])^.oldIndex1 := fLastCompareRec.oldIndex1;
-              PCompareRec(fCompareList[j])^.chr1 := Chrs1^[oldIndex1];
+              PCompareRec(fCompareList[j])^.chr1 := Chrs1[oldIndex1];
               if j = fCompareList.count-1 then fLastCompareRec.kind := ckModify;
               continue;
             end;
@@ -574,7 +569,7 @@ begin
             kind := ckDelete;
             chr2 := #0;
             inc(oldIndex1);
-            chr1 := Chrs1^[oldIndex1]; //ie what we deleted
+            chr1 := Chrs1[oldIndex1]; //ie what we deleted
           end;
           new(compareRec);
           compareRec^ := fLastCompareRec;
@@ -586,7 +581,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-PROCEDURE TDiff.AddChangeInt(offset1, range: integer; ChangeKind: TChangeKind);
+PROCEDURE TDiff.AddChangeInt(CONST offset1, range: integer; ChangeKind: TChangeKind);
 VAR
   i,j: integer;
   compareRec: PCompareRec;
@@ -599,8 +594,8 @@ begin
       kind := ckNone;
       inc(oldIndex1);
       inc(oldIndex2);
-      int1 := Ints1^[oldIndex1];
-      int2 := Ints2^[oldIndex2];
+      int1 := Ints1[oldIndex1];
+      int2 := Ints2[oldIndex2];
     end;
     new(compareRec);
     compareRec^ := fLastCompareRec;
@@ -617,8 +612,8 @@ begin
           kind := ckNone;
           inc(oldIndex1);
           inc(oldIndex2);
-          int1 := Ints1^[oldIndex1];
-          int2 := Ints2^[oldIndex2];
+          int1 := Ints1[oldIndex1];
+          int2 := Ints2[oldIndex2];
         end;
         new(compareRec);
         compareRec^ := fLastCompareRec;
@@ -644,7 +639,7 @@ begin
               inc(fDiffStats.modifies);
               inc(fLastCompareRec.oldIndex2);
               PCompareRec(fCompareList[j])^.oldIndex2 := fLastCompareRec.oldIndex2;
-              PCompareRec(fCompareList[j])^.int2 := Ints2^[oldIndex2];
+              PCompareRec(fCompareList[j])^.int2 := Ints2[oldIndex2];
               if j = fCompareList.count-1 then fLastCompareRec.kind := ckModify;
               continue;
             end;
@@ -652,7 +647,7 @@ begin
             kind := ckAdd;
             int1 := $0;
             inc(oldIndex2);
-            int2 := Ints2^[oldIndex2]; //ie what we added
+            int2 := Ints2[oldIndex2]; //ie what we added
           end;
           new(compareRec);
           compareRec^ := fLastCompareRec;
@@ -679,7 +674,7 @@ begin
               inc(fDiffStats.modifies);
               inc(fLastCompareRec.oldIndex1);
               PCompareRec(fCompareList[j])^.oldIndex1 := fLastCompareRec.oldIndex1;
-              PCompareRec(fCompareList[j])^.int1 := Ints1^[oldIndex1];
+              PCompareRec(fCompareList[j])^.int1 := Ints1[oldIndex1];
               if j = fCompareList.count-1 then fLastCompareRec.kind := ckModify;
               continue;
             end;
@@ -687,7 +682,7 @@ begin
             kind := ckDelete;
             int2 := $0;
             inc(oldIndex1);
-            int1 := Ints1^[oldIndex1]; //ie what we deleted
+            int1 := Ints1[oldIndex1]; //ie what we deleted
           end;
           new(compareRec);
           compareRec^ := fLastCompareRec;
@@ -724,7 +719,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.GetCompare(index: integer): TCompareRec;
+FUNCTION TDiff.GetCompare(CONST index: integer): TCompareRec;
 begin
   result := PCompareRec(fCompareList[index])^;
 end;

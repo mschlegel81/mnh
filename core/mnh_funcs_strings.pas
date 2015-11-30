@@ -587,7 +587,7 @@ FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) or
         (params^.value(0)^.literalType=lt_string) and
         (params^.value(1)^.literalType=lt_string)) then begin
-      Diff:=TDiff.create();
+      Diff.create();
       if (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) and
          (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
         with P_listLiteral(params^.value(0))^ do begin
