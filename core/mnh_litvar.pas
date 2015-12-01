@@ -57,7 +57,6 @@ TYPE
   end;
 
   P_boolLiteral = ^T_boolLiteral;
-
   T_boolLiteral = object(T_scalarLiteral)
   private
     val: boolean;
@@ -137,6 +136,7 @@ TYPE
 
   T_stringLiteral = object(T_scalarLiteral)
   private
+    cachedHash:T_hashInt;
     val: ansistring;
   public
     CONSTRUCTOR create(CONST value: ansistring);
@@ -202,8 +202,9 @@ TYPE
   { T_listLiteral }
   T_listLiteral = object(T_literal)
   private
-    strictType: T_literalType;
     element: array of P_literal;
+    cachedHash: T_hashInt;
+    strictType: T_literalType;
     nextAppendIsRange: boolean;
   public
     CONSTRUCTOR create;
@@ -503,15 +504,16 @@ FUNCTION T_literal.getReferenceCount: longint;
   end;
 
 //CONSTRUCTORS:=================================================================
-CONSTRUCTOR T_voidLiteral.create();                              begin inherited init;               end;
+CONSTRUCTOR T_voidLiteral.create();                              begin inherited init; end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init; val:=value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init; val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init; val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init; val:=value; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init; val:=value; cachedHash:=0; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);    begin inherited init; val:=value; end;
 CONSTRUCTOR T_listLiteral.create;
   begin
     inherited init;
+    cachedHash:=0;
     setLength(element, 0);
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
@@ -1141,9 +1143,11 @@ FUNCTION T_realLiteral.hash: T_hashInt;
 FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
+    if cachedHash<>0 then exit(cachedHash);
     {$Q-}
     result:=T_hashInt(lt_string)+length(val);
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
+    cachedHash:=result;
     {$Q+}
   end;
 
@@ -1161,9 +1165,11 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
 FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
+    if cachedHash<>0 then exit(cachedHash);
     {$Q-}
     result:=T_hashInt(lt_list)+length(element);
     for i:=0 to length(element)-1 do result:=result*31+element [i]^.hash;
+    cachedHash:=0;
     {$Q+}
   end;
 //=======================================================================:?.hash
@@ -1369,6 +1375,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR ad
       exit;
     end;
     if L^.literalType=lt_void then exit;
+    cachedHash:=0;
     setLength(element, length(element)+1);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;
@@ -1520,6 +1527,7 @@ PROCEDURE T_listLiteral.sort;
       i, j0, j1, k: longint;
   begin
     if (length(element)<=1) then exit;
+    cachedHash:=0;
     scale:=1;
     setLength(temp, length(element));
     while scale<length(element) do begin
@@ -1565,6 +1573,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral; VAR 
 
   begin
     if length(element)<=1 then exit;
+    cachedHash:=0;
     scale:=1;
     setLength(temp, length(element));
     while (scale<length(element)) and adapters.noErrors do begin
@@ -1688,6 +1697,7 @@ FUNCTION T_listLiteral.clone:P_listLiteral;
     end;
     result^.strictType:=strictType;
     result^.nextAppendIsRange:=nextAppendIsRange;
+    result^.cachedHash:=cachedHash;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
@@ -1975,10 +1985,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
       tt_operatorConcat: begin
         result:=newListLiteral;
-        if (LHS^.literalType in [lt_boolean..lt_expression])
+        if (LHS^.literalType in C_validScalarTypes)
         then P_listLiteral(result)^.append   (LHS,true,adapters)
         else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
-        if (RHS^.literalType in [lt_boolean..lt_expression])
+        if (RHS^.literalType in C_validScalarTypes)
         then P_listLiteral(result)^.append   (RHS,true,adapters)
         else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         checkedExit;
@@ -2123,7 +2133,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
       end;
       tt_cso_assignAppend: begin
         if (oldValue^.literalType in C_validListTypes) and (oldValue^.getReferenceCount=1) then begin
-          if (RHS^.literalType in [lt_boolean..lt_expression])
+          if (RHS^.literalType in C_validScalarTypes)
           then P_listLiteral(oldValue)^.append(RHS, true,adapters)
           else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
           result:=oldValue;
