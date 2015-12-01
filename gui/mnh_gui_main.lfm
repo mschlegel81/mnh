@@ -263,10 +263,7 @@ object MnhForm: TMnhForm
             item
               Command = ecDeleteLine
               ShortCut = 16473
-            end          
-            item
-              Command = ecDeleteEOL
-              ShortCut = 24665
+              ShortCut2 = 16460
             end          
             item
               Command = ecUndo
@@ -275,82 +272,6 @@ object MnhForm: TMnhForm
             item
               Command = ecRedo
               ShortCut = 24666
-            end          
-            item
-              Command = ecGotoMarker1
-              ShortCut = 16433
-            end          
-            item
-              Command = ecGotoMarker2
-              ShortCut = 16434
-            end          
-            item
-              Command = ecGotoMarker3
-              ShortCut = 16435
-            end          
-            item
-              Command = ecGotoMarker4
-              ShortCut = 16436
-            end          
-            item
-              Command = ecGotoMarker5
-              ShortCut = 16437
-            end          
-            item
-              Command = ecGotoMarker6
-              ShortCut = 16438
-            end          
-            item
-              Command = ecGotoMarker7
-              ShortCut = 16439
-            end          
-            item
-              Command = ecGotoMarker8
-              ShortCut = 16440
-            end          
-            item
-              Command = ecGotoMarker9
-              ShortCut = 16441
-            end          
-            item
-              Command = ecSetMarker0
-              ShortCut = 24624
-            end          
-            item
-              Command = ecSetMarker1
-              ShortCut = 24625
-            end          
-            item
-              Command = ecSetMarker2
-              ShortCut = 24626
-            end          
-            item
-              Command = ecSetMarker3
-              ShortCut = 24627
-            end          
-            item
-              Command = ecSetMarker4
-              ShortCut = 24628
-            end          
-            item
-              Command = ecSetMarker5
-              ShortCut = 24629
-            end          
-            item
-              Command = ecSetMarker6
-              ShortCut = 24630
-            end          
-            item
-              Command = ecSetMarker7
-              ShortCut = 24631
-            end          
-            item
-              Command = ecSetMarker8
-              ShortCut = 24632
-            end          
-            item
-              Command = ecSetMarker9
-              ShortCut = 24633
             end          
             item
               Command = ecUserDefined0
