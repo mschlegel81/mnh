@@ -154,7 +154,6 @@ FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR x, y: P_literal;
-      x0, y0, x1, y1: double;
       o:T_scalingOptions;
   begin
     result:=nil;
@@ -236,7 +235,9 @@ FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_to
 
 FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    result:=newBoolLiteral(adapters.plot.options.preserveAspect);
+    if (params=nil) or (params^.size=0)
+    then result:=newBoolLiteral(adapters.plot.options.preserveAspect)
+    else result:=nil;
   end;
 
 FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
@@ -269,9 +270,11 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
 
 FUNCTION display_imp(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    adapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-    adapters.raiseCustomMessage(mt_plotCreatedWithInstantDisplay,'',tokenLocation);
-    result:=newVoidLiteral;
+    if (params=nil) or (params^.size=0) then begin
+      adapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+      adapters.raiseCustomMessage(mt_plotCreatedWithInstantDisplay,'',tokenLocation);
+      result:=newVoidLiteral;
+    end else result:=nil;
   end;
 
 INITIALIZATION

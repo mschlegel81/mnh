@@ -414,8 +414,7 @@ PROCEDURE TMnhForm.pullPlotSettingsToGui;
   end;
 
 PROCEDURE TMnhForm.pushSettingsToPlotContainer();
-  VAR aidX,aidY:longint;
-      o:T_scalingOptions;
+  VAR o:T_scalingOptions;
   begin
     o:=guiAdapters.plot.options;
     o.axisStyle['x']:=0;

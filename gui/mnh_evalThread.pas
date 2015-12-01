@@ -47,8 +47,6 @@ FUNCTION main(p:pointer):ptrint;
       mainEvaluationContext:T_evaluationContext;
 
   PROCEDURE updateCompletionList;
-    VAR list:T_listOfString;
-        i:longint;
     begin
       completionList.clear;
       completionList.addAll(userRules.elementArray);
