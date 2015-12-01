@@ -12,7 +12,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   mnh_funcs_system, mnh_litVar, mnh_tokens, mnh_out_adapters,
   consoleAsk, mnh_constants, mnh_doc, mnh_html,
   mnh_debugForm, SynHighlighterMnh, mnh_evalThread, mySys,
-  mnh_plotData,mnh_plotFuncs
+  mnh_plotData,mnh_plotFuncs, mnh_plotForm
   {$ifndef debugMode},windows,sysutils{$endif};
 
 {$R *.res}
@@ -34,6 +34,7 @@ begin
   Application.CreateForm(TcloseDialogForm, closeDialogForm);
   Application.CreateForm(TaskForm, askForm);
   Application.CreateForm(TDebugForm, DebugForm);
+  Application.CreateForm(TplotForm, plotForm);
   Application.Run;
   {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_SHOW); {$endif}
 end.

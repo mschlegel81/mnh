@@ -1,0 +1,129 @@
+object plotForm: TplotForm
+  Left = 774
+  Height = 240
+  Top = 168
+  Width = 320
+  Caption = 'MNH plot'
+  ClientHeight = 220
+  ClientWidth = 320
+  Menu = MainMenu
+  OnKeyPress = FormKeyPress
+  OnResize = FormResize
+  LCLVersion = '1.2.6.0'
+  object plotImage: TImage
+    Left = 0
+    Height = 2000
+    Top = 0
+    Width = 2000
+    OnMouseDown = plotImageMouseDown
+    OnMouseMove = plotImageMouseMove
+    OnMouseUp = plotImageMouseUp
+  end
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 23
+    Top = 197
+    Width = 320
+    Panels = <>
+  end
+  object MainMenu: TMainMenu
+    left = 71
+    top = 92
+    object MenuItem6: TMenuItem
+      Caption = 'Plot'
+      object miAutoReset: TMenuItem
+        Caption = 'Reset plot options on evaluation'
+        OnClick = miAutoResetClick
+      end
+    end
+    object MenuItem1: TMenuItem
+      Caption = 'Quality'
+      object miAntiAliasing1: TMenuItem
+        AutoCheck = True
+        Caption = 'No anti aliasing'
+        Checked = True
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing2: TMenuItem
+        AutoCheck = True
+        Caption = '2x anti-aliasing'
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing3: TMenuItem
+        AutoCheck = True
+        Caption = '3x anti-aliasing'
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing4: TMenuItem
+        AutoCheck = True
+        Caption = '4x anti-aliasing'
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+      object miAntiAliasing5: TMenuItem
+        AutoCheck = True
+        Caption = '5x anti-aliasing'
+        RadioItem = True
+        OnClick = miAntiAliasing1Click
+      end
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'Grid'
+      object MenuItem3: TMenuItem
+        Caption = 'x'
+        object miXGrid: TMenuItem
+          Caption = 'Coarse Grid'
+          OnClick = miXGridClick
+        end
+        object miXFinerGrid: TMenuItem
+          Caption = 'Fine Grid'
+          OnClick = miXFinerGridClick
+        end
+        object miXTics: TMenuItem
+          Caption = 'Tics'
+          OnClick = miXTicsClick
+        end
+      end
+      object MenuItem4: TMenuItem
+        Caption = 'y'
+        object miYGrid: TMenuItem
+          Caption = 'Coarse Grid'
+          OnClick = miYGridClick
+        end
+        object miYFinerGrid: TMenuItem
+          Caption = 'Fine Grid'
+          OnClick = miYFinerGridClick
+        end
+        object miYTics: TMenuItem
+          Caption = 'Tics'
+          OnClick = miYTicsClick
+        end
+      end
+    end
+    object MenuItem5: TMenuItem
+      Caption = 'Scaling'
+      object miPreserveAspect: TMenuItem
+        Caption = 'Preserve aspect ratio'
+        OnClick = miPreserveAspectClick
+      end
+      object miAutoscaleX: TMenuItem
+        Caption = 'Autoscale x'
+        OnClick = miAutoscaleXClick
+      end
+      object miAutoscaleY: TMenuItem
+        Caption = 'Autoscale y'
+        OnClick = miAutoscaleYClick
+      end
+      object miLogscaleX: TMenuItem
+        Caption = 'Logscale x'
+        OnClick = miLogscaleXClick
+      end
+      object miLogscaleY: TMenuItem
+        Caption = 'Logscale y'
+        OnClick = miLogscaleYClick
+      end
+    end
+  end
+end

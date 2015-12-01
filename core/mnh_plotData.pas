@@ -83,6 +83,7 @@ TYPE
     preserveAspect: boolean;
   end;
 
+  P_plot =^T_plot;
   T_plot = object
     TYPE T_ticInfo = record
       pos: double;
