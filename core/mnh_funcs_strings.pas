@@ -572,13 +572,14 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end;
   end;
 
-FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+{$define diffStatOrDiff_impl:=
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
       Diff:TDiff;
       i:longint;
-
+      {$ifdef withEditScript}
       comp:P_listLiteral;
+      {$endif}
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
@@ -621,6 +622,7 @@ FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
              .append(newListLiteral^
                     .appendString('modifies')^
                     .appendInt(Diff.DiffStats.modifies),false,adapters);
+      {$ifdef withEditScript}
       comp:=newListLiteral;
       for i:=0 to Diff.count-1 do begin
         case Diff.Compares[i].kind of
@@ -631,9 +633,16 @@ FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         end;
       end;
       P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false,adapters),false,adapters);
+      {$endif}
       Diff.destroy;
     end;
-  end;
+  end}
+{$define withEditScript}
+FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+diffStatOrDiff_impl;
+{$undef withEditScript}
+FUNCTION diffStats_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+diffStatOrDiff_impl;
 
 INITIALIZATION
   //Functions on Strings:
@@ -656,6 +665,7 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
   registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
   registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
-  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script between strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B');
 
 end.
