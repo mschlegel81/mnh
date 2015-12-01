@@ -574,7 +574,6 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
 
 FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR aHashes,bHashes:PInteger;
-      aTxt,bTxt:ansistring;
       aLen,bLen:integer;
       Diff:TDiff;
       i:longint;
@@ -605,9 +604,8 @@ FUNCTION diff_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         freeMem(bHashes,bLen*sizeOf(integer));
       end else if (params^.value(0)^.literalType=lt_string) and
                   (params^.value(1)^.literalType=lt_string) then begin
-        aTxt:=P_stringLiteral(params^.value(0))^.value; UniqueString(aTxt);
-        bTxt:=P_stringLiteral(params^.value(1))^.value; UniqueString(bTxt);
-        Diff.execute(PChar(aTxt),PChar(bTxt),length(aTxt)+1,length(bTxt)+1);
+        Diff.execute(P_stringLiteral(params^.value(0))^.value,
+                     P_stringLiteral(params^.value(1))^.value);
       end;
 
       result:=newListLiteral^
