@@ -306,6 +306,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
@@ -2313,6 +2314,24 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       if fallback=nil then exit(newListLiteral);
       result:=fallback;
       fallback^.rereference;
+    end;
+  end;
+
+FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR map,keyValuePair:P_listLiteral;
+      key:P_stringLiteral;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (length(params^.element)=2) and
+       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.element[1]^.literalType=lt_string) then begin
+      result:=newListLiteral;
+      key:=P_stringLiteral(params^.element[1]);
+      for i:=0 to length(map^.element)-1 do begin
+        keyValuePair:=P_listLiteral(map^.element[i]);
+        if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true,adapters);
+      end;
     end;
   end;
 

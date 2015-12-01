@@ -216,5 +216,6 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'put',@mapPut,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
   registerRule(LIST_NAMESPACE,'get',@mapGet,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
                                             'get(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
+  registerRule(LIST_NAMESPACE,'drop',@mapDrop,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
 end.
