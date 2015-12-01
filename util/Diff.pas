@@ -62,7 +62,7 @@ TYPE
     DESTRUCTOR destroy;
 
     //compare either and array of characters or an array of integers ...
-    FUNCTION execute(CONST pints1, pints2: PInteger; CONST len1, len2: integer): boolean; overload;
+    FUNCTION execute(CONST pInts1, pInts2: PInteger; CONST len1, len2: integer): boolean; overload;
     FUNCTION execute(CONST txt1,txt2:ansistring): boolean; overload;
     //Cancel allows interrupting excessively prolonged comparisons
     PROCEDURE clear;
@@ -88,10 +88,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-FUNCTION TDiff.execute(CONST pints1, pints2: PInteger; CONST len1, len2: integer): boolean;
-VAR
-  i, Len1Minus1: integer;
+FUNCTION TDiff.execute(CONST pInts1, pInts2: PInteger; CONST len1, len2: integer): boolean;
+VAR i, Len1Minus1: integer;
 begin
+  result:=true;
   try
     clear;
 
@@ -99,8 +99,8 @@ begin
     fCompareList.Capacity := len1 + len2;
     GetMem(DiagBufferF, sizeOf(integer)*(len1+len2+3));
     GetMem(DiagBufferB, sizeOf(integer)*(len1+len2+3));
-    Ints1 := pints1;
-    Ints2 := pints2;
+    Ints1 := pInts1;
+    Ints2 := pInts2;
     try
       PushDiff(0, 0, len1, len2);
       while PopDiff do;
@@ -131,13 +131,13 @@ FUNCTION TDiff.execute(CONST txt1,txt2:ansistring): boolean;
   VAR i:longint;
       pInts1,pInts2:PInteger;
   begin
-    getMem(pInts1,length(txt1)*sizeOf(Integer));
+    GetMem(pInts1,length(txt1)*sizeOf(integer));
     for i:=1 to length(txt1) do pInts1[i-1]:=ord(txt1[i]);
-    getMem(pInts2,length(txt2)*sizeOf(Integer));
+    GetMem(pInts2,length(txt2)*sizeOf(integer));
     for i:=1 to length(txt2) do pInts2[i-1]:=ord(txt2[i]);
     result:=execute(pInts1,pInts2,length(txt1),length(txt2));
-    freeMem(pInts1,length(txt1)*sizeOf(Integer));
-    freeMem(pInts2,length(txt2)*sizeOf(Integer));
+    freeMem(pInts1,length(txt1)*sizeOf(integer));
+    freeMem(pInts2,length(txt2)*sizeOf(integer));
   end;
 //------------------------------------------------------------------------------
 

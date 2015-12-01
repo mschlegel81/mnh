@@ -374,11 +374,15 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring);
   begin
     if not(isIdentifier(wordText,true)) then exit;
     if (inputHighlighter.setMarkedWord(wordText) and outputHighlighter.setMarkedWord(wordText)) then InputEdit.Repaint;
-    if miHelp.Checked then ad_explainIdentifier(wordText,underCursor);
-    if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) then begin
+    if miHelp.Checked then ad_explainIdentifier(wordText,underCursor)
+                      else begin
+                        underCursor.tokenText:=wordText;
+                        underCursor.tokenExplanation:='';
+                      end;
+    if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) and (miHelp.Checked) then begin
       PopupNotifier1.title:=underCursor.tokenText;
       PopupNotifier1.text:=underCursor.tokenExplanation;
-      if miHelp.Checked and not(PopupNotifier1.Visible) then positionHelpNotifier;
+      if not(PopupNotifier1.Visible) then positionHelpNotifier;
     end;
   end;
 
@@ -500,8 +504,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
     end;
   end;
 
-PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
-  CONST doJump: boolean);
+PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boolean);
   VAR loc:T_tokenLocation;
       newCaret:TPoint;
   begin
@@ -822,7 +825,7 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
 begin
   miHelp.Checked:=not(miHelp.Checked);
   if not(miHelp.Checked) then PopupNotifier1.Visible:=false
-                         else if underCursor.tokenText<>'' then positionHelpNotifier;
+                         else if underCursor.tokenText<>'' then setUnderCursor(underCursor.tokenText);
 end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
