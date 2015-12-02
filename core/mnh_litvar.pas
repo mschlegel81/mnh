@@ -2326,6 +2326,7 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     if (params<>nil) and (length(params^.element)=2) and
        (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
        (params^.element[1]^.literalType=lt_string) then begin
+      map:=P_listLiteral(params^.element[0]);
       result:=newListLiteral;
       key:=P_stringLiteral(params^.element[1]);
       for i:=0 to length(map^.element)-1 do begin
