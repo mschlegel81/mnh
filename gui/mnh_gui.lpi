@@ -240,6 +240,7 @@
         <Filename Value="mnh_plotform.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="plotForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_plotForm"/>
       </Unit37>
@@ -272,11 +273,6 @@
         <OptimizationLevel Value="0"/>
       </Optimizations>
     </CodeGeneration>
-    <Linking>
-      <Debugging>
-        <UseHeaptrc Value="True"/>
-      </Debugging>
-    </Linking>
     <Other>
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>

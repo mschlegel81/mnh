@@ -19,10 +19,12 @@ TYPE
     DESTRUCTOR destroy;
 
     FUNCTION getLines: T_arrayOfString;
+    PROCEDURE getLines(CONST value: TStrings);
     PROCEDURE setLines(CONST value: T_arrayOfString);
     PROCEDURE setLines(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
     PROCEDURE appendLine(CONST value: ansistring);
+
 
     PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
 
@@ -342,6 +344,13 @@ FUNCTION T_codeProvider.getLines: T_arrayOfString;
     for i := 0 to length(lineData)-1 do begin
       result[i] := lineData [i];
     end;
+  end;
+
+PROCEDURE T_codeProvider.getLines(CONST value: TStrings);
+  VAR i:longint;
+  begin
+    value.clear;
+    for i:=0 to length(lineData)-1 do value.append(lineData[i]);
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);

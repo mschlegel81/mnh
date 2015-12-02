@@ -764,7 +764,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      if @self=environment.mainPackage then adapters.raiseCustomMessage(mt_reloadRequired,'Persisting package '+codeProvider^.id,C_nilTokenLocation);
+      if @self=environment.mainPackage then adapters.raiseCustomMessage(mt_reloadRequired,codeProvider^.getPath,C_nilTokenLocation);
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;

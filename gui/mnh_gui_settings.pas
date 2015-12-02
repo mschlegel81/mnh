@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants;
+  StdCtrls, EditBtn, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,mnh_fileWrappers;
 
 CONST
   STATE_SAVE_INTERVAL=ONE_MINUTE;
@@ -15,9 +15,30 @@ TYPE
 
   { TSettingsForm }
 
-  T_formPosition=record
+  { T_formPosition }
+
+  T_formPosition=object(T_serializable)
     top, left, width, height: longint;
     isFullscreen: boolean;
+    CONSTRUCTOR create;
+    FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
+    PROCEDURE saveToFile(VAR F:T_file);           virtual;
+  end;
+
+  { T_editorState }
+
+  T_editorState=object(T_serializable)
+    visible:boolean;
+    filePath:ansistring;
+    fileAccessAge:double;
+    changed:boolean;
+    lines:T_arrayOfString;
+
+    CONSTRUCTOR create;
+    CONSTRUCTOR create(CONST path:ansistring; CONST age:double; CONST change:boolean; CONST dat:TStrings);
+    PROCEDURE getLines(CONST dat:TStrings);
+    FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
+    PROCEDURE saveToFile(VAR F:T_file);           virtual;
   end;
 
   TSettingsForm = class(TForm)
@@ -35,16 +56,14 @@ TYPE
   private
     { private declarations }
     editorFontname: string;
-    fileInEditor: ansistring;
     mainForm:T_formPosition;
     outputBehaviour:T_outputBehaviour;
     instantEvaluation: boolean;
     doResetPlotOnEvaluation: boolean;
-    fileContents: T_arrayOfString;
     fileHistory: array[0..9] of ansistring;
-
+    editorState: array[0..9] of T_editorState;
+    activePage:longint;
     //nonpersistent:
-    changedSinceStore:boolean;
     savedAt:double;
     FUNCTION getFontSize: longint;
     PROCEDURE setFontSize(CONST value: longint);
@@ -56,6 +75,8 @@ TYPE
     PROCEDURE setOutputBehaviour(CONST value:T_outputBehaviour);
     FUNCTION getResetPlotOnEvaluation:boolean;
     PROCEDURE setResetPlotOnEvaluation(CONST value:boolean);
+    FUNCTION getPageIndex:longint;
+    PROCEDURE setPageIndex(CONST value:longint);
   public
     { public declarations }
     PROPERTY fontSize: longint read getFontSize write setFontSize;
@@ -63,13 +84,12 @@ TYPE
     PROPERTY wantInstantEvaluation: boolean read getInstantEvaluation write setInstantEvaluation;
     PROPERTY behaviour:T_outputBehaviour read getOutputBehaviour write setOutputBehaviour;
     PROPERTY resetPlotOnEvaluation:boolean read getResetPlotOnEvaluation write setResetPlotOnEvaluation;
+    PROPERTY pageIndex:longint read getPageIndex write setPageIndex;
     FUNCTION getEditorFontName: string;
     PROCEDURE saveSettings;
-    PROCEDURE saveSettingsMaybe;
-    PROCEDURE setFileContents(CONST data: TStrings);
-    PROCEDURE getFileContents(CONST data: TStrings);
-    FUNCTION setFileInEditor(fileName: ansistring): boolean;
-    FUNCTION getFileInEditor: ansistring;
+    FUNCTION timeForSaving:boolean;
+    PROCEDURE setEditorState(CONST index:longint; CONST dat:T_editorState);
+    FUNCTION  getEditorState(CONST index:longint):T_editorState;
     FUNCTION polishHistory: boolean;
     FUNCTION historyItem(CONST index:longint):ansistring;
   end;
@@ -86,6 +106,97 @@ FUNCTION settingsFileName: string;
     result := expandFileName(extractFilePath(paramStr(0)))+'mnh_gui.settings';
   end;
 
+{ T_editorState }
+
+CONSTRUCTOR T_editorState.create;
+  begin
+    visible:=false;
+    setLength(lines,0);
+    filePath:='';
+    fileAccessAge:=0;
+    changed:=false;
+    setLength(lines,0);
+  end;
+
+CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONST change: boolean; CONST dat: TStrings);
+  VAR i:longint;
+  begin
+    visible:=true;
+    filePath:=path;
+    fileAccessAge:=age;
+    changed:=change;
+    setLength(lines,dat.count);
+    for i:=0 to dat.count-1 do lines[i]:=dat[i];
+  end;
+
+PROCEDURE T_editorState.getLines(CONST dat: TStrings);
+  VAR i:longint;
+  begin
+    dat.clear;
+    for i:=0 to length(lines)-1 do dat.append(lines[i]);
+  end;
+
+FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
+  VAR i:longint;
+  begin
+    visible:=f.readBoolean;
+    if not(visible) then exit(true);
+    filePath:=f.readAnsiString;
+    changed:=f.readBoolean;
+    if changed then begin
+      fileAccessAge:=f.readDouble;
+      i:=f.readLongint;
+      if i>=0 then begin
+        setLength(lines,i);
+        for i:=0 to length(lines)-1 do lines[i]:=f.readAnsiString;
+        result:=true;
+      end else result:=false;
+    end else begin
+      lines:=fileLines(filePath,result);
+      if result then fileAge(filePath,fileAccessAge)
+                else visible:=false;
+      result:=true;
+    end;
+  end;
+
+PROCEDURE T_editorState.saveToFile(VAR F: T_file);
+  VAR i:longint;
+  begin
+    f.writeBoolean(visible);
+    if not(visible) then exit;
+    f.writeAnsiString(filePath);
+    f.writeBoolean(changed);
+    if changed then begin
+      f.writeDouble(fileAccessAge);
+      f.writeLongint(length(lines));
+      for i:=0 to length(lines)-1 do f.writeAnsiString(lines[i]);
+    end;
+  end;
+
+{ T_formPosition }
+CONSTRUCTOR T_formPosition.create;
+  begin
+  end;
+
+FUNCTION T_formPosition.loadFromFile(VAR F: T_file): boolean;
+  begin
+    top   :=f.readLongint;
+    left  :=f.readLongint;
+    width :=f.readLongint;
+    height:=f.readLongint;
+    isFullscreen:=f.readBoolean;
+    result:=true;
+  end;
+
+PROCEDURE T_formPosition.saveToFile(VAR F: T_file);
+  begin
+    f.writeLongint(top);
+    f.writeLongint(left);
+    f.writeLongint(width);
+    f.writeLongint(height);
+    f.writeBoolean(isFullscreen);
+  end;
+
 { TSettingsForm }
 
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
@@ -94,21 +205,17 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     iMax, i: longint;
 
   begin
+    mainForm.create;
+    for i:=0 to 9 do editorState[i].create;
     if fileExists(settingsFileName) then begin
       ff.createToRead(settingsFileName);
 
-      setFontSize(ff.readLongint);
+      fontSize:=ff.readLongint;
       editorFontname := ff.readAnsiString;
       EditorFontDialog.Font.name := editorFontname;
-
       AntialiasCheckbox.Checked := ff.readBoolean;
-      with mainForm do begin
-        top := ff.readLongint;
-        left := ff.readLongint;
-        width := ff.readLongint;
-        height := ff.readLongint;
-        isFullscreen := ff.readBoolean;
-      end;
+
+      mainForm.loadFromFile(ff);
       with outputBehaviour do begin
         doEchoInput := ff.readBoolean;
         doEchoDeclaration := ff.readBoolean;
@@ -121,18 +228,11 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       for i := 0 to 9 do
         fileHistory[i] := ff.readAnsiString;
 
-      fileInEditor := ff.readAnsiString;
-      if fileInEditor = '' then begin
-        iMax := ff.readLongint;
-        if iMax>=0 then begin
-          setLength(fileContents, iMax);
-          for i := 0 to iMax-1 do
-            fileContents[i] := ff.readAnsiString;
-        end else setLength(fileContents, 0);
+      for i:=0 to 9 do begin
+        editorState[i].loadFromFile(ff);
       end;
+      activePage:=ff.readLongint;
       ff.destroy;
-      if not (fileExists(fileInEditor)) then
-        fileInEditor := '';
     end else begin
       for i := 0 to 9 do fileHistory[i] := '';
       editorFontname := 'Courier New';
@@ -153,7 +253,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       end;
       instantEvaluation := true;
       doResetPlotOnEvaluation := false;
-      fileInEditor := '';
+      editorState[0].visible:=true;
+      activePage:=0;
     end;
     FontButton.Font.name := editorFontname;
     FontButton.Font.size := getFontSize;
@@ -176,7 +277,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         end;
     end;
     polishHistory;
-    changedSinceStore:=false;
     savedAt:=now;
   end;
 
@@ -189,13 +289,12 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
       FontButton.Font.name := editorFontname;
       FontButton.Font.size := getFontSize;
       FontButton.Caption := editorFontname;
-      changedSinceStore := true;
     end;
   end;
 
 PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
   begin
-    if changedSinceStore then saveSettings;
+    saveSettings;
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;
@@ -207,7 +306,6 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
   begin
     FontSizeEdit.text := intToStr(value);
     EditorFontDialog.Font.size := value;
-    changedSinceStore:=true;
   end;
 
 FUNCTION TSettingsForm.getMainFormPosition: T_formPosition;
@@ -218,7 +316,6 @@ FUNCTION TSettingsForm.getMainFormPosition: T_formPosition;
 PROCEDURE TSettingsForm.setMainFormPosition(CONST value: T_formPosition);
   begin
     mainForm:=value;
-    changedSinceStore:=true;
   end;
 
 FUNCTION TSettingsForm.getInstantEvaluation: boolean;
@@ -229,7 +326,6 @@ FUNCTION TSettingsForm.getInstantEvaluation: boolean;
 PROCEDURE TSettingsForm.setInstantEvaluation(CONST value: boolean);
   begin
     instantEvaluation:=value;
-    changedSinceStore:=true;
   end;
 
 FUNCTION TSettingsForm.getOutputBehaviour: T_outputBehaviour;
@@ -240,7 +336,6 @@ FUNCTION TSettingsForm.getOutputBehaviour: T_outputBehaviour;
 PROCEDURE TSettingsForm.setOutputBehaviour(CONST value: T_outputBehaviour);
   begin
     outputBehaviour:=value;
-    changedSinceStore:=true;
   end;
 
 FUNCTION TSettingsForm.getResetPlotOnEvaluation: boolean;
@@ -251,7 +346,16 @@ FUNCTION TSettingsForm.getResetPlotOnEvaluation: boolean;
 PROCEDURE TSettingsForm.setResetPlotOnEvaluation(CONST value: boolean);
   begin
     doResetPlotOnEvaluation:=value;
-    changedSinceStore:=true;
+  end;
+
+FUNCTION TSettingsForm.getPageIndex: longint;
+  begin
+    result:=activePage;
+  end;
+
+PROCEDURE TSettingsForm.setPageIndex(CONST value: longint);
+  begin
+    if (value>=0) and (value<=9) then activePage:=value;
   end;
 
 FUNCTION TSettingsForm.getEditorFontName: string;
@@ -266,17 +370,11 @@ PROCEDURE TSettingsForm.saveSettings;
   begin
     ff.createToWrite(settingsFileName);
 
-    ff.writeLongint(getFontSize);
+    ff.writeLongint(fontSize);
     ff.writeAnsiString(editorFontname);
     ff.writeBoolean(AntialiasCheckbox.Checked);
 
-    with mainForm do begin
-      ff.writeLongint(top);
-      ff.writeLongint(left);
-      ff.writeLongint(width);
-      ff.writeLongint(height);
-      ff.writeBoolean(isFullscreen);
-    end;
+    mainForm.saveToFile(ff);
     with outputBehaviour do begin
       ff.writeBoolean(doEchoInput);
       ff.writeBoolean(doEchoDeclaration);
@@ -286,74 +384,29 @@ PROCEDURE TSettingsForm.saveSettings;
     end;
     ff.writeBoolean(instantEvaluation);
     ff.writeBoolean(doResetPlotOnEvaluation);
-    for i := 0 to 9 do
-      ff.writeAnsiString(fileHistory [i]);
-    ff.writeAnsiString(fileInEditor);
-    if fileInEditor = '' then
-      begin
-      ff.writeLongint(length(fileContents));
-      for i := 0 to length(fileContents)-1 do
-        ff.writeAnsiString(fileContents [i]);
-      end;
+    for i := 0 to 9 do ff.writeAnsiString(fileHistory [i]);
+    for i:=0 to 9 do begin
+      editorState[i].saveToFile(ff);
+    end;
+    ff.writeLongint(activePage);
     ff.destroy;
-    changedSinceStore:=false;
     savedAt:=now;
   end;
 
-PROCEDURE TSettingsForm.saveSettingsMaybe;
+FUNCTION TSettingsForm.timeForSaving: boolean;
   begin
-    if changedSinceStore and (now-savedAt>STATE_SAVE_INTERVAL) then saveSettings;
+    result:=(now-savedAt>STATE_SAVE_INTERVAL);
   end;
 
-PROCEDURE TSettingsForm.setFileContents(CONST data: TStrings);
-  VAR i: longint;
+PROCEDURE TSettingsForm.setEditorState(CONST index: longint;
+  CONST dat: T_editorState);
   begin
-    if fileInEditor<>'' then begin
-      setLength(fileContents, 0);
-      exit;
-    end;
-    setLength(fileContents, data.count);
-    for i := 0 to data.count-1 do fileContents[i] := data [i];
-    changedSinceStore:=true;
+    editorState[index]:=dat;
   end;
 
-PROCEDURE TSettingsForm.getFileContents(CONST data: TStrings);
-  VAR  i: longint;
+FUNCTION TSettingsForm.getEditorState(CONST index: longint): T_editorState;
   begin
-    if fileInEditor<>'' then exit;
-    data.clear;
-    for i := 0 to length(fileContents)-1 do
-      data.append(fileContents [i]);
-  end;
-
-FUNCTION TSettingsForm.setFileInEditor(fileName: ansistring): boolean;
-  VAR i: longint;
-      tmp: ansistring;
-  begin
-    fileName:=expandFileName(fileName);
-    if fileInEditor<>'' then begin
-      polishHistory;
-      i := 0;
-      while (i<length(fileHistory)) and (fileHistory [i]<>fileInEditor) do inc(i);
-      if (i>=length(fileHistory)) then begin
-        i := length(fileHistory)-1;
-        fileHistory[i] := fileInEditor;
-      end;
-      while (i>0) do begin
-        tmp := fileHistory [i];
-        fileHistory[i] := fileHistory [i-1];
-        fileHistory[i-1] := tmp;
-        dec(i);
-      end;
-      result := true;
-    end else result := polishHistory;
-    fileInEditor := fileName;
-    changedSinceStore:=true;
-  end;
-
-FUNCTION TSettingsForm.getFileInEditor: ansistring;
-  begin
-    result := fileInEditor;
+    result:=editorState[index];
   end;
 
 FUNCTION TSettingsForm.polishHistory: boolean;
@@ -376,7 +429,6 @@ FUNCTION TSettingsForm.polishHistory: boolean;
       fileHistory[length(fileHistory)-1] := '';
       result := true;
     end;
-    changedSinceStore:=changedSinceStore or result;
   end;
 
 FUNCTION TSettingsForm.historyItem(CONST index: longint): ansistring;
