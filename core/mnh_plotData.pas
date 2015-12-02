@@ -669,7 +669,7 @@ FUNCTION T_plot.setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
       xOffset:=yTicWidth+5;
       result:=true;
     end;
-    if ((axisStyle['y'] and C_tics)>0) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
+    if ((axisStyle['x'] and C_tics)>0) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
       yOffset:=screenHeight-(xTicHeight+5);
       result:=true;
     end;
@@ -1193,36 +1193,27 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       target.Pen.style:=psClear;
       target.Pen.width:=1;
       target.Pen.EndCap:=pecSquare;
-      if (scalingOptions.axisStyle['y'] and C_grid) = C_grid then target.FillRect(0,0, xOffset, screenHeight);
-      if (scalingOptions.axisStyle['x'] and C_grid) = C_grid then target.FillRect(xOffset, yOffset,screenWidth, screenHeight);
+      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then target.FillRect(0,0, xOffset, screenHeight);
+      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) > 0 then target.FillRect(xOffset, yOffset,screenWidth, screenHeight);
       //-----------------------------------------------------------:clear border
       //axis:-------------------------------------------------------------------
       target.Pen.style:=psSolid;
       target.Pen.color:=clBlack;
       target.Pen.width:=1;
-      if (scalingOptions.axisStyle['y'] and C_grid) = C_grid then
-        target.line(xOffset, 0,
-          xOffset, yOffset);
-      if (scalingOptions.axisStyle['x'] and C_grid) = C_grid then
-        target.line(screenWidth, yOffset,
-          xOffset, yOffset);
+      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then target.line(xOffset, 0, xOffset, yOffset);
+      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) > 0 then target.line(screenWidth, yOffset, xOffset, yOffset);
       //-------------------------------------------------------------------:axis
       //tics:-------------------------------------------------------------------
-      if (scalingOptions.axisStyle['y'] and C_grid) = C_grid then for i:=0 to length(tic['y'])-1 do
-          with tic['y'][i] do if major then
-              begin
-              y:=round(pos);
-              target.line(xOffset-5, y, xOffset, y);
-              target.TextOut(xOffset-5-target.TextWidth(txt), y-
-                target.TextHeight(txt) shr 1, txt);
-              end;
-      if (scalingOptions.axisStyle['x'] and C_grid) = C_grid then for i:=0 to length(tic['x'])-1 do
-          with tic['x'][i] do if major then
-              begin
-              x:=round(pos);
-              target.line(x, yOffset+5, x, yOffset);
-              target.TextOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
-              end;
+      if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
+        y:=round(pos);
+        target.line(xOffset-5, y, xOffset, y);
+        if (scalingOptions.axisStyle['y'] and C_tics)>0 then target.TextOut(xOffset-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
+      end;
+      if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) >0 then for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
+        x:=round(pos);
+        target.line(x, yOffset+5, x, yOffset);
+        if (scalingOptions.axisStyle['x'] and C_tics)>0 then target.TextOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
+      end;
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system
     end;

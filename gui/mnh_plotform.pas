@@ -88,11 +88,13 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
       if key='+' then guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,  0.9,plotImage)
                  else guiAdapters^.plot.zoomOnPoint(plotSubsystem.lastMouseX,plotSubsystem.lastMouseY,1/0.9,plotImage);
       guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
+      pullPlotSettingsToGui();
     end;
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
+    plotImage.Align:=alClient;
     if ad_evaluationRunning
       then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
       else doPlot();
@@ -240,7 +242,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     if miXGrid.Checked      then o.axisStyle['x']:=o.axisStyle['x'] or C_grid;
     if miXFinerGrid.Checked then o.axisStyle['x']:=o.axisStyle['x'] or C_finerGrid;
     o.axisStyle['y']:=0;
-    if miYTics.Checked      then o.axisStyle['y']:=C_tics;;
+    if miYTics.Checked      then o.axisStyle['y']:=C_tics;
     if miYGrid.Checked      then o.axisStyle['y']:=o.axisStyle['y'] or C_grid;
     if miYFinerGrid.Checked then o.axisStyle['y']:=o.axisStyle['y'] or C_finerGrid;
     o.preserveAspect:=miPreserveAspect.Checked;
@@ -265,7 +267,7 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
     guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-    guiAdapters^.plot.setScreenSize(ClientWidth,ClientHeight);
+    guiAdapters^.plot.setScreenSize(plotImage.width,plotImage.height);
     guiAdapters^.plot.renderPlot(plotImage,factor);
   end;
 
