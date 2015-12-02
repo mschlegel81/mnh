@@ -9,17 +9,12 @@ TYPE
     location:T_tokenLocation;
   end;
 
-PROCEDURE ad_clearFile;
-PROCEDURE ad_evaluate(CONST L:TStrings);
-PROCEDURE ad_callMain(CONST L:TStrings; params:ansistring);
+PROCEDURE ad_evaluate(CONST path:ansistring; CONST L:TStrings);
+PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring);
 PROCEDURE ad_haltEvaluation;
-PROCEDURE ad_setFile(CONST path:string; CONST L:TStrings);
-PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
-FUNCTION ad_currentFile:string;
 FUNCTION ad_evaluationRunning:boolean;
 PROCEDURE ad_killEvaluationLoopSoftly;
 PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
-FUNCTION ad_needReload:boolean;
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
 PROCEDURE ad_doReload(CONST L:TStrings);
 
@@ -104,8 +99,9 @@ PROCEDURE ad_clearFile;
     environment.mainPackageProvider^.clear;
   end;
 
-PROCEDURE ad_evaluate(CONST L: TStrings);
+PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings);
   begin
+    environment.mainPackageProvider^.setPath(path);
     environment.mainPackageProvider^.setLines(L);
     pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
@@ -114,7 +110,7 @@ PROCEDURE ad_evaluate(CONST L: TStrings);
     end;
   end;
 
-PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
+PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring);
   VAR sp:longint;
   begin
     setLength(parametersForMainCall,0);
@@ -129,7 +125,7 @@ PROCEDURE ad_callMain(CONST L: TStrings; params: ansistring);
         params:=trim(copy(params,sp+1,length(params)));
       end;
     end;
-
+    environment.mainPackageProvider^.setPath(path);
     environment.mainPackageProvider^.setLines(L);
     pendingRequest.value:=er_callMain;
     if evaluationState.value=es_dead then begin
@@ -143,37 +139,6 @@ PROCEDURE ad_haltEvaluation;
     if evaluationState.value=es_running then stepper.onAbort;
     while not(guiOutAdapters^.hasMessageOfType[mt_el5_haltMessageReceived]) do guiOutAdapters^.haltEvaluation;
     repeat pendingRequest.value:=er_none; until pendingRequest.value=er_none;
-  end;
-
-PROCEDURE ad_setFile(CONST path: string; CONST L: TStrings);
-  VAR i:longint;
-      LL:T_arrayOfString;
-  begin
-    ad_haltEvaluation;
-    if path<>environment.mainPackageProvider^.getPath then begin
-      environment.mainPackageProvider^.setPath(path);
-      environment.mainPackageProvider^.load;
-      L.clear;
-      LL:=environment.mainPackageProvider^.getLines;
-      for i:=0 to length(LL)-1 do L.append(LL[i]);
-      setLength(LL,0);
-      environment.mainPackage^.clear;
-    end;
-  end;
-
-PROCEDURE ad_saveFile(CONST path:string; CONST L:TStrings);
-  begin
-    L.saveToFile(path);
-    if path<>environment.mainPackageProvider^.getPath then begin
-      environment.mainPackageProvider^.setPath(path);
-    end;
-    environment.mainPackageProvider^.setLines(L);
-    environment.mainPackageProvider^.save;
-  end;
-
-FUNCTION ad_currentFile: string;
-  begin
-    result:=environment.mainPackageProvider^.getPath;
   end;
 
 FUNCTION ad_evaluationRunning: boolean;
@@ -239,11 +204,6 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
         info.location:=P_rule(token.data)^.getLocationOfDeclaration;
       end;
     end;
-  end;
-
-FUNCTION ad_needReload: boolean;
-  begin
-    result:=not(ad_evaluationRunning) and (ad_currentFile<>'') and environment.mainPackageProvider^.fileHasChanged;
   end;
 
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
