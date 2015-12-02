@@ -621,15 +621,27 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
   VAR i:longint;
       commented:boolean=true;
   begin
-    with inputRec[PageControl.ActivePageIndex] do begin
-      if (Command=ecUserDefinedFirst) and (editor.BlockBegin.y>=1) then begin
-        for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
-          commented:=commented and (copy(trim(editor.lines[i]),1,2)='//');
-        if commented
-        then for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
-          editor.lines[i]:=replaceOne(editor.lines[i],'//','')
-        else for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
-        editor.lines[i]:='//'+editor.lines[i];
+    with inputRec[PageControl.ActivePageIndex] do if (Command=ecUserDefinedFirst) and (editor.BlockBegin.y>=1) then begin
+      for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
+        commented:=commented and (copy(trim(editor.lines[i]),1,2)='//');
+      if commented
+      then for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
+        editor.lines[i]:=replaceOne(editor.lines[i],'//','')
+      else for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
+      editor.lines[i]:='//'+editor.lines[i];
+    end;
+    if Command=ecUserDefinedFirst+1 then begin
+      for i:=1 to 9 do if inputRec[(i+PageControl.ActivePageIndex) mod 10].sheet.TabVisible then begin
+        PageControl.ActivePageIndex:=(i+PageControl.ActivePageIndex) mod 10;
+        inputRec[PageControl.ActivePageIndex].editor.SetFocus;
+        exit;
+      end;
+    end;
+    if Command=ecUserDefinedFirst+2 then begin
+      for i:=9 downto 1 do if inputRec[(i+PageControl.ActivePageIndex) mod 10].sheet.TabVisible then begin
+        PageControl.ActivePageIndex:=(i+PageControl.ActivePageIndex) mod 10;
+        inputRec[PageControl.ActivePageIndex].editor.SetFocus;
+        exit;
       end;
     end;
   end;
