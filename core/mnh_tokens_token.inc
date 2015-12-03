@@ -959,12 +959,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     begin
       eachLocation:=first^.location;
+      if P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void] then begin
+        context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
+        exit
+      end;
       if callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
       end;
       if not(parseBodyOk) then exit;
-      if (P_literal(first^.data)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression])
+      if (P_literal(first^.data)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
       then itList:=newOneElementListLiteral(first^.data,false,context.adapters^)
       else itList:=first^.data;
       resultLiteral:=nil;
