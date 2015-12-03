@@ -483,7 +483,7 @@ object DebugForm: TDebugForm
     MouseLinkColor.Background = clNone
     MouseLinkColor.Foreground = clBlue
     MouseLinkColor.FrameEdges = sfeAround
-    LineHighlightColor.Background = clNone
+    LineHighlightColor.Background = 15790320
     LineHighlightColor.Foreground = clNone
     LineHighlightColor.FrameEdges = sfeAround
     inline SynLeftGutterPartList1: TSynGutterPartList
