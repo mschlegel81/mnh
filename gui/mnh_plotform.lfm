@@ -11,6 +11,7 @@ object plotForm: TplotForm
   OnResize = FormResize
   LCLVersion = '1.2.6.0'
   object plotImage: TImage
+    Cursor = crCross
     Left = 0
     Height = 2000
     Top = 0

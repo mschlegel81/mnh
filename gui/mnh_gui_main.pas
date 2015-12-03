@@ -94,6 +94,7 @@ TYPE
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
@@ -183,8 +184,8 @@ TYPE
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
-    FUNCTION _doSaveAs_:boolean;
-    FUNCTION _doSave_:boolean;
+    FUNCTION _doSaveAs_(CONST index:longint):boolean;
+    FUNCTION _doSave_(CONST index:longint):boolean;
 
 
     PROCEDURE setupInputRecForNewFile    (CONST index:longint);
@@ -357,8 +358,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
   begin
     PopupNotifier1.ShowAtPos(left+PageControl.width-PopupNotifier1.vNotifierForm.width,
                              ClientToScreen(point(left,OutputEdit.top)).y);
-    //TODO Reactivate the following line?
-    //ActiveInputEdit.SetFocus;
+    if (PageControl.ActivePageIndex>=0) then inputRec[PageControl.ActivePageIndex].editor.SetFocus;
   end;
 
 PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring);
@@ -410,7 +410,6 @@ PROCEDURE TMnhForm.doStartEvaluation;
     UpdateTimeTimer.Interval:=20;
     doConditionalPlotReset;
     underCursor.tokenText:='';
-    OutputEdit.SetFocus;
     if miDebug.Checked then begin
       DebugForm.debugEdit.ClearAll;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
@@ -432,7 +431,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
       if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
       if (underCursor.tokenText<>wordUnderCursor) or
          (underCursor.location.column<=0) then exit;
-      //TODO if necessary jump to other tab
+      if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
       pageIdx:=getInputEditIndexForFilename(underCursor.location.fileName);
       if pageIdx>=0 then begin
         PageControl.ActivePageIndex:=pageIdx;
@@ -446,10 +445,27 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
 PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boolean);
   VAR loc:T_tokenLocation;
       newCaret:TPoint;
+      pageIdx:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
     setUnderCursor(OutputEdit.GetWordAtRowCol(caret));
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
+    if not(doJump) then exit;
+    if (loc.fileName='') or (loc.fileName='?') then exit;
+    pageIdx:=getInputEditIndexForFilename(loc.fileName);
+    if pageIdx<0 then exit;
+    PageControl.ActivePageIndex:=pageIdx;
+    with inputRec[pageIdx] do begin
+      editor.SetFocus;
+      highlighter.setMarkedToken(loc.line-1,loc.column-1);
+      newCaret.x:=loc.column;
+      newCaret.y:=loc.line;
+      editor.CaretXY:=newCaret;
+      forceInputEditFocusOnOutputEditMouseUp:=true;
+    end;
+
+
+
     //TODO if necessary change tab
     //if (loc.column>0) and (loc.fileName=environment.mainPackageProvider^.getPath)
     //then begin
@@ -504,9 +520,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     end;
 
     doNotMarkWordBefore:=now;
-    doNotCheckFileBefore:=now+10*ONE_SECOND;
-    //OpenDialog.fileName:=paramStr(0);
-    //SaveDialog.fileName:=paramStr(0);
+    doNotCheckFileBefore:=now+ONE_SECOND;
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
@@ -539,6 +553,14 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     outputHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
     wordsInEditor.destroy;
+  end;
+
+PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+  VAR i:longint;
+  begin
+    for i:=0 to length(FileNames)-1 do if uppercase(extractFileExt(FileNames[i]))=SCRIPT_EXTENSION then begin
+      if getInputEditIndexForFilename(FileNames[i])<0 then exit;
+    end;
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
@@ -574,7 +596,16 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
         end;
         updateSheetCaption(i);
       end;
-      PageControl.ActivePageIndex:=SettingsForm.pageIndex;
+      i:=SettingsForm.pageIndex;
+      while (i>=0) and not(inputRec[i].sheet.TabVisible) do dec(i);
+      if i<0 then begin
+        i:=9;
+        while (i>=0) and not(inputRec[i].sheet.TabVisible) do dec(i);
+      end;
+      if i>=0 then begin
+        PageControl.ActivePageIndex:=i;
+        inputRec[i].editor.SetFocus;
+      end;
 
       if (locationToOpenOnFormStartup.fileName<>'') and
          (locationToOpenOnFormStartup.fileName<>C_nilTokenLocation.fileName) and
@@ -671,11 +702,14 @@ PROCEDURE TMnhForm.miClearClick(Sender: TObject);
       PageControl.ActivePageIndex:=mr;
       exit;
     end;
-    with inputRec[PageControl.ActivePageIndex] do
-    if changed then begin
-      mr:=closeDialogForm.showOnLoad;
-      if mr=mrOk then if not(_doSave_) then exit;
-      if mr=mrCancel then exit;
+    with inputRec[PageControl.ActivePageIndex] do begin
+      if changed then begin
+        mr:=closeDialogForm.showOnLoad;
+        if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
+        if mr=mrCancel then exit;
+      end;
+      if filePath<>'' then SettingsForm.fileClosed(filePath);
+      processFileHistory;
     end;
     setupInputRecForNewFile(mr);
   end;
@@ -687,15 +721,23 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
     with inputRec[PageControl.ActivePageIndex] do begin
       if changed then begin
         mr:=closeDialogForm.showOnLoad;
-        if mr=mrOk then if not(_doSave_) then exit;
+        if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
         if mr=mrCancel then exit;
       end;
       sheet.TabVisible:=false;
+      if filePath<>'' then begin
+        SettingsForm.fileClosed(filePath);
+        processFileHistory;
+      end;
     end;
-    for i:=0 to 9 do if inputRec[i].sheet.TabVisible then begin
-      PageControl.ActivePageIndex:=i;
+    if PageControl.ActivePageIndex>0 then
+    for i:=9+PageControl.ActivePageIndex downto
+             PageControl.ActivePageIndex do if inputRec[i mod 10].sheet.TabVisible then begin
+      PageControl.ActivePageIndex:=i mod 10;
       exit;
     end;
+    //If we reach that line, closing just closed the last tab
+    setupInputRecForNewFile(0);
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
@@ -849,11 +891,12 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
     end;
   end;
 
-FUNCTION TMnhForm._doSaveAs_: boolean;
+FUNCTION TMnhForm._doSaveAs_(CONST index:longint): boolean;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
-    if SaveDialog.execute then with inputRec[PageControl.ActivePageIndex] do begin
+    if index<0 then exit(false);
+    if SaveDialog.execute then with inputRec[index] do begin
       filePath:=SaveDialog.fileName;
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
@@ -861,15 +904,16 @@ FUNCTION TMnhForm._doSaveAs_: boolean;
       fileAge(filePath,fileAccessAge);
       changed:=false;
       result:=true;
-      updateSheetCaption(PageControl.ActivePageIndex);
+      updateSheetCaption(index);
     end else result:=false;
   end;
 
-FUNCTION TMnhForm._doSave_: boolean;
+FUNCTION TMnhForm._doSave_(CONST index:longint): boolean;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
-    with inputRec[PageControl.ActivePageIndex] do if filePath='' then result:=_doSaveAs_
+    if index<0 then exit(false);
+    with inputRec[index] do if filePath='' then result:=_doSaveAs_(index)
     else begin
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
@@ -877,7 +921,7 @@ FUNCTION TMnhForm._doSave_: boolean;
       fileAge(filePath,fileAccessAge);
       changed:=false;
       result:=true;
-      updateSheetCaption(PageControl.ActivePageIndex);
+      updateSheetCaption(index);
     end;
   end;
 
@@ -925,12 +969,11 @@ FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName:ansistring):longin
       uName:ansistring;
   begin
     uName:=extractRelativePath(expandFileName(''),fileName);;
-    for i:=0 to 9 do with inputRec[i] do begin
-      if filePath=uName then exit(i);
-      if not(sheet.TabVisible) then begin
-        setupInputRecForLoadingFile(i,uName);
-        exit(i);
-      end;
+    for i:=0 to 9 do with inputRec[i] do if sheet.TabVisible and (filePath=uName) then exit(i);
+    for i:=0 to 9 do with inputRec[i] do
+    if not(sheet.TabVisible) then begin
+      setupInputRecForLoadingFile(i,uName);
+      exit(i);
     end;
     result:=-1;
   end;
@@ -949,24 +992,28 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     then begin
       mr:=getInputEditIndexForFilename(OpenDialog.fileName);
       if mr>=0 then PageControl.ActivePageIndex:=mr else begin
-        with inputRec[PageControl.ActivePageIndex] do
-        if changed then begin
-          mr:=closeDialogForm.showOnLoad;
-          if mr=mrOk then if not(_doSave_) then exit;
-          if mr=mrCancel then exit;
+        with inputRec[PageControl.ActivePageIndex] do begin
+          if changed then begin
+            mr:=closeDialogForm.showOnLoad;
+            if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
+            if mr=mrCancel then exit;
+          end;
+          if filePath<>'' then SettingsForm.fileClosed(filePath);
+          processFileHistory;
         end;
+        setupInputRecForNewFile(PageControl.ActivePageIndex);
       end;
     end;
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);
   begin
-    _doSaveAs_;
+    _doSaveAs_(PageControl.ActivePageIndex);
   end;
 
 PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
   begin
-    _doSave_;
+    _doSave_(PageControl.ActivePageIndex);
   end;
 
 PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
@@ -993,7 +1040,7 @@ PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
     if ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,true);
-    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=InputEdit0;
+    if forceInputEditFocusOnOutputEditMouseUp and (PageControl.ActivePageIndex>=0) then ActiveControl:=inputRec[PageControl.ActivePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
@@ -1049,12 +1096,14 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
       caret:TPoint;
   begin
     if wordsInEditor.size>0 then exit;
-    caret:=InputEdit0.CaretXY;
-    for i:=0 to InputEdit0.lines.count-1 do
-      if i+1=caret.y then collectIdentifiers(InputEdit0.lines[i],wordsInEditor,caret.x)
-                     else collectIdentifiers(InputEdit0.lines[i],wordsInEditor,-1);
-    wordsInEditor.addAll(completionList.elementArray);
-    wordsInEditor.unique;
+    if PageControl.ActivePageIndex>=0 then with inputRec[PageControl.ActivePageIndex] do begin
+      caret:=editor.CaretXY;
+      for i:=0 to editor.lines.count-1 do
+        if i+1=caret.y then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+      wordsInEditor.addAll(completionList.elementArray);
+      wordsInEditor.unique;
+    end;
   end;
 
 PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
@@ -1087,8 +1136,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       isEvaluationRunning:boolean;
       flushPerformed:boolean;
       autosizingDone:boolean;
-      i:longint;
+      i,modalRes:longint;
       state:T_editorState;
+      currentFileAge:double;
   begin
     isEvaluationRunning:=ad_evaluationRunning;
     //fast ones:================================================================
@@ -1131,6 +1181,11 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
 
+    if not(flushPerformed) and not(autosizingDone) then begin
+      UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
+      if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
+    end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
+    //================================================================:slow ones
     if SettingsForm.timeForSaving then begin
       for i:=0 to 9 do with inputRec[i] do begin
         if sheet.TabVisible
@@ -1141,22 +1196,19 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       SettingsForm.saveSettings;
     end;
 
-    if not(flushPerformed) and not(autosizingDone) then begin
-      UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
-      if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
-    end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
-    //================================================================:slow ones
-    //if (now>doNotCheckFileBefore) and ad_needReload then begin
-    //  writeln(StdErr,'Opening modal dialog.');
-    //  UpdateTimeTimer.Enabled:=false;
-    //  i:=closeDialogForm.showOnOutOfSync;
-    //  writeln(StdErr, 'Modal result received...');
-    //  if i=mrOk     then begin ad_doReload(MnhForm.InputEdit.lines);                doNotCheckFileBefore:=now+ONE_SECOND; end;
-    //  if i=mrClose  then begin ad_saveFile(ad_currentFile,MnhForm.InputEdit.lines); doNotCheckFileBefore:=now+ONE_SECOND; end;
-    //  if i=mrCancel then begin                                                      doNotCheckFileBefore:=now+ONE_MINUTE; end;
-    //  writeln(StdErr, 'Modal result evaluation done.');
-    //  UpdateTimeTimer.Enabled:=true;
-    //end;
+    if (now>doNotCheckFileBefore) then begin
+      doNotCheckFileBefore:=now+1;
+      for i:=0 to 9 do with inputRec[i] do if sheet.TabVisible and (filePath<>'') and not(changed) then begin
+        fileAge(filePath,currentFileAge);
+        if currentFileAge>fileAccessAge then begin
+          modalRes:=closeDialogForm.showOnOutOfSync(filePath);
+          if modalRes=mrOk then setupInputRecForLoadingFile(i,filePath) else
+          if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
+          changed:=true;
+        end;
+      end;
+      doNotCheckFileBefore:=now+ONE_SECOND;
+    end;
   end;
 
 PROCEDURE TMnhForm.processSettings;

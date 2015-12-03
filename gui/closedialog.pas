@@ -19,7 +19,7 @@ TYPE
     { public declarations }
     FUNCTION showOnQuit: integer;
     FUNCTION showOnLoad: integer;
-    FUNCTION showOnOutOfSync: integer;
+    FUNCTION showOnOutOfSync(CONST fileName:string): integer;
   end;
 
 VAR
@@ -53,9 +53,9 @@ FUNCTION TcloseDialogForm.showOnLoad: integer;
     result := ShowModal;
   end;
 
-FUNCTION TcloseDialogForm.showOnOutOfSync: integer;
+FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName:string): integer;
   begin
-    Caption:='The current file is out of sync';
+    Caption:=fileName+' is out of sync';
     ButtonPanel1.OKButton.Caption := 'Reload';
     ButtonPanel1.CancelButton.Caption := 'Ignore changes';
     ButtonPanel1.CloseButton.Caption := 'Overwrite';

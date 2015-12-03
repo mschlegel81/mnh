@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   sysutils, Classes, FileUtil, Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_constants,myGenerics;
+  SynEditTypes, SynEditHighlighter, mnh_evalThread,mnh_constants,myGenerics,myStringUtil;
 
 TYPE
   TtkTokenKind = (
@@ -31,9 +31,22 @@ TYPE
 
 TYPE
   { TSynMnhSyn }
+  T_contextStackElement=(cse_bottom,cse_expression);
+  T_contextStack=object
+    private
+      dat:array of T_contextStackElement;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE clear;
+      PROCEDURE push(CONST e:T_contextStackElement);
+      PROCEDURE pop(CONST e:T_contextStackElement);
+      FUNCTION top:T_contextStackElement;
+  end;
 
   TSynMnhSyn = class(TSynCustomHighlighter)
   private
+    contextStack:T_contextStack;
 
     isMarked,
     isDebugInfoLine :boolean;
@@ -80,9 +93,30 @@ VAR modifierStrings:T_listOfString;
     specialLiteralStrings:T_listOfString;
     specialConstructStrings:T_listOfString;
 
+CONSTRUCTOR T_contextStack.create; begin clear; end;
+DESTRUCTOR T_contextStack.destroy; begin clear; end;
+PROCEDURE T_contextStack.clear; begin setLength(dat,0); end;
+PROCEDURE T_contextStack.push(CONST e:T_contextStackElement);
+  begin
+    setLength(dat,length(dat)+1);
+    dat[length(dat)-1]:=e;
+  end;
+
+PROCEDURE T_contextStack.pop(CONST e:T_contextStackElement);
+  begin
+    if (length(dat)>0) and (dat[length(dat)-1]=e) then setLength(dat,length(dat)-1);
+  end;
+
+FUNCTION T_contextStack.top:T_contextStackElement;
+  begin
+    if (length(dat)>0) then result:=dat[length(dat)-1]
+                       else result:=cse_bottom;
+  end;
+
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   begin
     inherited create(AOwner);
+    contextStack.create;
     flavour:=flav;
     styleTable[tkComment         ]:=TSynHighlighterAttributes.create('Comment');
     styleTable[tkDocComment      ]:=TSynHighlighterAttributes.create('DocComment');
@@ -110,6 +144,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkSpecialRule     ].style:=[fsBold];
     styleTable[tkOperator        ].style:=[fsBold];
     styleTable[tkModifier        ].style:=[fsBold];
+    //styleTable[tkStringFormatPlaceholder].style:=[fsBold];
 
     styleTable[tkComment         ].foreground:=$00999999;
     styleTable[tkDocComment      ].foreground:=$00999999;
@@ -139,6 +174,7 @@ DESTRUCTOR TSynMnhSyn.destroy;
   VAR tk: TtkTokenKind;
   begin
     for tk := low(TtkTokenKind) to high(TtkTokenKind) do styleTable[tk].destroy;
+    contextStack.destroy;
     inherited destroy;
   end; { Destroy }
 
@@ -153,6 +189,7 @@ PROCEDURE TSynMnhSyn.SetLine(CONST newValue: string; LineNumber: integer);
     fLine := PChar(newValue);
     run := 0;
     fLineNumber := LineNumber;
+    ResetRange;
     next;
   end;
 
@@ -179,6 +216,16 @@ PROCEDURE TSynMnhSyn.next;
       result:=length(prefix)>0;
       for k:=1 to length(prefix) do begin
         if fLine[k-1]<>prefix[k] then exit(false);
+      end;
+    end;
+
+  FUNCTION head:ansistring;
+    VAR i:longint;
+    begin
+      result:='';
+      i:=run;
+      while (i<run+20) and (fLine[i]<>#0) do begin
+        result:=result+fLine[i]; inc(i);
       end;
     end;
 
@@ -217,13 +264,18 @@ PROCEDURE TSynMnhSyn.next;
       end;
       exit;
     end;
-
     case fLine [run] of
       #0: fTokenId := tkNull;
-      ';': begin
-        inc(run);
-        fTokenId := tkDefault;
-        end;
+      '{': begin
+             if contextStack.top in [cse_bottom,cse_expression] then contextStack.push(cse_expression);
+             inc(run);
+             fTokenId := tkDefault;
+           end;
+      '}': begin
+             contextStack.pop(cse_expression);
+             inc(run);
+             fTokenId := tkDefault;
+           end;
       '0'..'9': begin
         while fLine [run] in ['0'..'9', '.'] do inc(run);
         if fLine[run] in ['E','e'] then begin
@@ -247,7 +299,8 @@ PROCEDURE TSynMnhSyn.next;
         end;
         if      operatorStrings        .contains(localId) then fTokenId := tkOperator
         else if specialLiteralStrings  .contains(localId) then fTokenId := tkNonStringLiteral
-        else if modifierStrings        .contains(localId) then fTokenId := tkModifier
+        else if modifierStrings        .contains(localId) or
+                (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
         else if specialConstructStrings.contains(localId) then fTokenId := tkSpecialRule
         else
         if      userRules     .contains(localId) then fTokenId := tkUserRule
@@ -338,8 +391,7 @@ FUNCTION TSynMnhSyn.getRange: pointer;
   end;
 
 FUNCTION TSynMnhSyn.getToken: string;
-  VAR
-    len: longint;
+  VAR len: longint;
   begin
     len := run-fTokenPos;
     result := '';
@@ -356,7 +408,12 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
     if isMarked then result.FrameColor:=$000000ff
-                else if fTokenId<>tkDebugInfo then result.FrameColor:=clNone;
+                else if fTokenId<>tkDebugInfo then begin
+                  result.FrameColor:=clNone;
+                  if (contextStack.top=cse_expression) or (fTokenId=tkSpecialComment)
+                     then result.style:=result.style + [fsUnderline]
+                     else result.style:=result.style - [fsUnderline];
+                end;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenKind: integer;
@@ -373,10 +430,12 @@ PROCEDURE TSynMnhSyn.ResetRange;
   begin
     isMarked:=false;
     isDebugInfoLine:=false;
+    contextStack.clear;
   end;
 
 PROCEDURE TSynMnhSyn.setRange(value: pointer);
   begin
+    ResetRange;
   end;
 
 class FUNCTION TSynMnhSyn.GetLanguageName: string;
@@ -386,7 +445,7 @@ class FUNCTION TSynMnhSyn.GetLanguageName: string;
 
 FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
   begin
-    result := ['a'..'z', 'A'..'Z', C_ID_QUALIFY_CHARACTER, '_', '0'..'9'];
+    result := IDENTIFIER_CHARS;
   end;
 
 INITIALIZATION

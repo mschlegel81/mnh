@@ -3,6 +3,7 @@ object MnhForm: TMnhForm
   Height = 368
   Top = 273
   Width = 479
+  AllowDropFiles = True
   Caption = 'MNH5'
   ClientHeight = 348
   ClientWidth = 479
@@ -12,6 +13,7 @@ object MnhForm: TMnhForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnDropFiles = FormDropFiles
   OnResize = FormResize
   OnShow = FormShow
   LCLVersion = '1.2.6.0'
@@ -27,9 +29,10 @@ object MnhForm: TMnhForm
     Height = 125
     Top = 0
     Width = 479
-    ActivePage = TabSheet1
+    TabStop = False
+    ActivePage = EditorTabSheet
     Align = alTop
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 1
     OnChange = PageControlChange
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
@@ -253,7 +256,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -334,10 +336,6 @@ object MnhForm: TMnhForm
           item
             Command = ecBlockIndent
             ShortCut = 16457
-          end        
-          item
-            Command = ecAutoCompletion
-            ShortCut = 16416
           end>
         MouseActions = <>
         MouseTextActions = <>
@@ -628,7 +626,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -999,7 +996,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -1370,7 +1366,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -1741,7 +1736,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -2112,7 +2106,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -2483,7 +2476,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -2854,7 +2846,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -3225,7 +3216,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
@@ -3596,7 +3586,6 @@ object MnhForm: TMnhForm
           item
             Command = ecDeleteLine
             ShortCut = 16473
-            ShortCut2 = 16460
           end        
           item
             Command = ecUndo
