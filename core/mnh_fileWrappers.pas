@@ -10,7 +10,7 @@ TYPE
   private
     filePath: ansistring;
     lineData: T_arrayOfString;
-
+    fileContentsEnforced,
     outOfSync:boolean;
     fileAccessedAtFileAge:double;
   public
@@ -378,6 +378,7 @@ PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
       outOfSync := outOfSync or (trim(lineData [i])<>trim(value [i]));
       lineData[i] := value [i];
     end;
+    fileContentsEnforced:=true;
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: ansistring);
@@ -420,6 +421,7 @@ CONSTRUCTOR T_codeProvider.create;
     clear;
     filePath:='';
     outOfSync:=false;
+    fileContentsEnforced:=false;
   end;
 
 CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
@@ -427,6 +429,7 @@ CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
     clear;
     filePath := path;
     if fileExists(path) then load;
+    fileContentsEnforced:=false;
   end;
 
 DESTRUCTOR T_codeProvider.destroy;
@@ -479,7 +482,7 @@ FUNCTION T_codeProvider.fileName: ansistring;
 FUNCTION T_codeProvider.fileHasChanged: boolean;
   VAR currentFileAge: double;
   begin
-    if (filePath<>'') and fileExists(filePath) then begin
+    if (filePath<>'') and fileExists(filePath) and not(fileContentsEnforced) then begin
       fileAge(filePath, currentFileAge);
       result:=currentFileAge>fileAccessedAtFileAge;
     end else result := false;
