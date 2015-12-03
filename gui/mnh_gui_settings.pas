@@ -91,6 +91,7 @@ TYPE
     PROCEDURE setEditorState(CONST index:longint; CONST dat:T_editorState);
     FUNCTION  getEditorState(CONST index:longint):T_editorState;
     FUNCTION polishHistory: boolean;
+    PROCEDURE fileClosed(CONST fileName:ansistring);
     FUNCTION historyItem(CONST index:longint):ansistring;
   end;
 
@@ -141,7 +142,7 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
   begin
     visible:=f.readBoolean;
     if not(visible) then exit(true);
-    filePath:=f.readAnsiString;
+    filePath:=extractRelativePath(expandFileName(''),f.readAnsiString);
     changed:=f.readBoolean;
     if changed then begin
       fileAccessAge:=f.readDouble;
@@ -164,7 +165,7 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
   begin
     f.writeBoolean(visible);
     if not(visible) then exit;
-    f.writeAnsiString(filePath);
+    f.writeAnsiString(expandFileName(filePath));
     f.writeBoolean(changed);
     if changed then begin
       f.writeDouble(fileAccessAge);
@@ -202,7 +203,7 @@ PROCEDURE T_formPosition.saveToFile(VAR F: T_file);
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR
     ff: T_file;
-    iMax, i: longint;
+    i: longint;
 
   begin
     mainForm.create;
@@ -429,6 +430,19 @@ FUNCTION TSettingsForm.polishHistory: boolean;
       fileHistory[length(fileHistory)-1] := '';
       result := true;
     end;
+  end;
+
+PROCEDURE TSettingsForm.fileClosed(CONST fileName:ansistring);
+  VAR i:longint;
+  begin
+    for i:=0 to length(fileHistory)-1 do if fileHistory[i]='' then begin
+      fileHistory[i]:=fileName;
+      polishHistory;
+      exit;
+    end;
+    for i:=0 to length(fileHistory)-2 do fileHistory[i]:=fileHistory[i+1];
+    fileHistory[length(fileHistory)-1]:=fileName;
+    polishHistory;
   end;
 
 FUNCTION TSettingsForm.historyItem(CONST index: longint): ansistring;
