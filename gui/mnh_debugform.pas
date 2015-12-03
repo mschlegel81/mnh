@@ -5,8 +5,8 @@ UNIT mnh_debugForm;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, SynEdit, Forms, Controls,
-  Menus,mnh_out_adapters,SynHighlighterMnh,mnh_evalThread,SynEditKeyCmds;
+  Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Menus, ComCtrls, Grids,
+  mnh_out_adapters, SynHighlighterMnh, mnh_evalThread, SynEditKeyCmds;
 
 CONST
   ROLLING_LINE_COUNT=200;
@@ -16,26 +16,40 @@ TYPE
   { TDebugForm }
 
   TDebugForm = class(TForm)
+    debugEdit: TSynEdit;
     MainMenu1: TMainMenu;
+    miRunForBreak: TMenuItem;
+    miVerboseRun: TMenuItem;
     miStep: TMenuItem;
     miMultistep: TMenuItem;
     miCancel: TMenuItem;
-    debugEdit: TSynEdit;
     highlighter:TSynMnhSyn;
+    PageControl1: TPageControl;
+    BreakpointsGrid: TStringGrid;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
 
+    PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE miCancelClick(Sender: TObject);
     PROCEDURE miMultistepClick(Sender: TObject);
+    PROCEDURE miRunForBreakClick(Sender: TObject);
     PROCEDURE miStepClick(Sender: TObject);
-
+    PROCEDURE miVerboseRunClick(Sender: TObject);
   private
+    rollOffset:longint;
+    roll:array[0..ROLLING_LINE_COUNT-1] of ansistring;
     { private declarations }
   public
     { public declarations }
+    PROCEDURE updateBreakpointGrid;
     PROCEDURE rollingAppend(CONST line:ansistring);
+    PROCEDURE updateFromRoll;
+    PROCEDURE clearRoll;
   end;
 
 VAR
@@ -56,6 +70,15 @@ PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     if StopDebuggingCallback<>nil then StopDebuggingCallback;
   end;
 
+PROCEDURE TDebugForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR i:longint;
+  begin
+    if key<>46 then exit;
+    if BreakpointsGrid.Selection.Bottom>=BreakpointsGrid.Selection.top then
+    for i:=BreakpointsGrid.Selection.top-1 downto BreakpointsGrid.Selection.Bottom-1 do stepper.removeBreakpoint(i);
+    updateBreakpointGrid;
+  end;
+
 PROCEDURE TDebugForm.FormCreate(Sender: TObject);
   begin
     highlighter:=TSynMnhSyn.create(nil,msf_debugger);
@@ -69,13 +92,15 @@ PROCEDURE TDebugForm.FormDestroy(Sender: TObject);
   end;
 
 PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);
-begin
-  case key of
-    's','S': miStepClick(Sender);
-    'm','M': miMultistepClick(Sender);
-    'c','C': miCancelClick(Sender);
+  begin
+    case key of
+      's','S': miStepClick(Sender);
+      'm','M': miMultistepClick(Sender);
+      'c','C': miCancelClick(Sender);
+      'r','R': if miRunForBreak.Enabled then miRunForBreakClick(Sender);
+      'v','V': if miVerboseRun.Enabled then miVerboseRunClick(Sender);
+    end;
   end;
-end;
 
 PROCEDURE TDebugForm.miCancelClick(Sender: TObject);
   begin
@@ -89,24 +114,68 @@ PROCEDURE TDebugForm.miMultistepClick(Sender: TObject);
     if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
+PROCEDURE TDebugForm.miRunForBreakClick(Sender: TObject);
+  begin
+    stepper.setRunUntilBreak;
+    if DebuggingStepCallback<>nil then DebuggingStepCallback;
+  end;
+
 PROCEDURE TDebugForm.miStepClick(Sender: TObject);
   begin
     stepper.doStep;
     if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
+PROCEDURE TDebugForm.miVerboseRunClick(Sender: TObject);
+  begin
+    stepper.setVerboseRunUntilBreak;
+    if DebuggingStepCallback<>nil then DebuggingStepCallback;
+  end;
+
 PROCEDURE TDebugForm.rollingAppend(CONST line: ansistring);
   VAR i:longint;
   begin
-    if debugEdit.lines.count<ROLLING_LINE_COUNT
-    then debugEdit.lines.append(line)
-    else begin
-      for i:=0 to ROLLING_LINE_COUNT-2 do debugEdit.lines[i]:=debugEdit.lines[i+1];
-      debugEdit.lines[ROLLING_LINE_COUNT-1]:=line;
-    end;
+    roll[rollOffset]:=line;
+    inc(rollOffset);
+    if rollOffset>=ROLLING_LINE_COUNT then rollOffset:=0;
+  end;
+
+PROCEDURE TDebugForm.clearRoll;
+  VAR i:longint;
+  begin
+    for i:=0 to ROLLING_LINE_COUNT-1 do roll[i]:='';
+    debugEdit.lines.clear;
+    rollOffset:=0;
+  end;
+
+PROCEDURE TDebugForm.updateFromRoll;
+  VAR i:longint;
+  begin
+    BeginFormUpdate;
+    debugEdit.BeginUpdate(false);
+    highlighter.BeginUpdate;
+    debugEdit.lines.clear;
+    for i:=rollOffset to rollOffset+ROLLING_LINE_COUNT-1 do if roll[i mod ROLLING_LINE_COUNT]<>'' then debugEdit.lines.append(roll[i mod ROLLING_LINE_COUNT]);
     debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
     debugEdit.ExecuteCommand(ecLineStart,' ',nil);
+    PageControl1.ActivePageIndex:=0;
+    highlighter.EndUpdate;
+    debugEdit.EndUpdate;
+    EndFormUpdate;
+  end;
 
+PROCEDURE TDebugForm.updateBreakpointGrid;
+  VAR i:longint;
+  begin
+    BreakpointsGrid.RowCount:=1+length(stepper.breakpoints);
+    for i:=0 to length(stepper.breakpoints)-1 do begin
+      BreakpointsGrid.Cells[0,i+1]:=         stepper.breakpoints[i].fileName;
+      BreakpointsGrid.Cells[1,i+1]:=intToStr(stepper.breakpoints[i].line);
+    end;
+    PageControl1.ActivePageIndex:=1;
+    miVerboseRun .Enabled:=length(stepper.breakpoints)>0;
+    miRunForBreak.Enabled:=length(stepper.breakpoints)>0;
+    if not(showing) then Show;
   end;
 
 end.

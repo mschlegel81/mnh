@@ -39,7 +39,6 @@ TYPE
     miMinErrorlevel4: TMenuItem;
     miTimingInfo: TMenuItem;
     miStartAnotherInstance: TMenuItem;
-    miDebugFrom: TMenuItem;
     miDebug: TMenuItem;
     miCallMain: TMenuItem;
     miHelp: TMenuItem;
@@ -106,7 +105,6 @@ TYPE
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
-    PROCEDURE miDebugFromClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
     PROCEDURE miEvalModeDirectClick(Sender: TObject);
@@ -192,6 +190,7 @@ TYPE
     PROCEDURE setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
     PROCEDURE updateSheetCaption(CONST index:longint);
     FUNCTION getInputEditIndexForFilename(CONST fileName:ansistring):longint;
+    FUNCTION pseudoName(CONST index:longint):ansistring;
   public
     inputRec:array[0..9] of record
       filePath:ansistring;
@@ -238,6 +237,8 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
       instantPlotRequested:boolean=false;
+      debugLocation:T_tokenLocation;
+      hasDebugLocation:boolean=false;
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
@@ -252,21 +253,19 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
               syn.lines.clear;
               for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
-            end else for j:=0 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
+            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
           end;
         mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
-          j:=MnhForm.getInputEditIndexForFilename(location.fileName);
-          if j>=0 then begin
-            MnhForm.PageControl.ActivePageIndex:=j;
-            MnhForm.inputRec[j].highlighter.setMarkedToken(location.line-1,location.column-1);
-            MnhForm.inputRec[j].editor.Repaint;
-          end;
+          hasDebugLocation:=true;
+          debugLocation:=location;
         end;
         mt_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
-          MnhForm.InputEdit0.readonly:=false;
-          for j:=0 to 9 do MnhForm.inputRec[j].highlighter.setMarkedToken(-1,-1);
+          for j:=0 to 9 do begin
+            MnhForm.inputRec[j].highlighter.setMarkedToken(-1,-1);
+            MnhForm.inputRec[j].editor.readonly:=false;
+          end;
         end;
         mt_reloadRequired: begin
           for j:=0 to 9 do with MnhForm.inputRec[i] do
@@ -293,6 +292,15 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
     if instantPlotRequested then plotForm.doPlot();
+    if hasDebugLocation then begin
+      j:=MnhForm.getInputEditIndexForFilename(debugLocation.fileName);
+      if j>=0 then begin
+        MnhForm.PageControl.ActivePageIndex:=j;
+        MnhForm.inputRec[j].highlighter.setMarkedToken(debugLocation.line-1,debugLocation.column-1);
+        MnhForm.inputRec[j].editor.Repaint;
+      end;
+      DebugForm.updateFromRoll;
+    end;
     system.leaveCriticalSection(cs);
   end;
 
@@ -411,9 +419,9 @@ PROCEDURE TMnhForm.doStartEvaluation;
     doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
-      DebugForm.debugEdit.ClearAll;
+      DebugForm.clearRoll;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
-      stepper.doStep;
+      stepper.doStart;
       DebugForm.Show;
     end else stepper.setFreeRun;
   end;
@@ -535,6 +543,8 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR i:integer;
       state:T_editorState;
   begin
+    if ad_evaluationRunning then ad_haltEvaluation;
+    stepper.onAbort;
     for i:=0 to 9 do with inputRec[i] do begin
       if sheet.TabVisible
       then state.create(filePath,fileAccessAge,changed,editor.lines)
@@ -605,7 +615,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       if i>=0 then begin
         PageControl.ActivePageIndex:=i;
         inputRec[i].editor.SetFocus;
-      end;
+      end else setupInputRecForNewFile(0);
 
       if (locationToOpenOnFormStartup.fileName<>'') and
          (locationToOpenOnFormStartup.fileName<>C_nilTokenLocation.fileName) and
@@ -631,7 +641,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>evaluation.deferredUntil then begin
         doStartEvaluation;
-        with inputRec[PageControl.ActivePageIndex] do ad_evaluate(filePath,editor.lines);
+        with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
       end else evaluation.required:=true;
     end;
     with inputRec[PageControl.ActivePageIndex] do begin
@@ -682,6 +692,10 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
         exit;
       end;
     end;
+    if (Command=ecUserDefinedFirst+3) then with inputRec[PageControl.ActivePageIndex] do begin
+      stepper.toggleBreakpoint(pseudoName(PageControl.ActivePageIndex),editor.CaretY);
+      DebugForm.updateBreakpointGrid;
+    end;
   end;
 
 PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
@@ -690,7 +704,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
       doStartEvaluation;
-      with inputRec[PageControl.ActivePageIndex] do ad_callMain(filePath,editor.lines,askForm.getLastAnswerReleasing);
+      with inputRec[PageControl.ActivePageIndex] do ad_callMain(pseudoName(PageControl.ActivePageIndex),editor.lines,askForm.getLastAnswerReleasing);
     end else askForm.getLastAnswerReleasing;
   end;
 
@@ -741,6 +755,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
+  VAR i:longint;
   begin
     if miDebug.Checked
     then miDebug.Checked:=false
@@ -750,33 +765,12 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       miEvalModeDirectOnKeypress.Checked:=false;
       SettingsForm.wantInstantEvaluation:=false;
       if ad_evaluationRunning then begin
-        DebugForm.debugEdit.ClearAll;
-        InputEdit0.readonly:=true;
+        DebugForm.clearRoll;
+        for i:=0 to 9 do with inputRec[i] do editor.readonly:=true;
         stepper.doStep;
-        DebugForm.Show;
       end;
+      DebugForm.Show;
     end;
-  end;
-
-PROCEDURE TMnhForm.miDebugFromClick(Sender: TObject);
-  VAR lineIdx:longint;
-  begin
-    if ad_evaluationRunning then exit;
-
-    askForm.initWithFileLines(1,InputEdit0.lines.count);
-    if askForm.ShowModal=mrOk then begin
-      lineIdx:=strToIntDef(askForm.getLastAnswerReleasing,-1);
-      if lineIdx<0 then exit;
-
-      miDebug.Checked:=true;
-      miEvalModeDirect.Checked:=true;
-      miEvalModeDirectOnKeypress.Checked:=false;
-      SettingsForm.wantInstantEvaluation:=false;
-
-      doStartEvaluation;
-      stepper.setBreakpoint(environment.mainPackageProvider^.fileName,lineIdx);
-      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(filePath,editor.lines);
-    end else askForm.getLastAnswerReleasing;
   end;
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
@@ -817,7 +811,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>evaluation.deferredUntil then begin
       doStartEvaluation;
-      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(filePath,editor.lines);
+      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
     end else evaluation.required:=true;
   end;
 
@@ -897,7 +891,7 @@ FUNCTION TMnhForm._doSaveAs_(CONST index:longint): boolean;
   begin
     if index<0 then exit(false);
     if SaveDialog.execute then with inputRec[index] do begin
-      filePath:=SaveDialog.fileName;
+      filePath:=extractRelativePath(expandFileName(''),SaveDialog.fileName);
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
       writeFileLines(filePath,arr,'');
@@ -968,14 +962,21 @@ FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName:ansistring):longin
   VAR i:longint;
       uName:ansistring;
   begin
-    uName:=extractRelativePath(expandFileName(''),fileName);;
-    for i:=0 to 9 do with inputRec[i] do if sheet.TabVisible and (filePath=uName) then exit(i);
+    uName:=extractRelativePath(expandFileName(''),fileName);
+    for i:=0 to 9 do with inputRec[i] do if sheet.TabVisible and ((filePath=uName) or (pseudoName(i)=fileName)) then exit(i);
+    if copy(fileName,1,4)='<new' then exit;
     for i:=0 to 9 do with inputRec[i] do
     if not(sheet.TabVisible) then begin
       setupInputRecForLoadingFile(i,uName);
       exit(i);
     end;
     result:=-1;
+  end;
+
+FUNCTION TMnhForm.pseudoName(CONST index:longint):ansistring;
+  begin
+    with inputRec[index] do if filePath<>'' then result:=filePath
+                                            else result:='<new '+intToStr(index)+'>';
   end;
 
 PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin _setErrorlevel_(1); end;
@@ -1151,7 +1152,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
     //progress time:------------------------------------------------------------
-    if PageControl.ActivePageIndex>=0
+    if stepper.haltet and isEvaluationRunning then aid:=C_tabChar+'[haltet]'
+    else if PageControl.ActivePageIndex>=0
     then aid:=C_tabChar+intToStr(inputRec[PageControl.ActivePageIndex].editor.CaretY)+','+intToStr(inputRec[PageControl.ActivePageIndex].editor.CaretX)
     else aid:='';
     if isEvaluationRunning then StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid
@@ -1177,7 +1179,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
     if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation;
-      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(filePath,editor.lines);
+      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
       UpdateTimeTimer.Interval:=MIN_INTERVALL;
     end;
 

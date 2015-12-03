@@ -282,7 +282,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -652,7 +652,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -1022,7 +1022,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -1392,7 +1392,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -1762,7 +1762,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -2132,7 +2132,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -2502,7 +2502,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -2872,7 +2872,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -3242,7 +3242,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -3612,7 +3612,7 @@ object MnhForm: TMnhForm
             ShortCut = 8201
           end        
           item
-            Command = ecMatchBracket
+            Command = ecUserDefined3
             ShortCut = 24642
           end        
           item
@@ -4132,10 +4132,6 @@ object MnhForm: TMnhForm
         ShortCut = 8201
       end    
       item
-        Command = ecMatchBracket
-        ShortCut = 24642
-      end    
-      item
         Command = ecColSelUp
         ShortCut = 40998
       end    
@@ -4363,10 +4359,6 @@ object MnhForm: TMnhForm
       object miDebug: TMenuItem
         Caption = 'Debug'
         OnClick = miDebugClick
-      end
-      object miDebugFrom: TMenuItem
-        Caption = 'Debug starting at line...'
-        OnClick = miDebugFromClick
       end
     end
     object submenuEditorAppearance: TMenuItem

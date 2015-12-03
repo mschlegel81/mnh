@@ -132,10 +132,10 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_step,ds_abort);
+  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_verboseRunUntilBreak,ds_step,ds_abort);
 
   T_stepper=object
-    breakAtLine:T_tokenLocation;
+    breakpoints:array of T_tokenLocation;
     cs:TRTLCriticalSection;
     signal:T_debugSignal;
     toStep:longint;
@@ -144,11 +144,17 @@ TYPE
     DESTRUCTOR destroy;
     FUNCTION stepping(CONST location:T_tokenLocation):boolean;
 
+    PROCEDURE doStart;
     PROCEDURE setFreeRun;
-    PROCEDURE setBreakpoint(CONST fileName:ansistring; CONST line:longint);
+    PROCEDURE setRunUntilBreak;
+    PROCEDURE setVerboseRunUntilBreak;
+    PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
+    PROCEDURE toggleBreakpoint(CONST fileName:ansistring; CONST line:longint);
+    PROCEDURE removeBreakpoint(CONST index:longint);
     PROCEDURE doStep;
     PROCEDURE doMultiStep(CONST stepCount:longint);
     PROCEDURE onAbort;
+    FUNCTION haltet:boolean;
   end;
   {$endif}
 
@@ -617,20 +623,26 @@ DESTRUCTOR T_stepper.destroy;
   end;
 
 FUNCTION T_stepper.stepping(CONST location:T_tokenLocation):boolean;
+  FUNCTION breakpointEncountered:boolean;
+    VAR i:longint;
+    begin
+      for i:=0 to length(breakpoints)-1 do
+        if (breakpoints[i].fileName=location.fileName) and
+           (breakpoints[i].line    =location.line    ) then exit(true);
+      result:=false;
+    end;
+
   begin
     if signal=ds_run then exit(false);
     system.enterCriticalSection(cs);
-    if signal=ds_runUntilBreak then begin
-      if (location.fileName=breakAtLine.fileName) and
-         (location.line    =breakAtLine.line)
-      then begin
+    if signal in [ds_runUntilBreak,ds_verboseRunUntilBreak] then begin
+      if breakpointEncountered then begin
         signal:=ds_wait;
         result:=true;
-      end else result:=false;
+      end else result:=(signal=ds_verboseRunUntilBreak);
       system.leaveCriticalSection(cs);
       exit(result);
     end;
-
     if signal=ds_wait then repeat
       system.leaveCriticalSection(cs);
       sleep(10);
@@ -652,6 +664,14 @@ PROCEDURE T_stepper.doStep;
     system.leaveCriticalSection(cs);
   end;
 
+PROCEDURE T_stepper.doStart;
+  begin
+    system.enterCriticalSection(cs);
+    if length(breakpoints)=0 then signal:=ds_step
+                             else signal:=ds_runUntilBreak;
+    system.leaveCriticalSection(cs);
+  end;
+
 PROCEDURE T_stepper.setFreeRun;
   begin
     system.enterCriticalSection(cs);
@@ -659,15 +679,56 @@ PROCEDURE T_stepper.setFreeRun;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.setBreakpoint(CONST fileName:ansistring; CONST line:longint);
+PROCEDURE T_stepper.setRunUntilBreak;
   begin
     system.enterCriticalSection(cs);
     signal:=ds_runUntilBreak;
-    breakAtLine.fileName:=fileName;
-    breakAtLine.line:=line;
     system.leaveCriticalSection(cs);
   end;
 
+
+PROCEDURE T_stepper.setVerboseRunUntilBreak;
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_verboseRunUntilBreak;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.addBreakpoint(CONST fileName:ansistring; CONST line:longint);
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_runUntilBreak;
+    i:=length(breakpoints);
+    setLength(breakpoints,i+1);
+    breakpoints[i].fileName:=fileName;
+    breakpoints[i].line:=line;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.toggleBreakpoint(CONST fileName:ansistring; CONST line:longint);
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    signal:=ds_runUntilBreak;
+    i:=0;
+    while (i<length(breakpoints)) and not((breakpoints[i].fileName=fileName) and (breakpoints[i].line=line)) do inc(i);
+    if i<length(breakpoints) then removeBreakpoint(i)
+                             else addBreakpoint(fileName,line);
+    system.leaveCriticalSection(cs);
+  end;
+
+
+PROCEDURE T_stepper.removeBreakpoint(CONST index:longint);
+  VAR i:longint;
+  begin
+    system.enterCriticalSection(cs);
+    if (index>=0) and (index<length(breakpoints)) then begin
+      for i:=index to length(breakpoints)-2 do breakpoints[i]:=breakpoints[i+1];
+      setLength(breakpoints,length(breakpoints)-1);
+    end;
+    system.leaveCriticalSection(cs);
+  end;
 
 PROCEDURE T_stepper.doMultiStep(CONST stepCount:longint);
   begin
@@ -681,6 +742,14 @@ PROCEDURE T_stepper.onAbort;
   begin
     signal:=ds_run;
   end;
+
+FUNCTION T_stepper.haltet:boolean;
+  begin
+    system.enterCriticalSection(cs);
+    result:=(signal=ds_wait);
+    system.leaveCriticalSection(cs);
+  end;
+
 {$endif}
 
 INITIALIZATION
