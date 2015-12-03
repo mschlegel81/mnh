@@ -267,7 +267,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           MnhForm.InputEdit0.readonly:=false;
           for j:=0 to 9 do MnhForm.inputRec[j].highlighter.setMarkedToken(-1,-1);
         end;
-        mt_reloadRequired: ad_doReload(MnhForm.InputEdit0.lines);
+        mt_reloadRequired: begin
+          for j:=0 to 9 do with MnhForm.inputRec[i] do
+          if sheet.TabVisible and (filePath=simpleMessage) and not(changed) then begin
+            editor.lines.loadFromFile(filePath);
+            fileAge(filePath,fileAccessAge);
+            changed:=false;
+          end;
+        end;
         mt_echo_input: begin
           syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
           DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
