@@ -1,5 +1,7 @@
 private B(1)->"1 bottle";
 private B(n)->n&" bottles";
-private strophe(i)->B(i)&" of beer on the wall\n"&B(i)&" of beer\nTake one down, pass it around\n"&B(i-1)&" of beer on the wall.\n";
 //*Prints out the song "99 bottles of beer", see <a href="http://rosettacode.org/wiki/99_Bottles_of_Beer">RosettaCode</a> or <a href="http://www.99-bottles-of-beer.net/">99-bottles-of-beer.net</a>
-main->print(each(i,[99..1],aggregator({$x&"\n"&$y}),strophe(i)));
+main->printf("%{B($n)}s of beer on the wall\n"&
+             "%{B($n)}s of beer\n"&
+             "Take one down, pass it around\n"&
+             "%{B($n-1)}s of beer on the wall.\n",[99..1]);
