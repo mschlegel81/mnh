@@ -116,7 +116,8 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       end;
     end;
 
-  VAR i,binIdx: longint;
+  VAR i:longint;
+      binIdx: T_hashInt;
   begin
     binIdx:=key^.hash and (length(cached)-1);
     with cached[binIdx] do begin
@@ -138,7 +139,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
 
 FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR i: longint;
-      binIdx:longint;
+      binIdx: T_hashInt;
   begin
     binIdx:=key^.hash and (length(cached)-1);
     with cached[binIdx] do begin

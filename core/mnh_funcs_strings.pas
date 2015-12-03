@@ -22,8 +22,8 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION posInt(x,y:P_literal):P_intLiteral;
     begin
-      result:=newIntLiteral(pos(P_stringLiteral(x)^.value,
-                                P_stringLiteral(y)^.value)-1);
+      result:=newIntLiteral(int64(pos(P_stringLiteral(x)^.value,
+                                      P_stringLiteral(y)^.value))-int64(1));
     end;
 
   VAR i:longint;

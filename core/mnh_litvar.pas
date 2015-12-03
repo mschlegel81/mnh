@@ -5,7 +5,7 @@ INTERFACE
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc;
 
 TYPE
-  T_hashInt=int64;
+  T_hashInt=dword;
 
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -1129,7 +1129,7 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 
 //====================================================================:?.operate
 //?.hash:=======================================================================
-FUNCTION T_literal    .hash: T_hashInt; begin result:=-1; end;
+FUNCTION T_literal    .hash: T_hashInt; begin result:=$FFFFFFFF; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
 FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longint(val); end;
 FUNCTION T_realLiteral.hash: T_hashInt;
@@ -1146,7 +1146,7 @@ FUNCTION T_stringLiteral.hash: T_hashInt;
   begin
     if cachedHash<>0 then exit(cachedHash);
     {$Q-}
-    result:=T_hashInt(lt_string)+length(val);
+    result:=T_hashInt(lt_string)+T_hashInt(length(val));
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     cachedHash:=result;
     {$Q+}
@@ -1158,7 +1158,7 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
   begin
     {$Q-}
     s:= toString;
-    result:=T_hashInt(lt_expression)+length(s);
+    result:=T_hashInt(lt_expression)+T_hashInt(length(s));
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
     {$Q+}
   end;
@@ -1168,7 +1168,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   begin
     if cachedHash<>0 then exit(cachedHash);
     {$Q-}
-    result:=T_hashInt(lt_list)+length(element);
+    result:=T_hashInt(lt_list)+T_hashInt(length(element));
     for i:=0 to length(element)-1 do result:=result*31+element [i]^.hash;
     cachedHash:=0;
     {$Q+}
