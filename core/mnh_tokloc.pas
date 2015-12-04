@@ -38,7 +38,7 @@ FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithout
     while (i0<=length(s)) and (s[i0]<>'@') do inc(i0);
     result.fileName:='';
     inc(i0);
-    while (i0<=length(s)) and (s[i0]<>':') do begin
+    while (i0<=length(s)) and ((s[i0]<>':') or (length(result.fileName)=1)) do begin
       result.fileName:=result.fileName+s[i0];
       inc(i0);
     end;

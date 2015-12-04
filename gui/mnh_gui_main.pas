@@ -228,7 +228,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
 
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    inherited create(at_gui);
+    inherited create(at_gui,'*GUI*');
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -582,7 +582,8 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift);
+    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift)
+    else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
@@ -1317,7 +1318,7 @@ PROCEDURE formCycle(ownId:longint; reverse:boolean);
                else ownId:=(ownId  +1) mod 3;
     if      ownId=0 then MnhForm.Show
     else if ownId=1 then plotForm.Show
-                    else DebugForm.show;
+                    else DebugForm.Show;
   end;
 
 PROCEDURE lateInitialization;

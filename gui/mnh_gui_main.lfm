@@ -370,7 +370,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -740,7 +740,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -1110,7 +1110,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -1480,7 +1480,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -1850,7 +1850,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -2220,7 +2220,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -2590,7 +2590,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -2960,7 +2960,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -3330,7 +3330,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -3700,7 +3700,7 @@ object MnhForm: TMnhForm
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
         MouseLinkColor.FrameEdges = sfeAround
-        LineHighlightColor.Background = 15790320
+        LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
         LineHighlightColor.FrameEdges = sfeAround
         WantTabs = False
@@ -4213,7 +4213,7 @@ object MnhForm: TMnhForm
     MouseLinkColor.Background = clNone
     MouseLinkColor.Foreground = clBlue
     MouseLinkColor.FrameEdges = sfeAround
-    LineHighlightColor.Background = 15790320
+    LineHighlightColor.Background = clNone
     LineHighlightColor.Foreground = clNone
     LineHighlightColor.FrameEdges = sfeAround
     WantTabs = False
@@ -4271,7 +4271,6 @@ object MnhForm: TMnhForm
       end
       object miClose: TMenuItem
         Caption = 'Close'
-        ShortCut = 16471
         OnClick = miCloseClick
       end
       object miSave: TMenuItem

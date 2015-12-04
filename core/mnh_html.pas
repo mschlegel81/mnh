@@ -26,18 +26,27 @@ TYPE
 
 VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
-PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansistring);
+PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST definedAtRuntime:boolean);
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
-PROCEDURE addHtmlOutAdapter(VAR adapters:T_adapters; CONST outputFileName:ansistring);
+PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST definedAtRuntime:boolean);
   VAR htmlOutAdapter:P_htmlOutAdapter;
+      fileOutAdapter:P_textFileOutAdapter;
   begin
-    new(htmlOutAdapter,create(outputFileName));
-    adapters.addOutAdapter(htmlOutAdapter,true);
+    if uppercase(extractFileExt(fileName))='.HTML'
+    then begin
+      new(htmlOutAdapter,create(fileName));
+      adapters.addOutAdapter(htmlOutAdapter,true);
+      if definedAtRuntime then htmlOutAdapter^.adapterType:=at_sessionDefinedHtmlFile;
+    end else begin
+      new(fileOutAdapter,create(fileName));
+      adapters.addOutAdapter(fileOutAdapter,true);
+      if definedAtRuntime then fileOutAdapter^.adapterType:=at_sessionDefinedTextFile;
+    end;
   end;
 
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
@@ -98,7 +107,7 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
-    inherited create(at_htmlFile);
+    inherited create(at_htmlFile,fileName);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;
     lastWasEndOfEvaluation:=true;
@@ -132,6 +141,7 @@ PROCEDURE T_htmlOutAdapter.flush;
     end;
   begin
     if length(storedMessages)=0 then exit;
+    try
     assign(handle,outputFileName);
     if fileExists(outputFileName) then begin
       append(handle);
@@ -139,34 +149,36 @@ PROCEDURE T_htmlOutAdapter.flush;
       rewrite(handle);
       writeln(handle,HTML_FILE_START,'<table>');
     end;
-    for i:=0 to length(storedMessages)-1 do begin
-      with storedMessages[i] do case messageType of
-        mt_clearConsole: begin end;
+      for i:=0 to length(storedMessages)-1 do begin
+        with storedMessages[i] do case messageType of
+          mt_clearConsole: begin end;
 
-        mt_printline:
-        if length(multiMessage)<1 then writeln(handle,'<tr></tr>') else
-        if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]),'</code></td></tr>')
-        else begin
-          writeln(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]));
-          for j:=1 to length(multiMessage)-2 do writeln(handle,htmlEscape(multiMessage[j]));
-          writeln(handle,htmlEscape(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
+          mt_printline:
+          if length(multiMessage)<1 then writeln(handle,'<tr></tr>') else
+          if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]),'</code></td></tr>')
+          else begin
+            writeln(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]));
+            for j:=1 to length(multiMessage)-2 do writeln(handle,htmlEscape(multiMessage[j]));
+            writeln(handle,htmlEscape(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
+          end;
+
+          mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
+
+          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
+          mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
+          {$ifdef fullVersion}
+          mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
+                                   imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
+          mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged: begin end;
+          {$endif}
+          else writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;
-
-        mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
-
-        mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
-        mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
-        {$ifdef fullVersion}
-        mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
-                                 imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
-        mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged: begin end;
-        {$endif}
-        else writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
+        lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
       end;
-      lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
+      close(handle);
+    finally
+      clearMessages;
+      lastFileFlushTime:=now;
     end;
-    clearMessages;
-    close(handle);
-    lastFileFlushTime:=now;
   end;
 end.

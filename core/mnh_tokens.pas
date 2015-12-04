@@ -121,7 +121,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
       adapter:T_adapters;
       i:longint;
   begin
-    collector.create(at_unknown);
+    collector.create(at_unknown,'');
     adapter.create;
     adapter.addOutAdapter(@collector,false);
     adapter.minErrorLevel:=0;

@@ -103,13 +103,6 @@ FUNCTION parseCmdLine:T_tokenLocation;
       halt;
     end;
 
-  PROCEDURE addOutfile(CONST fileName:ansistring);
-    begin
-      if uppercase(extractFileExt(fileName))='.HTML'
-      then addHtmlOutAdapter(consoleAdapters,fileName)
-      else consoleAdapters.addFileOutAdapter(fileName);
-    end;
-
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       i    :longint;
@@ -125,7 +118,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if paramStr(i)='-time' then time:=t_forcedOff
         else if paramStr(i)='-det'  then randseed:=0
         else if paramStr(i)='-cmd'  then directExecutionMode:=true
-        else if startsWith(paramStr(i),'-out:') then addOutfile(copy(paramStr(i),6,length(paramStr(i))-5))
+        else if startsWith(paramStr(i),'-out:') then addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5),false)
         else if startsWith(paramStr(i),'-open@') then result:=guessLocationFromString(paramStr(i),true)
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end

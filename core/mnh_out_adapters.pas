@@ -21,17 +21,21 @@ TYPE
     minErrorLevel: shortint;
   end;
 
-  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui);
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,
+                 at_sessionDefinedPrintOnly,
+                 at_sessionDefinedTextFile,
+                 at_sessionDefinedHtmlFile);
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
-    adapterType:T_adapterType;
-    outputBehaviour:T_outputBehaviour;
-    CONSTRUCTOR create(CONST typ:T_adapterType);
-    DESTRUCTOR destroy; virtual; abstract;
-    PROCEDURE clearConsole; virtual; abstract;
-    PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
-    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
+      adapterType:T_adapterType;
+      adapterName:ansistring;
+      outputBehaviour:T_outputBehaviour;
+      CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
+      DESTRUCTOR destroy; virtual; abstract;
+      PROCEDURE clearConsole; virtual; abstract;
+      PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
+      PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
   end;
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
@@ -47,7 +51,7 @@ TYPE
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
     cs:TRTLCriticalSection;
-    CONSTRUCTOR create(CONST typ:T_adapterType);
+    CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
@@ -57,10 +61,7 @@ TYPE
   end;
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
-
-  { T_textFileOutAdapter }
-
-  T_textFileOutAdapter = object(T_collectingOutAdapter) //TYPE 1
+  T_textFileOutAdapter = object(T_collectingOutAdapter)
     lastFileFlushTime:double;
     outputFileName:ansistring;
     longestLineUpToNow:longint;
@@ -71,10 +72,15 @@ TYPE
     PROCEDURE flush;
   end;
 
+  P_textFilePrintOnlyAdapter=^T_textFilePrintOnlyAdapter;
+  T_textFilePrintOnlyAdapter=object(T_textFileOutAdapter)
+    CONSTRUCTOR create(CONST fileName:ansistring);
+    DESTRUCTOR destroy; virtual;
+    PROCEDURE appendSingleMessage(CONST message: T_storedMessage); virtual;
+  end;
+
+
   P_adapters=^T_adapters;
-
-  { T_adapters }
-
   T_adapters=object
     private
       stackTraceCount:longint;
@@ -124,8 +130,9 @@ TYPE
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
-      PROCEDURE addFileOutAdapter(CONST fileName:ansistring);
+      //PROCEDURE addFileOutAdapter(CONST fileName:ansistring);
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
+      PROCEDURE removeOutAdapter(CONST name:ansistring);
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -180,9 +187,26 @@ FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ans
     end;
   end;
 
+CONSTRUCTOR T_textFilePrintOnlyAdapter.create(CONST fileName: ansistring);
+  begin
+    inherited create(fileName);
+    adapterType:=at_sessionDefinedPrintOnly;
+  end;
+
+DESTRUCTOR T_textFilePrintOnlyAdapter.destroy;
+  begin
+    inherited destroy;
+  end;
+
+PROCEDURE T_textFilePrintOnlyAdapter.appendSingleMessage(CONST message: T_storedMessage);
+  begin
+    if message.messageType<>mt_printline then exit;
+    inherited appendSingleMessage(message);
+  end;
+
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
   begin
-    inherited create(at_textFile);
+    inherited create(at_textFile,fileName);
     lastWasEndOfEvaluation:=true;
     longestLineUpToNow:=0;
     outputFileName:=expandFileName(fileName);
@@ -217,29 +241,32 @@ PROCEDURE T_textFileOutAdapter.flush;
 
   begin
     if length(storedMessages)=0 then exit;
-    assign(handle,outputFileName);
-    if fileExists(outputFileName)
-    then system.append(handle)
-    else rewrite(handle);
-    for i:=0 to length(storedMessages)-1 do begin
-      with storedMessages[i] do begin
-        case messageType of
-          mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
-          mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
-          mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-          mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-          mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-          mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-          mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
-          else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
-            myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+    try
+      assign(handle,outputFileName);
+      if fileExists(outputFileName)
+      then system.append(handle)
+      else rewrite(handle);
+      for i:=0 to length(storedMessages)-1 do begin
+        with storedMessages[i] do begin
+          case messageType of
+            mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
+            mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
+            mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
+            else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
+              myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+          end;
         end;
+        lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
       end;
-      lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
+      close(handle);
+    finally
+      clearMessages;
+      lastFileFlushTime:=now;
     end;
-    close(handle);
-    clearMessages;
-    lastFileFlushTime:=now;
   end;
 
 FUNCTION T_adapters.getEchoInput: boolean;
@@ -372,6 +399,12 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
       if errorCount>30 then exit;
     end;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
+    if thisErrorLevel=mt_endOfEvaluation then
+    while i<length(adapter)-1 do begin
+      if adapter[i].ad^.adapterType in [at_sessionDefinedTextFile,at_sessionDefinedHtmlFile,at_sessionDefinedPrintOnly]
+      then removeOutAdapter(adapter[i].ad)
+      else inc(i);
+    end;
   end;
 
 {$ifdef fullVersion}
@@ -458,17 +491,21 @@ PROCEDURE T_adapters.addConsoleOutAdapter;
     addOutAdapter(consoleOutAdapter,true);
   end;
 
-PROCEDURE T_adapters.addFileOutAdapter(CONST fileName: ansistring);
-  VAR fileOutAdapter:P_textFileOutAdapter;
-  begin
-    new(fileOutAdapter,create(fileName));
-    addOutAdapter(fileOutAdapter,true);
-  end;
-
 PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
   VAR i,j:longint;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].ad=p then begin
+      for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
+      setLength(adapter,length(adapter)-1);
+      exit;
+    end;
+  end;
+
+PROCEDURE T_adapters.removeOutAdapter(CONST name:ansistring);
+  VAR i,j:longint;
+  begin
+    for i:=0 to length(adapter)-1 do if adapter[i].ad^.adapterName=name then begin
+      if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
       for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
       setLength(adapter,length(adapter)-1);
       exit;
@@ -485,9 +522,10 @@ FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;
     result:=adapter[index].ad;
   end;
 
-CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
+CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);
   begin
     adapterType:=typ;
+    adapterName:=name;
     with outputBehaviour do begin
       doEchoDeclaration:=false;
       doEchoInput:=false;
@@ -499,7 +537,7 @@ CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
-    inherited create(at_console);
+    inherited create(at_console,'');
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -548,9 +586,9 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType;
     end;
   end;
 
-CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType);
+CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);
   begin
-    inherited create(typ);
+    inherited create(typ,name);
     system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
