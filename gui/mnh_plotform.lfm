@@ -8,6 +8,7 @@ object plotForm: TplotForm
   ClientWidth = 320
   Menu = MainMenu
   OnKeyPress = FormKeyPress
+  OnKeyUp = FormKeyUp
   OnResize = FormResize
   LCLVersion = '1.2.6.0'
   object plotImage: TImage

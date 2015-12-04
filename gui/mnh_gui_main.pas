@@ -94,6 +94,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormDropFiles(Sender: TObject; CONST FileNames: array of string);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
@@ -576,6 +577,11 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
     for i:=0 to length(FileNames)-1 do if uppercase(extractFileExt(FileNames[i]))=SCRIPT_EXTENSION then begin
       if getInputEditIndexForFilename(FileNames[i])<0 then exit;
     end;
+  end;
+
+PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (Shift=[ssCtrl]) then plotForm.Show;
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
@@ -1304,6 +1310,11 @@ PROCEDURE debugForm_debuggingStep;
     MnhForm.UpdateTimeTimer.Interval:=20;
   end;
 
+PROCEDURE showMainForm;
+  begin
+    MnhForm.Show;
+  end;
+
 PROCEDURE lateInitialization;
   VAR i:longint;
   begin
@@ -1315,6 +1326,7 @@ PROCEDURE lateInitialization;
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     StopDebuggingCallback:=@debugForm_stopDebugging;
     DebuggingStepCallback:=@debugForm_debuggingStep;
+    showMainFormCallback:=@showMainForm;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit;
   end;

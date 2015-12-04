@@ -38,6 +38,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE miCancelClick(Sender: TObject);
     PROCEDURE miMultistepClick(Sender: TObject);
     PROCEDURE miRunForBreakClick(Sender: TObject);
@@ -60,7 +61,7 @@ VAR
   DebugForm: TDebugForm;
   StopDebuggingCallback: PROCEDURE = nil;
   DebuggingStepCallback: PROCEDURE = nil;
-
+  showMainFormCallback : PROCEDURE = nil;
 IMPLEMENTATION
 
 {$R *.lfm}
@@ -77,7 +78,8 @@ PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 PROCEDURE TDebugForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   VAR i:longint;
   begin
-    if key<>46 then exit;
+    FormKeyUp(Sender,key,Shift);
+    if key=46 then exit;
     if BreakpointsGrid.Selection.Bottom>=BreakpointsGrid.Selection.top then
     for i:=BreakpointsGrid.Selection.top-1 downto BreakpointsGrid.Selection.Bottom-1 do stepper.removeBreakpoint(i);
     updateBreakpointGrid;
@@ -107,6 +109,11 @@ PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);
       'r','R': if miRunForBreak.Enabled then miRunForBreakClick(Sender);
       'v','V': if miVerboseRun.Enabled then miVerboseRunClick(Sender);
     end;
+  end;
+
+PROCEDURE TDebugForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (Shift=[ssCtrl]) and (showMainFormCallback<>nil) then showMainFormCallback();
   end;
 
 PROCEDURE TDebugForm.miCancelClick(Sender: TObject);

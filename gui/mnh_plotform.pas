@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, ComCtrls, mnh_plotData,mnh_constants, mnh_out_adapters, mnh_evalThread, mnh_gui_settings;
+  Menus, ComCtrls, mnh_plotData,mnh_constants, mnh_out_adapters, mnh_evalThread, mnh_gui_settings,mnh_debugForm;
 
 TYPE
 
@@ -40,6 +40,7 @@ TYPE
     plotImage: TImage;
     StatusBar: TStatusBar;
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
     PROCEDURE miAntiAliasing1Click(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
@@ -90,6 +91,11 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
       guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true;
       pullPlotSettingsToGui();
     end;
+  end;
+
+PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (Shift=[ssCtrl]) then DebugForm.Show;
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);

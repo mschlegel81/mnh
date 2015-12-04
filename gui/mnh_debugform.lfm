@@ -6,12 +6,12 @@ object DebugForm: TDebugForm
   Caption = 'Debug'
   ClientHeight = 201
   ClientWidth = 320
-  FormStyle = fsStayOnTop
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyPress = FormKeyPress
+  OnKeyUp = FormKeyUp
   LCLVersion = '1.2.6.0'
   object PageControl1: TPageControl
     Left = 0
