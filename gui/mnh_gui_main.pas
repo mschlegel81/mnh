@@ -255,6 +255,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
             end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
           end;
+        mt_debug_varInfo: DebugForm.variablesPut(simpleMessage);
         mt_debug_step: begin
           DebugForm.rollingAppend(simpleMessage);
           hasDebugLocation:=true;
@@ -262,6 +263,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         mt_endOfEvaluation: begin
           DebugForm.rollingAppend('Evaluation finished');
+          DebugForm.updateFromRoll;
+          hasDebugLocation:=false;
           for j:=0 to 9 do begin
             MnhForm.inputRec[j].highlighter.setMarkedToken(-1,-1);
             MnhForm.inputRec[j].editor.readonly:=false;
@@ -293,13 +296,13 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     end;
     if instantPlotRequested then plotForm.doPlot();
     if hasDebugLocation then begin
+      DebugForm.updateFromRoll;
       j:=MnhForm.getInputEditIndexForFilename(debugLocation.fileName);
       if j>=0 then begin
         MnhForm.PageControl.ActivePageIndex:=j;
         MnhForm.inputRec[j].highlighter.setMarkedToken(debugLocation.line-1,debugLocation.column-1);
         MnhForm.inputRec[j].editor.Repaint;
       end;
-      DebugForm.updateFromRoll;
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -758,8 +761,10 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   VAR i:longint;
   begin
     if miDebug.Checked
-    then miDebug.Checked:=false
-    else begin
+    then begin
+      miDebug.Checked:=false;
+      if ad_evaluationRunning then stepper.setFreeRun;
+    end else begin
       miDebug.Checked:=true;
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
@@ -1169,7 +1174,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     //================================================================:fast ones
     //slow ones:================================================================
-    if not(isEvaluationRunning) then for i:=0 to 9 do inputRec[i].editor.readonly:=false;
+    //if not(isEvaluationRunning) then for i:=0 to 9 do inputRec[i].editor.readonly:=false;
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
     autosizingDone:=autosizeBlocks(isEvaluationRunning);
 
@@ -1253,8 +1258,9 @@ PROCEDURE TMnhForm.processSettings;
     else InputEdit0.Font.Quality:=fqNonAntialiased;
     for i:=1 to 9 do inputRec[i].editor.Font:=InputEdit0.Font;
 
-    OutputEdit.Font         :=InputEdit0.Font;
-    DebugForm.debugEdit.Font:=InputEdit0.Font;
+    OutputEdit.Font            :=InputEdit0.Font;
+    DebugForm.debugEdit.Font   :=InputEdit0.Font;
+    DebugForm.variableEdit.Font:=InputEdit0.Font;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;

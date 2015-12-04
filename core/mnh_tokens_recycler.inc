@@ -44,7 +44,8 @@
     FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
     FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
     FUNCTION hasId(CONST id:ansistring):boolean;
-    //Output routines:
+    //For debugging:
+    PROCEDURE reportVariables;
   end;
 
 {$endif}
@@ -292,6 +293,17 @@ FUNCTION T_evaluationContext.hasId(CONST id:ansistring):boolean;
     for i:=length(scopeStack)-1 downto 0 do if scopeStack[i].indexOfId(id)>=0 then exit(true);
     if parentContext<>nil then result:=parentContext^.hasId(id)
                           else result:=false;
+  end;
+
+PROCEDURE T_evaluationContext.reportVariables;
+  VAR i,j:longint;
+  begin
+    if parentContext<>nil then parentContext^.reportVariables;
+    for i:=0 to length(scopeStack)-1 do begin
+      adapters^.raiseCustomMessage(mt_debug_varInfo,'---------------',C_nilTokenLocation);
+      for j:=0 to length(scopeStack[i].data)-1 do
+        adapters^.raiseCustomMessage(mt_debug_varInfo,scopeStack[i].data[j].toString,C_nilTokenLocation);
+    end;
   end;
 
 {$endif}

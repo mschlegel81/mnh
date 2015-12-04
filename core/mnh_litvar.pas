@@ -257,6 +257,7 @@ TYPE
       FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
       FUNCTION getId:ansistring;
       FUNCTION getValue:P_literal;
+      FUNCTION toString:ansistring;
   end;
 
   GENERIC G_literalKeyMap<VALUE_TYPE>=object
@@ -2158,6 +2159,11 @@ FUNCTION T_namedVariable.getValue:P_literal;
   begin
     result:=value;
     result^.rereference;
+  end;
+
+FUNCTION T_namedVariable.toString:ansistring;
+  begin
+    result:=id+'='+value^.toString;
   end;
 
 FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;

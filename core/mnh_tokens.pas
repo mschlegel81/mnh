@@ -51,7 +51,9 @@ TYPE
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; VAR adapters:T_adapters):T_packageReference;
       FUNCTION isReady:boolean;
-  end;
+
+      PROCEDURE reportVariables(VAR adapters:T_adapters);
+    end;
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
@@ -914,6 +916,35 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; VAR adapters:T_adap
   end;
 
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
+
+PROCEDURE T_package.reportVariables(VAR adapters:T_adapters);
+  VAR firstInBlock:boolean=true;
+      i:longint;
+      s:ansistring;
+      r:T_ruleMap.VALUE_TYPE_ARRAY;
+  begin
+    r:=importedRules.valueSet;
+    for i:=0 to length(r)-1 do begin
+      s:=r[i]^.toString;
+      if s<>'' then begin
+        if firstInBlock then adapters.raiseCustomMessage(mt_debug_varInfo,'imported:',C_nilTokenLocation);
+        firstInBlock:=false;
+        adapters.raiseCustomMessage(mt_debug_varInfo,'  '+s,C_nilTokenLocation);
+      end;
+    end;
+    setLength(r,0);
+    r:=packageRules.valueSet;
+    for i:=0 to length(r)-1 do begin
+      s:=r[i]^.toString;
+      if s<>'' then begin
+        if firstInBlock then adapters.raiseCustomMessage(mt_debug_varInfo,'in main package:',C_nilTokenLocation);
+        firstInBlock:=false;
+        adapters.raiseCustomMessage(mt_debug_varInfo,'  '+s,C_nilTokenLocation);
+      end;
+    end;
+    setLength(r,0);
+  end;
+
 
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
   begin

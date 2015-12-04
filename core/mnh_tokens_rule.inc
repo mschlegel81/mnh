@@ -35,6 +35,7 @@
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
+      FUNCTION toString:ansistring;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -324,6 +325,27 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):
         code);
       result:=true;
     end else result:=false;
+  end;
+
+FUNCTION T_rule.toString:ansistring;
+  VAR L:P_literal;
+      isPrivate:boolean=false;
+  begin
+    if ruleType in [rt_memoized,rt_synchronized,rt_normal]
+    then L:=getInlineValue
+    else L:=namedValue.getValue;
+    if L=nil then exit('');
+
+    if (ruleType in [rt_mutable_private,rt_persistent_private]) or
+       (ruleType in [rt_memoized,rt_synchronized,rt_normal]) and
+       (length(subrules)=1) and (subrules[0]^.typ=srt_normal_private)
+    then result:='private '
+    else result:='';
+
+    if ruleType in [rt_mutable_private,rt_mutable_public] then result:=result+'mutable ';
+    if ruleType in [rt_persistent_private,rt_persistent_public] then result:=result+'persistent ';
+    result:=result+id+'='+L^.toString;
+    L^.unreference;
   end;
 
 {$endif}

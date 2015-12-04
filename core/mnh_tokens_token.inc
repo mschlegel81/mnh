@@ -1433,24 +1433,16 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           tt_identifier,tt_identifier_pon: infoPart:='id';
           tt_parameterIdentifier: infoPart:='paramId';
           tt_localUserRule,tt_importedUserRule,tt_localUserRule_pon,tt_importedUserRule_pon:
-            infoPart:='rule'+ansistring(P_rule(token^.data)^.getLocationOfDeclaration);
+            infoPart:='rule';//+ansistring(P_rule(token^.data)^.getLocationOfDeclaration);
           tt_intrinsicRule: infoPart:='builtin';
           tt_rulePutCacheValue: infoPart:='put-cache';
           tt_blockLocalVariable: infoPart:='local var';
-          tt_parList_constructor: infoPart:='parameter list constructor';
-          tt_parList: infoPart:='parameter list';
-          tt_list_constructor: infoPart:='list constructor';
+          tt_parList_constructor: infoPart:='paramList*';
+          tt_parList: infoPart:='paramList';
+          tt_list_constructor: infoPart:='list*';
           tt_assignNewBlockLocal: infoPart:='new local var';
-          tt_assignExistingBlockLocal, tt_cso_assignPlus,tt_cso_assignMinus,tt_cso_assignMult,tt_cso_assignDiv,tt_cso_assignStrConcat,tt_cso_assignAppend:
-            infoPart:='assign var';
-          tt_typeCheckScalar..tt_typeCheckKeyValueList: infoPart:='type check';
-          tt_literal: begin
-            infoPart:=C_typeString[P_literal(token^.data)^.literalType]+' literal';
-            if (length(tokenPart)>=2*length(infoPart)) then begin
-              tokenPart:=P_literal(token^.data)^.toShorterString;
-              infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1);
-            end;
-          end
+          tt_typeCheckScalar..tt_typeCheckKeyValueList: infoPart:='type';
+          tt_literal: infoPart:='literal';
           else infoPart:='';
         end;
         if (infoPart<>'') and (length(tokenPart)>=2*length(infoPart)) then tokenPart:=copy(tokenPart,1,2*length(infoPart)-3)+'...';
@@ -1485,6 +1477,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if debug then begin
         context.adapters^.raiseDebugMessage(tokenMessage,first^.location);
         context.adapters^.raiseDebugMessage(infoMessage ,first^.location);
+        context.adapters^.raiseCustomMessage(mt_debug_varInfo,C_carriageReturnChar,C_nilTokenLocation);
+        if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(context.adapters^);
+        context.reportVariables;
       end else
       {$endif}
       begin

@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, SynEdit, Forms, Controls, Menus, ComCtrls, Grids,
-  mnh_out_adapters, SynHighlighterMnh, mnh_evalThread, SynEditKeyCmds;
+  mnh_out_adapters, SynHighlighterMnh, mnh_evalThread, SynEditKeyCmds,myStringUtil;
 
 CONST
   ROLLING_LINE_COUNT=200;
@@ -17,17 +17,20 @@ TYPE
 
   TDebugForm = class(TForm)
     debugEdit: TSynEdit;
+    variableEdit: TSynEdit;
     MainMenu1: TMainMenu;
     miRunForBreak: TMenuItem;
     miVerboseRun: TMenuItem;
     miStep: TMenuItem;
     miMultistep: TMenuItem;
     miCancel: TMenuItem;
-    highlighter:TSynMnhSyn;
+    highlighter,
+    varHighlighter:TSynMnhSyn;
     PageControl1: TPageControl;
     BreakpointsGrid: TStringGrid;
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
+    TabSheet3: TTabSheet;
 
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
@@ -48,6 +51,7 @@ TYPE
     { public declarations }
     PROCEDURE updateBreakpointGrid;
     PROCEDURE rollingAppend(CONST line:ansistring);
+    PROCEDURE variablesPut(CONST line:ansistring);
     PROCEDURE updateFromRoll;
     PROCEDURE clearRoll;
   end;
@@ -83,11 +87,14 @@ PROCEDURE TDebugForm.FormCreate(Sender: TObject);
   begin
     highlighter:=TSynMnhSyn.create(nil,msf_debugger);
     debugEdit.highlighter:=highlighter;
+    varHighlighter:=TSynMnhSyn.create(nil,msf_input);
+    variableEdit.highlighter:=highlighter;
   end;
 
 PROCEDURE TDebugForm.FormDestroy(Sender: TObject);
   begin
     highlighter.destroy;
+    varHighlighter.destroy;
     debugEdit.highlighter:=nil;
   end;
 
@@ -158,7 +165,6 @@ PROCEDURE TDebugForm.updateFromRoll;
     for i:=rollOffset to rollOffset+ROLLING_LINE_COUNT-1 do if roll[i mod ROLLING_LINE_COUNT]<>'' then debugEdit.lines.append(roll[i mod ROLLING_LINE_COUNT]);
     debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
     debugEdit.ExecuteCommand(ecLineStart,' ',nil);
-    PageControl1.ActivePageIndex:=0;
     highlighter.EndUpdate;
     debugEdit.EndUpdate;
     EndFormUpdate;
@@ -172,10 +178,17 @@ PROCEDURE TDebugForm.updateBreakpointGrid;
       BreakpointsGrid.Cells[0,i+1]:=         stepper.breakpoints[i].fileName;
       BreakpointsGrid.Cells[1,i+1]:=intToStr(stepper.breakpoints[i].line);
     end;
-    PageControl1.ActivePageIndex:=1;
+    PageControl1.ActivePageIndex:=2;
     miVerboseRun .Enabled:=length(stepper.breakpoints)>0;
     miRunForBreak.Enabled:=length(stepper.breakpoints)>0;
     if not(showing) then Show;
+  end;
+
+PROCEDURE TDebugForm.variablesPut(CONST line:ansistring);
+  begin
+    if line=C_carriageReturnChar
+    then variableEdit.lines.clear
+    else variableEdit.lines.append(line);
   end;
 
 end.
