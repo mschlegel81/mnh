@@ -658,6 +658,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
+      {$ifdef fullVersion}reportableStep:boolean;{$endif}
       cTokType:array[-1..2] of T_tokenType;
 
   PROCEDURE initTokTypes; inline;
@@ -999,6 +1000,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
+      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveWhile;
@@ -1076,6 +1078,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
+      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveWhen;
@@ -1128,6 +1131,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       setLength(bodyParts,0);
       didSubstitution:=true;
+      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
@@ -1194,6 +1198,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       first:=firstReplace;
       lastReplace^.next:=firstTokenAfterCall;
       didSubstitution:=true;
+      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveInlineIf(CONST conditionLit:boolean); inline;
@@ -1254,6 +1259,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
+      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE applyMutation;
@@ -1377,6 +1383,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first:=context.disposeToken(first); //drop true
             first:=context.disposeToken(first); //drop AND
             didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else begin
             //false AND ... -> false
             p:=first^.next;
@@ -1389,6 +1396,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             first^.next:=p;
             didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end;
         end else raiseLazyBooleanError(first^.next^.location);
         tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
@@ -1404,11 +1412,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             first^.next:=p;
             didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else begin
             //false OR ... -> ...
             first:=context.disposeToken(first); //drop false
             first:=context.disposeToken(first); //drop OR
             didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end;
         end else raiseLazyBooleanError(first^.next^.location);
         else begin
@@ -1416,59 +1426,29 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           stack[length(stack)-2]:=first; first:=first^.next;
           stack[length(stack)-1]:=first; first:=first^.next;
           didSubstitution:=true;
+          {$ifdef fullVersion}reportableStep:=true;{$endif}
         end;
       end;
     end;
 
   PROCEDURE currentStateMessage({$ifdef fullVersion}CONST debug:boolean{$endif});
     VAR i,i0:longint;
-        idLike:boolean=false;
+        prevWasIdLike:boolean=false;
         p:P_token;
-        tokenMessage,infoMessage:ansistring;
-    PROCEDURE addMessage(CONST token:P_token);
-      VAR tokenPart,infoPart:ansistring;
-      begin
-        tokenPart:=token^.toString(idLike,idLike);
-        case token^.tokType of
-          tt_identifier,tt_identifier_pon: infoPart:='id';
-          tt_parameterIdentifier: infoPart:='paramId';
-          tt_localUserRule,tt_importedUserRule,tt_localUserRule_pon,tt_importedUserRule_pon:
-            infoPart:='rule';//+ansistring(P_rule(token^.data)^.getLocationOfDeclaration);
-          tt_intrinsicRule: infoPart:='builtin';
-          tt_rulePutCacheValue: infoPart:='put-cache';
-          tt_blockLocalVariable: infoPart:='local var';
-          tt_parList_constructor: infoPart:='paramList*';
-          tt_parList: infoPart:='paramList';
-          tt_list_constructor: infoPart:='list*';
-          tt_assignNewBlockLocal: infoPart:='new local var';
-          tt_typeCheckScalar..tt_typeCheckKeyValueList: infoPart:='type';
-          tt_literal: infoPart:='literal';
-          else infoPart:='';
-        end;
-        if (infoPart<>'') and (length(tokenPart)>=2*length(infoPart)) then tokenPart:=copy(tokenPart,1,2*length(infoPart)-3)+'...';
-        tokenPart:=tokenPart+StringOfChar(' ',length(infoPart)+1-length(tokenPart));
-        infoPart :=infoPart +StringOfChar(' ',length(tokenPart)-length(infoPart)-1)+#28;
-        tokenMessage:=tokenMessage+tokenPart;
-        infoMessage:=infoMessage+infoPart;
-      end;
-
+        tokenMessage:ansistring;
     begin
       if length(stack)>16 then begin
         tokenMessage:='... ';
-        infoMessage :='#   ';
         i0:=length(stack)-16;
       end else begin
         tokenMessage:=' ';
-        infoMessage :='#';
         i0:=0;
       end;
-      for i:=i0 to length(stack)-1 do addMessage(stack[i]);
-      tokenMessage:=tokenMessage+' || ';
-      infoMessage :=infoMessage +#28+#28+#28+#28;
+      for i:=i0 to length(stack)-1 do tokenMessage:=tokenMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
       i:=0;
       p:=first;
       while (p<>nil) and (i<16) do begin
-        addMessage(p);
+        tokenMessage:=tokenMessage+p^.toString(prevWasIdLike,prevWasIdLike);
         p:=p^.next;
         inc(i);
       end;
@@ -1476,7 +1456,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       {$ifdef fullVersion}
       if debug then begin
         context.adapters^.raiseDebugMessage(tokenMessage,first^.location);
-        context.adapters^.raiseDebugMessage(infoMessage ,first^.location);
         context.adapters^.raiseCustomMessage(mt_debug_varInfo,C_carriageReturnChar,C_nilTokenLocation);
         if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(context.adapters^);
         context.reportVariables;
@@ -1484,7 +1463,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       {$endif}
       begin
         context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
-        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,replaceAll(infoMessage,#28,' '),first^.location);
       end;
     end;
 
@@ -1519,10 +1497,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
   begin
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
+    {$ifdef fullVersion} reportableStep:=false; {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
-      {$ifdef fullVersion} if stepper.stepping(first^.location) then currentStateMessage(true) else context.adapters^.currentlyDebugging:=false; {$endif}
+      {$ifdef fullVersion}
+      if reportableStep then begin
+        if stepper.stepping(first^.location) then currentStateMessage(true)
+                                             else context.adapters^.currentlyDebugging:=false;
+      end;
+      reportableStep:=false;
+      {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
@@ -1551,6 +1536,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               //applied comparator is replaced by operator 'and'
               stack[length(stack)-1]^.tokType:=tt_operatorAnd;
               didSubstitution:=true;
+              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end else process_op_lit;
           end;
           tt_operatorAnd, tt_operatorOr, //operators with lazy evaluation ?
@@ -1587,6 +1573,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack_popLink;
               first^.tokType:=tt_literal;
               didSubstitution:=true;
+              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
@@ -1599,6 +1586,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first:=context.disposeToken(first); //dispose closing bracket
               stack_popLink; //pop parameter list
               stack_popLink; //pop FUNCTION
+              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true,context.adapters^);
@@ -1677,6 +1665,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
@@ -1695,6 +1684,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           first^.tokType:=tt_parList;
           stack_popLink;
           didSubstitution:=true;
+          {$ifdef fullVersion}reportableStep:=true;{$endif}
         end;
         tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
           //empty list
@@ -1743,6 +1733,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first^.next:=context.disposeToken(first^.next); //drop +
               first^.next:=context.disposeToken(first^.next); //drop )
               didSubstitution:=true;
+              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end else startOrPushParameterList;
           end;
           tt_parList: applyRule(first^.next,first^.next^.next);

@@ -260,7 +260,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
 PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
-    Show;
+    if not(showing) then Show;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
     else if miAntiAliasing3.Checked then factor:=3

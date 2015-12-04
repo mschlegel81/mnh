@@ -297,11 +297,13 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if instantPlotRequested then plotForm.doPlot();
     if hasDebugLocation then begin
       DebugForm.updateFromRoll;
-      j:=MnhForm.getInputEditIndexForFilename(debugLocation.fileName);
-      if j>=0 then begin
-        MnhForm.PageControl.ActivePageIndex:=j;
-        MnhForm.inputRec[j].highlighter.setMarkedToken(debugLocation.line-1,debugLocation.column-1);
-        MnhForm.inputRec[j].editor.Repaint;
+      if not((debugLocation.fileName='') or (debugLocation.fileName='?')) then begin
+        j:=MnhForm.getInputEditIndexForFilename(debugLocation.fileName);
+        if j>=0 then begin
+          MnhForm.PageControl.ActivePageIndex:=j;
+          MnhForm.inputRec[j].highlighter.setMarkedToken(debugLocation.line-1,debugLocation.column-1);
+          MnhForm.inputRec[j].editor.Repaint;
+        end;
       end;
     end;
     system.leaveCriticalSection(cs);
@@ -426,7 +428,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
       stepper.doStart;
       DebugForm.Show;
-    end else stepper.setFreeRun;
+    end else stepper.setSignal(ds_run);
   end;
 
 PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
@@ -763,7 +765,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
     if miDebug.Checked
     then begin
       miDebug.Checked:=false;
-      if ad_evaluationRunning then stepper.setFreeRun;
+      if ad_evaluationRunning then stepper.setSignal(ds_run);
     end else begin
       miDebug.Checked:=true;
       miEvalModeDirect.Checked:=true;

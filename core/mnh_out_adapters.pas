@@ -145,9 +145,7 @@ TYPE
     FUNCTION stepping(CONST location:T_tokenLocation):boolean;
 
     PROCEDURE doStart;
-    PROCEDURE setFreeRun;
-    PROCEDURE setRunUntilBreak;
-    PROCEDURE setVerboseRunUntilBreak;
+    PROCEDURE setSignal(CONST sig:T_debugSignal);
     PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
     PROCEDURE toggleBreakpoint(CONST fileName:ansistring; CONST line:longint);
     PROCEDURE removeBreakpoint(CONST index:longint);
@@ -611,10 +609,10 @@ PROCEDURE T_collectingOutAdapter.clearMessages;
   end;
 
 {$ifdef fullVersion}
-  CONSTRUCTOR T_stepper.create;
+CONSTRUCTOR T_stepper.create;
   begin
     system.initCriticalSection(cs);
-    setFreeRun;
+    setSignal(ds_run);
   end;
 
 DESTRUCTOR T_stepper.destroy;
@@ -672,25 +670,10 @@ PROCEDURE T_stepper.doStart;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.setFreeRun;
+PROCEDURE T_stepper.setSignal(CONST sig:T_debugSignal);
   begin
     system.enterCriticalSection(cs);
-    signal:=ds_run;
-    system.leaveCriticalSection(cs);
-  end;
-
-PROCEDURE T_stepper.setRunUntilBreak;
-  begin
-    system.enterCriticalSection(cs);
-    signal:=ds_runUntilBreak;
-    system.leaveCriticalSection(cs);
-  end;
-
-
-PROCEDURE T_stepper.setVerboseRunUntilBreak;
-  begin
-    system.enterCriticalSection(cs);
-    signal:=ds_verboseRunUntilBreak;
+    signal:=sig;
     system.leaveCriticalSection(cs);
   end;
 

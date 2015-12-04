@@ -142,7 +142,8 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
   begin
     visible:=f.readBoolean;
     if not(visible) then exit(true);
-    filePath:=extractRelativePath(expandFileName(''),f.readAnsiString);
+    filePath:=f.readAnsiString;
+    if filePath<>'' then filePath:=extractRelativePath(expandFileName(''),filePath);
     changed:=f.readBoolean;
     if changed then begin
       fileAccessAge:=f.readDouble;
@@ -165,7 +166,8 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
   begin
     f.writeBoolean(visible);
     if not(visible) then exit;
-    f.writeAnsiString(expandFileName(filePath));
+    if filePath<>'' then filePath:=expandFileName(filePath);
+    f.writeAnsiString(filePath);
     f.writeBoolean(changed);
     if changed then begin
       f.writeDouble(fileAccessAge);

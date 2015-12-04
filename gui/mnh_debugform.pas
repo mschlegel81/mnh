@@ -70,7 +70,7 @@ IMPLEMENTATION
 
 PROCEDURE TDebugForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if ad_evaluationRunning then stepper.setFreeRun;
+    if ad_evaluationRunning then stepper.setSignal(ds_run);
     if StopDebuggingCallback<>nil then StopDebuggingCallback;
   end;
 
@@ -123,7 +123,7 @@ PROCEDURE TDebugForm.miMultistepClick(Sender: TObject);
 
 PROCEDURE TDebugForm.miRunForBreakClick(Sender: TObject);
   begin
-    stepper.setRunUntilBreak;
+    stepper.setSignal(ds_runUntilBreak);
     if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
@@ -135,7 +135,7 @@ PROCEDURE TDebugForm.miStepClick(Sender: TObject);
 
 PROCEDURE TDebugForm.miVerboseRunClick(Sender: TObject);
   begin
-    stepper.setVerboseRunUntilBreak;
+    stepper.setSignal(ds_verboseRunUntilBreak);
     if DebuggingStepCallback<>nil then DebuggingStepCallback;
   end;
 
