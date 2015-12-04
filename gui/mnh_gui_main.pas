@@ -217,6 +217,7 @@ VAR MnhForm: TMnhForm;
     locationToOpenOnFormStartup:T_tokenLocation;
 
 PROCEDURE lateInitialization;
+PROCEDURE formCycle(ownId:longint; reverse:boolean);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
@@ -581,7 +582,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (Shift=[ssCtrl]) then plotForm.Show;
+    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift);
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
@@ -1310,9 +1311,13 @@ PROCEDURE debugForm_debuggingStep;
     MnhForm.UpdateTimeTimer.Interval:=20;
   end;
 
-PROCEDURE showMainForm;
+PROCEDURE formCycle(ownId:longint; reverse:boolean);
   begin
-    MnhForm.Show;
+    if reverse then ownId:=(ownId+3-1) mod 3
+               else ownId:=(ownId  +1) mod 3;
+    if      ownId=0 then MnhForm.Show
+    else if ownId=1 then plotForm.Show
+                    else DebugForm.show;
   end;
 
 PROCEDURE lateInitialization;
@@ -1326,7 +1331,8 @@ PROCEDURE lateInitialization;
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     StopDebuggingCallback:=@debugForm_stopDebugging;
     DebuggingStepCallback:=@debugForm_debuggingStep;
-    showMainFormCallback:=@showMainForm;
+    mnh_plotForm.formCycleCallback:=@formCycle;
+    mnh_debugForm.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit;
   end;

@@ -71,13 +71,13 @@ TYPE
 VAR
   plotForm: TplotForm;
   guiAdapters:P_adapters;
+  formCycleCallback    : PROCEDURE(ownId:longint; reverse:boolean) = nil;
 
 IMPLEMENTATION
 VAR plotSubsystem:record
       mouseUpTriggersPlot:boolean;
       lastMouseX,lastMouseY:longint;
     end;
-
 
 {$R *.lfm}
 
@@ -95,7 +95,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (Shift=[ssCtrl]) then DebugForm.Show;
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1,ssShift in Shift);
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);

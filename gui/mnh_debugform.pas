@@ -61,7 +61,7 @@ VAR
   DebugForm: TDebugForm;
   StopDebuggingCallback: PROCEDURE = nil;
   DebuggingStepCallback: PROCEDURE = nil;
-  showMainFormCallback : PROCEDURE = nil;
+  formCycleCallback    : PROCEDURE(ownId:longint; reverse:boolean) = nil;
 IMPLEMENTATION
 
 {$R *.lfm}
@@ -113,7 +113,7 @@ PROCEDURE TDebugForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TDebugForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (Shift=[ssCtrl]) and (showMainFormCallback<>nil) then showMainFormCallback();
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2,ssShift in Shift);
   end;
 
 PROCEDURE TDebugForm.miCancelClick(Sender: TObject);
