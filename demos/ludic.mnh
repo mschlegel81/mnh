@@ -1,7 +1,14 @@
-private dropNth(L,n)->dropNth(L%([0..size(L)-1] mod n<>0));
-private dropNth([])->[];
-private dropNth(L:intList)->head(L)|dropNth(L,head(L));
-private LUDICS:=1|dropNth([2..22000]);
+private LUDICS(n)->begin
+  local candidates:=[2..10*n];
+  local result:=[1];
+  while((candidates.size>0) AND (result.size<n),begin
+    local next:=candidates%0;
+    result|=next;
+    candidates:=candidates%([0..size(candidates)-1] mod next<>0);
+  end);
+  result;
+end;
+private LUDICS:=LUDICS(2152);
 
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->print("Ludic Numbers\n  The first 25 are: ",head(LUDICS,25),'.') and
