@@ -1,5 +1,5 @@
 private memoized //use memoization because this will be called again...
-step_new(s:string)->
+step(s:string)->
   s .chars            //split the string in characters
     .elementFrequency //transform characters to a list [[count1,char1],[count2,char2],...]
     .flatten          //flatten to [count1,char1,count2,char2,...]
@@ -11,10 +11,10 @@ series(i:int)->begin
   local result:=[];
   while(not(s in result),begin
     result|=s;
-    s:=step_new(s);
+    s:=step(s);
   end);
   result;
 end;
 
 //*See <a href="http://rosettacode.org/wiki/Self-referential_sequence">http://rosettacode.org/wiki/Self-referential_sequence</a>
-main->print(each(i,[1..10000],aggregator({size($x)<size($y) ? $y : $x}), series(i)));
+main->print(pEach(i,[1..10000],aggregator({size($x)<size($y) ? $y : $x}), series(i)).join(', '));
