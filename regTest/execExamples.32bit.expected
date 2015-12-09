@@ -10,8 +10,7 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in>                expression('');
 Error               The parsed expression appears to be empty
-Error [stack trace]   || expression('')
-Error [stack trace] #    builtin   parameter list
+Error [stack trace]  expression('')
 out>                expression('')
  in> not(true);
 out> false
@@ -41,8 +40,7 @@ out> 65
 out> -1
  in>                ord(2.1);
 Error               ord can only be applied to booleans, ints and strings
-Error [stack trace]   || <ERR>
-Error [stack trace] #    error literal
+Error [stack trace]  <ERR>
 out>                <ERR>
  in> softCast('A');
 out> 'A'
@@ -211,13 +209,11 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
 Error               Fail.
-Error [stack trace]   || fail
-Error [stack trace] #    builtin
+Error [stack trace]  fail
 out>                fail
  in>                fail("Told you this wouldn't work!");
 Error               "Told you this wouldn't work!"
-Error [stack trace]   || fail    ("Told you this wouldn't ...
-Error [stack trace] #    builtin parameter list
+Error [stack trace]  fail("Told you this wouldn't work!")
 out>                fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
@@ -226,7 +222,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> each(func,listBuiltin, copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
+out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.addPrintAdapter','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.addFullAdapter','mnh.myPath','mnh.not','mnh.ord','mnh.removeAdapter']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x%0+$y%0,$x%1]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);

@@ -623,6 +623,7 @@ FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
   CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+        zeroBlobLevel:longint=0;
   begin
     result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
     if comment<>'' then begin
@@ -630,7 +631,7 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
       then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
       else result:=result+'<i>'+comment+'</i><br>';
     end;
-    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
+    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString,zeroBlobLevel)+'</code></td></tr>';
   end;
 
 {$endif}

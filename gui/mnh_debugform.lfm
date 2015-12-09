@@ -19,9 +19,9 @@ object DebugForm: TDebugForm
     Top = 0
     Width = 320
     TabStop = False
-    ActivePage = TabSheet1
+    ActivePage = TabSheet2
     Align = alClient
-    TabIndex = 0
+    TabIndex = 2
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'Steps'

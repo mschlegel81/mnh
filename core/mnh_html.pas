@@ -29,7 +29,7 @@ VAR rawTokenizeCallback:T_rawTokenizeCallback;
 PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST definedAtRuntime:boolean);
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
-FUNCTION toHtmlCode(line:ansistring):ansistring;
+FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
@@ -59,10 +59,12 @@ FUNCTION imageTag(CONST fileName:ansistring):ansistring;
     result:='<img src="'+fileName+'" alt="'+fileName+'">';
   end;
 
-FUNCTION toHtmlCode(line:ansistring):ansistring;
+FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
   VAR raw:T_rawTokenArray;
       i:longint;
   begin
+    if trim(line)=SPECIAL_COMMENT_BLOB_END then dec(blobLevel);
+    if blobLevel<0 then blobLevel:=0 else if blobLevel>0 then exit(line);
     result:='';
     raw:=rawTokenizeCallback(line);
     for i:=0 to length(raw)-1 do with raw[i] do begin
@@ -79,7 +81,10 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
         tt_typeCheckScalar..tt_typeCheckKeyValueList: result:=result+span('builtin',txt);
         tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);
         tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
-        tt_blank: if (copy(trim(txt),1,2)='//') then result:=result+span('comment',txt) else result:=result+txt;
+        tt_blank: begin
+                    if (copy(trim(txt),1,2)='//') then result:=result+span('comment',txt) else result:=result+txt;
+                    if txt=SPECIAL_COMMENT_BLOB_BEGIN then inc(blobLevel);
+                  end;
         else result:=result+txt;
       end;
     end;
@@ -133,6 +138,7 @@ PROCEDURE T_htmlOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
 PROCEDURE T_htmlOutAdapter.flush;
   VAR handle:text;
       i,j:longint;
+      zeroBlobLevel:longint=0;
   FUNCTION htmlEscape(s:ansistring):ansistring;
     begin
       result:=replaceAll(
@@ -164,8 +170,8 @@ PROCEDURE T_htmlOutAdapter.flush;
 
           mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
 
-          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
-          mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
+          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage,zeroBlobLevel),'</code></td></tr>');
+          mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage,zeroBlobLevel),'</code></td></tr>');
           {$ifdef fullVersion}
           mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
                                    imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');

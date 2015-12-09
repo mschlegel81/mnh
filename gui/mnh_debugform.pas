@@ -79,7 +79,7 @@ PROCEDURE TDebugForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift:
   VAR i:longint;
   begin
     FormKeyUp(Sender,key,Shift);
-    if key=46 then exit;
+    if key<>46 then exit;
     if BreakpointsGrid.Selection.Bottom>=BreakpointsGrid.Selection.top then
     for i:=BreakpointsGrid.Selection.top-1 downto BreakpointsGrid.Selection.Bottom-1 do stepper.removeBreakpoint(i);
     updateBreakpointGrid;

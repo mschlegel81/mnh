@@ -34,7 +34,7 @@
       PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
       FUNCTION atEnd:boolean;
       FUNCTION getRawTokensUndefining:T_rawTokenArray;
-      PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters);
+      PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
       PROCEDURE tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
   end;
 
@@ -483,17 +483,18 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-PROCEDURE T_tokenArray.tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters);
+PROCEDURE T_tokenArray.tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
     workLocation:=location;
     workLocation.column:=1;
     while (workLocation.column<=length(inputString)) and (adapters.noErrors) do begin
-      next:=getToken(inputString,workLocation,inPackage,adapters);
+      next:=getToken(inputString,workLocation,inPackage,adapters,retainBlanks);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
           workLocation.column:=length(inputString)+1;
+          if retainBlanks then append(next);
         end else begin
           next.location:=workLocation;
           append(next);
@@ -511,7 +512,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     location.column:=1;
     tokenArray.create;
     adapters.create;
-    tokenArray.tokenizeAll(inputString,location,nil,adapters);
+    tokenArray.tokenizeAll(inputString,location,nil,adapters,true);
     adapters.destroy;
     result:=tokenArray.getRawTokensUndefining;
     tokenArray.destroy;

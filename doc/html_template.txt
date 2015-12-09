@@ -883,6 +883,13 @@ Expressions allow for anonymous recursion via the <code>$self</code> pseudo-lite
   fib:={$i<=1 ? 1 : $self($i-1)+$self($i-2)};
 <!--end-->
 </code>
+Instead of using parameters like <code>$x</code> you can also refer to parameters by their (zero based) index. For example the following functions are equivalent:<code>
+<!--mnh-->
+  f1:={$x**$y};
+  f2:={$0**$1};
+<!--end-->
+</code>
+Adressing parameters by their index is recommended for expressions in <a href="formatStrings.html">format strings</a>.
 
 <h4><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
@@ -1152,7 +1159,104 @@ is equivalent to:
   condition2 ? statement2 : void;
 <!--end-->
 </code> 
+<!--commonFoot-->
+<!--file formatStrings.html-->
+<!--commonHead-->
+<title>MNH 5 - Format Strings</title>
+</head><body>
+<h2 align="center"><a href="index.html">MNH 5</a> - Format Strings</h3>
+<h3><a href="#generalFmt">General formatting</a></h3>
+<h3><a href="#timeFmt">Time formatting</a></h3>
 
+<div align="right"><hr> </div>
+<h3><a name="generalFmt">General formatting</a></h3>
+
+Format Strings are used in conjunction with the builtin functions <a href="builtin.html#strings.format">strings.format</a> and 
+<a href="builtin.html#system.printf">system.printf</a>. They contain parts of the string which are independent from the remaining arguments and placeholders for the remaining arguments.
+
+Every placeholder begins with a percent-sign "<code>%</code>". If you want to have a percent-sign in your output, use "<code>%%</code>" instead.
+A placeholder looks as follows<code>
+  '%' [{expression}] ['-'] [Width] ['.' Precision] ArgType
+</code>
+where <ul><li><code>expression</code> is a valid MNH expression (in curly brackets)</li>
+<li>the minus indicates that the formatted string shall be left-aligned</li>
+<li><code>width</code> is the width of the result</li>
+<li><code>precision</code> is the number of decimal digits for number formats and</li>
+<li><code>ArgType</code> is one of the following<ul>
+    <li> <code>d  </code> decimal format
+    <li> <code>e  </code> scientific format
+    <li> <code>f  </code> fixed point format
+    <li> <code>g  </code> general number format
+    <li> <code>s  </code> string format
+    <li> <code>x  </code> hexadecimal format
+</ul>
+</ul>
+
+The expression parts can be used both for calculations and for selecting a specific parameter. E.g.:<code>
+   in>  <span class="builtin">format</span>(<span class="literal">'%{$2}s/%{$1}s/%{$0}s'</span>,<span class="literal">1</span>,<span class="literal">2</span>,<span class="literal">3</span>);
+  out>  <span class="literal">'3/2/1'</span>
+   in>  <span class="builtin">format</span>(<span class="literal">'sqrt(%{$0}g)=%{sqrt($0)}g'</span>,<span class="literal">2</span>);
+  out>  <span class="literal">'sqrt(2)=1.4142135623731'</span>
+</code>
+<br>
+Using list parameters as arguments to be formatted results in multi-line-printing for <code><span class="builtin">printf</span></code> and list results for <code><span class="builtin">format</span></code>.<code>
+
+   in>  <span class="modifier">private</span> <span class="identifier">B</span>(<span class="literal">1</span>)<span class="operator">-></span><span class="literal">'1 bottle'</span>;
+   in>  <span class="modifier">private</span> <span class="identifier">B</span>(<span class="identifier">n</span>)<span class="operator">-></span><span class="identifier">n</span><span class="operator">&</span><span class="literal">' bottles'</span>;
+   in>  <span class="builtin">printf</span>(<span class="literal">"%{B($n)}s of beer on the wall\n"</span><span class="operator">&
+               </span><span class="literal">"%{B($n)}s of beer\n"</span><span class="operator">&
+               </span><span class="literal">"Take one down, pass it around\n"</span><span class="operator">&
+               </span><span class="literal">"%{B($n-1)}s of beer on the wall.\n"</span>,[<span class="literal">99</span>..<span class="literal">1</span>]);
+        99 bottles of beer on the wall
+        99 bottles of beer
+        Take one down, pass it around
+        98 bottles of beer on the wall.
+        
+        98 bottles of beer on the wall
+        98 bottles of beer
+        Take one down, pass it around
+        97 bottles of beer on the wall.
+</code>
+(Output abridged... obviously.)
+<br>
+<h3><a name="timeFmt">Time formatting</a></h3>
+There are additional routines for formatting and parsing dates and times. Some of the available placeholders can be used in 
+<code><span class="builtin">formatTime</span></code> only, others can be used both in <code><span class="builtin">formatTime</span></code> and in <code><span class="builtin">parseTime</span></code>.
+<br>
+<table><tr class="ruleHead">
+    <td>placeholder</td><td>usable for parsing</td><td>explanation</td></tr>
+<tr><td><code>c</code>     </td><td>no </td><td>Formats date using shortdateformat and formats time using longtimeformat if the time is not zero.</td></tr>
+<tr><td><code>f</code>     </td><td>no </td><td>Same as c, but adds the time even if it is zero.</td></tr>
+<tr><td><code>d</code>     </td><td>yes</td><td>day of month</td></tr>
+<tr><td><code>dd</code>    </td><td>yes</td><td>day of month (leading zero)</td></tr>
+<tr><td><code>ddd</code>   </td><td>no </td><td>day of week (abbreviation)</td></tr>
+<tr><td><code>dddd</code>  </td><td>no </td><td>day of week (full)</td></tr>
+<tr><td><code>ddddd</code> </td><td>no </td><td>shortdateformat</td></tr>
+<tr><td><code>dddddd</code></td><td>no </td><td>longdateformat</td></tr>
+<tr><td><code>m</code>     </td><td>yes</td><td>month</td></tr>
+<tr><td><code>mm</code>    </td><td>yes</td><td>month (leading zero)</td></tr>
+<tr><td><code>mmm</code>   </td><td>no </td><td>month (abbreviation)</td></tr>
+<tr><td><code>mmmm</code>  </td><td>no </td><td>month (full)</td></tr>
+<tr><td><code>y</code>     </td><td>no </td><td>year (2 digits)</td></tr>
+<tr><td><code>yy</code>    </td><td>no </td><td>year (two digits)</td></tr>
+<tr><td><code>yyyy</code>  </td><td>yes</td><td>year (with century)</td></tr>
+<tr><td><code>h</code>     </td><td>yes</td><td>hour</td></tr>
+<tr><td><code>hh</code>    </td><td>yes</td><td>hour (leading zero)</td></tr>
+<tr><td><code>n</code>     </td><td>yes</td><td>minute</td></tr>
+<tr><td><code>nn</code>    </td><td>yes</td><td>minute (leading zero)</td></tr>
+<tr><td><code>s</code>     </td><td>yes</td><td>second</td></tr>
+<tr><td><code>ss</code>    </td><td>yes</td><td>second (leading zero)</td></tr>
+<tr><td><code>t</code>     </td><td>no </td><td>shorttimeformat</td></tr>
+<tr><td><code>tt</code>    </td><td>no </td><td>longtimeformat</td></tr>
+<tr><td><code>am/pm</code> </td><td>no </td><td>use 12 hour clock and display am and pm accordingly</td></tr>
+<tr><td><code>a/p</code>   </td><td>no </td><td>use 12 hour clock and display a and p accordingly</td></tr>
+<tr><td><code>/</code>     </td><td>-  </td><td>insert date seperator</td></tr>
+<tr><td><code>:</code>     </td><td>-  </td><td>insert time seperator</td></tr>
+<tr><td><code>"xx"</code>  </td><td>-  </td><td>literal text</td></tr>
+<tr><td><code>'xx'</code>  </td><td>-  </td><td>literal text</td></tr>
+<tr><td><code>z</code>     </td><td>yes</td><td>milliseconds</td></tr>
+<tr><td><code>zzz</code>   </td><td>yes</td><td>milliseconds(leading zero)</td></tr>
+</table>
 <!--commonFoot-->
 <!--file builtin.html-->
 <!--commonHead-->
