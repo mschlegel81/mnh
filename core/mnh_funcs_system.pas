@@ -3,6 +3,18 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil;
 IMPLEMENTATION
+{$MACRO ON}
+{$define str0:=P_stringLiteral(params^.value(0))}
+{$define str1:=P_stringLiteral(params^.value(1))}
+{$define str2:=P_stringLiteral(params^.value(2))}
+{$define list0:=P_listLiteral(params^.value(0))}
+{$define list1:=P_listLiteral(params^.value(1))}
+{$define int0:=P_intLiteral(params^.value(0))}
+{$define int1:=P_intLiteral(params^.value(1))}
+{$define int2:=P_intLiteral(params^.value(2))}
+{$define arg0:=params^.value(0)}
+{$define arg1:=params^.value(1)}
+{$define arg2:=params^.value(2)}
 VAR lockedFiles:specialize G_stringKeyMap<TThreadID>;
 
 PROCEDURE obtainLock(CONST fileName:ansistring);
@@ -27,8 +39,8 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
-    else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
-      count:=P_intLiteral(params^.value(0))^.value;
+    else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      count:=int0^.value;
       if count>0 then begin
         result:=newListLiteral;
         for i:=1 to count do P_listLiteral(result)^.appendReal(random);
@@ -41,12 +53,12 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR i,count:longint;
   begin
-     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then exit(newIntLiteral(random(P_intLiteral(params^.value(0))^.value)))
-     else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int) then begin
-      count:=P_intLiteral(params^.value(1))^.value;
+     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(random(int0^.value)))
+     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
+      count:=int1^.value;
       if count>0 then begin
         result:=newListLiteral;
-        for i:=1 to count do P_listLiteral(result)^.appendInt(random(P_intLiteral(params^.value(0))^.value));
+        for i:=1 to count do P_listLiteral(result)^.appendInt(random(int0^.value));
         exit(result);
       end;
     end;
@@ -85,36 +97,36 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
 FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
-    then result:=filesOrDirs_impl(params^.value(0),true,false);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(arg0,true,false);
   end;
 
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
-    then result:=filesOrDirs_impl(params^.value(0),false,false);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(arg0,false,false);
   end;
 
 FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string, lt_stringList, lt_emptyList])
-    then result:=filesOrDirs_impl(params^.value(0),false,true);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
+    then result:=filesOrDirs_impl(arg0,false,true);
   end;
 
 FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
-    then result:=newBoolLiteral(fileExists(P_stringLiteral(params^.value(0))^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newBoolLiteral(fileExists(str0^.value));
   end;
 
 FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
-    then result:=newBoolLiteral(DirectoryExists(P_stringLiteral(params^.value(0))^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newBoolLiteral(DirectoryExists(str0^.value));
   end;
 
 
@@ -122,12 +134,12 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   VAR accessed:boolean;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      result:=newStringLiteral(fileContent(P_stringLiteral(params^.value(0))^.value,accessed));
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      result:=newStringLiteral(fileContent(str0^.value,accessed));
+      releaseLock(str0^.value);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newStringLiteral('');
       end;
@@ -140,30 +152,30 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      L:=fileLines(P_stringLiteral(params^.value(0))^.value,accessed);
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      L:=fileLines(str0^.value,accessed);
+      releaseLock(str0^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newListLiteral;
       end;
     end else if (params<>nil) and (params^.size=3) and
-                (params^.value(0)^.literalType=lt_string) and
-                (params^.value(1)^.literalType=lt_int) and
-                (params^.value(2)^.literalType=lt_int) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      L:=fileLines(P_stringLiteral(params^.value(0))^.value,
-                   P_intLiteral   (params^.value(1))^.value,
-                   P_intLiteral   (params^.value(2))^.value,accessed);
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+                (arg0^.literalType=lt_string) and
+                (arg1^.literalType=lt_int) and
+                (arg2^.literalType=lt_int) then begin
+      obtainLock(str0^.value);
+      L:=fileLines(str0^.value,
+                   int1^.value,
+                   int2^.value,accessed);
+      releaseLock(str0^.value);
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newListLiteral;
       end;
@@ -174,14 +186,14 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   VAR ok:boolean;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string)
-                                          and (params^.value(1)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      ok:=mnh_fileWrappers.writeFile(P_stringLiteral(params^.value(0))^.value,
-                                     P_stringLiteral(params^.value(1))^.value);
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string)
+                                          and (arg1^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      ok:=mnh_fileWrappers.writeFile(str0^.value,
+                                     str1^.value);
+      releaseLock(str0^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then adapters.raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
 
@@ -193,18 +205,18 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3)
-       and (params^.value(0)^.literalType=lt_string)
-       and (params^.value(1)^.literalType in [lt_stringList,lt_emptyList])
-       and ((params^.size=2) or (params^.value(2)^.literalType=lt_string)) then begin
-      if params^.size=3 then sep:=P_stringLiteral(params^.value(2))^.value
+       and (arg0^.literalType=lt_string)
+       and (arg1^.literalType in [lt_stringList,lt_emptyList])
+       and ((params^.size=2) or (arg2^.literalType=lt_string)) then begin
+      if params^.size=3 then sep:=str2^.value
                         else sep:='';
-      setLength(L,P_listLiteral(params^.value(1))^.size);
-      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      ok:=writeFileLines(P_stringLiteral(params^.value(0))^.value,L,sep);
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+      setLength(L,list1^.size);
+      for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value(i))^.value;
+      obtainLock(str0^.value);
+      ok:=writeFileLines(str0^.value,L,sep);
+      releaseLock(str0^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then adapters.raiseWarning('File "'+P_stringLiteral(params^.value(0))^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
 
@@ -260,14 +272,14 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
+      executable:=str0^.value;
       if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+        setLength(cmdLinePar,list1^.size);
+        for i:=0 to list1^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
       end;
       runCommand(executable,
                  cmdLinePar,
@@ -284,14 +296,14 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
+      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=P_stringLiteral(params^.value(0))^.value;
+      executable:=str0^.value;
       if params^.size=2 then begin
-        setLength(cmdLinePar,P_listLiteral(params^.value(1))^.size);
-        for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-          cmdLinePar[i]:=P_scalarLiteral(P_listLiteral(params^.value(1))^.value(i))^.stringForm;
+        setLength(cmdLinePar,list1^.size);
+        for i:=0 to list1^.size-1 do
+          cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
       end;
       runCommandAsyncOrPipeless(executable,
                                 cmdLinePar,doAsynch);
@@ -320,50 +332,50 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      result:=newBoolLiteral(DeleteFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value)));
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      result:=newBoolLiteral(DeleteFileUTF8(UTF8Encode(str0^.value)));
+      releaseLock(str0^.value);
     end;
   end;
 
 FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      result:=newBoolLiteral(DeleteDirectory(UTF8Encode(P_stringLiteral(params^.value(0))^.value),false));
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      result:=newBoolLiteral(DeleteDirectory(UTF8Encode(str0^.value),false));
+      releaseLock(str0^.value);
     end;
   end;
 
 FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      obtainLock(P_stringLiteral(params^.value(1))^.value);
-      ensurePath(P_stringLiteral(params^.value(1))^.value);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
+      obtainLock(str0^.value);
+      obtainLock(str1^.value);
+      ensurePath(str1^.value);
       result:=newBoolLiteral(
-      FileUtil.CopyFile(UTF8Encode(P_stringLiteral(params^.value(0))^.value),
-                        UTF8Encode(P_stringLiteral(params^.value(1))^.value),true));
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
-      releaseLock(P_stringLiteral(params^.value(1))^.value);
+      FileUtil.CopyFile(UTF8Encode(str0^.value),
+                        UTF8Encode(str1^.value),true));
+      releaseLock(str0^.value);
+      releaseLock(str1^.value);
     end;
   end;
 
 FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_string)  then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      obtainLock(P_stringLiteral(params^.value(1))^.value);
-      ensurePath(P_stringLiteral(params^.value(1))^.value);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
+      obtainLock(str0^.value);
+      obtainLock(str1^.value);
+      ensurePath(str1^.value);
       result:=newBoolLiteral(
-      FileUtil.RenameFileUTF8(UTF8Encode(P_stringLiteral(params^.value(0))^.value),
-                              UTF8Encode(P_stringLiteral(params^.value(1))^.value)));
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
-      releaseLock(P_stringLiteral(params^.value(1))^.value);
+      FileUtil.RenameFileUTF8(UTF8Encode(str0^.value),
+                              UTF8Encode(str1^.value)));
+      releaseLock(str0^.value);
+      releaseLock(str1^.value);
     end;
   end;
 
@@ -392,10 +404,10 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       tmpParam:P_listLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      obtainLock(P_stringLiteral(params^.value(0))^.value);
-      getFileInfo(P_stringLiteral(params^.value(0))^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
-      releaseLock(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      obtainLock(str0^.value);
+      getFileInfo(str0^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      releaseLock(str0^.value);
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
       if isExistent then begin
@@ -410,10 +422,10 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         appendKeyValuePair('attributes',attributeList);
       end;
       result:=resultAsList;
-    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true,adapters);
+      for i:=0 to list0^.size-1 do begin
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true,adapters);
         P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation,adapters),false,adapters);
         disposeLiteral(tmpParam);
       end;
@@ -424,9 +436,9 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   VAR resultText:ansistring;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       try
-        resultText:=TFPCustomHTTPClient.SimpleGet(P_stringLiteral(params^.value(0))^.value);
+        resultText:=TFPCustomHTTPClient.SimpleGet(str0^.value);
       except
         on E : Exception do begin
           resultText:='';
@@ -443,10 +455,10 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
       sysutils.Beep;
-    end else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int) then begin
+    end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       result:=newVoidLiteral;
-      windows.Beep(P_intLiteral(params^.value(0))^.value,
-                   P_intLiteral(params^.value(1))^.value);
+      windows.Beep(int0^.value,
+                   int1^.value);
     end;
   end;
 

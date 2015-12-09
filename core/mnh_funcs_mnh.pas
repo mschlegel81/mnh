@@ -2,6 +2,14 @@ UNIT mnh_funcs_mnh;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html;
 IMPLEMENTATION
+{$MACRO ON}
+{$define str0:=P_stringLiteral(params^.value(0))}
+{$define str1:=P_stringLiteral(params^.value(1))}
+{$define list0:=P_listLiteral(params^.value(0))}
+{$define list1:=P_listLiteral(params^.value(1))}
+{$define arg0:=params^.value(0)}
+{$define arg1:=params^.value(1)}
+
 FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -22,17 +30,17 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(params^.value(0));
+    if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
   end;
 
 FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if params^.value(0)^.literalType=lt_string then begin
-        result:=params^.value(0);
+      if arg0^.literalType=lt_string then begin
+        result:=arg0;
         result^.rereference;
-      end else result:=newStringLiteral(params^.value(0)^.toString);
+      end else result:=newStringLiteral(arg0^.toString);
     end;
   end;
 
@@ -66,9 +74,9 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       tmpParam:P_listLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       result:=newListLiteral;
-      name:=P_stringLiteral(params^.value(0))^.value;
+      name:=str0^.value;
       appendPair(result,'input',name);
       appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
       appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),name),'\','/'));
@@ -77,10 +85,10 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
       appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
       appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
-    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(P_listLiteral(params^.value(0))^.value(i),true,adapters);
+      for i:=0 to list0^.size-1 do begin
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true,adapters);
         P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,adapters),false,adapters);
         disposeLiteral(tmpParam);
       end;
@@ -91,40 +99,40 @@ FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T
   VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) then case params^.value(0)^.literalType of
-      lt_string: case params^.value(1)^.literalType of
+    if (params<>nil) and (params^.size=2) then case arg0^.literalType of
+      lt_string: case arg1^.literalType of
         lt_string: exit(newStringLiteral(
             replaceAll(
-            extractRelativePath(P_stringLiteral(params^.value(0))^.value+'/',
-                                P_stringLiteral(params^.value(1))^.value),
+            extractRelativePath(str0^.value+'/',
+                                str1^.value),
             '\','/')));
         lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          for i:=0 to list1^.size-1 do
             P_listLiteral(result)^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(              params^.value(0)           )^.value+'/',
-                                P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value),
+            extractRelativePath(str0^.value+'/',
+                                P_stringLiteral(list1^.value(i))^.value),
             '\','/'));
         end;
       end;
-      lt_stringList,lt_emptyList: case params^.value(1)^.literalType of
+      lt_stringList,lt_emptyList: case arg1^.literalType of
         lt_string: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          for i:=0 to list1^.size-1 do
             P_listLiteral(result)^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value+'/',
-                                P_stringLiteral(              params^.value(1)           )^.value),
+            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
+                                str1^.value),
             '\','/'));
         end;
-        lt_stringList,lt_emptyList: if  P_listLiteral(params^.value(0))^.size= P_listLiteral(params^.value(1))^.size then begin
+        lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
+          for i:=0 to list1^.size-1 do
             P_listLiteral(result)^.appendString(
             replaceAll(
-            extractRelativePath(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value+'/',
-                                P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value),
+            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
+                                P_stringLiteral(list1^.value(i))^.value),
             '\','/'));
         end;
       end;
@@ -135,7 +143,7 @@ FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=newIntLiteral(params^.value(0)^.hash);
+    then result:=newIntLiteral(arg0^.hash);
   end;
 
 FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
@@ -154,7 +162,7 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     if (params=nil) or (params^.size=0) then adapters.raiseError('Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then adapters.raiseError(params^.value(0)^.toString,tokenLocation);
+    else if (params<>nil) and (params^.size=1) then adapters.raiseError(arg0^.toString,tokenLocation);
     result:=nil;
   end;
 
@@ -182,14 +190,14 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then result:=recurse(params^.value(0));
+    then result:=recurse(arg0);
   end;
 
 FUNCTION addPrintAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR printAdapter:P_textFilePrintOnlyAdapter;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      new(printAdapter,create(P_stringLiteral(params^.value(0))^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      new(printAdapter,create(str0^.value));
       adapters.addOutAdapter(printAdapter,true);
       result:=newVoidLiteral;
     end else result:=nil;
@@ -197,16 +205,16 @@ FUNCTION addPrintAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
 
 FUNCTION addFullAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      addOutfile(adapters,P_stringLiteral(params^.value(0))^.value,true);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      addOutfile(adapters,str0^.value,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
 FUNCTION removeAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      adapters.removeOutAdapter(P_stringLiteral(params^.value(0))^.value);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      adapters.removeOutAdapter(str0^.value);
       result:=newVoidLiteral;
     end else result:=nil;
   end;

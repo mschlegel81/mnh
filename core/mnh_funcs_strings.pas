@@ -3,17 +3,29 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,Diff;
 IMPLEMENTATION
 {$MACRO ON}
+{$define str0:=P_stringLiteral(params^.value(0))}
+{$define str1:=P_stringLiteral(params^.value(1))}
+{$define str2:=P_stringLiteral(params^.value(2))}
+{$define list0:=P_listLiteral(params^.value(0))}
+{$define list1:=P_listLiteral(params^.value(1))}
+{$define list2:=P_listLiteral(params^.value(2))}
+{$define int1:=P_intLiteral(params^.value(1))}
+{$define int2:=P_intLiteral(params^.value(2))}
+{$define arg0:=params^.value(0)}
+{$define arg1:=params^.value(1)}
+{$define arg2:=params^.value(2)}
+
 FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      case params^.value(0)^.literalType of
-        lt_string: result:=newIntLiteral(length(P_stringLiteral(params^.value(0))^.value));
+      case arg0^.literalType of
+        lt_string: result:=newIntLiteral(length(str0^.value));
         lt_stringList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.appendInt(length(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
+          for i:=0 to list0^.size-1 do
+            P_listLiteral(result)^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
         end;
       end;
     end;
@@ -30,30 +42,29 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      if params^.value(0)^.literalType=lt_string then begin
-        if params^.value(1)^.literalType=lt_string then begin
-          result:=posInt(params^.value(0),
-                         params^.value(1));
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      if arg0^.literalType=lt_string then begin
+        if arg1^.literalType=lt_string then begin
+          result:=posInt(arg0,
+                         arg1);
         end else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(1))^.size-1 do
-            P_listLiteral(result)^.append(posInt(              params^.value(0),
-                                                 P_listLiteral(params^.value(1))^.value(i)),false,adapters);
+          for i:=0 to list1^.size-1 do
+            P_listLiteral(result)^.append(posInt(arg0,list1^.value(i)),false,adapters);
         end;
       end else begin
-        if params^.value(1)^.literalType=lt_string then begin
+        if arg1^.literalType=lt_string then begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-            P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
-                                                               params^.value(1)           ),false,adapters);
+          for i:=0 to list0^.size-1 do
+            P_listLiteral(result)^.append(posInt(list0^.value(i),
+                                                               arg1           ),false,adapters);
         end else begin
-          if P_listLiteral(params^.value(0))^.size=P_listLiteral(params^.value(1))^.size then begin
+          if list0^.size=list1^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-              P_listLiteral(result)^.append(posInt(P_listLiteral(params^.value(0))^.value(i),
-                                                   P_listLiteral(params^.value(1))^.value(i)),false,adapters);
+            for i:=0 to list0^.size-1 do
+              P_listLiteral(result)^.append(posInt(list0^.value(i),
+                                                   list1^.value(i)),false,adapters);
           end else adapters.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
@@ -75,40 +86,40 @@ FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   FUNCTION safeString(index:longint):ansistring;
     begin
-      if params^.value(0)^.literalType=lt_string
-        then result:=P_stringLiteral(              params^.value(0)               )^.value
-        else result:=P_stringLiteral(P_listLiteral(params^.value(0))^.value(index))^.value;
+      if arg0^.literalType=lt_string
+        then result:=str0^.value
+        else result:=P_stringLiteral(list0^.value(index))^.value;
     end;
 
   FUNCTION safeStart(index:longint):longint;
     begin
-      if params^.value(1)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.value(1)               )^.value
-        else result:=P_intLiteral(P_listLiteral(params^.value(1))^.value(index))^.value;
+      if arg1^.literalType=lt_int
+        then result:=int1^.value
+        else result:=P_intLiteral(list1^.value(index))^.value;
       inc(result);
     end;
 
   FUNCTION safeLen(index:longint):longint;
     begin
-      if params^.value(2)^.literalType=lt_int
-        then result:=P_intLiteral(              params^.value(2)               )^.value
-        else result:=P_intLiteral(P_listLiteral(params^.value(2))^.value(index))^.value;
+      if arg2^.literalType=lt_int
+        then result:=int2^.value
+        else result:=P_intLiteral(list2^.value(index))^.value;
     end;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList])
-                                          and (params^.value(1)^.literalType in [lt_int   ,lt_intList   ,lt_emptyList])
-                                          and (params^.value(2)^.literalType in [lt_int   ,lt_intList   ,lt_emptyList]) then begin
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList])
+                                          and (arg1^.literalType in [lt_int   ,lt_intList   ,lt_emptyList])
+                                          and (arg2^.literalType in [lt_int   ,lt_intList   ,lt_emptyList]) then begin
       anyList:=false;
-      if params^.value(0)^.literalType in [lt_stringList,lt_emptyList] then checkLength(params^.value(0));
-      if params^.value(1)^.literalType in [lt_intList   ,lt_emptyList] then checkLength(params^.value(1));
-      if params^.value(2)^.literalType in [lt_intList   ,lt_emptyList] then checkLength(params^.value(2));
+      if arg0^.literalType in [lt_stringList,lt_emptyList] then checkLength(arg0);
+      if arg1^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg1);
+      if arg2^.literalType in [lt_intList   ,lt_emptyList] then checkLength(arg2);
       if not(allOkay) then exit(nil)
       else if not(anyList) then
-        result:=newStringLiteral(copy(P_stringLiteral(params^.value(0))^.value,
-                                      P_intLiteral   (params^.value(1))^.value+1,
-                                      P_intLiteral   (params^.value(2))^.value))
+        result:=newStringLiteral(copy(str0^.value,
+                                      P_intLiteral   (arg1)^.value+1,
+                                      P_intLiteral   (arg2)^.value))
       else begin
         result:=newListLiteral;
         for i:=0 to i1-1 do
@@ -132,11 +143,11 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
   VAR i:longint;
   begin
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
-      result:=chars_internal(params^.value(0));
-    end else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      result:=chars_internal(arg0);
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do P_listLiteral(result)^.append(chars_internal(P_listLiteral(params^.value(0))^.value(i)),false,adapters);
+      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false,adapters);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
@@ -148,13 +159,13 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   PROCEDURE initSplitters;
     VAR i:longint;
     begin
-      if params^.value(1)^.literalType=lt_string then begin
+      if arg1^.literalType=lt_string then begin
         setLength(splitters,1);
-        splitters[0]:=P_stringLiteral(params^.value(1))^.value;
+        splitters[0]:=str1^.value;
       end else begin
-        setLength(splitters,P_listLiteral(params^.value(1))^.size);
+        setLength(splitters,list1^.size);
         for i:=0 to length(splitters)-1 do
-          splitters[i]:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+          splitters[i]:=P_stringLiteral(list1^.value(i))^.value;
       end;
     end;
 
@@ -204,10 +215,10 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2)
-      and (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_list,lt_emptyList])
-      and (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      and (arg0^.literalType in [lt_string,lt_stringList,lt_list,lt_emptyList])
+      and (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       initSplitters;
-      result:=splitRecurse(params^.value(0));
+      result:=splitRecurse(arg0);
     end;
   end;
 
@@ -230,16 +241,16 @@ FUNCTION join_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType=lt_string)) then begin
-      if params^.size=2 then joiner:=P_stringLiteral(params^.value(1))^.value;
-      if (params^.value(0)^.literalType in C_validListTypes) then begin
-        if P_listLiteral(params^.value(0))^.size=0 then exit(newStringLiteral(''));
-        resTxt:=stringOfLit(P_listLiteral(params^.value(0))^.value(0));
-        for i:=1 to P_listLiteral(params^.value(0))^.size-1 do
-          resTxt:=resTxt+joiner+stringOfLit(P_listLiteral(params^.value(0))^.value(i));
+    if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
+      if params^.size=2 then joiner:=str1^.value;
+      if (arg0^.literalType in C_validListTypes) then begin
+        if list0^.size=0 then exit(newStringLiteral(''));
+        resTxt:=stringOfLit(list0^.value(0));
+        for i:=1 to list0^.size-1 do
+          resTxt:=resTxt+joiner+stringOfLit(list0^.value(i));
         result:=newStringLiteral(resTxt);
-      end else if (params^.value(0)^.literalType in C_validScalarTypes) then
-        result:=newStringLiteral(stringOfLit(params^.value(0)));
+      end else if (arg0^.literalType in C_validScalarTypes) then
+        result:=newStringLiteral(stringOfLit(arg0));
     end;
   end;
 
@@ -265,8 +276,8 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
 
 begin
   result:=nil;
-  if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList])
-  then result:=recurse(params^.value(0));
+  if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_list,lt_stringList,lt_string,lt_emptyList])
+  then result:=recurse(arg0);
 end}
 
 
@@ -325,7 +336,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
       end;
 
     begin
-      L:=params^.value(1);
+      L:=arg1;
       if L^.literalType=lt_string then begin
         setLength(lookFor,1);
         lookFor[0]:=P_stringLiteral(L)^.value;
@@ -334,7 +345,7 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
         for i:=0 to length(lookFor)-1 do
           lookFor[i]:=P_stringLiteral(P_listLiteral(L)^.value(i))^.value;
       end;
-      L:=params^.value(2);
+      L:=arg2;
       if L^.literalType=lt_string then begin
         setLength(replaceBy,1);
         replaceBy[0]:=P_stringLiteral(L)^.value;
@@ -358,11 +369,11 @@ FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_lit
 
   begin
     initArrays;
-    if params^.value(0)^.literalType=lt_string then result:=newStringLiteral(modify(P_stringLiteral(params^.value(0))^.value))
+    if arg0^.literalType=lt_string then result:=newStringLiteral(modify(str0^.value))
     else begin
       result:=newListLiteral;
-      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-        P_listLiteral(result)^.appendString(modify(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value));
+      for i:=0 to list0^.size-1 do
+        P_listLiteral(result)^.appendString(modify(P_stringLiteral(list0^.value(i))^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
@@ -372,9 +383,9 @@ FUNCTION replaceOne_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(2)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       result:=replace_one_or_all(params,false);
     end;
   end;
@@ -383,9 +394,9 @@ FUNCTION replace_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(1)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(2)^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg2^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       result:=replace_one_or_all(params,true);
     end;
   end;
@@ -396,11 +407,11 @@ FUNCTION repeat_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
-       (params^.value(0)^.literalType = lt_string) and
-       (params^.value(1)^.literalType = lt_int) then begin
+       (arg0^.literalType = lt_string) and
+       (arg1^.literalType = lt_int) then begin
       res:='';
-      sub:=P_stringLiteral(params^.value(0))^.value;
-      for i:=1 to P_intLiteral(params^.value(1))^.value do res:=res+sub;
+      sub:=str0^.value;
+      for i:=1 to int1^.value do res:=res+sub;
       result:=newStringLiteral(res);
     end;
   end;
@@ -415,26 +426,26 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
-       (params^.value(1)^.literalType=lt_stringList) and
-       (params^.value(2)^.literalType=lt_string) and
-       (length(P_stringLiteral(params^.value(2))^.value)=1) then begin
+       (arg0^.literalType in [lt_string,lt_stringList,lt_emptyList]) and
+       (arg1^.literalType=lt_stringList) and
+       (arg2^.literalType=lt_string) and
+       (length(str2^.value)=1) then begin
       whiteList:=[];
-      for i:=0 to P_listLiteral(params^.value(1))^.size-1 do begin
-        tmp:=P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
+      for i:=0 to list1^.size-1 do begin
+        tmp:=P_stringLiteral(list1^.value(i))^.value;
         if length(tmp)=1 then include(whiteList,tmp[1])
         else begin
           adapters.raiseError('Built in function clean expects a list of single-character strings as whitelist (second argument)',tokenLocation);
           exit(nil);
         end;
       end;
-      instead:=P_stringLiteral(params^.value(2))^.value[1];
-      if params^.value(0)^.literalType=lt_string then begin
-        result:=newStringLiteral(cleanString(P_stringLiteral(params^.value(0))^.value,whiteList,instead));
+      instead:=str2^.value[1];
+      if arg0^.literalType=lt_string then begin
+        result:=newStringLiteral(cleanString(str0^.value,whiteList,instead));
       end else begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value,whiteList,instead));
+        for i:=0 to list0^.size-1 do
+        P_listLiteral(result)^.appendString(cleanString(P_stringLiteral(list0^.value(i))^.value,whiteList,instead));
       end;
     end;
   end;
@@ -484,14 +495,14 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
-      if (params^.value(1)^.literalType=lt_string)
-      then setLanguage(P_stringLiteral(params^.value(1))^.value)
+      if (arg1^.literalType=lt_string)
+      then setLanguage(str1^.value)
       else exit(nil);
     end;
 
     if (params<>nil) and (params^.size>=1) and
-       (params^.value(0)^.literalType=lt_string) then begin
-      stringToSplit:=P_stringLiteral(params^.value(0))^.value;
+       (arg0^.literalType=lt_string) then begin
+      stringToSplit:=str0^.value;
 
       result:=newListLiteral;
       i0:=1;
@@ -562,12 +573,12 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
   VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case params^.value(0)^.literalType of
-      lt_string: result:=newStringLiteral(rev(params^.value(0)));
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_string: result:=newStringLiteral(rev(arg0));
       lt_stringList,lt_emptyList: begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(params^.value(0))^.size-1 do
-          P_listLiteral(result)^.appendString(rev(P_listLiteral(params^.value(0))^.value(i)));
+        for i:=0 to list0^.size-1 do
+          P_listLiteral(result)^.appendString(rev(list0^.value(i)));
       end;
     end;
   end;
@@ -583,19 +594,19 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
-       ((params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) and
-        (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) or
-        (params^.value(0)^.literalType=lt_string) and
-        (params^.value(1)^.literalType=lt_string)) then begin
+       ((arg0^.literalType in [lt_stringList,lt_emptyList]) and
+        (arg1^.literalType in [lt_stringList,lt_emptyList]) or
+        (arg0^.literalType=lt_string) and
+        (arg1^.literalType=lt_string)) then begin
       Diff.create();
-      if (params^.value(0)^.literalType in [lt_stringList,lt_emptyList]) and
-         (params^.value(1)^.literalType in [lt_stringList,lt_emptyList]) then begin
-        with P_listLiteral(params^.value(0))^ do begin
+      if (arg0^.literalType in [lt_stringList,lt_emptyList]) and
+         (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
+        with list0^ do begin
           aLen:=size;
           GetMem(aHashes,aLen*sizeOf(integer));
           for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
         end;
-        with P_listLiteral(params^.value(1))^ do begin
+        with list1^ do begin
           bLen:=size;
           GetMem(bHashes,bLen*sizeOf(integer));
           for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
@@ -603,10 +614,10 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
         Diff.execute(aHashes,bHashes,aLen,bLen);
         freeMem(aHashes,aLen*sizeOf(integer));
         freeMem(bHashes,bLen*sizeOf(integer));
-      end else if (params^.value(0)^.literalType=lt_string) and
-                  (params^.value(1)^.literalType=lt_string) then begin
-        Diff.execute(P_stringLiteral(params^.value(0))^.value,
-                     P_stringLiteral(params^.value(1))^.value);
+      end else if (arg0^.literalType=lt_string) and
+                  (arg1^.literalType=lt_string) then begin
+        Diff.execute(str0^.value,
+                     str1^.value);
       end;
 
       result:=newListLiteral^

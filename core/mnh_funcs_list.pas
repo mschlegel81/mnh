@@ -2,26 +2,29 @@ UNIT mnh_funcs_list;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters;
 IMPLEMENTATION
+{$MACRO ON}
+{$define list0:=P_listLiteral(params^.value(0))}
+{$define arg0:=params^.value(0)}
+{$define arg1:=params^.value(1)}
 
 FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      if params^.value(0)^.getReferenceCount=1 then begin
-        result:=params^.value(0);
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_validListTypes) then begin
+      if arg0^.getReferenceCount=1 then begin
+        result:=arg0;
         result^.rereference;
-      end else result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.append(params^.value(1),true,adapters);
+      end else result:=list0^.clone;
+      P_listLiteral(result)^.append(arg1,true,adapters);
     end;
   end;
 
-{$MACRO ON}
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
-  if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-    if      (params^.size=1) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO
-    else if (params^.size=2) and (params^.value(1)^.literalType=lt_int) then result:=P_listLiteral(params^.value(0))^.CALL_MACRO(P_intLiteral(params^.value(1))^.value);
+  if (params<>nil) and (params^.size>=1) and (arg0^.literalType in C_validListTypes) then begin
+    if      (params^.size=1) then result:=list0^.CALL_MACRO
+    else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(P_intLiteral(arg1)^.value);
   end;
 end}
 
@@ -50,38 +53,38 @@ SUB_LIST_IMPL;
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      if (params^.value(0)^.getReferenceCount=1) then begin
-        result:=params^.value(0);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
+      if (arg0^.getReferenceCount=1) then begin
+        result:=arg0;
         result^.rereference;
-      end else result:=P_listLiteral(params^.value(0))^.clone;
+      end else result:=list0^.clone;
       P_listLiteral(result)^.sort;
     end else if (params<>nil) and (params^.size=2)
-            and (params^.value(0)^.literalType in C_validListTypes)
-            and (params^.value(1)^.literalType=lt_expression) then begin
-      if (params^.value(0)^.getReferenceCount=1) then begin
-        result:=params^.value(0);
+            and (arg0^.literalType in C_validListTypes)
+            and (arg1^.literalType=lt_expression) then begin
+      if (arg0^.getReferenceCount=1) then begin
+        result:=arg0;
         result^.rereference;
-      end else result:=P_listLiteral(params^.value(0))^.clone;
-      P_listLiteral(result)^.customSort(P_expressionLiteral(params^.value(1)),adapters);
+      end else result:=list0^.clone;
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),adapters);
     end;
   end;
 
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)
-    then result:=P_listLiteral(params^.value(0))^.sortPerm;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes)
+    then result:=list0^.sortPerm;
   end;
 
 FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
-      if (params^.value(0)^.getReferenceCount=1) then begin
-        result:=params^.value(0);
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
+      if (arg0^.getReferenceCount=1) then begin
+        result:=arg0;
         result^.rereference;
-      end else result:=P_listLiteral(params^.value(0))^.clone;
+      end else result:=list0^.clone;
       P_listLiteral(result)^.unique;
     end;
   end;
@@ -107,9 +110,9 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      case params^.value(0)^.literalType of
+      case arg0^.literalType of
         lt_error..  lt_expression: result:=newIntLiteral(1);
-        lt_list..lt_listWithError: result:=newIntLiteral(P_listLiteral(params^.value(0))^.size);
+        lt_list..lt_listWithError: result:=newIntLiteral(list0^.size);
       end;
     end;
   end;
@@ -120,7 +123,7 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      B:=params^.value(0);
+      B:=arg0;
       case B^.literalType of
         lt_boolean: if P_boolLiteral(B)^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
         lt_booleanList: begin
@@ -139,7 +142,7 @@ FUNCTION listAnd_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      B:=params^.value(0);
+      B:=arg0;
       case B^.literalType of
         lt_boolean: begin result:=B; result^.rereference; end;
         lt_booleanList: begin
@@ -157,7 +160,7 @@ FUNCTION listOr_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      B:=params^.value(0);
+      B:=arg0;
       case B^.literalType of
         lt_boolean: begin result:=B; result^.rereference; end;
         lt_booleanList: begin
@@ -173,10 +176,10 @@ FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
       result:=newListLiteral;
-      for i:=P_listLiteral(params^.value(0))^.size-1 downto 0 do
-        P_listLiteral(result)^.append(P_listLiteral(params^.value(0))^.value(i),true,adapters);
+      for i:=list0^.size-1 downto 0 do
+        P_listLiteral(result)^.append(list0^.value(i),true,adapters);
     end;
   end;
 
@@ -185,9 +188,9 @@ FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       R:P_listLiteral;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_booleanList,lt_emptyList]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_booleanList,lt_emptyList]) then begin
       R:=newListLiteral;
-      with P_listLiteral(params^.value(0))^ do for i:=0 to size-1 do if P_boolLiteral(value(i))^.value
+      with list0^ do for i:=0 to size-1 do if P_boolLiteral(value(i))^.value
         then R^.appendInt(i);
       result:=R;
     end;
