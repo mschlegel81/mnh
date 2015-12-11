@@ -582,39 +582,29 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   PROCEDURE prettyPrintTime;
-    VAR largest:double=0;
-        importing_     ,
+    VAR importing_     ,
         tokenizing_    ,
         declarations_  ,
         interpretation_,
         unaccounted_   ,
+        total_         ,
         timeUnit:string;
+        totalTime:double;
         longest:longint=0;
         formatString:ansistring;
 
-    FUNCTION fmt(CONST d:double):string;
-      begin
-        result:=formatFloat(formatString,d);
-        if length(result)>longest then longest:=length(result);
-      end;
-    FUNCTION fmt(CONST s:string):string;
-      begin
-        result:=StringOfChar(' ',longest-length(s))+s+timeUnit;
-      end;
-
+    FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
+    FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
     begin
       with profiler do begin
-        if importing     >largest then largest:=importing     ;
-        if tokenizing    >largest then largest:=tokenizing    ;
-        if declarations  >largest then largest:=declarations  ;
-        if interpretation>largest then largest:=interpretation;
-        if unaccounted   >largest then largest:=unaccounted   ;
-        if largest<1 then begin
+        totalTime:=importing+tokenizing+declarations+interpretation+unaccounted;
+        if totalTime<1 then begin
           importing     :=importing     *1000;
           tokenizing    :=tokenizing    *1000;
           declarations  :=declarations  *1000;
           interpretation:=interpretation*1000;
           unaccounted   :=unaccounted   *1000;
+          totalTime     :=totalTime     *1000;
           timeUnit:='ms';
           formatString:='0.000';
         end else begin
@@ -626,11 +616,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         declarations_  :=fmt(declarations  );
         interpretation_:=fmt(interpretation);
         unaccounted_   :=fmt(unaccounted   );
+        total_         :=fmt(totalTime     );
         if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),C_nilTokenLocation);
         if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),C_nilTokenLocation);
         if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),C_nilTokenLocation);
         if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),C_nilTokenLocation);
         if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),C_nilTokenLocation);
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),C_nilTokenLocation);
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),C_nilTokenLocation);
       end;
     end;
 
