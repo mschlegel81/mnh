@@ -419,7 +419,9 @@ PROCEDURE TMnhForm.doStartEvaluation;
       deferredUntil:=now+0.1*ONE_SECOND;
       start:=now;
     end;
-
+    with inputRec[PageControl.ActivePageIndex] do
+      if filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
+                     else SetCurrentDir(ExtractFileDir(filePath));
     guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
     UpdateTimeTimer.Interval:=20;
