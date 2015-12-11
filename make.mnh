@@ -1,25 +1,12 @@
 USE regTest, checkstyle, hash, shorten;
 
 private tryPack(filename)->begin
-  filename='regTest/passedTestsStore.mnh' 
-  ? begin
-      copyFile('regTest/passedTestsStore.mnh','regTest/passedTestsStore.mnh.stashed');
-      sandBoxExecute('USE passedTestsStore; passedTestsStore.main("clear");');
-      void;
-    end
-  : void;
-  
-  print(filename);
   local oldContents:=fileContents(filename);
-  filename='regTest/passedTestsStore.mnh' 
-  ?                                      deleteFile('regTest/passedTestsStore.mnh') AND
-    moveFile('regTest/passedTestsStore.mnh.stashed','regTest/passedTestsStore.mnh')
-  : void;
-
   local newContents:=shortenSilently(oldContents);
   local oldContents:=escape(oldContents);
-  'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
+  printf('%40s packed to %6.2d%%',filename,100*length(shorten.formatResult(newContents))/length(oldContents));
 
+  'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
   (length(shorten.formatResult(newContents))<length(oldContents)
    ? shorten.formatResult(newContents)
    : oldContents)&');';
@@ -34,10 +21,7 @@ private ensureInstall->fileExists('install.mnh') ? void : begin
     'doc/examples.txt'|
     files('demos/*.mnh')|
           'demos/inputs/inputs.mnh'|
-    files('packages/*.mnh')|
-    files('regTest/*.mnh')|
-    files('regTest/*.expected')|
-          'regTest/regTestCases.dat',
+    files('packages/*.mnh'),
     tryPack(file))|
     ["deleteFile(myPath);",
      "execPipeless(executor,['-doc']);",
@@ -89,7 +73,7 @@ exeHasWrongVersion(FI) ? begin
        ('-o'&exeName)|
        (debug ? ['-gl','-ddebugMode']
               : ['-O3','-CX','-XX','-Si']) |
-       ['-Fugui','-l','-dLCL','-dLCLwin32','-MObjFPC','-Scgh','-Fucore','-Fuutil','-Ficore','-vewnhi'] |
+       ['-Fugui','-l','-dLCL','-S2cgh','-Fucore','-Fuutil','-Ficore','-vewnhi'] |
        (bin64 ? ['-FuC:\lazarus64\components\synedit\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64\win32','-FuC:\lazarus64\lcl\units\x86_64-win64','-FuC:\lazarus64\components\lazutils\lib\x86_64-win64','-FuC:\lazarus64\packager\units\x86_64-win64','-dversion64bit']
               : ['-FuC:\lazarus32\components\synedit\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32\win32'  ,'-FuC:\lazarus32\lcl\units\i386-win32'  ,'-FuC:\lazarus32\components\lazutils\lib\i386-win32'  ,'-FuC:\lazarus32\packager\units\i386-win32']);
   deleteFile(exeName);
@@ -119,15 +103,19 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['mnh_light.exe','mnh64_light.exe'],
                     ['bin32/mnh.exe','mnh.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
-
+private verboseMove(src,dest)->begin
+  printf('move %-19s -> %-19s',src,dest);
+  moveFile(src,dest);
+end;
+                    
 //*Make distro 7z - including build and regTest if needed
 main('distro')->
   each(i,[0..3],AND,build(i)) ? begin
     compress('64bit');
-    each(pair,movePairs,AND,moveFile@pair)
+    each(pair,movePairs,AND,verboseMove@pair)
     ? begin
         compress('32bit');
-        each(pair,movePairs%[3..0],moveFile@(pair%[1,0]));
+        each(pair,movePairs%[3..0],verboseMove@(pair%[1,0]));
       end
     : print('Error moving files! 32bit distro has not been created!');
   end : void;
