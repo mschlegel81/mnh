@@ -352,6 +352,6 @@ intersect([0..1000]^2,[0..1000]^3);
 
 union(1/[1..5],2/[2..6]);
 
+deleteFile('plotDemo1.png');
 
-
-
+driveInfo;

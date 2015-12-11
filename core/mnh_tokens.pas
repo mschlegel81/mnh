@@ -884,7 +884,7 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
       if ruleList[i]^.id='main' then result^.isExecutable:=true;
     end;
     setLength(ruleList,0);
-    for i:=0 to length(packageUses)-1 do result^.addUses(packageUses[i].path);
+    for i:=0 to length(packageUses)-1 do result^.addUses(expandFileName(packageUses[i].path));
   end;
 
 PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);

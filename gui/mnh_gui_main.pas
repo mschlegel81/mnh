@@ -629,6 +629,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
         PageControl.ActivePageIndex:=i;
         inputRec[i].editor.SetFocus;
       end else setupInputRecForNewFile(0);
+      SynCompletion.editor:=inputRec[PageControl.ActivePageIndex].editor;
 
       if (locationToOpenOnFormStartup.fileName<>'') and
          (locationToOpenOnFormStartup.fileName<>C_nilTokenLocation.fileName) and
