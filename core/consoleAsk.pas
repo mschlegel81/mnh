@@ -1,6 +1,6 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs, sysutils, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil;
+USES mnh_funcs, sysutils, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil,mnh_contexts;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;
@@ -40,7 +40,7 @@ FUNCTION ask(CONST question: ansistring; CONST options: T_arrayOfString): ansist
     result := options [i];
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters):  P_literal;
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext):  P_literal;
   VAR opt: T_arrayOfString;
       i: longint;
   begin

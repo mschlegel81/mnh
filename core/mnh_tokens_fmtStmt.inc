@@ -4,9 +4,9 @@ T_preparedFormatStatement=object
   parts:T_arrayOfString;
   formats:array of T_format;
   formatSubrule:P_literal;
-  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+  CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   DESTRUCTOR destroy;
-  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):T_arrayOfString;
+  FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_arrayOfString;
 end;
 
 {$endif}
@@ -14,16 +14,16 @@ end;
 VAR cachedFormats:specialize G_stringKeyMap<P_preparedFormatStatement>;
     cachedFormatCS:TRTLCriticalSection;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
   begin;
-    if not(adapters.noErrors) then exit;
+    if not(context.adapters^.noErrors) then exit;
     system.enterCriticalSection(cachedFormatCS);
     if cachedFormats.containsKey(formatString,result) then begin
       system.leaveCriticalSection(cachedFormatCS);
       exit(result);
     end;
-    new(result,create(formatString,tokenLocation,adapters));
-    if adapters.noErrors then cachedFormats.put(formatString,result)
+    new(result,create(formatString,tokenLocation,context));
+    if context.adapters^.noErrors then cachedFormats.put(formatString,result)
     else begin
       dispose(result,destroy);
       result:=nil;
@@ -31,7 +31,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     system.leaveCriticalSection(cachedFormatCS);
   end;
 
-CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
     VAR i:longint=1;
         partStart:longint=1;
@@ -54,7 +54,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           '%': if fmtPart then begin
                  if bracketLevel>0
                  then part:=part+formatString[i]
-                 else adapters.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
+                 else context.adapters^.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
                end else begin
                  if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
                    part:=part+'%';
@@ -73,7 +73,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                  part:=part+formatString[i];
                  if bracketLevel<=0 then begin
                    if not(formatString[i] in FORMAT_CHARS) then
-                     adapters.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
+                     context.adapters^.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
                    setLength(result,length(result)+1);
                    result[length(result)-1]:=part;
                    part:='';
@@ -102,12 +102,12 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       begin
         part:=trim(part);
         if pos('{',part)<=0 then begin
-          if pos('}',part)>0 then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
+          if pos('}',part)>0 then context.adapters^.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
           expPart:='$'+intToStr(index);
         end else begin
           expPart:=copy(part,3,pos('}',part)-3);
           part:='%'+copy(part,pos('}',part)+1,length(part));
-          if (pos('{',part)>0) or (pos('}',part)>0) then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
+          if (pos('{',part)>0) or (pos('}',part)>0) then context.adapters^.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
         end;
         if expressionString=''
         then expressionString:=                 '['+expPart
@@ -130,10 +130,10 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           end;
         end;
       end;
-      if adapters.noErrors
+      if context.adapters^.noErrors
       then result:=stringToExpression('{'+expressionString+']}',
                                       tokenLocation,
-                                      adapters)
+                                      context)
       else result:=nil;
     end;
 
@@ -157,8 +157,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
     setLength(formats,0);
   end;
 
-FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):T_arrayOfString;
-  VAR context:T_evaluationContext;
+FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):T_arrayOfString;
   FUNCTION getFormattedString(CONST index:longint):ansistring;
     FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
       VAR i,k:longint;
@@ -179,7 +178,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
             end else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
-        except on E:Exception do adapters.raiseError('Error during formatting: '+e.message,tokenLocation);
+        except on E:Exception do context.adapters^.raiseError('Error during formatting: '+e.message,tokenLocation);
         end;
       end;
     VAR fpar:P_listLiteral;
@@ -190,8 +189,8 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
       if params^.value(k)^.literalType in C_validListTypes
-      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true,adapters)
-      else fpar^.append(              params^.value(k)               ,true,adapters);
+      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true,context.adapters^)
+      else fpar^.append(              params^.value(k)               ,true,context.adapters^);
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
@@ -217,7 +216,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     for i:=1 to params^.size-1 do if params^.value(i)^.literalType in C_validListTypes then begin
       if listSize=-1 then listSize:=P_listLiteral(params^.value(i))^.size
                   else if listSize<>P_listLiteral(params^.value(i))^.size then begin
-        adapters.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
+        context.adapters^.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
         exit;
       end;
     end;
@@ -227,20 +226,17 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     then i:=length(parts) shr 1
     else i:=length(P_subrule(P_expressionLiteral(formatSubrule)^.value)^.pattern.sig);
     if i<>(params^.size-1) then begin
-      adapters.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
+      context.adapters^.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin
-        adapters.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
+        context.adapters^.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
         disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
       exit;
     end;
-    if (formatSubrule<>nil) then context.createNormalContext(P_adapters(@adapters));
     setLength(result,listSize);
-    for i:=0 to listSize-1 do if (adapters.noErrors) then result[i]:=getFormattedString(i);
-    for i:=0 to length(parts)-1 do if odd(i) then formats[i].destroy;
-    if (formatSubrule<>nil) then context.destroy;
-    if not(adapters.noErrors) then setLength(result,0);
+    for i:=0 to listSize-1 do if (context.adapters^.noErrors) then result[i]:=getFormattedString(i);
+    if not(context.adapters^.noErrors) then setLength(result,0);
   end;
 
 PROCEDURE clearCachedFormats;

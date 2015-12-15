@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil;
+     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -35,7 +35,7 @@ PROCEDURE releaseLock(CONST fileName:ansistring);
     end;
   end;
 
-FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i,count:longint;
   begin
     if (params=nil) or (params^.size=0) then exit(newRealLiteral(random))
@@ -50,7 +50,7 @@ FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     result:=nil;
   end;
 
-FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i,count:longint;
   begin
      if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(random(int0^.value)))
@@ -94,35 +94,35 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     end;
   end;
 
-FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
     then result:=filesOrDirs_impl(arg0,true,false);
   end;
 
-FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
     then result:=filesOrDirs_impl(arg0,false,false);
   end;
 
-FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION allFolders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_string, lt_stringList, lt_emptyList])
     then result:=filesOrDirs_impl(arg0,false,true);
   end;
 
-FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION fileExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then result:=newBoolLiteral(fileExists(str0^.value));
   end;
 
-FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
@@ -130,7 +130,7 @@ FUNCTION folderExists_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
   end;
 
 
-FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR accessed:boolean;
   begin
     result:=nil;
@@ -139,14 +139,14 @@ FUNCTION fileContents_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       result:=newStringLiteral(fileContent(str0^.value,accessed));
       releaseLock(str0^.value);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newStringLiteral('');
       end;
     end;
   end;
 
-FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR accessed:boolean;
       L:T_arrayOfString;
       i:longint;
@@ -159,7 +159,7 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newListLiteral;
       end;
@@ -175,14 +175,14 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       result:=newListLiteral;
       for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
       if not(accessed) then begin
-        adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
         disposeLiteral(result);
         result:=newListLiteral;
       end;
     end;
   end;
 
-FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR ok:boolean;
   begin
     result:=nil;
@@ -193,11 +193,11 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
                                      str1^.value);
       releaseLock(str0^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
 
-FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR ok:boolean;
       L:T_arrayOfString;
       i:longint;
@@ -216,12 +216,12 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       ok:=writeFileLines(str0^.value,L,sep);
       releaseLock(str0^.value);
       result:=newBoolLiteral(ok);
-      if not(ok) then adapters.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
+      if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
 
 
-FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
     CONST
       READ_BYTES = 2048;
@@ -243,7 +243,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       try
         tempProcess.execute;
         tempProcess.CloseInput;
-        while tempProcess.running and adapters.noErrors do begin
+        while tempProcess.running and context.adapters^.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
@@ -311,17 +311,17 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
     end;
   end;
 
-FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION execAsync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=execAsyncOrPipeless(params,true);
   end;
 
-FUNCTION execPipeless_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION execPipeless_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=execAsyncOrPipeless(params,false);
   end;
 
-FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
@@ -329,7 +329,7 @@ FUNCTION systime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 
-FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
@@ -339,7 +339,7 @@ FUNCTION deleteFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
@@ -349,7 +349,7 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
   end;
 
-FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
@@ -364,7 +364,7 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
@@ -379,7 +379,7 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR time:double;
       size:int64;
       isExistent,
@@ -397,7 +397,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       resultAsList^.append(
         newListLiteral^.
         appendString(key)^.
-        append(value,false,adapters),false,adapters);
+        append(value,false,context.adapters^),false,context.adapters^);
     end;
 
   VAR i:longint;
@@ -425,14 +425,14 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true,adapters);
-        P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation,adapters),false,adapters);
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true,context.adapters^);
+        P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation,context),false,context.adapters^);
         disposeLiteral(tmpParam);
       end;
     end;
   end;
 
-FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR resultText:ansistring;
   begin
     result:=nil;
@@ -442,14 +442,14 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       except
         on E : Exception do begin
           resultText:='';
-          adapters.raiseCustomMessage(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
+          context.adapters^.raiseCustomMessage(mt_el5_systemError,'httpGet failed with:'+E.message,tokenLocation);
         end;
       end;
       result:=newStringLiteral(resultText);
     end;
   end;
 
-FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
@@ -462,7 +462,7 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: string;
         driveType:longint;
@@ -479,7 +479,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         result:=newListLiteral;
       end else exit(newVoidLiteral);
 
-      P_listLiteral(result)^.append(newListLiteral^.appendString('drive')^.appendString( drive ),false,adapters);
+      P_listLiteral(result)^.append(newListLiteral^.appendString('drive')^.appendString( drive ),false,context.adapters^);
 
       infoPair:=newListLiteral;
       infoPair^.appendString('type');
@@ -490,7 +490,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         DRIVE_CDROM:     infoPair^.appendString('CD_ROM'   );
         DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
       end;
-      P_listLiteral(result)^.append(infoPair,false,adapters);
+      P_listLiteral(result)^.append(infoPair,false,context.adapters^);
 
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
@@ -500,12 +500,12 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       P_listLiteral(result)^.append(
         newListLiteral^.
         appendString('serial')^.
-        appendInt(VolumeSerialNumber),false,adapters);
+        appendInt(VolumeSerialNumber),false,context.adapters^);
 
       P_listLiteral(result)^.append(
         newListLiteral^.
         appendString('label')^.
-        appendString(DriveLetter),false,adapters);
+        appendString(DriveLetter),false,context.adapters^);
     end;
 
   VAR c:char;
@@ -513,11 +513,11 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false,adapters);
+      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false,context.adapters^);
     end;
   end;
 
-FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR e:T_arrayOfString;
       i:longint;
   FUNCTION environmentPair(CONST envString:ansistring):P_listLiteral;
@@ -532,7 +532,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
         if length(env)=1 then exit(result^.appendString(env[0])) else begin
           inner:=newListLiteral;
           for k:=0 to length(env)-1 do inner^.appendString(env[k]);
-          result:=result^.append(inner,false,adapters);
+          result:=result^.append(inner,false,context.adapters^);
         end;
       end;
     end;
@@ -542,7 +542,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     if (params=nil) or (params^.size=0) then begin
       e:=getEnvironment;
       result:=newListLiteral;
-      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false,adapters);
+      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false,context.adapters^);
       setLength(e,0);
     end;
   end;

@@ -1,13 +1,13 @@
 UNIT mnh_funcs_list;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
 IMPLEMENTATION
 {$MACRO ON}
 {$define list0:=P_listLiteral(params^.value(0))}
 {$define arg0:=params^.value(0)}
 {$define arg1:=params^.value(1)}
 
-FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_validListTypes) then begin
@@ -15,7 +15,7 @@ FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      P_listLiteral(result)^.append(arg1,true,adapters);
+      P_listLiteral(result)^.append(arg1,true,context.adapters^);
     end;
   end;
 
@@ -28,29 +28,29 @@ begin
   end;
 end}
 
-FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=head}
 {$define ID_MACRO:='head'}
 SUB_LIST_IMPL;
 
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=tail}
 {$define ID_MACRO:='tail'}
 SUB_LIST_IMPL;
 
-FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=leading}
 {$define ID_MACRO:='leading'}
 SUB_LIST_IMPL;
 
-FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=trailing}
 {$define ID_MACRO:='trailing'}
 SUB_LIST_IMPL;
 
 {$undef SUB_LIST_IMPL}
 
-FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
@@ -66,18 +66,18 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),adapters);
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),context.adapters^);
     end;
   end;
 
-FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes)
     then result:=list0^.sortPerm;
   end;
 
-FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
@@ -89,13 +89,109 @@ FUNCTION unique_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
+    begin result:=newListLiteral^.appendInt(count)^.append(value,true,nullAdapter); end;
+
+  TYPE T_freqMap=specialize G_literalKeyMap<longint>;
+  VAR freqMap:T_freqMap;
+      freqList:T_freqMap.KEY_VALUE_LIST;
+      i:longint;
+      list:P_listLiteral;
+
+  begin
+    if not((params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in C_validListTypes)) then exit(nil);
+    list:=P_listLiteral(params^.value(0));
+
+    freqMap.create;
+    for i:=0 to list^.size-1 do freqMap.put(list^.value(i),freqMap.get(list^.value(i),0)+1);
+    freqList:=freqMap.keyValueList;
+    result:=newListLiteral;
+    for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false,nullAdapter);
+    freqMap.destroy;
+  end;
+
+FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  TYPE T_set=specialize G_literalKeyMap<boolean>;
+  VAR resultSet:T_set;
+      resultList:T_set.KEY_VALUE_LIST;
+      i,j:longint;
+  begin
+    if not((params<>nil) and (params^.size>=1)) then exit(nil);
+    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
+    if params^.size=1 then begin
+      result:=params^.value(0);
+      result^.rereference;
+    end;
+
+    resultSet.create;
+    for i:=0 to params^.size-1 do
+      with P_listLiteral(params^.value(i))^ do
+        for j:=0 to size-1 do resultSet.put(value(j),true);
+
+    result:=newListLiteral;
+    resultList:=resultSet.keyValueList;
+    for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true,nullAdapter);
+    setLength(resultList,0);
+    resultSet.destroy;
+  end;
+
+FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  TYPE T_set=specialize G_literalKeyMap<longint>;
+  VAR resultSet:T_set;
+      resultList:T_set.KEY_VALUE_LIST;
+      i,j:longint;
+  begin
+    if not((params<>nil) and (params^.size>=1)) then exit(nil);
+    for i:=0 to params^.size-1 do if not(params^.value(i)^.literalType in C_validListTypes) then exit(nil);
+    if params^.size=1 then begin
+      result:=params^.value(0);
+      result^.rereference;
+    end;
+
+    resultSet.create;
+    for i:=0 to params^.size-1 do
+      with P_listLiteral(params^.value(i))^ do
+        for j:=0 to size-1 do if resultSet.get(value(j),0)=i then resultSet.put(value(j),i+1);
+
+    i:=params^.size;
+    resultList:=resultSet.keyValueList;
+    result:=newListLiteral;
+    for j:=0 to length(resultList)-1 do if resultList[j].value=i then
+      P_listLiteral(result)^.append(resultList[j].key,true,nullAdapter);
+    setLength(resultList,0);
+    resultSet.destroy;
+  end;
+
+FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR rhsSet:specialize G_literalKeyMap<boolean>;
+      i:longint;
+      LHS,RHS:P_listLiteral;
+  begin
+    if not((params<>nil) and
+           (params^.size=2) and
+           (params^.value(0)^.literalType in C_validListTypes) and
+           (params^.value(1)^.literalType in C_validListTypes))
+    then exit(nil);
+
+    LHS:=P_listLiteral(params^.value(0));
+    RHS:=P_listLiteral(params^.value(1));
+    rhsSet.create;
+    for i:=0 to RHS^.size-1 do rhsSet.put(RHS^.value(i),true);
+    result:=newListLiteral;
+    for i:=0 to LHS^.size-1 do
+      if not(rhsSet.get(LHS^.value(i),false))
+      then P_listLiteral(result)^.append(LHS^.value(i),true,nullAdapter);
+    rhsSet.destroy;
+  end;
+
+FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   PROCEDURE recurse_flatten(CONST L:P_listLiteral);
     VAR i:longint;
     begin
       for i:=0 to L^.size-1 do
       if L^.value(i)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]
-      then P_listLiteral(result)^.append(L^.value(i),true,adapters)
+      then P_listLiteral(result)^.append(L^.value(i),true,context.adapters^)
       else recurse_flatten(P_listLiteral(L^.value(i)));
     end;
 
@@ -106,7 +202,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end else result:=nil;
   end;
 
-FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -117,7 +213,7 @@ FUNCTION size_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     end;
   end;
 
-FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR B:P_literal;
       i,c:longint;
   begin
@@ -136,7 +232,7 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION listAnd_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION listAnd_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR B:P_literal;
       i:longint;
   begin
@@ -154,7 +250,7 @@ FUNCTION listAnd_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
-FUNCTION listOr_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION listOr_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR B:P_literal;
       i:longint;
   begin
@@ -172,18 +268,33 @@ FUNCTION listOr_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
       result:=newListLiteral;
       for i:=list0^.size-1 downto 0 do
-        P_listLiteral(result)^.append(list0^.value(i),true,adapters);
+        P_listLiteral(result)^.append(list0^.value(i),true,context.adapters^);
     end;
   end;
 
-FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION mapPut_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=mapPut(params,tokenLocation,context.adapters^);
+  end;
+
+FUNCTION mapGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=mapGet(params,tokenLocation,context.adapters^);
+  end;
+
+FUNCTION mapDrop_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=mapDrop(params,tokenLocation,context.adapters^);
+  end;
+
+FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
       R:P_listLiteral;
   begin
@@ -216,9 +327,9 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'listAnd',@listAnd_impl,'listAnd(B:booleanList);#Returns true if all values in B are true, false otherwise');
   registerRule(LIST_NAMESPACE,'listOr',@listOr_impl,'listOr(B:booleanList);#Returns true if any value in B is true, false otherwise');
   registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
-  registerRule(LIST_NAMESPACE,'put',@mapPut,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
-  registerRule(LIST_NAMESPACE,'get',@mapGet,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
+  registerRule(LIST_NAMESPACE,'put',@mapPut_imp,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
+  registerRule(LIST_NAMESPACE,'get',@mapGet_imp,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
                                             'get(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
-  registerRule(LIST_NAMESPACE,'drop',@mapDrop,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
+  registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
 end.

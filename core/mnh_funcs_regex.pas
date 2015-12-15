@@ -1,6 +1,6 @@
 UNIT mnh_funcs_regex;
 INTERFACE
-USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_tokLoc,sysutils,mnh_out_adapters;
+USES RegExpr,Classes,mnh_litVar,mnh_funcs,mnh_constants,mnh_tokLoc,sysutils,mnh_out_adapters,mnh_contexts;
 
 IMPLEMENTATION
 TYPE T_triplet=record
@@ -42,7 +42,7 @@ FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
     end;
   end;
 
-FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION regexMatches(CONST trip:T_triplet):boolean;
     VAR regex:TRegExpr;
     begin
@@ -53,7 +53,7 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         result:=regex.Exec(trip.y);
       except
         on e:Exception do begin
-           adapters.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
+           context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -72,7 +72,7 @@ FUNCTION regexMatch_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION regexMatchComposite(CONST trip:T_triplet):P_listLiteral;
     VAR regex:TRegExpr;
         i:longint;
@@ -88,12 +88,12 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
               newListLiteral^.
               appendString(regex.Match   [i])^.
               appendInt   (regex.MatchPos[i])^.
-              appendInt   (regex.MatchLen[i]),false,adapters);
+              appendInt   (regex.MatchLen[i]),false,context.adapters^);
           end;
         until not(regex.ExecNext);
       except
         on e:Exception do begin
-          adapters.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
+          context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -108,12 +108,12 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
       else if i1=0 then result:=regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false,adapters);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false,context.adapters^);
       end;
     end;
   end;
 
-FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION regexSplit(CONST trip:T_triplet):P_listLiteral;
     VAR regex:TRegExpr;
         i:longint;
@@ -126,7 +126,7 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         regex.split(trip.y,pieces);
       except
         on e:Exception do begin
-          adapters.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
+          context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;
@@ -144,12 +144,12 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       else if i1=0 then result:=regexSplit(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false,adapters);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false,context.adapters^);
       end;
     end;
   end;
 
-FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION regexReplace(CONST trip:T_triplet):ansistring;
     VAR regex:TRegExpr;
     begin
@@ -159,7 +159,7 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         result:=regex.Replace(trip.y,trip.z,false);
       except
         on e:Exception do begin
-          adapters.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
+          context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,tokenLocation);
         end;
       end;
       regex.free;

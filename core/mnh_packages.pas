@@ -13,7 +13,6 @@ TYPE
   {$include mnh_tokens_pattern.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {include mnh_tokens_recycler.inc}
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
@@ -67,7 +66,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
-FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_preparedFormatStatement;
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
 
 TYPE T_packageEnvironment=record
        mainPackageProvider:P_codeProvider;
@@ -205,7 +204,6 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 
 {$define include_implementation}
 {$include mnh_tokens_token.inc}
-{include mnh_tokens_recycler.inc}
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_futureTask.inc}

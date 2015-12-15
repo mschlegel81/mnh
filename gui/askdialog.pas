@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics;
+  StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
 TYPE
 
   { TaskForm }
@@ -36,7 +36,7 @@ TYPE
 VAR
   askForm: TaskForm;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 {$R *.lfm}
@@ -126,7 +126,7 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
     ownerThread := 0;
   end;
 
-FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
+FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
   VAR opt: T_arrayOfString;
       i: longint;
   begin

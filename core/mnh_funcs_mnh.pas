@@ -1,6 +1,6 @@
 UNIT mnh_funcs_mnh;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -10,7 +10,7 @@ IMPLEMENTATION
 {$define arg0:=params^.value(0)}
 {$define arg1:=params^.value(1)}
 
-FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -19,7 +19,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         lt_list..lt_listWithError: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false,adapters);
+            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
         end;
         else begin
           x^.rereference;
@@ -33,7 +33,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
   end;
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -44,7 +44,7 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
-FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
@@ -54,20 +54,20 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
-FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0)
     then result:=newStringLiteral(paramStr(0));
   end;
 
-FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
     begin
       P_listLiteral(result)^.append(
         newListLiteral^.
         appendString(el0)^.
-        appendString(el1),false,adapters);
+        appendString(el1),false,context.adapters^);
     end;
   VAR name:string;
       i:longint;
@@ -88,14 +88,14 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true,adapters);
-        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,adapters),false,adapters);
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true,context.adapters^);
+        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,context),false,context.adapters^);
         disposeLiteral(tmpParam);
       end;
     end;
   end;
 
-FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
   begin
     result:=nil;
@@ -139,14 +139,14 @@ FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T
     end;
   end;
 
-FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then result:=newIntLiteral(arg0^.hash);
   end;
 
-FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR keys:T_arrayOfString;
       i:longint;
   begin
@@ -159,14 +159,14 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
-    if (params=nil) or (params^.size=0) then adapters.raiseError('Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then adapters.raiseError(arg0^.toString,tokenLocation);
+    if (params=nil) or (params^.size=0) then context.adapters^.raiseError('Fail.',tokenLocation)
+    else if (params<>nil) and (params^.size=1) then context.adapters^.raiseError(arg0^.toString,tokenLocation);
     result:=nil;
   end;
 
-FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION recurse(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
@@ -178,11 +178,11 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_string : if length(P_stringLiteral(x)^.value)=1
                     then exit(newIntLiteral(ord(P_stringLiteral(x)^.value[1])))
                     else exit(newIntLiteral(-1));
-        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation,adapters));
+        lt_error,lt_void, lt_real,lt_expression: exit(newErrorLiteralRaising('ord can only be applied to booleans, ints and strings',tokenLocation,context.adapters^));
         else begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do if adapters.noErrors then
-            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,adapters);
+          for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
+            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
         end;
       end;
     end;
@@ -193,28 +193,28 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then result:=recurse(arg0);
   end;
 
-FUNCTION addPrintAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION addPrintAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR printAdapter:P_textFilePrintOnlyAdapter;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       new(printAdapter,create(str0^.value));
-      adapters.addOutAdapter(printAdapter,true);
+      context.adapters^.addOutAdapter(printAdapter,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
-FUNCTION addFullAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION addFullAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      addOutfile(adapters,str0^.value,true);
+      addOutfile(context.adapters^,str0^.value,true);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
 
-FUNCTION removeAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION removeAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      adapters.removeOutAdapter(str0^.value);
+      context.adapters^.removeOutAdapter(str0^.value);
       result:=newVoidLiteral;
     end else result:=nil;
   end;

@@ -1,9 +1,9 @@
 UNIT mnh_funcs;
 INTERFACE
-USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,
+USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
      myStringUtil,Classes,mySys;
 TYPE
-  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
@@ -37,16 +37,16 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
   end;
 {$undef INNER_FORMATTING}
 
-FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
     system.enterCriticalSection(print_cs);
-    adapters.clearPrint();
+    context.adapters^.clearPrint();
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
 
-FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR stringToPrint:ansistring='';
       i:longint;
   begin
@@ -59,7 +59,7 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       lt_list..lt_listWithError: stringToPrint:=stringToPrint + params^.value(i)^.toString;
     end;
     system.enterCriticalSection(print_cs);
-    adapters.printOut(formatTabs(split(stringToPrint)));
+    context.adapters^.printOut(formatTabs(split(stringToPrint)));
     system.leaveCriticalSection(print_cs);
     result:=newVoidLiteral;
   end;
