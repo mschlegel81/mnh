@@ -825,6 +825,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ru
     if not(packageRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
+      adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
     end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin
       adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart);
     end;
