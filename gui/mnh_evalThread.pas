@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,myStringUtil;
+USES sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,myStringUtil,mnh_tokens;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);

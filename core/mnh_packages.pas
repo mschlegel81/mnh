@@ -1,7 +1,7 @@
 UNIT mnh_packages;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
-     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, //types
+     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_html, //even more specific
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_regex;
