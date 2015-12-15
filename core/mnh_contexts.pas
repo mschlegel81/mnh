@@ -1,6 +1,8 @@
-{$ifdef include_interface}
-
-  T_valueStoreElement=object
+UNIT mnh_contexts;
+INTERFACE
+USES mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
+TYPE
+    T_valueStoreElement=object
     data:array of T_namedVariable;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -48,8 +50,7 @@
     PROCEDURE reportVariables;
   end;
 
-{$endif}
-{$ifdef include_implementation}
+IMPLEMENTATION
 CONSTRUCTOR T_valueStoreElement.create;
   begin
     setLength(data,0);
@@ -306,4 +307,4 @@ PROCEDURE T_evaluationContext.reportVariables;
     end;
   end;
 
-{$endif}
+end.

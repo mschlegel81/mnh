@@ -1,7 +1,7 @@
 UNIT mnh_packages;
 INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
-     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, //types
+     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_html, //even more specific
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_regex;
@@ -13,7 +13,7 @@ TYPE
   {$include mnh_tokens_pattern.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_tokens_recycler.inc}
+  {include mnh_tokens_recycler.inc}
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
@@ -205,7 +205,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 
 {$define include_implementation}
 {$include mnh_tokens_token.inc}
-{$include mnh_tokens_recycler.inc}
+{include mnh_tokens_recycler.inc}
 {$include mnh_tokens_pattern.inc}
 {$include mnh_tokens_subrule.inc}
 {$include mnh_tokens_futureTask.inc}

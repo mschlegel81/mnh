@@ -1206,7 +1206,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else stack_push_push;
     end;
 
-  PROCEDURE operator_and_literal_push; inline;
+  PROCEDURE operator_and_literal_push;
     VAR p:P_token;
         bracketLevel:longint=0;
     begin
