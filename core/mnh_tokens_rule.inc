@@ -312,12 +312,16 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):
   VAR code:ansistring;
   begin
     if (adapters.noErrors) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
-      code:=C_tokenString[tt_modifier_persistent]+' '+
-            id+
+      if ruleType=rt_persistent_private then code:=C_tokenString[tt_modifier_private]+' '
+                                        else code:='';
+      code:=code+
+            C_tokenString[tt_modifier_persistent]+' '+
+            id;
+      adapters.raiseNote('Writing back: '+code,declarationStart);
+      code:=code+
             C_tokenString[tt_assign]+
             namedValue.getValue^.toString+
             C_tokenString[tt_semicolon];
-      adapters.raiseNote('Writing back: '+C_tokenString[tt_modifier_persistent]+' '+id,declarationStart);
       provider.replaceCode(
         declarationStart.line-1,
         declarationStart.column,
