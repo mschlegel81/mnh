@@ -292,8 +292,8 @@ TYPE
               fmtCat_hex);
     intFmt,realFmt,strFmt:string;
 
-    CONSTRUCTOR create(CONST formatString:string);
-    FUNCTION format(CONST l:P_literal):string;
+    CONSTRUCTOR create(CONST formatString:ansistring);
+    PROCEDURE formatAppend(VAR txt:ansistring; CONST l:P_literal);
     DESTRUCTOR destroy;
   end;
 
@@ -2276,7 +2276,7 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end;
   end;
 
-CONSTRUCTOR T_format.create(CONST formatString: string);
+CONSTRUCTOR T_format.create(CONST formatString: ansistring);
   begin
     if length(formatString)>0 then case formatString[length(formatString)] of
       'd','D': begin
@@ -2335,19 +2335,22 @@ CONSTRUCTOR T_format.create(CONST formatString: string);
     end;
   end;
 
-FUNCTION T_format.format(CONST l: P_literal): string;
+PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
   begin
     case category of
       fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
-        lt_real: exit(sysutils.format(realFmt,[P_realLiteral(l)^.val]));
-        lt_int : exit(sysutils.format(realFmt,[extended(P_intLiteral(l)^.val)]));
+        lt_real: begin txt:=txt+sysutils.format(realFmt,[P_realLiteral(l)^.val]); exit; end;
+        lt_int : begin txt:=txt+sysutils.format(realFmt,[extended(P_intLiteral(l)^.val)]); exit; end;
       end;
       fmtCat_decimal, fmtCat_hex:
-      if l^.literalType=lt_int then exit(sysutils.format(intFmt,[P_intLiteral(l)^.val]));
+      if l^.literalType=lt_int then begin
+        txt:=txt+sysutils.format(intFmt,[P_intLiteral(l)^.val]);
+        exit;
+      end;
     end;
     if l^.literalType in C_validScalarTypes
-    then result:=sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
-    else result:=sysutils.format(strFmt,[l^.toString]);
+    then txt:=txt+sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
+    else txt:=txt+sysutils.format(strFmt,[l^.toString]);
   end;
 
 DESTRUCTOR T_format.destroy;

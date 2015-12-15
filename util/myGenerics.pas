@@ -56,8 +56,8 @@ TYPE
 
   T_arrayOfString=array of ansistring;
   OPERATOR :=(x:ansistring):T_arrayOfString;
-  PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
-  PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:string);
+  PROCEDURE append(VAR x:T_arrayOfString; CONST y:ansistring);
+  PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:ansistring);
   PROCEDURE append(VAR x:T_arrayOfString; CONST y:T_arrayOfString);
   PROCEDURE dropFirst(VAR x:T_arrayOfString; CONST dropCount:longint);
   FUNCTION C_EMPTY_STRING_ARRAY:T_arrayOfString;
@@ -134,13 +134,15 @@ TYPE
 
   GENERIC G_lazyVar<ENTRY_TYPE>=object
     TYPE T_obtainer=FUNCTION():ENTRY_TYPE;
+         T_disposer=PROCEDURE(x:ENTRY_TYPE);
     private
       valueObtained:boolean;
       obtainer:T_obtainer;
+      disposer:T_disposer;
       v :ENTRY_TYPE;
       FUNCTION getValue:ENTRY_TYPE;
     public
-      CONSTRUCTOR create(CONST o:T_obtainer);
+      CONSTRUCTOR create(CONST o:T_obtainer; CONST d:T_disposer);
       DESTRUCTOR destroy;
       PROPERTY value:ENTRY_TYPE read getValue;
   end;
@@ -154,13 +156,13 @@ OPERATOR :=(x:ansistring):T_arrayOfString;
     result[0]:=x;
   end;
 
-PROCEDURE append(VAR x:T_arrayOfString; CONST y:string);
+PROCEDURE append(VAR x:T_arrayOfString; CONST y:ansistring);
   begin
     setLength(x,length(x)+1);
     x[length(x)-1]:=y;
   end;
 
-PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:string);
+PROCEDURE appendIfNew(VAR x:T_arrayOfString; CONST y:ansistring);
   VAR i:longint;
   begin
     i:=0;
@@ -282,14 +284,16 @@ FUNCTION G_lazyVar.getValue: ENTRY_TYPE;
     result:=v;
   end;
 
-CONSTRUCTOR G_lazyVar.create(CONST o:T_obtainer);
+CONSTRUCTOR G_lazyVar.create(CONST o:T_obtainer; CONST d:T_disposer);
   begin
     obtainer:=o;
+    disposer:=d;
     valueObtained:=false;
   end;
 
 DESTRUCTOR G_lazyVar.destroy;
   begin
+    if valueObtained and (disposer<>nil) then disposer(v);
   end;
 
 { G_safeVar }
@@ -844,7 +848,10 @@ CONSTRUCTOR G_stringKeyMap.create(rebalanceFactor: double);
   begin
     system.initCriticalSection(cs);
     rebalanceFac:=rebalanceFactor;
-    clear;
+    setLength(bucket,1);
+    setLength(bucket[0],0);
+    bitMask:=0;
+    entryCount:=0;
   end;
 
 PROCEDURE G_stringKeyMap.clear;

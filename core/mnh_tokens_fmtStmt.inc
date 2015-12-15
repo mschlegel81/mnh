@@ -151,9 +151,11 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
   end;
 
 DESTRUCTOR T_preparedFormatStatement.destroy;
+  VAR i:longint;
   begin
     if formatSubrule<>nil then disposeLiteral(formatSubrule);
     setLength(parts,0);
+    for i:=0 to length(formats)-1 do formats[i].destroy;
     setLength(formats,0);
   end;
 
@@ -167,7 +169,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
-            then result:=result+formats[i].format(p.value(k))
+            then formats[i].formatAppend(result,p.value(k))
             else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];

@@ -129,9 +129,9 @@ FUNCTION MemoryUsed: int64;
   end;
 
 INITIALIZATION
-  CMD_PATH.create(@obtainCmd);
-  SEVEN_ZIP_PATH.create(@obtain7Zip);
-  NOTEPAD_PATH.create(@obtainNotepad);
+  CMD_PATH.create(@obtainCmd,nil);
+  SEVEN_ZIP_PATH.create(@obtain7Zip,nil);
+  NOTEPAD_PATH.create(@obtainNotepad,nil);
 
 FINALIZATION
   CMD_PATH.destroy;

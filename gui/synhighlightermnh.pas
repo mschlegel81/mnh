@@ -67,14 +67,14 @@ TYPE
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
   public
-    class FUNCTION GetLanguageName: string; override;
+    class FUNCTION GetLanguageName: ansistring; override;
   public
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     DESTRUCTOR destroy; override;
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
     FUNCTION GetEol: boolean; override;
     FUNCTION getRange: pointer; override;
-    FUNCTION getToken: string; override;
+    FUNCTION getToken: ansistring; override;
     PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
     FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
     FUNCTION GetTokenKind: integer; override;
@@ -82,7 +82,7 @@ TYPE
     PROCEDURE next; override;
     PROCEDURE ResetRange; override;
     PROCEDURE setRange(value: pointer); override;
-    PROCEDURE SetLine(CONST newValue: string; LineNumber: integer); override;
+    PROCEDURE SetLine(CONST newValue: ansistring; LineNumber: integer); override;
     FUNCTION setMarkedWord(CONST s:ansistring):boolean;
     PROCEDURE setMarkedToken(CONST line,column:longint);
   end;
@@ -183,7 +183,7 @@ FUNCTION TSynMnhSyn.GetDefaultAttribute(index: integer): TSynHighlighterAttribut
     result := styleTable [tkDefault];
   end;
 
-PROCEDURE TSynMnhSyn.SetLine(CONST newValue: string; LineNumber: integer);
+PROCEDURE TSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
   begin
     inherited;
     fLine := PChar(newValue);
@@ -390,7 +390,7 @@ FUNCTION TSynMnhSyn.getRange: pointer;
     result := nil;
   end;
 
-FUNCTION TSynMnhSyn.getToken: string;
+FUNCTION TSynMnhSyn.getToken: ansistring;
   VAR len: longint;
   begin
     len := run-fTokenPos;
@@ -438,7 +438,7 @@ PROCEDURE TSynMnhSyn.setRange(value: pointer);
     ResetRange;
   end;
 
-class FUNCTION TSynMnhSyn.GetLanguageName: string;
+class FUNCTION TSynMnhSyn.GetLanguageName: ansistring;
   begin
     result := 'MNH';
   end;

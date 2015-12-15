@@ -464,7 +464,7 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
 FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION infoForLetter(CONST drive:char):P_literal;
-    VAR DriveLetter: string;
+    VAR DriveLetter: ansistring;
         driveType:longint;
         NotUsed:     dword=0;
         VolumeFlags: dword=0;

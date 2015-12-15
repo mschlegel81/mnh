@@ -147,7 +147,6 @@ PROCEDURE TDebugForm.miVerboseRunClick(Sender: TObject);
   end;
 
 PROCEDURE TDebugForm.rollingAppend(CONST line: ansistring);
-  VAR i:longint;
   begin
     roll[rollOffset]:=line;
     inc(rollOffset);

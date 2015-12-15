@@ -989,10 +989,15 @@ FUNCTION initTimer:TEpikTimer;
     result.start;
   end;
 
+PROCEDURE disposeTimer(t:TEpikTimer);
+  begin
+    t.destroy;
+  end;
+
 {$undef include_implementation}
 VAR i:longint;
 INITIALIZATION
-  timer.create(@initTimer);
+  timer.create(@initTimer,@disposeTimer);
 {$define include_initialization}
 {$include mnh_tokens_fmtStmt.inc}
   with environment do begin
