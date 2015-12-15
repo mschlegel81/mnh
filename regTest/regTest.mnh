@@ -13,6 +13,22 @@ private expectedResultExists(scriptname,is32Bit:boolean)->fileExists(expectedRes
 private expectedResult      (scriptname,is32Bit:boolean)->fileLines (expectedResultName(scriptname,is32Bit));
 private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
+//*Display uncovered scripts
+main('uncovered')->begin
+  local coveredTests:=(expression(fileContents(TESTS_STORE))()%%0).unique.splitFileName%%'expanded';
+  local first:=true;
+  each(script,
+       (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName%%'expanded',
+       script in coveredTests ? void : begin
+         first ? begin
+           first:=false;
+           print('The following scripts are not covered by tests:');
+         end : void;
+         print('  ',script);
+       end);
+  first ? print('There are no scrips uncovered by tests') : void;
+end;
+
 //*Executes all tests with current interpreter
 main->main(executor);
 
@@ -20,6 +36,7 @@ private is64Bit(exe)->'x86_64'==(exec(exe,['-version']).split(' ').trailing.trai
 
 private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,separate32BitOutput,FMT_STRING)->
   begin
+    printf(FMT_STRING,scriptName,'','');
     local SRF:=separate32BitOutput AND not(is64Bit(executor));
     delOutputBefore and outputFileName<>''
     ? deleteFile(ROOT_DIRECTORY&outputFileName)
@@ -30,17 +47,17 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
     when(
       not(expectedResultExists(scriptName,SRF)),
         begin
-          printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
+          printf(FMT_STRING,'',scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
           []; //Test did not fail, so it is interpreted as passed
         end,
       expectedResult(scriptName,SRF)==scriptOutput,
         begin
-          printf(FMT_STRING,scriptName,scriptTime,'o.k.');
+          printf(FMT_STRING,'',scriptTime,'o.k.');
           markAsPassed(scriptName,exeHash,scriptTime);
           [];
         end,
         begin
-          printf(FMT_STRING,scriptName,scriptTime,"Results differ!");
+          printf(FMT_STRING,'',scriptTime,"Results differ!");
           storeResult(lastResultName(scriptName,SRF),scriptOutput);
           [expectedResultName(scriptName,SRF),
            lastResultName    (scriptName,SRF)];
@@ -74,7 +91,7 @@ main(exe,...)->begin
     testCases:=testCases%sortPerm(size(testCases).random);
     stopAtTime:=systime+5/(24*60*60);
   end : void;
-  local FMT_STRING:="%-"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"s %7.2fsec %s";
+  local FMT_STRING:="%{$0}-"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"s %{$1:numeric ? format('%7.2fsec',$1) : ''}s %{$2}s";
   local first:=true;
   local failedTestOut:=[];
   local allPassed:=true;
@@ -114,22 +131,6 @@ main(exe,...)->begin
   end);
   first ? print('All tests have been passed by ',exe) : void;
   
-  size(testCases)>0 ? begin
-    print(previouslyPassedTests,' Tests were already marked as passed.');
-    //displayUncoveredTests:--------------
-    local coveredTests:=(expression(fileContents(TESTS_STORE))()%%0).unique.splitFileName%%'expanded';
-    first:=true;
-    each(script,
-         (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName%%'expanded',
-         script in coveredTests ? void : begin
-           first ? begin
-             first:=false;
-             print('The following scripts are not covered by tests:');
-           end : void;
-           print('  ',script);
-         end);
-    //--------------:displayUncoveredTests
-    first ? print('There are no scrips uncovered by tests') : void;
-  end : void;
+  size(testCases)>0 ? print(previouslyPassedTests,' Tests were already marked as passed.') : void;
   allPassed;
 end;

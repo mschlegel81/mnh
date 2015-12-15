@@ -1,8 +1,0 @@
-Consolidation of [{A,B} {C,D}]
-              is [{C,D},{A,B}]
-Consolidation of [{A,B} {B,C}]
-              is [{A,B,C}]
-Consolidation of [{A,B} {C,D} {D,B}]
-              is [{A,B,C,D}]
-Consolidation of [{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]
-              is [{f,g,h,i,k},{a,b,c,d}]
