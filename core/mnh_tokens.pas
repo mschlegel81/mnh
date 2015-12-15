@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters,mnh_fileWrappers,myStringUtil;
+USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters;
 TYPE
   P_token=^T_token;
   T_token=packed object
