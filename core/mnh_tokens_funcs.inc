@@ -543,220 +543,16 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION inner_formatting(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):T_arrayOfString;
-  FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
-    VAR i:longint=1;
-        partStart:longint=1;
-        bracketLevel:longint=0;
-        part:ansistring;
-        fmtPart:boolean=false;
-    begin
-      part:='';
-      setLength(result,0);
-      while i<=length(formatString) do begin
-        case formatString[i] of
-          '{': begin
-                 if fmtPart then inc(bracketLevel);
-                 part:=part+formatString[i];
-               end;
-          '}': begin
-                 if fmtPart then dec(bracketLevel);
-                 part:=part+formatString[i];
-               end;
-          '%': if fmtPart then begin
-                 if bracketLevel>0
-                 then part:=part+formatString[i]
-                 else adapters.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
-               end else begin
-                 if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
-                   part:=part+'%';
-                   inc(i);
-                 end else begin
-                   setLength(result,length(result)+1);
-                   result[length(result)-1]:=part;
-                   part:='%';
-                   partStart:=i;
-                   bracketLevel:=0;
-                   fmtPart:=true;
-                 end;
-               end;
-          'a'..'z','A'..'Z':
-               if fmtPart then begin
-                 part:=part+formatString[i];
-                 if bracketLevel<=0 then begin
-                   if not(formatString[i] in FORMAT_CHARS) then
-                     adapters.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
-                   setLength(result,length(result)+1);
-                   result[length(result)-1]:=part;
-                   part:='';
-                   partStart:=i;
-                   bracketLevel:=0;
-                   fmtPart:=false;
-                 end;
-               end else part:=part+formatString[i];
-          else part:=part+formatString[i];
-        end;
-        inc(i);
-      end;
-      if part<>'' then begin
-        setLength(result,length(result)+1);
-        result[length(result)-1]:=part;
-      end;
-    end;
-
-  FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_literal;
-    VAR i,k:longint;
-        needSubRule:boolean=false;
-        expressionString:ansistring;
-
-    PROCEDURE splitPart(VAR part:ansistring; CONST index:longint);
-      VAR expPart:ansistring;
-      begin
-        part:=trim(part);
-        if pos('{',part)<=0 then begin
-          if pos('}',part)>0 then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
-          expPart:='$'+intToStr(index);
-        end else begin
-          expPart:=copy(part,3,pos('}',part)-3);
-          part:='%'+copy(part,pos('}',part)+1,length(part));
-          if (pos('{',part)>0) or (pos('}',part)>0) then adapters.raiseError('Invalid format specification: '+escapeString(part),tokenLocation);
-        end;
-        if expressionString=''
-        then expressionString:=                 '['+expPart
-        else expressionString:=expressionString+','+expPart;
-        if part='%' then part:='%S';
-      end;
-
-    begin
-      //Check if a rule is needed at all:
-      for i:=0 to length(parts)-1 do if odd(i) and (copy(trim(parts[i]),2,1)='{') then needSubRule:=true;
-      if not(needSubRule) then exit(nil);
-
-      expressionString:='';
-      k:=0;
-      for i:=0 to length(parts)-1 do begin
-        if odd(i) then begin
-          if parts[i]<>'' then begin
-            splitPart(parts[i],k);
-            inc(k);
-          end;
-        end;
-      end;
-      if adapters.noErrors
-      then result:=stringToExpression('{'+expressionString+']}',
-                                      tokenLocation,
-                                      adapters)
-      else result:=nil;
-    end;
-
-  VAR parts:T_arrayOfString;
-      formats:array of T_format;
-      formatSubrule:P_literal;
-      i:longint;
-      listSize:longint=-1;
-      context:T_evaluationContext;
-
-  FUNCTION getFormattedString(CONST index:longint):ansistring;
-    FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
-      VAR i,k:longint;
-          L:P_literal;
-      begin
-        result:='';
-        k:=0;
-        try
-          for i:=0 to length(parts)-1 do if odd(i) then begin
-            if k<p.size then begin
-              L:=p.value(k);
-              case L^.literalType of
-                lt_int   : result:=result+formats[i].format(P_intLiteral   (L)^.value);
-                lt_real  : result:=result+formats[i].format(P_realLiteral  (L)^.value);
-                lt_string: result:=result+formats[i].format(P_stringLiteral(L)^.value);
-                else       result:=result+formats[i].format(L^.toString);
-              end;
-            end else result:=result+'%'+parts[i]+'%';
-            inc(k);
-          end else result:=result+parts[i];
-        except on E:Exception do adapters.raiseError('Error during formatting: '+e.message,tokenLocation);
-        end;
-      end;
-    VAR fpar:P_listLiteral;
-        temp:P_literal;
-        k:longint;
-    begin
-      //prepare parameters
-      fpar:=newListLiteral;
-      for k:=1 to params^.size-1 do
-      if params^.value(k)^.literalType in C_validListTypes
-      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true,adapters)
-      else fpar^.append(              params^.value(k)               ,true,adapters);
-
-      if formatSubrule<>nil then begin
-        temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
-          P_expressionLiteral(formatSubrule),
-          fpar,
-          0,
-          context);
-        disposeLiteral(fpar);
-        if (temp<>nil) and (temp^.literalType in C_validListTypes)
-        then fpar:=P_listLiteral(temp)
-        else begin
-          if temp<>nil then disposeLiteral(temp);
-          exit(''); //One of the called routines already raised a proper error
-        end;
-      end;
-      result:=simpleFormat(parts,fpar^);
-      disposeLiteral(fpar);
-    end;
-
-  begin
-    setLength(result,0);
-    if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
-      for i:=1 to params^.size-1 do if params^.value(i)^.literalType in C_validListTypes then begin
-        if listSize=-1 then listSize:=P_listLiteral(params^.value(i))^.size
-                    else if listSize<>P_listLiteral(params^.value(i))^.size then begin
-          adapters.raiseError('Invalid list lengths '+intToStr(listSize)+' and '+intToStr(P_listLiteral(params^.value(i))^.size)+' for formatting.',tokenLocation);
-          exit;
-        end;
-      end;
-      if listSize=-1 then listSize:=1;
-      parts:=splitFormatString(P_stringLiteral(params^.value(0))^.value);
-      formatSubrule:=getFormatSubrule(parts);
-      if (formatSubrule<>nil) and (formatSubrule^.literalType<>lt_expression) then begin
-        disposeLiteral(formatSubrule);
-        exit;
-      end;
-      if formatSubrule=nil
-      then i:=length(parts) shr 1
-      else i:=length(P_subrule(P_expressionLiteral(formatSubrule)^.value)^.pattern.sig);
-      if i<>(params^.size-1) then begin
-        adapters.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
-        if formatSubrule<>nil then begin
-          adapters.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
-          disposeLiteral(formatSubrule);
-        end;
-        exit;
-      end;
-      setLength(formats,length(parts));
-      for i:=0 to length(parts)-1 do if odd(i) then formats[i].create(parts[i]);
-      if (formatSubrule<>nil) then context.createNormalContext(P_adapters(@adapters));
-      setLength(result,listSize);
-      for i:=0 to listSize-1 do if (adapters.noErrors) then result[i]:=getFormattedString(i);
-      for i:=0 to length(parts)-1 do if odd(i) then formats[i].destroy;
-      if (formatSubrule<>nil) then begin
-        context.destroy;
-        disposeLiteral(formatSubrule);
-      end;
-      if not(adapters.noErrors) then setLength(result,0);
-    end;
-  end;
-
 FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR txt:T_arrayOfString;
       i:longint;
+      preparedStatement:P_preparedFormatStatement;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
-      txt:=inner_formatting(params,tokenLocation,adapters);
+      preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,adapters);
+      if not(adapters.noErrors) then exit(nil);
+      txt:=preparedStatement^.format(params,tokenLocation,adapters);
       if length(txt)=1 then result:=newStringLiteral(txt[0])
       else begin
         result:=newListLiteral;
@@ -766,11 +562,14 @@ FUNCTION format_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+  VAR preparedStatement:P_preparedFormatStatement;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.value(0)^.literalType=lt_string) then begin
+      preparedStatement:=getFormat(P_stringLiteral(params^.value(0))^.value,tokenLocation,adapters);
+      if not(adapters.noErrors) then exit(nil);
       system.enterCriticalSection(print_cs);
-      adapters.printOut(formatTabs(reSplit(inner_formatting(params,tokenLocation,adapters))));
+      adapters.printOut(formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,adapters))));
       system.leaveCriticalSection(print_cs);
       result:=newVoidLiteral;
     end;

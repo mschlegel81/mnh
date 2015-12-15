@@ -18,7 +18,7 @@ TYPE
   {$include mnh_tokens_rule.inc}
   {$include mnh_tokens_futureTask.inc}
   {$include mnh_tokens_procBlock.inc}
-
+  {$include mnh_tokens_fmtStmt.inc}
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
 
   T_packageReference=object
@@ -67,12 +67,13 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
+FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_preparedFormatStatement;
+
 TYPE T_packageEnvironment=record
        mainPackageProvider:P_codeProvider;
        secondaryPackages:array of P_package;
        mainPackage      :P_package;
      end;
-
 
 VAR environment:T_packageEnvironment;
 
@@ -211,6 +212,7 @@ FUNCTION guessPackageForToken(CONST token:T_token):P_package;
 {$include mnh_tokens_procBlock.inc}
 {$include mnh_tokens_rule.inc}
 {$include mnh_tokens_funcs.inc}
+{$include mnh_tokens_fmtStmt.inc}
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
   VAR i,j:longint;
@@ -994,6 +996,7 @@ VAR i:longint;
 INITIALIZATION
   timer.create(@initTimer);
 {$define include_initialization}
+{$include mnh_tokens_fmtStmt.inc}
   with environment do begin
     new(mainPackageProvider,create);
     new(mainPackage,create(mainPackageProvider));
@@ -1015,8 +1018,10 @@ INITIALIZATION
   if MAX_NUMBER_OF_SECONDARY_WORKER_THREADS<1 then
      MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=1;
   {$include mnh_tokens_funcs.inc}
+{$undef include_initialization}
 
 FINALIZATION
+{$define include_finalization}
   pendingTasks.destroy;
   with environment do begin
     dispose(mainPackage,destroy);
@@ -1024,5 +1029,5 @@ FINALIZATION
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
     setLength(secondaryPackages,0);
   end;
-
+{$include mnh_tokens_fmtStmt.inc}
 end.
