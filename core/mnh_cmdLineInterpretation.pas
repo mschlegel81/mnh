@@ -82,6 +82,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
     VAR context:T_evaluationContext;
     begin
       environment.mainPackageProvider^.setPath(fileOrCommandToInterpret);
+      fileOrCommandToInterpret:='';
       if wantHelpDisplay then begin
         environment.mainPackageProvider^.load;
         printMainPackageDocText(consoleAdapters);

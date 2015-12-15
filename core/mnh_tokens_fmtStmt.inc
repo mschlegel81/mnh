@@ -161,26 +161,20 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   FUNCTION getFormattedString(CONST index:longint):ansistring;
     FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
       VAR i,k:longint;
-          L:P_literal;
       begin
         result:='';
         k:=0;
         try
           for i:=0 to length(parts)-1 do if odd(i) then begin
-            if k<p.size then begin
-              L:=p.value(k);
-              case L^.literalType of
-                lt_int   : result:=result+formats[i].format(P_intLiteral   (L)^.value);
-                lt_real  : result:=result+formats[i].format(P_realLiteral  (L)^.value);
-                lt_string: result:=result+formats[i].format(P_stringLiteral(L)^.value);
-                else       result:=result+formats[i].format(L^.toString);
-              end;
-            end else result:=result+'%'+parts[i]+'%';
+            if k<p.size
+            then result:=result+formats[i].format(p.value(k))
+            else result:=result+'%'+parts[i]+'%';
             inc(k);
           end else result:=result+parts[i];
         except on E:Exception do context.adapters^.raiseError('Error during formatting: '+e.message,tokenLocation);
         end;
       end;
+
     VAR fpar:P_listLiteral;
         temp:P_literal;
         k:longint;

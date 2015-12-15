@@ -5,26 +5,6 @@ USES math, strutils, sysutils,  myGenerics;
 
 TYPE charSet=set of char;
 
-{ T_format }
-
-T_format=object
-  category:(fmtCat_decimal,
-            fmtCat_scientific,
-            fmtCat_fixedPoint,
-            fmtCat_general,
-            fmtCat_currency,
-            fmtCat_number,
-            fmtCat_string,
-            fmtCat_hex);
-  intFmt,realFmt,strFmt:string;
-
-  CONSTRUCTOR create(CONST formatString:string);
-  FUNCTION format(CONST s:string):string;
-  FUNCTION format(CONST i:int64):string;
-  FUNCTION format(CONST e:extended):string;
-  DESTRUCTOR destroy;
-end;
-
 CONST
   C_lineBreakChar = #10;
   C_carriageReturnChar = #13;
@@ -435,89 +415,6 @@ FUNCTION myTimeToStr(dt:double):string;
         dt:=(dt-floor(dt))*60; result:=result+formatFloat('00',floor(dt));
       end
     else result:=timeToStr(dt);
-  end;
-
-{ T_format }
-
-CONSTRUCTOR T_format.create(CONST formatString: string);
-  begin
-    if length(formatString)>0 then case formatString[length(formatString)] of
-      'd','D': begin
-        category:=fmtCat_decimal;
-        intFmt :=formatString;
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      'e','E': begin
-        category:=fmtCat_scientific;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'f','F': begin
-        category:=fmtCat_fixedPoint;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'g','G': begin
-        category:=fmtCat_general;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'm','M': begin
-        category:=fmtCat_currency;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      'n','N': begin
-        category:=fmtCat_number;
-        realFmt:=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
-      end;
-      's','S': begin
-        category:=fmtCat_string;
-        strFmt :=formatString;
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      'x','X': begin
-        category:=fmtCat_hex;
-        intFmt :=formatString;
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-      else begin
-        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
-        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
-        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
-      end;
-    end;
-  end;
-
-FUNCTION T_format.format(CONST s: string): string;
-  begin
-    result:=sysutils.format(strFmt,[s]);
-  end;
-
-FUNCTION T_format.format(CONST i: int64): string;
-  begin
-    if category in [fmtCat_scientific..fmtCat_number]
-      then result:=sysutils.format(realFmt,[extended(i)])
-      else result:=sysutils.format(intFmt,[i]);
-  end;
-
-FUNCTION T_format.format(CONST e: extended): string;
-  begin
-    result:=sysutils.format(realFmt,[e]);
-  end;
-
-DESTRUCTOR T_format.destroy;
-  begin
-
   end;
 
 end.

@@ -281,6 +281,22 @@ TYPE
   T_pointerToStringCallback = FUNCTION(CONST p: pointer): string;
   T_evaluateCompatorCallback = FUNCTION (CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
 
+  T_format=object
+    category:(fmtCat_decimal,
+              fmtCat_scientific,
+              fmtCat_fixedPoint,
+              fmtCat_general,
+              fmtCat_currency,
+              fmtCat_number,
+              fmtCat_string,
+              fmtCat_hex);
+    intFmt,realFmt,strFmt:string;
+
+    CONSTRUCTOR create(CONST formatString:string);
+    FUNCTION format(CONST l:P_literal):string;
+    DESTRUCTOR destroy;
+  end;
+
 VAR
   disposeSubruleCallback: T_disposeSubruleCallback;
   subruleToStringCallback: T_pointerToStringCallback;
@@ -2260,6 +2276,83 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     end;
   end;
 
+CONSTRUCTOR T_format.create(CONST formatString: string);
+  begin
+    if length(formatString)>0 then case formatString[length(formatString)] of
+      'd','D': begin
+        category:=fmtCat_decimal;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'e','E': begin
+        category:=fmtCat_scientific;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'f','F': begin
+        category:=fmtCat_fixedPoint;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'g','G': begin
+        category:=fmtCat_general;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'm','M': begin
+        category:=fmtCat_currency;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      'n','N': begin
+        category:=fmtCat_number;
+        realFmt:=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :='%'+intToStr(length(sysutils.format(realFmt,[0.0])))+'s';
+      end;
+      's','S': begin
+        category:=fmtCat_string;
+        strFmt :=formatString;
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      'x','X': begin
+        category:=fmtCat_hex;
+        intFmt :=formatString;
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+      else begin
+        intFmt :=copy(formatString,1,length(formatString)-1)+'d';
+        strFmt :=copy(formatString,1,length(formatString)-1)+'s';
+        realFmt:=copy(formatString,1,length(formatString)-1)+'f';
+      end;
+    end;
+  end;
+
+FUNCTION T_format.format(CONST l: P_literal): string;
+  begin
+    case category of
+      fmtCat_scientific, fmtCat_fixedPoint, fmtCat_general, fmtCat_currency, fmtCat_number: case l^.literalType of
+        lt_real: exit(sysutils.format(realFmt,[P_realLiteral(l)^.val]));
+        lt_int : exit(sysutils.format(realFmt,[extended(P_intLiteral(l)^.val)]));
+      end;
+      fmtCat_decimal, fmtCat_hex:
+      if l^.literalType=lt_int then exit(sysutils.format(intFmt,[P_intLiteral(l)^.val]));
+    end;
+    if l^.literalType in C_validScalarTypes
+    then result:=sysutils.format(strFmt,[P_scalarLiteral(l)^.stringForm])
+    else result:=sysutils.format(strFmt,[l^.toString]);
+  end;
+
+DESTRUCTOR T_format.destroy;
+  begin
+  end;
 
 VAR
   i: longint;
