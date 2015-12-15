@@ -1,6 +1,6 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_cmdLineInterpretation, mnh_tokens, sysutils, mnh_constants, mnh_out_adapters;
+USES mnh_cmdLineInterpretation, mnh_packages, sysutils, mnh_constants, mnh_out_adapters;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;

@@ -1,6 +1,6 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_tokens,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,mnh_tokLoc,myStringUtil,sysutils,myGenerics,
      lclintf,mySys,mnh_html;
 FUNCTION parseCmdLine:T_tokenLocation;
 VAR consoleAdapters:T_adapters;

@@ -9,7 +9,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog,
   mnh_cmdLineInterpretation, mnh_tokLoc, mnh_funcs, mnh_funcs_list,
   mnh_funcs_math, mnh_funcs_mnh, mnh_funcs_regex, mnh_funcs_strings,
-  mnh_funcs_system, mnh_litVar, mnh_tokens, mnh_out_adapters,
+  mnh_funcs_system, mnh_litVar, mnh_packages, mnh_out_adapters,
   consoleAsk, mnh_constants, mnh_doc, mnh_html,
   mnh_debugForm, SynHighlighterMnh, mnh_evalThread, mySys,
   mnh_plotData,mnh_plotFuncs, mnh_plotForm

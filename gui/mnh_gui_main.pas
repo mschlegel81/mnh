@@ -9,7 +9,7 @@ USES
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
-  mnh_tokens,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
+  mnh_packages,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm;
 
