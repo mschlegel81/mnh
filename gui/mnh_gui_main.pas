@@ -189,7 +189,7 @@ TYPE
 
     PROCEDURE setupInputRecForNewFile    (CONST index:longint);
     PROCEDURE setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
-    PROCEDURE updateSheetCaption(CONST index:longint);
+    FUNCTION updateSheetCaption(CONST index:longint):ansistring;
     FUNCTION getInputEditIndexForFilename(CONST fileName:ansistring):longint;
     FUNCTION pseudoName(CONST index:longint):ansistring;
   public
@@ -909,7 +909,7 @@ FUNCTION TMnhForm._doSaveAs_(CONST index:longint): boolean;
   begin
     if index<0 then exit(false);
     if SaveDialog.execute then with inputRec[index] do begin
-      filePath:=extractRelativePath(expandFileName(''),SaveDialog.fileName);
+      filePath:=expandFileName(SaveDialog.fileName);
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
       writeFileLines(filePath,arr,'');
@@ -953,7 +953,7 @@ PROCEDURE TMnhForm.setupInputRecForNewFile    (CONST index:longint);
 PROCEDURE TMnhForm.setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
   begin
     with inputRec[index] do begin
-      filePath:=extractRelativePath(expandFileName(''),fileName);
+      filePath:=expandFileName(fileName);
       fileAge(filePath,fileAccessAge);
       changed:=false;
 
@@ -963,16 +963,27 @@ PROCEDURE TMnhForm.setupInputRecForLoadingFile(CONST index:longint; CONST fileNa
     end;
   end;
 
-PROCEDURE TMnhForm.updateSheetCaption(CONST index:longint);
+FUNCTION TMnhForm.updateSheetCaption(CONST index:longint):ansistring;
   VAR i:longint;
   begin
+    result:='';
     if (index<0) or (index>9)
     then for i:=0 to 9 do updateSheetCaption(i)
     else with inputRec[index] do begin
       if filePath<>'' then begin
-        if changed then sheet.Caption:=filePath+' *'
-                   else sheet.Caption:=filePath;
-      end else sheet.Caption:='<new '+intToStr(index)+'>';
+        if changed then begin
+                          sheet.Caption:=extractFileName(filePath)+' *';
+                          result:=filePath+' *';
+                        end
+                   else begin
+                          sheet.Caption:=extractFileName(filePath);
+                          result:=filePath;
+                        end;
+      end else begin
+        result:='<new '+intToStr(index)+'>';
+        sheet.Caption:=result;
+      end;
+      result:='MNH5 '+result;
     end;
   end;
 
@@ -980,7 +991,7 @@ FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName:ansistring):longin
   VAR i:longint;
       uName:ansistring;
   begin
-    uName:=extractRelativePath(expandFileName(''),fileName);
+    uName:=expandFileName(fileName);
     for i:=0 to 9 do with inputRec[i] do if sheet.TabVisible and ((filePath=uName) or (pseudoName(i)=fileName)) then exit(i);
     if copy(fileName,1,4)='<new' then exit;
     for i:=0 to 9 do with inputRec[i] do
@@ -1165,7 +1176,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if askForm.displayPending then askForm.ShowModal;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
-    then aid:='MNH5 '+inputRec[PageControl.ActivePageIndex].sheet.Caption
+    then aid:=updateSheetCaption(PageControl.ActivePageIndex)
     else aid:='MNH5';
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption

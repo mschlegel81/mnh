@@ -127,7 +127,7 @@ FUNCTION locateSources: T_arrayOfString;
           if (info.name<>'.') and (info.name<>'..') then
             recursePath(path+info.name+DirectorySeparator);
         end else if uppercase(extractFileExt(info.name)) = SCRIPT_EXTENSION then
-          appendIfNew(result,extractRelativePath(expandFileName(''),path+info.name));
+          appendIfNew(result,path+info.name);
       until (findNext(info)<>0);
       sysutils.findClose(info);
     end;
@@ -444,7 +444,7 @@ PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
 
 FUNCTION T_codeProvider.getPath: ansistring;
   begin
-    result := extractRelativePath(expandFileName(''),filePath);
+    result := filePath;
   end;
 
 PROCEDURE T_codeProvider.load;

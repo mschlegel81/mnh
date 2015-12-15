@@ -143,7 +143,6 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
     visible:=f.readBoolean;
     if not(visible) then exit(true);
     filePath:=f.readAnsiString;
-    if filePath<>'' then filePath:=extractRelativePath(expandFileName(''),filePath);
     changed:=f.readBoolean;
     if changed then begin
       fileAccessAge:=f.readDouble;
