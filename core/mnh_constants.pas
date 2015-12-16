@@ -23,6 +23,8 @@ CONST
   C_infText = 'Inf';
   C_boolText: array[false..true] of string = ('false', 'true');
 
+  C_eachIndexId='index';
+
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.MNH';

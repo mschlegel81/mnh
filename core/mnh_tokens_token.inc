@@ -718,7 +718,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,context);
+              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateBinary(resultLiteral,L,aggregatorExpression,callDepth+1,context);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
@@ -784,20 +784,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),context);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),context);
             if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
       end;
-
+    VAR indexLiteral:T_intLiteral;
     begin
       eachLocation:=first^.location;
       if P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void] then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
+      if first^.txt=C_eachIndexId then context.adapters^.raiseWarning('Each variable "'+C_eachIndexId+'" is not accessible (hidden by each-index).',eachLocation);
       if callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
@@ -818,8 +819,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           initFutures;
           aggregateFutures(true);
         end else begin
-          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then
-            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,context),true);
+          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
+            indexLiteral.create(i);
+            addToAggregation(bodyRule[j]^.directEvaluateBinary(@indexLiteral,itList^.value(i),nil,callDepth+1,context),true);
+            indexLiteral.destroy;
+          end;
           finalizeAggregation;
         end;
       end else begin

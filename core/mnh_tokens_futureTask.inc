@@ -14,7 +14,7 @@
     next:P_futureTask;
     scope:P_evaluationContext;
 
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST x:P_literal; VAR context:T_evaluationContext);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
     FUNCTION    getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
     PROCEDURE   free(VAR context:T_evaluationContext);
@@ -31,7 +31,7 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
   end;
@@ -80,12 +80,13 @@ PROCEDURE limitPoolThreads(CONST newLimit:longint);
     while poolThreadsRunning>MAX_NUMBER_OF_SECONDARY_WORKER_THREADS do sleep(100);
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; VAR context:T_evaluationContext);
+CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext);
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
     scope:=@context;
     param.create;
+    param.appendInt(eachIndex);
     param.append(x,true,context.adapters^);
     if expr^.replaces(@param,nil,task,dummy,context)
     then state:=fts_pending
@@ -94,7 +95,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST x: P_literal; V
     next:=nil;
   end;
 
-PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationContext);
+PROCEDURE T_futureTask.evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
   begin
     if context.adapters^.noErrors then begin
       reduceExpression(task,callDepth,context);
@@ -105,7 +106,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationC
     repeat state:=fts_ready until state=fts_ready;
   end;
 
-FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext): P_literal;
+FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
   VAR loc:T_tokenLocation;
   begin
     while state in [fts_pending,fts_evaluating] do sleep(1);
@@ -151,9 +152,9 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
   begin
-    new(result,createTask(expr,x,context));
+    new(result,createTask(expr,eachIndex,x,context));
     if result^.state=fts_pending then begin
       system.enterCriticalSection(cs);
       if first=nil then begin
