@@ -1284,6 +1284,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       for i:=i0 to length(stack)-1 do tokenMessage:=tokenMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
       i:=0;
+      tokenMessage:=tokenMessage+' # ';
+      prevWasIdLike:=false;
       p:=first;
       while (p<>nil) and (i<16) do begin
         tokenMessage:=tokenMessage+p^.toString(prevWasIdLike,prevWasIdLike);
@@ -1299,9 +1301,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.reportVariables;
       end else
       {$endif}
-      begin
-        context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
-      end;
+      context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
     end;
 
 {$MACRO ON}
@@ -1601,10 +1601,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef debugMode}
     except
-      on EOutOfMemory do begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'An unhandled EOutOfMemory exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
-      end else begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'An unhandled, unknown exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+      on e:Exception do begin
+        context.adapters^.raiseCustomMessage(mt_el5_systemError,'An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
+        context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,C_nilTokenLocation);
       end;
     end;
     {$endif}

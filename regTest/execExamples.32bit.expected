@@ -10,7 +10,7 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in>                expression("");
 Error               The parsed expression appears to be empty
-Error [stack trace]  expression("")
+Error [stack trace]   # expression("")
 out>                expression("")
  in> not(true);
 out> false
@@ -40,7 +40,7 @@ out> 65
 out> -1
  in>                ord(2.1);
 Error               ord can only be applied to booleans, ints and strings
-Error [stack trace]  <ERR>
+Error [stack trace]   # <ERR>
 out>                <ERR>
  in> softCast("A");
 out> "A"
@@ -210,11 +210,11 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
 Error               Fail.
-Error [stack trace]  fail
+Error [stack trace]   # fail
 out>                fail
  in>                fail("Told you this wouldn't work!");
 Error               "Told you this wouldn't work!"
-Error [stack trace]  fail("Told you this wouldn't work!")
+Error [stack trace]   # fail("Told you this wouldn't work!")
 out>                fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
