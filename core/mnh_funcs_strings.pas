@@ -1,6 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,Diff,mnh_contexts;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,Diff,mnh_contexts,FileUtil;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -655,6 +655,40 @@ diffStatOrDiff_impl;
 FUNCTION diffStats_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 diffStatOrDiff_impl;
 
+FUNCTION sysToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_string: result:=newStringLiteral(SysToUTF8(str0^.value));
+      lt_stringList: begin
+        result:=newListLiteral;
+        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(SysToUTF8(P_stringLiteral(value(i))^.value));
+      end;
+      lt_emptyList: begin
+        result:=arg0;
+        result^.rereference;
+      end;
+    end;
+  end;
+
+FUNCTION utf8ToSys_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_string: result:=newStringLiteral(UTF8ToSys(str0^.value));
+      lt_stringList: begin
+        result:=newListLiteral;
+        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(UTF8ToSys(P_stringLiteral(value(i))^.value));
+      end;
+      lt_emptyList: begin
+        result:=arg0;
+        result^.rereference;
+      end;
+    end;
+  end;
+
 INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S');
@@ -678,5 +712,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
   registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script for strings A and B or string lists A and B');
   registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B');
-
+  registerRule(STRINGS_NAMESPACE,'utf8ToSys',@utf8ToSys_impl,'utf8ToSys(S);#Converts a string or a string list from UTF-8 to the system encoding');
+  registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding t UTF-8');
 end.
