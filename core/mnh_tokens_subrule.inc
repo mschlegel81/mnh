@@ -52,8 +52,28 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
       eachLevel:longint=0;
 
   FUNCTION top:T_tokenType; begin result:=bracketStack[length(bracketStack)-1]; end;
-  PROCEDURE push(CONST t:T_tokenType); begin setLength(bracketStack,length(bracketStack)+1); bracketStack[length(bracketStack)-1]:=t; end;
-  PROCEDURE pop; begin if length(bracketStack)>0 then setLength(bracketStack,length(bracketStack)-1); end;
+
+  PROCEDURE push(CONST t:T_tokenType; CONST txt:ansistring);
+    begin
+      setLength(bracketStack,length(bracketStack)+1);
+      bracketStack[length(bracketStack)-1]:=t;
+    end;
+
+  PROCEDURE pop;
+    begin
+      if length(bracketStack)>0 then begin
+        if (bracketStack[length(bracketStack)-1] in [tt_each,tt_parallelEach]) and (eachLevel>0) then dec(eachLevel);
+        setLength(bracketStack,length(bracketStack)-1);
+      end;
+    end;
+
+  FUNCTION skipVariable(CONST txt:ansistring):boolean;
+    VAR i:longint;
+    begin
+      if not(skipEachBodies and (eachLevel>0)) then exit(false);
+      if txt=C_eachIndexId then exit(true);
+      result:=false;
+    end;
 
   begin
     setLength(bracketStack,0);
@@ -68,7 +88,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
         parIdx:=-1;
         case token.tokType of
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
-          tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: if not(skipEachBodies and (eachLevel>0)) then begin
+          tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: if not(skipVariable(token.txt)) then begin
             parIdx:=pattern.indexOfId(token.txt);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
@@ -88,11 +108,10 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
               end;
             end;
           end;
-          tt_each, tt_parallelEach: push(token.tokType);
+          tt_each, tt_parallelEach: push(token.tokType,token.txt);
           tt_separatorComma: if (top in [tt_each,tt_parallelEach]) then inc(eachLevel);
-          tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(token.tokType);
-          tt_listBraceClose, tt_expBraceClose,tt_end: pop;
-          tt_braceClose: if (top in [tt_each,tt_parallelEach]) then dec(eachLevel);
+          tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(token.tokType,token.txt);
+          tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_end: pop;
         end;
       end;
     end;
