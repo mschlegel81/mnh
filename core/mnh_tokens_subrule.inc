@@ -68,7 +68,6 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
     end;
 
   FUNCTION skipVariable(CONST txt:ansistring):boolean;
-    VAR i:longint;
     begin
       if not(skipEachBodies and (eachLevel>0)) then exit(false);
       if txt=C_eachIndexId then exit(true);

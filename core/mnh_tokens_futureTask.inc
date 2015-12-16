@@ -144,11 +144,23 @@ CONSTRUCTOR T_taskQueue.create;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
+  VAR t:P_futureTask;
+      context:T_evaluationContext;
   begin
-    while poolThreadsRunning>0 do begin
-      destructionPending:=true;
-      sleep(5);
+    system.EnterCriticalsection(cs);
+    destructionPending:=true;
+    system.LeaveCriticalsection(cs);
+    t:=dequeue;
+    if t<>nil then begin
+      context.createSanboxContext(nullAdapter);
+      while t<>nil do begin
+        t^.free(context);
+        dispose(t,destroy);
+        t:=dequeue;
+      end;
+      context.destroy;
     end;
+    while poolThreadsRunning>0 do sleep(1);
     system.doneCriticalSection(cs);
   end;
 
