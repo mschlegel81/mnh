@@ -713,7 +713,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
     then complainAboutUncalled(true,context.adapters^);
     if (usecase in [lu_forDirectExecution,lu_forCallingMain])
-    then finalize(context.adapters^);
+    then begin
+      finalize(context.adapters^);
+      clearCachedFormats;
+    end;
 
     with profiler do if active then begin
       unaccounted:=timer.value.Elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
@@ -752,7 +755,6 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   VAR ruleList:array of P_rule;
       wroteBack:boolean=false;
       i:longint;
-
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
