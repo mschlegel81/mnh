@@ -33,6 +33,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
+    CONST FORMAT_CHARS:charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
         partStart:longint=1;
         bracketLevel:longint=0;
