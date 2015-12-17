@@ -1,7 +1,7 @@
 USE hash;
 private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
 private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
-persistent passedTests:=[];
+private persistent passedTests:=[];
 
 synchronized markAsPassed(case,exeHash,runTime)->begin
   local contained:=false;
@@ -72,7 +72,7 @@ begin
     end).sort({$x%1<=$y%1});
   
     print('All tests ordered by time:');
-    printf("%s\t%7.3s\t+/-\t%g\ts",timePerTest%%0,round(timePerTest%%1,4),round(timePerTest%%2,4));
+    printf("%s\t%7.3f\t+/-\t%g\ts",timePerTest%%0,round(timePerTest%%1,4),round(timePerTest%%2,4));
     print;
 
     local currentBin:=executor.exec(["-codeHash"]).head;

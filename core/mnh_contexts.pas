@@ -2,7 +2,7 @@ UNIT mnh_contexts;
 INTERFACE
 USES mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
 TYPE
-    T_valueStoreElement=object
+  T_valueStoreElement=object
     data:array of T_namedVariable;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;

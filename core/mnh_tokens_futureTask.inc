@@ -147,15 +147,15 @@ DESTRUCTOR T_taskQueue.destroy;
   VAR t:P_futureTask;
       context:T_evaluationContext;
   begin
-    system.EnterCriticalsection(cs);
+    system.enterCriticalSection(cs);
     destructionPending:=true;
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(cs);
     t:=dequeue;
     if t<>nil then begin
-      context.createSanboxContext(nullAdapter);
+      context.createSanboxContext(@nullAdapter);
       while t<>nil do begin
         t^.free(context);
-        dispose(t,destroy);
+        dispose(t,proFormaDestroy);
         t:=dequeue;
       end;
       context.destroy;

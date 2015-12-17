@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, ComCtrls, mnh_plotData,mnh_constants, mnh_out_adapters, mnh_evalThread, mnh_gui_settings,mnh_debugForm;
+  Menus, ComCtrls, mnh_plotData,mnh_constants, mnh_out_adapters, mnh_evalThread, mnh_gui_settings;
 
 TYPE
 
