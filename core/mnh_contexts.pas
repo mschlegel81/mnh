@@ -233,8 +233,7 @@ FUNCTION T_evaluationContext.newToken(CONST original:P_token):P_token;
   end;
 
 FUNCTION T_evaluationContext.getVariable(CONST id:ansistring):P_namedVariable;
-  VAR i:longint;
-      blockEncountered:boolean;
+  VAR blockEncountered:boolean;
   begin
     result:=valueStore.getVariable(id,blockEncountered);
     if (result=nil) and not(blockEncountered) and (parentContext<>nil) then result:=parentContext^.getVariable(id);

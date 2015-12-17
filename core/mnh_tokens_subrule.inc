@@ -2,7 +2,7 @@
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
                  srt_inline_for_literal,
-                 srt_inline_for_each);
+                 srt_inline_for_special);
   P_subrule=^T_subrule;
   T_subrule=object
     private
@@ -22,7 +22,7 @@
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST skipEachBodies:boolean);
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext; CONST enforcedType:T_subruleType=srt_normal_public);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -109,36 +109,37 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
           end;
           tt_each, tt_parallelEach: push(token.tokType,token.txt);
           tt_separatorComma: if (top in [tt_each,tt_parallelEach]) then inc(eachLevel);
-          tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(token.tokType,token.txt);
+          tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin,tt_blockingBegin: push(token.tokType,token.txt);
           tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_end: pop;
         end;
       end;
     end;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext; CONST enforcedType:T_subruleType=srt_normal_public);
   begin
     called:=false;
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
+    if enforcedType<>srt_normal_public then typ:=enforcedType;
     pattern:=pat;
     pattern.finalizeRefs;
     declaredAt:=declAt;
 
     constructExpression(rep,context,false);
-    if needEmbrace(context.adapters^) then embrace;
+    needEmbrace(context.adapters^); //Ignoring the result, but checking bracket balancing is worthwile
   end;
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
   begin
     called:=false;
-    typ:=srt_inline_for_each;
+    typ:=srt_inline_for_special;
     pattern.create;
     pattern.appendFreeId(C_eachIndexId);
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
     constructExpression(rep,context,true);
-    if needEmbrace(context.adapters^) then embrace;
+    needEmbrace(context.adapters^); //Ignoring the result, but checking bracket balancing is worthwile
   end;
 
 
@@ -171,7 +172,7 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
         result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
              or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
              or (oT=tt_expBraceOpen) and (ct=tt_expBraceClose)
-             or (oT=tt_begin) and (ct=tt_end);
+             or (oT in [tt_begin,tt_blockingBegin]) and (ct=tt_end);
       end;
 
     begin
@@ -202,7 +203,7 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
 
     result:=false;
     for i:=0 to length(preparedBody)-1 do case preparedBody[i].token.tokType of
-      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(i);
+      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin,tt_blockingBegin: push(i);
       tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_end: pop(i);
 
       tt_separatorComma, tt_separatorCnt,
@@ -408,6 +409,16 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         t:=t^.next;
       end;
       lastRep:=t;
+      if typ in [srt_normal_private,srt_normal_public] then begin
+        t:=firstRep;
+        firstRep:=context.newToken(declaredAt,'',tt_blockingBegin);
+        firstRep^.next:=t;
+
+        lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
+        lastRep:=lastRep^.next;
+        lastRep^.next:=context.newToken(declaredAt,'',tt_end);
+        lastRep:=lastRep^.next;
+      end;
       result:=true;
     end else if (param<>nil)
             and (length(preparedBody)=1)
@@ -420,7 +431,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     end else begin
       result:=false;
       case typ of
-        srt_inline_for_each: begin
+        srt_inline_for_special: begin
           if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
                        else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
         end;
@@ -551,7 +562,7 @@ FUNCTION T_subrule.toString:ansistring;
       prevIdLike:=idLike;
     end;
     if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
-    else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
+    else if typ=srt_inline_for_special    then result:=pattern.toString+'{'+result+'}'
     else result:=pattern.toString+result;
   end;
 
@@ -633,7 +644,7 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin
-    if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
+    if (length(preparedBody)<>1) or (typ in [srt_inline_for_special,srt_inline_for_literal]) then exit(nil);
     with preparedBody[0] do if token.tokType=tt_literal then begin
       called:=true;
       result:=token.data;

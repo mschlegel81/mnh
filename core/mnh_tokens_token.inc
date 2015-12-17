@@ -93,25 +93,20 @@ FUNCTION T_tokenArray.atEnd:boolean;
 
 FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
   VAR k:longint;
-      lastComment:ansistring='';
       intrinsicFuncPtr:T_intFuncCallback;
   begin
-    setLength(result,0);
-    repeat
-      step(nil,lastComment);
-      if not(atEnd) then begin
-        setLength(result,length(result)+1);
-        result[length(result)-1]:=current.getRawToken;
-        with result[length(result)-1] do if tokType in [tt_identifier,tt_identifier_pon] then begin
-          if intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then begin
-            if tokType=tt_identifier_pon
-            then tokType:=tt_intrinsicRule_pon
-            else tokType:=tt_intrinsicRule;
-          end;
+    setLength(result,length(t));
+    for k:=0 to length(t)-1 do begin
+      result[k]:=t[k].getRawToken;
+      with result[k] do if tokType in [tt_identifier,tt_identifier_pon] then begin
+        if intrinsicRuleMap.containsKey(t[k].txt,intrinsicFuncPtr) then begin
+          if tokType=tt_identifier_pon
+          then tokType:=tt_intrinsicRule_pon
+          else tokType:=tt_intrinsicRule;
         end;
       end;
-    until atEnd;
-    for k:=0 to length(t)-1 do t[k].undefine;
+      t[k].undefine;
+    end;
   end;
 
 FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
@@ -568,8 +563,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
         case t^.tokType of
-          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
+          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
+          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end                   : dec(bracketLevel);
           tt_separatorComma: if bracketLevel=1 then begin
             result[length(result)-1].last:=p; //end of body part is token before comma
             setLength(result,length(result)+1);
@@ -868,8 +863,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context));
-        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context));
+        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context,srt_inline_for_special));
+        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context,srt_inline_for_special));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
@@ -1048,8 +1043,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1061,8 +1056,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1227,8 +1222,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;
@@ -1243,8 +1238,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;
@@ -1318,7 +1313,7 @@ tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in lis
 tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[-1]=tt_begin) then begin
+tt_semicolon: if (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
   if (cTokType[2]=tt_end) then begin
     stack_popDestroy;
     first^.next:=context.disposeToken(first^.next);
@@ -1451,7 +1446,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             else context.adapters^.raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
           end else context.adapters^.raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
               stack_popDestroy;
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1468,7 +1463,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_CASES;
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
               first:=context.disposeToken(first);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1494,6 +1489,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
         tt_begin: begin
           context.valueStore.scopePush(false);
+          stack_push;
+          didSubstitution:=true;
+        end;
+        tt_blockingBegin: begin
+          context.valueStore.scopePush(true);
           stack_push;
           didSubstitution:=true;
         end;

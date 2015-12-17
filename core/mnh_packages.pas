@@ -144,7 +144,8 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
 
 FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
   VAR messages:T_storedMessages;
-      i,blobLevel:longint;
+      i:longint;
+      blobLevel:longint=0;
       tmp:ansistring;
   begin
     messages:=runAlone(input);

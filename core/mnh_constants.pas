@@ -55,7 +55,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin,  tt_end,
+    tt_each, tt_parallelEach, tt_when, tt_while, tt_blockingBegin, tt_begin, tt_end,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -173,7 +173,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    'each', 'pEach', 'when','while','begin','end',
+    'each', 'pEach', 'when','while','begin','begin','end',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',

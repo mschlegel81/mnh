@@ -71,7 +71,7 @@ FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
       case tokType of
         tt_literal, tt_aggregatorExpressionLiteral: result:=result+span('literal',txt);
         tt_intrinsicRule,tt_intrinsicRule_pon,
-        tt_aggregatorConstructor,tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin,  tt_end: result:=result+span('builtin',txt);
+        tt_aggregatorConstructor,tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin, tt_blockingBegin, tt_end: result:=result+span('builtin',txt);
         tt_identifier, tt_parameterIdentifier, tt_localUserRule,
         tt_importedUserRule, tt_rulePutCacheValue,
         tt_identifier_pon,
