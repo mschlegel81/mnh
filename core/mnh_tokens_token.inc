@@ -786,27 +786,25 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
       end;
+
     VAR indexLiteral:T_intLiteral;
     begin
       eachLocation:=first^.location;
-      if P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void] then begin
-        context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
-        exit
-      end;
-      if first^.txt=C_eachIndexId then context.adapters^.raiseWarning('Each variable "'+C_eachIndexId+'" is not accessible (hidden by each-index).',eachLocation);
       if callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
       end;
+      if not(P_literal(first^.data)^.literalType in C_validListTypes) then begin
+        context.adapters^.raiseError('(p)each can only be applied to list literals',eachLocation);
+        exit
+      end;
+      itList:=first^.data;
+      if first^.txt=C_eachIndexId then context.adapters^.raiseWarning('Each variable "'+C_eachIndexId+'" is not accessible (hidden by each-index).',eachLocation);
       if not(parseBodyOk) then exit;
-      if (P_literal(first^.data)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
-      then itList:=newOneElementListLiteral(first^.data,false,context.adapters^)
-      else itList:=first^.data;
       resultLiteral:=nil;
       first^.data:=nil;
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
-      //t:=first;
       if (aggregatorPresent<>no) and (itList^.size=0)
       then context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
