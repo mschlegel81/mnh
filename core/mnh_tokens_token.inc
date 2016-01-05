@@ -182,7 +182,7 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
           result.tokType:=tt_literal;
-          result.data:=newStringLiteral(id,copy(line,lineLocation.column,parsedLength));
+          result.data:=newStringLiteral(id);
         end;
       end;
       '$': begin
@@ -803,9 +803,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         exit;
       end;
       if not(parseBodyOk) then exit;
-      if (P_literal(first^.data)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
-      then itList:=newOneElementListLiteral(first^.data,false,context.adapters^)
-      else itList:=first^.data;
+      if (P_literal(first^.data)^.literalType in C_validListTypes)
+      then itList:=first^.data
+      else itList:=newOneElementListLiteral(first^.data,false,context.adapters^);
+
       resultLiteral:=nil;
       first^.data:=nil;
       first^.txt:='';
@@ -1532,21 +1533,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack_push;
         end;
         tt_list_constructor: stack_push;
-        tt_identifier: begin
-          if context.valueStore.getVariable(first^.txt,didSubstitution)<>nil then begin
-            first^.tokType:=tt_blockLocalVariable;
-            first^.data:=nil;
-            didSubstitution:=true;
-          end else begin
-            if first^.data=nil then first^.data:=guessPackageForToken(first^);
-            P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-            didSubstitution:=(first^.tokType<>tt_identifier);
-          end;
-        end;
-        tt_identifier_pon: begin
+        tt_identifier,tt_identifier_pon: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-          if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
+          didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation);
         tt_mutate: stack_push;
