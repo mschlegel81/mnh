@@ -1110,15 +1110,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.declareLocalValue(first^.txt,newValue);
+          context.valueStore.createVariable(first^.txt,newValue);
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.setLocalValue(first^.txt,newValue);
+          context.getVariable(first^.txt)^.setValue(newValue);
           first:=context.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin
-          newValue:=context.mutateInline(first^.txt,kind,newValue,first^.location);
+          newValue:=context.getVariable(first^.txt)^.mutate(kind,newValue,first^.location,context.adapters^);
           if context.adapters^.noErrors then begin
             first:=context.disposeToken(first);
             disposeLiteral(first^.data);
@@ -1319,7 +1319,7 @@ tt_semicolon: if (cTokType[-1]=tt_begin) then begin
     stack_popDestroy;
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
-    context.scopePop;
+    context.valueStore.scopePop;
     didSubstitution:=true;
   end else begin
     first:=context.disposeToken(first);
@@ -1451,7 +1451,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack_popDestroy;
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
-              context.scopePop;
+              context.valueStore.scopePop;
               didSubstitution:=true;
             end else begin
               stack_popLink;
@@ -1468,7 +1468,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first:=context.disposeToken(first);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
-              context.scopePop;
+              context.valueStore.scopePop;
               didSubstitution:=true;
             end else begin
               stack_popLink;
@@ -1489,13 +1489,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_begin: begin
-          context.scopePush;
+          context.valueStore.scopePush(false);
           stack_push;
           didSubstitution:=true;
         end;
         tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: stack_push;
         tt_blockLocalVariable: begin
-          first^.data:=context.getLocalValueOrNull(first^.txt);
+          first^.data:=context.getVariableValue(first^.txt);
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
@@ -1533,14 +1533,14 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
         tt_list_constructor: stack_push;
         tt_identifier: begin
-          if not(context.scopeBottom) and (context.hasId(first^.txt)) then begin
+          if context.valueStore.getVariable(first^.txt,didSubstitution)<>nil then begin
             first^.tokType:=tt_blockLocalVariable;
             first^.data:=nil;
             didSubstitution:=true;
           end else begin
             if first^.data=nil then first^.data:=guessPackageForToken(first^);
             P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-            if first^.tokType<>tt_identifier then didSubstitution:=true;
+            didSubstitution:=(first^.tokType<>tt_identifier);
           end;
         end;
         tt_identifier_pon: begin

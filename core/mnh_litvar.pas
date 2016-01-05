@@ -247,6 +247,7 @@ TYPE
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
   end;
 
+  P_namedVariable=^T_namedVariable;
   T_namedVariable=object
     private
       id:ansistring;
@@ -2120,12 +2121,12 @@ CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValu
   begin
     id:=initialId;
     value:=initialValue;
-    value^.rereference;
+    if value<>nil then value^.rereference;
   end;
 
 DESTRUCTOR T_namedVariable.destroy;
   begin
-    disposeLiteral(value);
+    if value<>nil then disposeLiteral(value);
   end;
 
 PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
@@ -2191,10 +2192,6 @@ FUNCTION T_namedVariable.toString:ansistring;
   begin
     result:=id+'='+value^.toString;
   end;
-
-
-
-
 
 FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   VAR map,keyValuePair:P_listLiteral;

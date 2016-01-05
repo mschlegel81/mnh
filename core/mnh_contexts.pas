@@ -2,28 +2,32 @@ UNIT mnh_contexts;
 INTERFACE
 USES mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
 TYPE
-    T_valueStoreElement=object
-    data:array of T_namedVariable;
+  T_valueStoreMarker=(vsm_none,vsm_blockingVoid,vsm_nonblockgingVoid,vsm_blockingFirst,vsm_nonblockingFirst);
+CONST
+  C_nonVoid:array[vsm_blockingVoid..vsm_nonblockgingVoid] of T_valueStoreMarker=(vsm_blockingFirst,vsm_nonblockingFirst);
+TYPE
+  T_valueStore=object
+    data:array of record
+      marker:T_valueStoreMarker;
+      v:P_namedVariable;
+    end;
+
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION indexOfId(id:ansistring):longint;
-    PROCEDURE declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
-    PROCEDURE setValue(CONST id:ansistring; CONST value:P_literal);
-    PROCEDURE setValue(CONST idx:longint; CONST value:P_literal);
-    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-    FUNCTION mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-    FUNCTION getValueOrNull(CONST id:ansistring):P_literal;
-    FUNCTION getValueOrNull(CONST idx:longint):P_literal;
+    PROCEDURE scopePush(CONST blocking:boolean);
+    PROCEDURE scopePop;
+    FUNCTION getVariable(CONST id:ansistring; OUT blockEncountered:boolean):P_namedVariable;
+    PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal);
+    //For debugging:
+    PROCEDURE reportVariables(VAR adapters:T_adapters);
   end;
-
-  T_valueStore=array of T_valueStoreElement;
 
   P_evaluationContext=^T_evaluationContext;
   T_evaluationContext=object
     dat:array[0..2047] of P_token;
     fill:longint;
     parentContext:P_evaluationContext;
-    scopeStack:T_valueStore;
+    valueStore:T_valueStore;
     adapters:P_adapters;
     allowDelegation:boolean;
     CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
@@ -38,92 +42,93 @@ TYPE
     FUNCTION newToken(CONST original:T_token):P_token; inline;
     FUNCTION newToken(CONST original:P_token):P_token; inline;
     //Local scope routines:
-    PROCEDURE scopePush;
-    PROCEDURE scopePop;
-    FUNCTION scopeBottom:boolean;
-    PROCEDURE declareLocalValue(CONST id:ansistring; CONST value:P_literal);
-    PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
-    FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-    FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
-    FUNCTION hasId(CONST id:ansistring):boolean;
+    FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
+    FUNCTION getVariableValue(CONST id:ansistring):P_literal;
+
+    //PROCEDURE scopePush;
+    //PROCEDURE scopePop;
+    //FUNCTION scopeBottom:boolean;
+    //PROCEDURE declareLocalValue(CONST id:ansistring; CONST value:P_literal);
+    //PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
+    //FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
+    //FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
+    //FUNCTION hasId(CONST id:ansistring):boolean;
     //For debugging:
     PROCEDURE reportVariables;
   end;
 
 IMPLEMENTATION
-CONSTRUCTOR T_valueStoreElement.create;
+CONSTRUCTOR T_valueStore.create;
   begin
     setLength(data,0);
   end;
 
-DESTRUCTOR T_valueStoreElement.destroy;
+DESTRUCTOR T_valueStore.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(data)-1 do data[i].destroy;
+    for i:=0 to length(data)-1 do if data[i].v<>nil then dispose(data[i].v,destroy);
     setLength(data,0);
   end;
 
-FUNCTION T_valueStoreElement.indexOfId(id:ansistring):longint;
+PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(data)-1 do if data[i].getId=id then exit(i);
-    result:=-1;
-  end;
-
-PROCEDURE T_valueStoreElement.declareValue(CONST id:ansistring; CONST value:P_literal; CONST guaranteedToBeNew:boolean);
-  VAR i:longint;
-  begin
-    if guaranteedToBeNew then i:=length(data) else begin
-      i:=0;
-      while (i<length(data)) and (data[i].getId<>id) do inc(i);
-    end;
-    if i>=length(data) then begin
-      setLength(data,i+1);
-      data[i].create(id,value);
-    end else data[i].setValue(value);
-  end;
-
-PROCEDURE T_valueStoreElement.setValue(CONST id:ansistring; CONST value:P_literal);
-  VAR idx:longint;
-  begin
-    idx:=indexOfId(id);
-    if idx<0 then declareValue(id,value,true)
-             else setValue(idx,value);
-  end;
-
-PROCEDURE T_valueStoreElement.setValue(CONST idx:longint; CONST value:P_literal);
-  begin
-    data[idx].setValue(value);
-  end;
-
-FUNCTION T_valueStoreElement.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  VAR idx:longint;
-  begin
-    idx:=indexOfId(id);
-    if idx<0 then begin
-      adapters.raiseError('Value with ID="'+id+'" is not contained in value store! Cannot apply mutation.',location);
-      result:=nil;
-    end else mutateInline(idx,mutation,RHS,location,adapters);
-  end;
-
-FUNCTION T_valueStoreElement.mutateInline(CONST idx:longint; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  begin
-    result:=data[idx].mutate(mutation,RHS,location,adapters);
-  end;
-
-FUNCTION T_valueStoreElement.getValueOrNull(CONST id:ansistring):P_literal;
-  VAR idx:longint;
-  begin
-    idx:=indexOfId(id);
-    if idx<0 then result:=nil else begin
-      result:=data[idx].getValue;
+    i:=length(data);
+    setLength(data,i+1);
+    with data[i] do begin
+      v:=nil;
+      if blocking then marker:=vsm_blockingVoid
+                  else marker:=vsm_nonblockgingVoid;
     end;
   end;
 
-FUNCTION T_valueStoreElement.getValueOrNull(CONST idx:longint):P_literal;
+PROCEDURE T_valueStore.scopePop;
+  VAR i:longint;
   begin
-    if idx<0 then result:=nil else begin
-      result:=data[idx].getValue;
+    i:=length(data);
+    repeat
+      dec(i);
+      with data[i] do if v<>nil then dispose(v,destroy);
+    until data[i].marker<>vsm_none;
+    setLength(data,i);
+  end;
+
+FUNCTION T_valueStore.getVariable(CONST id:ansistring; OUT blockEncountered:boolean):P_namedVariable;
+  VAR i:longint;
+  begin
+    result:=nil;
+    blockEncountered:=false;
+    for i:=length(data)-1 downto 0 do with data[i] do begin
+      if (v<>nil) and (v^.getId=id) then exit(v);
+      if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
+        blockEncountered:=true;
+        exit(nil);
+      end;
+    end;
+  end;
+
+PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal);
+  VAR i:longint;
+  begin
+    i:=length(data);
+    with data[i-1] do if marker in [vsm_blockingVoid,vsm_nonblockgingVoid] then begin
+      marker:=C_nonVoid[marker];
+      new(v,create(id,value));
+      exit;
+    end;
+    setLength(data,i+1);
+    with data[i] do begin
+      marker:=vsm_none;
+      new(v,create(id,value));
+    end;
+  end;
+
+PROCEDURE T_valueStore.reportVariables(VAR adapters:T_adapters);
+  VAR i:longint;
+  begin
+    for i:=0 to length(data)-1 do with data[i] do begin
+      if marker<>vsm_none then adapters.raiseCustomMessage(mt_debug_varInfo,'---------------',C_nilTokenLocation);
+      if v<>nil           then adapters.raiseCustomMessage(mt_debug_varInfo,v^.toString,C_nilTokenLocation);
     end;
   end;
 
@@ -140,7 +145,7 @@ CONSTRUCTOR T_evaluationContext.createNormalContext(CONST outAdapters:P_adapters
     adapters:=outAdapters;
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
-    setLength(scopeStack,0);
+    valueStore.create;
     allowDelegation:=true;
   end;
 
@@ -151,7 +156,7 @@ CONSTRUCTOR T_evaluationContext.createSanboxContext(CONST outAdapters:P_adapters
     adapters:=outAdapters;
     for i:=0 to length(dat)-1 do dat[i]:=nil;
     fill:=0;
-    setLength(scopeStack,0);
+    valueStore.create;
     allowDelegation:=false;
   end;
 
@@ -166,7 +171,7 @@ DESTRUCTOR T_evaluationContext.destroy;
         dat[fill]:=nil;
       end;
     end;
-    while not(scopeBottom) do scopePop;
+    valueStore.destroy;
   end;
 
 FUNCTION T_evaluationContext.disposeToken(p:P_token):P_token;
@@ -227,84 +232,26 @@ FUNCTION T_evaluationContext.newToken(CONST original:P_token):P_token;
     result^.next:=nil;
   end;
 
-PROCEDURE T_evaluationContext.scopePush;
-  begin
-    setLength(scopeStack,length(scopeStack)+1);
-  end;
-
-PROCEDURE T_evaluationContext.scopePop;
-  VAR topIdx:longint;
-  begin
-    topIdx:=length(scopeStack)-1;
-    scopeStack[topIdx].destroy;
-    setLength(scopeStack,topIdx);
-  end;
-
-FUNCTION T_evaluationContext.scopeBottom:boolean;
-  begin
-    result:=length(scopeStack)=0;
-  end;
-
-PROCEDURE T_evaluationContext.declareLocalValue(CONST id:ansistring; CONST value:P_literal);
-  VAR topIdx:longint;
-  begin
-    topIdx:=length(scopeStack)-1;
-    scopeStack[topIdx].declareValue(id,value,false);
-  end;
-
-PROCEDURE T_evaluationContext.setLocalValue(CONST id:ansistring; CONST value:P_literal);
-  VAR i,j:longint;
-  begin
-    for i:=length(scopeStack)-1 downto 0 do begin
-      j:=scopeStack[i].indexOfId(id);
-      if j>=0 then begin
-        scopeStack[i].setValue(j,value);
-        exit;
-      end;
-    end;
-    if parentContext<>nil then parentContext^.setLocalValue(id,value)
-                          else scopeStack[length(scopeStack)-1].declareValue(id,value,true);
-  end;
-
-FUNCTION T_evaluationContext.mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-  VAR i,j:longint;
-  begin
-    for i:=length(scopeStack)-1 downto 0 do begin
-      j:=scopeStack[i].indexOfId(id);
-      if j>=0 then exit(scopeStack[i].mutateInline(j,mutation,RHS,location,adapters^));
-    end;
-    if parentContext<>nil then exit(parentContext^.mutateInline(id,mutation,RHS,location));
-    result:=nil;
-  end;
-
-FUNCTION T_evaluationContext.getLocalValueOrNull(CONST id:ansistring):P_literal;
-  VAR i,j:longint;
-  begin
-    result:=nil;
-    for i:=length(scopeStack)-1 downto 0 do begin
-      j:=scopeStack[i].indexOfId(id);
-      if j>=0 then exit(scopeStack[i].getValueOrNull(j));
-    end;
-    if parentContext<>nil then result:=parentContext^.getLocalValueOrNull(id);
-  end;
-
-FUNCTION T_evaluationContext.hasId(CONST id:ansistring):boolean;
+FUNCTION T_evaluationContext.getVariable(CONST id:ansistring):P_namedVariable;
   VAR i:longint;
+      blockEncountered:boolean;
   begin
-    for i:=length(scopeStack)-1 downto 0 do if scopeStack[i].indexOfId(id)>=0 then exit(true);
-    if parentContext<>nil then result:=parentContext^.hasId(id)
-                          else result:=false;
+    result:=valueStore.getVariable(id,blockEncountered);
+    if (result=nil) and not(blockEncountered) and (parentContext<>nil) then result:=parentContext^.getVariable(id);
+  end;
+
+FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
+  VAR named:P_namedVariable;
+  begin
+    named:=getVariable(id);
+    if named=nil then result:=nil
+                 else result:=named^.getValue;
   end;
 
 PROCEDURE T_evaluationContext.reportVariables;
-  VAR i,j:longint;
   begin
     if parentContext<>nil then parentContext^.reportVariables;
-    for i:=0 to length(scopeStack)-1 do begin
-      adapters^.raiseCustomMessage(mt_debug_varInfo,'---------------',C_nilTokenLocation);
-      for j:=0 to length(scopeStack[i].data)-1 do
-        adapters^.raiseCustomMessage(mt_debug_varInfo,scopeStack[i].data[j].toString,C_nilTokenLocation);
-    end;
+    valueStore.reportVariables(adapters^);
   end;
 
 end.
