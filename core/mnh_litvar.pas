@@ -13,7 +13,6 @@ TYPE
   T_literal = object
   private
     numberOfReferences: longint;
-    cachedStringForm: ansistring;
   public
     CONSTRUCTOR init;
     PROCEDURE rereference;
@@ -309,7 +308,6 @@ FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral; inline;
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral; inline;
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral; inline;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral; inline;
-FUNCTION newStringLiteral(CONST value,stringForm: ansistring): P_stringLiteral; inline;
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral; inline;
 FUNCTION newListLiteral: P_listLiteral; inline;
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters): P_listLiteral; inline;
@@ -365,12 +363,6 @@ FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
     new(result, create(value));
-  end;
-
-FUNCTION newStringLiteral(CONST value,stringForm: ansistring): P_stringLiteral; inline;
-  begin
-    new(result, create(value));
-    result^.cachedStringForm:=stringForm;
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
@@ -449,11 +441,9 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         parsedLength:=i+1-offset;
         if suppressOutput then exit(nil);
         result:=newRealLiteral(strToFloatDef(copy(input, offset, parsedLength), Nan));
-        P_realLiteral(result)^.cachedStringForm:=copy(input, offset, parsedLength);
       end else begin
         if suppressOutput then exit(nil);
         result:=newIntLiteral(StrToInt64Def(copy(input, offset, parsedLength), 0));
-        P_intLiteral(result)^.cachedStringForm:=copy(input, offset, parsedLength);
       end;
     end;
   end;
@@ -508,7 +498,7 @@ FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
   end;
 
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init; begin numberOfReferences:=1; cachedStringForm:=''; end;
+CONSTRUCTOR T_literal.init; begin numberOfReferences:=1; end;
 
 PROCEDURE T_literal.rereference;
   begin
@@ -638,14 +628,13 @@ FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
 FUNCTION T_literal          .toString: ansistring; begin result:='<ERR>';                      end;
 FUNCTION T_voidLiteral      .toString: ansistring; begin result:=C_voidText;                   end;
 FUNCTION T_boolLiteral      .toString: ansistring; begin result:=C_boolText[val];              end;
-FUNCTION T_intLiteral       .toString: ansistring; begin if cachedStringForm<>'' then exit(cachedStringForm); result:=intToStr(val);                cachedStringForm:=result; end;
-FUNCTION T_realLiteral      .toString: ansistring; begin if cachedStringForm<>'' then exit(cachedStringForm); result:=myFloatToStr(val);            cachedStringForm:=result; end;
-FUNCTION T_stringLiteral    .toString: ansistring; begin if cachedStringForm<>'' then exit(cachedStringForm); result:=escapeString(val);            cachedStringForm:=result; end;
-FUNCTION T_expressionLiteral.toString: ansistring; begin if cachedStringForm<>'' then exit(cachedStringForm); result:=subruleToStringCallback(val); cachedStringForm:=result; end;
+FUNCTION T_intLiteral       .toString: ansistring; begin result:=intToStr(val);                end;
+FUNCTION T_realLiteral      .toString: ansistring; begin result:=myFloatToStr(val);            end;
+FUNCTION T_stringLiteral    .toString: ansistring; begin result:=escapeString(val);            end;
+FUNCTION T_expressionLiteral.toString: ansistring; begin result:=subruleToStringCallback(val); end;
 FUNCTION T_listLiteral      .toString: ansistring;
   VAR i: longint;
   begin
-    if cachedStringForm<>'' then exit(cachedStringForm);
     if length(element) = 0 then result:='[]'
     else begin
       result:='['+element[0]^.toString;
@@ -653,7 +642,6 @@ FUNCTION T_listLiteral      .toString: ansistring;
         result:=result+','+element[i]^.toString;
       result:=result+']';
     end;
-    cachedStringForm:=result;
   end;
 
 FUNCTION T_listLiteral.listConstructorToString:ansistring;
@@ -1401,7 +1389,6 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR ad
     end;
     if L^.literalType=lt_void then exit;
     cachedHash:=0;
-    cachedStringForm:='';
     setLength(element, length(element)+1);
     element[length(element)-1]:=L;
     if incRefs then L^.rereference;
@@ -1554,7 +1541,6 @@ PROCEDURE T_listLiteral.sort;
   begin
     if (length(element)<=1) then exit;
     cachedHash:=0;
-    cachedStringForm:='';
     scale:=1;
     setLength(temp, length(element));
     while scale<length(element) do begin
@@ -1601,7 +1587,6 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral; VAR 
   begin
     if length(element)<=1 then exit;
     cachedHash:=0;
-    cachedStringForm:='';
     scale:=1;
     setLength(temp, length(element));
     while (scale<length(element)) and adapters.noErrors do begin
@@ -1726,7 +1711,6 @@ FUNCTION T_listLiteral.clone:P_listLiteral;
     result^.strictType:=strictType;
     result^.nextAppendIsRange:=nextAppendIsRange;
     result^.cachedHash:=cachedHash;
-    result^.cachedStringForm:=cachedStringForm;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
