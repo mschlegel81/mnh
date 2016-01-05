@@ -1,6 +1,6 @@
 UNIT mnh_html;
 INTERFACE
-USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_funcs,mnh_out_adapters,mnh_tokLoc,FileUtil;
+USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_funcs,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens;
 CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="10"/> '+
   '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+

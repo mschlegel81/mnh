@@ -44,15 +44,6 @@ TYPE
     //Local scope routines:
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
-
-    //PROCEDURE scopePush;
-    //PROCEDURE scopePop;
-    //FUNCTION scopeBottom:boolean;
-    //PROCEDURE declareLocalValue(CONST id:ansistring; CONST value:P_literal);
-    //PROCEDURE setLocalValue(CONST id:ansistring; CONST value:P_literal);
-    //FUNCTION mutateInline(CONST id:ansistring; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation):P_literal;
-    //FUNCTION getLocalValueOrNull(CONST id:ansistring):P_literal;
-    //FUNCTION hasId(CONST id:ansistring):boolean;
     //For debugging:
     PROCEDURE reportVariables;
   end;
@@ -233,8 +224,7 @@ FUNCTION T_evaluationContext.newToken(CONST original:P_token):P_token;
   end;
 
 FUNCTION T_evaluationContext.getVariable(CONST id:ansistring):P_namedVariable;
-  VAR i:longint;
-      blockEncountered:boolean;
+  VAR blockEncountered:boolean;
   begin
     result:=valueStore.getVariable(id,blockEncountered);
     if (result=nil) and not(blockEncountered) and (parentContext<>nil) then result:=parentContext^.getVariable(id);

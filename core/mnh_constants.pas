@@ -107,9 +107,6 @@ TYPE
     tt_EOL,
     tt_blank);
 
-  T_rawToken=record txt:string; tokType:T_tokenType; end;
-  T_rawTokenArray=array of T_rawToken;
-
   T_literalType = (
     lt_error,
     lt_boolean,
