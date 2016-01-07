@@ -1,7 +1,7 @@
 USE hash;
 private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
 private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
-persistent passedTests:=[];
+private persistent passedTests:=[];
 
 synchronized markAsPassed(case,exeHash,runTime)->begin
   local contained:=false;

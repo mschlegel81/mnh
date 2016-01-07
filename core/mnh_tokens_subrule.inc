@@ -20,7 +20,7 @@
       PROCEDURE embrace;
       FUNCTION needEmbrace(VAR adapters:T_adapters):boolean;
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
     public
       CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
@@ -45,7 +45,7 @@
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext);
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
   VAR t:P_token;
       inlineLiteral:P_literal;
   begin
@@ -65,7 +65,8 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
             if parIdx>=REMAINING_PARAMETERS_IDX
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
-          end else begin
+          end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
+          else begin
             if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,nil);
             if (token.tokType in [tt_localUserRule,tt_importedUserRule]) and
                ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList,tt_listToParameterList])) //rule must not be followed by an opening bracket, indicating a call with parameters
@@ -91,8 +92,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declA
     pattern:=pat;
     pattern.finalizeRefs;
     declaredAt:=declAt;
-
-    constructExpression(rep,context);
+    constructExpression(rep,context,false);
     if needEmbrace(context.adapters^) then embrace;
   end;
 
@@ -103,7 +103,7 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
     pattern.create;
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
-    constructExpression(rep,context);
+    constructExpression(rep,context,true);
     if needEmbrace(context.adapters^) then embrace;
   end;
 

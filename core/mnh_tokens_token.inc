@@ -655,7 +655,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     VAR itList:P_listLiteral;
-        i,j:longint;
+        i:longint;
         eachLocation:T_tokenLocation;
         resultLiteral:P_literal;
         booleanResult:boolean;
@@ -751,30 +751,30 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.next:=context.disposeToken(bracketClosingEach);
       end;
 
-    VAR future:array of P_futureTask;
-        nextFuture:longint=0;
-        initializedFutures:longint=0;
-
-    PROCEDURE aggregateFutures(CONST finalizing:boolean);
-      begin
-        while (nextFuture<initializedFutures)
-          and (future[nextFuture]<>nil)
-          and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
-               finalizing or
-               (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
-          while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
-          addToAggregation(future[nextFuture]^.getResultAsLiteral(context),true);
-          future[nextFuture]^.free(context);
-          dispose(future[nextFuture],proFormaDestroy);
-          inc(nextFuture);
-        end;
-        if finalizing then begin
-          finalizeAggregation;
-          setLength(future,0);
-        end;
-      end;
-
     PROCEDURE initFutures;
+      VAR future:array of P_futureTask;
+          nextFuture:longint=0;
+          initializedFutures:longint=0;
+
+      PROCEDURE aggregateFutures(CONST finalizing:boolean);
+        begin
+          while (nextFuture<initializedFutures)
+            and (future[nextFuture]<>nil)
+            and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
+                 finalizing or
+                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
+            addToAggregation(future[nextFuture]^.getResultAsLiteral(context),true);
+            future[nextFuture]^.free(context);
+            dispose(future[nextFuture],proFormaDestroy);
+            inc(nextFuture);
+          end;
+          if finalizing then begin
+            finalizeAggregation;
+            setLength(future,0);
+          end;
+        end;
+
       VAR i,j:longint;
       begin
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
@@ -784,12 +784,30 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],itList^.value(i),context);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),context);
             if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
+        aggregateFutures(true);
+      end;
+
+    PROCEDURE initNonFutures;
+      VAR task:T_futureTask;
+          i,j:longint;
+      begin
+        for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
+          task.createTask(bodyRule[j],i,itList^.value(i),context);
+          if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation)
+          else begin
+            task.evaluate(callDepth+1,context);
+            addToAggregation(task.getResultAsLiteral(context),true);
+          end;
+          task.free(context);
+          task.proFormaDestroy;
+        end;
+        finalizeAggregation;
       end;
 
     begin
@@ -811,18 +829,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       first^.data:=nil;
       first^.txt:='';
       //iterate over itList----------------------------------------------------------
-      //t:=first;
       if (aggregatorPresent<>no) and (itList^.size=0)
       then context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
-        if inParallel then begin
-          initFutures;
-          aggregateFutures(true);
-        end else begin
-          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then
-            addToAggregation(bodyRule[j]^.directEvaluateUnary(itList^.value(i),nil,callDepth+1,context),true);
-          finalizeAggregation;
-        end;
+        if inParallel
+        then initFutures
+        else initNonFutures;
       end else begin
         if inParallel then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to itList^.size-1 do if context.adapters^.noErrors then addToAggregation(itList^.value(i),false);
@@ -1490,7 +1502,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_begin: begin
-          context.valueStore.scopePush(false);
+          context.valueStore.scopePush;
           stack_push;
           didSubstitution:=true;
         end;

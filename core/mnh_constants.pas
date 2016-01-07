@@ -29,6 +29,8 @@ CONST
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system'{$ifdef fullVersion},'plot'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
 
+  C_eachIndexIdentifier='index';
+
 FUNCTION isQualified(CONST s:string):boolean;
 
 CONST

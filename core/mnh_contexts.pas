@@ -2,11 +2,11 @@ UNIT mnh_contexts;
 INTERFACE
 USES mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
 TYPE
-  T_valueStoreMarker=(vsm_none,vsm_blockingVoid,vsm_nonblockgingVoid,vsm_blockingFirst,vsm_nonblockingFirst);
-CONST
-  C_nonVoid:array[vsm_blockingVoid..vsm_nonblockgingVoid] of T_valueStoreMarker=(vsm_blockingFirst,vsm_nonblockingFirst);
+  T_valueStoreMarker=(vsm_none,vsm_void,vsm_first);
+
 TYPE
   T_valueStore=object
+    cs:TRTLCriticalSection;
     data:array of record
       marker:T_valueStoreMarker;
       v:P_namedVariable;
@@ -14,9 +14,9 @@ TYPE
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE scopePush(CONST blocking:boolean);
+    PROCEDURE scopePush;
     PROCEDURE scopePop;
-    FUNCTION getVariable(CONST id:ansistring; OUT blockEncountered:boolean):P_namedVariable;
+    FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal);
     //For debugging:
     PROCEDURE reportVariables(VAR adapters:T_adapters);
@@ -51,60 +51,67 @@ TYPE
 IMPLEMENTATION
 CONSTRUCTOR T_valueStore.create;
   begin
+    system.initCriticalSection(cs);
     setLength(data,0);
   end;
 
 DESTRUCTOR T_valueStore.destroy;
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     for i:=0 to length(data)-1 do if data[i].v<>nil then dispose(data[i].v,destroy);
     setLength(data,0);
+    system.leaveCriticalSection(cs);
+    system.doneCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
+PROCEDURE T_valueStore.scopePush;
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     i:=length(data);
     setLength(data,i+1);
     with data[i] do begin
       v:=nil;
-      if blocking then marker:=vsm_blockingVoid
-                  else marker:=vsm_nonblockgingVoid;
+      marker:=vsm_void;
     end;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.scopePop;
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     i:=length(data);
     repeat
       dec(i);
       with data[i] do if v<>nil then dispose(v,destroy);
     until data[i].marker<>vsm_none;
     setLength(data,i);
+    system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_valueStore.getVariable(CONST id:ansistring; OUT blockEncountered:boolean):P_namedVariable;
+FUNCTION T_valueStore.getVariable(CONST id:ansistring):P_namedVariable;
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     result:=nil;
-    blockEncountered:=false;
-    for i:=length(data)-1 downto 0 do with data[i] do begin
-      if (v<>nil) and (v^.getId=id) then exit(v);
-      if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
-        blockEncountered:=true;
-        exit(nil);
-      end;
+    for i:=length(data)-1 downto 0 do with data[i] do if (v<>nil) and (v^.getId=id) then begin
+      system.leaveCriticalSection(cs);
+      exit(v);
     end;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal);
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     i:=length(data);
-    with data[i-1] do if marker in [vsm_blockingVoid,vsm_nonblockgingVoid] then begin
-      marker:=C_nonVoid[marker];
+    with data[i-1] do if marker=vsm_void then begin
+      marker:=vsm_first;
       new(v,create(id,value));
+      system.leaveCriticalSection(cs);
       exit;
     end;
     setLength(data,i+1);
@@ -112,21 +119,24 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
       marker:=vsm_none;
       new(v,create(id,value));
     end;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_valueStore.reportVariables(VAR adapters:T_adapters);
   VAR i:longint;
   begin
+    system.enterCriticalSection(cs);
     for i:=0 to length(data)-1 do with data[i] do begin
       if marker<>vsm_none then adapters.raiseCustomMessage(mt_debug_varInfo,'---------------',C_nilTokenLocation);
       if v<>nil           then adapters.raiseCustomMessage(mt_debug_varInfo,v^.toString,C_nilTokenLocation);
     end;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluationContext.adopt(CONST parent:P_evaluationContext);
   begin
     parentContext:=parent;
-    adapters:=parent^.adapters;
+    if parent<>nil then adapters:=parent^.adapters;
   end;
 
 CONSTRUCTOR T_evaluationContext.createNormalContext(CONST outAdapters:P_adapters);
@@ -224,10 +234,9 @@ FUNCTION T_evaluationContext.newToken(CONST original:P_token):P_token;
   end;
 
 FUNCTION T_evaluationContext.getVariable(CONST id:ansistring):P_namedVariable;
-  VAR blockEncountered:boolean;
   begin
-    result:=valueStore.getVariable(id,blockEncountered);
-    if (result=nil) and not(blockEncountered) and (parentContext<>nil) then result:=parentContext^.getVariable(id);
+    result:=valueStore.getVariable(id);
+    if (result=nil) and (parentContext<>nil) then result:=parentContext^.getVariable(id);
   end;
 
 FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
