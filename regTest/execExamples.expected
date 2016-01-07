@@ -6,12 +6,12 @@ out> 1
 out> 2
  in> arity({printf('%s%s',$a,...)});
 out> 1
- in> expression("$x-$x^2+$x^3");
+ in> expression('$x-$x^2+$x^3');
 out> {($x-$x^2+$x^3)}
- in>                expression("");
+ in>                expression('');
 Error               The parsed expression appears to be empty
-Error [stack trace]   # expression("")
-out>                expression("")
+Error [stack trace]   # expression('')
+out>                expression('')
  in> not(true);
 out> false
  in> not([true, false, true]);
@@ -26,7 +26,7 @@ out> []
 out> ['$x']
  in> parameterNames({sin($x)/$y});
 out> ['$x','$y']
- in> parameterNames({printf("%s%s",$a,...)});
+ in> parameterNames({printf('%s%s',$a,...)});
 out> ['$a']
  in> ord(3);
 out> 3
@@ -34,30 +34,30 @@ out> 3
 out> 1
  in> ord(false);
 out> 0
- in> ord("A");
+ in> ord('A');
 out> 65
- in> ord("abc");
+ in> ord('abc');
 out> -1
  in>                ord(2.1);
 Error               ord can only be applied to booleans, ints and strings
 Error [stack trace]   # <ERR>
 out>                <ERR>
- in> softCast("A");
-out> "A"
+ in> softCast('A');
+out> 'A'
  in> softCast('"B"');
 out> 'B'
  in> softCast(3);
 out> 3
- in> softCast([1,"2","true","'TEXT'","1.5","2,6"]);
-out> [1,2,true,'TEXT',1.5,"2,6"]
- in> splitFileName("../test.txt");
+ in> softCast([1,'2','true',"'TEXT'",'1.5','2,6']);
+out> [1,2,true,'TEXT',1.5,'2,6']
+ in> splitFileName('../test.txt');
 out> [['input','../test.txt'],['expanded','D:/dev/test.txt'],['relative','../test.txt'],['directory','..'],['filename','test.txt'],['extension','.txt']]
  in> string('a');
 out> 'a'
  in> string(234);
 out> '234'
- in> string([1, 2.6,"a", true,{$x}]);
-out> '[1,2.6,"a",true,{$x}]'
+ in> string([1, 2.6,'a', true,{$x}]);
+out> "[1,2.6,'a',true,{$x}]"
  in> abs(-0.92);
 out> 0.92
  in> abs(3);
@@ -188,21 +188,21 @@ out> -1
 out> 1
  in> sign({1+$x});
 out> {sign(1+$x)}
- in> max(["a".."z"]);
+ in> max(['a'..'z']);
 out> 'z'
  in> max([0..9]/2);
 out> 4.5
  in> max(true, false);
 out> true
- in> min(["a".."z"]);
-out> "a"
+ in> min(['a'..'z']);
+out> 'a'
  in> min([0..9]/2);
 out> 0.0
  in> min(true, false);
 out> false
- in> copy("abcde", 1, 3);
+ in> copy('abcde', 1, 3);
 out> 'bcd'
- in> escape("a");
+ in> escape('a');
 out> "'a'"
  in> escape("\t");
 out> '"\t"'
@@ -220,7 +220,7 @@ out>                fail("Told you this wouldn't work!")
 out> 3
  in> hash([1..3]);
 out> 271003
- in> hash("a");
+ in> hash('a');
 out> 252
  in> each(func,listBuiltin, copy(func, 0, 4)=='mnh.' ? func : void);
 out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.addPrintAdapter','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.addFullAdapter','mnh.myPath','mnh.not','mnh.ord','mnh.removeAdapter']
@@ -263,7 +263,7 @@ out>                  void
  in>                  plot.renderToFile('plotDemo1.png', 600, 300, 4);
 Image:                D:\dev\mnh5\plotDemo1.png
 out>                  void
- in>                              printf("%s", each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'), join(message,"\t")));
+ in>                              printf('%s', each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'), join(message,"\t")));
 printline                          in>  @:1,1  f(x<1)->random;
 Note  @:1,1  Creating new rule: f
  in>  @:1,17 f(x)->f(x-1)+random;

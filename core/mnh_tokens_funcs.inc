@@ -489,7 +489,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator^.value)^.directEvaluateBinary(resultLiteral,L,aggregator,0,context);
+          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,context);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;

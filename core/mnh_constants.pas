@@ -23,13 +23,13 @@ CONST
   C_infText = 'Inf';
   C_boolText: array[false..true] of string = ('false', 'true');
 
-  C_eachIndexId='index';
-
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.MNH';
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system'{$ifdef fullVersion},'plot'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
+
+  C_eachIndexIdentifier='index';
 
 FUNCTION isQualified(CONST s:string):boolean;
 
@@ -55,7 +55,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_when, tt_while, tt_blockingBegin, tt_begin, tt_end,
+    tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin,  tt_end,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -108,9 +108,6 @@ TYPE
     //special: [E]nd [O]f [L]ine
     tt_EOL,
     tt_blank);
-
-  T_rawToken=record txt:string; tokType:T_tokenType; end;
-  T_rawTokenArray=array of T_rawToken;
 
   T_literalType = (
     lt_error,
@@ -173,7 +170,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    'each', 'pEach', 'when','while','begin','begin','end',
+    'each', 'pEach', 'when','while','begin','end',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',

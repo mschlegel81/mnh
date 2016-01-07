@@ -93,20 +93,25 @@ FUNCTION T_tokenArray.atEnd:boolean;
 
 FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
   VAR k:longint;
+      lastComment:ansistring='';
       intrinsicFuncPtr:T_intFuncCallback;
   begin
-    setLength(result,length(t));
-    for k:=0 to length(t)-1 do begin
-      result[k]:=t[k].getRawToken;
-      with result[k] do if tokType in [tt_identifier,tt_identifier_pon] then begin
-        if intrinsicRuleMap.containsKey(t[k].txt,intrinsicFuncPtr) then begin
-          if tokType=tt_identifier_pon
-          then tokType:=tt_intrinsicRule_pon
-          else tokType:=tt_intrinsicRule;
+    setLength(result,0);
+    repeat
+      step(nil,lastComment);
+      if not(atEnd) then begin
+        setLength(result,length(result)+1);
+        result[length(result)-1]:=current.getRawToken;
+        with result[length(result)-1] do if tokType in [tt_identifier,tt_identifier_pon] then begin
+          if intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then begin
+            if tokType=tt_identifier_pon
+            then tokType:=tt_intrinsicRule_pon
+            else tokType:=tt_intrinsicRule;
+          end;
         end;
       end;
-      t[k].undefine;
-    end;
+    until atEnd;
+    for k:=0 to length(t)-1 do t[k].undefine;
   end;
 
 FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
@@ -177,7 +182,7 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
           result.tokType:=tt_literal;
-          result.data:=newStringLiteral(id,copy(line,lineLocation.column,parsedLength));
+          result.data:=newStringLiteral(id);
         end;
       end;
       '$': begin
@@ -563,8 +568,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
         case t^.tokType of
-          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
-          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end                   : dec(bracketLevel);
+          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
           tt_separatorComma: if bracketLevel=1 then begin
             result[length(result)-1].last:=p; //end of body part is token before comma
             setLength(result,length(result)+1);
@@ -650,7 +655,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     VAR itList:P_listLiteral;
-        i,j:longint;
+        i:longint;
         eachLocation:T_tokenLocation;
         resultLiteral:P_literal;
         booleanResult:boolean;
@@ -713,7 +718,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateBinary(resultLiteral,L,aggregatorExpression,callDepth+1,context);
+              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,context);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
@@ -746,30 +751,30 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.next:=context.disposeToken(bracketClosingEach);
       end;
 
-    VAR future:array of P_futureTask;
-        nextFuture:longint=0;
-        initializedFutures:longint=0;
-
-    PROCEDURE aggregateFutures(CONST finalizing:boolean);
-      begin
-        while (nextFuture<initializedFutures)
-          and (future[nextFuture]<>nil)
-          and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
-               finalizing or
-               (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
-          while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
-          addToAggregation(future[nextFuture]^.getResultAsLiteral(context),true);
-          future[nextFuture]^.free(context);
-          dispose(future[nextFuture],proFormaDestroy);
-          inc(nextFuture);
-        end;
-        if finalizing then begin
-          finalizeAggregation;
-          setLength(future,0);
-        end;
-      end;
-
     PROCEDURE initFutures;
+      VAR future:array of P_futureTask;
+          nextFuture:longint=0;
+          initializedFutures:longint=0;
+
+      PROCEDURE aggregateFutures(CONST finalizing:boolean);
+        begin
+          while (nextFuture<initializedFutures)
+            and (future[nextFuture]<>nil)
+            and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
+                 finalizing or
+                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+            while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
+            addToAggregation(future[nextFuture]^.getResultAsLiteral(context),true);
+            future[nextFuture]^.free(context);
+            dispose(future[nextFuture],proFormaDestroy);
+            inc(nextFuture);
+          end;
+          if finalizing then begin
+            finalizeAggregation;
+            setLength(future,0);
+          end;
+        end;
+
       VAR i,j:longint;
       begin
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
@@ -785,22 +790,41 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
         end;
+        aggregateFutures(true);
       end;
 
-    VAR indexLiteral:T_intLiteral;
+    PROCEDURE initNonFutures;
+      VAR task:T_futureTask;
+          i,j:longint;
+      begin
+        for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
+          task.createTask(bodyRule[j],i,itList^.value(i),context);
+          if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation)
+          else begin
+            task.evaluate(callDepth+1,context);
+            addToAggregation(task.getResultAsLiteral(context),true);
+          end;
+          task.free(context);
+          task.proFormaDestroy;
+        end;
+        finalizeAggregation;
+      end;
+
     begin
       eachLocation:=first^.location;
+      if P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void] then begin
+        context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
+        exit
+      end;
       if callDepth>STACK_DEPTH_LIMIT then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack overflow in (p)each construct.',eachLocation);
         exit;
       end;
-      if not(P_literal(first^.data)^.literalType in C_validListTypes) then begin
-        context.adapters^.raiseError('(p)each can only be applied to list literals',eachLocation);
-        exit
-      end;
-      itList:=first^.data;
-      if first^.txt=C_eachIndexId then context.adapters^.raiseWarning('Each variable "'+C_eachIndexId+'" is not accessible (hidden by each-index).',eachLocation);
       if not(parseBodyOk) then exit;
+      if (P_literal(first^.data)^.literalType in C_validListTypes)
+      then itList:=first^.data
+      else itList:=newOneElementListLiteral(first^.data,false,context.adapters^);
+
       resultLiteral:=nil;
       first^.data:=nil;
       first^.txt:='';
@@ -808,17 +832,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (aggregatorPresent<>no) and (itList^.size=0)
       then context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
       else if length(bodyRule)>0 then begin
-        if inParallel then begin
-          initFutures;
-          aggregateFutures(true);
-        end else begin
-          for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            indexLiteral.create(i);
-            addToAggregation(bodyRule[j]^.directEvaluateBinary(@indexLiteral,itList^.value(i),nil,callDepth+1,context),true);
-            indexLiteral.destroy;
-          end;
-          finalizeAggregation;
-        end;
+        if inParallel
+        then initFutures
+        else initNonFutures;
       end else begin
         if inParallel then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to itList^.size-1 do if context.adapters^.noErrors then addToAggregation(itList^.value(i),false);
@@ -861,8 +877,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context,srt_inline_for_special));
-        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context,srt_inline_for_special));
+        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context));
+        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
@@ -1041,8 +1057,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1054,8 +1070,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
         case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
+          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
         end;
         prev:=p; p:=p^.next;
       end;
@@ -1220,8 +1236,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;
@@ -1236,8 +1252,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
               case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin,tt_blockingBegin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end                   : dec(bracketLevel);
+                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
               end;
               p:=context.disposeToken(p);
             end;
@@ -1311,7 +1327,7 @@ tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in lis
 tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
 {$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
+tt_semicolon: if (cTokType[-1]=tt_begin) then begin
   if (cTokType[2]=tt_end) then begin
     stack_popDestroy;
     first^.next:=context.disposeToken(first^.next);
@@ -1444,7 +1460,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             else context.adapters^.raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
           end else context.adapters^.raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               stack_popDestroy;
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1461,7 +1477,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_CASES;
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
-            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1] in [tt_begin,tt_blockingBegin]) then begin
+            tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               first:=context.disposeToken(first);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1486,12 +1502,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
         end;
         tt_begin: begin
-          context.valueStore.scopePush(false);
-          stack_push;
-          didSubstitution:=true;
-        end;
-        tt_blockingBegin: begin
-          context.valueStore.scopePush(true);
+          context.valueStore.scopePush;
           stack_push;
           didSubstitution:=true;
         end;
@@ -1534,21 +1545,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack_push;
         end;
         tt_list_constructor: stack_push;
-        tt_identifier: begin
-          if context.valueStore.getVariable(first^.txt,didSubstitution)<>nil then begin
-            first^.tokType:=tt_blockLocalVariable;
-            first^.data:=nil;
-            didSubstitution:=true;
-          end else begin
-            if first^.data=nil then first^.data:=guessPackageForToken(first^);
-            P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-            didSubstitution:=(first^.tokType<>tt_identifier);
-          end;
-        end;
-        tt_identifier_pon: begin
+        tt_identifier,tt_identifier_pon: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-          if first^.tokType<>tt_identifier_pon then didSubstitution:=true;
+          didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
         tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation);
         tt_mutate: stack_push;

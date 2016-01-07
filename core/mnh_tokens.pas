@@ -1,9 +1,12 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters;
+USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants;
 TYPE
+  T_rawToken=record txt:string; tokType:T_tokenType; end;
+  T_rawTokenArray=array of T_rawToken;
+
   P_token=^T_token;
-  T_token=packed object
+  T_token=object
     next    :P_token;
     location:T_tokenLocation;
     txt     :shortString;
@@ -82,8 +85,11 @@ PROCEDURE T_token.define(CONST original:T_token);
     txt     :=original.txt;
     tokType :=original.tokType;
     data    :=original.data;
-    if (tokType in [tt_literal,tt_aggregatorExpressionLiteral,tt_parList]) or (tokType in [tt_each,tt_parallelEach]) and (data<>nil) then P_literal(data)^.rereference
-    else if (tokType in [tt_list_constructor,tt_parList_constructor]) then data:=P_listLiteral(original.data)^.clone;
+    case tokType of
+      tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
+      tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
+      tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
+    end;
   end;
 
 PROCEDURE T_token.undefine;
@@ -159,8 +165,8 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
     while t<>nil do begin
       case t^.tokType of
         tt_declare,tt_assign: if scopeLevel=0 then exit(t);
-        tt_begin,tt_blockingBegin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
-        tt_end                   ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
+        tt_begin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
+        tt_end  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
       end;
       t:=t^.next;
     end;
@@ -171,7 +177,5 @@ FUNCTION T_token.getRawToken:T_rawToken;
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
   end;
-
-
 
 end.

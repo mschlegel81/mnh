@@ -9,12 +9,13 @@
   { T_futureTask }
 
   T_futureTask=object
+    eachIndex:longint;
     task:P_token;
     state:T_futureTaskState;
     next:P_futureTask;
     scope:P_evaluationContext;
 
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
     FUNCTION    getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
     PROCEDURE   free(VAR context:T_evaluationContext);
@@ -31,7 +32,7 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
   end;
@@ -39,7 +40,6 @@
 {$endif}
 {$ifdef include_implementation}
 VAR poolThreadsRunning:longint=0;
-
 
 FUNCTION threadPoolThread(p:pointer):ptrint;
   //means that 0.511 seconds have passed since the last activity
@@ -56,7 +56,6 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         inc(sleepTime);
         sleep(sleepTime div 5);
       end else begin
-        tempcontext.adopt(currentTask^.scope);
         currentTask^.evaluate(0,tempcontext);
         sleepTime:=0;
       end;
@@ -80,13 +79,13 @@ PROCEDURE limitPoolThreads(CONST newLimit:longint);
     while poolThreadsRunning>MAX_NUMBER_OF_SECONDARY_WORKER_THREADS do sleep(100);
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext);
+CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx:longint; CONST x: P_literal; VAR context:T_evaluationContext);
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
     scope:=@context;
+    eachIndex:=idx;
     param.create;
-    param.appendInt(eachIndex);
     param.append(x,true,context.adapters^);
     if expr^.replaces(@param,nil,task,dummy,context)
     then state:=fts_pending
@@ -95,18 +94,23 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST eachIndex:longin
     next:=nil;
   end;
 
-PROCEDURE T_futureTask.evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
+PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationContext);
   begin
+    if (scope<>@context) then context.adopt(scope);
+    context.valueStore.scopePush;
+    context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex));
     if context.adapters^.noErrors then begin
       reduceExpression(task,callDepth,context);
     end else begin
       context.cascadeDisposeToken(task);
       task:=nil;
     end;
+    context.valueStore.scopePop;
+    if (scope<>@context) then context.adopt(nil);
     repeat state:=fts_ready until state=fts_ready;
   end;
 
-FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
+FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext): P_literal;
   VAR loc:T_tokenLocation;
   begin
     while state in [fts_pending,fts_evaluating] do sleep(1);
@@ -144,29 +148,17 @@ CONSTRUCTOR T_taskQueue.create;
   end;
 
 DESTRUCTOR T_taskQueue.destroy;
-  VAR t:P_futureTask;
-      context:T_evaluationContext;
   begin
-    system.enterCriticalSection(cs);
-    destructionPending:=true;
-    system.leaveCriticalSection(cs);
-    t:=dequeue;
-    if t<>nil then begin
-      context.createSanboxContext(@nullAdapter);
-      while t<>nil do begin
-        t^.free(context);
-        dispose(t,proFormaDestroy);
-        t:=dequeue;
-      end;
-      context.destroy;
+    while poolThreadsRunning>0 do begin
+      destructionPending:=true;
+      sleep(5);
     end;
-    while poolThreadsRunning>0 do sleep(1);
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST eachIndex:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
   begin
-    new(result,createTask(expr,eachIndex,x,context));
+    new(result,createTask(expr,idx,x,context));
     if result^.state=fts_pending then begin
       system.enterCriticalSection(cs);
       if first=nil then begin
