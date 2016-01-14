@@ -1285,16 +1285,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         p:P_token;
         stepMessage:T_storedMessage;
     begin
-      if debug then context.adapters^.currentlyDebugging:=true;
       with stepMessage do begin
-        if debug then messageType:=mt_debug_step
-                 else messageType:=mt_el3_stackTrace;
+        {$ifdef fullVersion}if debug then messageType:=mt_debug_step else {$endif}
+        messageType:=mt_el3_stackTrace;
         simpleMessage:='';
         setLength(multiMessage,0);
         location:=first^.location;
       end;
-      if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(stepMessage);
-      context.reportVariables(stepMessage);
+      {$ifdef fullVersion}
+        if debug then context.adapters^.currentlyDebugging:=true;
+        if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(stepMessage);
+        context.reportVariables(stepMessage);
+      {$endif}
       if length(stack)>16 then begin
         stepMessage.simpleMessage:='... ';
         i0:=length(stack)-16;
