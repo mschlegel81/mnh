@@ -129,7 +129,7 @@ main->main('build');
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->begin
   each(f,allFolders('.'),
-       splitFileName(f)%'filename'="nppBackup"
+       splitFileName(f)%'filename' in ["nppBackup","backup"]
        ? begin
            print('Deleting ',f);
            deleteDir(f);
@@ -144,7 +144,7 @@ main('clean')->begin
        files('doc/*.css')|
        files('install.mnh')|
        files('make*.log.txt')|
-       files('demos/inputs/*.txt')|
+//       files('demos/inputs/*.txt')|
        files('regTest/*.last'),
        print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   sandBoxExecute('USE passedTestsStore; passedTestsStore.main("clear");');
