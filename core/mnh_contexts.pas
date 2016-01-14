@@ -19,7 +19,7 @@ TYPE
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal);
     //For debugging:
-    PROCEDURE reportVariables(VAR stepMessage:T_storedMessage);
+    PROCEDURE reportVariables(VAR variableReport:T_variableReport);
   end;
 
   P_evaluationContext=^T_evaluationContext;
@@ -45,7 +45,7 @@ TYPE
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
     //For debugging:
-    PROCEDURE reportVariables(VAR stepMessage:T_storedMessage);
+    PROCEDURE reportVariables(VAR variableReport:T_variableReport);
   end;
 
 IMPLEMENTATION
@@ -122,13 +122,13 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.reportVariables(VAR stepMessage:T_storedMessage);
+PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     for i:=0 to length(data)-1 do with data[i] do begin
-      if marker<>vsm_none then appendToMultiMessage(stepMessage,'---------------');
-      if v<>nil           then appendToMultiMessage(stepMessage,v^.toString);
+      if marker<>vsm_none then variableReport.addScopeSeparator;
+      if v<>nil           then variableReport.addVariable(v);
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -247,10 +247,10 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
                  else result:=named^.getValue;
   end;
 
-PROCEDURE T_evaluationContext.reportVariables(VAR stepMessage:T_storedMessage);
+PROCEDURE T_evaluationContext.reportVariables(VAR variableReport:T_variableReport);
   begin
-    if parentContext<>nil then parentContext^.reportVariables(stepMessage);
-    valueStore.reportVariables(stepMessage);
+    if parentContext<>nil then parentContext^.reportVariables(variableReport);
+    valueStore.reportVariables(variableReport);
   end;
 
 end.

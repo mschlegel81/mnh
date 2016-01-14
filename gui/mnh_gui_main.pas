@@ -1021,63 +1021,39 @@ PROCEDURE TMnhForm.addDebugMessage(CONST m:T_storedMessage);
     debugStep[debugStepOffset]:=m;
     if (debugStepFill<DEBUG_LINE_COUNT) then inc(debugStepFill);
     debugStepOffset:=(debugStepOffset+1) mod DEBUG_LINE_COUNT;
-    writeln('added debug message; VAR length is ',length(m.multiMessage));
   end;
 
 PROCEDURE TMnhForm.writeDebugOutput(CONST updateSteps:boolean);
-  VAR i,j,lineIdx,CaretY:longint;
+  FUNCTION lineIdxToDatIdx(CONST lineIdx:longint):longint;
+    begin
+      if debugStepFill<DEBUG_LINE_COUNT
+      then result:= lineIdx
+      else result:=(lineIdx+debugStepOffset) mod DEBUG_LINE_COUNT;
+    end;
 
+  VAR j,lineIdx,datIdx:longint;
   begin
     if updateSteps then begin
       debugEdit.lines.clear;
-      for i:=0 to DEBUG_LINE_COUNT-1 do begin
-        j:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
-        if j<debugStepFill then begin
-          lineIdx:=j;
-          debugEdit.lines.append(debugStep[lineIdx].simpleMessage);
-        end;
+      for lineIdx:=0 to debugStepFill-1 do begin
+        datIdx:=lineIdxToDatIdx(lineIdx);
+        debugEdit.lines.append(debugStep[datIdx].simpleMessage);
       end;
       debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       debugEdit.ExecuteCommand(ecLineStart,' ',nil);
-    end else begin
-      i:=debugEdit.CaretY-1;
-      if i<0 then j:=0 else j:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
-      if j<debugStepFill then lineIdx:=j
-                         else lineIdx:=-1;
-    end;
-    if lineIdx>=0 then with debugStep[lineIdx] do begin
+    end else datIdx:=lineIdxToDatIdx(debugEdit.CaretY-1);
+    if datIdx>=0 then with debugStep[datIdx] do begin
       variableEdit.lines.clear;
-      for i:=0 to length(multiMessage)-1 do
-        variableEdit.lines.append(multiMessage[i]);
-
-        if not((location.fileName='') or (location.fileName='?')) then begin
-          j:=getInputEditIndexForFilename(location.fileName);
-          if j>=0 then begin
-            PageControl.ActivePageIndex:=j;
-            inputRec[j].highlighter.setMarkedToken(location.line-1,location.column-1);
-            inputRec[j].editor.Repaint;
-          end;
+      for j:=0 to length(multiMessage)-1 do variableEdit.lines.append(multiMessage[j]);
+      if not((location.fileName='') or (location.fileName='?')) then begin
+        j:=getInputEditIndexForFilename(location.fileName);
+        if j>=0 then begin
+          PageControl.ActivePageIndex:=j;
+          inputRec[j].highlighter.setMarkedToken(location.line-1,location.column-1);
+          inputRec[j].editor.Repaint;
         end;
+      end;
     end;
-
-
-
-    //caret:=debugEdit.CaretXY;
-    //writeln('Caret Y=',debugEdit.CaretY);
-    //debugEdit.lines.Clear;
-    //variableEdit.Lines.Clear;
-    //for i:=0 to DEBUG_LINE_COUNT-1 do begin
-    //  lineIdx:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
-    //  if lineIdx<debugStepFill then begin
-    //    debugEdit.Lines.Append(debugStep[lineIdx].simpleMessage);
-    //    if debugEdit.CaretXY.y-1=i then begin
-    //      for j:=0 to length(debugStep[lineIdx].multiMessage)-1 do
-    //        variableEdit.Lines.Add(debugStep[lineIdx].multiMessage[j]);
-    //    end;
-    //  end;
-    //end;
-    //debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
-    //debugEdit.ExecuteCommand(ecLineStart,' ',nil);
   end;
 
 PROCEDURE TMnhForm.updateBreakpointGrid;

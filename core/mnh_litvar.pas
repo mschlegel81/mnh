@@ -261,6 +261,27 @@ TYPE
       FUNCTION toString:ansistring;
   end;
 
+  { T_variableReport }
+
+  T_variableReport=object
+    private
+      hashIdIdx:longint;
+      dat:array of record
+            commentLine:boolean;
+            id:ansistring;
+            value:P_literal;
+          end;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      PROCEDURE toStep(VAR stepMessage:T_storedMessage);
+      PROCEDURE addScopeSeparator;
+      PROCEDURE addCommentLine(CONST comment:ansistring);
+      PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal);
+      PROCEDURE addVariable(CONST namedVar:P_namedVariable);
+      FUNCTION getLiteralStringOrGetAlias(CONST value:P_literal):ansistring;
+  end;
+
   GENERIC G_literalKeyMap<VALUE_TYPE>=object
     CONST CACHE_MOD=2047;
     TYPE CACHE_ENTRY=record
@@ -446,6 +467,87 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
         result:=newIntLiteral(StrToInt64Def(copy(input, offset, parsedLength), 0));
       end;
     end;
+  end;
+
+{ T_variableReport }
+
+CONSTRUCTOR T_variableReport.create;
+  begin
+    hashIdIdx:=0;
+    setLength(dat,0);
+  end;
+
+DESTRUCTOR T_variableReport.destroy;
+  begin
+    setLength(dat,0);
+  end;
+
+PROCEDURE T_variableReport.toStep(VAR stepMessage:T_storedMessage);
+  VAR i:longint;
+  begin
+    setLength(stepMessage.multiMessage,length(dat));
+    for i:=0 to length(dat)-1 do
+      if dat[i].commentLine then stepMessage.multiMessage[i]:=dat[i].id
+                            else stepMessage.multiMessage[i]:=dat[i].id+' = '+dat[i].value^.toString;
+  end;
+
+PROCEDURE T_variableReport.addScopeSeparator;
+  CONST SINGLE_SEPARATOR='---------------------';
+        DOUBLE_SEPARATOR='=====================';
+  begin
+    if (length(dat)>0) and
+       (dat[length(dat)-1].commentLine) and
+       (dat[length(dat)-1].id=SINGLE_SEPARATOR)
+    then dat[length(dat)-1].id:=DOUBLE_SEPARATOR
+    else begin
+      setLength(dat,length(dat)+1);
+      with dat[length(dat)-1] do begin
+        commentLine:=true;
+        value:=nil;
+        id:=SINGLE_SEPARATOR;
+      end;
+    end;
+  end;
+
+PROCEDURE T_variableReport.addCommentLine(CONST comment: ansistring);
+  begin
+    setLength(dat,length(dat)+1);
+    with dat[length(dat)-1] do begin
+      commentLine:=true;
+      value:=nil;
+      id:=comment;
+    end;
+  end;
+
+PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal);
+  begin
+    setLength(dat,length(dat)+1);
+    dat[length(dat)-1].commentLine:=false;
+    dat[length(dat)-1].id:=id;
+    dat[length(dat)-1].value:=value;
+  end;
+
+PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable);
+  begin
+    addVariable(namedVar^.id,namedVar^.value);
+  end;
+
+FUNCTION T_variableReport.getLiteralStringOrGetAlias(CONST value: P_literal): ansistring;
+  CONST LENGTH_THRESHOLD=32;
+        HALF_SEPARATOR='- - - - - - - - - - -';
+  VAR i:longint;
+  begin
+    result:=value^.toString;
+    if length(result)<LENGTH_THRESHOLD then exit(result);
+    for i:=0 to length(dat)-1 do if not(dat[i].commentLine) and (dat[i].value=value) then exit(dat[i].id);
+    if hashIdIdx=0 then addCommentLine(HALF_SEPARATOR);
+    inc(hashIdIdx);
+    result:='#'+intToStr(hashIdIdx);
+    i:=length(dat);
+    setLength(dat,i+1);
+    dat[i].commentLine:=false;
+    dat[i].id:=result;
+    dat[i].value:=value;
   end;
 
 //=====================================================================================================================

@@ -25,8 +25,7 @@ TYPE
     tkNull,
     tkError,
     tkHighlightedItem,
-    tkDebugInfo,
-    tkWhiteOnWhite);
+    tkHashVariable);
   T_mnhSynFlavour=(msf_input,msf_output,msf_debugger);
 
 TYPE
@@ -48,8 +47,7 @@ TYPE
   private
     contextStack:T_contextStack;
 
-    isMarked,
-    isDebugInfoLine :boolean;
+    isMarked:boolean;
     flavour :T_mnhSynFlavour;
 
     fLine: PChar;
@@ -133,8 +131,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
     styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
     styleTable[tkHighlightedItem ]:=TSynHighlighterAttributes.create('Highlighted');
-    styleTable[tkDebugInfo       ]:=TSynHighlighterAttributes.create('DebugInfo');
-    styleTable[tkWhiteOnWhite    ]:=TSynHighlighterAttributes.create('WhiteOnWhite');
+    styleTable[tkHashVariable    ]:=TSynHighlighterAttributes.create('HashVariable');
 
     styleTable[tkComment         ].style:=[fsItalic];
     styleTable[tkDocComment      ].style:=[fsItalic,fsBold];
@@ -144,7 +141,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkSpecialRule     ].style:=[fsBold];
     styleTable[tkOperator        ].style:=[fsBold];
     styleTable[tkModifier        ].style:=[fsBold];
-    //styleTable[tkStringFormatPlaceholder].style:=[fsBold];
+    styleTable[tkHashVariable    ].style:=[fsBold];
 
     styleTable[tkComment         ].foreground:=$00999999;
     styleTable[tkDocComment      ].foreground:=$00999999;
@@ -160,11 +157,8 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkModifier        ].foreground:=$000088ff;
     styleTable[tkNull            ].foreground:=$00000000;
     styleTable[tkError           ].foreground:=$000000ff; styleTable[tkError].background:=$0000FFFF;
-    styleTable[tkHighlightedItem ].foreground:=$00000000;
-    styleTable[tkHighlightedItem ].background:=$0000FFFF;
-    styleTable[tkWhiteOnWhite    ].foreground:=$00FFFFFF;
-    styleTable[tkWhiteOnWhite    ].background:=$00FEFEFE;
-    styleTable[tkDebugInfo       ].FrameColor:=$00FF0000;
+    styleTable[tkHashVariable    ].foreground:=$00FF0000;
+    styleTable[tkHashVariable    ].background:=$00FFEEDD;
 
     markedWord:='';
     setMarkedToken(-1,-1);
@@ -246,23 +240,7 @@ PROCEDURE TSynMnhSyn.next;
                                                           else fTokenId:=tkDefault;
         if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
         if run>0 then exit;
-      end else if (flavour=msf_debugger) and (fLine[run]='#') then begin
-        isDebugInfoLine:=true;
-        fTokenId:=tkWhiteOnWhite;
-        inc(run);
-        exit;
-      end else isDebugInfoLine:=false;
-    end;
-    if (flavour=msf_debugger) and (isDebugInfoLine) then begin
-      if fLine[run]=#0 then begin
-        fTokenId := tkNull;
-      end else begin
-        while not(fLine[run] in [#0,#28]) do inc(run);
-        if fLine[run]=#28 then inc(run);
-        if run>fTokenPos+1 then fTokenId:=tkDebugInfo
-                           else fTokenId:=tkWhiteOnWhite;
       end;
-      exit;
     end;
     case fLine [run] of
       #0: fTokenId := tkNull;
@@ -370,6 +348,16 @@ PROCEDURE TSynMnhSyn.next;
         if (fLine [run] = '''') then inc(run);
         fTokenId := tkString;
       end;
+      '#': if flavour=msf_debugger then begin
+        inc(run);
+        if fLine[run] in ['0'..'9'] then begin
+          fTokenId := tkHashVariable;
+          while fLine [run] in ['0'..'9'] do inc(run);
+        end else fTokenId:=tkOperator;
+      end else begin
+        fTokenId := tkDefault;
+        inc(run);
+      end
       else begin
         fTokenId := tkDefault;
         inc(run);
@@ -408,7 +396,7 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
     if isMarked then result.FrameColor:=$000000ff
-                else if fTokenId<>tkDebugInfo then begin
+                else begin
                   result.FrameColor:=clNone;
                   if (contextStack.top=cse_expression) or (fTokenId=tkSpecialComment)
                      then result.style:=result.style + [fsUnderline]
@@ -429,7 +417,6 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
     isMarked:=false;
-    isDebugInfoLine:=false;
     contextStack.clear;
   end;
 

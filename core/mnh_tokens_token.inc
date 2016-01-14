@@ -1284,18 +1284,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         prevWasIdLike:boolean=false;
         p:P_token;
         stepMessage:T_storedMessage;
+        {$ifdef fullVersion}
+        variableReport:T_variableReport;
+        {$endif}
     begin
       with stepMessage do begin
         {$ifdef fullVersion}if debug then messageType:=mt_debug_step else {$endif}
         messageType:=mt_el3_stackTrace;
         simpleMessage:='';
-        setLength(multiMessage,0);
         location:=first^.location;
       end;
       {$ifdef fullVersion}
-        if debug then context.adapters^.currentlyDebugging:=true;
-        if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(stepMessage);
-        context.reportVariables(stepMessage);
+      variableReport.create;
+      if debug then context.adapters^.currentlyDebugging:=true;
+      if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(variableReport);
+      context.reportVariables(variableReport);
       {$endif}
       if length(stack)>16 then begin
         stepMessage.simpleMessage:='... ';
@@ -1304,18 +1307,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         stepMessage.simpleMessage:=' ';
         i0:=0;
       end;
-      for i:=i0 to length(stack)-1 do stepMessage.simpleMessage:=stepMessage.simpleMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
+      for i:=i0 to length(stack)-1 do stepMessage.simpleMessage:=stepMessage.simpleMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike{$ifdef fullVersion},variableReport{$endif});
       i:=0;
       stepMessage.simpleMessage:=stepMessage.simpleMessage+' # ';
       prevWasIdLike:=false;
       p:=first;
       while (p<>nil) and (i<16) do begin
-        stepMessage.simpleMessage:=stepMessage.simpleMessage+p^.toString(prevWasIdLike,prevWasIdLike);
+        stepMessage.simpleMessage:=stepMessage.simpleMessage+p^.toString(prevWasIdLike,prevWasIdLike{$ifdef fullVersion},variableReport{$endif});
         p:=p^.next;
         inc(i);
       end;
       if (p<>nil) then stepMessage.simpleMessage:=stepMessage.simpleMessage+' ...';
-
+      {$ifdef fullVersion}
+      variableReport.toStep(stepMessage);
+      variableReport.destroy;
+      {$endif}
       context.adapters^.raiseCustomMessage(stepMessage);
     end;
 
