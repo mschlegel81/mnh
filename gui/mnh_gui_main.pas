@@ -352,27 +352,33 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
       scrollbarHeight     :=editor.height-editor.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ editor    .Font.GetTextHeight(SAMPLE_TEXT)*(editor    .lines.count+1);
       idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
+
+
+      //Are both editors large enough? Then return right now.
+      if (editor.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
+
       availableTotalHeight:=editor.height+OutputEdit.height;
       inputFocus:=not(forceOutputFocus or OutputEdit.Focused);
-
-      //Are both editors large enough?
-      if (editor.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
       if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
-        //There is enough room for both
-        if inputFocus then idealInputHeight:=availableTotalHeight-idealOutputHeight;
+        //There is enough space for both -> priorize input before output
+        idealInputHeight:=availableTotalHeight-idealOutputHeight;
       end else begin
-        //There is NOT enough room for both
+        //There is not enough space for both
         temp:=round(0.9*availableTotalHeight);
-        if inputFocus
-        then begin
-          if idealInputHeight>=temp then idealInputHeight:=temp;
+        if inputFocus then begin
+          if idealInputHeight>temp then idealInputHeight:=temp; //There is not even enough room for input edit!
+          if idealInputHeight< availableTotalHeight-idealOutputHeight then
+             idealInputHeight:=availableTotalHeight-idealOutputHeight;
+          idealOutputHeight:=availableTotalHeight-idealInputHeight;
         end else begin
-          if idealOutputHeight>=temp then idealOutputHeight:=temp;
+          if idealOutputHeight>temp then idealOutputHeight:=temp; //There is not even enough room for output edit!
+          if idealOutputHeight< availableTotalHeight-idealInputHeight then
+             idealOutputHeight:=availableTotalHeight-idealInputHeight;
           idealInputHeight:=availableTotalHeight-idealOutputHeight;
         end;
       end;
-      if idealInputHeight<>PageControl.height then begin
-        if idealInputHeight<PageControl.height then begin
+      if idealInputHeight<>editor.height then begin
+        if idealInputHeight<editor.height then begin
           if inputHeightSpeed>=0 then inputHeightSpeed:=-1
                                  else dec(inputHeightSpeed);
         end else begin
