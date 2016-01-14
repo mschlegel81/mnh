@@ -1,0 +1,20 @@
+//*searchPattern can be a regex
+//*the remaining parameters are file patterns; if none is given, * is assumed
+main(searchPattern,...)->begin
+  local filesToScan:=size(...)=0
+                     ? files(allFolders('.')&'/*')
+                     : each(pattern,...,files(allFolders('.')&'/'&pattern)).flatten;
+  each(file,filesToScan,begin
+    local nameDisplayed:=false;
+    each(line,fileLines(file),
+      line.matches(searchPattern)
+      ? begin
+          nameDisplayed OR begin
+            print(file);
+            nameDisplayed:=true;
+          end;
+          printf('  %4d:%s',index+1,line);
+        end
+      : void);
+  end);
+end;
