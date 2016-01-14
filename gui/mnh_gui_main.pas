@@ -14,7 +14,8 @@ USES
   mnh_plotForm;
 
 CONST DEBUG_LINE_COUNT=200;
-
+      RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
+      RUN_VERBOSE_ICON_INDEX:array[false..true] of longint=(6,3);
 TYPE
   { TMnhForm }
 
@@ -113,6 +114,7 @@ TYPE
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
       VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+    PROCEDURE debugEditKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -454,6 +456,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
     if miDebug.Checked then begin
       debugStepFill:=0;
       debugStepOffset:=0;
+      updateBreakpointGrid;
       debugPanel.visible:=true;
       debugSplitter.visible:=true;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
@@ -607,6 +610,17 @@ PROCEDURE TMnhForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: T
 PROCEDURE TMnhForm.debugEditCommandProcessed(Sender: TObject; VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
     writeDebugOutput(false);
+  end;
+
+PROCEDURE TMnhForm.debugEditKeyPress(Sender: TObject; VAR key: char);
+  begin
+    case key of
+      'S','s':miDebugStepClick(Sender);
+      'M','m':miDebugMultistepClick(Sender);
+      'R','r':if miDebugSilentRun.Enabled then miDebugSilentRunClick(Sender);
+      'V','v':if miDebugVerboseRun.Enabled then miDebugVerboseRunClick(Sender);
+      'C','c':miDebugCancelClick(Sender);
+    end;
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -834,6 +848,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       if ad_evaluationRunning then stepper.setSignal(ds_run);
     end else begin
       miDebug.Checked:=true;
+      updateBreakpointGrid;
       debugPanel.visible:=true;
       debugSplitter.visible:=true;
       miEvalModeDirect.Checked:=true;
@@ -1065,7 +1080,9 @@ PROCEDURE TMnhForm.updateBreakpointGrid;
       BreakpointsGrid.Cells[1,i+1]:=intToStr(stepper.breakpoints[i].line);
     end;
     miDebugVerboseRun.Enabled:=length(stepper.breakpoints)>0;
+    miDebugVerboseRun.ImageIndex:=RUN_VERBOSE_ICON_INDEX[miDebugVerboseRun.Enabled];
     miDebugSilentRun .Enabled:=length(stepper.breakpoints)>0;
+    miDebugSilentRun.ImageIndex:=RUN_SILENT_ICON_INDEX[miDebugSilentRun.Enabled];
     miDebug.Checked:=true;
     debugPanel.visible:=true;
     debugSplitter.visible:=true;
