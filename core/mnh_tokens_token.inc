@@ -1296,7 +1296,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       {$ifdef fullVersion}
       variableReport.create;
-      if debug then context.adapters^.currentlyDebugging:=true;
       if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(variableReport);
       context.reportVariables(variableReport);
       {$endif}
@@ -1361,10 +1360,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       didSubstitution:=false;
       initTokTypes;
       {$ifdef fullVersion}
-      if reportableStep then begin
-        if stepper.stepping(first^.location) then currentStateMessage(true)
-                                             else context.adapters^.currentlyDebugging:=false;
-      end;
+      if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
       reportableStep:=false;
       {$endif}
       case cTokType[0] of
@@ -1562,7 +1558,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation);
+        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif});
         tt_mutate: stack_push;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
@@ -1610,10 +1606,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifdef fullVersion}
-    if reportableStep then begin
-      if stepper.stepping(first^.location) then currentStateMessage(true)
-                                           else context.adapters^.currentlyDebugging:=false;
-    end;
+    if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
     {$endif}
     {$ifndef debugMode}
     except

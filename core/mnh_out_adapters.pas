@@ -103,7 +103,6 @@ TYPE
     public
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
-      currentlyDebugging:boolean;
       plot:T_plot;
       {$endif}
       CONSTRUCTOR create;
@@ -149,6 +148,7 @@ TYPE
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     FUNCTION stepping(CONST location:T_tokenLocation):boolean;
+    FUNCTION currentlyDebugging:boolean;
 
     PROCEDURE doStart;
     PROCEDURE setSignal(CONST sig:T_debugSignal);
@@ -363,7 +363,6 @@ PROCEDURE T_adapters.setOutputBehaviour(CONST value: T_outputBehaviour);
 CONSTRUCTOR T_adapters.create;
   begin
     {$ifdef fullVersion}
-    currentlyDebugging:=false;
     plot.createWithDefaults;
     {$endif}
     setLength(adapter,0);
@@ -715,6 +714,9 @@ FUNCTION T_stepper.stepping(CONST location:T_tokenLocation):boolean;
     system.leaveCriticalSection(cs);
     result:=true;
   end;
+
+FUNCTION T_stepper.currentlyDebugging:boolean;
+  begin result:=signal<>ds_run; end;
 
 PROCEDURE T_stepper.doStep;
   begin
