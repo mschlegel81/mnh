@@ -9,16 +9,23 @@ USES
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
-  mnh_packages,closeDialog,askDialog,SynEditKeyCmds,mnh_debugForm,
+  mnh_packages,closeDialog,askDialog,SynEditKeyCmds,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm;
 
-TYPE
+CONST DEBUG_LINE_COUNT=200;
 
+TYPE
   { TMnhForm }
 
   TMnhForm = class(TForm)
     autosizeToggleBox: TToggleBox;
+    BreakpointsGrid: TStringGrid;
+    debugEdit: TSynEdit;
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    GroupBox3: TGroupBox;
+    debugItemsImageList: TImageList;
     InputEdit0: TSynEdit;
     InputEdit1: TSynEdit;
     InputEdit2: TSynEdit;
@@ -66,7 +73,12 @@ TYPE
     OpenDialog: TOpenDialog;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
+    Panel1: TPanel;
+    debugPanel: TPanel;
     Splitter1: TSplitter;
+    debugSplitter: TSplitter;
+    Splitter3: TSplitter;
+    Splitter4: TSplitter;
     submenuEditorAppearance: TMenuItem;
     miExpressionEcho: TMenuItem;
     miExpressionResult: TMenuItem;
@@ -89,7 +101,18 @@ TYPE
     TabSheet7: TTabSheet;
     TabSheet8: TTabSheet;
     TabSheet9: TTabSheet;
+    ToolBar1: TToolBar;
+    miDebugStep: TToolButton;
+    miDebugMultistep: TToolButton;
+    miDebugSilentRun: TToolButton;
+    miDebugVerboseRun: TToolButton;
+    miDebugCancel: TToolButton;
     UpdateTimeTimer: TTimer;
+    variableEdit: TSynEdit;
+    PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
+    PROCEDURE debugEditCommandProcessed(Sender: TObject;
+      VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -105,7 +128,12 @@ TYPE
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
+    PROCEDURE miDebugCancelClick(Sender: TObject);
     PROCEDURE miDebugClick(Sender: TObject);
+    PROCEDURE miDebugMultistepClick(Sender: TObject);
+    PROCEDURE miDebugSilentRunClick(Sender: TObject);
+    PROCEDURE miDebugStepClick(Sender: TObject);
+    PROCEDURE miDebugVerboseRunClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
     PROCEDURE miEvalModeDirectClick(Sender: TObject);
@@ -155,7 +183,7 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 
   private
-    outputHighlighter:TSynMnhSyn;
+    outputHighlighter,debugHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
     evaluation:record
@@ -169,6 +197,9 @@ TYPE
     doNotCheckFileBefore:double;
 
     wordsInEditor:T_listOfString;
+
+    debugStep:array[0..DEBUG_LINE_COUNT-1] of T_storedMessage;
+    debugStepFill,debugStepOffset:longint;
 
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
@@ -186,6 +217,9 @@ TYPE
     FUNCTION _doSaveAs_(CONST index:longint):boolean;
     FUNCTION _doSave_(CONST index:longint):boolean;
 
+    PROCEDURE updateBreakpointGrid;
+    PROCEDURE addDebugMessage(CONST m:T_storedMessage);
+    PROCEDURE writeDebugOutput(CONST updateSteps:boolean);
 
     PROCEDURE setupInputRecForNewFile    (CONST index:longint);
     PROCEDURE setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
@@ -217,7 +251,7 @@ VAR MnhForm: TMnhForm;
     locationToOpenOnFormStartup:T_tokenLocation;
 
 PROCEDURE lateInitialization;
-PROCEDURE formCycle(ownId:longint; reverse:boolean);
+PROCEDURE formCycle(CONST ownId:longint);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
@@ -239,8 +273,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j:longint;
       instantPlotRequested:boolean=false;
-      debugLocation:T_tokenLocation;
-      hasDebugLocation:boolean=false;
+      hasDebugMessage:boolean=false;
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
@@ -257,16 +290,11 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
               for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
             end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
           end;
-        mt_debug_varInfo: DebugForm.variablesPut(simpleMessage);
         mt_debug_step: begin
-          DebugForm.rollingAppend(simpleMessage);
-          hasDebugLocation:=true;
-          debugLocation:=location;
+          MnhForm.addDebugMessage(storedMessages[i]);
+          hasDebugMessage:=true;
         end;
         mt_endOfEvaluation: begin
-          DebugForm.rollingAppend('Evaluation finished');
-          DebugForm.updateFromRoll;
-          hasDebugLocation:=false;
           for j:=0 to 9 do begin
             MnhForm.inputRec[j].highlighter.setMarkedToken(-1,-1);
             MnhForm.inputRec[j].editor.readonly:=false;
@@ -282,12 +310,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         mt_echo_input: begin
           syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
-          DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
+          //DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
         end;
         mt_echo_declaration,
         mt_echo_output:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
         else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
-          DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+          //DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
         end;
       end;
     end;
@@ -297,17 +325,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
     if instantPlotRequested then plotForm.doPlot();
-    if hasDebugLocation then begin
-      DebugForm.updateFromRoll;
-      if not((debugLocation.fileName='') or (debugLocation.fileName='?')) then begin
-        j:=MnhForm.getInputEditIndexForFilename(debugLocation.fileName);
-        if j>=0 then begin
-          MnhForm.PageControl.ActivePageIndex:=j;
-          MnhForm.inputRec[j].highlighter.setMarkedToken(debugLocation.line-1,debugLocation.column-1);
-          MnhForm.inputRec[j].editor.Repaint;
-        end;
-      end;
-    end;
+    if hasDebugMessage then MnhForm.writeDebugOutput(true);
     system.leaveCriticalSection(cs);
   end;
 
@@ -428,10 +446,12 @@ PROCEDURE TMnhForm.doStartEvaluation;
     doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
-      DebugForm.clearRoll;
+      debugStepFill:=0;
+      debugStepOffset:=0;
+      debugPanel.visible:=true;
+      debugSplitter.visible:=true;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
       stepper.doStart;
-      DebugForm.Show;
     end else stepper.setSignal(ds_run);
   end;
 
@@ -541,11 +561,17 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
+    debugHighlighter:=TSynMnhSyn.create(nil,msf_debugger);
+    debugEdit.highlighter:=debugHighlighter;
+    variableEdit.highlighter:=debugHighlighter;
     endOfEvaluationText.value:=msg;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
     {$endif}
+
+    debugStepFill:=0;
+    debugStepOffset:=0;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -560,6 +586,21 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       else state.create;
       SettingsForm.setEditorState(i,state);
     end;
+  end;
+
+PROCEDURE TMnhForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  VAR i:longint;
+  begin
+    FormKeyUp(Sender,key,Shift);
+    if key<>46 then exit;
+    if BreakpointsGrid.Selection.Bottom>=BreakpointsGrid.Selection.top then
+    for i:=BreakpointsGrid.Selection.top-1 downto BreakpointsGrid.Selection.Bottom-1 do stepper.removeBreakpoint(i);
+    updateBreakpointGrid;
+  end;
+
+PROCEDURE TMnhForm.debugEditCommandProcessed(Sender: TObject; VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+  begin
+    writeDebugOutput(false);
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -584,7 +625,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift)
+    if (key=9) and (ssCtrl in Shift) then formCycle(0)
     else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
   end;
 
@@ -710,7 +751,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
     end;
     if (Command=ecUserDefinedFirst+3) then with inputRec[PageControl.ActivePageIndex] do begin
       stepper.toggleBreakpoint(pseudoName(PageControl.ActivePageIndex),editor.CaretY);
-      DebugForm.updateBreakpointGrid;
+      updateBreakpointGrid;
     end;
   end;
 
@@ -770,25 +811,55 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
     setupInputRecForNewFile(0);
   end;
 
+PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
+  begin
+    ad_haltEvaluation;
+    stepper.setSignal(ds_run);
+  end;
+
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   VAR i:longint;
   begin
     if miDebug.Checked
     then begin
       miDebug.Checked:=false;
+      debugPanel.visible:=false;
+      debugSplitter.visible:=false;
       if ad_evaluationRunning then stepper.setSignal(ds_run);
     end else begin
       miDebug.Checked:=true;
+      debugPanel.visible:=true;
+      debugSplitter.visible:=true;
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
       SettingsForm.wantInstantEvaluation:=false;
       if ad_evaluationRunning then begin
-        DebugForm.clearRoll;
+        debugStepFill:=0;
+        debugStepOffset:=0;
         for i:=0 to 9 do with inputRec[i] do editor.readonly:=true;
         stepper.doStep;
       end;
-      DebugForm.Show;
     end;
+  end;
+
+PROCEDURE TMnhForm.miDebugMultistepClick(Sender: TObject);
+  begin
+    stepper.doMultiStep(32);
+  end;
+
+PROCEDURE TMnhForm.miDebugSilentRunClick(Sender: TObject);
+  begin
+    stepper.setSignal(ds_runUntilBreak);
+  end;
+
+PROCEDURE TMnhForm.miDebugStepClick(Sender: TObject);
+  begin
+    if ad_evaluationRunning then stepper.doStep;
+  end;
+
+PROCEDURE TMnhForm.miDebugVerboseRunClick(Sender: TObject);
+  begin
+    stepper.setSignal(ds_verboseRunUntilBreak);
   end;
 
 PROCEDURE TMnhForm.miDecFontSizeClick(Sender: TObject);
@@ -820,6 +891,8 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
     miDebug.Checked:=false;
+    debugPanel.visible:=false;
+    debugSplitter.visible:=false;
     miEvalModeDirect.Checked:=false;
     miEvalModeDirectOnKeypress.Checked:=true;
     SettingsForm.wantInstantEvaluation:=true;
@@ -935,6 +1008,85 @@ FUNCTION TMnhForm._doSave_(CONST index:longint): boolean;
       result:=true;
       updateSheetCaption(index);
     end;
+  end;
+
+PROCEDURE TMnhForm.addDebugMessage(CONST m:T_storedMessage);
+  begin
+    debugStep[debugStepOffset]:=m;
+    if (debugStepFill<DEBUG_LINE_COUNT) then inc(debugStepFill);
+    debugStepOffset:=(debugStepOffset+1) mod DEBUG_LINE_COUNT;
+    writeln('added debug message; VAR length is ',length(m.multiMessage));
+  end;
+
+PROCEDURE TMnhForm.writeDebugOutput(CONST updateSteps:boolean);
+  VAR i,j,lineIdx,CaretY:longint;
+
+  begin
+    if updateSteps then begin
+      debugEdit.lines.clear;
+      for i:=0 to DEBUG_LINE_COUNT-1 do begin
+        j:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
+        if j<debugStepFill then begin
+          lineIdx:=j;
+          debugEdit.lines.append(debugStep[lineIdx].simpleMessage);
+        end;
+      end;
+      debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
+      debugEdit.ExecuteCommand(ecLineStart,' ',nil);
+    end else begin
+      i:=debugEdit.CaretY-1;
+      if i<0 then j:=0 else j:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
+      if j<debugStepFill then lineIdx:=j
+                         else lineIdx:=-1;
+    end;
+    if lineIdx>=0 then with debugStep[lineIdx] do begin
+      variableEdit.lines.clear;
+      for i:=0 to length(multiMessage)-1 do
+        variableEdit.lines.append(multiMessage[i]);
+
+        if not((location.fileName='') or (location.fileName='?')) then begin
+          j:=getInputEditIndexForFilename(location.fileName);
+          if j>=0 then begin
+            PageControl.ActivePageIndex:=j;
+            inputRec[j].highlighter.setMarkedToken(location.line-1,location.column-1);
+            inputRec[j].editor.Repaint;
+          end;
+        end;
+    end;
+
+
+
+    //caret:=debugEdit.CaretXY;
+    //writeln('Caret Y=',debugEdit.CaretY);
+    //debugEdit.lines.Clear;
+    //variableEdit.Lines.Clear;
+    //for i:=0 to DEBUG_LINE_COUNT-1 do begin
+    //  lineIdx:=(i+debugStepOffset) mod DEBUG_LINE_COUNT;
+    //  if lineIdx<debugStepFill then begin
+    //    debugEdit.Lines.Append(debugStep[lineIdx].simpleMessage);
+    //    if debugEdit.CaretXY.y-1=i then begin
+    //      for j:=0 to length(debugStep[lineIdx].multiMessage)-1 do
+    //        variableEdit.Lines.Add(debugStep[lineIdx].multiMessage[j]);
+    //    end;
+    //  end;
+    //end;
+    //debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
+    //debugEdit.ExecuteCommand(ecLineStart,' ',nil);
+  end;
+
+PROCEDURE TMnhForm.updateBreakpointGrid;
+  VAR i:longint;
+  begin
+    BreakpointsGrid.RowCount:=1+length(stepper.breakpoints);
+    for i:=0 to length(stepper.breakpoints)-1 do begin
+      BreakpointsGrid.Cells[0,i+1]:=         stepper.breakpoints[i].fileName;
+      BreakpointsGrid.Cells[1,i+1]:=intToStr(stepper.breakpoints[i].line);
+    end;
+    miDebugVerboseRun.Enabled:=length(stepper.breakpoints)>0;
+    miDebugSilentRun .Enabled:=length(stepper.breakpoints)>0;
+    miDebug.Checked:=true;
+    debugPanel.visible:=true;
+    debugSplitter.visible:=true;
   end;
 
 PROCEDURE TMnhForm.setupInputRecForNewFile    (CONST index:longint);
@@ -1282,9 +1434,9 @@ PROCEDURE TMnhForm.processSettings;
     else InputEdit0.Font.Quality:=fqNonAntialiased;
     for i:=1 to 9 do inputRec[i].editor.Font:=InputEdit0.Font;
 
-    OutputEdit.Font            :=InputEdit0.Font;
-    DebugForm.debugEdit.Font   :=InputEdit0.Font;
-    DebugForm.variableEdit.Font:=InputEdit0.Font;
+    OutputEdit  .Font:=InputEdit0.Font;
+    debugEdit   .Font:=InputEdit0.Font;
+    variableEdit.Font:=InputEdit0.Font;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1315,24 +1467,10 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   end;
 
-PROCEDURE debugForm_stopDebugging;
+PROCEDURE formCycle(CONST ownId:longint);
   begin
-    MnhForm.miDebug.Checked:=false;
-  end;
-
-PROCEDURE debugForm_debuggingStep;
-  begin
-    MnhForm.UpdateTimeTimerTimer(nil);
-    MnhForm.UpdateTimeTimer.Interval:=20;
-  end;
-
-PROCEDURE formCycle(ownId:longint; reverse:boolean);
-  begin
-    if reverse then ownId:=(ownId+3-1) mod 3
-               else ownId:=(ownId  +1) mod 3;
-    if      ownId=0 then MnhForm.Show
-    else if ownId=1 then plotForm.Show
-                    else DebugForm.Show;
+    if ownId=0 then MnhForm.Show
+               else plotForm.Show;
   end;
 
 PROCEDURE lateInitialization;
@@ -1344,10 +1482,7 @@ PROCEDURE lateInitialization;
         guiAdapters.addOutAdapter(consoleAdapters.getAdapter(i),false);
 
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
-    StopDebuggingCallback:=@debugForm_stopDebugging;
-    DebuggingStepCallback:=@debugForm_debuggingStep;
     mnh_plotForm.formCycleCallback:=@formCycle;
-    mnh_debugForm.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit;
   end;

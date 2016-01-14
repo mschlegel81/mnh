@@ -250,7 +250,6 @@ TYPE
     mt_echo_declaration,
     mt_echo_output,
     mt_debug_step,
-    mt_debug_varInfo,
     mt_el1_note,
     mt_el2_warning,
     mt_el3_evalError,
@@ -277,7 +276,6 @@ CONST
    -1,//mt_echo_declaration,
    -1,//mt_echo_output,
    -1,//mt_debug_step,
-   -1,
     1,//mt_el1_note,
     2,//mt_el2_warning,
     3,//mt_el3_evalError,
@@ -303,7 +301,6 @@ CONST
     ' in>',//echo declaration
     'out>',//echo output
     'STEP:',
-    'VAR: ',
     'Note ',
     'Warning ',
     'Error ',

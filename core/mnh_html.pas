@@ -18,7 +18,7 @@ TYPE
     lastWasEndOfEvaluation:boolean;
     CONSTRUCTOR create(CONST fileName:ansistring);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE appendSingleMessage(CONST message: T_storedMessage); virtual;
+    PROCEDURE append(CONST message: T_storedMessage); virtual;
     PROCEDURE flush;
   end;
 
@@ -128,9 +128,9 @@ CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
 DESTRUCTOR T_htmlOutAdapter.destroy;
   begin messageOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
 
-PROCEDURE T_htmlOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+PROCEDURE T_htmlOutAdapter.append(CONST message: T_storedMessage);
   begin
-    if (message.messageType<>mt_clearConsole) then inherited appendSingleMessage(message);
+    if (message.messageType<>mt_clearConsole) then inherited append(message);
     with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
@@ -150,7 +150,7 @@ PROCEDURE T_htmlOutAdapter.flush;
     try
     assign(handle,outputFileName);
     if fileExists(outputFileName) then begin
-      append(handle);
+      system.append(handle);
     end else begin
       rewrite(handle);
       writeln(handle,HTML_FILE_START,'<table>');

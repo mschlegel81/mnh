@@ -51,7 +51,7 @@ TYPE
       FUNCTION getPackageReferenceForId(CONST id:string; VAR adapters:T_adapters):T_packageReference;
       FUNCTION isReady:boolean;
 
-      PROCEDURE reportVariables(VAR adapters:T_adapters);
+      PROCEDURE reportVariables(VAR stepMessage:T_storedMessage);
     end;
 
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
@@ -917,7 +917,7 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; VAR adapters:T_adap
 
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 
-PROCEDURE T_package.reportVariables(VAR adapters:T_adapters);
+PROCEDURE T_package.reportVariables(VAR stepMessage:T_storedMessage);
   VAR firstInBlock:boolean=true;
       i:longint;
       s:ansistring;
@@ -927,9 +927,9 @@ PROCEDURE T_package.reportVariables(VAR adapters:T_adapters);
     for i:=0 to length(r)-1 do begin
       s:=r[i]^.toString;
       if s<>'' then begin
-        if firstInBlock then adapters.raiseCustomMessage(mt_debug_varInfo,'imported:',C_nilTokenLocation);
+        if firstInBlock then appendToMultiMessage(stepMessage,'imported:');
         firstInBlock:=false;
-        adapters.raiseCustomMessage(mt_debug_varInfo,'  '+s,C_nilTokenLocation);
+        appendToMultiMessage(stepMessage,'  '+s);
       end;
     end;
     setLength(r,0);
@@ -937,9 +937,9 @@ PROCEDURE T_package.reportVariables(VAR adapters:T_adapters);
     for i:=0 to length(r)-1 do begin
       s:=r[i]^.toString;
       if s<>'' then begin
-        if firstInBlock then adapters.raiseCustomMessage(mt_debug_varInfo,'in main package:',C_nilTokenLocation);
+        if firstInBlock then appendToMultiMessage(stepMessage,'in main package:');
         firstInBlock:=false;
-        adapters.raiseCustomMessage(mt_debug_varInfo,'  '+s,C_nilTokenLocation);
+        appendToMultiMessage(stepMessage,'  '+s);
       end;
     end;
     setLength(r,0);

@@ -100,6 +100,9 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationC
     context.valueStore.scopePush;
     context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex));
     if context.adapters^.noErrors then begin
+      {$ifdef fullVersion}
+      if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//next (p)Each step',C_nilTokenLocation);
+      {$endif}
       reduceExpression(task,callDepth,context);
     end else begin
       context.cascadeDisposeToken(task);
@@ -112,8 +115,12 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationC
 
 FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext): P_literal;
   VAR loc:T_tokenLocation;
+      sleepTime:longint=0;
   begin
-    while state in [fts_pending,fts_evaluating] do sleep(1);
+    while state in [fts_pending,fts_evaluating] do begin
+      sleep(sleepTime);
+      if sleepTime<100 then inc(sleepTime);
+    end;
     if (context.adapters^.noErrors) then begin
       if (task<>nil) and (task^.next=nil) and (task^.tokType=tt_literal) then begin
         result:=task^.data;

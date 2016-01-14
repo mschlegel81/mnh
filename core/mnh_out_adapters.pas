@@ -28,14 +28,15 @@ TYPE
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
-      adapterType:T_adapterType;
-      adapterName:ansistring;
-      outputBehaviour:T_outputBehaviour;
-      CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
-      DESTRUCTOR destroy; virtual; abstract;
-      PROCEDURE clearConsole; virtual; abstract;
-      PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
-      PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
+    adapterType:T_adapterType;
+    adapterName:ansistring;
+    outputBehaviour:T_outputBehaviour;
+    CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
+    DESTRUCTOR destroy; virtual; abstract;
+    PROCEDURE clearConsole; virtual; abstract;
+    PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
+    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
+    PROCEDURE append(CONST message:T_storedMessage); virtual;
   end;
 
   P_consoleOutAdapter = ^T_consoleOutAdapter;
@@ -56,7 +57,7 @@ TYPE
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
     PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
-    PROCEDURE appendSingleMessage(CONST message:T_storedMessage); virtual;
+    PROCEDURE append(CONST message:T_storedMessage); virtual;
     PROCEDURE clearMessages;
   end;
 
@@ -68,7 +69,7 @@ TYPE
     lastWasEndOfEvaluation:boolean;
     CONSTRUCTOR create(CONST fileName:ansistring);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE appendSingleMessage(CONST message: T_storedMessage); virtual;
+    PROCEDURE append(CONST message: T_storedMessage); virtual;
     PROCEDURE flush;
   end;
 
@@ -76,7 +77,7 @@ TYPE
   T_textFilePrintOnlyAdapter=object(T_textFileOutAdapter)
     CONSTRUCTOR create(CONST fileName:ansistring);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE appendSingleMessage(CONST message: T_storedMessage); virtual;
+    PROCEDURE append(CONST message: T_storedMessage); virtual;
   end;
 
 
@@ -116,9 +117,7 @@ TYPE
 
       PROCEDURE clearErrors;
       PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-      {$ifdef fullVersion}
-      PROCEDURE raiseDebugMessage(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-      {$endif}
+      PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
       PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
       PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -139,7 +138,7 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_verboseRunUntilBreak,ds_step,ds_abort);
+  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_verboseRunUntilBreak,ds_step);
 
   T_stepper=object
     breakpoints:array of T_tokenLocation;
@@ -169,6 +168,7 @@ VAR
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
+PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
 IMPLEMENTATION
 FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
   begin
@@ -187,6 +187,14 @@ FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ans
     end;
   end;
 
+PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
+  begin
+    with message do begin
+      setLength(multiMessage,length(multiMessage)+1);
+      multiMessage[length(multiMessage)-1]:=s;
+    end;
+  end;
+
 CONSTRUCTOR T_textFilePrintOnlyAdapter.create(CONST fileName: ansistring);
   begin
     inherited create(fileName);
@@ -198,10 +206,10 @@ DESTRUCTOR T_textFilePrintOnlyAdapter.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_textFilePrintOnlyAdapter.appendSingleMessage(CONST message: T_storedMessage);
+PROCEDURE T_textFilePrintOnlyAdapter.append(CONST message: T_storedMessage);
   begin
     if message.messageType<>mt_printline then exit;
-    inherited appendSingleMessage(message);
+    inherited append(message);
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
@@ -223,9 +231,9 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin messageOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
 
-PROCEDURE T_textFileOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+PROCEDURE T_textFileOutAdapter.append(CONST message: T_storedMessage);
   begin
-    if (message.messageType<>mt_clearConsole) then inherited appendSingleMessage(message);
+    if (message.messageType<>mt_clearConsole) then inherited append(message);
     with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
@@ -383,8 +391,7 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
-  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -407,16 +414,28 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
     end;
   end;
 
-{$ifdef fullVersion}
-PROCEDURE T_adapters.raiseDebugMessage(CONST errorMessage: ansistring;
-  CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST message:T_storedMessage);
   VAR i:longint;
   begin
-    hasMessageOfType[mt_debug_step]:=true;
-    currentlyDebugging:=true;
-    for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_debug_step,errorMessage,errorLocation);
+    if maxErrorLevel< C_errorLevelForMessageType[message.messageType] then
+       maxErrorLevel:=C_errorLevelForMessageType[message.messageType];
+    hasMessageOfType[message.messageType]:=true;
+    if (message.messageType=mt_el3_stackTrace) then begin
+      inc(stackTraceCount);
+      if stackTraceCount>30 then exit;
+    end;
+    if (message.messageType in [mt_el3_evalError,mt_el3_noMatchingMain,mt_el4_parsingError,mt_el5_haltMessageReceived,mt_el5_systemError]) then begin
+      inc(errorCount);
+      if errorCount>30 then exit;
+    end;
+    for i:=0 to length(adapter)-1 do adapter[i].ad^.append(message);
+    if message.messageType=mt_endOfEvaluation then
+    while i<length(adapter)-1 do begin
+      if adapter[i].ad^.adapterType in [at_sessionDefinedTextFile,at_sessionDefinedHtmlFile,at_sessionDefinedPrintOnly]
+      then removeOutAdapter(adapter[i].ad)
+      else inc(i);
+    end;
   end;
-{$endif}
 
 PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
   CONST errorLocation: T_tokenLocation);
@@ -535,6 +554,15 @@ CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansi
     end;
   end;
 
+PROCEDURE T_abstractOutAdapter.append(CONST message:T_storedMessage);
+  begin
+    case message.messageType of
+      mt_clearConsole: clearConsole;
+      mt_printline: printOut(message.multiMessage);
+      else messageOut(message.messageType,message.simpleMessage,message.location);
+    end;
+  end;
+
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
     inherited create(at_console,'');
@@ -602,21 +630,17 @@ DESTRUCTOR T_collectingOutAdapter.destroy;
 PROCEDURE T_collectingOutAdapter.clearConsole;
   VAR msg:T_storedMessage;
   begin
-    system.enterCriticalSection(cs);
     clearMessages;
     msg.messageType:=mt_clearConsole;
-    appendSingleMessage(msg);
-    system.leaveCriticalSection(cs);
+    append(msg);
   end;
 
 PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR msg:T_storedMessage;
   begin
-    system.enterCriticalSection(cs);
     msg.messageType:=mt_printline;
     msg.multiMessage:=s;
-    appendSingleMessage(msg);
-    system.leaveCriticalSection(cs);
+    append(msg);
   end;
 
 PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
@@ -627,18 +651,18 @@ PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CO
     or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
     or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
     or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
-    system.enterCriticalSection(cs);
     msg.messageType:=messageType;
     msg.simpleMessage:=errorMessage;
     msg.location:=errorLocation;
-    appendSingleMessage(msg);
-    system.leaveCriticalSection(cs);
+    append(msg);
   end;
 
-PROCEDURE T_collectingOutAdapter.appendSingleMessage(CONST message: T_storedMessage);
+PROCEDURE T_collectingOutAdapter.append(CONST message: T_storedMessage);
   begin
+    system.enterCriticalSection(cs);
     setLength(storedMessages,length(storedMessages)+1);
     storedMessages[length(storedMessages)-1]:=message;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_collectingOutAdapter.clearMessages;

@@ -82,7 +82,7 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral; VAR context:T_evaluationCo
   begin
     enterCriticalSection(rule_cs);
     {$ifdef fullVersion}
-    if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache put for memoized rule',declarationStart);
+    if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//cache put for memoized rule',declarationStart);
     {$endif}
     cache^.put(P_listLiteral(param^.value(0)),
                param^.value(1));
@@ -119,7 +119,7 @@ exit}
                      else useParam:=param;
         if system.TryEnterCriticalsection(rule_cs)=0 then begin
           {$ifdef fullVersion}
-          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//entering critical section for memoized rule failed - memoization disabled',declarationStart);
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//entering critical section for memoized rule failed - memoization disabled',declarationStart);
           {$endif}
           result:=false;
           for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
@@ -134,7 +134,7 @@ exit}
         lit:=cache^.get(useParam);
         if lit<>nil then begin
           {$ifdef fullVersion}
-          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache get for memoized rule succeeded',declarationStart);
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//cache get for memoized rule succeeded',declarationStart);
           {$endif}
           lit^.rereference;
           firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,lit);
@@ -142,7 +142,7 @@ exit}
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context) then begin
           {$ifdef fullVersion}
-          if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache get for memoized rule failed',declarationStart);
+          if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//cache get for memoized rule failed',declarationStart);
           {$endif}
           if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
@@ -150,7 +150,7 @@ exit}
             lit:=firstRep^.data;
             cache^.put(useParam,lit);
             {$ifdef fullVersion}
-            if context.adapters^.currentlyDebugging then context.adapters^.raiseDebugMessage('//cache put for memoized rule',declarationStart);
+            if context.adapters^.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//cache put for memoized rule',declarationStart);
             {$endif}
           end;
           lastRep:=firstRep^.last;

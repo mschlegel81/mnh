@@ -19,7 +19,7 @@ TYPE
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal);
     //For debugging:
-    PROCEDURE reportVariables(VAR adapters:T_adapters);
+    PROCEDURE reportVariables(VAR stepMessage:T_storedMessage);
   end;
 
   P_evaluationContext=^T_evaluationContext;
@@ -45,7 +45,7 @@ TYPE
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
     //For debugging:
-    PROCEDURE reportVariables;
+    PROCEDURE reportVariables(VAR stepMessage:T_storedMessage);
   end;
 
 IMPLEMENTATION
@@ -122,13 +122,13 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.reportVariables(VAR adapters:T_adapters);
+PROCEDURE T_valueStore.reportVariables(VAR stepMessage:T_storedMessage);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     for i:=0 to length(data)-1 do with data[i] do begin
-      if marker<>vsm_none then adapters.raiseCustomMessage(mt_debug_varInfo,'---------------',C_nilTokenLocation);
-      if v<>nil           then adapters.raiseCustomMessage(mt_debug_varInfo,v^.toString,C_nilTokenLocation);
+      if marker<>vsm_none then appendToMultiMessage(stepMessage,'---------------');
+      if v<>nil           then appendToMultiMessage(stepMessage,v^.toString);
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -247,10 +247,10 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
                  else result:=named^.getValue;
   end;
 
-PROCEDURE T_evaluationContext.reportVariables;
+PROCEDURE T_evaluationContext.reportVariables(VAR stepMessage:T_storedMessage);
   begin
-    if parentContext<>nil then parentContext^.reportVariables;
-    valueStore.reportVariables(adapters^);
+    if parentContext<>nil then parentContext^.reportVariables(stepMessage);
+    valueStore.reportVariables(stepMessage);
   end;
 
 end.

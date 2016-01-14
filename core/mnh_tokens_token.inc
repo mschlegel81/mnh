@@ -779,7 +779,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
         then maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS
-        else maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS*8;
+        else maxFutureForwardInitialization:=1024;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
@@ -799,7 +799,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
           task.createTask(bodyRule[j],i,itList^.value(i),context);
-          if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation)
+          if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing (pseudo-)future.',eachLocation)
           else begin
             task.evaluate(callDepth+1,context);
             addToAggregation(task.getResultAsLiteral(context),true);
@@ -1212,6 +1212,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.data:=newLit; //store new literal in head
         stack_popDestroy; //pop operator from stack
         stack_popDestroy; //pop LHS-Literal from stack
+        {$ifdef fullVersion}reportableStep:=true;{$endif}
       end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
@@ -1282,35 +1283,38 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR i,i0:longint;
         prevWasIdLike:boolean=false;
         p:P_token;
-        tokenMessage:ansistring;
+        stepMessage:T_storedMessage;
     begin
+      if debug then context.adapters^.currentlyDebugging:=true;
+      with stepMessage do begin
+        if debug then messageType:=mt_debug_step
+                 else messageType:=mt_el3_stackTrace;
+        simpleMessage:='';
+        setLength(multiMessage,0);
+        location:=first^.location;
+      end;
+      if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(stepMessage);
+      context.reportVariables(stepMessage);
       if length(stack)>16 then begin
-        tokenMessage:='... ';
+        stepMessage.simpleMessage:='... ';
         i0:=length(stack)-16;
       end else begin
-        tokenMessage:=' ';
+        stepMessage.simpleMessage:=' ';
         i0:=0;
       end;
-      for i:=i0 to length(stack)-1 do tokenMessage:=tokenMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
+      for i:=i0 to length(stack)-1 do stepMessage.simpleMessage:=stepMessage.simpleMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
       i:=0;
-      tokenMessage:=tokenMessage+' # ';
+      stepMessage.simpleMessage:=stepMessage.simpleMessage+' # ';
       prevWasIdLike:=false;
       p:=first;
       while (p<>nil) and (i<16) do begin
-        tokenMessage:=tokenMessage+p^.toString(prevWasIdLike,prevWasIdLike);
+        stepMessage.simpleMessage:=stepMessage.simpleMessage+p^.toString(prevWasIdLike,prevWasIdLike);
         p:=p^.next;
         inc(i);
       end;
-      if (p<>nil) then tokenMessage:=tokenMessage+' ...';
-      {$ifdef fullVersion}
-      if debug then begin
-        context.adapters^.raiseDebugMessage(tokenMessage,first^.location);
-        context.adapters^.raiseCustomMessage(mt_debug_varInfo,C_carriageReturnChar,C_nilTokenLocation);
-        if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(context.adapters^);
-        context.reportVariables;
-      end else
-      {$endif}
-      context.adapters^.raiseCustomMessage(mt_el3_stackTrace,tokenMessage,first^.location);
+      if (p<>nil) then stepMessage.simpleMessage:=stepMessage.simpleMessage+' ...';
+
+      context.adapters^.raiseCustomMessage(stepMessage);
     end;
 
 {$MACRO ON}
@@ -1597,6 +1601,12 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
+    {$ifdef fullVersion}
+    if reportableStep then begin
+      if stepper.stepping(first^.location) then currentStateMessage(true)
+                                           else context.adapters^.currentlyDebugging:=false;
+    end;
+    {$endif}
     {$ifndef debugMode}
     except
       on e:Exception do begin
