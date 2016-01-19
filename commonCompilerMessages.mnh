@@ -1,5 +1,3 @@
-intersect(A,B)->each(a,A,a in B ? a : void);
-intersect(A,...)->intersect(A,intersect@...);
 contains(fullString,subString)->pos(subString,fullString)>=0;
 
 ignore(s)->s.matches('^(mnh_litvar|mnh_funcs|mnh_tokens_funcs|consoleAsk|mnh_plotfuncs).* Hint: Parameter "(other|tokenLocation|context|adapters)" not used$') OR
