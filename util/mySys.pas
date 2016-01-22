@@ -1,6 +1,6 @@
 UNIT mySys;
 INTERFACE
-USES dos,myGenerics,sysutils,process,windows,FileUtil;
+USES dos,myGenerics,sysutils,process,{$ifdef WINDOWS}windows,{$endif}FileUtil;
 
 FUNCTION getEnvironment:T_arrayOfString;
 FUNCTION findDeeply(CONST rootPath,searchPattern:ansistring):ansistring;
@@ -8,6 +8,11 @@ PROCEDURE clearConsole;
 PROCEDURE getFileInfo(CONST filePath:string; OUT time:double; OUT size:int64; OUT isExistent, isArchive, isDirectory, isReadOnly, isSystem, isHidden:boolean);
 FUNCTION getNumberOfCPUs:longint;
 FUNCTION MemoryUsed: int64;
+{$ifdef WINDOWS}{$ifndef debugMode}
+FUNCTION GetConsoleWindow: HWND; stdcall; external kernel32;
+{$endif}{$endif}
+PROCEDURE showConsole;
+PROCEDURE hideConsole;
 
 VAR CMD_PATH,
     SEVEN_ZIP_PATH,
@@ -126,6 +131,27 @@ PROCEDURE getFileInfo(CONST filePath:string;
 FUNCTION MemoryUsed: int64;
   begin
     result:=GetHeapStatus.TotalAllocated;
+  end;
+
+VAR consoleShowing:longint=1;
+PROCEDURE showConsole;
+  begin
+    inc(consoleShowing);
+    if consoleShowing<1 then consoleShowing:=1;
+    {$ifdef WINDOWS}{$ifndef debugMode}
+    ShowWindow(GetConsoleWindow, SW_SHOW);
+    {$endif}{$endif}
+  end;
+
+PROCEDURE hideConsole;
+  begin
+    dec(consoleShowing);
+    if consoleShowing<=0 then begin
+      {$ifdef WINDOWS}{$ifndef debugMode}
+      ShowWindow(GetConsoleWindow, SW_HIDE);
+      {$endif}{$endif}
+      if consoleShowing<0 then consoleShowing:=0;
+    end;
   end;
 
 INITIALIZATION

@@ -276,8 +276,10 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
         for i:=0 to list1^.size-1 do
           cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
       end;
+      showConsole;
       runCommandAsyncOrPipeless(executable,
                                 cmdLinePar,doAsynch);
+      hideConsole;
       result:=newBoolLiteral(true);
     end;
   end;

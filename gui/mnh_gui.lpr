@@ -16,13 +16,10 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   {$ifndef debugMode},windows,sysutils{$endif};
 
 {$R *.res}
-{$ifndef debugMode}
-FUNCTION GetConsoleWindow: HWND; stdcall; external kernel32;
-{$endif}
 
 begin
   locationToOpenOnFormStartup:=parseCmdLine;
-  {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_HIDE); {$endif}
+  hideConsole;
 
   mnh_gui_main.lateInitialization;
   Application.Title:='MNH5 - GUI';
@@ -35,5 +32,5 @@ begin
   Application.CreateForm(TaskForm, askForm);
   Application.CreateForm(TplotForm, plotForm);
   Application.Run;
-  {$ifndef debugMode} ShowWindow(GetConsoleWindow, SW_SHOW); {$endif}
+  showConsole;
 end.
