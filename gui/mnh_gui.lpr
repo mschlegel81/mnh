@@ -3,8 +3,7 @@ PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$IFDEF UNIX} {$IFDEF UseCThreads}
-  cthreads, {$ENDIF} {$ENDIF}
+USES {$IFDEF UNIX} cthreads, cmem, {$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog,
   mnh_cmdLineInterpretation, mnh_tokLoc, mnh_funcs, mnh_funcs_list,
@@ -12,8 +11,7 @@ USES {$IFDEF UNIX} {$IFDEF UseCThreads}
   mnh_funcs_system, mnh_litVar, mnh_packages, mnh_out_adapters,
   consoleAsk, mnh_constants, mnh_doc, mnh_html,
   SynHighlighterMnh, mnh_evalThread, mySys,
-  mnh_plotData,mnh_plotFuncs, mnh_plotForm
-  {$ifndef debugMode},windows,sysutils{$endif};
+  mnh_plotData,mnh_plotFuncs, mnh_plotForm;
 
 {$R *.res}
 

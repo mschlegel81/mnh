@@ -9,7 +9,7 @@ object SettingsForm: TSettingsForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poMainFormCenter
-  LCLVersion = '1.2.6.0'
+  LCLVersion = '1.4.4.0'
   object PageControl1: TPageControl
     Left = 0
     Height = 240

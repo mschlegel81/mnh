@@ -17,7 +17,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.2.6.0'
+  LCLVersion = '1.4.4.0'
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
@@ -357,7 +357,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -365,24 +364,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -393,7 +386,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -404,7 +396,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -727,7 +718,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -735,24 +725,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -763,7 +747,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -774,7 +757,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -1097,7 +1079,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -1105,24 +1086,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -1133,7 +1108,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -1144,7 +1118,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -1467,7 +1440,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -1475,24 +1447,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -1503,7 +1469,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -1514,7 +1479,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -1837,7 +1801,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -1845,24 +1808,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -1873,7 +1830,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -1884,7 +1840,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -2207,7 +2162,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -2215,24 +2169,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -2243,7 +2191,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -2254,7 +2201,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -2577,7 +2523,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -2585,24 +2530,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -2613,7 +2552,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -2624,7 +2562,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -2947,7 +2884,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -2955,24 +2891,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -2983,7 +2913,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -2994,7 +2923,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -3317,7 +3245,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -3325,24 +3252,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -3353,7 +3274,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -3364,7 +3284,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -3687,7 +3606,6 @@ object MnhForm: TMnhForm
           VisibleSpecialChars = [vscSpace, vscTabAtLast]
           RightEdge = -1
           ScrollBars = ssAutoBoth
-          SelectedColor.FrameEdges = sfeAround
           SelectedColor.BackPriority = 50
           SelectedColor.ForePriority = 50
           SelectedColor.FramePriority = 50
@@ -3695,24 +3613,18 @@ object MnhForm: TMnhForm
           SelectedColor.ItalicPriority = 50
           SelectedColor.UnderlinePriority = 50
           SelectedColor.StrikeOutPriority = 50
-          IncrementColor.FrameEdges = sfeAround
-          HighlightAllColor.FrameEdges = sfeAround
           BracketHighlightStyle = sbhsBoth
           BracketMatchColor.Background = clYellow
           BracketMatchColor.Foreground = clNone
           BracketMatchColor.FrameColor = clRed
-          BracketMatchColor.FrameEdges = sfeAround
           BracketMatchColor.Style = [fsBold]
           FoldedCodeColor.Background = clNone
           FoldedCodeColor.Foreground = clGray
           FoldedCodeColor.FrameColor = clGray
-          FoldedCodeColor.FrameEdges = sfeAround
           MouseLinkColor.Background = clNone
           MouseLinkColor.Foreground = clBlue
-          MouseLinkColor.FrameEdges = sfeAround
           LineHighlightColor.Background = clNone
           LineHighlightColor.Foreground = clNone
-          LineHighlightColor.FrameEdges = sfeAround
           WantTabs = False
           OnChange = InputEditChange
           OnProcessCommand = InputEditProcessUserCommand
@@ -3723,7 +3635,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
-              MarkupInfo.FrameEdges = sfeAround
               DigitCount = 2
               ShowOnlyLineNumbersMultiplesOf = 1
               ZeroStart = False
@@ -3734,7 +3645,6 @@ object MnhForm: TMnhForm
               MouseActions = <>
               MarkupInfo.Background = clWhite
               MarkupInfo.Foreground = clGray
-              MarkupInfo.FrameEdges = sfeAround
             end
             object SynGutterChanges1: TSynGutterChanges
               Width = 4
@@ -4200,7 +4110,6 @@ object MnhForm: TMnhForm
       ReadOnly = True
       RightEdge = -1
       ScrollBars = ssAutoBoth
-      SelectedColor.FrameEdges = sfeAround
       SelectedColor.BackPriority = 50
       SelectedColor.ForePriority = 50
       SelectedColor.FramePriority = 50
@@ -4208,24 +4117,18 @@ object MnhForm: TMnhForm
       SelectedColor.ItalicPriority = 50
       SelectedColor.UnderlinePriority = 50
       SelectedColor.StrikeOutPriority = 50
-      IncrementColor.FrameEdges = sfeAround
-      HighlightAllColor.FrameEdges = sfeAround
       BracketHighlightStyle = sbhsBoth
       BracketMatchColor.Background = clYellow
       BracketMatchColor.Foreground = clNone
       BracketMatchColor.FrameColor = clRed
-      BracketMatchColor.FrameEdges = sfeAround
       BracketMatchColor.Style = [fsBold]
       FoldedCodeColor.Background = clNone
       FoldedCodeColor.Foreground = clGray
       FoldedCodeColor.FrameColor = clGray
-      FoldedCodeColor.FrameEdges = sfeAround
       MouseLinkColor.Background = clNone
       MouseLinkColor.Foreground = clBlue
-      MouseLinkColor.FrameEdges = sfeAround
       LineHighlightColor.Background = clNone
       LineHighlightColor.Foreground = clNone
-      LineHighlightColor.FrameEdges = sfeAround
       WantTabs = False
       inline SynLeftGutterPartList1: TSynGutterPartList
         object SynGutterLineNumber1: TSynGutterLineNumber
@@ -4233,7 +4136,6 @@ object MnhForm: TMnhForm
           MouseActions = <>
           MarkupInfo.Background = clBtnFace
           MarkupInfo.Foreground = clNone
-          MarkupInfo.FrameEdges = sfeAround
           DigitCount = 2
           ShowOnlyLineNumbersMultiplesOf = 1
           ZeroStart = False
@@ -4244,7 +4146,6 @@ object MnhForm: TMnhForm
           MouseActions = <>
           MarkupInfo.Background = clWhite
           MarkupInfo.Foreground = clGray
-          MarkupInfo.FrameEdges = sfeAround
         end
       end
     end
@@ -4353,12 +4254,12 @@ object MnhForm: TMnhForm
       Width = 172
       Align = alTop
       Caption = 'Breakpoints'
-      ClientHeight = 87
+      ClientHeight = 85
       ClientWidth = 168
       TabOrder = 1
       object BreakpointsGrid: TStringGrid
         Left = 0
-        Height = 87
+        Height = 85
         Top = 0
         Width = 168
         Align = alClient
@@ -4401,12 +4302,12 @@ object MnhForm: TMnhForm
       Width = 172
       Align = alClient
       Caption = 'Step'
-      ClientHeight = 185
+      ClientHeight = 183
       ClientWidth = 168
       TabOrder = 3
       inline debugEdit: TSynEdit
         Left = 0
-        Height = 185
+        Height = 183
         Top = 0
         Width = 168
         Align = alClient
@@ -4849,7 +4750,6 @@ object MnhForm: TMnhForm
         MouseSelActions = <>
         VisibleSpecialChars = [vscSpace, vscTabAtLast]
         ReadOnly = True
-        SelectedColor.FrameEdges = sfeAround
         SelectedColor.BackPriority = 50
         SelectedColor.ForePriority = 50
         SelectedColor.FramePriority = 50
@@ -4857,23 +4757,17 @@ object MnhForm: TMnhForm
         SelectedColor.ItalicPriority = 50
         SelectedColor.UnderlinePriority = 50
         SelectedColor.StrikeOutPriority = 50
-        IncrementColor.FrameEdges = sfeAround
-        HighlightAllColor.FrameEdges = sfeAround
         BracketHighlightStyle = sbhsBoth
         BracketMatchColor.Background = clNone
         BracketMatchColor.Foreground = clNone
-        BracketMatchColor.FrameEdges = sfeAround
         BracketMatchColor.Style = [fsBold]
         FoldedCodeColor.Background = clNone
         FoldedCodeColor.Foreground = clGray
         FoldedCodeColor.FrameColor = clGray
-        FoldedCodeColor.FrameEdges = sfeAround
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
-        MouseLinkColor.FrameEdges = sfeAround
         LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
-        LineHighlightColor.FrameEdges = sfeAround
         OnCommandProcessed = debugEditCommandProcessed
         inline SynLeftGutterPartList1: TSynGutterPartList
         end
@@ -4895,12 +4789,12 @@ object MnhForm: TMnhForm
       Width = 172
       Align = alBottom
       Caption = 'Variables'
-      ClientHeight = 71
+      ClientHeight = 69
       ClientWidth = 168
       TabOrder = 5
       inline variableEdit: TSynEdit
         Left = 0
-        Height = 71
+        Height = 69
         Top = 0
         Width = 168
         Align = alClient
@@ -5342,7 +5236,6 @@ object MnhForm: TMnhForm
         MouseSelActions = <>
         VisibleSpecialChars = [vscSpace, vscTabAtLast]
         ReadOnly = True
-        SelectedColor.FrameEdges = sfeAround
         SelectedColor.BackPriority = 50
         SelectedColor.ForePriority = 50
         SelectedColor.FramePriority = 50
@@ -5350,23 +5243,17 @@ object MnhForm: TMnhForm
         SelectedColor.ItalicPriority = 50
         SelectedColor.UnderlinePriority = 50
         SelectedColor.StrikeOutPriority = 50
-        IncrementColor.FrameEdges = sfeAround
-        HighlightAllColor.FrameEdges = sfeAround
         BracketHighlightStyle = sbhsBoth
         BracketMatchColor.Background = clNone
         BracketMatchColor.Foreground = clNone
-        BracketMatchColor.FrameEdges = sfeAround
         BracketMatchColor.Style = [fsBold]
         FoldedCodeColor.Background = clNone
         FoldedCodeColor.Foreground = clGray
         FoldedCodeColor.FrameColor = clGray
-        FoldedCodeColor.FrameEdges = sfeAround
         MouseLinkColor.Background = clNone
         MouseLinkColor.Foreground = clBlue
-        MouseLinkColor.FrameEdges = sfeAround
         LineHighlightColor.Background = clNone
         LineHighlightColor.Foreground = clNone
-        LineHighlightColor.FrameEdges = sfeAround
         inline SynLeftGutterPartList1: TSynGutterPartList
         end
       end

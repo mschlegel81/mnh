@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, EditBtn, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,mnh_fileWrappers;
+  StdCtrls, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,mnh_fileWrappers;
 
 CONST
   STATE_SAVE_INTERVAL=ONE_MINUTE;

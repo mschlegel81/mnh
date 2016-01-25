@@ -47,7 +47,6 @@
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_gui"/>
       </Unit0>
       <Unit1>
         <Filename Value="mnh_gui_main.pas"/>
@@ -55,7 +54,6 @@
         <ComponentName Value="MnhForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="mnh_gui_main"/>
       </Unit1>
       <Unit2>
         <Filename Value="mnh_gui_settings.pas"/>
@@ -63,7 +61,6 @@
         <ComponentName Value="SettingsForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="mnh_gui_settings"/>
       </Unit2>
       <Unit3>
         <Filename Value="closedialog.pas"/>
@@ -89,7 +86,6 @@
       <Unit6>
         <Filename Value="..\core\mnh_tokens.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_tokens"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\core\mnh_tokens_subrule.inc"/>
@@ -102,7 +98,6 @@
       <Unit9>
         <Filename Value="..\core\mnh_fileWrappers.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_fileWrappers"/>
       </Unit9>
       <Unit10>
         <Filename Value="..\core\mnh_tokloc.pas"/>
@@ -112,7 +107,6 @@
       <Unit11>
         <Filename Value="..\core\mnh_out_adapters.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_out_adapters"/>
       </Unit11>
       <Unit12>
         <Filename Value="..\core\mnh_tokens_token.inc"/>
@@ -121,7 +115,6 @@
       <Unit13>
         <Filename Value="..\core\mnh_constants.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_constants"/>
       </Unit13>
       <Unit14>
         <Filename Value="..\core\mnh_litvar.pas"/>
@@ -131,12 +124,10 @@
       <Unit15>
         <Filename Value="..\core\mnh_funcs.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs"/>
       </Unit15>
       <Unit16>
         <Filename Value="mnh_evalThread.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_evalThread"/>
       </Unit16>
       <Unit17>
         <Filename Value="..\core\mnh_tokens_pattern.inc"/>
@@ -145,12 +136,10 @@
       <Unit18>
         <Filename Value="..\core\mnh_plotData.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_plotData"/>
       </Unit18>
       <Unit19>
         <Filename Value="..\core\mnh_caches.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_caches"/>
       </Unit19>
       <Unit20>
         <Filename Value="..\core\mnh_tokens_futureTask.inc"/>
@@ -159,7 +148,6 @@
       <Unit21>
         <Filename Value="..\core\mnh_doc.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_doc"/>
       </Unit21>
       <Unit22>
         <Filename Value="..\core\mnh_tokens_funcs.inc"/>
@@ -168,7 +156,6 @@
       <Unit23>
         <Filename Value="..\core\consoleAsk.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="consoleAsk"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\core\mnh_tokens_recycler.inc"/>
@@ -177,42 +164,34 @@
       <Unit25>
         <Filename Value="..\core\mnh_cmdLineInterpretation.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_cmdLineInterpretation"/>
       </Unit25>
       <Unit26>
         <Filename Value="..\util\mySys.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mySys"/>
       </Unit26>
       <Unit27>
         <Filename Value="..\core\mnh_funcs_mnh.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_mnh"/>
       </Unit27>
       <Unit28>
         <Filename Value="..\core\mnh_funcs_math.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_math"/>
       </Unit28>
       <Unit29>
         <Filename Value="..\core\mnh_funcs_strings.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_strings"/>
       </Unit29>
       <Unit30>
         <Filename Value="..\core\mnh_funcs_list.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_list"/>
       </Unit30>
       <Unit31>
         <Filename Value="..\core\mnh_funcs_system.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_system"/>
       </Unit31>
       <Unit32>
         <Filename Value="..\core\mnh_funcs_regex.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_funcs_regex"/>
       </Unit32>
       <Unit33>
         <Filename Value="..\core\mnh_tokens_procBlock.inc"/>
@@ -221,7 +200,6 @@
       <Unit34>
         <Filename Value="..\core\mnh_html.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="mnh_html"/>
       </Unit34>
       <Unit35>
         <Filename Value="..\core\mnh_plotfuncs.pas"/>
@@ -267,12 +245,8 @@
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
       </Verbosity>
-      <CompilerMessages>
-        <MsgFileName Value=""/>
-      </CompilerMessages>
       <CustomOptions Value="-ddebugMode
 -dfullVersion"/>
-      <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>
   <Debugging>
