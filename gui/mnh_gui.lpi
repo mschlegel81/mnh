@@ -224,7 +224,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core"/>
-      <OtherUnitFiles Value="..\core;..\util"/>
+      <OtherUnitFiles Value="..\core;..\..\common"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
