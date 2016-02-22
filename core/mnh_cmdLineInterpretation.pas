@@ -63,21 +63,6 @@ FUNCTION parseCmdLine:T_tokenLocation;
       {$endif}
     end;
 
-  {$ifdef fullVersion}
-  PROCEDURE tryToRunSetup;
-    CONST setupFile='install.mnh';
-    VAR context:T_evaluationContext;
-    begin
-      if not(fileExists(setupFile)) then exit;
-      context.createNormalContext(@nullAdapter);
-      environment.mainPackageProvider^.setPath(setupFile);
-      setLength(parameters,0);
-      callMainInMain(parameters,context);
-      context.destroy;
-      nullAdapter.ClearAll;
-    end;
-  {$endif}
-
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
     begin
@@ -169,9 +154,6 @@ FUNCTION parseCmdLine:T_tokenLocation;
       displayHelp;
       halt;
     end;
-    {$ifdef fullVersion}
-    tryToRunSetup;
-    {$endif}
   end;
 
 INITIALIZATION
