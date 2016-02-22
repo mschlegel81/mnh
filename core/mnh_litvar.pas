@@ -2313,30 +2313,52 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
   end;
 
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-  VAR map,keyValuePair:P_listLiteral;
+  VAR map,keyValuePair,keyList,fallbackList,resultList:P_listLiteral;
       key:P_stringLiteral;
       fallback:P_literal;
       i:longint;
+      back:specialize G_literalKeyMap<P_literal>;
   begin
     result:=nil;
     if (params<>nil) and ((length(params^.element)=2) or (length(params^.element)=3)) and
        (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.element[1]^.literalType=lt_string) then begin
+       (params^.element[1]^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
       map:=P_listLiteral(params^.element[0]);
-      key:=P_stringLiteral(params^.element[1]);
       if length(params^.element)=3 then fallback:=params^.element[2]
                                    else fallback:=nil;
-      for i:=0 to length(map^.element)-1 do begin
-        keyValuePair:=P_listLiteral(map^.element[i]);
-        if keyValuePair^.element[0]^.equals(key) then begin
-          result:=keyValuePair^.element[1];
-          result^.rereference;
-          exit(result);
+      if params^.element[1]^.literalType in [lt_stringList,lt_emptyList] then begin
+        keyList:=P_listLiteral(params^.element[1]);
+        back.create();
+        for i:=0 to map^.size-1 do begin
+          keyValuePair:=P_listLiteral(map^.element[i]);
+          back.put(keyValuePair^.element[0],keyValuePair^.element[1]);
         end;
+        resultList:=newListLiteral;
+        if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
+          fallbackList:=P_listLiteral(fallback);
+          for i:=0 to keyList^.size-1 do resultList^.append(back.get(keyList^.element[i],fallbackList^.element[i]),true,adapters);
+        end else begin
+          for i:=0 to keyList^.size-1 do begin
+            result:=back.get(keyList^.element[i],fallback);
+            if result<>nil then resultList^.append(result,true,adapters);
+          end;
+        end;
+        back.destroy;
+        result:=resultList;
+      end else begin
+        key:=P_stringLiteral(params^.element[1]);
+        for i:=0 to length(map^.element)-1 do begin
+          keyValuePair:=P_listLiteral(map^.element[i]);
+          if keyValuePair^.element[0]^.equals(key) then begin
+            result:=keyValuePair^.element[1];
+            result^.rereference;
+            exit(result);
+          end;
+        end;
+        if fallback=nil then exit(newListLiteral);
+        result:=fallback;
+        fallback^.rereference;
       end;
-      if fallback=nil then exit(newListLiteral);
-      result:=fallback;
-      fallback^.rereference;
     end;
   end;
 
