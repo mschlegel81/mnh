@@ -357,4 +357,4 @@ out> [1.0,0.5,0.25,0.2,0.4,0.333333333333333,0.666666666666667]
  in> deleteFile('plotDemo1.png');
 out> true
  in> driveInfo;
-out> [[['drive','C'],['type','fixed'],['serial',1779773958],['label','']],[['drive','D'],['type','fixed'],['serial',1915365941],['label','Cache SSD']]]
+out> [[['drive','C'],['type','fixed'],['serial',1779773958],['label','']],[['drive','D'],['type','fixed'],['serial',1915365941],['label','Cache SSD']],[['drive','E'],['type','removable'],['serial',650802681],['label','']],[['drive','Y'],['type','network'],['serial',41222496],['label','nas']],[['drive','Z'],['type','network'],['serial',41224716],['label','Photos']]]
