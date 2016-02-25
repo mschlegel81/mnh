@@ -1,6 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,Diff,mnh_contexts,FileUtil;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,FileUtil;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -586,7 +586,7 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
 {$define diffStatOrDiff_impl:=
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
-      Diff:TDiff;
+      diff:TDiff;
       i:longint;
       {$ifdef withEditScript}
       comp:P_listLiteral;
@@ -598,54 +598,54 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
         (arg1^.literalType in [lt_stringList,lt_emptyList]) or
         (arg0^.literalType=lt_string) and
         (arg1^.literalType=lt_string)) then begin
-      Diff.create();
+      diff.create();
       if (arg0^.literalType in [lt_stringList,lt_emptyList]) and
          (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
         with list0^ do begin
           aLen:=size;
-          GetMem(aHashes,aLen*sizeOf(integer));
+          getMem(aHashes,aLen*sizeOf(integer));
           for i:=0 to aLen-1 do aHashes[i]:=value(i)^.hash;
         end;
         with list1^ do begin
           bLen:=size;
-          GetMem(bHashes,bLen*sizeOf(integer));
+          getMem(bHashes,bLen*sizeOf(integer));
           for i:=0 to bLen-1 do bHashes[i]:=value(i)^.hash;
         end;
-        Diff.execute(aHashes,bHashes,aLen,bLen);
+        diff.execute(aHashes,bHashes,aLen,bLen);
         freeMem(aHashes,aLen*sizeOf(integer));
         freeMem(bHashes,bLen*sizeOf(integer));
       end else if (arg0^.literalType=lt_string) and
                   (arg1^.literalType=lt_string) then begin
-        Diff.execute(str0^.value,
+        diff.execute(str0^.value,
                      str1^.value);
       end;
 
       result:=newListLiteral^
              .append(newListLiteral^
                     .appendString('adds')^
-                    .appendInt(Diff.DiffStats.adds),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.adds),false,context.adapters^)^
              .append(newListLiteral^
                     .appendString('deletes')^
-                    .appendInt(Diff.DiffStats.deletes),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.deletes),false,context.adapters^)^
              .append(newListLiteral^
                     .appendString('matches')^
-                    .appendInt(Diff.DiffStats.matches),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.matches),false,context.adapters^)^
              .append(newListLiteral^
                     .appendString('modifies')^
-                    .appendInt(Diff.DiffStats.modifies),false,context.adapters^);
+                    .appendInt(diff.DiffStats.modifies),false,context.adapters^);
       {$ifdef withEditScript}
       comp:=newListLiteral;
-      for i:=0 to Diff.count-1 do begin
-        case Diff.Compares[i].kind of
-          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(Diff.Compares[i].oldIndex1)^.appendInt(Diff.Compares[i].oldIndex2),false,context.adapters^);
+      for i:=0 to diff.count-1 do begin
+        case diff.Compares[i].kind of
+          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
+          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
+          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
+          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
         end;
       end;
       P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false,context.adapters^),false,context.adapters^);
       {$endif}
-      Diff.destroy;
+      diff.destroy;
     end;
   end}
 {$define withEditScript}

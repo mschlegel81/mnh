@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts;
+     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -413,10 +413,10 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
-      sysutils.Beep;
+      sysutils.beep;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       result:=newVoidLiteral;
-      windows.Beep(int0^.value,
+      windows.beep(int0^.value,
                    int1^.value);
     end;
   end;

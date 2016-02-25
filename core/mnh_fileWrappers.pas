@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES sysutils,Classes,process,myGenerics,mnh_constants,myStringUtil;
+USES sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil;
 TYPE
   P_codeProvider = ^T_codeProvider;
 
@@ -98,7 +98,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     VAR
       info: TSearchRec;
     begin
-      if findFirst(path+'*', faAnyFile, info) = 0 then
+      if FindFirst(path+'*', faAnyFile, info) = 0 then
         repeat
           if (info.Attr and faDirectory) = faDirectory then
             begin
@@ -108,7 +108,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
           else if nameToId(info.name) = id then
             result := path+info.name;
         until (findNext(info)<>0) or (result<>'');
-      sysutils.findClose(info);
+      sysutils.FindClose(info);
     end;
 
   begin
@@ -122,14 +122,14 @@ FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
-      if findFirst(path+'*', faAnyFile, info) = 0 then repeat
+      if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
         if (info.Attr and faDirectory) = faDirectory then begin
           if (info.name<>'.') and (info.name<>'..') then
             recursePath(path+info.name+DirectorySeparator);
         end else if uppercase(extractFileExt(info.name)) = SCRIPT_EXTENSION then
           appendIfNew(result,path+info.name);
       until (findNext(info)<>0);
-      sysutils.findClose(info);
+      sysutils.FindClose(info);
     end;
 
   begin
@@ -154,7 +154,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
       reset(handle);
       result := '';
       repeat
-        blockread(handle, block, length(block), actuallyRead);
+        BlockRead(handle, block, length(block), actuallyRead);
         for i := 0 to actuallyRead-1 do
           result := result+block [i];
       until actuallyRead<length(block);
@@ -220,7 +220,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
           inc(i);
           inc(j);
           end;
-        blockwrite(handle, block, j);
+        BlockWrite(handle, block, j);
       end;
       close(handle);
     except
@@ -247,7 +247,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
           content := '';
           result :='';
           repeat
-            blockread(chandle, block, length(block), actuallyRead);
+            BlockRead(chandle, block, length(block), actuallyRead);
             for i := 0 to actuallyRead-1 do content := content+block [i];
             pr:=pos(C_carriageReturnChar,content);
             pn:=pos(C_lineBreakChar,content);
@@ -296,7 +296,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
   begin
     path := extractFilePath(pattern);
     setLength(result, 0);
-    if findFirst(pattern, faAnyFile, info) = 0 then repeat
+    if FindFirst(pattern, faAnyFile, info) = 0 then repeat
       if (info.name<>'.') and
          (info.name<>'..') and
         (((info.Attr and faDirectory) =faDirectory) and not(filesAndNotFolders) or
@@ -306,7 +306,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
         if recurseSubDirs and not(filesAndNotFolders) then append(result,find(path+info.name+DirectorySeparator+'*',false,true));
       end;
     until (findNext(info)<>0);
-    sysutils.findClose(info);
+    sysutils.FindClose(info);
   end;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;

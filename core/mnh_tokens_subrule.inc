@@ -176,7 +176,6 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
       tt_operatorStrConcat,
-      tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
       tt_operatorConcat, tt_operatorIn,
       tt_iifCheck, tt_iifElse,
       tt_typeCheckScalar,  tt_typeCheckList,
@@ -209,7 +208,6 @@ FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
         tt_operatorAnd, tt_operatorOr, tt_operatorXor,
         tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
         tt_operatorStrConcat,
-        tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2, tt_operatorExtractL3,
         tt_operatorConcat, tt_operatorIn: if C_opPrecedence[preparedBody[i].token.tokType]>C_opPrecedence[outerOp] then exit(false);
       end;
       if bracketLevel<0 then exit(false);

@@ -294,6 +294,20 @@ FUNCTION mapDrop_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     result:=mapDrop(params,tokenLocation,context.adapters^);
   end;
 
+FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_validListTypes)
+    then result:=list0^.get(arg1,tokenLocation,context.adapters^)
+    else result:=nil;
+  end;
+
+FUNCTION getInner_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_validListTypes)
+    then result:=list0^.getInner(arg1,tokenLocation,context.adapters^)
+    else result:=nil;
+  end;
+
 FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
       R:P_listLiteral;
@@ -327,8 +341,10 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'listAnd',@listAnd_impl,'listAnd(B:booleanList);#Returns true if all values in B are true, false otherwise');
   registerRule(LIST_NAMESPACE,'listOr',@listOr_impl,'listOr(B:booleanList);#Returns true if any value in B is true, false otherwise');
   registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
-  registerRule(LIST_NAMESPACE,'put',@mapPut_imp,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
-  registerRule(LIST_NAMESPACE,'get',@mapGet_imp,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
+  registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
+  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
+  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
+  registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
                                             'get(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
   registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');

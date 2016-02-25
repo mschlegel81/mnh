@@ -62,7 +62,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     until (sleepTime>=SLEEP_TIME_TO_QUIT) or (pendingTasks.destructionPending){$ifdef fullVersion} or stepper.currentlyDebugging{$endif};
     tempcontext.destroy;
     result:=0;
-    InterLockedDecrement(poolThreadsRunning);
+    interlockedDecrement(poolThreadsRunning);
   end;
 
 PROCEDURE ensurePoolThreads;

@@ -116,7 +116,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
     case tokType of
       tt_each, tt_parallelEach: begin
         result:=C_tokenString[tokType];
-        if txt<>'' then result:=result+'('+txt+',';
+        if txt<>'' then result:=result+'('+txt+','
+                   else result:=C_tokenString[tt_agg]+'(';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
       tt_aggregatorExpressionLiteral,

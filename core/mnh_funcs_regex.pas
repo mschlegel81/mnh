@@ -86,7 +86,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
           for i:=0 to regex.SubExprMatchCount do begin
             result^.append(
               newListLiteral^.
-              appendString(regex.Match   [i])^.
+              appendString(regex.match   [i])^.
               appendInt   (regex.MatchPos[i])^.
               appendInt   (regex.MatchLen[i]),false,context.adapters^);
           end;

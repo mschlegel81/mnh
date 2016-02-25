@@ -55,7 +55,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_when, tt_while,  tt_begin,  tt_end,
+    tt_each, tt_parallelEach, tt_agg, tt_when, tt_while,  tt_begin,  tt_end,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -76,8 +76,6 @@ TYPE
     //special: string concatenation
     tt_operatorStrConcat,
     //list operators:
-    tt_operatorExtractL0, tt_operatorExtractL1, tt_operatorExtractL2,
-    tt_operatorExtractL3,
     tt_operatorConcat, tt_operatorIn,
     //inline if: (<condition>?<then>:<else>)
     tt_iifCheck, tt_iifElse,
@@ -145,7 +143,7 @@ CONST
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
     5,                   //special: string concatenation
-    0, 0, 0, 0, 1, 7);   //list operators
+    1, 7);   //list operators
 
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckKeyValueList] of set of T_literalType =
     {tt_typeCheckScalar}      ([lt_boolean, lt_int, lt_real, lt_string],
@@ -170,7 +168,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    'each', 'pEach', 'when','while','begin','end',
+    '.each', '.pEach', '.agg', 'when','while','begin','end',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -189,7 +187,7 @@ CONST
     //special: string concatenation
     '&',
     //list operators:
-    '%', '%%', '%%%', '%%%%', '|', 'in',
+    '|', 'in',
     //inline if: (<condition>?<then>:<else>)
     '?', ':',
     '@',

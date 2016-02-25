@@ -64,6 +64,12 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
           t[i+3].data:=nil;
           inc(i,3); //skip tt_braceOpen, identifier and comma
         end;
+        tt_agg: if (i<length(t)-1) and (t[i+1].tokType=tt_braceOpen) then begin
+          t[i+1].tokType:=tt_each;
+          t[i+1].txt:='';
+          t[i+1].data:=nil;
+          inc(i);
+        end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
          ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
          (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
@@ -229,7 +235,16 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
         parsedLength:=1;
         result.tokType:=tt_operatorDivReal;
       end;
-      '.': if startsWith(C_tokenString[tt_optionalParameters]) then begin
+      '.': if startsWith(C_tokenString[tt_each]) then begin
+        parsedLength:=length(C_tokenString[tt_each]);
+        result.tokType:=tt_each;
+      end else if startsWith(C_tokenString[tt_parallelEach]) then begin
+        parsedLength:=length(C_tokenString[tt_parallelEach]);
+        result.tokType:=tt_parallelEach;
+      end else if startsWith(C_tokenString[tt_agg]) then begin
+        parsedLength:=length(C_tokenString[tt_agg]);
+        result.tokType:=tt_agg;
+      end else if startsWith(C_tokenString[tt_optionalParameters]) then begin
         parsedLength:=length(C_tokenString[tt_optionalParameters]);
         result.tokType:=tt_optionalParameters;
       end else if startsWith(C_tokenString[tt_separatorCnt]) then begin
@@ -302,10 +317,6 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
            if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
            if startsWith('<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
                                                                   else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
-      '%': if startsWith(C_tokenString[tt_operatorExtractL3])     then begin parsedLength:=4; result.tokType:=tt_operatorExtractL3;     end else
-           if startsWith(C_tokenString[tt_operatorExtractL2])     then begin parsedLength:=3; result.tokType:=tt_operatorExtractL2;     end else
-           if startsWith(C_tokenString[tt_operatorExtractL1])     then begin parsedLength:=2; result.tokType:=tt_operatorExtractL1;     end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorExtractL0;     end;
       '!': if startsWith('!=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end
                                                                   else begin fail('Cannot parse: '+copy(line,lineLocation.column,20)+' (first char is "'+line[lineLocation.column]+'"=#'+intToStr(ord(line[lineLocation.column]))+')'); lineLocation.column:=length(line)+1; end;
       else begin
@@ -604,24 +615,26 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         aggregatorExpression:P_expressionLiteral;
         aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
         maxFutureForwardInitialization:longint=16;
+        eachToken:P_token;
 
     FUNCTION parseBodyOk:boolean;
-      VAR i:longint;
+      VAR i,lastPart:longint;
           t:P_token;
           bodyParts:T_bodyParts;
       begin
-        //first token is <each>-Token
+        //first^.next token is <each>-Token
+        eachToken:=first^.next;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,0,bracketClosingEach);
+        bodyParts:=getBodyParts(eachToken,0,bracketClosingEach);
         if bracketClosingEach=nil then exit(false);
-
         //process aggregator part (if any)----------------------------------------------
         aggregatorPresent:=no;
-        t:=bodyParts[0].first;
+        lastPart:=length(bodyParts)-1;
+        t:=bodyParts[lastPart].first;
         if t^.tokType=tt_aggregatorConstructor then begin
-          reduceExpression(bodyParts[0].first,callDepth+1,context);
-          bodyParts[0].last:=bodyParts[0].first^.last;
-          t:=bodyParts[0].first;
+          reduceExpression(bodyParts[lastPart].first,callDepth+1,context);
+          bodyParts[lastPart].last:=bodyParts[lastPart].first^.last;
+          t:=bodyParts[lastPart].first;
         end;
         if t^.next=nil then begin
           case t^.tokType of
@@ -639,17 +652,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           end;
         end;
         if aggregatorPresent<>no then begin
-          context.disposeToken(bodyParts[0].first);
-          for i:=0 to length(bodyParts)-2 do bodyParts[i]:=bodyParts[i+1];
+          context.disposeToken(bodyParts[lastPart].first);
           setLength(bodyParts,length(bodyParts)-1);
-          first^.tokType:=tt_braceOpen;
-          bracketClosingEach^.tokType:=tt_braceClose;
         end;
         //----------------------------------------------process aggregator part (if any)
         //process other body parts (if any)---------------------------------------------
-        setLength(bodyRule       ,length(bodyParts));
+        setLength(bodyRule,length(bodyParts));
         for i:=0 to length(bodyParts)-1 do
-          new(bodyRule[i],createForEachBody(first^.txt,bodyParts[i].first,context));
+          new(bodyRule[i],createForEachBody(eachToken^.txt,bodyParts[i].first,context));
         //---------------------------------------------process other body parts (if any)
         result:=true;
       end;
@@ -812,7 +822,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
     begin
       eachLocation:=first^.location;
-      if P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void] then begin
+      if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
       end;
@@ -825,9 +835,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       then itList:=first^.data
       else itList:=newOneElementListLiteral(first^.data,false,context.adapters^);
 
+      first^.next:=context.disposeToken(first^.next);
       resultLiteral:=nil;
-      first^.data:=nil;
-      first^.txt:='';
       //iterate over itList----------------------------------------------------------
       if (aggregatorPresent<>no) and (itList^.size=0)
       then context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
@@ -873,7 +882,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           if bodyParts[i].last^.next<>bracketClosingWhile then context.disposeToken(bodyParts[i].last^.next);
           bodyParts[i].last^.next:=nil;
         end;
-
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
@@ -1217,6 +1225,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
+      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach((first^.next^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif})
       else stack_push_push;
     end;
 
@@ -1331,7 +1340,8 @@ tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
 tt_identifier_pon,tt_importedUserRule_pon,tt_localUserRule_pon,tt_intrinsicRule_pon: pon_flip;
-tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck}
+tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
+tt_each,tt_parallelEach: resolveEach((first^.next^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif})}
 
 {$define FORBIDDEN_SEPARATORS:=
 tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
@@ -1355,13 +1365,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
   begin
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
-    {$ifdef fullVersion} reportableStep:=false; {$endif}
+    {$ifdef fullVersion} reportableStep:=true; {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
       {$ifdef fullVersion}
       if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
-      reportableStep:=false;
+      reportableStep:=true;
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
@@ -1396,8 +1406,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_operatorAnd, tt_operatorOr, //operators with lazy evaluation ?
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
-          tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorExtractL0, tt_operatorExtractL1,
-          tt_operatorExtractL2, tt_operatorExtractL3, tt_operatorConcat, tt_operatorIn: process_op_lit;
+          tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorIn: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>
             tt_braceClose: begin  // ( | <Lit> )
               stack_popDestroy;
@@ -1453,20 +1462,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
           end;
-          tt_each,tt_parallelEach: if (stack[length(stack)-1]^.data=nil) then case cTokType[1] of
-            tt_separatorComma: if cTokType[2]<>tt_EOL then begin
-              // each(<id>, || <literal> , ...
-              stack[length(stack)-1]^.data:=first^.data; //store literal list in each/pEach-token
-              P_literal(first^.data)^.rereference; //rereference literal to prevent destruction
-              first:=context.disposeToken(first); //dispose old literal
-              first:=context.disposeToken(first); //dispose comma
-              stack_popLink;
-            end else context.adapters^.raiseError('Invalid syntax for each/pEach construct - EOL comes to early!',stack[length(stack)-1]^.location);
-            tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
-            COMMON_SEMICOLON_HANDLING;
-            COMMON_CASES;
-            else context.adapters^.raiseError('Invalid syntax for each construct - token "'+safeTokenToString(first^.next)+'" cannot be interpreted after each! Expression tail:',stack[length(stack)-1]^.location);
-          end else context.adapters^.raiseError('Invalid syntax for each construct - each already has a literal!',stack[length(stack)-1]^.location);
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               stack_popDestroy;
@@ -1558,7 +1553,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
-        tt_each,tt_parallelEach: if (first^.data=nil) then stack_push else resolveEach((first^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif});
         tt_mutate: stack_push;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
@@ -1587,7 +1581,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon : applyRule(nil,first^.next);
+          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);

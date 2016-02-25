@@ -244,6 +244,10 @@ TYPE
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
+
+    FUNCTION contains(CONST other: P_literal): boolean;
+    FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+    FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_listLiteral;
   end;
 
   P_namedVariable=^T_namedVariable;
@@ -1326,6 +1330,102 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
     for i:=0 to length(element)-1 do if not (element [i]^.equals(P_listLiteral(other)^.element [i])) then exit(false);
     result:=true;
   end;
+
+FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
+  VAR i:longint;
+  begin
+    with indexBacking do if isSetBacked then exit(setBack.get(other,-1)>=0);
+    result:=false;
+    for i:=0 to length(element)-1 do if element[i]^.equals(other) then exit(true);
+  end;
+
+FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters): P_literal;
+{$MACRO ON}
+{$define checkedExit:=
+  if result^.literalType = lt_listWithError then begin
+    disposeLiteral(result);
+    result:=nil;
+  end;
+  exit(result)}
+  VAR i,i1,j:longint;
+      key:ansistring;
+  begin
+    case other^.literalType of
+      lt_int: begin
+        i1:=length(element);
+        i:=P_intLiteral(other)^.val;
+        if (i>=0) and (i<i1) then begin
+          result:=element [i];
+          result^.rereference;
+          checkedExit;
+        end else exit(newListLiteral);
+      end;
+      lt_intList: begin
+        result:=newListLiteral;
+        i1:=length(element);
+        for j:=0 to length(P_listLiteral(other)^.element)-1 do begin
+          i:=P_intLiteral(P_listLiteral(other)^.element [j])^.val;
+          if (i>=0) and (i<i1) then P_listLiteral(result)^.append(element [i], true,adapters);
+        end;
+        checkedExit;
+      end;
+      lt_booleanList: begin
+        result:=newListLiteral;
+        i1:=length(element);
+        if i1 = length(P_listLiteral(other)^.element) then
+        for i:=0 to length(P_listLiteral(other)^.element)-1 do
+        if P_boolLiteral(P_listLiteral(other)^.element [i])^.val then
+          P_listLiteral(result)^.append(element [i], true,adapters);
+        checkedExit;
+      end;
+      lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
+        //!! Backing
+        key:=P_stringLiteral(other)^.val;
+        for i:=0 to length(element)-1 do
+        if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.val = key then begin
+          result:=P_listLiteral(element [i])^.element [1];
+          result^.rereference;
+          checkedExit;
+        end;
+        exit(newListLiteral);
+      end else begin
+        adapters.raiseError('get with a string as second parameter can only be applied to key-value-lists!', tokenLocation);
+        exit(nil);
+      end;
+      lt_stringList: if literalType in [lt_keyValueList,lt_emptyList] then begin
+        //!! Backing
+        result:=newListLiteral;
+        for j:=0 to P_listLiteral(other)^.size-1 do begin
+          key:=P_stringLiteral(P_listLiteral(other)^.element [j])^.value;
+          i:=0; while i<length(element) do
+          if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.value = key then begin
+            P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true,adapters);
+            i:=length(element);
+          end else inc(i);
+        end;
+        checkedExit;
+      end else begin
+        adapters.raiseError('get with a stringList as second parameter can only be applied to key-value-lists!', tokenLocation);
+        exit(nil);
+      end;
+      lt_emptyList: exit(newListLiteral);
+    end;
+  end;
+
+FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters): P_listLiteral;
+  VAR i:longint;
+  begin
+    result:=newListLiteral;
+    for i:=0 to length(element)-1 do
+    if element[i]^.literalType in C_validListTypes
+    then result^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false,adapters)
+    else begin
+      disposeLiteral(result);
+      exit(nil);
+    end;
+    checkedExit;
+  end;
+
 //=====================================================================:?.equals
 //?.leqForSorting:==============================================================
 FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
@@ -1926,7 +2026,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
     end;
 
-  {$MACRO ON}
   {$define checkedExit:=
     if result^.literalType = lt_listWithError then begin
       disposeLiteral(result);
@@ -1935,8 +2034,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     exit(result)}
   {$define invalidLengthExit:=exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString [op], tokenLocation,adapters))}
 
-  VAR i, i1, j: longint;
-      key: ansistring;
+  VAR i, i1: longint;
   begin
     //HANDLE S x S -> S OPERATORS:---------------------------------------------
     case op of
@@ -2110,82 +2208,6 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
       tt_comparatorListEq: exit(newBoolLiteral(equals(LHS, RHS)));
       tt_operatorIn: exit(newBoolLiteral(isContained(LHS, RHS)));
-      tt_operatorExtractL0: if LHS^.literalType in C_validListTypes then case RHS^.literalType of
-        lt_int: begin
-          i1:=length(P_listLiteral(LHS)^.element);
-          i:=P_intLiteral(RHS)^.val;
-          if (i>=0) and (i<i1) then begin
-            result:=P_listLiteral(LHS)^.element [i];
-            result^.rereference;
-            checkedExit;
-          end else exit(newListLiteral);
-        end;
-        lt_intList: begin
-          result:=newListLiteral;
-          i1:=length(P_listLiteral(LHS)^.element);
-          for j:=0 to length(P_listLiteral(RHS)^.element)-1 do begin
-            i:=P_intLiteral(P_listLiteral(RHS)^.element [j])^.val;
-            if (i>=0) and (i<i1) then P_listLiteral(result)^.append(P_listLiteral(LHS)^.element [i], true,adapters);
-          end;
-          checkedExit;
-        end;
-        lt_booleanList: begin
-          result:=newListLiteral;
-          i1:=length(P_listLiteral(LHS)^.element);
-          if i1 = length(P_listLiteral(RHS)^.element) then
-          for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
-          if P_boolLiteral(P_listLiteral(RHS)^.element [i])^.val then
-            P_listLiteral(result)^.append(P_listLiteral(LHS)^.element [i], true,adapters);
-          checkedExit;
-        end;
-        lt_string: if LHS^.literalType in [lt_keyValueList,lt_emptyList] then begin
-          key:=P_stringLiteral(RHS)^.val;
-          for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-          if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.val = key then begin
-            result:=P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [1];
-            result^.rereference;
-            checkedExit;
-          end;
-          exit(newListLiteral);
-        end else exit(newErrorLiteralRaising('Operator % with a string as second operand can only be applied to key-value-lists!', tokenLocation,adapters));
-        lt_stringList: if LHS^.literalType in [lt_keyValueList,lt_emptyList] then begin
-          result:=newListLiteral;
-          for j:=0 to P_listLiteral(RHS)^.size-1 do begin
-            key:=P_stringLiteral(P_listLiteral(RHS)^.element [j])^.value;
-            i:=0; while i<length(P_listLiteral(LHS)^.element) do
-            if P_stringLiteral(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [0])^.value = key then begin
-              P_listLiteral(result)^.append(P_listLiteral(P_listLiteral(LHS)^.element [i])^.element [1], true,adapters);
-              i:=length(P_listLiteral(LHS)^.element);
-            end else inc(i);
-          end;
-          checkedExit;
-        end else exit(newErrorLiteralRaising('Operator % with a stringList as second operand can only be applied to key-value-lists!', tokenLocation,adapters));
-        lt_emptyList: exit(newListLiteral);
-      end;
-      tt_operatorExtractL1: if LHS^.literalType in C_validListTypes then begin
-        result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-          P_listLiteral(result)^.append(resolveOperator(
-            P_listLiteral(LHS)^.element [i], tt_operatorExtractL0,
-            RHS, tokenLocation,adapters), false,adapters);
-        checkedExit;
-      end;
-      tt_operatorExtractL2: if LHS^.literalType in C_validListTypes then begin
-        result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-          P_listLiteral(result)^.append(resolveOperator(
-            P_listLiteral(LHS)^.element [i], tt_operatorExtractL1,
-            RHS, tokenLocation,adapters), false,adapters);
-        checkedExit;
-      end;
-      tt_operatorExtractL3: if LHS^.literalType in C_validListTypes then begin
-        result:=newListLiteral;
-        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
-          P_listLiteral(result)^.append(resolveOperator(
-            P_listLiteral(LHS)^.element [i], tt_operatorExtractL2,
-            RHS, tokenLocation,adapters), false,adapters);
-        checkedExit;
-      end;
     end;
     //---------------------------------------------:HANDLE S x S -> S OPERATORS
     //HANDLE ERROR, VOID AND EXPRESSION LITERALS:-------------------------------
