@@ -197,15 +197,38 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
+  GENERIC G_literalKeyMap<VALUE_TYPE>=object
+    CONST CACHE_MOD=2047;
+    TYPE CACHE_ENTRY=record
+           key:P_literal;
+           value:VALUE_TYPE;
+         end;
+         KEY_VALUE_LIST=array of CACHE_ENTRY;
+    VAR dat:array[0..CACHE_MOD] of KEY_VALUE_LIST;
+    CONSTRUCTOR create();
+    DESTRUCTOR destroy;
+    FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
+    FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+    FUNCTION keyValueList:KEY_VALUE_LIST;
+  end;
+
   P_listLiteral = ^T_listLiteral;
 
   { T_listLiteral }
+
   T_listLiteral = object(T_literal)
   private
     element: array of P_literal;
     cachedHash: T_hashInt;
     strictType: T_literalType;
     nextAppendIsRange: boolean;
+    indexBacking:record
+      isSetBacked:boolean;
+      setBack:specialize G_literalKeyMap<longint>;
+      isMapBacked:boolean;
+      mapBack:specialize G_literalKeyMap<P_literal>;
+    end;
+
   public
     CONSTRUCTOR create;
     FUNCTION toParameterListString(CONST isFinalized: boolean): ansistring;
@@ -217,6 +240,8 @@ TYPE
     FUNCTION appendAll(CONST L: P_listLiteral):P_listLiteral;
     PROCEDURE appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters);
     PROCEDURE setRangeAppend;
+    PROCEDURE dropIndexes;
+
     FUNCTION size: longint;
     FUNCTION head:P_literal;
     FUNCTION head(CONST headSize:longint):P_listLiteral;
@@ -232,6 +257,7 @@ TYPE
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
+    PROCEDURE toKeyValueList;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isKeyValuePair: boolean;
     FUNCTION clone:P_listLiteral;
@@ -284,21 +310,6 @@ TYPE
       PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal);
       PROCEDURE addVariable(CONST namedVar:P_namedVariable);
       FUNCTION getLiteralStringOrGetAlias(CONST value:P_literal):ansistring;
-  end;
-
-  GENERIC G_literalKeyMap<VALUE_TYPE>=object
-    CONST CACHE_MOD=2047;
-    TYPE CACHE_ENTRY=record
-           key:P_literal;
-           value:VALUE_TYPE;
-         end;
-         KEY_VALUE_LIST=array of CACHE_ENTRY;
-    VAR dat:array[0..CACHE_MOD] of KEY_VALUE_LIST;
-    CONSTRUCTOR create();
-    DESTRUCTOR destroy;
-    FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
-    FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
-    FUNCTION keyValueList:KEY_VALUE_LIST;
   end;
 
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
@@ -434,7 +445,7 @@ FUNCTION newVoidLiteral: P_voidLiteral; inline;
 
 FUNCTION myFloatToStr(CONST x: T_myFloat): string;
   begin
-    result:=FloatToStr(x);
+    result:=floatToStr(x);
     if (pos('E', uppercase(result))<=0) and //occurs in exponents
       (pos('N', uppercase(result))<=0) and //occurs in "Nan or Inf"
       (pos('.', result)<=0) then
@@ -613,7 +624,7 @@ PROCEDURE T_literal.rereference;
 
 FUNCTION T_literal.unreference: longint;
   begin
-    InterLockedDecrement(numberOfReferences);
+    interlockedDecrement(numberOfReferences);
     result:=numberOfReferences;
   end;
 
@@ -636,6 +647,10 @@ CONSTRUCTOR T_listLiteral.create;
     setLength(element, 0);
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
+    with indexBacking do begin
+      isSetBacked:=false;
+      isMapBacked:=false;
+    end;
   end;
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
@@ -655,6 +670,7 @@ DESTRUCTOR T_listLiteral.destroy;
     setLength(element, 0);
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
+    dropIndexes;
   end;
 //==================================================================:DESTRUCTORS
 //?.literalType:================================================================
@@ -693,13 +709,13 @@ FUNCTION T_listLiteral.head:P_literal;
     result^.rereference;
   end;
 
-FUNCTION T_listLiteral.head(CONST headSize:longint):P_listLiteral;
-  VAR i,iMax:longint;
+FUNCTION T_listLiteral.head(CONST headSize: longint): P_listLiteral;
+  VAR i,imax:longint;
   begin
-    iMax:=headSize;
-    if iMax>length(element) then iMax:=length(element);
+    imax:=headSize;
+    if imax>length(element) then imax:=length(element);
     result:=newListLiteral;
-    for i:=0 to iMax-1 do result^.append(element[i],true,nullAdapter);
+    for i:=0 to imax-1 do result^.append(element[i],true,nullAdapter);
   end;
 
 FUNCTION T_listLiteral.tail:P_listLiteral;
@@ -1247,7 +1263,7 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 
 //====================================================================:?.operate
 //?.hash:=======================================================================
-FUNCTION T_literal    .hash: T_hashInt; begin result:=$FFFFFFFF; end;
+FUNCTION T_literal    .hash: T_hashInt; begin result:=$ffffffff; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
 FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longint(val); end;
 FUNCTION T_realLiteral.hash: T_hashInt;
@@ -1582,7 +1598,8 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters):P_listLiteral;
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean;
+  VAR adapters: T_adapters): P_listLiteral;
   begin
     result:=@self;
     if L = nil then begin
@@ -1645,36 +1662,38 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR ad
   	                 lt_list..lt_flatList:              strictType:=lt_list;
                        end;
     end;
+    dropIndexes;
   end;
 
-FUNCTION T_listLiteral.appendString(CONST s: ansistring):P_listLiteral;
+FUNCTION T_listLiteral.appendString(CONST s: ansistring): P_listLiteral;
   begin
     result:=append(newStringLiteral(s),false,nullAdapter);
   end;
 
-FUNCTION T_listLiteral.appendBool(CONST b: boolean):P_listLiteral;
+FUNCTION T_listLiteral.appendBool(CONST b: boolean): P_listLiteral;
   begin
     result:=append(newBoolLiteral(b),false,nullAdapter);
   end;
 
-FUNCTION T_listLiteral.appendInt(CONST i: int64):P_listLiteral;
+FUNCTION T_listLiteral.appendInt(CONST i: int64): P_listLiteral;
   begin
     result:=append(newIntLiteral(i),false,nullAdapter);
   end;
 
-FUNCTION T_listLiteral.appendReal(CONST r: T_myFloat):P_listLiteral;
+FUNCTION T_listLiteral.appendReal(CONST r: T_myFloat): P_listLiteral;
   begin
     result:=append(newRealLiteral(r),false,nullAdapter);
   end;
 
-FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral):P_listLiteral;
+FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral): P_listLiteral;
   VAR i: longint;
   begin
     for i:=0 to length(L^.element)-1 do append(L^.element [i], true,nullAdapter);
     result:=@self;
   end;
 
-PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters);
+PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
+  CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
   VAR
     last: P_literal;
     i0, i1: int64;
@@ -1736,6 +1755,16 @@ PROCEDURE T_listLiteral.setRangeAppend;
     nextAppendIsRange:=true;
   end;
 
+PROCEDURE T_listLiteral.dropIndexes;
+  begin
+    with indexBacking do begin
+      if isSetBacked then setBack.destroy;
+      isSetBacked:=false;
+      if isMapBacked then mapBack.destroy;
+      isMapBacked:=false;
+    end;
+  end;
+
 PROCEDURE T_listLiteral.sort;
   VAR temp: array of P_literal;
       scale: longint;
@@ -1778,9 +1807,11 @@ PROCEDURE T_listLiteral.sort;
       end else for k:=0 to length(element)-1 do element[k]:=temp [k];
     end;
     setLength(temp, 0);
+    dropIndexes;
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral; VAR adapters:T_adapters);
+PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral;
+  VAR adapters: T_adapters);
   VAR temp: array of P_literal;
       scale: longint;
       i, j0, j1, k: longint;
@@ -1825,6 +1856,7 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression:P_expressionLiteral; VAR 
       end else for k:=0 to length(element)-1 do element[k]:=temp [k];
     end;
     setLength(temp, 0);
+    dropIndexes;
   end;
 
 FUNCTION T_listLiteral.sortPerm: P_listLiteral;
@@ -1883,16 +1915,42 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
 PROCEDURE T_listLiteral.unique;
   VAR i, j: longint;
   begin
-    if (length(element)<=1) then exit;
-    sort;
-    i:=0;
-    for j:=1 to length(element)-1 do
-    if (element[i]^.equals(element[j])) then disposeLiteral(element [j])
-    else begin
-      inc(i);
-      element[i]:=element [j];
+    with indexBacking do begin
+      if isSetBacked then exit;
+      isSetBacked:=true;
+      j:=0;
+      setBack.create();
+      for i:=0 to length(element)-1 do
+      if setBack.get(element[i],-1)=-1
+      then begin
+        setBack.put(element[i],i);
+        element[j]:=element[i];
+        inc(j);
+      end else disposeLiteral(element[j]);
+      setLength(element,j);
     end;
-    setLength(element, i+1);
+  end;
+
+PROCEDURE T_listLiteral.toKeyValueList;
+  VAR i,j:longint;
+      key,val:P_literal;
+  begin
+    with indexBacking do begin
+      if (strictType<>lt_keyValueList) or isMapBacked then exit;
+      isMapBacked:=true;
+      j:=0;
+      mapBack.create();
+      for i:=0 to length(element)-1 do begin
+        key:=P_listLiteral(element[i])^.element[0];
+        val:=P_listLiteral(element[i])^.element[1];
+        if mapBack.get(key,nil)=nil then begin
+          mapBack.put(key,val);
+          element[j]:=element[i];
+          inc(j);
+        end else disposeLiteral(element[j]);
+      end;
+      setLength(element,j);
+    end;
   end;
 
 FUNCTION T_listLiteral.isKeyValuePair: boolean;
@@ -1901,7 +1959,7 @@ FUNCTION T_listLiteral.isKeyValuePair: boolean;
         and (element[0]^.literalType=lt_string);
   end;
 
-FUNCTION T_listLiteral.clone:P_listLiteral;
+FUNCTION T_listLiteral.clone: P_listLiteral;
   VAR i:longint;
   begin
     result:=newListLiteral;
@@ -1913,6 +1971,10 @@ FUNCTION T_listLiteral.clone:P_listLiteral;
     result^.strictType:=strictType;
     result^.nextAppendIsRange:=nextAppendIsRange;
     result^.cachedHash:=cachedHash;
+    with indexBacking do begin
+      if isSetBacked then result^.unique;
+      if isMapBacked then result^.toKeyValueList;
+    end;
   end;
 
 FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
@@ -1941,17 +2003,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
     end;
 
-  FUNCTION isContained(CONST LHS, RHS: P_literal): boolean;
-    VAR i: longint;
+  FUNCTION isContained(CONST LHS, RHS: P_literal): boolean; inline;
     begin
       result:=false;
-      if RHS^.literalType in C_validListTypes then begin
-        i:=0;
-        while (i<length(P_listLiteral(RHS)^.element)) and not (result) do begin
-          result:=result or equals(LHS, P_listLiteral(RHS)^.element [i]);
-          inc(i);
-        end;
-      end;
+      result:=(RHS^.literalType in C_validListTypes) and P_listLiteral(RHS)^.contains(LHS);
     end;
 
   FUNCTION areInRelEqual(CONST LHS,RHS:P_literal):boolean; inline;
@@ -2341,6 +2396,7 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       i:longint;
       back:specialize G_literalKeyMap<P_literal>;
   begin
+    //!! Backing
     result:=nil;
     if (params<>nil) and ((length(params^.element)=2) or (length(params^.element)=3)) and
        (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
