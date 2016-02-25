@@ -1,14 +1,14 @@
 USE hash;
-private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
+private TEST_DIRECTORY    :=replace(splitFileName(myPath).get("relative"),splitFileName(myPath).get("filename"),"");
 private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
-private persistent passedTests:=[];
+private persistent passedTests:=[['FOx86_64:7281313C','demos/100doors.mnh','7F7EEB25',0.0423851778944859],['FOx86_64:7281313C','demos/12_statements.mnh','381A590A',1.44153511368792]];'FDx86_64:40F7F96B','demos/12_statements.mnh','381A590A',0.256491833600317]];
 
 synchronized markAsPassed(case,exeHash,runTime)->begin
   local contained:=false;
-  passedTests:=each(pt,passedTests,
-                    pt%0=exeHash AND pt%1=case ? begin
+  passedTests:=passedTests.each(pt,
+                    pt.get([0,1])==[exeHash,case] ? begin
                       contained:=true;
-                      [exeHash,case,fileHash(ROOT_DIRECTORY&case),(runTime+pt%3)/2];
+                      [exeHash,case,fileHash(ROOT_DIRECTORY&case),(runTime+pt.get(3))/2];
                     end : pt);
   contained ? void
             : passedTests|=[[exeHash,case,fileHash(ROOT_DIRECTORY&case),runTime]];
@@ -17,7 +17,7 @@ end;
 
 private memoized memFileHash(case)->fileHash(ROOT_DIRECTORY&case);
 
-synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,memFileHash(case)] in passedTests%%[0..2];
+synchronized isMarkedAsPassed(case,exeHash)->[exeHash,case,memFileHash(case)] in passedTests.getInner([0..2]);
 
 //*Clear all passed tests
 main('clear')->(passedTests:=[]);
@@ -25,19 +25,19 @@ main('clear')->(passedTests:=[]);
 //*Remove all passed tests related to versions with different code hashes
 main('cleanup')->begin
   local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
-  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? pt : void)),' passed tests remain.');
+  print('Cleaned up. ',size(passedTests:=passedTests.each(pt,split(pt.get(0),':').trailing = currentExeHash ? pt : void)),' passed tests remain.');
 end;
 
 //*Remove all passed tests related to versions with equal (!) code hashes
 main('retest')->begin
   local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
-  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash ? void : pt)),' passed tests remain.');
+  print('Cleaned up. ',size(passedTests:=passedTests.each(pt,split(pt.get(0),':').trailing = currentExeHash ? void : pt)),' passed tests remain.');
 end;
 
 //*Remove passed tests related to versions with equal (!) code hashes and containing one of the given test name parts
 main('retest',...)->begin
   local currentExeHash:= executor.exec(["-codeHash"]).head.split(':').trailing;
-  print('Cleaned up. ',size(passedTests:=each(pt,passedTests,split(pt%0,':').trailing = currentExeHash AND trueCount(pos(...,pt%1)>=0)>0 ? void : pt)),' passed tests remain.');
+  print('Cleaned up. ',size(passedTests:=passedTests.each(pt,split(pt.get(0),':').trailing = currentExeHash AND trueCount(pos(...,pt.get(1))>=0)>0 ? void : pt)),' passed tests remain.');
 end;
 
 //*Shows statistics on passed tests
@@ -45,62 +45,62 @@ main('compare')->main('compare','');
 
 private printComparison(testFile)->begin
   local currentBin:=executor.exec(["-codeHash"]).head;
-  local relAvgTimePerBin:=each(t,passedTests%(passedTests%%1=testFile)%%[0,3],(t%0)=currentBin ? t|'(current)' : t|'').sort({$x%1<=$y%1});
+  local relAvgTimePerBin:=passedTests.get(passedTests.getInner(1)=testFile).getInner([0,3]).each(t,t.get(0)=currentBin ? t|'(current)' : t|'').sort({$x.get(1)<=$y.get(1)});
   printf("%s\t:\t%s\t%6.4f\t \t%g",
-    split(relAvgTimePerBin%%0,':')%%0,
-    split(relAvgTimePerBin%%0,':')%%1,
-    relAvgTimePerBin%%1,
-    relAvgTimePerBin%%2);
+    split(relAvgTimePerBin.getInner(0),':').getInner(0),
+    split(relAvgTimePerBin.getInner(0),':').getInner(1),
+    relAvgTimePerBin.getInner(1),
+    relAvgTimePerBin.getInner(2));
   print;
 end;
 
-private average(L:numericList)->each(x,L,+)/size(L);
+private average(L:numericList)->L.agg(+)/size(L);
 //*Shows statistics on passed tests containing infix
 main('compare',infix,...)->
 begin
   local filteredPassedTests:=(infix='')
                              ? passedTests
-                             : each(test,passedTests,trueCount(pos(infix|...,test%1)>=0)>0 ? test : void);
+                             : passedTests.each(test,trueCount(pos(infix|...,test.get(1))>=0)>0 ? test : void);
 
   size(filteredPassedTests)<=0 ? print('No tests ',infix='' ? '' : 'matching "'&infix&'" ','have been passed.') : begin
     print('Calculating statistics over ',size(filteredPassedTests)," passed tests.\n");
   
-    local timePerTest:=each(testFile,unique(filteredPassedTests%%1),begin
-      local avg  :=average(filteredPassedTests%(filteredPassedTests%%1=testFile)%%3);
-      local sigma:=sqrt(average(sqr(avg-(filteredPassedTests%(filteredPassedTests%%1=testFile)%%3))));
+    local timePerTest:=unique(filteredPassedTests.getInner(1)).each(testFile,begin
+      local avg  :=average(filteredPassedTests.get(filteredPassedTests.getInner(1)=testFile).getInner(3));
+      local sigma:=sqrt(average(sqr(avg-(filteredPassedTests.get(filteredPassedTests.getInner(1)=testFile).getInner(3)))));
       [testFile, avg,sigma];
-    end).sort({$x%1<=$y%1});
+    end).sort({$x.get(1)<=$y.get(1)});
   
     print('All tests ordered by time:');
-    printf("%s\t%7.3s\t+/-\t%g\ts",timePerTest%%0,round(timePerTest%%1,4),round(timePerTest%%2,4));
+    printf("%s\t%7.4f\t+/-\t%7.4f\ts",timePerTest.getInner(0),timePerTest.getInner(1),timePerTest.getInner(2));
     print;
 
     local currentBin:=executor.exec(["-codeHash"]).head;
     
-    printf@('Fastest test: %s; average time: %6.4fs+/-%gs'| timePerTest%(argMin(timePerTest%%1)));
-    printComparison(timePerTest%(argMin(timePerTest%%1))%0);
+    printf@('Fastest test: %s; average time: %6.4fs+/-%gs'| timePerTest.get(argMin(timePerTest.getInner(1))));
+    printComparison(timePerTest.get(argMin(timePerTest.getInner(1))).get(0));
   
-    printf@('Slowest test: %s; average time: %6.4fs+/-%gs'| timePerTest%(argMax(timePerTest%%1)));
-    printComparison(timePerTest%(argMax(timePerTest%%1))%0);
-    local testWithTime:=timePerTest%(argMax(timePerTest%%2/timePerTest%%1));
+    printf@('Slowest test: %s; average time: %6.4fs+/-%gs'| timePerTest.get(argMax(timePerTest.getInner(1))));
+    printComparison(timePerTest.get(argMax(timePerTest.getInner(1))).get(0));
+    local testWithTime:=timePerTest.get(argMax(timePerTest.getInner(2)/timePerTest.getInner(1)));
     printf@('Test with the largest relative variance: %s; average time: %6.4fs+/-%gs'|(testWithTime));
-    printComparison(testWithTime%0);
+    printComparison(testWithTime.get(0));
     
     currentBin:=currentBin.split(':');
-    local relAvgTimePerBin:=each(bin,unique((filteredPassedTests%%0).split(':')%%0),begin
-      local passedByBin:=filteredPassedTests%(((filteredPassedTests%%0).split(':')%%0)=bin)%%[1,3]; //testFile and time
-      [bin,100*(average(each(pass,passedByBin,pass%1/((timePerTest%%[0,1])%(pass%0))))-1),bin=currentBin%0 ? " (current)":""];
-    end).sort({$x%1<=$y%1});
+    local relAvgTimePerBin:=unique((filteredPassedTests.getInner(0)).split(':').getInner(0)).each(bin,begin
+      local passedByBin:=filteredPassedTests.get(((filteredPassedTests.getInner(0)).split(':').getInner(0))=bin).getInner([1,3]); //testFile and time
+      [bin,100*(average(passedByBin.each(pass,pass.get(1)/((timePerTest.getInner([0,1])).get(pass.get(0)))))-1),bin=currentBin.get(0) ? " (current)":""];
+    end).sort({$x.get(1)<=$y.get(1)});
     print('Average relative time of executables by flavour: ');
-    printf("%s\t%s\t%%\t%s",relAvgTimePerBin%%0,round(relAvgTimePerBin%%1,2),relAvgTimePerBin%%2);
+    printf("%s\t%s\t%%\t%s",relAvgTimePerBin.getInner(0),round(relAvgTimePerBin.getInner(1),2),relAvgTimePerBin.getInner(2));
     print;
     
     
-    relAvgTimePerBin:=each(bin,unique((filteredPassedTests%%0).split(':')%%1),begin
-      local passedByBin:=filteredPassedTests%(((filteredPassedTests%%0).split(':')%%1)=bin)%%[1,3]; //testFile and time
-      [bin,100*(average(each(pass,passedByBin,pass%1/((timePerTest%%[0,1])%(pass%0))))-1),bin=currentBin%1 ? " (current)":""];
-    end).sort({$x%1<=$y%1});
+    relAvgTimePerBin:=unique((filteredPassedTests.getInner(0)).split(':').getInner(1)).each(bin,begin
+      local passedByBin:=filteredPassedTests.get(((filteredPassedTests.getInner(0)).split(':').getInner(1))=bin).getInner([1,3]); //testFile and time
+      [bin,100*(average(passedByBin.each(pass,pass.get(1)/((timePerTest.getInner([0,1])).get(pass.get(0)))))-1),bin=currentBin.get(1) ? " (current)":""];
+    end).sort({$x.get(1)<=$y.get(1)});
     print('Average relative time of executables by code hash: ');  
-    printf("%s\t%s\t%%\t%s",relAvgTimePerBin%%0,round(relAvgTimePerBin%%1,2),relAvgTimePerBin%%2);
+    printf("%s\t%s\t%%\t%s",relAvgTimePerBin.getInner(0),round(relAvgTimePerBin.getInner(1),2),relAvgTimePerBin.getInner(2));
   end;
 end;

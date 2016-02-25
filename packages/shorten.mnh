@@ -13,19 +13,19 @@ end;
 
 private bestSubString(s:string,len:int)->begin
   local freq:=copy(s,[0..length(s)-len],len).elementFrequency;
-  local benefits:=(length(escape(freq%%1))-2)*(freq%%0-1)-1;
+  local benefits:=(length(escape(freq.innerGet(1)))-2)*(freq.innerGet(0)-1)-1;
   local best:=argMax(benefits);
-  [benefits%best,freq%best%1];
+  [benefits.get(best),freq.get(best).get(1)];
 end;
 
 formatResult(result:list)->
   format('replace(%s,chars(%s),copy(%s,[0..%d]*%d,%d))',
-         escape(result%0),
-         escape(join(result%1)),
-         escape(join(result%2)),
-         size(result%2)-1,
-         result%3,
-         result%3);
+         escape(result.get(0)),
+         escape(join(result.get(1))),
+         escape(join(result.get(2))),
+         size(result.get(2))-1,
+         result.get(3),
+         result.get(3));
 
 private fallbackResult(s:string)->[s,[' '],[' '],1];
 
@@ -49,18 +49,20 @@ private shorten(s:string,subLength)->begin
   local prevResult:=result;
   each(run,[0..19],begin
     run=10 ? proceed:=true : void;
-    each(alphabetChar,(run<10
-                       ? chars%[33..91,93..126]
-                       : chars%[33..91,93..126,128..255,0..32,92,127]).minus(workString.chars),
+    (run<10
+     ? chars.get([33..91,93..126])
+     : chars.get([33..91,93..126,128..255,0..32,92,127]))
+    .minus(workString.chars)
+    .each(alphabetChar,
     proceed
     ? begin
         local sub:=bestSubString(workString,subLength);
-        sub%0<=0
+        sub.get(0)<=0
         ? proceed:=false
         : begin
-            replacements:=sub%1|replacements;
+            replacements:=sub.get(1)|replacements;
             alphabetOut:=alphabetChar|alphabetOut;
-            workString:=replace(workString,sub%1,alphabetChar);
+            workString:=replace(workString,sub.get(1),alphabetChar);
             result:=[workString,alphabetOut,replacements,subLength];
             length(formatResult(result))>=length(formatResult(prevResult))
             ? proceed:=false 

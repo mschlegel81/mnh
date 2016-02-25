@@ -1,24 +1,24 @@
 USE hash, passedTestsStore;
 
-private TEST_DIRECTORY    :=replace(splitFileName(myPath)%"relative",splitFileName(myPath)%"filename","");
+private TEST_DIRECTORY    :=replace(splitFileName(myPath).get("relative"),splitFileName(myPath).get("filename"),"");
 private ROOT_DIRECTORY    :=TEST_DIRECTORY&'../';
 private TESTS_STORE       :=TEST_DIRECTORY&'regTestCases.dat';
 private NEED_PLOT_IDX:=3;
 
 mutable previouslyPassedTests:=0;
 
-private expectedResultName  (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".expected");
-private lastResultName      (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname)%"filename"&"#",".mnh#",(is32Bit?".32bit":"")&".last");
+private expectedResultName  (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname).get("filename")&"#",".mnh#",(is32Bit?".32bit":"")&".expected");
+private lastResultName      (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname).get("filename")&"#",".mnh#",(is32Bit?".32bit":"")&".last");
 private expectedResultExists(scriptname,is32Bit:boolean)->fileExists(expectedResultName(scriptname,is32Bit));
 private expectedResult      (scriptname,is32Bit:boolean)->fileLines (expectedResultName(scriptname,is32Bit));
 private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
 //*Display uncovered scripts
 main('uncovered')->begin
-  local coveredTests:=(expression(fileContents(TESTS_STORE))()%%0).unique.splitFileName%%'expanded';
+  local coveredTests:=(expression(fileContents(TESTS_STORE))().getInner(0)).unique.splitFileName.getInner('expanded');
   local first:=true;
   each(script,
-       (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName%%'expanded',
+       (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName.getInner('expanded'),
        script in coveredTests ? void : begin
          first ? begin
            first:=false;
@@ -76,27 +76,26 @@ main(exe,...)->begin
   local randomSample     := testFilter==['randomSample'];
   local specific_tests   := not((testFilter==[]) or randomSample);
   randomSample ? testFilter:=[] : void;
-  local testCases:=sort(each(case,
-                   expression(fileContents(TESTS_STORE))(),
-                   (currentExeCanPlot OR not(case%NEED_PLOT_IDX)) and
-                   (testFilter==[] OR each(f,testFilter,OR,pos(f,case%0)>=0)) ? case%[0..2,4] : void));
+  local testCases:=expression(fileContents(TESTS_STORE))().each(case,
+                   (currentExeCanPlot OR not(case.get(NEED_PLOT_IDX))) AND
+                   (testFilter==[] OR testFilter.each(f,OR,pos(f,case.get(0))>=0)) ? case.get([0..2,4]) : void).sort;
 
   //count already passed tests and remove them from the list
-  testCases:=each(test,testCases,
-    isMarkedAsPassed(test%0,currentExeHash) and not(specific_tests)
+  testCases:=testCases.each(test,
+    isMarkedAsPassed(test.get(0),currentExeHash) and not(specific_tests)
     ? begin previouslyPassedTests+=1; void; end
     : test);
   local stopAtTime:=systime+1;
   randomSample AND size(testCases)>0 ? begin
-    testCases:=testCases%sortPerm(size(testCases).random);
+    testCases:=testCases.get(sortPerm(size(testCases).random));
     stopAtTime:=systime+5/(24*60*60);
   end : void;
-  local FMT_STRING:="%{$0}-"&(size(testCases)=0 ? 0 : max(length(testCases%%0)))&"s %{$1:numeric ? format('%7.2fsec',$1) : ''}s %{$2}s";
+  local FMT_STRING:="%{$0}-"&(size(testCases)=0 ? 0 : max(length(testCases.getInner(0))))&"s %{$1:numeric ? format('%7.2fsec',$1) : ''}s %{$2}s";
   local first:=true;
   local failedTestOut:=[];
   local allPassed:=true;
   size(testCases)<=0 ? void :
-  each(test,testCases,AND,systime>stopAtTime ? false : begin
+  testCases.each(test,systime>stopAtTime ? false : begin
     first ? begin
       local msg1:="| Starting test runs with executable "&exe;
       local msg2:="| "&currentExeInfo;
@@ -111,15 +110,15 @@ main(exe,...)->begin
     testOutput==[] OR begin
       allPassed:=false;
       fileExists('kdiff.bat')
-      ? ask("Expected output is : "&testOutput%0&
-          "\n    Last output is : "&testOutput%1&
+      ? ask("Expected output is : "&testOutput.get(0)&
+          "\n    Last output is : "&testOutput.get(1)&
           "\nDo you want to view the diff?",['No','Yes'])='Yes'
         ? begin 
             execPipeless('cmd',['/c','kdiff.bat']|testOutput);
             ask('Shall the last result be the new expected result?',['No','Yes'])='Yes' 
             ? begin
-                deleteFile(testOutput%0);
-                moveFile(testOutput%1,testOutput%0);
+                deleteFile(testOutput.get(0));
+                moveFile(testOutput.get(1),testOutput.get(0));
                 allPassed:=true;
               end
             : void;
@@ -128,7 +127,8 @@ main(exe,...)->begin
       : printf@('Compare files %s and %s'|testOutput);      
       allPassed;
     end;
-  end);
+    allPassed;
+  end,AND);
   first ? print('All tests have been passed by ',exe) : void;
   
   size(testCases)>0 ? print(previouslyPassedTests,' Tests were already marked as passed.') : void;
