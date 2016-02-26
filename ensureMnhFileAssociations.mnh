@@ -1,5 +1,5 @@
 main->begin
-  writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat')%'expanded'&'", "", "", "runas", 1']);
+  writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat').get('expanded')&'", "", "", "runas", 1']);
   writeFile('install.bat',replace(
 //!BLOB START
 @assoc .mnh=mnh.script
