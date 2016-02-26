@@ -1,6 +1,7 @@
 UNIT mnh_funcs_list;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
+FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 IMPLEMENTATION
 {$MACRO ON}
 {$define list0:=P_listLiteral(params^.value(0))}
@@ -307,9 +308,25 @@ FUNCTION mapDrop_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR tmpPar:T_listLiteral;
+      i:longint;
   begin
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_validListTypes)
     then result:=list0^.get(arg1,tokenLocation,context.adapters^)
+    else if (params<>nil) and (params^.size>=2) and (arg0^.literalType in C_validListTypes) then begin
+      tmpPar.create;
+      tmpPar.append(params^.value(0),true,context.adapters^)^
+            .append(params^.value(1),true,context.adapters^);
+      result:=get_imp(@tmpPar,tokenLocation,context);
+      tmpPar.destroy;
+      if result<>nil then begin
+        tmpPar.create;
+        tmpPar.append(result,false,context.adapters^);
+        for i:=2 to params^.size-1 do tmpPar.append(params^.value(i),true,context.adapters^);
+        result:=get_imp(@tmpPar,tokenLocation,context);
+        tmpPar.destroy;
+      end;
+    end
     else result:=nil;
   end;
 

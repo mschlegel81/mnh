@@ -502,6 +502,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
   VAR stack:array of P_token;
       newLit:P_literal;
+      newTok:P_token;
       didSubstitution:boolean;
       {$ifdef fullVersion}reportableStep:boolean;{$endif}
       cTokType:array[-1..2] of T_tokenType;
@@ -1226,6 +1227,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
       else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach((first^.next^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif})
+      else if cTokType[1]= tt_listBraceOpen then stack_push
       else stack_push_push;
     end;
 
@@ -1288,6 +1290,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
+  FUNCTION tokenContextString:ansistring;
+    begin
+      result:=getEnumName(TypeInfo(cTokType[-1]),ord(cTokType[-1]))+' # '+
+              getEnumName(TypeInfo(cTokType[ 0]),ord(cTokType[ 0]))+' '+
+              getEnumName(TypeInfo(cTokType[ 1]),ord(cTokType[ 1]))+' '+
+              getEnumName(TypeInfo(cTokType[ 2]),ord(cTokType[ 2]));
+    end;
+
   PROCEDURE currentStateMessage({$ifdef fullVersion}CONST debug:boolean{$endif});
     VAR i,i0:longint;
         prevWasIdLike:boolean=false;
@@ -1335,6 +1345,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
 {$MACRO ON}
 {$define COMMON_CASES:=
+tt_listBraceOpen: begin
+  first^.next^.data:=newListLiteral;
+  first^.next^.tokType:=tt_list_constructor;
+  stack_push;
+end;
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
@@ -1369,9 +1384,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
+      //writeln(tokensToString(first,10));
+      //writeln(tokenContextString);
       {$ifdef fullVersion}
       if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
-      reportableStep:=true;
+      reportableStep:=false;
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
@@ -1437,6 +1454,19 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack_popLink;
               first^.tokType:=tt_literal;
               didSubstitution:=true;
+              if (length(stack)>0) and (stack[length(stack)-1]^.tokType=tt_literal) then begin
+                stack_popLink;
+                newLit:=newListLiteral;
+                P_listLiteral(newLit)^
+                .append(first^.data,false,context.adapters^)^
+                .appendAll(first^.next^.data);
+                disposeLiteral(first^.next^.data);
+                first^.tokType:=tt_intrinsicRule;
+                first^.data:=@get_imp;
+                first^.txt:='get';
+                first^.next^.tokType:=tt_parList;
+                first^.next^.data:=newLit;
+              end;
               {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;
             COMMON_SEMICOLON_HANDLING;
@@ -1581,7 +1611,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach : applyRule(nil,first^.next);
+          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
@@ -1610,8 +1640,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       end;
     end;
     {$endif}
-
-    if not(context.adapters^.noErrors) and (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
+    if context.adapters^.noErrors then begin
+      if (length(stack)>0) or (first^.next<>nil) then begin
+        context.adapters^.raiseError('Cannot reduce expression.',first^.location);
+        context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,maxLongint),first^.location);
+        context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
+      end;
+    end else if (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
     if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin
