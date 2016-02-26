@@ -208,7 +208,7 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
           if      id=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
           else if id=C_boolText[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end
           else if id=C_nanText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Nan); end
-          else if id=C_infText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Infinity); end
+          else if id=C_infText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(infinity); end
           else if id=C_voidText        then begin result.tokType:=tt_literal; result.data:=newVoidLiteral; end
           else begin
             result.txt:=id;

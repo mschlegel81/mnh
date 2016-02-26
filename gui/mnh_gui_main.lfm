@@ -410,13 +410,13 @@ object MnhForm: TMnhForm
       object TabSheet1: TTabSheet
         Caption = 'TabSheet1'
         ClientHeight = 97
-        ClientWidth = 471
+        ClientWidth = 477
         TabVisible = False
         inline InputEdit1: TSynEdit
           Left = 0
           Height = 97
           Top = 0
-          Width = 471
+          Width = 477
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'

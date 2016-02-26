@@ -212,6 +212,11 @@ TYPE
     FUNCTION keyValueList:KEY_VALUE_LIST;
   end;
 
+  P_literalKeyLongintValueMap=^T_literalKeyLongintValueMap;
+  T_literalKeyLongintValueMap=specialize G_literalKeyMap<longint>;
+  P_literalKeyLiteralValueMap=^T_literalKeyLiteralValueMap;
+  T_literalKeyLiteralValueMap=specialize G_literalKeyMap<P_literal>;
+
   P_listLiteral = ^T_listLiteral;
 
   { T_listLiteral }
@@ -222,11 +227,10 @@ TYPE
     cachedHash: T_hashInt;
     strictType: T_literalType;
     nextAppendIsRange: boolean;
+
     indexBacking:record
-      isSetBacked:boolean;
-      setBack:specialize G_literalKeyMap<longint>;
-      isMapBacked:boolean;
-      mapBack:specialize G_literalKeyMap<P_literal>;
+      setBack:P_literalKeyLongintValueMap;
+      mapBack:P_literalKeyLiteralValueMap;
     end;
 
   public
@@ -367,10 +371,10 @@ VAR
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
-    if l = nil then begin
-      writeln(stdErr, 'disposing NIL literal ?!?');
-      exit;
-    end;
+    //if l = nil then begin
+    //  writeln(stdErr, 'disposing NIL literal ?!?');
+    //  exit;
+    //end;
     if l^.unreference<=0 then dispose(l, destroy);
     l:=nil;
   end;
@@ -648,8 +652,8 @@ CONSTRUCTOR T_listLiteral.create;
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
     with indexBacking do begin
-      isSetBacked:=false;
-      isMapBacked:=false;
+      setBack:=nil;
+      mapBack:=nil;
     end;
   end;
 //=================================================================:CONSTRUCTORS
@@ -1350,7 +1354,7 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
 FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
   VAR i:longint;
   begin
-    with indexBacking do if isSetBacked then exit(setBack.get(other,-1)>=0);
+    with indexBacking do if setBack<>nil then exit(setBack^.get(other,-1)>=0);
     result:=false;
     for i:=0 to length(element)-1 do if element[i]^.equals(other) then exit(true);
   end;
@@ -1758,10 +1762,10 @@ PROCEDURE T_listLiteral.setRangeAppend;
 PROCEDURE T_listLiteral.dropIndexes;
   begin
     with indexBacking do begin
-      if isSetBacked then setBack.destroy;
-      isSetBacked:=false;
-      if isMapBacked then mapBack.destroy;
-      isMapBacked:=false;
+      if setBack<>nil then dispose(setBack,destroy);
+      if mapBack<>nil then dispose(mapBack,destroy);
+      setBack:=nil;
+      mapBack:=nil;
     end;
   end;
 
@@ -1916,17 +1920,20 @@ PROCEDURE T_listLiteral.unique;
   VAR i, j: longint;
   begin
     with indexBacking do begin
-      if isSetBacked then exit;
-      isSetBacked:=true;
+      if setBack<>nil then exit;
+      if mapBack<>nil then begin
+        dispose(mapBack,destroy);
+        mapBack:=nil;
+      end;
       j:=0;
-      setBack.create();
+      new(setBack,create);
       for i:=0 to length(element)-1 do
-      if setBack.get(element[i],-1)=-1
+      if setBack^.get(element[i],-1)=-1
       then begin
-        setBack.put(element[i],i);
+        setBack^.put(element[i],i);
         element[j]:=element[i];
         inc(j);
-      end else disposeLiteral(element[j]);
+      end else disposeLiteral(element[i]);
       setLength(element,j);
     end;
   end;
@@ -1936,18 +1943,21 @@ PROCEDURE T_listLiteral.toKeyValueList;
       key,val:P_literal;
   begin
     with indexBacking do begin
-      if (strictType<>lt_keyValueList) or isMapBacked then exit;
-      isMapBacked:=true;
+      if (strictType<>lt_keyValueList) or (mapBack<>nil) then exit;
+      if setBack<>nil then begin
+        dispose(setBack,destroy);
+        setBack:=nil;
+      end;
       j:=0;
-      mapBack.create();
+      new(mapBack,create());
       for i:=0 to length(element)-1 do begin
         key:=P_listLiteral(element[i])^.element[0];
         val:=P_listLiteral(element[i])^.element[1];
-        if mapBack.get(key,nil)=nil then begin
-          mapBack.put(key,val);
+        if mapBack^.get(key,nil)=nil then begin
+          mapBack^.put(key,val);
           element[j]:=element[i];
           inc(j);
-        end else disposeLiteral(element[j]);
+        end else disposeLiteral(element[i]);
       end;
       setLength(element,j);
     end;
@@ -1972,8 +1982,8 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
     result^.nextAppendIsRange:=nextAppendIsRange;
     result^.cachedHash:=cachedHash;
     with indexBacking do begin
-      if isSetBacked then result^.unique;
-      if isMapBacked then result^.toKeyValueList;
+      if mapBack<>nil then result^.unique;
+      if setBack<>nil then result^.toKeyValueList;
     end;
   end;
 

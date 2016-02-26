@@ -1234,12 +1234,11 @@ PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
     outputEditReposition(OutputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
   end;
 
-PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
-begin
-  if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=InputEdit0;
-  forceInputEditFocusOnOutputEditMouseUp :=false;
-end;
+PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=inputRec[PageControl.ActivePageIndex].editor;
+    forceInputEditFocusOnOutputEditMouseUp :=false;
+  end;
 
 PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
   begin

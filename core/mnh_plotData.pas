@@ -452,8 +452,8 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
     begin with scalingOptions do begin
       //Determine current bounding box:-----------------------------------------------------------
       for axis:='x' to 'y' do begin
-        boundingBox[axis,0]:= Infinity;
-        boundingBox[axis,1]:=-Infinity;
+        boundingBox[axis,0]:= infinity;
+        boundingBox[axis,1]:=-infinity;
       end;
       for i:=0 to length(row)-1 do row[i].getBoundingBox(logscale['x'], logscale['y'], boundingBox);
       for axis:='x' to 'y' do if autoscale[axis] then for i:=0 to 1 do begin
