@@ -1369,6 +1369,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
   exit(result)}
   VAR i,i1,j:longint;
       key:ansistring;
+      L:P_literal;
   begin
     case other^.literalType of
       lt_int: begin
@@ -1399,29 +1400,44 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         checkedExit;
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
-        //!! Backing
-        key:=P_stringLiteral(other)^.val;
-        for i:=0 to length(element)-1 do
-        if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.val = key then begin
-          result:=P_listLiteral(element [i])^.element [1];
+        if indexBacking.mapBack<>nil then begin
+          result:=indexBacking.mapBack^.get(other,nil);
+          if result=nil then exit(newListLiteral);
           result^.rereference;
-          checkedExit;
+          exit(result);
+        end else begin
+          key:=P_stringLiteral(other)^.val;
+          for i:=0 to length(element)-1 do
+          if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.val = key then begin
+            result:=P_listLiteral(element [i])^.element [1];
+            result^.rereference;
+            checkedExit;
+          end;
+          exit(newListLiteral);
         end;
-        exit(newListLiteral);
       end else begin
         adapters.raiseError('get with a string as second parameter can only be applied to key-value-lists!', tokenLocation);
         exit(nil);
       end;
       lt_stringList: if literalType in [lt_keyValueList,lt_emptyList] then begin
-        //!! Backing
         result:=newListLiteral;
-        for j:=0 to P_listLiteral(other)^.size-1 do begin
-          key:=P_stringLiteral(P_listLiteral(other)^.element [j])^.value;
-          i:=0; while i<length(element) do
-          if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.value = key then begin
-            P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true,adapters);
-            i:=length(element);
-          end else inc(i);
+        if indexBacking.mapBack<>nil then begin
+          for j:=0 to P_listLiteral(other)^.size-1 do begin
+            L:=indexBacking.mapBack^.get(P_listLiteral(other)^.element[j],nil);
+            if L<>nil then begin
+              P_listLiteral(result)^.append(L,true,adapters);
+              break;
+            end;
+          end;
+        end else begin
+          for j:=0 to P_listLiteral(other)^.size-1 do begin
+            key:=P_stringLiteral(P_listLiteral(other)^.element [j])^.value;
+            i:=0; while i<length(element) do
+            if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.value = key then begin
+              P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true,adapters);
+              i:=length(element);
+            end else inc(i);
+          end;
         end;
         checkedExit;
       end else begin
@@ -1925,6 +1941,7 @@ PROCEDURE T_listLiteral.unique;
         dispose(mapBack,destroy);
         mapBack:=nil;
       end;
+      sort;
       j:=0;
       new(setBack,create);
       for i:=0 to length(element)-1 do
@@ -2404,9 +2421,9 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       key:P_stringLiteral;
       fallback:P_literal;
       i:longint;
-      back:specialize G_literalKeyMap<P_literal>;
+      back:P_literalKeyLiteralValueMap;
+      tempBack:boolean=false;
   begin
-    //!! Backing
     result:=nil;
     if (params<>nil) and ((length(params^.element)=2) or (length(params^.element)=3)) and
        (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
@@ -2416,29 +2433,42 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
                                    else fallback:=nil;
       if params^.element[1]^.literalType in [lt_stringList,lt_emptyList] then begin
         keyList:=P_listLiteral(params^.element[1]);
-        back.create();
-        for i:=0 to map^.size-1 do begin
-          keyValuePair:=P_listLiteral(map^.element[i]);
-          back.put(keyValuePair^.element[0],keyValuePair^.element[1]);
+        back:=map^.indexBacking.mapBack;
+        if back=nil then begin
+          tempBack:=true;
+          new(back,create);
+          for i:=0 to map^.size-1 do begin
+            keyValuePair:=P_listLiteral(map^.element[i]);
+            back^.put(keyValuePair^.element[0],keyValuePair^.element[1]);
+          end;
         end;
         resultList:=newListLiteral;
         if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
           fallbackList:=P_listLiteral(fallback);
-          for i:=0 to keyList^.size-1 do resultList^.append(back.get(keyList^.element[i],fallbackList^.element[i]),true,adapters);
+          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.element[i],fallbackList^.element[i]),true,adapters);
         end else begin
           for i:=0 to keyList^.size-1 do begin
-            result:=back.get(keyList^.element[i],fallback);
+            result:=back^.get(keyList^.element[i],fallback);
             if result<>nil then resultList^.append(result,true,adapters);
           end;
         end;
-        back.destroy;
+        if tempBack then dispose(back,destroy);
         result:=resultList;
       end else begin
+        back:=map^.indexBacking.mapBack;
         key:=P_stringLiteral(params^.element[1]);
-        for i:=0 to length(map^.element)-1 do begin
-          keyValuePair:=P_listLiteral(map^.element[i]);
-          if keyValuePair^.element[0]^.equals(key) then begin
-            result:=keyValuePair^.element[1];
+        if back=nil then begin
+          for i:=0 to length(map^.element)-1 do begin
+            keyValuePair:=P_listLiteral(map^.element[i]);
+            if keyValuePair^.element[0]^.equals(key) then begin
+              result:=keyValuePair^.element[1];
+              result^.rereference;
+              exit(result);
+            end;
+          end;
+        end else begin
+          result:=back^.get(key,nil);
+          if result<>nil then begin
             result^.rereference;
             exit(result);
           end;
