@@ -13,7 +13,7 @@ private tryPack(filename)->begin
 end;
 
 private ensureInstall->fileExists('install.mnh') ? void : begin
-  writeFileLines('install.mnh','main->begin'|pEach(file,
+  writeFileLines('install.mnh','main->begin'|(
     'doTests.bat'|
     'ensureMnhFileAssociations.mnh'|
     'ensureNotepad++Highlighting.mnh'|
@@ -21,13 +21,12 @@ private ensureInstall->fileExists('install.mnh') ? void : begin
     'doc/examples.txt'|
     files('demos/*.mnh')|
           'demos/inputs/inputs.mnh'|
-    files('packages/*.mnh'),
-    tryPack(file))|
+    files('packages/*.mnh'))
+    .pEach(file,tryPack(file))|
     ["deleteFile(myPath);",
      "execPipeless(executor,['-doc']);",
      "end;"]);
 end;
-
 
 memoized private 
 relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
@@ -98,6 +97,9 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['mnh_light.exe','mnh64_light.exe'],
                     ['bin32/mnh.exe','mnh.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
+private copyPairs:=[['mnh.exe','../mnh5.bin/mnh.exe'], 
+                    ['mnh_light.exe','../mnh5.bin/mnh_light.exe'],
+                    ['install.mnh','../mnh5.bin/install.mnh']];
 private verboseMove(src,dest)->begin
   printf('move %-19s -> %-19s',src,dest);
   moveFile(src,dest);
@@ -107,6 +109,7 @@ end;
 main('distro')->
   [0..3].each(i,build(i),AND) ? begin
     compress('64bit');
+    copyPairs.each(p,copyFile@p);
     movePairs.each(pair,verboseMove@pair,AND)
     ? begin
         compress('32bit');
@@ -123,24 +126,22 @@ main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->begin
-  each(f,allFolders('.'),
+  allFolders('.').each(f,
        splitFileName(f).get('filename') in ["nppBackup","backup"]
        ? begin
            print('Deleting ',f);
            deleteDir(f);
          end
        : void);
-  each(file,
-       files(allFolders('.')&'/*.exe')|
-       files(allFolders('.')&'/*.png')|
-       files(allFolders('.')&'/*.bak')|
-       files('doc/package_doc/*.html')|
-       files('doc/*.html')|
-       files('doc/*.css')|
-       files('install.mnh')|
-       files('make*.log.txt')|
-       files('regTest/*.last'),
-       print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  (files(allFolders('.')&'/*.exe')|
+   files(allFolders('.')&'/*.png')|
+   files(allFolders('.')&'/*.bak')|
+   files('doc/package_doc/*.html')|
+   files('doc/*.html')|
+   files('doc/*.css')|
+   files('install.mnh')|
+   files('make*.log.txt')|
+   files('regTest/*.last')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   sandBoxExecute('USE passedTestsStore; passedTestsStore.main("clear");');
 end;
      
