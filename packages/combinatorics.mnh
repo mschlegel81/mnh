@@ -1,13 +1,13 @@
-private drop(L<>[],i:int)->L%each(j,[0..size(L)-1],j<>i);
+private drop(L<>[],i:int)->L.get([0..size(L)-1].each(j,j<>i));
 private myUnique([])->[];
-private myUnique(L)->[head(L)]|myUnique(L%each(E,L,not(E==head(L))));
+private myUnique(L)->[head(L)]|L.get(L.each(E,not(E==head(L)))).myUnique;
 
 //*Returns all permutations of list <code>[0..i-1]</code>
 permutations(i:int)->permutations([],[0..i-1]);
 //*Returns all permutations of list <code>L</code>
 permutations(L:list)->myUnique(permutations([],L));
 private permutations(Head:list,[])->[Head];
-private permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
+private permutations(Head:list,L)->[0..size(L)-1].each(i,permutations(Head|(L.get(i)),drop(L,i)),|);
 
 //*Returns <code>[[],[S]]</code>
 subsets(S:scalar)->[[],[S]];

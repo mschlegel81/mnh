@@ -1,5 +1,5 @@
-private forkbombFib(i:int)->i<1 ? 1 : pEach(arg,[i-1,i-2],+,executor.exec([myPath,arg]).head.softCast);
+private forkbombFib(i:int)->i<1 ? 1 : [i-1,i-2].pEach(arg,executor.exec([myPath,arg]).head.softCast,+);
 //*Returns the i-th Fibonacci number using forked calls of the MNH-Interpreter
 main(i)->print(forkbombFib(softCast(i)));
 //*Returns the 1st through 9th Fibonacci number
-main->each(i,[1..9],main(i));
+main->[1..9].each(i,main(i));

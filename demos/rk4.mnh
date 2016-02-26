@@ -11,15 +11,15 @@ end;
 rk4evolve(F,y0,dt,tEnd>0)->(y0:scalar ? y0 : [y0]) |rk4evolve(F,RK4(F,y0,dt),dt,round(tEnd-dt,3));
 rk4evolve(F,y0,dt,tEnd  )->(y0:scalar ? y0 : [y0]);
 
-private df     :={[1,$x%0*sqrt($x%1)]};
+private df     :={[1,$x.get(0)*sqrt($x.get(1))]};
 private initial:=[0,1];
 private exact  :={1/16*($t^2+4)^2};
 
 //*Solves the Runge-Kutta task from <fga href="http://rosettacode.org/wiki/Runge-Kutta_method">Rosetta Code</a>
 main->begin
-  local steps:=each(p,rk4evolve(df,initial,0.1,10),[p%0,p%1,abs(p%1-exact(p%0))]);
+  local steps:=rk4evolve(df,initial,0.1,10).each(p,[p.get(0),p.get(1),abs(p.get(1)-exact(p.get(0)))]);
   printf("%4.1f\t%g\t%e",
-         'time'|steps%%0,
-         'approximation'|steps%%1,
-         'error'|steps%%2);
+         'time'|steps.getInner(0),
+         'approximation'|steps.getInner(1),
+         'error'|steps.getInner(2));
 end;  

@@ -12,12 +12,12 @@ private consolidate(ListOfSets,consolidationPoints)->
   consolidationPoints==[]
   ? ListOfSets
   : begin
-      local mask:=each(set,ListOfSets,consolidationPoints.head in set);
-      consolidate([flatten(ListOfSets%mask).unique]|ListOfSets%not(mask),consolidationPoints.tail);
+      local mask:=ListOfSets.each(set,consolidationPoints.head in set);
+      consolidate([ListOfSets.get(mask).flatten.unique]|ListOfSets.get(not(mask)),consolidationPoints.tail);
     end;
   
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];
 
 //*See <a href="http://rosettacode.org/wiki/Set_consolidation">http://rosettacode.org/wiki/Set_consolidation</a>
-main->each(e,examples,print('Consolidation of ',e) and
-                      print('              is ',consolidate(e)));
+main->examples.each(e,print('Consolidation of ',e,"\n",
+                            '              is ',consolidate(e)));

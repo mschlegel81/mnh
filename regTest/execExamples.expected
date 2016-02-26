@@ -222,9 +222,9 @@ out> 3
 out> 271003
  in> hash('a');
 out> 252
- in> each(func,listBuiltin, copy(func, 0, 4)=='mnh.' ? func : void);
+ in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
 out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.addPrintAdapter','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.addFullAdapter','mnh.myPath','mnh.not','mnh.ord','mnh.removeAdapter']
- in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x%0+$y%0,$x%1]}));
+ in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
 out> 3
@@ -234,7 +234,7 @@ out> 3
 out> [1.0,0.5,0.0,0.5,1.0]
  in> chars('This is a test.');
 out> ['T','h','i','s',' ','i','s',' ','a',' ','t','e','s','t','.']
- in> chars%100;
+ in> chars.get(100);
 out> 'd'
  in> clean('+21/232/2116-11',['0'..'9'],' ');
 out> ' 21 232 2116 11'
@@ -263,7 +263,7 @@ out>                  void
  in>                  plot.renderToFile('plotDemo1.png', 600, 300, 4);
 Image:                D:\dev\mnh5\plotDemo1.png
 out>                  void
- in>                              printf('%s', each(message,sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'), join(message,"\t")));
+ in>                              printf('%s', sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)').each(message,join(message,"\t")));
 printline                          in>  @:1,1  f(x<1)->random;
 Note  @:1,1  Creating new rule: f
  in>  @:1,17 f(x)->f(x-1)+random;
@@ -357,4 +357,4 @@ out> [1.0,0.5,0.25,0.2,0.4,0.333333333333333,0.666666666666667]
  in> deleteFile('plotDemo1.png');
 out> true
  in> driveInfo;
-out> [[['drive','C'],['type','fixed'],['serial',1779773958],['label','']],[['drive','D'],['type','fixed'],['serial',1915365941],['label','Cache SSD']],[['drive','E'],['type','removable'],['serial',650802681],['label','']],[['drive','Y'],['type','network'],['serial',41222496],['label','nas']],[['drive','Z'],['type','network'],['serial',41224716],['label','Photos']]]
+out> [[['drive','C'],['type','fixed'],['serial',1779773958],['label','']],[['drive','D'],['type','fixed'],['serial',1915365941],['label','Cache SSD']]]

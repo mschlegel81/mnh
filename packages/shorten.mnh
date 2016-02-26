@@ -1,7 +1,7 @@
 shortenSilently(s:string)->begin
   local result:=shorten(s,2);
   local tryOn:=length(formatResult(result))<length(escape(s));
-  each(subLen,[3..32],tryOn ? begin
+  [3..32].each(subLen,tryOn ? begin
     local newResult:=shorten(s,subLen);
     length(formatResult(newResult))<length(formatResult(result))
     ? result:=newResult
@@ -13,7 +13,7 @@ end;
 
 private bestSubString(s:string,len:int)->begin
   local freq:=copy(s,[0..length(s)-len],len).elementFrequency;
-  local benefits:=(length(escape(freq.innerGet(1)))-2)*(freq.innerGet(0)-1)-1;
+  local benefits:=(length(escape(freq.getInner(1)))-2)*(freq.getInner(0)-1)-1;
   local best:=argMax(benefits);
   [benefits.get(best),freq.get(best).get(1)];
 end;
@@ -47,7 +47,7 @@ private shorten(s:string,subLength)->begin
   local proceed:=true;
   local result:=fallbackResult(s);
   local prevResult:=result;
-  each(run,[0..19],begin
+  [0..19].each(run,begin
     run=10 ? proceed:=true : void;
     (run<10
      ? chars.get([33..91,93..126])

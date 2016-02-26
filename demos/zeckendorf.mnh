@@ -7,12 +7,12 @@ private encode(F,n:int     )->replace('#'&encode(F,n,inv(F,n)),["#0","#"],["#","
 private encode(F,n:int,i>=0)->(F(i))<=n ? 1 & encode(F,n-(F(i)),i-1)
                                         : 0 & encode(F,n       ,i-1);
 private encode(F,n:int,i)->"";
-private encode(F,N:intList     )->pEach(n,N,encode(F,n));
+private encode(F,N:intList     )->N.pEach(n,encode(F,n));
 
 private FIB:={fib($i)};
 private POT:={2^$i};
 
-private memoized avgLen(bits)->pEach(i,[2^(bits-1)..2^bits-1],+,length(encode(FIB,i)))/(2^(bits-1));
+private memoized avgLen(bits)->[2^(bits-1)..2^bits-1].pEach(i,length(encode(FIB,i)),+)/(2^(bits-1));
 private examples:=[1,2,3,4,5,17,100,255];
 
 //*Displays examples for Zeckendorf-encoding
@@ -25,5 +25,5 @@ printf('%8d %8d %12d',
 print("\n    bits rel. overhead") |
 printf('%2d %5.2f     %9.4f',
        [1..12],
-       each(i,[1..12],avgLen(i)),
-       each(i,[1..12],avgLen(i))/[1..12]);
+       [1..12].each(i,avgLen(i)),
+       [1..12].each(i,avgLen(i))/[1..12]);

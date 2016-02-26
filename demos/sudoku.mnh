@@ -1,26 +1,26 @@
-private drop(list:intList,toDrop:int)->list%(list!=toDrop);
-private drop(list:intList,toDrop:intList)->each(el,list,el in toDrop ? void : el);
+private drop(list:intList,toDrop:int)->list.get(list!=toDrop);
+private drop(list:intList,toDrop:intList)->list.each(el,el in toDrop ? void : el);
 
 private
-COMPONENTS:=each(i,[0..8],i+[0..8]*9)|
-            each(i,[0..8],i*9+[0..8])|
-            each(i,[0..8],[0..80]%(i=([0..80] div 27)*3+[0..80] mod 9 div 3));
+COMPONENTS:=[0..8].each(i,i+[0..8]*9)|
+            [0..8].each(i,i*9+[0..8])|
+            [0..8].each(i,[0..80].get(i=([0..80] div 27)*3+[0..80] mod 9 div 3));
 
-private memoized connectedIdx(i:int)->sort(flatten(each(c,COMPONENTS,i in c ? drop(c,i) : void)));
-private memoized components(i)->each(c,COMPONENTS,i in c ? drop(c,i) : void);
+private memoized connectedIdx(i:int)->COMPONENTS.each(c,i in c ? drop(c,i) : void).flatten.sort;
+private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 
 //*A board is solved when all components contain numbers [1..9]
-isSolved(Board)->each(c,COMPONENTS,AND,(Board%c).sort==[1..9]);
+isSolved(Board)->COMPONENTS.each(c,Board.get(c).sort==[1..9],AND);
 //*A board is valid when all components may contain all numbers [1..9]
-isValid(Board)->each(cell,Board,AND,not(cell==[])) AND
-                each(c,COMPONENTS,AND,(Board%c).flatten.unique==[1..9]);
+isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
+                COMPONENTS.each(c,Board.get(c).flatten.unique.sort==[1..9],AND);
 //*A board's difficulty is given by the number of cells to fill
-difficulty(Board)->each(cell,Board,+,cell:int ? 0 : 1);
+difficulty(Board)->Board.each(cell,cell:int ? 0 : 1,+);
 
 initialBoard->begin
   local values:=1+random(9).sortPerm;
   local indexes:=[0..8]*9+random(9).sortPerm;
-  each(i,[0..80],i in indexes ? values%(indexes=i)%0 : [1..9]);
+  [0..80].each(i,i in indexes ? values.get(indexes=i).get(0) : [1..9]);
 end;
   
 testBoard:=
@@ -34,14 +34,14 @@ testBoard:=
  [1..9],  8   ,[1..9],  3   ,[1..9],  9   ,[1..9],  6   ,  7   ,
    9   ,[1..9],  3   ,[1..9],[1..9],  1   ,[1..9],  2   ,[1..9]];
 
-printBoard(B)->each(row,[0..8],print(row in [3,6] ? "---------+---------+---------\n" : '',
-               each(col,[0..8],&,begin
+printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+---------\n" : '',
+               [0..8].each(col,begin
                  local i:=col+9*row;
                  (col in [3,6] ? '|' : '')&
-                 " "&((B%i) :int ? B%i : " ")&" ";
-               end)))|B;
+                 " "&(B.get(i) :int ? B.get(i) : " ")&" ";
+               end,&)))|B;
 
-debugPrint(B)->printf@("%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%"|each(row,[0..8],B%(row+9*[0..8])));
+debugPrint(B)->printf@("%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%"|each(row,[0..8],B.get(row+9*[0..8])));
 
 solve(B)->begin
   local needRun:=isValid(B);
@@ -49,24 +49,24 @@ solve(B)->begin
   while(needRun,
   begin
     needRun:=false;
-    local intsOnly:=each(c,Board,c:int ? c : []);
-    Board:=each(i,[0..80],
-      (Board%i):int
-      ? Board%i
+    local intsOnly:=Board.each(c,c:int ? c : []);
+    Board:=[0..80].each(i,
+      Board.get(i):int
+      ? Board.get(i)
       : begin
-          local newList:=drop(Board%i,flatten(intsOnly%connectedIdx(i)));
+          local newList:=drop(Board.get(i),intsOnly.get(connectedIdx(i)).flatten);
           size(newList)=1
           ? begin
               needRun:=true;
-              newList%0;
+              newList.get(0);
             end
           : begin
-              local tmp:=drop(Board%i,flatten(Board%(components(i)%0)));
-              size(tmp)=1 ? begin needRun:=true; tmp%0; end : begin
-              tmp:=drop(Board%i,flatten(Board%(components(i)%1)));
-              size(tmp)=1 ? begin needRun:=true; tmp%0; end : begin
-              tmp:=drop(Board%i,flatten(Board%(components(i)%2)));
-              size(tmp)=1 ? begin needRun:=true; tmp%0; end : newList; end; end;
+              local tmp:=drop(Board.get(i),flatten(Board.get(components(i).get(0))));
+              size(tmp)=1 ? begin needRun:=true; tmp.get(0); end : begin
+              tmp:=drop(Board.get(i),Board.get(components(i).get(1)).flatten);
+              size(tmp)=1 ? begin needRun:=true; tmp.get(0); end : begin
+              tmp:=drop(Board.get(i),Board.get(components(i).get(2)).flatten);
+              size(tmp)=1 ? begin needRun:=true; tmp.get(0); end : newList; end; end;
             end;
         end);
   end);
@@ -76,12 +76,12 @@ end;
 bruteForceSolve(B)->begin
   local Board:=solve(B);
   isSolved(Board) ? Board : begin
-    local firstListIdx:=min(81|each(i,[0..80],(Board%i):int ? void : i));
-    local candidates:=Board%firstListIdx;
+    local firstListIdx:=min(81|each(i,[0..80],Board.get(i):int ? void : i));
+    local candidates:=Board.get(firstListIdx);
     local numberOfSolutions:=0;
     local finalSolution:=void;
     each(candidate,candidates,numberOfSolutions>1 ? void : begin
-      local newSolution:=bruteForceSolve(each(i,[0..80],i=firstListIdx ? candidate : Board%i));
+      local newSolution:=bruteForceSolve(each(i,[0..80],i=firstListIdx ? candidate : Board.get(i)));
       isSolved(newSolution)
       ? begin
           finalSolution:=newSolution;
@@ -94,10 +94,10 @@ bruteForceSolve(B)->begin
 end;
 
 private restrictRandom(B)->begin
-  local listIndexes:=each(i,[0..80],(B%i):int ? void : i);
+  local listIndexes:=[0..80].each(i,B.get(i):int ? void : i);
   listIndexes==[] ? B : begin
-    local randomListIdx:=listIndexes%intRandom(size(listIndexes));
-    each(i,[0..80],i=randomListIdx ? (B%i)%intRandom(size(B%i)) : B%i);
+    local randomListIdx:=listIndexes.get(intRandom(size(listIndexes)));
+    [0..80].each(i,i=randomListIdx ? (B.get(i)).get(intRandom(size(B.get(i)))) : B.get(i));
   end;
 end;
 
@@ -114,9 +114,9 @@ end;
 
 randomRiddle->begin
   local riddle:=randomSolution;
-  each(undefIdx,sortPerm(random(81)),begin
+  random(81).sortPerm.each(undefIdx,begin
     local previousRiddle:=riddle;
-    riddle:=each(i,[0..80],i=undefIdx ? [1..9] : riddle%i);
+    riddle:=[0..80].each(i,i=undefIdx ? [1..9] : riddle.get(i));
     riddle.solve.isSolved ? void : riddle:=previousRiddle;
     void;
   end);
@@ -128,3 +128,5 @@ end;
 //*For regression test: create a random riddle and print it out
 main->randomRiddle.printBoard;
 
+
+isValid(initialBoard);

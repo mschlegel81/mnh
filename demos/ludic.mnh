@@ -2,9 +2,9 @@ private LUDICS(n)->begin
   local candidates:=[2..10*n];
   local result:=[1];
   while((candidates.size>0) AND (result.size<n),begin
-    local next:=candidates%0;
+    local next:=candidates.get(0);
     result|=next;
-    candidates:=candidates%([0..size(candidates)-1] mod next<>0);
+    candidates:=candidates.get([0..size(candidates)-1] mod next<>0);
   end);
   result;
 end;
@@ -13,5 +13,5 @@ private LUDICS:=LUDICS(2152);
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->print("Ludic Numbers\n  The first 25 are: ",head(LUDICS,25),'.') and
       print('  There are ',trueCount(LUDICS<=1000),' lesser or equal to 1000.') and
-      print('  The 2000..2005th are ',LUDICS%([2000..2005]-1),'.') and
-      print('  The triplets below 250 are ',each(i,LUDICS%(LUDICS<250),i+2 in LUDICS and i+6 in LUDICS ? [i,i+2,i+6] : void));
+      print('  The 2000..2005th are ',LUDICS.get([2000..2005]-1),'.') and
+      print('  The triplets below 250 are ',LUDICS.get(LUDICS<250).each(i,i+2 in LUDICS and i+6 in LUDICS ? [i,i+2,i+6] : void));

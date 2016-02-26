@@ -1,16 +1,16 @@
 printExecute([])->void;
 
 printExecute(code:stringList)->begin
-  local out:=each(message,sandBoxExecute(code),message%0=="timing_info" ? void : message);
-  printf("%s\t%s",out%%0,out%%2);
+  local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
+  printf("%s\t%s",out.getInner(0),out.getInner(2));
 end;
 
 
-examplesFile:=splitFileName(myPath)%"directory"&'/../doc/examples.txt';
+examplesFile:=splitFileName(myPath).get("directory")&'/../doc/examples.txt';
 
 main->begin
   local codeToExecute:=[];
-  each(line,fileLines(examplesFile),
+  fileLines(examplesFile).each(line,
     line=='' ? begin
       printExecute(codeToExecute);
       codeToExecute:=[];

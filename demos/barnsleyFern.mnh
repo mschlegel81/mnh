@@ -1,4 +1,4 @@
-private interlace(X,Y)->each(i,[0..size(X)-1],[X%i,Y%i]);
+private interlace(X,Y)->[0..size(X)-1].each(i,[X.get(i),Y.get(i)]);
 
 private barnsleyFern(sampleCount)->begin
   local x:=random(1);
@@ -6,8 +6,8 @@ private barnsleyFern(sampleCount)->begin
   while (size(x)<=sampleCount, begin
     local p1:=random(size(x))<0.01;
     local p2:=random(size(x))<0.11;
-    local xNew:=flatten(   0*x%p1, 0.85*x+0.04*y    ,0.20*x%p2-0.26*y%p2    ,-0.15*x%p2+0.28*y%p2     );
-    y:=         flatten(0.16*y%p1,-0.04*x+0.85*y+1.6,0.23*x%p2+0.22*y%p2+1.6, 0.26*x%p2+0.24*y%p2+0.44);
+    local xNew:=flatten(   0*x.get(p1), 0.85*x+0.04*y    ,0.20*x.get(p2)-0.26*y.get(p2)    ,-0.15*x.get(p2)+0.28*y.get(p2)     );
+    y:=         flatten(0.16*y.get(p1),-0.04*x+0.85*y+1.6,0.23*x.get(p2)+0.22*y.get(p2)+1.6, 0.26*x.get(p2)+0.24*y.get(p2)+0.44);
     x:=xNew;
   end);
   interlace(x,y);
@@ -23,7 +23,7 @@ private main_impl(filename:string,xRes:int,yRes:int)->begin
 end;
 
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution (given as <i>xRes</i><code>x</code><i>yRes</i>)
-main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x")%0),softCast(split(resolution,"x")%1));
+main(filename,resolution)->main_impl(filename,softCast(split(resolution,"x").get(0)),softCast(split(resolution,"x").get(1)));
 //*Plots a Barnsley Fern to file <code>filename</code> using a custom resolution
 main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,softCast(yRes));
 //*Plots a Barnsley Fern to file <code>filename</code> using a resolution of 768x768

@@ -39,10 +39,8 @@
 [ "demos/wordCount.mnh",                 "",                                     false,         false,        false],
 [ "demos/y.mnh",                         "",                                     false,         false,        false],
 [ "demos/zeckendorf.mnh",                "",                                     false,         false,        false],
-[ "packages/bool.mnh",                   "",                                     false,         false,        false],
 //script name                    output                       delete output? use plotting? spearate 32/64-bit results?
 [ "packages/combinatorics.mnh",  "",                          false,         false,        false],
-[ "packages/densityPlots.mnh",   "packages/densityPlots.png", true,          true,         false],
 [ "packages/shorten.mnh",        "",                          false,         false,        false],
 [ "packages/turtleGfx.mnh",      "packages/turtleGfx.png",    true,          true,         false],
 [ "regTest/hash.mnh",            "",                          false,         false,        false],

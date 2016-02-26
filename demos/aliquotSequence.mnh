@@ -1,8 +1,8 @@
 memoized private dividerSum(n:int)->
   n<=1 ? 0 : begin
     local C:=[2..floor(sqrt(n))];
-    C:=C%(n mod C = 0);
-    each(d,unique(1|C|(n div C)),+);
+    C:=C.get(n mod C = 0);
+    unique(1|C|(n div C)).agg(+);
   end;
 
 private classify(n:int)->
@@ -26,9 +26,9 @@ private classify(n:int)->
 //*See http://rosettacode.org/wiki/Aliquot_sequence_classifications
 main->begin
   local input:=[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488];
-  local class:=each(n,input,classify(n));
+  local class:=input.each(n,classify(n));
     printf("%d\t|\t%s\t|\t%s",
      "start @"| input,
-     "classification"|( class%%0),
-     "sequence"|(class%%1));
+     "classification"|( class.getInner(0)),
+     "sequence"|(class.getInner(1)));
 end;

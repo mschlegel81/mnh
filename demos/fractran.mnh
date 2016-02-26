@@ -1,13 +1,13 @@
 //Rational numbers are handled as arrays of their prime factor powers.
 private BASE:=  [2,3,5,7,11,13,17,19,23,29];
 private POT2TAIL:=[0,0,0, 0, 0, 0, 0, 0, 0];
-private niceRational(L)->each(i,[0..size(L)-1],aggregator({$x&"*"&$y}),L%i<>0 ? BASE%i&"^"&L%i : void)&" = "&each(f,BASE^L,*);
+private niceRational(L)->[0..size(L)-1].each(i,L.get(i)<>0 ? BASE.get(i)&"^"&L.get(i) : void).join("*")&" = "&(BASE^L).agg(*);
 
 //*This routine transforms a rational number to the corresponding prime factor powers
 private rational(enumerator:int,denominator:int)->begin
   local en:=enumerator;
   local de:=denominator;
-  each(b,BASE,begin
+  BASE.each(b,begin
     local k:=0;
     while(en mod b=0,begin k+=1; en:=en div b; end);
     while(de mod b=0,begin k-=1; de:=de div b; end);
@@ -19,30 +19,30 @@ end;
 private isInteger(L:intList)->min(L)>=0;
 
 //*Turns an input string first into a list of tuples (denoting rational numbers) then to lists of prime factor powers
-private parseFractions(s:string)->each(tuple,
+private parseFractions(s:string)->
   expression('[['&
              replace(s,[' ', ',' ,'/'],
                        ['' ,'],[',','])&
-             ']]')(),rational@tuple);
+             ']]')().each(tuple,rational@tuple);
 
 //*The core algorithm;
 private Fractran(out:expression,fractions,k,steplimit)->begin
   local state:=k;
   local terminated:=false;
   out(0,state);
-  each(step,[1..steplimit],terminated ? void :
+  [1..steplimit].each(step,terminated ? void :
     begin
-      terminated:=each(f,fractions,AND,
+      terminated:=fractions.each(f,
         isInteger(state+f) 
         ? begin state+=f; false; end //Do NOT terminate early when there is a matching rational 
-        : true);
+        : true,AND);
       out(step,state);
     end);
 end;
 
 Conway_primes_algorithm:='17 / 91, 78 / 85, 19 / 51, 23 / 38, 29 / 33, 77 / 29, 95 / 23, 77 / 19, 1 / 17, 11 / 13, 13 / 11, 15 / 14, 15 / 2, 55 / 1';
-private printPowersOf2:={tail($params%1)==POT2TAIL ? print($step,': ',niceRational($state)) : void};
-private printAll      :={                            print($step,': ',niceRational($state))       };
+private printPowersOf2:={tail($params.get(1))==POT2TAIL ? print($step,': ',niceRational($state)) : void};
+private printAll      :={                                 print($step,': ',niceRational($state))       };
 
 main(fractions,n)->Fractran(printAll      ,parseFractions(fractions),rational(softCast(n),1),30)|
                    print('----------------------------------')|

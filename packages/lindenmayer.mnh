@@ -7,7 +7,7 @@ private lindenmayer(data,productionLHS,productionRHS,depth>0)->
                     productionRHS,
                     depth-1);
 private lindenmayer(data,productionLHS,productionRHS,depth)->upper(data);
-lindenmayerTurtle(config,depth)->turtle@(config%1|lindenmayer(config%0,depth));
+lindenmayerTurtle(config,depth)->turtle@(config.get(1)|lindenmayer(config.get(0),depth));
 
 HILBERT       :=[['A'      ,['A','B'],['-BF+AFA+FB-','+AF-BFB-FA+']],[ 0, 90,'F' ]];
 KOCH_SNOWFLAKE:=[['F++F++F',['F'    ],['F-F++F-F'                 ]],[ 0, 60,'F' ]];

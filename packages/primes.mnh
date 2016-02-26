@@ -6,12 +6,12 @@ synchronized
 primes(n:int)->begin
   n>max_cached ? begin
     local candidates:=[(max(cached_primes)+1) div 2..ceil(n/2)-1]*2+1; //only odd numbers as candidates
-    each(p,cached_primes,candidates:=candidates%(candidates mod p!=0)); //filter candidates using cached_primes
+    cached_primes.each(p,candidates:=candidates.get(candidates mod p!=0)); //filter candidates using cached_primes
     local lastPrime:=head(candidates);
     candidates:=tail(candidates);
     while(lastPrime^2<n,begin
       cached_primes|=lastPrime;
-      candidates:=candidates%(candidates mod lastPrime!=0);
+      candidates:=candidates.get(candidates mod lastPrime!=0);
       lastPrime :=head(candidates);
       candidates:=tail(candidates);
     end);
@@ -19,7 +19,7 @@ primes(n:int)->begin
     cached_primes|=candidates;
     max_cached:=n;
   end : void;
-  cached_primes%(cached_primes<=n);
+  cached_primes.get(cached_primes<=n);
 end;
 
 //*Return prime numbers <= floor(n)
@@ -36,7 +36,7 @@ end;
 
 //*Returns the first k primes
 firstKPrimes(k:int)->k<size(cached_primes) ? head(cached_primes,k)
-                                           : (primes(max(k*11,round(max_cached*1.1))))%-1 | firstKPrimes(k);
+                                           : (primes(max(k*11,round(max_cached*1.1)))).get(-1) | firstKPrimes(k);
 
 //*Factorize number <code>n</code> using prime numbers from function <code>primes</code>
 factorize(n:int)-> n<=1 ? [1] :
@@ -44,7 +44,7 @@ begin
   local factors:=[];
   local k:=n;
   local P:=primes(sqrt(k));
-  each(p,P%(k mod P=0),
+  P.get(k mod P=0).each(p,
     while(k mod p = 0, begin
       k:=k div p;
       factors|=p;
@@ -55,14 +55,14 @@ end;
 //*Return the dividers of integer <code>n</code>
 dividers(n:int)->begin
   local C:=[2..floor(sqrt(n))];
-  C:=C%(n mod C = 0);
+  C:=C.get(n mod C = 0);
   unique(1|C|(n div C));
 end;
 //*Return the divider-sum of integer <code>n</code>
-memoized dividerSum(n:int)->each(d,dividers(n),+);
+memoized dividerSum(n:int)->dividers(n).agg(+);
 
 
-dividerPairs(n:int)->each(d,[2..floor(sqrt(n))]%(n mod [2..floor(sqrt(n))]=0),[d,n div d]);
+dividerPairs(n:int)->[2..floor(sqrt(n))].get(n mod [2..floor(sqrt(n))]=0).each(d,[d,n div d]);
 
 private testEx(e:expression)->printf("%-20s = %s",unbrace(string(e)),string(e()));
 //*Call functions for reg-testing

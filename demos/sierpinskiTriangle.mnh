@@ -1,7 +1,7 @@
 //*Solves the "Sierpinski-Triangle" task from <a href="http://rosettacode.org/wiki/Sierpinski_triangle">RosettaCode</a>
 main(recursionDepth:string)->begin
   local n:=softCast(recursionDepth);
-  printf("%{repeat(' ',$i)&each(j,[0..2^$n-1],&,trueCount(($i and 2^[$n-1..0])>0<(j and 2^[$n-1..0]))=0 ? 'A ' : '  ')}s",[2^n-1..0],n);
+  printf("%{repeat(' ',$i)&[0..2^$n-1].each(j,trueCount(($i and 2^[$n-1..0])>0<(j and 2^[$n-1..0]))=0 ? 'A ' : '  ',&)}s",[2^n-1..0],n);
 end;
 
 //*For test

@@ -7,10 +7,11 @@ private getFangs(i:int)->begin
                  ? [toTest1..toTest2]
                  : [toTest3..toTest2];
   local iDigits:=string(i).chars.sort;
-  pEach(d,toTest%(i mod toTest=0),
-    (string(d)&string(i div d)).chars.sort==iDigits
-    ? [i div d,d]
-    : void);
+  toTest
+  .get(i mod toTest=0)
+  .pEach(d,(string(d)&string(i div d)).chars.sort==iDigits
+           ? [i div d,d]
+           : void);
 end;
 
 private printVampire(i:int)->begin

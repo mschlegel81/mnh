@@ -1,8 +1,11 @@
 USE inputs;
 
-readDict(filename)->pEach(word,fileLines(filename),[join(word.chars.sort),word]);
+readDict(filename)->fileLines(filename).pEach(word,[join(word.chars.sort),word]);
 
-anagramsInDict(list)->pEach(gr,pEach(word,fileLines(inputs.dict),[each(char,word.chars.sort,&),word]).group(0),size(gr)<=1 ? void : gr%%1);
+anagramsInDict(list)->fileLines(inputs.dict)
+                     .pEach(word,[word.chars.sort.agg(&),word])
+                     .group(0)
+                     .pEach(gr,size(gr)<=1 ? void : gr.getInner(1));
 
 //*Finds anagrams in unixdict.txt
 main->main(inputs.dict);

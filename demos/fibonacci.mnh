@@ -1,5 +1,5 @@
 memoized private
-fibNStep(i>=k,k>=1)->each(j,[1..k],+,fibNStep(i-j,k));
+fibNStep(i>=k,k>=1)->[1..k].each(j,fibNStep(i-j,k),+);
 fibNStep(i   ,k)->1;
 
 //*Solves the "Fibonacci n-step" task from <a href="http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences">RosettaCode</a>
@@ -7,5 +7,5 @@ main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences')
       print('Fibonacci n-step sequence') and
       print(' n | values') and
       print('---+-----------------------------------------------------------------------------------------------------') and
-      print(each(k,[1..20],aggregator({$x&"\n"&$y}),k&"\t| "&
-            each(i,[1..20],aggregator({$x&"\t"&$y}),fibNStep(i+k-3,k))));
+      printf("%s",[1..20].each(k,k&"\t| "&
+            [1..20].each(i,fibNStep(i+k-3,k)).join("\t")));

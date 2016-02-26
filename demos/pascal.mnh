@@ -1,8 +1,7 @@
 memoized
 private tri(1)->1;
 private tri(n>1)->tri(n-1)|1+1|tri(n-1);
-private printTri(n:int)->print(each(i,[1..n],aggregator({$x&"\n"&$y}), each(i,[0..n-i],&,"\t")&
-                               each(x,tri(i),aggregator({$x&"\t\t"&$y}))));
+private printTri(n:int)->print([1..n].each(i,repeat("\t",n-i)&tri(i).join("\t\t")).join("\n"));
 
 //*Simple output
 main->printTri(10);

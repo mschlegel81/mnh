@@ -24,4 +24,4 @@ end;
 memoized stringFib(i:int)->i<=1 ? "1" : stringFib(i-1).plus(stringFib(i-2));
 
 //*Prints out the first 1000 Fibonacci-Numbers
-main->printf("%s\t",each(i,[1..1000],stringFib(i)));
+main->printf("%s\t",[1..1000].each(i,stringFib(i)));

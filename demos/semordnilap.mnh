@@ -1,8 +1,9 @@
 USE anagram,inputs;
 
 private findSemordnilaps->
-  pEach(anagramGroup,
-        readDict(inputs.dict).anagramsInDict,
+  readDict(inputs.dict)
+  .anagramsInDict
+  .pEach(anagramGroup,
         begin
           local semordnilapGroup:=intersect(anagramGroup,reverseString(anagramGroup));
           size(semordnilapGroup)==0 ? void : semordnilapGroup;
@@ -12,5 +13,5 @@ private findSemordnilaps->
 main->begin
   local fullList:=findSemordnilaps;
   printf('Found %d Semordnilaps',size(fullList));
-  printf("%s\t%s",['Examples:','','','',''],fullList%intRandom(size(fullList),5));
+  printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)));
 end;

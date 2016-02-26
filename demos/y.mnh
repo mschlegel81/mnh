@@ -3,4 +3,4 @@ fakForY:={$n<=1 ? 1 : $n*$f($n-1,$f)};
 fibForY:={$n<=1 ? 1 :    $f($n-1,$f)+
                          $f($n-2,$f)};
 //*Solves the <a href="http://rosettacode.org/wiki/Y_combinator">Y combinator task</a> from rosettacode.org
-main->each(i,[0..20],print(i,' ',Y(fakForY)(i),' ',Y(fibForY)(i)));
+main->[0..20].each(i,print(i,' ',Y(fakForY)(i),' ',Y(fibForY)(i)));

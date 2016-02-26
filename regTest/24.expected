@@ -1,10 +1,10 @@
 This is a demo - start with any argument to play.
  ?> Find an expression to calculate 24 from the numbers [1,1,6,4].
- !> ((1-1)+4)*6
+ !> ((1-1)+6)*4
 The solution is valid.
  ?> Another round?
  !> no
-Warning @regTest/../demos/24.mnh:25,1 Unused private subrule getRiddle(set, 0)
-Warning @regTest/../demos/24.mnh:40,1 Unused private subrule playARound
-Warning @regTest/../demos/24.mnh:41,1 Unused private subrule playARound(set)
-Warning @regTest/../demos/24.mnh:42,1 Unused private subrule playARound(set, answer)
+Warning @regTest/../demos/24.mnh:23,1 Unused private subrule getRiddle(set, false)
+Warning @regTest/../demos/24.mnh:38,1 Unused private subrule playARound
+Warning @regTest/../demos/24.mnh:39,1 Unused private subrule playARound(set)
+Warning @regTest/../demos/24.mnh:40,1 Unused private subrule playARound(set, answer)

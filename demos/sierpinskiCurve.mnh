@@ -21,13 +21,13 @@ sc(depth)->begin
     direction+=deg45;
     $self($level-1);
   end};
-  each(i,[0..1],begin
+  [0..1].each(i,begin
     half(depth);
     direction-=deg45*2;
     result|=[position+=[cos(direction),sin(direction)]];
     direction-=deg45*2;
     void; end);
-  (result|result%[0])/2^depth;
+  (result|result.get([0]))/2^depth;
 end;
 
 main->begin

@@ -5,4 +5,4 @@ private ackermann(m>0,n>0)->ackermann(m-1,ackermann(m,n-1));
 
 //*Solves the "Ackermann" task from <a href="http://rosettacode.org/wiki/Ackermann_function">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Ackermann_function') and
-      each(n,[0..14],print('ackermann(3,',n,')=',ackermann(3,n)));
+      [0..14].each(n,print('ackermann(3,',n,')=',ackermann(3,n)));

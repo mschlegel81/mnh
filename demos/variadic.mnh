@@ -1,4 +1,4 @@
 //*See <a href="http://rosettacode.org/wiki/Variadic_function">http://rosettacode.org/wiki/Variadic_function</a>
 main->print('Example parameters: "A","B","C"')|main("A","B","C");
 //*Print all the script parameters - each in a new line
-main(...)->each(p,$params,print(p));
+main(...)->$params.each(p,print(p));

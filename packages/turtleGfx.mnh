@@ -3,7 +3,7 @@ private removeRedundantSequences(s,s)->s;
 private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
 
 private cleanString(drawChars:string, input:string, allowShortening:boolean)->begin
-  local ignorables:=each(c,unique('~'|copy(input,[0..length(input)-1],1)),c in ['+','-','F','[',']'] ? void : c);
+  local ignorables:=('~'|input.chars).minus(['+','-','F','[',']']);
   local clean:=replace(replace(input,
                                copy(drawChars,[0..length(drawChars)-1],1),
                                'F'),
@@ -26,7 +26,7 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,al
   local posStack:=[];
   local dirStack:=[];
   local rotAngle:=rotAngleInDegrees*degToRad;
-  each(c,cleanInput .chars,when(
+  cleanInput.chars.each(c,when(
     c='0', begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end,
     c='+', begin turtleDir-=rotAngle; void; end,
     c='-', begin turtleDir+=rotAngle; void; end,
@@ -54,4 +54,4 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,al
 end;
 
 //*For reg-test
-main->plot.setAxisStyle([0,0]) and plot(turtle(0,59,'F',each(i,[1..100],&,repeat('F',i),'+'))) and renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
+main->plot.setAxisStyle([0,0]) and plot(turtle(0,59,'F',[1..100].each(i,repeat('F',i),'+',&))) and renderToFile(replace(myPath,'.mnh','.png'),768,768,4);

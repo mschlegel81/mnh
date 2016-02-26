@@ -1,29 +1,27 @@
 randomSet->1+intRandom(9,4);
 OPLIST:=['+','-','*','/'];
 
-private drop(L<>[],i:int)->L%([0..size(L)-1]<>i);
-permutations(L:list)->unique(permutations([],L));
+private drop(L<>[],i:int)->L.get([0..size(L)-1]<>i);
+permutations(L:list)->permutations([],L).unique;
 private permutations(Head:list,[])->[Head];
-private permutations(Head:list,L)->each(i,[0..size(L)-1],|,permutations(Head|(L%i),drop(L,i)));
+private permutations(Head:list,L)->[0..size(L)-1].each(i,permutations(Head|L.get(i),drop(L,i)),|);
 
 private
-canSolve(set)->each(x,permutations(set),+,
-               each(y,[x%0+x%1,x%0-x%1,x%0*x%1,x%0/x%1],+,
-               each(z,[y  +x%2,y  -x%2,y  *x%2,y  /x%2],+,
-            trueCount([z  +x%3,z  -x%3,z  *x%3,z  /x%3]=24))));
+canSolve(set)->permutations(set).each(x,
+               [x.get(0)+x.get(1),x.get(0)-x.get(1),x.get(0)*x.get(1),x.get(0)/x.get(1)].each(y,
+               [y       +x.get(2),y       -x.get(2),y       *x.get(2),y       /x.get(2)].each(z,
+        listOr([z       +x.get(3),z       -x.get(3),z       *x.get(3),z       /x.get(3)]=24),OR),OR),OR);
 private
 testSolution(s:string)->expression(s)()=24 ? s : void;
 private
-findSolution(set)->head(flatten(each(x,permutations(set),
-                   each(op1,OPLIST,
-                   each(op2,OPLIST,
-                   each(op3,OPLIST,
-                   testSolution('(('&x%0&op1&x%1&')'&op2&x%2&')'&op3&x%3)))))));
+findSolution(set)->head(flatten(permutations(set).each(x,
+                   OPLIST.each(op1,OPLIST.each(op2,OPLIST.each(op3,
+                   testSolution('(('&x.get(0)&op1&x.get(1)&')'&op2&x.get(2)&')'&op3&x.get(3))))))));
 
 private getRiddle->getRiddle(randomSet);
 private getRiddle(set)->getRiddle(set,canSolve(set));
-private getRiddle(set,0)->getRiddle(randomSet);
-private getRiddle(set,k)->set;
+private getRiddle(set,false)->getRiddle(randomSet);
+private getRiddle(set,true )->set;
 
 private isCorrectSolution(set,text)->
     not(each(c,text.chars,AND,c in (set&"") | OPLIST | [' ','(',')']))

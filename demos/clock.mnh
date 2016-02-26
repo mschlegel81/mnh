@@ -1,5 +1,5 @@
 private glyphs:=expression(replace("[['0'@***C1'(=! _/)  _/  )===!!#;2'@=G%EDH ;3'@>+/)>C4'(G%# )I==!!#;5'(IEE$H)>>$H#;6'@E$/_<C7'(I>>=G%#.-(8'@*+<C9'@?$/%>C:'(BB&B&B!; '(!!\"!%B!\"% \"-]",chars('IHGFEDCBA@?>=<;.-+*)(&%$#"!'),copy('D/&/_/!AF" A#."$/$?#;! " #!(+<*+/. &!!)/)* -(!! '']]  $#!&# ",[''_/%  "_/__/!'',''   ',[0..26]*3,3)))();
-private printTime(time:real)->printf('%s',each(g,glyphs%chars(formatTime(' hh:nn:ss',time)),&));
+private printTime(time:real)->printf('%s',glyphs.get(chars(formatTime(' hh:nn:ss',time))).agg(&));
 //*For regtest
 main->begin
   print('Call with any string parameter for continuous run.');

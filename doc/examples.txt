@@ -221,10 +221,10 @@ hash([1..3]);
 
 hash("a");
 
-each(func,listBuiltin,copy(func,0,4)=='mnh.' ? func : void);
+listBuiltin.each(func,copy(func,0,4)=='mnh.' ? func : void);
 
 //Group to join element frequencies
-group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']],1,aggregator({[$x%0+$y%0,$x%1]}));
+group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']],1,aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
 
 abs(3);
 
@@ -234,7 +234,7 @@ abs([-2..2]/2);
 
 chars('This is a test.');
 
-chars%100;
+chars.get(100);
 
 clean('+21/232/2116-11',['0'..'9'],' ');
 
@@ -259,9 +259,8 @@ plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,4);
 
 printf("%s",
-each(message,
-     sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)'),
-     join(message,"\t")));
+       sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)')
+       .each(message,join(message,"\t")));
      
 abs({$x});
 

@@ -3,7 +3,7 @@ regulaFalsi(F:expression,x0input:numeric,x1input>x0input,steps>0)->begin
   local f0:=F(x0);
   local x1:=x1input;
   local f1:=F(x1);
-  each(step,[1..steps],
+  [1..steps].each(step,
     f0=0 or f1=0 ? void :
     begin
       local xm:=x1-f1*(x0-x1)/(f0-f1);
@@ -19,14 +19,14 @@ end;
 
 roots(F:expression,x0:numeric,x1:numeric)->begin
   local X:=x0|sort(x0+random(1000)*(x1-x0))|x1;
-  local S:=each(x,X,sign(F(x)));
-  each(i,[0..size(S)-2],S%i<>S%(i+1) ? regulaFalsi(F,X%i,X%(i+1),100) : void);
+  local S:=X.each(x,sign(F(x)));
+  [0..size(S)-2].each(i,S.get(i)<>S.get(i+1) ? regulaFalsi(F,X.get(i),X.get(i+1),100) : void);
 end;
 
 private epsilon:=1E-12;
 
 main(F:expression)->print("Analyzing ",F) and
-                    each(r,roots(F,-6,6),print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));
+                    roots(F,-6,6).each(r,print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));
 main(F:string)->main(expression(F));
 //*Solves the "Roots of a function" task from <a href="http://rosettacode.org/wiki/Roots_of_a_function">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
