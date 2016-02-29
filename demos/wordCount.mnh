@@ -5,7 +5,7 @@ private cleanSplitString(s:stringList)->begin
                .lower                 //convert to lowercase
                .clean(['a'..'z'],' ') //retain only letters
                .split(' ');           //split at spaces
-  result.get(result<>''); //return those elements from the result list which are not empty strings
+  result[result<>'']; //return those elements from the result list which are not empty strings
 end;
 
 private processLinesInChunks(lines:stringList,chunkSize)->
@@ -15,7 +15,7 @@ private processLinesInChunks(lines:stringList,chunkSize)->
   .elementFrequency;
         
 private analyze(lines:stringList)->begin
-  local wordCount:=processLinesInChunks(lines,100).sort({$x.get(0)>=$y.get(0)});
+  local wordCount:=processLinesInChunks(lines,100).sort({$x[0]>=$y[0]});
   print('Words total:    ',local total:=wordCount.getInner(0).agg(+));
   print('Distinct words: ',size(wordCount));
   local top50:=head(wordCount,50);

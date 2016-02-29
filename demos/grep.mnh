@@ -3,10 +3,10 @@
 main(searchPattern,...)->begin
   local filesToScan:=size(...)=0
                      ? files(allFolders('.')&'/*')
-                     : each(pattern,...,files(allFolders('.')&'/'&pattern)).flatten;
-  each(file,filesToScan,begin
+                     : ... .each(pattern,files(allFolders('.')&'/'&pattern)).flatten;
+  filesToScan.each(file,begin
     local nameDisplayed:=false;
-    each(line,fileLines(file),
+    fileLines(file).each(line,
       line.matches(searchPattern)
       ? begin
           nameDisplayed OR begin

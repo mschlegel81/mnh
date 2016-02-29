@@ -1,13 +1,13 @@
 USE inputs;
 
-private huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L.get(0).get(1)).sort({length($x.get(0))>=length($y.get(0))})
+private huffman(L         )->size(L)<=1 ? traverseBinaryTree("",L[0,1]).sort({length($x[0])>=length($y[0])})
                                         : huffman(L,sortPerm(L.getInner(0)).get([0,1]));
-private huffman(L,mergeIdx)->huffman(L.get(mergeIdx.get(0)<>[0..size(L)-1]<>mergeIdx.get(1)) | [mergeNodes@(L.get(mergeIdx.get([0,1])))]);
-private mergeNodes(n1,n2)->[n1.get(0)+n2.get(0),[n1.get(1),n2.get(1)]];
+private huffman(L,mergeIdx)->huffman(L.get(mergeIdx[0]<>[0..size(L)-1]<>mergeIdx[1]) | [mergeNodes@(L[mergeIdx.get([0,1])])]);
+private mergeNodes(n1,n2)->[n1[0]+n2[0],[n1[1],n2[1]]];
 
 private traverseBinaryTree(codePrefix,T:string)->[[codePrefix,T]];
-private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T.get(0))|
-                                              traverseBinaryTree(codePrefix&1,T.get(1)) ;
+private traverseBinaryTree(codePrefix,T<>[])->traverseBinaryTree(codePrefix&0,T[0])|
+                                              traverseBinaryTree(codePrefix&1,T[1]) ;
 
 private charactersInFile(filename:string)->charactersInString(fileContents(filename));
 private charactersInString     (s:string)->s.chars.elementFrequency;
@@ -16,6 +16,6 @@ private charactersInString     (s:string)->s.chars.elementFrequency;
 main(filename:string)->print('See http://rosettacode.org/wiki/Huffman_coding') and
                        print(" code\tchar\n "&
                              huffman(charactersInFile(filename)).each(e,
-                                  e.get(0)&"\t"&e.get(1).escape).join("\n "));
+                                  e[0]&"\t"&e[1].escape).join("\n "));
 //*Calls main with unixdict.txt as input
 main->main(inputs.dict);
