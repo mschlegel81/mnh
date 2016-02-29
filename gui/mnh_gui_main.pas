@@ -113,7 +113,7 @@ TYPE
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
-      VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+      VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE debugEditKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -124,9 +124,9 @@ TYPE
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE InputEditChange(Sender: TObject);
     PROCEDURE InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-    PROCEDURE InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+    PROCEDURE InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE InputEditProcessUserCommand(Sender: TObject;
-      VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+      VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE MenuItem4Click(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
@@ -170,9 +170,9 @@ TYPE
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
-    PROCEDURE OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
+    PROCEDURE OutputEditMouseDown(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
-    PROCEDURE OutputEditMouseUp(Sender: TObject; Button: TMouseButton;
+    PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
     PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -397,8 +397,8 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
   begin
-    PopupNotifier1.ShowAtPos(left+PageControl.width-PopupNotifier1.vNotifierForm.width,
-                             ClientToScreen(point(left,OutputEdit.top)).y);
+    PopupNotifier1.ShowAtPos(Left+PageControl.width-PopupNotifier1.vNotifierForm.width,
+                             ClientToScreen(point(Left,OutputEdit.top)).y);
     if (PageControl.ActivePageIndex>=0) then inputRec[PageControl.ActivePageIndex].editor.SetFocus;
   end;
 
@@ -607,7 +607,7 @@ PROCEDURE TMnhForm.BreakpointsGridKeyUp(Sender: TObject; VAR key: word; Shift: T
     updateBreakpointGrid;
   end;
 
-PROCEDURE TMnhForm.debugEditCommandProcessed(Sender: TObject; VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE TMnhForm.debugEditCommandProcessed(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
     writeDebugOutput(false);
   end;
@@ -655,7 +655,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
     if settingsReady then begin
       formPosition.create;
       formPosition.top   :=top;
-      formPosition.left  :=left;
+      formPosition.Left  :=Left;
       formPosition.width :=width;
       formPosition.height:=height;
       formPosition.isFullscreen:=(WindowState=wsMaximized);
@@ -733,7 +733,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift)) then inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift);
   end;
 
-PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -742,11 +742,11 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; Button: TMouseButton; Shi
   end;
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
-  VAR Command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+  VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   VAR i:longint;
       commented:boolean=true;
   begin
-    with inputRec[PageControl.ActivePageIndex] do if (Command=ecUserDefinedFirst) and (editor.BlockBegin.y>=1) then begin
+    with inputRec[PageControl.ActivePageIndex] do if (command=ecUserDefinedFirst) and (editor.BlockBegin.y>=1) then begin
       for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
         commented:=commented and (copy(trim(editor.lines[i]),1,2)='//');
       if commented
@@ -755,21 +755,21 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
       else for i:=editor.BlockBegin.y-1 to editor.BlockEnd.y-1 do
       editor.lines[i]:='//'+editor.lines[i];
     end;
-    if Command=ecUserDefinedFirst+1 then begin
+    if command=ecUserDefinedFirst+1 then begin
       for i:=1 to 9 do if inputRec[(i+PageControl.ActivePageIndex) mod 10].sheet.TabVisible then begin
         PageControl.ActivePageIndex:=(i+PageControl.ActivePageIndex) mod 10;
         inputRec[PageControl.ActivePageIndex].editor.SetFocus;
         exit;
       end;
     end;
-    if Command=ecUserDefinedFirst+2 then begin
+    if command=ecUserDefinedFirst+2 then begin
       for i:=9 downto 1 do if inputRec[(i+PageControl.ActivePageIndex) mod 10].sheet.TabVisible then begin
         PageControl.ActivePageIndex:=(i+PageControl.ActivePageIndex) mod 10;
         inputRec[PageControl.ActivePageIndex].editor.SetFocus;
         exit;
       end;
     end;
-    if (Command=ecUserDefinedFirst+3) then with inputRec[PageControl.ActivePageIndex] do begin
+    if (command=ecUserDefinedFirst+3) then with inputRec[PageControl.ActivePageIndex] do begin
       stepper.toggleBreakpoint(pseudoName(PageControl.ActivePageIndex),editor.CaretY);
       updateBreakpointGrid;
     end;
@@ -1225,7 +1225,7 @@ PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
+PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
@@ -1234,7 +1234,7 @@ PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; Button: TMouseButton;
     outputEditReposition(OutputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
   end;
 
-PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=inputRec[PageControl.ActivePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
@@ -1400,7 +1400,7 @@ PROCEDURE TMnhForm.processSettings;
 
       formPosition:=SettingsForm.mainFormPosition;
       top   :=formPosition.top;
-      left  :=formPosition.left;
+      Left  :=formPosition.Left;
       width :=formPosition.width;
       height:=formPosition.height;
       if formPosition.isFullscreen then WindowState:=wsMaximized;
@@ -1428,8 +1428,8 @@ PROCEDURE TMnhForm.processSettings;
     InputEdit0.Font.name:=SettingsForm.getEditorFontName;
     InputEdit0.Font.size:=SettingsForm.fontSize;
     if SettingsForm.AntialiasCheckbox.Checked
-    then InputEdit0.Font.Quality:=fqCleartypeNatural
-    else InputEdit0.Font.Quality:=fqNonAntialiased;
+    then InputEdit0.Font.quality:=fqCleartypeNatural
+    else InputEdit0.Font.quality:=fqNonAntialiased;
     for i:=1 to 9 do inputRec[i].editor.Font:=InputEdit0.Font;
 
     OutputEdit  .Font:=InputEdit0.Font;

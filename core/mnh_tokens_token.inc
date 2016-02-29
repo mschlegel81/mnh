@@ -502,7 +502,6 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; VAR context:T_evaluationContex
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
   VAR stack:array of P_token;
       newLit:P_literal;
-      newTok:P_token;
       didSubstitution:boolean;
       {$ifdef fullVersion}reportableStep:boolean;{$endif}
       cTokType:array[-1..2] of T_tokenType;
@@ -1384,8 +1383,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
-      //writeln(tokensToString(first,10));
-      //writeln(tokenContextString);
+      //writeln(tokensToString(first,10));      writeln(tokenContextString);
       {$ifdef fullVersion}
       if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
       reportableStep:=false;
@@ -1447,15 +1445,16 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                     (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
             end;
-            tt_listBraceClose: begin // [ | <Lit> ]
+            tt_listBraceClose: begin // [ | <Lit> ] ...
               P_listLiteral(stack[length(stack)-1]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
-              stack_popLink;
-              first^.tokType:=tt_literal;
+              stack_popLink;   // -> ? | [ ...
+              first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
               if (length(stack)>0) and (stack[length(stack)-1]^.tokType=tt_literal) then begin
-                stack_popLink;
+                // <Lit> | <NewList> ...
+                stack_popLink; // -> | <Lit> <NewList> ...
                 newLit:=newListLiteral;
                 P_listLiteral(newLit)^
                 .append(first^.data,false,context.adapters^)^
@@ -1465,7 +1464,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 first^.data:=@get_imp;
                 first^.txt:='get';
                 first^.next^.tokType:=tt_parList;
-                first^.next^.data:=newLit;
+                first^.next^.data:=newLit;        // -> | get (<Lit>|<NewList>) ...
               end;
               {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;

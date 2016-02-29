@@ -343,7 +343,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     PROCEDURE parseRule;
       CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
-      VAR p,n,nn,nnn:P_token;
+      VAR p,n,NN,nnn:P_token;
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
           ruleIsMutable:boolean=false;
@@ -408,8 +408,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
             if rulePattern.hasOptionals then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,ruleDeclarationStart);
             n  :=first^.next;
-            nn :=n    ^.next;
-            nnn:=nn   ^.next;
+            NN :=n    ^.next;
+            nnn:=NN   ^.next;
             if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
             and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendFreeId(first^.txt);
@@ -437,25 +437,25 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               first:=context.disposeToken(first);
             end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList, tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList, tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList, tt_typeCheckKeyValueList])
-                     and (nn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
+                     and (NN^.tokType in [tt_separatorComma,tt_braceClose]) then begin
               rulePattern.appendTypeCheck(first^.txt,n^.tokType);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
             end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (nn^.tokType=tt_literal) and (P_literal(nn^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
+                     and (NN^.tokType=tt_literal) and (P_literal(NN^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison(first^.txt,n^.tokType,P_scalarLiteral(nn^.data));
+              rulePattern.appendComparison(first^.txt,n^.tokType,P_scalarLiteral(NN^.data));
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
             end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (nn^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
+                     and (NN^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
                      and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison(first^.txt,n^.tokType,nn^.txt);
+              rulePattern.appendComparison(first^.txt,n^.tokType,NN^.txt);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);

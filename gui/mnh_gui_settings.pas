@@ -18,7 +18,7 @@ TYPE
   { T_formPosition }
 
   T_formPosition=object(T_serializable)
-    top, left, width, height: longint;
+    top, Left, width, height: longint;
     isFullscreen: boolean;
     CONSTRUCTOR create;
     FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
@@ -183,7 +183,7 @@ CONSTRUCTOR T_formPosition.create;
 FUNCTION T_formPosition.loadFromFile(VAR F: T_file): boolean;
   begin
     top   :=f.readLongint;
-    left  :=f.readLongint;
+    Left  :=f.readLongint;
     width :=f.readLongint;
     height:=f.readLongint;
     isFullscreen:=f.readBoolean;
@@ -193,7 +193,7 @@ FUNCTION T_formPosition.loadFromFile(VAR F: T_file): boolean;
 PROCEDURE T_formPosition.saveToFile(VAR F: T_file);
   begin
     f.writeLongint(top);
-    f.writeLongint(left);
+    f.writeLongint(Left);
     f.writeLongint(width);
     f.writeLongint(height);
     f.writeBoolean(isFullscreen);
@@ -241,7 +241,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       fontSize := 11;
       with mainForm do begin
         top := 0;
-        left := 0;
+        Left := 0;
         width := 480;
         height := 480;
         isFullscreen := false;
@@ -264,16 +264,16 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     with mainForm do begin
       if top<0 then
         top := 0;
-      if left<0 then
-        left := 0;
+      if Left<0 then
+        Left := 0;
       if height>screen.height-top then
         height := screen.height-top;
-      if width>screen.width-left then
-        width := screen.width-left;
+      if width>screen.width-Left then
+        width := screen.width-Left;
       if (height<0) or (width<0) then
         begin
         top := 0;
-        left := 0;
+        Left := 0;
         width := 480;
         height := 480;
         end;

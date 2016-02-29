@@ -55,9 +55,9 @@ TYPE
     PROCEDURE miYFinerGridClick(Sender: TObject);
     PROCEDURE miYGridClick(Sender: TObject);
     PROCEDURE miYTicsClick(Sender: TObject);
-    PROCEDURE plotImageMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+    PROCEDURE plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
-    PROCEDURE plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+    PROCEDURE plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   private
 
     { private declarations }
@@ -189,7 +189,7 @@ PROCEDURE TplotForm.miYTicsClick(Sender: TObject);
     pushSettingsToPlotContainer;
   end;
 
-PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if ssLeft in Shift then begin
       plotSubsystem.lastMouseX:=x;
@@ -201,7 +201,7 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
   VAR p:T_point;
   begin
     p:=guiAdapters^.plot.screenToReal(x,y);
-    StatusBar.SimpleText:='x='+FloatToStr(p[0])+'; y='+FloatToStr(p[1]);
+    StatusBar.SimpleText:='x='+floatToStr(p[0])+'; y='+floatToStr(p[1]);
     if ssLeft in Shift then with plotSubsystem do begin
       guiAdapters^.plot.panByPixels(lastMouseX-x,lastMouseY-y,plotImage);
       mouseUpTriggersPlot:=true;
@@ -212,7 +212,7 @@ PROCEDURE TplotForm.plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y
     end;
   end;
 
-PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     with plotSubsystem do if mouseUpTriggersPlot then begin
       pullPlotSettingsToGui();

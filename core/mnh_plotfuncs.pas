@@ -27,7 +27,7 @@ FUNCTION fReal(CONST X: P_literal): double; inline;
 FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
-      i,iMax: longint;
+      i,imax: longint;
       X,Y:    P_listLiteral;
 
       row:    T_dataRow;
@@ -77,8 +77,8 @@ FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocatio
          (params^.value(1)^.literalType in [lt_intList, lt_realList, lt_numList]) then begin
         X:=P_listLiteral(params^.value(0));
         Y:=P_listLiteral(params^.value(1));
-        iMax:=min(X^.size, Y^.size);
-        for i:=0 to iMax-1 do addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
+        imax:=min(X^.size, Y^.size);
+        for i:=0 to imax-1 do addSample(fReal(X^.value(i)), fReal(Y^.value(i)));
         context.adapters^.plot.addRow(options,row);
         context.adapters^.raiseCustomMessage(mt_plotCreatedWithDeferredDisplay,'',tokenLocation);
         setLength(row,0);

@@ -794,12 +794,12 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     system.leaveCriticalSection(cs);
 
     rectA.top:=0;
-    rectA.left:=0;
+    rectA.Left:=0;
     rectA.Right:=plotImage.width;
     rectA.Bottom:=plotImage.height;
 
     rectB.top:=round((-pixelY)*factor+pixelY);
-    rectB.left:=round((-pixelX)*factor+pixelX);
+    rectB.Left:=round((-pixelX)*factor+pixelX);
     rectB.Right:=round((plotImage.width-pixelX)*factor+pixelX);
     rectB.Bottom:=round((plotImage.height-pixelY)*factor+pixelY);
 
@@ -820,11 +820,11 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     range['y', 1]:=range['y', 1]+worldDY;
 
     rectA.top:=0;
-    rectA.left:=0;
+    rectA.Left:=0;
     rectA.Right:=plotImage.width;
     rectA.Bottom:=plotImage.height;
     rectB.top:=0+pixelDY;
-    rectB.left:=0+pixelDX;
+    rectB.Left:=0+pixelDX;
     rectB.Right:=plotImage.width+pixelDX;
     rectB.Bottom:=plotImage.height+pixelDY;
 
@@ -1178,7 +1178,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
     begin
       X:=round(Source.width*factor);
       Y:=round(Source.height*factor);
-      ARect:=rect(0, 0, X, Y);
+      ARect:=Rect(0, 0, X, Y);
       dest.Canvas.AntialiasingMode:=amOn;
       dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
     end;
@@ -1239,7 +1239,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
 
 PROCEDURE T_plot.renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
   VAR plotImage, storeImage: TImage;
-      rect: TRect;
+      Rect: TRect;
   begin
     system.enterCriticalSection(cs);
     plotImage:=TImage.create(nil);
@@ -1248,11 +1248,11 @@ PROCEDURE T_plot.renderToFile(CONST fileName:string; CONST width,height,supersam
     renderPlot(plotImage, supersampling);
     storeImage:=TImage.create(plotImage);
     storeImage.SetInitialBounds(0, 0, width, height);
-    rect.top:=0;
-    rect.left:=0;
-    rect.Right:=width;
-    rect.Bottom:=height;
-    storeImage.Canvas.CopyRect(rect, plotImage.Canvas, rect);
+    Rect.top:=0;
+    Rect.Left:=0;
+    Rect.Right:=width;
+    Rect.Bottom:=height;
+    storeImage.Canvas.CopyRect(Rect, plotImage.Canvas, Rect);
     storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     storeImage.free;
     plotImage.free;
