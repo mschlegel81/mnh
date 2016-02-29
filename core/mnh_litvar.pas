@@ -1371,6 +1371,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       key:ansistring;
       L:P_literal;
   begin
+    result:=nil;
     case other^.literalType of
       lt_int: begin
         i1:=length(element);
