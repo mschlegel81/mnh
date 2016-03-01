@@ -245,42 +245,6 @@ FUNCTION trueCount_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION listAnd_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR B:P_literal;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      B:=arg0;
-      case B^.literalType of
-        lt_boolean: begin result:=B; result^.rereference; end;
-        lt_booleanList: begin
-          for i:=0 to P_listLiteral(B)^.size-1 do if not(P_boolLiteral(P_listLiteral(B)^.value(i))^.value) then exit(newBoolLiteral(false));
-          exit(newBoolLiteral(true));
-        end;
-        lt_emptyList: exit(newBoolLiteral(true));
-      end;
-    end;
-  end;
-
-FUNCTION listOr_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR B:P_literal;
-      i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      B:=arg0;
-      case B^.literalType of
-        lt_boolean: begin result:=B; result^.rereference; end;
-        lt_booleanList: begin
-          for i:=0 to P_listLiteral(B)^.size-1 do if P_boolLiteral(P_listLiteral(B)^.value(i))^.value then exit(newBoolLiteral(true));
-          exit(newBoolLiteral(false));
-        end;
-        lt_emptyList: exit(newBoolLiteral(false));
-      end;
-    end;
-  end;
-
 FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
   begin
@@ -368,8 +332,6 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.');
   registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
   registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
-  registerRule(LIST_NAMESPACE,'listAnd',@listAnd_impl,'listAnd(B:booleanList);#Returns true if all values in B are true, false otherwise');
-  registerRule(LIST_NAMESPACE,'listOr',@listOr_impl,'listOr(B:booleanList);#Returns true if any value in B is true, false otherwise');
   registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
   registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');

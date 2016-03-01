@@ -6,11 +6,11 @@ private powerOfX(0)->"1";
 private powerOfX(1)->"x";
 private powerOfX(n)->"x^"&n;
 private AKSPolyToString(coeff)->[0..size(coeff)-1].each(i,
-  coeff.get(i)>0 and i>0 ? "+" : "",
-  coeff.get(i) = 1 ? "" : coeff.get(i) = -1 ? "-" : coeff.get(i),
+  coeff[i]>0 and i>0 ? "+" : "",
+  coeff[i] = 1 ? "" : coeff[i] = -1 ? "-" : coeff[i],
   powerOfX(size(coeff)-i-1)).join;
 
-private AKS_isPrime(n)->trueCount(AKSPoly(n).get([1..n-1]) mod n<>0)=0;
+private AKS_isPrime(n)->trueCount(AKSPoly(n)[[1..n-1]] mod n<>0)=0;
 
 //*See <a href="http://rosettacode.org/wiki/AKS_test_for_primes">http://rosettacode.org/wiki/AKS_test_for_primes</a>
 main->print('Polynomial expansions:') |

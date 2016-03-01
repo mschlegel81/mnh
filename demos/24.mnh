@@ -1,22 +1,22 @@
 randomSet->1+intRandom(9,4);
 OPLIST:=['+','-','*','/'];
 
-private drop(L<>[],i:int)->L.get([0..size(L)-1]<>i);
+private drop(L<>[],i:int)->L[[0..size(L)-1]<>i];
 permutations(L:list)->permutations([],L).unique;
 private permutations(Head:list,[])->[Head];
-private permutations(Head:list,L)->[0..size(L)-1].each(i,permutations(Head|L.get(i),drop(L,i)),|);
+private permutations(Head:list,L)->[0..size(L)-1].each(i,permutations(Head|L[i],drop(L,i)),|);
 
 private
 canSolve(set)->permutations(set).each(x,
-               [x.get(0)+x.get(1),x.get(0)-x.get(1),x.get(0)*x.get(1),x.get(0)/x.get(1)].each(y,
-               [y       +x.get(2),y       -x.get(2),y       *x.get(2),y       /x.get(2)].each(z,
-        listOr([z       +x.get(3),z       -x.get(3),z       *x.get(3),z       /x.get(3)]=24),OR),OR),OR);
+               [x[0]+x[1],x[0]-x[1],x[0]*x[1],x[0]/x[1]].each(y,
+               [y   +x[2],y   -x[2],y   *x[2],y   /x[2]].each(z,
+              ([z   +x[3],z   -x[3],z   *x[3],z   /x[3]]=24).agg(OR),OR),OR),OR);
 private
 testSolution(s:string)->expression(s)()=24 ? s : void;
 private
 findSolution(set)->head(flatten(permutations(set).each(x,
                    OPLIST.each(op1,OPLIST.each(op2,OPLIST.each(op3,
-                   testSolution('(('&x.get(0)&op1&x.get(1)&')'&op2&x.get(2)&')'&op3&x.get(3))))))));
+                   testSolution('(('&x[0]&op1&x[1]&')'&op2&x[2]&')'&op3&x[3])))))));
 
 private getRiddle->getRiddle(randomSet);
 private getRiddle(set)->getRiddle(set,canSolve(set));
