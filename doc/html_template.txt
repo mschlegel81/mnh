@@ -367,7 +367,7 @@ Or generally:<code>
   x AND y -> x ? y : x;
 <!--end-->
 </code>
-Used as aggregator in an <code>each</code> or <code>pEach</code> construct, the loop over all elements is cancelled as soon as the first <code>false</code> is encountered.
+Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>false</code> is encountered.
 </td></tr>
 <tr><td><code>OR</code></td><td><h5>Logical lazy or</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
@@ -382,7 +382,7 @@ Or generally:<code>
   x OR y -> x ? x : y;
 <!--end-->
 </code>
-Used as aggregator in an <code>each</code> or <code>pEach</code> construct, the loop over all elements is cancelled as soon as the first <code>true</code> is encountered.
+Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>true</code> is encountered.
 </td></tr>
 </table>
 
@@ -418,7 +418,7 @@ x in [y0,y1,...] -> x==y0 or x==y1 or ...;
 <!--end-->
 </code> or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:<code>
 <!--mnh-->
-x in Y -> each(y,Y,or,x==y);
+x in Y -> Y.each(y,or,x==y);
 <!--end-->
 </code>
 </td></tr>
@@ -477,7 +477,7 @@ This can also be applied to implement recursive variadic functions. The followin
   sum1(x,...)->x+sum1@...;
 
   sum2->0;
-  sum2(...)->each(x,...,+);
+  sum2(...)->... .agg(+);
 <!--end-->
 </code>
 </td></tr>
@@ -701,7 +701,7 @@ Example: <code>
 <!--mnh-->
   fib(i<=1)->1;                      //recursion terminates
   fib(i:int)->fib(i-1)+fib(i-2);     //recursion step
-  fib(I:intList)->each(i,I,fib(i));  //vectorization
+  fib(I:intList)->I.each(i,fib(i));  //vectorization
 <!--end-->
 </code>
 There is a shorthand for tests on equality: the first comparand can be omitted. The following pairs of function heads are equivalent:<code>
@@ -743,7 +743,7 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 <!--mnh-->
   runningSum(L:numericList)->begin
     local sum:=0;
-    each(element,L,sum+=element);
+    L.each(element,sum+=element);
   end;
 <!--end-->
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
@@ -894,7 +894,7 @@ Adressing parameters by their index is recommended for expressions in <a href="f
 <h4><a name="void">void</a></h4>
 The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
 <!--mnh-->
- in> each(i,[2..7*7],(i>2 and i mod 2=0) or
+ in> [2..7*7].each(i,(i>2 and i mod 2=0) or
                      (i>3 and i mod 3=0) or
                      (i>5 and i mod 5=0) or
                      (i>7 and i mod 7=0) ? void : i);
@@ -972,39 +972,42 @@ f(x)->sin(x);
 <h4><a name="syntax">Syntax</a></h4>
 The general syntax is: <code>
 <!--mnh-->
-  each(id,list,aggregator,body)
-  pEach(id,list,aggregator,body)
+  list.each(id,body,aggregator)
+  list.pEach(id,body,aggregator)
+  list.agg(aggregator)
 <!--end-->
 </code>
 Where <code>id</code> is an identifier,<br>
 <code>list</code> is a list or an expression returning a list,<br>
-<code>aggregator</code> (optional) is a full aggregator expression or a binary operator and<br>
+<code>aggregator</code> (optional for <code>each</code> and <code>pEach</code>) is a full aggregator expression or a binary operator and<br>
 <code>body</code> is an expression or list of expressions.
+
+<code>agg</code> is just a shorthand for an <code>each</code> construct without a body (consequently not needing an id to be used inside of the body).
 
 <h4><a name="construction">List construction</a></h4>
 To construct a list, ommit the aggregator. The body part is mandatory.<br>
 Simple example: return the input list<code>
 <!--mnh-->
-   in> each(i,[0..3],i);
+   in> [0..3].each(i,i);
   out> [0,1,2,3]
 <!--end-->
 </code>
 You can also use multiple body parts. These are then interlaced in the resulting list:<code>  
 <!--mnh-->
-   in> each(c,['a'..'c'],c,upper(c));
+   in> ['a'..'c'].each(c,c,upper(c));
   out> ['a','A','b','B','c','C']
 <!--end-->
 </code>
 Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<code>  
 <!--mnh-->
    in> f(i)->-2*i;
-   in> each(i,[0..3],f(i));
+   in> [0..3].each(i,f(i));
   out> [0,-2,-4,-6]
 <!--end-->
 </code>
 More complex: a function returning the intersection of sets A and B<code>  
 <!--mnh-->
-   in> intersect(A,B)->A%each(a,A,a in B);
+   in> intersect(A,B)->A.get(A.each(a,a in B));
    in> intersect(2*[0..10],3*[0..10]);
   out> [0,6,12,18]
 <!--end-->
@@ -1017,14 +1020,14 @@ Restriction: the list must not be empty!<br>
 Simple example: a function returing the sum of the argument:<code>
 <!--mnh-->
    in> sum([]):=0;
-   in> sum(L<>[])->each(e,L,+);
+   in> sum(L<>[])->L.agg(+);
    in> sum([1,5,-2,7]);
   out> 11
 <!--end-->
 </code>
 Generally an aggregator is an expression expecting two parameters. Given an aggregator <code>a</code>, aggregation will be performed as follows:<code>
 <!--mnh-->
-   in> each(x,[x0,x1,x2,x3,...],a);
+   in> [x0,x1,x2,x3,...].agg(a);
   out> a(...a(a(a(x0,x1),x2),x3),...)
 <!--end-->
 </code>
@@ -1033,13 +1036,13 @@ Generally an aggregator is an expression expecting two parameters. Given an aggr
 You can also use aggregator and body in the same each-/pEach clause.<br><br>
 Nested each: construct a cross product:<code>  
 <!--mnh-->
-   in> each(i,[0..9],each(j,[0..9],[i,j]));
+   in> [0..9].each(i,[0..9].each(j,[i,j]));
   out> [[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]
 <!--end-->
 </code>
 This returns a nested list which is probably one level deeper than intended.<code>
 <!--mnh-->
-   in> each(i,[0..9],|,each(j,[0..9],[i,j]));
+   in> [0..9].each(i,[0..9].each(j,[i,j]),|);
   out> [[0,0],...,[0,9],[1,0],...,[1,9],...];
 <!--end-->
 </code>
@@ -1047,8 +1050,8 @@ This returns a nested list.<br><br>
 Compute Euler's number based on inverse factorials<code>
 <!--mnh-->
    in> fak(n<1)->1;
-   in> fak(n :int)->each(i,[1..n],*);
-   in> each(n,[0..20],+,1/fak(n));
+   in> fak(n :int)->[1..n].agg(*);
+   in> [0..20].each(n,1/fak(n),+);
   out> 2.71828182845905
 <!--end-->
 </code>
@@ -1060,10 +1063,10 @@ This is simple.<br>In order to parallelize your existing <code>each</code>-expre
 The <code>aggregator</code> construct can be used to mark an expression for the use within an each-/pEach-clause.<code>
 <!--mnh-->
        //A simple expression, interpreted as each-body
-   in> each(x,[1..5],{1/$x+$y});
+   in> [1..5].each(x,{1/$x+$y});
   out> [{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)}]
        //An aggregator, interpreted as such           
-   in> each(x,[1..5],aggregator({1/$x+$y}));
+   in> [1..5].each(x,aggregator({1/$x+$y}));
   out> 5.23255813953488
 <!--end-->
 </code>
@@ -1093,9 +1096,9 @@ In each construct you should prefer passing a single operator as aggregator inst
 <!--mnh-->
    in> list:=random(1000);
        //Run with "complex" aggregator
-   in> run1:=time({each(x,list,aggregator(+))});
+   in> run1:=time({list.each(x,aggregator(+))});
        //Run with "simple" aggregator
-   in> run2:=time({each(x,list,           + )});
+   in> run2:=time({list.each(x,           + )});
        //Are results equivalent ?
    in> run1%'result'==run2%'result';
   out> true
