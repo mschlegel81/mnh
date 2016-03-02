@@ -1641,6 +1641,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$endif}
     if context.adapters^.noErrors then begin
       if (length(stack)>0) or (first^.next<>nil) then begin
+        if first=nil then while (length(stack)>0) do stack_popLink;
         context.adapters^.raiseError('Cannot reduce expression.',first^.location);
         context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,maxLongint),first^.location);
         context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
