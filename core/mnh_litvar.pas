@@ -343,6 +343,8 @@ VAR
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
 
+FUNCTION exp(CONST x:double):double; inline; 
+  
 PROCEDURE disposeLiteral(VAR l: P_literal); inline;
 FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral; inline;
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral; inline;
@@ -369,6 +371,17 @@ VAR
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
 
+FUNCTION exp(CONST x:double):double; inline;
+  begin
+    {$ifdef CPU32}
+    result:=system.exp(x);
+    {$else}
+    if      x<-745.133219101925 then result:=0
+    else if x> 709.782712893375 then result:=infinity
+                                else result:=system.exp(x);
+    {$endif}
+  end;
+  
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
     //if l = nil then begin
