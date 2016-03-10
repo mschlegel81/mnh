@@ -343,8 +343,8 @@ VAR
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
 
-FUNCTION exp(CONST x:double):double; inline; 
-  
+FUNCTION exp(CONST x:double):double; inline;
+
 PROCEDURE disposeLiteral(VAR l: P_literal); inline;
 FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral; inline;
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral; inline;
@@ -381,7 +381,7 @@ FUNCTION exp(CONST x:double):double; inline;
                                 else result:=system.exp(x);
     {$endif}
   end;
-  
+
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
     //if l = nil then begin

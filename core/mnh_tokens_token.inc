@@ -1379,7 +1379,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
   begin
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
-    {$ifdef fullVersion} reportableStep:=true; {$endif}
+    {$ifdef fullVersion} reportableStep:=false; {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1628,6 +1628,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
+
     {$ifdef fullVersion}
     if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
     {$endif}
@@ -1646,14 +1647,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,maxLongint),first^.location);
         context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
       end;
-    end else if (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
-    if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
+    end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
+                 context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
       if (callDepth=0) then begin
         context.adapters^.raiseNote('Cleaning up partial result after system error',C_nilTokenLocation);
         context.cascadeDisposeToken(first);
       end;
-    end else while (length(stack)>0) do stack_popLink;
+    end else begin
+      if (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
+      while (length(stack)>0) do stack_popLink;
+    end;
   end;
 
 {$endif}
