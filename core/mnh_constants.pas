@@ -376,6 +376,10 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
       rwc_specialConstruct: begin
         result.add(C_tokenString[tt_each]);
         result.add(C_tokenString[tt_parallelEach]);
+        result.add(C_tokenString[tt_agg]);
+        result.add(replaceOne(C_tokenString[tt_each]        ,'.',''));
+        result.add(replaceOne(C_tokenString[tt_parallelEach],'.',''));
+        result.add(replaceOne(C_tokenString[tt_agg]         ,'.',''));
         result.add(C_tokenString[tt_when]);
         result.add(C_tokenString[tt_aggregatorConstructor]);
         result.add(C_tokenString[tt_while]);
