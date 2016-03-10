@@ -422,46 +422,6 @@ x in Y -> Y.each(y,or,x==y);
 <!--end-->
 </code>
 </td></tr>
-<tr><td><code>%</code></td><td><h5>Level 1 extraction operator</h5></td></tr><tr><td></td><td>
-The extraction operator can be used to access list items by their index (starting with 0) or by a boolean mask. The right hand operand must be an integer, a list of integers or a list of booleans with the same
-number of elements as the left hand side operand:<code>
-<!--mnh-->
-  ["a","b","c"]%0                 -> "a";
-  ["a","b","c"]%[true,false,true] -> ["a","c"];
-  ["a","b","c"]%[2,1,0]           -> ["c","b","a"];
-<!--end-->
-</code>
-Another possible use of the extraction-operator is access to Key-Value lists, i.e. nested lists of the form <code>[["key1",value1],["key2",value2],...]</code>. You can use the key as right hand side operand to obtain the
-corresponding value (or the first of such if there are more than one):<code>
-<!--mnh-->
-  [["a",1],["b",2]]%"a" -> 1;
-<!--end-->
-</code>
-</td></tr>
-<tr><td><code>%%</code></td><td><h5>Level 2 extraction operator</h5></td></tr><tr><td></td><td>
-The level 2 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-<!--mnh-->
-  [X0,X1,X2,...]%%Y -> [X0%Y,X1%Y,X2%Y,...]
-<!--end-->
-</code>
-</td></tr>
-
-<tr><td><code>%%%</code></td><td><h5>Level 3 extraction operator</h5></td></tr><tr><td></td><td>
-The level 3 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-<!--mnh-->
-  [X0,X1,X2,...]%%%Y -> [X0%%Y,X1%%Y,X2%%Y,...]
-<!--end-->
-</code>
-</td></tr>
-
-<tr><td><code>%%%%</code></td><td><h5>Level 4 extraction operator</h5></td></tr><tr><td></td><td>
-The level 4 extraction operator behaves similar to the level 1 extraction operator but instead creates a list of sublists:<code>
-<!--mnh-->
-  [X0,X1,X2,...]%%%%Y -> [X0%%%Y,X1%%%Y,X2%%%Y,...]
-<!--end-->
-</code>
-</td></tr>
-
 <tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td>
 The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>
 The following calls are equivalent:<code>
@@ -505,6 +465,7 @@ Type check operators can be employed to test a value or an expression for it's t
   :stringList
   :numeric
   :numericList
+  :keyValueList
   :expression
 <!--end-->
 </code><br>
@@ -523,6 +484,7 @@ Examples: <code>
          (x:stringList  ? 'stringList'  : void)|
          (x:numeric     ? 'numeric'     : void)|
          (x:numericList ? 'numericList' : void)|
+         (x:keyValueList? 'keyValueList': void)|
          (x:expression  ? 'expression'  : void);
 
    in> checkedType(3)
@@ -592,7 +554,7 @@ All variables are immutable or when they are not, they behave as immutable varia
 <br>
 Every function <code>f</code> can be called with any number of parameters; matching parameters will lead to evaluation of some kind, mismatching parameters
 will lead to an error output.</li>
-<li><b>Omitting parameters</b><br>A nullary function can be calles with or without parameters, so the following statements will behave the same:<code>
+<li><b>Omitting parameters</b><br>A nullary function can be called with or without parameters, so the following statements will behave the same:<code>
 <!--mnh-->
   someFunction;
   someFunction();
@@ -916,7 +878,68 @@ Lists contain zero or more elements of any type. They are represented as an enum
 <!--end-->
 </code>
 This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors.
-It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.
+It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers and one-character-strings.<br>
+List elements can be extracted from Lists via the <code>get</code> function or the associated shorthand <code>[?]</code>. The most straightforward way is access by a single index:<code>
+<!--mnh-->
+   in> simpleList :=['A'..'F'];
+   in> simpleList.get(4);
+  out> 'E'
+   in> simpleList[4];
+  out> 'E'  
+<!--end-->
+</code>
+Alternative accesses include access by a list of indexes...<code>
+<!--mnh-->
+   in> simpleList.get([1, 5, 3]);
+  out> ['B','F','D']
+<!--end-->
+</code>
+...or by a list of booleans, which must have the same length as the accessed list. <code>
+<!--mnh-->
+   in> simpleList.get(simpleList<='C');
+  out> ['A','B','C']
+<!--end-->
+</code>
+<br>
+A key-value-list is a nested list of the form <code>[[key1,value1],[key2,value2],...]</code>, where each key is a string. <br>
+For those lists there is also the possibility of accessing the values by key or a list of keys:<code>
+<!--mnh-->
+   in> keyValueList :=[['one', 1],['two', 2]];
+   in> keyValueList.get('one');
+  out> 1
+   in> keyValueList.get(['two','one']);
+  out> [2,1]
+<!--end-->
+</code>
+Additionally there is the function <code>mapGet</code> which accepts a fallback value as an additional argument:<code>
+<!--mnh-->
+   in> keyValueList.mapGet('three', 0);
+  out> 0
+   in> keyValueList.mapGet('two', 0);
+  out> 2
+<!--end-->
+</code>
+
+<br>
+Elements of general nested lists can also be accessed conveniently (or inconveniently as you can see in the following equivalent examples):<code>
+<!--mnh-->
+   in> nested :=[[1, 2, 3],[4, 5, 6],[7, 8, 9]];
+   in> nested.get(1).get(2);
+  out> 6
+   in> nested.get(1, 2);
+  out> 6
+   in> nested[1][2];
+  out> 6
+   in> nested[1,2];
+  out> 6
+<!--end-->
+</code>
+And finally there is the function <code>getInner</code> which allows access by index <i>k</i>, returning the <i>k</i>-th element of each sublist:<code>
+<!--mnh-->
+ in> nested.getInner(1);
+out> [2,5,8]
+<!--end-->
+</code>
 
 <!--commonFoot-->
 <!--file quickstart.html-->
