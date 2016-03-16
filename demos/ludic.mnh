@@ -1,17 +1,35 @@
-private LUDICS(n)->begin
-  local candidates:=[2..10*n];
-  local result:=[1];
-  while((candidates.size>0) AND (result.size<n),begin
-    local next:=candidates.get(0);
-    result|=next;
-    candidates:=candidates.get([0..size(candidates)-1] mod next<>0);
-  end);
-  result;
+memoized
+ludics_gen(1)->[1];
+ludics_gen(2)->[1,2];
+ludics_gen(n>2)->begin
+  print('Generating @',n);
+  local L:=ludics_gen(n-1);
+  local X:=[2..max(L)*4];
+  L.tail.each(ludic,X:=X[[0..size(X)-1] mod ludic<>0]);
+  L|X;
 end;
-private LUDICS:=LUDICS(2152);
+
+ludics_by_size(resultSize)->begin
+  local genIndex:=1;
+  local result:=ludics_gen(genIndex);
+  while(result.size<resultSize,result:=ludics_gen(genIndex+=1));
+  head(result,resultSize);
+end;
+
+ludics_by_max(maxValue)->begin
+  local genIndex:=1;
+  local result:=ludics_gen(genIndex);
+  while(result.max<maxValue,result:=ludics_gen(genIndex+=1));
+  result[result<=maxValue];
+end;
 
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
-main->print("Ludic Numbers\n  The first 25 are: ",head(LUDICS,25),'.') and
-      print('  There are ',trueCount(LUDICS<=1000),' lesser or equal to 1000.') and
-      print('  The 2000..2005th are ',LUDICS.get([2000..2005]-1),'.') and
-      print('  The triplets below 250 are ',LUDICS.get(LUDICS<250).each(i,i+2 in LUDICS and i+6 in LUDICS ? [i,i+2,i+6] : void));
+main->begin
+  local LUDICS:=ludics_by_size(2005).unique;
+  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
+  print("Ludic Numbers",
+      "\n  The first 25 are: ",LUDICS.head(25),'.',
+      "\n  There are ",LUDICS[LUDICS<=1000].size,' lesser or equal to 1000.',
+      "\n  The 2000..2005th are ",LUDICS.get([2000..2005]-1),'.',
+      "\n  The triplets below 250 are ",format('(%{$0}s,%{$0+2}s,%{$0+6}s)',triplets).join(','));
+end;
