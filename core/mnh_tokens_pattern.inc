@@ -1,13 +1,27 @@
 {$ifdef include_interface}
+
+  { T_patternElement }
+
+  T_patternElement=object
+    private
+      id               :ansistring;
+      restrictionType  :T_tokenType;
+      restrictionValue :P_literal;
+      restrictionIdx   :longint;
+      typeWhitelist    :set of T_literalType;
+      restrictionId    :ansistring;
+    public
+    CONSTRUCTOR createAnonymous;
+    CONSTRUCTOR create(CONST parameterId:ansistring);
+    FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
+    FUNCTION toString:ansistring;
+    FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
+    DESTRUCTOR destroy;
+  end;
+
   P_pattern=^T_pattern;
   T_pattern=object
-    sig:array of record
-          id               :ansistring;
-          restrictionType  :T_tokenType;
-          restrictionScalar:P_scalarLiteral;
-          restrictionIdx   :longint;
-          restrictionId    :ansistring;
-        end;
+    sig:array of T_patternElement;
     containsSelfPointer,
     hasOptionals:boolean;
 
@@ -16,14 +30,12 @@
     PROCEDURE clear;
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
-    FUNCTION appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tokenType):longint;
-    FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
-    FUNCTION appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
+    PROCEDURE append(CONST el:T_patternElement);
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     PROCEDURE finalizeRefs;
-    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -31,10 +43,96 @@
   end;
 {$endif}
 {$ifdef include_implementation}
+CONSTRUCTOR T_patternElement.createAnonymous;
+  begin
+    id:='';
+    restrictionType :=tt_literal;
+    restrictionValue:=nil;
+    restrictionIdx  :=-1;
+    restrictionId   :='';
+    typeWhitelist   :=C_validNonVoidTypes;
+  end;
+
+CONSTRUCTOR T_patternElement.create(CONST parameterId: ansistring);
+  begin
+    createAnonymous;
+    id:=parameterId;
+  end;
+
+FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
+  VAR L:P_literal;
+  begin
+    L:=parameterList.value(ownIndex);
+    if not(L^.literalType in typeWhitelist) then exit(false);
+    result:=true;
+    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
+      if restrictionIdx>=0 then result:=L^.isInRelationTo(restrictionType, parameterList.value(restrictionIdx))
+                           else result:=L^.isInRelationTo(restrictionType, restrictionValue);
+    end;
+  end;
+
+FUNCTION T_patternElement.toString: ansistring;
+  FUNCTION trimLeadingEquals(CONST s:ansistring):ansistring;
+    begin
+      if (length(s)>1) and (s[1]='=') then begin
+        result:=copy(s,2,length(s)-1);
+        if (length(result)>1) and (result[1]='=')
+        then result:=copy(result,2,length(result)-1);
+      end else result:=s;
+    end;
+
+  begin
+    result:='';
+    case restrictionType of
+      tt_literal: result:=id;
+      tt_typeCheckScalar    ,
+      tt_typeCheckList      ,
+      tt_typeCheckBoolean   ,
+      tt_typeCheckBoolList  ,
+      tt_typeCheckInt       ,
+      tt_typeCheckIntList   ,
+      tt_typeCheckReal      ,
+      tt_typeCheckRealList  ,
+      tt_typeCheckString    ,
+      tt_typeCheckStringList,
+      tt_typeCheckNumeric   ,
+      tt_typeCheckNumList   ,
+      tt_typeCheckExpression  ,
+      tt_typeCheckNonemptyList,
+      tt_typeCheckEmptyList,
+      tt_typeCheckKeyValueList: result:=trimLeadingEquals(id+C_tokenString[restrictionType]);
+      tt_comparatorEq,
+      tt_comparatorNeq,
+      tt_comparatorLeq,
+      tt_comparatorGeq,
+      tt_comparatorLss,
+      tt_comparatorGrt,
+      tt_comparatorListEq: if restrictionId='' then result:=trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionValue^.toString)
+                                               else result:=trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionId);
+      tt_operatorIn: if restrictionId='' then result:=trimLeadingEquals(id+' '+C_tokenString[restrictionType]+' '+restrictionValue^.toString)
+                                         else result:=trimLeadingEquals(id+' '+C_tokenString[restrictionType]+' '+restrictionId);
+      else result:=result+id;
+    end;
+  end;
+
+FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
+  begin
+    result:=(restrictionType = pe.restrictionType)
+        and (restrictionIdx  = pe.restrictionIdx )
+        and ((restrictionValue =nil) and (pe.restrictionValue =nil)
+          or (restrictionValue<>nil) and (pe.restrictionValue<>nil)
+          and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
+  end;
+
+DESTRUCTOR T_patternElement.destroy;
+  begin
+    if restrictionValue<>nil then disposeLiteral(restrictionValue);
+  end;
+
 CONSTRUCTOR T_pattern.create;
   begin clear; end;
 
-CONSTRUCTOR T_pattern.clone(original:T_pattern);
+CONSTRUCTOR T_pattern.clone(original: T_pattern);
   VAR i:longint;
   begin
     containsSelfPointer:=original.containsSelfPointer;
@@ -42,7 +140,7 @@ CONSTRUCTOR T_pattern.clone(original:T_pattern);
     setLength(sig,length(original.sig));
     for i:=0 to length(sig)-1 do begin
       sig[i]:=original.sig[i];
-      if sig[i].restrictionScalar<>nil then sig[i].restrictionScalar^.rereference;
+      if sig[i].restrictionValue<>nil then sig[i].restrictionValue^.rereference;
     end;
   end;
 
@@ -56,58 +154,17 @@ PROCEDURE T_pattern.clear;
 DESTRUCTOR T_pattern.destroy;
   begin clear; end;
 
-FUNCTION T_pattern.appendFreeId    (CONST parId:ansistring):longint;
+FUNCTION T_pattern.appendFreeId(CONST parId: ansistring): longint;
   begin
     result:=length(sig);
     setLength(sig,result+1);
-    with sig[result] do begin
-      id             :=parId;
-      restrictionType:=tt_literal;
-      restrictionIdx :=-1;
-      restrictionId  :='';
-      restrictionScalar:=nil;
-    end;
+    sig[result].create(parId);
   end;
 
-FUNCTION T_pattern.appendTypeCheck (CONST parId:ansistring; CONST typeRest:T_tokenType):longint;
+PROCEDURE T_pattern.append(CONST el: T_patternElement);
   begin
-    result:=length(sig);
-    setLength(sig,result+1);
-    with sig[result] do begin
-      id             :=parId;
-      restrictionType:=typeRest;
-      restrictionIdx :=-1;
-      restrictionId  :='';
-      restrictionScalar:=nil;
-    end;
-  end;
-
-FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST value:P_scalarLiteral):longint;
-  begin
-    result:=length(sig);
-    setLength(sig,result+1);
-    with sig[result] do begin
-      id             :=parId;
-      restrictionType:=comparator;
-      if restrictionType=tt_comparatorListEq then restrictionType:=tt_comparatorEq;
-      restrictionScalar:=value;
-      value^.rereference;
-      restrictionIdx :=-1;
-      restrictionId  :='';
-    end;
-  end;
-
-FUNCTION T_pattern.appendComparison(CONST parId:ansistring; CONST comparator:T_tokenType; CONST otherId:ansistring):longint;
-  begin
-    result:=length(sig);
-    setLength(sig,result+1);
-    with sig[result] do begin
-      id             :=parId;
-      restrictionType:=comparator;
-      restrictionIdx :=-1;
-      restrictionId  :=otherId;
-      restrictionScalar:=nil;
-    end;
+    setLength(sig,length(sig)+1);
+    sig[length(sig)-1]:=el;
   end;
 
 PROCEDURE T_pattern.appendOptional;
@@ -115,7 +172,7 @@ PROCEDURE T_pattern.appendOptional;
     hasOptionals:=true;
   end;
 
-FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
+FUNCTION T_pattern.indexOfId(CONST id: ansistring): longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
@@ -124,7 +181,7 @@ FUNCTION T_pattern.indexOfId(CONST id:ansistring):longint;
     result:=-1;
   end;
 
-FUNCTION T_pattern.indexOfIdForInline(CONST id:ansistring):longint;
+FUNCTION T_pattern.indexOfIdForInline(CONST id: ansistring): longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then begin containsSelfPointer:=true; exit(SELF_TOKEN_PAR_IDX); end;
@@ -139,7 +196,6 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id:ansistring):longint;
     if sig[i].id='' then begin sig[i].id:=id; exit(i); end;
     result:=appendFreeId(id);
   end;
-
 
 PROCEDURE T_pattern.finalizeRefs;
   VAR i,j:longint;
@@ -156,101 +212,50 @@ PROCEDURE T_pattern.finalizeRefs;
     for i:=0 to length(sig)-1 do
       if (sig[i].restrictionIdx<0) and
          (sig[i].restrictionId<>'') and
-         (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
+         (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn])
       then for j:=length(sig)-1 downto 0 do
         if (j<>i) and (sig[i].restrictionId=sig[j].id)
         then sig[i].restrictionIdx:=j;
+
+    for i:=0 to length(sig)-1 do begin
+      if sig[i].restrictionType in C_typeChecks then sig[i].typeWhitelist:=C_matchingTypes[sig[i].restrictionType];
+      if (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
+         and (sig[i].restrictionValue<>nil)
+      then begin
+        case sig[i].restrictionValue^.literalType of
+          lt_int,lt_real: sig[i].typeWhitelist:=[lt_int,lt_real];
+          lt_string: sig[i].typeWhitelist:=[lt_string];
+          lt_boolean: sig[i].typeWhitelist:=[lt_boolean];
+          lt_emptyList: if sig[i].restrictionType in [tt_comparatorEq,tt_comparatorListEq]
+            then sig[i].typeWhitelist:=C_matchingTypes[tt_typeCheckEmptyList]
+            else sig[i].typeWhitelist:=C_matchingTypes[tt_typeCheckNonemptyList];
+        end;
+      end;
+    end;
   end;
 
-FUNCTION T_pattern.matchesNilPattern:boolean;
+FUNCTION T_pattern.matchesNilPattern: boolean;
   begin
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR adapters:T_adapters):boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST selfPointerProvided: boolean): boolean;
   VAR i:longint;
-      L:P_literal;
   begin
     if (par.size<length(sig)) or ((par.size>length(sig)) and not(hasOptionals)) then exit(false);
-    for i:=0 to length(sig)-1 do begin
-      L:=par.value(i);
-      with sig[i] do case restrictionType of
-        tt_typeCheckScalar..tt_typeCheckKeyValueList: if not(L^.literalType in C_matchingTypes[restrictionType]) then exit(false);
-        tt_comparatorEq..tt_comparatorGrt:
-          if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
-            if restrictionIdx<0 then begin
-              if not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,restrictionScalar  ))
-              then exit(false);
-            end else begin
-              if not((par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
-                 and P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx))))
-              then exit(false);
-            end;
-          end else exit(false);
-        tt_comparatorListEq:
-          if restrictionIdx>=0 then begin
-            if (par.value(restrictionIdx)^.literalType <> L^.literalType) then exit(false);
-            if L^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression] then begin
-              if not(par.value(restrictionIdx)^.literalType in [lt_boolean,lt_int,lt_real,lt_string,lt_expression])
-              or not(P_scalarLiteral(L)^.isInRelationTo(restrictionType,P_scalarLiteral(par.value(restrictionIdx)) ))
-              then exit(false);
-            end else begin
-              L:=resolveOperator(L,tt_comparatorListEq,par.value(restrictionIdx),C_nilTokenLocation,adapters);
-              if not(L^.literalType=lt_boolean) or not(P_boolLiteral(L)^.value) then begin
-                disposeLiteral(L);
-                exit(false);
-              end else disposeLiteral(L);
-            end;
-          end else exit(false);
-      end;
-    end;
+    result:=true;
+    for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i)) then exit(false);
     result:=selfPointerProvided or not(containsSelfPointer);
   end;
 
-FUNCTION T_pattern.toString:ansistring;
-  FUNCTION trimLeadingEquals(CONST s:ansistring):ansistring;
-    begin
-      if (length(s)>1) and (s[1]='=') then begin
-        result:=copy(s,2,length(s)-1);
-        if (length(result)>1) and (result[1]='=')
-        then result:=copy(result,2,length(result)-1);
-      end else result:=s;
-    end;
-
+FUNCTION T_pattern.toString: ansistring;
   VAR i:longint;
   begin
     if (length(sig)=0) and not(hasOptionals) then exit('');
     result:='(';
-    for i:=0 to length(sig)-1 do with sig[i] do begin
+    for i:=0 to length(sig)-1 do begin
       if i>0 then result:=result+', ';
-      case restrictionType of
-        tt_literal: result:=result+id;
-        tt_typeCheckScalar    ,
-        tt_typeCheckList      ,
-        tt_typeCheckBoolean   ,
-        tt_typeCheckBoolList  ,
-        tt_typeCheckInt       ,
-        tt_typeCheckIntList   ,
-        tt_typeCheckReal      ,
-        tt_typeCheckRealList  ,
-        tt_typeCheckString    ,
-        tt_typeCheckStringList,
-        tt_typeCheckNumeric   ,
-        tt_typeCheckNumList   ,
-        tt_typeCheckExpression  ,
-        tt_typeCheckNonemptyList,
-        tt_typeCheckEmptyList,
-        tt_typeCheckKeyValueList: result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]);
-        tt_comparatorEq,
-        tt_comparatorNeq,
-        tt_comparatorLeq,
-        tt_comparatorGeq,
-        tt_comparatorLss,
-        tt_comparatorGrt,
-        tt_comparatorListEq: if restrictionId='' then result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionScalar^.toString)
-                                                 else result:=result+trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionId);
-        else result:=result+id;
-      end;
+      result:=result+sig[i].toString;
     end;
     if hasOptionals then begin
       if  length(sig)>0 then result:=result+',';
@@ -259,21 +264,16 @@ FUNCTION T_pattern.toString:ansistring;
     result:=result+')';
   end;
 
-FUNCTION T_pattern.isEquivalent(CONST p:T_pattern):boolean;
+FUNCTION T_pattern.isEquivalent(CONST p: T_pattern): boolean;
   VAR i:longint;
   begin
     result:=(length(sig)=length(p.sig)) and
             (containsSelfPointer=p.containsSelfPointer) and
             (hasOptionals=p.hasOptionals);
-    for i:=0 to length(sig)-1 do
-      result:=result and (sig[i].restrictionType = p.sig[i].restrictionType)
-                     and (sig[i].restrictionIdx  = p.sig[i].restrictionIdx )
-                     and ((sig[i].restrictionScalar =nil) and (p.sig[i].restrictionScalar =nil)
-                       or (sig[i].restrictionScalar<>nil) and (p.sig[i].restrictionScalar<>nil)
-                       and sig[i].restrictionScalar^.isInRelationTo(tt_comparatorEq,p.sig[i].restrictionScalar));
+    for i:=0 to length(sig)-1 do result:=result and sig[i].isEquivalent(p.sig[i]);
   end;
 
-PROCEDURE T_pattern.toParameterIds(CONST tok:P_token);
+PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   VAR t:P_token;
   begin
     t:=tok;

@@ -17,8 +17,8 @@ private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void
 main('uncovered')->begin
   local coveredTests:=(expression(fileContents(TESTS_STORE))().getInner(0)).unique.splitFileName.getInner('expanded');
   local first:=true;
-  each(script,
-       (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName.getInner('expanded'),
+  (files(ROOT_DIRECTORY&'demos/*.mnh')|files(ROOT_DIRECTORY&'packages/*.mnh')).unique.splitFileName.getInner('expanded')
+  .each(script,
        script in coveredTests ? void : begin
          first ? begin
            first:=false;

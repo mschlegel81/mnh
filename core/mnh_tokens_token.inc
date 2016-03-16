@@ -414,6 +414,46 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST provider:P_codeProvider; CONST inPackag
     end;
   end;
 
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VAR context:T_evaluationContext; OUT closingBracket:P_token):T_bodyParts;
+  VAR t,p:P_token;
+      bracketLevel,i:longint;
+  begin
+    closingBracket:=nil;
+    bracketLevel:=initialBracketLevel;
+    t:=first; p:=nil;
+    if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
+      setLength(result,1);
+      result[0].first:=first^.next;
+    end else begin
+      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
+      case t^.tokType of
+        tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
+        tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
+        tt_separatorComma: if bracketLevel=1 then begin
+          result[length(result)-1].last:=p; //end of body part is token before comma
+          setLength(result,length(result)+1);
+          result[length(result)-1].first:=t^.next; //start of next body part is token after comma
+        end;
+      end;
+      p:=t; t:=t^.next;
+    end;
+    result[length(result)-1].last:=p; //end of body part is token before comma
+    if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
+      context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
+      setLength(result,0);
+      exit;
+    end;
+    closingBracket:=t;
+    for i:=0 to length(result)-1 do begin
+      if result[i].last^.next<>closingBracket then context.disposeToken(result[i].last^.next);
+      result[i].last^.next:=nil;
+    end;
+  end;
+
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_evaluationContext);
   VAR t:P_token;
       rule:P_rule;
@@ -560,48 +600,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
-  TYPE T_bodyParts=array of record first,last:P_token; end;
-
-  FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; OUT closingBracket:P_token):T_bodyParts;
-    VAR t,p:P_token;
-        bracketLevel,i:longint;
-    begin
-      closingBracket:=nil;
-      bracketLevel:=initialBracketLevel;
-      t:=first; p:=nil;
-      if (first^.next<>nil) and (first^.next^.tokType<>tt_separatorComma) then begin
-        setLength(result,1);
-        result[0].first:=first^.next;
-      end else begin
-        context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-        setLength(result,0);
-        exit;
-      end;
-      while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-        case t^.tokType of
-          tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
-          tt_separatorComma: if bracketLevel=1 then begin
-            result[length(result)-1].last:=p; //end of body part is token before comma
-            setLength(result,length(result)+1);
-            result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-          end;
-        end;
-        p:=t; t:=t^.next;
-      end;
-      result[length(result)-1].last:=p; //end of body part is token before comma
-      if (t=nil) or (t^.tokType<>tt_braceClose) or (bracketLevel<>1) then begin
-        context.adapters^.raiseError('Invalid special construct; Cannot find closing bracket.',first^.location);
-        setLength(result,0);
-        exit;
-      end;
-      closingBracket:=t;
-      for i:=0 to length(result)-1 do begin
-        if result[i].last^.next<>closingBracket then context.disposeToken(result[i].last^.next);
-        result[i].last^.next:=nil;
-      end;
-    end;
-
   PROCEDURE raiseLazyBooleanError(CONST location:T_tokenLocation);
     begin
       context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',location);
@@ -625,7 +623,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         //first^.next token is <each>-Token
         eachToken:=first^.next;
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(eachToken,0,bracketClosingEach);
+        bodyParts:=getBodyParts(eachToken,0,context,bracketClosingEach);
         if bracketClosingEach=nil then exit(false);
         //process aggregator part (if any)----------------------------------------------
         aggregatorPresent:=no;
@@ -871,7 +869,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         //first token is <while>-Token
         //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,bracketClosingWhile);
+        bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
         if bracketClosingWhile=nil then exit(false);
         if length(bodyParts)<>2 then begin
           context.adapters^.raiseError('Invalid while-construct; Exactly two arguments (head and body) are expected.',first^.location);
@@ -945,7 +943,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         locationForComplaint:T_tokenLocation;
     begin
-      bodyParts:=getBodyParts(first,1,closingBracket);
+      bodyParts:=getBodyParts(first,1,context,closingBracket);
       if closingBracket=nil then exit;
 
       for i:=0 to length(bodyParts)-1 do begin

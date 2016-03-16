@@ -26,7 +26,9 @@ TYPE
     FUNCTION getRawToken:T_rawToken;
   end;
 
-FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
+  T_bodyParts=array of record first,last:P_token; end;
+
+FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ansistring;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;

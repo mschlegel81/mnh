@@ -2,12 +2,12 @@ contains(fullString,subString)->pos(subString,fullString)>=0;
 
 ignore(s)->s.matches('^(mnh_litvar|mnh_funcs|mnh_tokens_funcs|consoleAsk|mnh_plotfuncs).* Hint: Parameter "(other|tokenLocation|context|adapters)" not used$') OR
            s.matches('^(mnh_gui_main|askdialog|mnh_debugform).* Hint: Parameter "Sender" not used$');
-filter(S:stringList)->each(s,S,ignore(s) ? void : s);
+filter(S:stringList)->S.each(s,ignore(s) ? void : s);
 
 
 //*Prints messages contained in all found make*log.txt files
 main->begin
-  local commonOnly:=intersect@each(f,files('make*log.txt'),fileLines(f));
+  local commonOnly:=intersect@(files('make*log.txt').each(f,fileLines(f))).sort;
   print("------------------------------------------------------------------------\n",
         "----------------------- ALL COMMON MESSAGES ----------------------------\n",
         "------------------------------------------------------------------------");

@@ -27,12 +27,12 @@ TYPE
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
   T_scalarLiteral = object(T_literal)
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
     FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -64,7 +64,7 @@ TYPE
     CONSTRUCTOR create(CONST value: boolean);
     FUNCTION value: boolean;
     //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -86,7 +86,7 @@ TYPE
     CONSTRUCTOR create(CONST value: int64);
     FUNCTION value: int64;
     //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -116,7 +116,7 @@ TYPE
     CONSTRUCTOR create(CONST value: T_myFloat);
     FUNCTION value: T_myFloat;
     //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opMinus    (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opMult     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -152,7 +152,7 @@ TYPE
     PROCEDURE append(CONST suffix:ansistring);
     //from T_scalarLiteral:
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
@@ -175,7 +175,7 @@ TYPE
     CONSTRUCTOR create(CONST value: pointer);
     FUNCTION value: pointer;
     //from T_scalarLiteral:
-    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean; virtual;
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -274,7 +274,7 @@ TYPE
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
-
+    FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION contains(CONST other: P_literal): boolean;
     FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_listLiteral;
@@ -836,14 +836,15 @@ FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
 //=================================================================:?.stringForm
 //?.isInRelationTo:=============================================================
-FUNCTION T_scalarLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_literal.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   begin
     result:=false;
   end;
 
-FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovl: boolean;
   begin
+    if (relation=tt_operatorIn) and (other^.literalType in C_validListTypes) and (P_listLiteral(other)^.contains(@self)) then exit(true);
     if other^.literalType<>lt_boolean then exit(false);
     ovl:=P_boolLiteral(other)^.val;
     result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
@@ -851,10 +852,11 @@ FUNCTION T_boolLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
            or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovi: int64;
       ovr: T_myFloat;
   begin
+    if (relation=tt_operatorIn) and (other^.literalType in C_validListTypes) and (P_listLiteral(other)^.contains(@self)) then exit(true);
     case other^.literalType of
       lt_int: begin
         ovi:=P_intLiteral(other)^.val;
@@ -872,10 +874,11 @@ FUNCTION T_intLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P
     end;
   end;
 
-FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovi: int64;
       ovr: T_myFloat;
   begin
+    if (relation=tt_operatorIn) and (other^.literalType in C_validListTypes) and (P_listLiteral(other)^.contains(@self)) then exit(true);
     case other^.literalType of
       lt_int: begin
         ovi:=P_intLiteral(other)^.val;
@@ -893,9 +896,10 @@ FUNCTION T_realLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
     end;
   end;
 
-FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
   VAR ovl: ansistring;
   begin
+    if (relation=tt_operatorIn) and (other^.literalType in C_validListTypes) and (P_listLiteral(other)^.contains(@self)) then exit(true);
     if other^.literalType<>lt_string then exit(false);
     ovl:=P_stringLiteral(other)^.val;
     result:=(val=ovl) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
@@ -903,9 +907,28 @@ FUNCTION T_stringLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other
          or (val>ovl) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
   end;
 
-FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_scalarLiteral): boolean;
+FUNCTION T_expressionLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+  VAR myTxt,otherTxt:ansistring;
   begin
-    result:=false;
+    if (relation=tt_operatorIn) and (other^.literalType in C_validListTypes) and (P_listLiteral(other)^.contains(@self)) then exit(true);
+    if other^.literalType<>lt_expression then exit(false);
+    if (relation in [tt_comparatorEq,tt_comparatorListEq]) and equals(other) then exit(true);
+    myTxt   :=toString;
+    otherTxt:=other^.toString;
+    result:=(myTxt=otherTxt) and (relation in [tt_comparatorEq, tt_comparatorListEq, tt_comparatorLeq, tt_comparatorGeq])
+         or (myTxt<otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorLeq, tt_comparatorLss])
+         or (myTxt>otherTxt) and (relation in [tt_comparatorNeq, tt_comparatorGeq, tt_comparatorGrt]);
+  end;
+
+FUNCTION T_listLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+  VAR i:longint;
+  begin
+    if not(other^.literalType in C_validListTypes) then exit(false);
+    if (relation=tt_operatorIn) and (P_listLiteral(other)^.contains(@self)) then exit(true);
+    if not(relation in [tt_comparatorListEq,tt_comparatorNeq]) then exit(false);
+    result:=length(element)=length(P_listLiteral(other)^.element);
+    for i:=0 to length(element)-1 do result:=result and element[i]^.isInRelationTo(tt_comparatorListEq,P_listLiteral(other)^.element[i]);
+    if relation=tt_comparatorNeq then result:=not(result);
   end;
 //=============================================================:?.isInRelationTo
 //?.negate:=====================================================================
@@ -1332,7 +1355,7 @@ FUNCTION T_literal.equals(CONST other: P_literal): boolean;
 FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
   begin
     result:=(@self = other)
-           or (other^.literalType = lt_int) and (P_intLiteral(other)^.value = val);
+         or (other^.literalType = lt_int) and (P_intLiteral(other)^.value = val);
   end;
 
 FUNCTION T_realLiteral.equals(CONST other: P_literal): boolean;
@@ -1632,8 +1655,7 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean;
-  VAR adapters: T_adapters): P_listLiteral;
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR adapters: T_adapters): P_listLiteral;
   begin
     result:=@self;
     if L = nil then begin
@@ -1726,8 +1748,7 @@ FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral): P_listLiteral;
     result:=@self;
   end;
 
-PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal;
-  CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
+PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
   VAR
     last: P_literal;
     i0, i1: int64;
@@ -1844,8 +1865,7 @@ PROCEDURE T_listLiteral.sort;
     dropIndexes;
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral;
-  VAR adapters: T_adapters);
+PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; VAR adapters: T_adapters);
   VAR temp: array of P_literal;
       scale: longint;
       i, j0, j1, k: longint;

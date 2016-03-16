@@ -342,8 +342,19 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     VAR assignmentToken:P_token;
 
     PROCEDURE parseRule;
+      PROCEDURE fail(VAR firstOfPart:P_token);
+        begin
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(firstOfPart,10) ,firstOfPart^.location);
+          context.cascadeDisposeToken(firstOfPart);
+        end;
+
+      PROCEDURE assertNil(VAR firstOfPart:P_token);
+        begin
+          if firstOfPart<>nil then fail(firstOfPart);
+        end;
+
       CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
-      VAR p,n,NN,nnn:P_token;
+      VAR p:P_token;
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
           ruleIsMutable:boolean=false;
@@ -352,10 +363,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
+          rulePatternElement:T_patternElement;
           ruleBody:P_token;
           ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
           ruleGroup:P_rule;
+
+          parts:T_bodyParts;
+          closingBracket:P_token;
+          i:longint;
+
       begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -403,69 +420,67 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
         rulePattern.create;
         if first^.tokType=tt_braceOpen then begin
-          first:=context.disposeToken(first);
-          if (first<>nil) and (first^.tokType=tt_braceClose) then first:=context.disposeToken(first);
-          while not((first=nil) or (first^.tokType in [tt_assign,tt_declare])) do begin
-            if rulePattern.hasOptionals then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,ruleDeclarationStart);
-            n  :=first^.next;
-            NN :=n    ^.next;
-            nnn:=NN   ^.next;
-            if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-            and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendFreeId(first^.txt);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_optionalParameters)
-                     and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              if n^.tokType=tt_separatorComma then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,ruleDeclarationStart);
-              rulePattern.appendOptional;
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
-                     and (n^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison('',tt_comparatorEq,P_scalarLiteral(first^.data));
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_emptyList) then begin
-              rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType=tt_listBraceOpen) and (first^.next<>nil) and (first^.next^.tokType=tt_listBraceClose) then begin
-              rulePattern.appendTypeCheck('',tt_typeCheckEmptyList);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-                     and (n^.tokType in [tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList, tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList, tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList, tt_typeCheckKeyValueList])
-                     and (NN^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendTypeCheck(first^.txt,n^.tokType);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-                     and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (NN^.tokType=tt_literal) and (P_literal(NN^.data)^.literalType in [lt_boolean, lt_int, lt_real, lt_string])
-                     and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison(first^.txt,n^.tokType,P_scalarLiteral(NN^.data));
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-                     and (n^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-                     and (NN^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
-                     and (nnn^.tokType in [tt_separatorComma,tt_braceClose]) then begin
-              rulePattern.appendComparison(first^.txt,n^.tokType,NN^.txt);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-              first:=context.disposeToken(first);
-            end else begin
-              context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(first,10) ,first^.location);
-              context.cascadeDisposeToken(first);
-              exit;
+          if (first^.next<>nil) and (first^.next^.tokType=tt_braceClose) then begin
+            setLength(parts,0);
+            closingBracket:=first^.next;
+          end else begin
+            parts:=getBodyParts(first,0,context,closingBracket);
+            for i:=0 to length(parts)-1 do begin
+              if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
+                if i<>length(parts)-1 then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,parts[i].first^.location);
+                //Optionals: f(...)->
+                rulePattern.appendOptional;
+                parts[i].first:=context.disposeToken(parts[i].first);
+                assertNil(parts[i].first);
+              end else if (parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) then begin
+                //Identified parameter: f(x)->
+                rulePatternElement.create(parts[i].first^.txt);
+                parts[i].first:=context.disposeToken(parts[i].first);
+                if (parts[i].first<>nil) then begin
+                  if (parts[i].first^.tokType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn,
+                                                  tt_typeCheckScalar, tt_typeCheckList, tt_typeCheckBoolean, tt_typeCheckBoolList, tt_typeCheckInt, tt_typeCheckIntList,
+                                                  tt_typeCheckReal,tt_typeCheckRealList, tt_typeCheckString,tt_typeCheckStringList, tt_typeCheckNumeric, tt_typeCheckNumList,
+                                                  tt_typeCheckExpression, tt_typeCheckNonemptyList, tt_typeCheckEmptyList, tt_typeCheckKeyValueList]) then
+                  begin
+                    rulePatternElement.restrictionType:=parts[i].first^.tokType;
+                    parts[i].first:=context.disposeToken(parts[i].first);
+                    if rulePatternElement.restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn] then begin
+                      //Identified, restricted parameter: f(x>?)->
+                      if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
+                        rulePatternElement.restrictionId:=parts[i].first^.txt;
+                        parts[i].first:=context.disposeToken(parts[i].first);
+                        assertNil(parts[i].first);
+                      end else begin
+                        reduceExpression(parts[i].first,0,context);
+                        if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
+                          rulePatternElement.restrictionValue:=parts[i].first^.data;
+                          rulePatternElement.restrictionValue^.rereference;
+                          parts[i].first:=context.disposeToken(parts[i].first);
+                          assertNil(parts[i].first);
+                        end else fail(parts[i].first);
+                      end;
+                    end else assertNil(parts[i].first);
+                  end else fail(parts[i].first);
+                end;
+                rulePattern.append(rulePatternElement);
+              end else begin
+                //Anonymous equals: f(1)->
+                reduceExpression(parts[i].first,0,context);
+                if (parts[i].first<>nil) and (parts[i].first^.tokType=tt_literal) then begin
+                  rulePatternElement.createAnonymous;
+                  rulePatternElement.restrictionType:=tt_comparatorListEq;
+                  rulePatternElement.restrictionValue:=parts[i].first^.data;
+                  rulePatternElement.restrictionValue^.rereference;
+                  parts[i].first:=context.disposeToken(parts[i].first);
+                  assertNil(parts[i].first);
+                  rulePattern.append(rulePatternElement);
+                end else fail(parts[i].first);
+              end;
             end;
           end;
+          rulePattern.finalizeRefs;
+          context.disposeToken(first);
+          first:=context.disposeToken(closingBracket);
         end;
         if first<>nil then begin
           first:=context.disposeToken(first);
@@ -473,7 +488,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-
         if (usecase=lu_forDocGeneration) then begin
           context.cascadeDisposeToken(ruleBody);
           ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
@@ -505,6 +519,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     begin
       if first=nil then exit;
+      if not(context.adapters^.noErrors) then begin
+        context.cascadeDisposeToken(first);
+        exit;
+      end;
+
       if isFirstLine then begin
         isFirstLine:=false;
         if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and

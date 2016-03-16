@@ -126,10 +126,14 @@ TYPE
     lt_listWithError,
     lt_void);
 
+  T_literalTypeSet=set of T_literalType;
+
 CONST
-  C_validListTypes: set of T_literalType=[lt_list..lt_flatList];
-  C_validScalarTypes: set of T_literalType=[lt_boolean..lt_expression,lt_void];
+  C_validNonVoidTypes: T_literalTypeSet=[lt_boolean..lt_flatList];
+  C_validListTypes: T_literalTypeSet=[lt_list..lt_flatList];
+  C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
   C_operatorsForAggregators: set of T_tokenType=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
+  C_typeChecks: set of T_tokenType=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
   C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
     tt_identifier,
     tt_localUserRule,
@@ -145,7 +149,7 @@ CONST
     5,                   //special: string concatenation
     1, 7);   //list operators
 
-  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckKeyValueList] of set of T_literalType =
+  C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckKeyValueList] of T_literalTypeSet =
     {tt_typeCheckScalar}      ([lt_boolean, lt_int, lt_real, lt_string],
     {tt_typeCheckList}         [lt_list..lt_flatList],
     {tt_typeCheckBoolean}      [lt_boolean],

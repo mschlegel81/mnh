@@ -29,6 +29,8 @@
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
+      CONSTRUCTOR createEnumConstant(CONST value:P_intLiteral; CONST location:T_tokenLocation);
+      CONSTRUCTOR createRecordAccessor(CONST index:P_intLiteral; CONST location:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
       FUNCTION toString:ansistring;
@@ -311,6 +313,46 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
     end;
   end;
 
+CONSTRUCTOR T_subrule.createEnumConstant(CONST value: P_intLiteral; CONST location:T_tokenLocation);
+  begin
+    comment:='';
+    called:=true;
+    typ:=srt_normal_public;
+    declaredAt:=location;
+    pattern.create;
+    setLength(preparedBody,1);
+    with preparedBody[0] do begin
+      parIdx:=-1;
+      token.create;
+      token.define(location,'',tt_literal,value);
+      value^.rereference;
+    end;
+  end;
+
+CONSTRUCTOR T_subrule.createRecordAccessor(CONST index: P_intLiteral; CONST location:T_tokenLocation);
+  begin
+    comment:='';
+    called:=true;
+    typ:=srt_normal_public;
+    declaredAt:=location;
+    pattern.create;
+    pattern.appendFreeId('R');
+    // get($0,index)
+    //0: get
+    //1: (
+    //2: par0
+    //3: ,
+    //4: index
+    //5: )
+    setLength(preparedBody,6);
+    with preparedBody[0] do begin parIdx:=-1; token.create; token.define(location,'get',tt_intrinsicRule,@get_imp); end;
+    with preparedBody[1] do begin parIdx:=-1; token.create; token.define(location,'',tt_braceOpen); end;
+    with preparedBody[2] do begin parIdx:= 0; token.create; token.define(location,'R',tt_parameterIdentifier); end;
+    with preparedBody[3] do begin parIdx:=-1; token.create; token.define(location,'',tt_separatorComma); end;
+    with preparedBody[4] do begin parIdx:=-1; token.create; token.define(location,'',tt_literal,index); index^.rereference; end;
+    with preparedBody[5] do begin parIdx:=-1; token.create; token.define(location,'',tt_braceClose); end;
+  end;
+
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
@@ -363,7 +405,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
 
   begin
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,selfLiteral<>nil,context.adapters^) then begin
+       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
       called:=true;
       with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
@@ -377,7 +419,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
             and (length(preparedBody)=1)
             and (preparedBody[0].token.tokType=tt_literal)
             and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
-            and (P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.pattern.matches(param^,true,context.adapters^))
+            and (P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.pattern.matches(param^,true))
     then begin
       result:=P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.replaces(param,P_expressionLiteral(preparedBody[0].token.data),firstRep,lastRep,context);
       called:=called or result;
