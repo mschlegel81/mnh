@@ -1,5 +1,8 @@
 private monteCarloPi(sampleSize>0)->4*samplesInCircle(sampleSize)/sampleSize;
+
+//Note:     To improve performance, replace this |vvvv| "each" by "pEach" - however this will lead to nondeterministic results
 private samplesInCircle(sampleSize>10000)->[1..9].each(i,samplesInCircle(sampleSize div 10),+)+samplesInCircle(sampleSize-9*(sampleSize div 10));
+
 private samplesInCircle(sampleSize>0)->trueCount(random(sampleSize)^2+random(sampleSize)^2<1);
 
 //*Solves the "Monte carlo methods" task from <a href="http://rosettacode.org/wiki/Monte_Carlo_methods">RosettaCode</a>
