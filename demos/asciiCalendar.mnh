@@ -1,0 +1,52 @@
+private bigDigit:=
+[[' ### ','#   #','#   #','#   #',' ### '],
+ ['  # ',' ## ','# # ','  # ',' ###'],
+ [' ### ','#   #','  ## ',' #   ','#####'],
+ [' ### ','#   #','   # ','#   #',' ### '],
+ ['  #  ',' #  #','#####','    #','    #'],
+ ['#####','#    ','#### ','    #','#### '],
+ [' ### ','#    ','#### ','#   #',' ### '],
+ ['#####','   # ','  #  ','  #  ','  #  '],
+ [' ### ','#   #',' ### ','#   #',' ### '],
+ [' ### ','#   #',' ####','    #',' ### ']];
+
+private getWeeks(year,month)->begin
+  local firstDayOfMonth:=parseTime('dd.mm.yyyy',format('01.%2.2d.%4.4d',month,year)).round;
+  local lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12 ? format('01.%2.2d.%4.4d',      1,year+1)
+                                                         : format('01.%2.2d.%4.4d',month+1,year  )).round-1;
+  local startingMonday :=firstDayOfMonth;
+  while(formatTime('ddd',startingMonday)!='Mo',startingMonday-=1);
+  local daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
+  daysOnTab:=daysOnTab
+  .group([0..size(daysOnTab)-1] div 7)
+  .sort({$x[0]<$y[0]})
+  .each(week,week.each(day,day<=0 ? '  ' : format('%2s',day)).join(' '));
+  while(daysOnTab.size<6,daysOnTab|='');
+  daysOnTab;
+end;
+
+private printCalendar(year)->begin
+  local digitIndexes:=string(year).chars.softCast;
+  local bigYear:=[0..4].each(i,bigDigit[digitIndexes].getInner(i).join(' '));
+  bigYear:=repeat(' ',(91-bigYear[0].length) div 2)&bigYear;
+  print('+',repeat('-',91),'+');
+  printf('|%-91s|',bigYear);
+
+  local weeks:=[1..12].each(month,getWeeks(year,month));
+  local lineFormat:='| %-20s | %-20s | %-20s | %-20s |';
+  local splitLine:='+'&repeat(repeat('-',22)&'+',4);
+  local nameOfMonth:=['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  local weekDays:='Mo Di Mi Do Fr Sa So';
+  ([0..2]*4).each(leftMonth,
+    print(splitLine),
+    printf@(lineFormat | nameOfMonth[[leftMonth..leftMonth+3]]),
+    printf(lineFormat,weekDays,weekDays,weekDays,weekDays),
+    [0..5].each(i,printf(lineFormat,weeks[leftMonth,i],weeks[leftMonth+1,i],weeks[leftMonth+2,i],weeks[leftMonth+3,i])));
+  print(splitLine);
+end;
+
+//*Prints a calendar of 1966
+main->printCalendar(1966);
+
+//*Prints a calendar of the given year
+main(year)->printCalendar(year.softCast);
