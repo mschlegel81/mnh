@@ -16,6 +16,8 @@
     FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
+    PROCEDURE lateRHSResolution(VAR context:T_evaluationContext; CONST package:P_package);
+    PROCEDURE thinOutWhitelist;
     DESTRUCTOR destroy;
   end;
 
@@ -34,7 +36,7 @@
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
-    PROCEDURE finalizeRefs;
+    PROCEDURE finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
@@ -124,6 +126,39 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
   end;
 
+PROCEDURE T_patternElement.lateRHSResolution(VAR context:T_evaluationContext; CONST package:P_package);
+  VAR tok:P_token;
+  begin
+    if (restrictionId<>'') and (restrictionIdx<0) then begin
+      tok:=context.newToken(C_nilTokenLocation,restrictionId,tt_identifier,nil);
+      reduceExpression(tok,0,context);
+      if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
+        restrictionId:='';
+        restrictionValue:=tok^.data;
+        restrictionValue^.rereference;
+      end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',C_nilTokenLocation);
+      context.cascadeDisposeToken(tok);
+    end;
+  end;
+
+PROCEDURE T_patternElement.thinOutWhitelist;
+  begin
+    if restrictionType in C_typeChecks then typeWhitelist:=C_matchingTypes[restrictionType];
+    if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
+       and (restrictionValue<>nil)
+    then begin
+      case restrictionValue^.literalType of
+        lt_int,lt_real: typeWhitelist:=[lt_int,lt_real];
+        lt_string: typeWhitelist:=[lt_string];
+        lt_boolean: typeWhitelist:=[lt_boolean];
+        lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
+          then typeWhitelist:=C_matchingTypes[tt_typeCheckEmptyList]
+          else typeWhitelist:=C_matchingTypes[tt_typeCheckNonemptyList];
+      end;
+    end;
+
+  end;
+
 DESTRUCTOR T_patternElement.destroy;
   begin
     if restrictionValue<>nil then disposeLiteral(restrictionValue);
@@ -197,8 +232,9 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: ansistring): longint;
     result:=appendFreeId(id);
   end;
 
-PROCEDURE T_pattern.finalizeRefs;
+PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);
   VAR i,j:longint;
+
   begin
     for i:=1 to length(sig)-1 do if (sig[i].restrictionType=tt_literal) then begin
       j:=0;
@@ -218,19 +254,8 @@ PROCEDURE T_pattern.finalizeRefs;
         then sig[i].restrictionIdx:=j;
 
     for i:=0 to length(sig)-1 do begin
-      if sig[i].restrictionType in C_typeChecks then sig[i].typeWhitelist:=C_matchingTypes[sig[i].restrictionType];
-      if (sig[i].restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
-         and (sig[i].restrictionValue<>nil)
-      then begin
-        case sig[i].restrictionValue^.literalType of
-          lt_int,lt_real: sig[i].typeWhitelist:=[lt_int,lt_real];
-          lt_string: sig[i].typeWhitelist:=[lt_string];
-          lt_boolean: sig[i].typeWhitelist:=[lt_boolean];
-          lt_emptyList: if sig[i].restrictionType in [tt_comparatorEq,tt_comparatorListEq]
-            then sig[i].typeWhitelist:=C_matchingTypes[tt_typeCheckEmptyList]
-            else sig[i].typeWhitelist:=C_matchingTypes[tt_typeCheckNonemptyList];
-        end;
-      end;
+      sig[i].lateRHSResolution(context,package);
+      sig[i].thinOutWhitelist;
     end;
   end;
 

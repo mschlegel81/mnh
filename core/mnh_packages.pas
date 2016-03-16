@@ -478,7 +478,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               end;
             end;
           end;
-          rulePattern.finalizeRefs;
+          rulePattern.finalizeRefs(context,@self);
           context.disposeToken(first);
           first:=context.disposeToken(closingBracket);
         end;

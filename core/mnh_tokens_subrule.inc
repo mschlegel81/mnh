@@ -92,7 +92,6 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declA
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
     pattern:=pat;
-    pattern.finalizeRefs;
     declaredAt:=declAt;
     constructExpression(rep,context,false);
     if needEmbrace(context.adapters^) then embrace;
