@@ -340,6 +340,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
 
     VAR assignmentToken:P_token;
+        ruleDeclarationStart:T_tokenLocation;
 
     PROCEDURE parseRule;
       PROCEDURE fail(VAR firstOfPart:P_token);
@@ -353,26 +354,66 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if firstOfPart<>nil then fail(firstOfPart);
         end;
 
+      PROCEDURE reduceEnumRule(VAR ruleBody:P_token);
+        VAR ids:T_arrayOfString;
+            p:P_token; //iterator
+            L:P_listLiteral;
+            i:longint;
+
+            enumValueRule:P_rule;
+            enumValueSubrule:P_subrule;
+        begin
+          ids:=C_EMPTY_STRING_ARRAY;
+          //expected body: enum(id1,id2,...)
+          p:=ruleBody;
+          if (p^.tokType=tt_enumConstructor) and (p^.last^.tokType=tt_braceClose) then begin
+            p:=p^.next;
+            if (p<>nil) and (p^.tokType=tt_braceOpen) then begin
+              p:=p^.next;
+              while (p<>nil) and (p^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
+                    (p^.next<>nil) and (p^.next^.tokType in [tt_braceClose,tt_separatorComma]) do begin
+                append(ids,p^.txt);
+                p:=p^.next^.next;
+              end;
+              if p=nil then begin
+                //successfully iterated over enum declaration body
+                L:=newListLiteral;
+                for i:=0 to length(ids)-1 do begin
+                  L^.appendInt(i);
+                  new(enumValueSubrule,createEnumConstant(newIntLiteral(i),ruleDeclarationStart));
+                  ensureRuleId(ids[i],false,false,false,false,false,ruleDeclarationStart,ruleBody^.last^.location,context.adapters^)^.addOrReplaceSubRule(enumValueSubrule,context)
+                end;
+                context.cascadeDisposeToken(ruleBody);
+                L^.unique; //implicitly creates backing map
+                ruleBody:=context.newToken(assignmentToken^.location,'',tt_literal,L);
+                exit;
+              end;
+            end;
+          end;
+          context.adapters^.raiseError('Invalid enum declaration: '+tokensToString(ruleBody),ruleBody^.location);
+        end;
+
       CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
-      VAR p:P_token;
+      VAR p:P_token; //iterator
+          //modifier flags
           ruleIsPrivate:boolean=false;
           ruleIsMemoized:boolean=false;
           ruleIsMutable:boolean=false;
           ruleIsPersistent:boolean=false;
           ruleIsSynchronized:boolean=false;
+
+          isEnumRule:boolean;
+          //rule meta data
           ruleId:string;
           evaluateBody:boolean;
           rulePattern:T_pattern;
           rulePatternElement:T_patternElement;
           ruleBody:P_token;
-          ruleDeclarationStart:T_tokenLocation;
           subRule:P_subrule;
           ruleGroup:P_rule;
-
           parts:T_bodyParts;
           closingBracket:P_token;
           i:longint;
-
       begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -384,14 +425,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(first);
           exit;
         end;
+        isEnumRule:=ruleBody^.tokType=tt_enumConstructor;
+        if isEnumRule then evaluateBody:=true;
+
         while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_persistent,tt_modifier_synchronized]) do begin
           if first^.tokType=tt_modifier_private      then ruleIsPrivate :=true;
           if first^.tokType=tt_modifier_memoized     then ruleIsMemoized:=true;
           if first^.tokType=tt_modifier_synchronized then ruleIsSynchronized:=true;
           if first^.tokType in [tt_modifier_mutable,tt_modifier_persistent]  then begin
-            ruleIsMutable :=true;
+            ruleIsMutable   :=true;
             ruleIsPersistent:=(first^.tokType=tt_modifier_persistent);
-            evaluateBody:=true;
+            evaluateBody    :=true;
           end;
           first:=context.disposeToken(first);
         end;
@@ -493,7 +537,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
         end else begin
           rulePattern.toParameterIds(ruleBody);
-          if evaluateBody and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
+          if evaluateBody and (context.adapters^.noErrors) then begin
+            if isEnumRule then reduceEnumRule(ruleBody)
+                          else reduceExpression(ruleBody,0,context);
+          end;
         end;
 
         if context.adapters^.noErrors then begin
