@@ -37,8 +37,7 @@ TYPE
     //Recycler routines:
     FUNCTION disposeToken(p:P_token):P_token; inline;
     PROCEDURE cascadeDisposeToken(VAR p:P_token);
-    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token; inline;
-    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token; inline;
+    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
     FUNCTION newToken(CONST original:T_token):P_token; inline;
     FUNCTION newToken(CONST original:P_token):P_token; inline;
     //Local scope routines:
@@ -200,16 +199,6 @@ FUNCTION T_evaluationContext.newToken(CONST tokenLocation:T_tokenLocation; CONST
       result:=dat[fill];
     end else new(result,create);
     result^.define(tokenLocation,tokenText,tokenType,ptr);
-    result^.next:=nil;
-  end;
-
-FUNCTION T_evaluationContext.newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType):P_token;
-  begin
-    if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-    end else new(result,create);
-    result^.define(tokenLocation,tokenText,tokenType);
     result^.next:=nil;
   end;
 

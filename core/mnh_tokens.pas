@@ -15,8 +15,7 @@ TYPE
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE define(CONST tokenLocation: T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
-    PROCEDURE define(CONST tokenLocation: T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType);
+    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
@@ -61,7 +60,7 @@ DESTRUCTOR T_token.destroy;
     undefine;
   end;
 
-PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
+PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
   begin
     location:=tokenLocation;
     if (tokenText='') or (C_tokenString[tokenType]<>'')
@@ -69,15 +68,6 @@ PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; tokenText:ansistri
       else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
-  end;
-
-PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; tokenText:ansistring; CONST tokenType:T_tokenType);
-  begin
-    location:=tokenLocation;
-    if tokenText='' then txt:=C_tokenString[tokenType]
-                    else txt:=tokenText;
-    tokType:=tokenType;
-    data:=nil;
   end;
 
 PROCEDURE T_token.define(CONST original:T_token);
