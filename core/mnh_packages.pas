@@ -129,15 +129,12 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     adapter.doEchoInput:=true;
     adapter.doShowExpressionOut:=true;
     adapter.doShowTimingInfo:=false;
-
     runAlone(input,@adapter);
-
     setLength(result,length(collector.storedMessages));
     for i:=0 to length(result)-1 do begin
       result[i]:=collector.storedMessages[i];
       with result[i] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     end;
-
     adapter.destroy;
     collector.destroy;
   end;
@@ -274,7 +271,6 @@ DESTRUCTOR T_packageReference.destroy;
     pack:=nil;
   end;
 
-
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
   VAR isFirstLine:boolean=true;
       lastComment:ansistring;
@@ -361,8 +357,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             p:P_token; //iterator
             L:P_listLiteral;
             i:longint;
-
-            enumValueRule:P_rule;
             enumValueSubrule:P_subrule;
         begin
           ids:=C_EMPTY_STRING_ARRAY;
@@ -456,7 +450,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           p:=p^.next;
         end;
         //:plausis
-
         ruleId:=trim(first^.txt);
         first:=context.disposeToken(first);
         if not(first^.tokType in [tt_braceOpen,tt_assign,tt_declare])  then begin
@@ -507,6 +500,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                         end else fail(parts[i].first);
                       end;
                     end else if rulePatternElement.restrictionType in C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER then begin
+                      if (parts[i].first=nil) then begin end else
                       if (parts[i].first^.tokType=tt_braceOpen) and
                          (parts[i].first^.next<>nil) and
                          (parts[i].first^.next^.tokType=tt_literal) and
