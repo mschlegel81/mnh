@@ -66,10 +66,13 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
   begin
     L:=parameterList.value(ownIndex);
     if not(L^.literalType in typeWhitelist) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and (P_subrule(P_expressionLiteral(L)^.value)^.arity<>restrictionIdx) then exit(false);
+    if (restrictionIdx>=0) and (restrictionType in [tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList])
+      and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       if restrictionIdx>=0 then result:=L^.isInRelationTo(restrictionType, parameterList.value(restrictionIdx))
-                           else result:=L^.isInRelationTo(restrictionType, restrictionValue);
+                           else result:=L^.isInRelationTo(restrictionType, restrictionValue                   );
     end;
   end;
 

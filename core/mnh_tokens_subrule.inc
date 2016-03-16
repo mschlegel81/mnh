@@ -43,6 +43,7 @@
       FUNCTION complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
       FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
       FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
+      FUNCTION arity:longint;
   end;
 
 {$endif}
@@ -671,6 +672,11 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
       else result:=result+'<i>'+comment+'</i><br>';
     end;
     result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString,zeroBlobLevel)+'</code></td></tr>';
+  end;
+
+FUNCTION T_subrule.arity:longint;
+  begin
+    result:=length(pattern.sig);
   end;
 
 {$endif}

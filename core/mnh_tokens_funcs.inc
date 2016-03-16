@@ -379,15 +379,10 @@ FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   end;
 
 FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  FUNCTION getArity(CONST subruleLiteral:P_expressionLiteral):longint;
-    begin
-      result:=length(P_subrule(subruleLiteral^.value)^.pattern.sig);
-    end;
-
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_expression)
-    then result:=newIntLiteral(getArity(P_expressionLiteral(params^.value(0))));
+    then result:=newIntLiteral(P_subrule (P_expressionLiteral(params^.value(0))^.value)^.arity);
   end;
 
 FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

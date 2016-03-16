@@ -343,6 +343,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         ruleDeclarationStart:T_tokenLocation;
 
     PROCEDURE parseRule;
+      CONST C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER:set of T_tokenType=[tt_typeCheckExpression,tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList];
+
       PROCEDURE fail(VAR firstOfPart:P_token);
         begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(firstOfPart,10) ,firstOfPart^.location);
@@ -488,7 +490,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                   begin
                     rulePatternElement.restrictionType:=parts[i].first^.tokType;
                     parts[i].first:=context.disposeToken(parts[i].first);
-                    if rulePatternElement.restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn] then begin
+                    if rulePatternElement.restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn]
+                    then begin
                       //Identified, restricted parameter: f(x>?)->
                       if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
                         rulePatternElement.restrictionId:=parts[i].first^.txt;
@@ -503,6 +506,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                           assertNil(parts[i].first);
                         end else fail(parts[i].first);
                       end;
+                    end else if rulePatternElement.restrictionType in C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER then begin
+                      if (parts[i].first^.tokType=tt_braceOpen) and
+                         (parts[i].first^.next<>nil) and
+                         (parts[i].first^.next^.tokType=tt_literal) and
+                         (P_literal(parts[i].first^.next^.data)^.literalType=lt_int) and
+                         (P_intLiteral(parts[i].first^.next^.data)^.value>=0) and
+                         (parts[i].first^.next^.next<>nil) and
+                         (parts[i].first^.next^.next^.tokType=tt_braceClose) and
+                         (parts[i].first^.next^.next^.next=nil) then begin
+                        rulePatternElement.restrictionIdx:=P_intLiteral(parts[i].first^.next^.data)^.value;
+                        context.cascadeDisposeToken(parts[i].first);
+                      end else fail(parts[i].first);
                     end else assertNil(parts[i].first);
                   end else fail(parts[i].first);
                 end;
