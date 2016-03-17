@@ -1,0 +1,28 @@
+private halve(i:int)->i div 2;
+private double(i:int)->i*2;
+private isEven(i:int)->(i and 1) = 0;
+
+ethiopianMultiplication(a_>=1,b_>=1)->ethiopianMultiplication(a_,b_,false);
+ethiopianMultiplication(a_>=1,b_>=1,doPrint:boolean)->begin
+  local a:=a_;
+  local b:=b_;
+  local aColumn:=[a];
+  local bColumn:=[b];
+  while(a>1,begin
+    aColumn|=(a:=halve(a));
+    bColumn|=(b:=double(b));
+  end);
+  local strikeOut:=aColumn.each(v,isEven(v));
+  local result:=bColumn[not(strikeOut)].agg(+);
+
+  doPrint ? begin
+    //Pretty printing:
+    printf("%{$0}5d  %{$2?'[':' '}s%{$1}5d%{$2?']':''}s",aColumn,bColumn,strikeOut);
+    print("       =======");
+    printf("        %5d",result);
+  end : void;
+  result;
+end;
+
+//*See <a href="http://rosettacode.org/wiki/Ethiopian_multiplication">http://rosettacode.org/wiki/Ethiopian_multiplication</a>
+main->ethiopianMultiplication(17,34,true);

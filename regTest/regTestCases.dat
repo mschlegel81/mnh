@@ -13,6 +13,7 @@
 [ "demos/countTheCoins.mnh",   "",                        false,         false,        false],
 [ "demos/dice7fromDice5.mnh",  "",                        false,         false,        false],
 [ "demos/digitSquareSum.mnh",  "",                        false,         false,        false],
+[ "demos/ethiopian.mnh",       "",                        false,         false,        false],
 [ "demos/forkbombFib.mnh",     "",                        false,         false,        false],
 [ "demos/fractalPlant.mnh",    "demos/fractalPlant.png",  true,          true,         false],
 [ "demos/gol.mnh",             "",                        false,         false,        false],
