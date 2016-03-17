@@ -31,7 +31,7 @@ end;
 memoized private 
 relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
                        files(allFolders('.')&'\*.pas'),
-                       files(allFolders('.')&'\*.inc').each(f,splitFileName(f).get("filename")='code_hash.inc' ? void : f));
+                       files(allFolders('.')&'\*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
                                
 memoized private 
 currentCodeHash->begin
@@ -49,7 +49,7 @@ private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
   fileExists(exeName) ? begin
     local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');
-    size(fullCodeHash)!=2 OR (fullCodeHash.get(1) != currentCodeHash);
+    size(fullCodeHash)!=2 OR (fullCodeHash[1] != currentCodeHash);
   end : true;
 end;
 
@@ -127,7 +127,7 @@ main->main('build');
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->begin
   allFolders('.').each(f,
-       splitFileName(f).get('filename') in ["nppBackup","backup"]
+       splitFileName(f).filename in ["nppBackup","backup"]
        ? begin
            print('Deleting ',f);
            deleteDir(f);

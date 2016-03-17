@@ -6,7 +6,7 @@ printExecute(code:stringList)->begin
 end;
 
 
-examplesFile:=splitFileName(myPath).get("directory")&'/../doc/examples.txt';
+examplesFile:=splitFileName(myPath).directory&'/../doc/examples.txt';
 
 main->begin
   local codeToExecute:=[];

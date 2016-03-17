@@ -1123,10 +1123,10 @@ In each construct you should prefer passing a single operator as aggregator inst
        //Run with "simple" aggregator
    in> run2:=time({list.each(x,           + )});
        //Are results equivalent ?
-   in> run1%'result'==run2%'result';
+   in> run1.result==run2.result;
   out> true
        //Relative cost:
-   in> run1%'time'/run2%'time';
+   in> run1['time']/run2['time'];
   out> 5.99899703090362
 <!--end-->
 </code>

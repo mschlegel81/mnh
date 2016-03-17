@@ -51,7 +51,7 @@ out> 3
  in> softCast([1,'2','true',"'TEXT'",'1.5','2,6']);
 out> [1,2,true,'TEXT',1.5,'2,6']
  in> splitFileName('../test.txt');
-out> [['input','../test.txt'],['expanded','D:/dev/test.txt'],['relative','../test.txt'],['directory','..'],['filename','test.txt'],['extension','.txt']]
+out> [['input','../test.txt'],['expanded','D:/dev/test.txt'],['relative','../test.txt'],['directory','..'],['filename','test.txt'],['extension','.txt'],['drive','D:']]
  in> string('a');
 out> 'a'
  in> string(234);
@@ -357,4 +357,4 @@ out> [1.0,0.5,0.25,0.333333333333333,0.666666666666667,0.2,0.4]
  in> deleteFile('plotDemo1.png');
 out> true
  in> driveInfo;
-out> [[['drive','C'],['type','fixed'],['serial',1779773958],['label','']],[['drive','D'],['type','fixed'],['serial',1915365941],['label','Cache SSD']]]
+out> [['C',[['type','fixed'],['serial',1779773958],['label','']]],['D',[['type','fixed'],['serial',1915365941],['label','Cache SSD']]]]
