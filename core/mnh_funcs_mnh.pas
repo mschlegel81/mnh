@@ -62,7 +62,7 @@ FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   end;
 
 FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:string);
+  PROCEDURE appendPair(VAR result:P_literal; CONST el0,el1:string);
     begin
       P_listLiteral(result)^.append(
         newListLiteral^.
@@ -85,6 +85,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
       appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
       appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
+      appendPair(result,'drive',ExtractFileDrive(expandFileName(name)));
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin

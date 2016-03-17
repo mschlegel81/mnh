@@ -431,14 +431,15 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         VolumeSerialNumber: dword;
         Buf: array [0..MAX_PATH] of char;
         infoPair:P_listLiteral;
+        infoMap:P_listLiteral;
     begin
       DriveLetter := drive + ':\';
       driveType:=GetDriveType(PChar(DriveLetter));
       if driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK] then begin
         result:=newListLiteral;
       end else exit(newVoidLiteral);
-
-      P_listLiteral(result)^.append(newListLiteral^.appendString('drive')^.appendString( drive ),false,context.adapters^);
+      infoMap:=newListLiteral;
+      P_listLiteral(result)^.appendString(drive)^.append(infoMap,false,context.adapters^);
 
       infoPair:=newListLiteral;
       infoPair^.appendString('type');
@@ -449,19 +450,19 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         DRIVE_CDROM:     infoPair^.appendString('CD_ROM'   );
         DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
       end;
-      P_listLiteral(result)^.append(infoPair,false,context.adapters^);
+      infoMap^.append(infoPair,false,context.adapters^);
 
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
       SetString(DriveLetter, Buf, StrLen(Buf));
 
-      P_listLiteral(result)^.append(
+      infoMap^.append(
         newListLiteral^.
         appendString('serial')^.
         appendInt(VolumeSerialNumber),false,context.adapters^);
 
-      P_listLiteral(result)^.append(
+      infoMap^.append(
         newListLiteral^.
         appendString('label')^.
         appendString(DriveLetter),false,context.adapters^);

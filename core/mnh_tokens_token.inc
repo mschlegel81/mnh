@@ -1172,6 +1172,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR newFunctionToken:P_token;
         newParameterListToken:P_token;
         oldSecond:P_token;
+        fallbackIsPossible:boolean=false;
+        ruleIdResolved:boolean=false;
+        key:string='';
     begin
       //Assuming:
       //cTokType[0]=tt_literal
@@ -1181,27 +1184,47 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       //  <Lit>.func     -> func(<Lit>)
       //  <Lit>.func(... -> func(<Lit>,...
       newFunctionToken:=context.newToken(first^.next);
+      fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType[2]<>tt_braceOpen);
+
 
       with newFunctionToken^ do begin
         tokType:=C_ponToFunc[tokType];
         if tokType=tt_identifier then begin
           if data=nil then data:=guessPackageForToken(newFunctionToken^);
-          P_package(data)^.resolveRuleId(newFunctionToken^,context.adapters);
+          if fallbackIsPossible
+          then P_package(data)^.resolveRuleId(newFunctionToken^,nil) //Do not pass adapters, because we try to handle complaints separately
+          else P_package(data)^.resolveRuleId(newFunctionToken^,context.adapters);
         end;
+        ruleIdResolved:=tokType<>tt_identifier;
       end;
-      newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false,context.adapters^));
-
-      first^.data:=nil; first^.tokType:=tt_identifier;
-      first^.next^.data:=nil;
-      oldSecond:=context.disposeToken(context.disposeToken(first));
-
-      first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
-
-      if cTokType[2]=tt_braceOpen then begin
-        newParameterListToken^.next:=context.disposeToken(oldSecond);
-        newParameterListToken^.tokType:=tt_parList_constructor;
+      if not(ruleIdResolved) and fallbackIsPossible then begin
+        key:=newFunctionToken^.txt;
+        newFunctionToken^.tokType:=tt_intrinsicRule;
+        newFunctionToken^.data:=@get_imp;
+        newFunctionToken^.txt:='get';
+        ruleIdResolved:=true;
       end;
-      didSubstitution:=true;
+
+      if ruleIdResolved then begin
+        //resolved rule ID mutate x.y -> y(x)
+        //if key is defined:      x.y -> get(x,"y")
+        if key=''
+        then newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false,context.adapters^))
+        else newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false,context.adapters^)^.appendString(key));
+
+        first^.data:=nil; first^.tokType:=tt_identifier;
+        first^.next^.data:=nil;
+        oldSecond:=context.disposeToken(context.disposeToken(first));
+
+        first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
+
+        if cTokType[2]=tt_braceOpen then begin
+          newParameterListToken^.next:=context.disposeToken(oldSecond);
+          newParameterListToken^.tokType:=tt_parList_constructor;
+        end;
+        didSubstitution:=true;
+        exit;
+      end;
     end;
 
   PROCEDURE process_op_lit; inline;
@@ -1384,7 +1407,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       //writeln(tokensToString(first,10));      writeln(tokenContextString);
       {$ifdef fullVersion}
       if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
-      reportableStep:=false;
+      reportableStep:=true;
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
