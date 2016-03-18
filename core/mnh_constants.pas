@@ -56,7 +56,6 @@ TYPE
     tt_aggregatorConstructor,
     //special operators
     tt_each, tt_parallelEach, tt_agg, tt_when, tt_while,  tt_begin,  tt_end,
-    tt_enumConstructor,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -174,7 +173,6 @@ CONST
     '', '', 'aggregator',
     //special operators
     '.each', '.pEach', '.agg', 'when','while','begin','end',
-    'enum',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -358,7 +356,6 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
        (wordText=C_tokenString[tt_while]) or
        (wordText=C_tokenString[tt_begin]) or
-       (wordText=C_tokenString[tt_enumConstructor]) or
        (wordText=C_tokenString[tt_end]) then exit(rwc_specialConstruct);
     for tt:=tt_comparatorEq to tt_listToParameterList do
       if wordText=C_tokenString[tt] then exit(rwc_operator);
@@ -392,7 +389,6 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
         result.add(C_tokenString[tt_while]);
         result.add(C_tokenString[tt_begin]);
         result.add(C_tokenString[tt_end]);
-        result.add(C_tokenString[tt_enumConstructor]);
       end;
       rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);
       rwc_modifier: for tt:=tt_modifier_private to tt_modifier_local do result.add(C_tokenString[tt]);
