@@ -354,3 +354,36 @@ union(1/[1..5],2/[2..6]);
 deleteFile('plotDemo1.png');
 
 driveInfo;
+
+drop([['A',1],['B',2],['C',0]],'B');
+
+//See <a href="types.html#lists">List types</a> for further information
+get(['a'..'f'],3);
+get(['a'..'f'],[3,1,2]);
+get([0..4],[2..6] mod 3 =0);
+get([['A',1],['B',2],['C',0]],'B');
+
+//See <a href="types.html#lists">List types</a> for further information
+getInner([[1,2,3],[4,5,6],[7,8,9]],1);
+getInner([[1,2,3],[4,5,6],[7,8,9]],[1,0]);
+getInner([[1,2,3],[4,5,6],[7,8,9]],[true,false,true]);
+
+indexOf([1..6]^2 mod 3=0);
+
+mapGet([['A',1],['B',2],['C',0]],'B');
+mapGet([['A',1],['B',2],['C',0]],'D');
+mapGet([['A',1],['B',2],['C',0]],'B',-1);
+mapGet([['A',1],['B',2],['C',0]],'D',-1);
+
+mapPut([['A',1],['B',2],['C',0]],'A',0);
+mapPut([['A',1],['B',2],['C',0]],'D',3);         
+
+reverseList([1..5]);
+
+size([0.5,0.1,0.2]);
+
+toMap([['A',1],['B',2],['C',0],['B',4]]);
+
+trueCount(10<[0..10]^2<50);
+
+unique([3,1,2,1,4,1,5]);

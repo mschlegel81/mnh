@@ -46,6 +46,7 @@ table { display: inline-table}
 <h4><a href="functions.html">Functions</a></h4>
 <h4><a href="specials.html">Special constructs</a></h4>
 <h4><a href="builtin.html">Built-in Functions</a></h4>
+<h4><a href="formatStrings.html">Format Strings</a></h4>
 <h4><a href="packages.html">User packages</a></h4>
 <tr bgcolor="#FFFACD">
 <!--begin commonFoot-->
