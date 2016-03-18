@@ -151,7 +151,8 @@ PROCEDURE T_patternElement.thinOutWhitelist;
        and (restrictionValue<>nil)
     then begin
       case restrictionValue^.literalType of
-        lt_int,lt_real: typeWhitelist:=[lt_int,lt_real];
+        lt_int : typeWhitelist:=[lt_int];
+        lt_real: typeWhitelist:=[lt_int,lt_real];
         lt_string: typeWhitelist:=[lt_string];
         lt_boolean: typeWhitelist:=[lt_boolean];
         lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
@@ -159,7 +160,6 @@ PROCEDURE T_patternElement.thinOutWhitelist;
           else typeWhitelist:=C_matchingTypes[tt_typeCheckNonemptyList];
       end;
     end;
-
   end;
 
 DESTRUCTOR T_patternElement.destroy;
