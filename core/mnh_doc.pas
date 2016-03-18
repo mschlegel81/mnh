@@ -1,11 +1,13 @@
 UNIT mnh_doc;
 INTERFACE
-USES sysutils, mnh_funcs, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
-VAR htmlRoot: string;
+USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
+VAR htmlRoot:specialize G_lazyVar<string>;
 TYPE
   T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
+  T_registerDocProcedure=PROCEDURE(CONST qualifiedId,explanation:ansistring);
 VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
 TYPE
+  P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
   T_intrinsicFunctionDocumentation = object
     id, unqualifiedId, description: ansistring;
     unqualifiedAccess:boolean;
@@ -13,6 +15,7 @@ TYPE
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
+    FUNCTION getPlainText(CONST lineSplitter:string):ansistring;
     PROCEDURE addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
   end;
 
@@ -39,10 +42,72 @@ TYPE
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 PROCEDURE makeHtmlFromTemplate;
-
+PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
+PROCEDURE ensureBuiltinDocExamples;
+VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
+    functionDocExamplesReady:boolean=false;
+
 CONST PACKAGE_DOC_SUBFOLDER='package_doc';
+PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
+  VAR newDoc:P_intrinsicFunctionDocumentation;
+      oldDoc:P_intrinsicFunctionDocumentation;
+  begin
+    new(newDoc,create(qualifiedId));
+    newDoc^.description:=explanation;
+    newDoc^.unqualifiedAccess:=not(qualifiedOnly);
+    functionDocMap.put(qualifiedId,newDoc);
+    if not(qualifiedOnly) then begin
+      if functionDocMap.containsKey(newDoc^.unqualifiedId,oldDoc) then oldDoc^.unqualifiedAccess:=false;
+      functionDocMap.put(newDoc^.unqualifiedId,newDoc);
+    end;
+  end;
+
+PROCEDURE ensureBuiltinDocExamples;
+  CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
+  VAR examplesFile:text;
+      line:ansistring;
+      code:T_arrayOfString;
+      i:longint;
+      keys:T_arrayOfString;
+      allDocs:array of P_intrinsicFunctionDocumentation;
+
+  PROCEDURE processExample;
+    VAR html:T_arrayOfString;
+        i:longint;
+    begin
+      if (length(code)<=0) then exit;
+      html:=demoCodeToHtmlCallback(code);
+      for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
+      setLength(code,0);
+      setLength(html,0);
+    end;
+
+  begin
+    if functionDocExamplesReady then exit;
+    keys:=functionDocMap.keySet;
+    setLength(allDocs,0);
+    for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
+      setLength(allDocs,length(allDocs)+1);
+      allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
+    end;
+
+    //Read examples:---------------------------------------------------------------------
+    assign(examplesFile, htmlRoot.value+EXAMPLES_NAME_SUFFIX);
+    reset(examplesFile);
+    setLength(code,0);
+    repeat
+      readln(examplesFile,line);
+      if trim(line)=''
+      then processExample
+      else append(code,line);
+    until eof(examplesFile);
+    processExample;
+    close(examplesFile);
+    //---------------------------------------------------------------------:Read examples
+    functionDocExamplesReady:=true;
+  end;
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
   begin
@@ -137,7 +202,7 @@ PROCEDURE T_userPackageDocumentation.writePackageDoc;
       i:longint;
       blobLevel:longint=0;
   begin
-    assign(handle,htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
+    assign(handle,htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
     rewrite(handle);
     writeln(handle,'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">');
     writeln(handle,'<html><head><link rel="stylesheet" href="../style.css" type="text/css"><META http-equiv="Content-Type" content="text/html; charset=ASCII">');
@@ -182,14 +247,9 @@ FUNCTION shortName(CONST id:ansistring):ansistring;
 
 
 CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
-  VAR f1,f2:T_intFuncCallback;
   begin
     id:=funcName;
     unqualifiedId:=shortName(funcName);
-    description:=intrinsicRuleExplanationMap.get(id);
-    f1:=intrinsicRuleMap.get(id);
-    f2:=intrinsicRuleMap.get(unqualifiedId);
-    unqualifiedAccess:=(f1=f2);
     setLength(example,0);
   end;
 
@@ -228,7 +288,16 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       result:=result+'<br>Examples:<code>';
       for i:=0 to length(example)-1 do result:=result+LineEnding+example[i];
       result:=result+'</code>';
-    end
+    end;
+    for i:=0 to length(example)-1 do writeln(StripHTML(example[i]));
+  end;
+
+FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
+  VAR i:longint;
+  begin
+    result:=id+lineSplitter+replaceAll(description,'#',lineSplitter);
+    if length(example)>0 then result:=result+lineSplitter+'Examples:';
+    for i:=0 to length(example)-1 do result:=result+lineSplitter+StripHTML(example[i]);
   end;
 
 PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
@@ -247,73 +316,32 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSou
   end;
 
 PROCEDURE makeHtmlFromTemplate();
-  VAR builtInDoc: array[T_namespace] of array of T_intrinsicFunctionDocumentation;
+  VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
-    CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
     VAR ids: T_arrayOfString;
         i,j: longint;
         n: T_namespace;
-        swapTmp: T_intrinsicFunctionDocumentation;
-
-        examplesFile:text;
-        line:ansistring;
-        code:T_arrayOfString;
-    PROCEDURE processExample;
-      VAR html:T_arrayOfString;
-          n: T_namespace;
-          i:longint;
-      begin
-        if (length(code)<=0) then exit;
-        html:=demoCodeToHtmlCallback(code);
-        for n:=low(T_namespace) to high(T_namespace) do
-          for i:=0 to length(builtInDoc[n])-1 do
-            builtInDoc[n][i].addExampleIfRelevant(code,html);
-        setLength(code,0);
-        setLength(html,0);
-      end;
-
+        swapTmp: P_intrinsicFunctionDocumentation;
     begin
+      ensureBuiltinDocExamples;
       //Prepare and sort data:-------------------------------------------------------------
       for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
-      ids:=intrinsicRuleExplanationMap.keySet;
+      ids:=functionDocMap.keySet;
       for i:=0 to length(ids)-1 do if isQualified(ids[i]) then begin
         n:=namespace(ids[i]);
         j:=length(builtInDoc[n]);
         setLength(builtInDoc[n],j+1);
-        builtInDoc[n][j].create(ids[i]);
+        builtInDoc[n][j]:=functionDocMap.get(ids[i]);
       end;
       setLength(ids,0);
 
       for n:=low(T_namespace) to high(T_namespace) do
       for i:=1 to length(builtInDoc[n])-1 do for j:=0 to i-1 do
-      if builtInDoc[n][i].id < builtInDoc[n][j].id then begin
+      if builtInDoc[n][i]^.id < builtInDoc[n][j]^.id then begin
         swapTmp:=builtInDoc[n][i]; builtInDoc[n][i]:=builtInDoc[n][j]; builtInDoc[n][j]:=swapTmp;
       end;
       //-------------------------------------------------------------:Prepare and sort data
-      //Read examples:---------------------------------------------------------------------
-      assign(examplesFile, htmlRoot+EXAMPLES_NAME_SUFFIX);
-      reset(examplesFile);
-      setLength(code,0);
-      repeat
-        readln(examplesFile,line);
-        if trim(line)=''
-        then processExample
-        else append(code,line);
-      until eof(examplesFile);
-      processExample;
-      close(examplesFile);
-      //---------------------------------------------------------------------:Read examples
-    end;
-
-  PROCEDURE finalizeBuiltInDocs;
-    VAR i:longint;
-        n: T_namespace;
-    begin
-      for n:=low(T_namespace) to high(T_namespace) do begin
-        for i:=0 to length(builtInDoc[n])-1 do builtInDoc[n][i].destroy;
-        setLength(builtInDoc[n],0);
-      end;
     end;
 
   PROCEDURE writeUserPackageDocumentations(VAR outFile:text);
@@ -321,8 +349,8 @@ PROCEDURE makeHtmlFromTemplate();
       VAR files:T_arrayOfString;
           i:longint;
       begin
-        CreateDir(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
-        files:=find(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true,false);
+        CreateDir(htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
+        files:=find(htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true,false);
         for i:=0 to length(files)-1 do DeleteFile(files[i]);
       end;
 
@@ -351,14 +379,15 @@ PROCEDURE makeHtmlFromTemplate();
     begin
       writeln(outFile, '<div align="right"><hr></div><br><div>');
       for n:=low(T_namespace) to high(T_namespace) do for i:=0 to length(builtInDoc[n])-1 do
-        writeln(outFile, '<a href="#', builtInDoc[n][i].id, '">', builtInDoc[n][i].id, '</a> &nbsp; ');
+        writeln(outFile, '<a href="#', builtInDoc[n][i]^.id, '">', builtInDoc[n][i]^.id, '</a> &nbsp; ');
       writeln(outFile, '</div><br><div align="right"><hr></div>');
       for n:=low(T_namespace) to high(T_namespace) do
         writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
 
       for n:=low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
-        for i:=0 to length(builtInDoc[n])-1 do write(outFile,builtInDoc[n][i].getHtml);
+        for i:=0 to length(builtInDoc[n])-1 do writeln(outFile, '<a href="#', builtInDoc[n][i]^.id, '">', builtInDoc[n][i]^.id, '</a> &nbsp; ');
+        for i:=0 to length(builtInDoc[n])-1 do write(outFile,builtInDoc[n][i]^.getHtml);
       end;
     end;
 
@@ -399,7 +428,7 @@ PROCEDURE makeHtmlFromTemplate();
 
   FUNCTION builtInReady:boolean;
     begin
-      result:=fileExists(htmlRoot+DirectorySeparator+BUILTIN_FILE_NAME);
+      result:=fileExists(htmlRoot.value+DirectorySeparator+BUILTIN_FILE_NAME);
     end;
 
   FUNCTION handleCommand(cmd:ansistring):boolean;
@@ -432,7 +461,7 @@ PROCEDURE makeHtmlFromTemplate();
         with outFile do begin
           if isOpen then close(handle);
           if not((cmdParam=BUILTIN_FILE_NAME) and builtInReady) then begin
-            assign(handle,htmlRoot+'\'+cmdParam);
+            assign(handle,htmlRoot.value+'\'+cmdParam);
             rewrite(handle);
             isOpen:=true;
           end else isOpen:=false;
@@ -472,7 +501,7 @@ PROCEDURE makeHtmlFromTemplate();
     setLength(includes,0);
     context.mode:=none;
 
-    assign(templateFile, htmlRoot+TEMPLATE_NAME_SUFFIX);
+    assign(templateFile, htmlRoot.value+TEMPLATE_NAME_SUFFIX);
     reset(templateFile);
     while not(eof(templateFile)) do begin
       readln(templateFile, txt);
@@ -487,16 +516,34 @@ PROCEDURE makeHtmlFromTemplate();
   end;
 
 
-PROCEDURE locateHtml;
+FUNCTION locateHtml:string;
   CONST primary = 'doc';
     VAR secondary:string;
   begin
     secondary:=extractFilePath(paramStr(0))+DirectorySeparator+primary;
-    if DirectoryExists(primary) then htmlRoot:=primary
-    else if DirectoryExists(secondary) then htmlRoot:=secondary
-    else htmlRoot:='';
+    if DirectoryExists(primary) then result:=primary
+    else if DirectoryExists(secondary) then result:=secondary
+    else result:='';
+  end;
+
+PROCEDURE disposeFunctionDocMap;
+  VAR keys:T_arrayOfString;
+      doc:P_intrinsicFunctionDocumentation;
+      i:longint;
+  begin
+    keys:=functionDocMap.keySet;
+    for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
+      doc:=functionDocMap.get(keys[i]);
+      dispose(doc,destroy);
+    end;
+    functionDocMap.destroy;
   end;
 
 INITIALIZATION
-  locateHtml;
+  htmlRoot.create(@locateHtml,nil);
+  functionDocMap.create();
+FINALIZATION
+  functionDocMap.destroy;
+  htmlRoot.destroy;
+
 end.

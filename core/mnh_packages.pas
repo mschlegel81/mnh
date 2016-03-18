@@ -3,7 +3,8 @@ INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
      EpikTimer,
-     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_doc, mnh_html, //even more specific
+     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
+     {$ifdef fullVersion}mnh_doc,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_regex;
 
 {$define include_interface}
@@ -45,7 +46,7 @@ TYPE
       FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
-      FUNCTION getDoc:P_userPackageDocumentation;
+      {$ifdef fullVersion}FUNCTION getDoc:P_userPackageDocumentation; {$endif}
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; VAR adapters:T_adapters):T_packageReference;
@@ -57,7 +58,9 @@ TYPE
 PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
 PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
 PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
+{$ifdef fullVersion}
 PROCEDURE findAndDocumentAllPackages;
+{$endif}
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
@@ -169,7 +172,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
           tmp:=extractFileName(simpleMessage);
-          CopyFile(simpleMessage,htmlRoot+DirectorySeparator+tmp);
+          CopyFile(simpleMessage,htmlRoot.value+DirectorySeparator+tmp);
           append(result,'Image created: '+imageTag(tmp));
         end;
         {$endif}
@@ -899,6 +902,7 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
     setLength(ruleList,0);
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_package.getDoc:P_userPackageDocumentation;
   VAR ruleList:array of P_rule;
       i:longint;
@@ -912,6 +916,7 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
     setLength(ruleList,0);
     for i:=0 to length(packageUses)-1 do result^.addUses(expandFileName(packageUses[i].path));
   end;
+{$endif}
 
 PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);
   VAR mainRule:P_rule;
@@ -990,6 +995,7 @@ PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
     silentContext.destroy;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE findAndDocumentAllPackages;
   VAR sourceNames:T_arrayOfString;
       i:longint;
@@ -1011,6 +1017,7 @@ PROCEDURE findAndDocumentAllPackages;
     context.destroy;
     nullAdapter.clearErrors;
   end;
+{$endif}
 
 FUNCTION initTimer:TEpikTimer;
   begin
@@ -1043,7 +1050,9 @@ INITIALIZATION
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   evaluateCompatorCallback:=@evaluateComparator;
   //callbacks in doc
+  {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
+  {$endif}
   //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
   //worker thread setup

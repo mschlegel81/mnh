@@ -5,11 +5,11 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
-  Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids, PopupNotifier,
+  Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
   SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
-  mnh_packages,closeDialog,askDialog,SynEditKeyCmds,
+  mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm;
 
@@ -88,7 +88,6 @@ TYPE
     miIncFontSize: TMenuItem;
     mi_settings: TMenuItem;
     PageControl: TPageControl;
-    PopupNotifier1: TPopupNotifier;
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     SynCompletion: TSynCompletion;
@@ -110,6 +109,7 @@ TYPE
     miDebugCancel: TToolButton;
     UpdateTimeTimer: TTimer;
     variableEdit: TSynEdit;
+    helpPopupMemo: TSynMemo;
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
@@ -207,13 +207,13 @@ TYPE
     PROCEDURE processFileHistory;
     FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
     PROCEDURE positionHelpNotifier;
-    PROCEDURE setUnderCursor(CONST wordText:ansistring);
+    PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker:boolean);
     PROCEDURE ensureWordsInEditorForCompletion;
 
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
     PROCEDURE doStartEvaluation;
-    PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
+    PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
     FUNCTION _doSaveAs_(CONST index:longint):boolean;
@@ -388,7 +388,7 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
                                  else inc(inputHeightSpeed);
         end;
         PageControl.height:=PageControl.height+inputHeightSpeed;
-        if PopupNotifier1.visible then positionHelpNotifier;
+        if helpPopupMemo.visible then positionHelpNotifier;
         autosizeToggleBox.top:=OutputEdit.top;
         result:=true;
       end;
@@ -396,27 +396,37 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
   end;
 
 PROCEDURE TMnhForm.positionHelpNotifier;
+  VAR maxLineLength:longint=0;
+      i:longint;
+      p:TPoint;
   begin
-    PopupNotifier1.ShowAtPos(Left+PageControl.width-PopupNotifier1.vNotifierForm.width,
-                             ClientToScreen(point(Left,OutputEdit.top)).y);
-    if (PageControl.ActivePageIndex>=0) then inputRec[PageControl.ActivePageIndex].editor.SetFocus;
+    p.x:=inputRec[PageControl.ActivePageIndex].editor.CaretXPix;
+    p.y:=inputRec[PageControl.ActivePageIndex].editor.CaretYPix
+        +inputRec[PageControl.ActivePageIndex].editor.LineHeight;
+    p:=inputRec[PageControl.ActivePageIndex].editor.ClientToParent(p,self);
+
+    helpPopupMemo.visible:=true;
+    helpPopupMemo.Left:=p.x;
+    helpPopupMemo.top :=p.y;
+    for i:=0 to helpPopupMemo.lines.count-1 do if length(helpPopupMemo.lines[i])>maxLineLength then maxLineLength:=length(helpPopupMemo.lines[i]);
+    helpPopupMemo.width:=helpPopupMemo.CharWidth*(maxLineLength+1);
+    helpPopupMemo.height:=helpPopupMemo.LineHeight*(helpPopupMemo.lines.count+1);
+    if helpPopupMemo.Left>Panel1.width-helpPopupMemo.width then helpPopupMemo.Left:=Panel1.width-helpPopupMemo.width;
+    if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker:boolean);
   VAR i:longint;
   begin
     if not(isIdentifier(wordText,true)) then exit;
-    outputHighlighter.setMarkedWord(wordText);
-    for i:=0 to 9 do with inputRec[i] do if highlighter.setMarkedWord(wordText) then editor.Repaint;
-    if miHelp.Checked then ad_explainIdentifier(wordText,underCursor)
-                      else begin
-                        underCursor.tokenText:=wordText;
-                        underCursor.tokenExplanation:='';
-                      end;
-    if (underCursor.tokenText<>'') and (underCursor.tokenText<>PopupNotifier1.title) and (miHelp.Checked) then begin
-      PopupNotifier1.title:=underCursor.tokenText;
-      PopupNotifier1.text:=underCursor.tokenExplanation;
-      if not(PopupNotifier1.visible) then positionHelpNotifier;
+    if updateMarker then begin
+      outputHighlighter.setMarkedWord(wordText);
+      for i:=0 to 9 do with inputRec[i] do if highlighter.setMarkedWord(wordText) then editor.Repaint;
+    end;
+    if miHelp.Checked then begin
+      ad_explainIdentifier(wordText,underCursor);
+      helpPopupMemo.text:=underCursor.tokenExplanation;
+      positionHelpNotifier;
     end;
   end;
 
@@ -464,15 +474,14 @@ PROCEDURE TMnhForm.doStartEvaluation;
     end else stepper.setSignal(ds_run);
   end;
 
-PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint;
-  CONST doJump: boolean);
+PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
   VAR wordUnderCursor:string;
       newCaret:TPoint;
       pageIdx:longint;
   begin
     with inputRec[PageControl.ActivePageIndex] do begin
       wordUnderCursor:=editor.GetWordAtRowCol(caret);
-      setUnderCursor(wordUnderCursor);
+      setUnderCursor(wordUnderCursor,updateMarker);
       if not(doJump) then exit;
       if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
       if (underCursor.tokenText<>wordUnderCursor) or
@@ -494,7 +503,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boole
       pageIdx:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
-    setUnderCursor(OutputEdit.GetWordAtRowCol(caret));
+    setUnderCursor(OutputEdit.GetWordAtRowCol(caret),true);
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
     if not(doJump) then exit;
     if (loc.fileName='') or (loc.fileName='?') then exit;
@@ -569,6 +578,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     doNotCheckFileBefore:=now+ONE_SECOND;
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
+    helpPopupMemo.highlighter:=outputHighlighter;
     OutputEdit.ClearAll;
     debugHighlighter:=TSynMnhSyn.create(nil,msf_debugger);
     debugEdit.highlighter:=debugHighlighter;
@@ -661,7 +671,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
       formPosition.isFullscreen:=(WindowState=wsMaximized);
       SettingsForm.mainFormPosition:=formPosition;
     end else plotForm.pullPlotSettingsToGui();
-    if PopupNotifier1.visible then positionHelpNotifier;
+    if helpPopupMemo.visible then positionHelpNotifier;
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
@@ -730,7 +740,9 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
 PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
   Shift: TShiftState);
   begin
-    if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift)) then inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift);
+    if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
+    then inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
+    else inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,false,false);
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
@@ -738,7 +750,7 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
   begin
     point.x:=x;
     point.y:=y;
-    inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.PixelsToRowColumn(point),ssCtrl in Shift);
+    inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.PixelsToRowColumn(point),ssCtrl in Shift,true);
   end;
 
 PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
@@ -962,16 +974,19 @@ PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
-begin
-  miHelp.Checked:=not(miHelp.Checked);
-  if not(miHelp.Checked) then PopupNotifier1.visible:=false
-                         else if underCursor.tokenText<>'' then setUnderCursor(underCursor.tokenText);
-end;
+  begin
+    miHelp.Checked:=not(miHelp.Checked);
+    if not(miHelp.Checked) then helpPopupMemo.visible:=false
+                           else begin
+                             helpPopupMemo.visible:=true;
+                             inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,false,false);
+                           end;
+  end;
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
     findAndDocumentAllPackages;
-    OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
+    OpenURL('file:///'+replaceAll(expandFileName(htmlRoot.value+'\index.html'),'\','/'));
   end;
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
@@ -1256,7 +1271,7 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
 
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
-    if PopupNotifier1.visible then positionHelpNotifier;
+    if helpPopupMemo.visible then positionHelpNotifier;
     autosizeToggleBox.top:=OutputEdit.top;
     autosizeToggleBox.Checked:=false;
   end;
@@ -1435,6 +1450,9 @@ PROCEDURE TMnhForm.processSettings;
     OutputEdit  .Font:=InputEdit0.Font;
     debugEdit   .Font:=InputEdit0.Font;
     variableEdit.Font:=InputEdit0.Font;
+
+    helpPopupMemo.Font:=InputEdit0.Font;
+    helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
   end;
 
 PROCEDURE TMnhForm.processFileHistory;

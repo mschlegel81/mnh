@@ -1,7 +1,7 @@
 UNIT mnh_evalThread;
 INTERFACE
 USES sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
-     myStringUtil,mnh_tokens,mnh_contexts;
+     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -190,16 +190,17 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     token.define(C_nilTokenLocation,id,tt_identifier,environment.mainPackage);
     environment.mainPackage^.resolveRuleId(token,nil);
     case token.tokType of
-      tt_intrinsicRule: begin
+      tt_intrinsicRule,tt_intrinsicRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+replaceAll(intrinsicRuleExplanationMap.get(id),'#',C_lineBreakChar);
+        ensureBuiltinDocExamples;
+        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+functionDocMap.get(id)^.getPlainText(C_lineBreakChar);
       end;
-      tt_importedUserRule:begin
+      tt_importedUserRule,tt_importedUserRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(token.data)^.getLocationOfDeclaration;
       end;
-      tt_localUserRule: begin
+      tt_localUserRule,tt_localUserRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(token.data)^.getLocationOfDeclaration;

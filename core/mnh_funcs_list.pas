@@ -335,9 +335,9 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
   registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
   registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
-  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'put(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
-  registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'get(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
-                                            'get(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
+  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'mapPut(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
+  registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'mapGet(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
+                                            'mapGet(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
   registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
   registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
 end.

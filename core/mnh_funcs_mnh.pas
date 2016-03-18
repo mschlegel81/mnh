@@ -153,7 +153,7 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      keys:=intrinsicRuleExplanationMap.keySet;
+      keys:=intrinsicRuleMap.keySet;
       result:=newListLiteral;
       for i:=0 to length(keys)-1 do P_listLiteral(result)^.appendString(keys[i]);
       setLength(keys,0);

@@ -14,13 +14,15 @@ VAR fileOrCommandToInterpret:ansistring='';
 //---------------:by command line parameters
 
 FUNCTION parseCmdLine:T_tokenLocation;
-  {$ifdef fullVersion}
   PROCEDURE makeAndShowDoc;
     begin
+      {$ifdef fullVersion}
       findAndDocumentAllPackages;
-      OpenURL('file:///'+replaceAll(expandFileName(htmlRoot+'\index.html'),'\','/'));
+      OpenURL('file:///'+replaceAll(expandFileName(htmlRoot.value+'\index.html'),'\','/'));
+      {$else}
+      writeln('Generation of the documentation is only implemented in the full version.');
+      {$endif}
     end;
-  {$endif}
 
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
@@ -55,7 +57,9 @@ FUNCTION parseCmdLine:T_tokenLocation;
       consoleAdapters.printOut('  -version          show version info and exit');
       consoleAdapters.printOut('  -codeHash         show codeHash and exit');
       consoleAdapters.printOut('  -cmd              directly execute the following command');
+      {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
+      {$endif}
       consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
       {$ifdef fullVersion}
@@ -112,9 +116,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
                                                                      {$I %FPCTARGET%}); {$include code_hash.inc} halt; end
-        {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
-        {$endif}
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
           if (minEL<0) or (minEL>5) then begin

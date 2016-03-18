@@ -1,13 +1,12 @@
 UNIT mnh_funcs;
 INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
-     myStringUtil,Classes,mySys;
+     myStringUtil,Classes,mySys{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 
 VAR
   intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
-  intrinsicRuleExplanationMap:specialize G_stringKeyMap<ansistring>;
   print_cs:system.TRTLCriticalSection;
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
@@ -16,17 +15,11 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
 IMPLEMENTATION
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
-  PROCEDURE registerImp(CONST regName:ansistring);
-    VAR oldExplanation:ansistring;
-    begin
-      intrinsicRuleMap.put(regName,ptr);
-      if (explanation<>'') or not(intrinsicRuleExplanationMap.containsKey(regName,oldExplanation))
-                             then intrinsicRuleExplanationMap.put        (regName,explanation);
-    end;
-
   begin
-    if not(fullNameOnly) then registerImp(name);
-    registerImp(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name);
+    if not(fullNameOnly) then
+    intrinsicRuleMap.put(                                                    name,ptr);
+    intrinsicRuleMap.put(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,ptr);
+    {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
@@ -67,12 +60,10 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
 INITIALIZATION
   intrinsicRuleMap.create;
-  intrinsicRuleExplanationMap.create;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   system.initCriticalSection(print_cs);
 FINALIZATION
   intrinsicRuleMap.destroy;
-  intrinsicRuleExplanationMap.destroy;
   system.doneCriticalSection(print_cs);
 end.
