@@ -65,10 +65,8 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
   end;
 
 PROCEDURE ensureBuiltinDocExamples;
-  CONST EXAMPLES_NAME_SUFFIX='\examples.txt';
-  VAR examplesFile:text;
-      line:ansistring;
-      code:T_arrayOfString;
+  {$include res_examples.inc}
+  VAR code:T_arrayOfString;
       i:longint;
       keys:T_arrayOfString;
       allDocs:array of P_intrinsicFunctionDocumentation;
@@ -94,17 +92,11 @@ PROCEDURE ensureBuiltinDocExamples;
     end;
 
     //Read examples:---------------------------------------------------------------------
-    assign(examplesFile, htmlRoot.value+EXAMPLES_NAME_SUFFIX);
-    reset(examplesFile);
     setLength(code,0);
-    repeat
-      readln(examplesFile,line);
-      if trim(line)=''
-      then processExample
-      else append(code,line);
-    until eof(examplesFile);
+    for i:=0 to length(doc_examples_txt)-1 do
+    if trim(doc_examples_txt[i])='' then processExample
+                                    else append(code,doc_examples_txt[i]);
     processExample;
-    close(examplesFile);
     //---------------------------------------------------------------------:Read examples
     functionDocExamplesReady:=true;
   end;
@@ -391,15 +383,12 @@ PROCEDURE makeHtmlFromTemplate();
       end;
     end;
 
-  CONST TEMPLATE_NAME_SUFFIX='\html_template.txt';
   TYPE T_include=record
          includeTag:ansistring;
          content:T_arrayOfString;
        end;
 
-  VAR templateFile:text;
-      txt:ansistring;
-      outFile:record
+  VAR outFile:record
         handle:text;
         isOpen:boolean;
       end;
@@ -494,24 +483,21 @@ PROCEDURE makeHtmlFromTemplate();
       end;
       result:=false;
     end;
-
+  {$include res_html_template.inc}
+  VAR i:longint;
   begin
     if not(builtInReady) then prepareBuiltInDocs;
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
 
-    assign(templateFile, htmlRoot.value+TEMPLATE_NAME_SUFFIX);
-    reset(templateFile);
-    while not(eof(templateFile)) do begin
-      readln(templateFile, txt);
+    for i:=0 to length(doc_html_template_txt)-1 do begin
       case context.mode of
-        none:            if not(handleCommand(txt)) and outFile.isOpen then writeln(outFile.handle,txt);
-        beautifying:     if not(contextEnds(txt))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(txt,blobLevel));
-        definingInclude: if not(contextEnds(txt))   then append(context.include.content,txt);
+        none:            if not(handleCommand(doc_html_template_txt[i])) and outFile.isOpen then writeln(outFile.handle,doc_html_template_txt[i]);
+        beautifying:     if not(contextEnds(doc_html_template_txt[i]))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(doc_html_template_txt[i],blobLevel));
+        definingInclude: if not(contextEnds(doc_html_template_txt[i]))   then append(context.include.content,doc_html_template_txt[i]);
       end;
     end;
-    close(templateFile);
     with outFile do if isOpen then close(handle);
   end;
 

@@ -1,5 +1,12 @@
 USE regTest, hash, shorten;
 
+private templateToInc(inFile,outFile<>inFile)->begin
+  local inLines:="'"&inFile.fileLines.replace("'","''")&"'";
+  local outText:=('CONST '&clean(inFile,['a'..'z','A'..'Z'],'_')&': array[0..'&(size(inLines)-1)&'] of string=(')&
+    inLines.join(",\n")&');';
+  writeFile(outFile,outText);
+end;
+
 private tryPack(filename)->begin
   local oldContents:=fileContents(filename);
   local newContents:=shortenSilently(oldContents);
@@ -17,8 +24,6 @@ private ensureInstall->fileExists('install.mnh') ? void : begin
     'doTests.bat'|
     'ensureMnhFileAssociations.mnh'|
     'ensureNotepad++Highlighting.mnh'|
-    'doc/html_template.txt'|
-    'doc/examples.txt'|
     files('demos/*.mnh')|
           'demos/inputs/inputs.mnh'|
     files('packages/*.mnh'))
@@ -35,6 +40,9 @@ relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
                                
 memoized private 
 currentCodeHash->begin
+  //convert here to ensure these files are considered in code hash calculation
+  templateToInc('doc/examples.txt','core/res_examples.inc');
+  templateToInc('doc/html_template.txt','core/res_html_template.inc');
   //update code hash
   local result:=relevantFiles.pEach(filename,hash(fileContents(filename)),+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
