@@ -541,6 +541,7 @@ PROCEDURE disposeFunctionDocMap;
 
 INITIALIZATION
   htmlRoot.create(@locateHtml,nil);
+  htmlRoot.value;
   functionDocMap.create();
 FINALIZATION
   functionDocMap.destroy;

@@ -185,7 +185,7 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
 
   private
-    outputHighlighter,debugHighlighter:TSynMnhSyn;
+    outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
     underCursor:T_tokenInfo;
     settingsReady:boolean;
     evaluation:record
@@ -388,7 +388,6 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
                                  else inc(inputHeightSpeed);
         end;
         PageControl.height:=PageControl.height+inputHeightSpeed;
-        if helpPopupMemo.visible then positionHelpNotifier;
         autosizeToggleBox.top:=OutputEdit.top;
         result:=true;
       end;
@@ -409,8 +408,13 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     helpPopupMemo.Left:=p.x;
     helpPopupMemo.top :=p.y;
     for i:=0 to helpPopupMemo.lines.count-1 do if length(helpPopupMemo.lines[i])>maxLineLength then maxLineLength:=length(helpPopupMemo.lines[i]);
-    helpPopupMemo.width:=helpPopupMemo.CharWidth*(maxLineLength+1);
-    helpPopupMemo.height:=helpPopupMemo.LineHeight*(helpPopupMemo.lines.count+1);
+    if (maxLineLength=0) then begin
+      helpPopupMemo.width:=0;
+      helpPopupMemo.height:=0;
+    end else begin
+      helpPopupMemo.width:=helpPopupMemo.CharWidth*(maxLineLength+1);
+      helpPopupMemo.height:=helpPopupMemo.LineHeight*(helpPopupMemo.lines.count+1);
+    end;
     if helpPopupMemo.Left>Panel1.width-helpPopupMemo.width then helpPopupMemo.Left:=Panel1.width-helpPopupMemo.width;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
@@ -418,7 +422,10 @@ PROCEDURE TMnhForm.positionHelpNotifier;
 PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker:boolean);
   VAR i:longint;
   begin
-    if not(isIdentifier(wordText,true)) then exit;
+    if not(isIdentifier(wordText,true)) then begin
+      if miHelp.Checked then positionHelpNotifier;
+      exit;
+    end;
     if updateMarker then begin
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to 9 do with inputRec[i] do if highlighter.setMarkedWord(wordText) then editor.Repaint;
@@ -578,7 +585,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     doNotCheckFileBefore:=now+ONE_SECOND;
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
     OutputEdit.highlighter:=outputHighlighter;
-    helpPopupMemo.highlighter:=outputHighlighter;
+    helpHighlighter:=TSynMnhSyn.create(nil,msf_guessing);
+    helpPopupMemo.highlighter:=helpHighlighter;
     OutputEdit.ClearAll;
     debugHighlighter:=TSynMnhSyn.create(nil,msf_debugger);
     debugEdit.highlighter:=debugHighlighter;

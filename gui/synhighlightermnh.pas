@@ -26,7 +26,7 @@ TYPE
     tkError,
     tkHighlightedItem,
     tkHashVariable);
-  T_mnhSynFlavour=(msf_input,msf_output,msf_debugger);
+  T_mnhSynFlavour=(msf_input,msf_output,msf_debugger,msf_guessing);
 
 TYPE
   { TSynMnhSyn }
@@ -228,12 +228,18 @@ PROCEDURE TSynMnhSyn.next;
     fTokenId := tkDefault;
     fTokenPos := run;
     if (run = 0) then begin
-      if flavour=msf_output then begin// in [msf_output,msf_debugger] and
+      if flavour in [msf_output,msf_guessing] then begin
         specialLineCase:=mt_clearConsole;
         i:=-1;
         for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
           specialLineCase:=lc;
           i:=length(C_errorLevelTxt[lc]);
+        end;
+        if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
+          i:=0;
+          while (fLine[i]<>#0) and (fLine[i]<>';') do inc(i);
+          if fLine[i]=';' then specialLineCase:=mt_echo_input;
+          i:=-1;
         end;
         if i>=0 then run:=i+1;
         if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError

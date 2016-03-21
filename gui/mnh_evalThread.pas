@@ -193,7 +193,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
       tt_intrinsicRule,tt_intrinsicRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         ensureBuiltinDocExamples;
-        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+functionDocMap.get(id)^.getPlainText(C_lineBreakChar);
+        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+functionDocMap.get(id)^.getPlainText(C_lineBreakChar)+';';
       end;
       tt_importedUserRule,tt_importedUserRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
