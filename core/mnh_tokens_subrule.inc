@@ -380,7 +380,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       i:longint;
       remaining:P_listLiteral=nil;
 
-  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; //inline;
+  FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; inline;
     VAR L:P_literal;
     begin
       if index>=0 then begin

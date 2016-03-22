@@ -1598,7 +1598,19 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack_push;
         end;
         tt_list_constructor: stack_push;
-        tt_identifier,tt_identifier_pon: begin
+        tt_identifier: begin
+          newLit:=context.getVariableValue(first^.txt);
+          if newLit<>nil then begin
+            first^.data:=newLit;
+            first^.tokType:=tt_literal;
+            didSubstitution:=true;
+          end else begin
+            if first^.data=nil then first^.data:=guessPackageForToken(first^);
+            P_package(first^.data)^.resolveRuleId(first^,context.adapters);
+            didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
+          end;
+        end;
+        tt_identifier_pon: begin
           if first^.data=nil then first^.data:=guessPackageForToken(first^);
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
