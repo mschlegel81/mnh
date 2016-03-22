@@ -57,11 +57,19 @@ FUNCTION print_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     result:=newVoidLiteral;
   end;
 
+FUNCTION type_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1)
+    then exit(newStringLiteral(params^.value(0)^.typeString))
+    else exit(newStringLiteral(params^.parameterListTypeString));
+  end;
 
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'type',@type_imp,'type(x);#Prints out the type of x');
   system.initCriticalSection(print_cs);
 FINALIZATION
   intrinsicRuleMap.destroy;

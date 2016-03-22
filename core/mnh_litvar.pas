@@ -10,6 +10,8 @@ TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
 
+  { T_literal }
+
   T_literal = object
   private
     numberOfReferences: longint;
@@ -28,6 +30,7 @@ TYPE
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
+    FUNCTION typeString:string; virtual;
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
@@ -195,6 +198,7 @@ TYPE
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
+    FUNCTION typeString:string; virtual;
   end;
 
   GENERIC G_literalKeyMap<VALUE_TYPE>=object
@@ -218,9 +222,6 @@ TYPE
   T_literalKeyLiteralValueMap=specialize G_literalKeyMap<P_literal>;
 
   P_listLiteral = ^T_listLiteral;
-
-  { T_listLiteral }
-
   T_listLiteral = object(T_literal)
   private
     element: array of P_literal;
@@ -278,6 +279,8 @@ TYPE
     FUNCTION contains(CONST other: P_literal): boolean;
     FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_listLiteral;
+    FUNCTION typeString:string; virtual;
+    FUNCTION parameterListTypeString:string;
   end;
 
   P_namedVariable=^T_namedVariable;
@@ -340,6 +343,7 @@ TYPE
 VAR
   disposeSubruleCallback: T_disposeSubruleCallback;
   subruleToStringCallback: T_pointerToStringCallback;
+  subruleToArityCallback: T_pointerToStringCallback;
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
 
@@ -632,20 +636,20 @@ FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
   end;
 
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init; begin numberOfReferences:=1; end;
+constructor T_literal.init; begin numberOfReferences:=1; end;
 
-PROCEDURE T_literal.rereference;
+procedure T_literal.rereference;
   begin
     InterLockedIncrement(numberOfReferences);
   end;
 
-FUNCTION T_literal.unreference: longint;
+function T_literal.unreference: longint;
   begin
     interlockedDecrement(numberOfReferences);
     result:=numberOfReferences;
   end;
 
-FUNCTION T_literal.getReferenceCount: longint;
+function T_literal.getReferenceCount: longint;
   begin
     result:=numberOfReferences;
   end;
@@ -671,7 +675,7 @@ CONSTRUCTOR T_listLiteral.create;
   end;
 //=================================================================:CONSTRUCTORS
 //DESTRUCTORS:==================================================================
-DESTRUCTOR T_literal.destroy; begin end;
+destructor T_literal.destroy; begin end;
 
 DESTRUCTOR T_stringLiteral.destroy; begin val:=''; end;
 
@@ -691,7 +695,7 @@ DESTRUCTOR T_listLiteral.destroy;
   end;
 //==================================================================:DESTRUCTORS
 //?.literalType:================================================================
-FUNCTION T_literal          .literalType: T_literalType; begin result:=lt_error;      end;
+function T_literal.literalType: T_literalType; begin result:=lt_error;      end;
 FUNCTION T_scalarLiteral    .literalType: T_literalType; begin result:=lt_error;      end;
 FUNCTION T_voidLiteral      .literalType: T_literalType; begin result:=lt_void;       end;
 FUNCTION T_boolLiteral      .literalType: T_literalType; begin result:=lt_boolean;    end;
@@ -764,7 +768,7 @@ FUNCTION T_listLiteral.leading:P_listLiteral;
 FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
   begin result:=head(length(element)-trailSize); end;
 //?.toString:===================================================================
-FUNCTION T_literal          .toString: ansistring; begin result:='<ERR>';                      end;
+function T_literal.toString: ansistring; begin result:='<ERR>';                      end;
 FUNCTION T_voidLiteral      .toString: ansistring; begin result:=C_voidText;                   end;
 FUNCTION T_boolLiteral      .toString: ansistring; begin result:=C_boolText[val];              end;
 FUNCTION T_intLiteral       .toString: ansistring; begin result:=intToStr(val);                end;
@@ -809,7 +813,7 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     else result:='('+result+',';
   end;
 //?.toShorterString:============================================================
-FUNCTION T_literal.toShorterString: ansistring; begin result:=toString; end;
+function T_literal.toShorterString: ansistring; begin result:=toString; end;
 
 FUNCTION T_stringLiteral.toShorterString: ansistring;
   begin
@@ -836,7 +840,7 @@ FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
 //=================================================================:?.stringForm
 //?.isInRelationTo:=============================================================
-FUNCTION T_literal.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
+function T_literal.isInRelationTo(const relation: T_tokenType; const other: P_literal): boolean;
   begin
     result:=false;
   end;
@@ -932,7 +936,7 @@ FUNCTION T_listLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
   end;
 //=============================================================:?.isInRelationTo
 //?.negate:=====================================================================
-FUNCTION T_literal.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
+function T_literal.negate(const minusLocation: T_tokenLocation; var adapters: T_adapters): P_literal;
   begin result:=@self; rereference; end;
 FUNCTION T_stringLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal;
   begin result:=newErrorLiteralRaising('Cannot negate string.', minusLocation,adapters); end;
@@ -953,6 +957,29 @@ FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters
     result:=res;
   end;
 //=====================================================================:?.negate
+function T_literal.typeString: string;
+  begin
+    result:=C_typeString[literalType];
+  end;
+
+FUNCTION T_expressionLiteral.typeString: string;
+  begin
+    result:=C_typeString[literalType]+'('+subruleToArityCallback(val)+')';
+  end;
+
+FUNCTION T_listLiteral.typeString:string;
+  begin
+    result:=C_typeString[literalType]+'('+IntToStr(length(element))+')';
+  end;
+
+FUNCTION T_listLiteral.parameterListTypeString:string;
+  VAR i:longint;
+  begin
+    if length(element)<=0 then exit('()');
+    result:='('+element[0]^.typeString;
+    for i:=1 to length(element)-1 do result:=result+', '+element[i]^.typeString;
+    result:=result+')';
+  end;
 //?.operate:====================================================================
 FUNCTION T_scalarLiteral.opAnd      (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorAnd      ,tokenLocation); end;
 FUNCTION T_scalarLiteral.opOr       (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorOr       ,tokenLocation); end;
@@ -1303,7 +1330,7 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 
 //====================================================================:?.operate
 //?.hash:=======================================================================
-FUNCTION T_literal    .hash: T_hashInt; begin result:=$ffffffff; end;
+function T_literal.hash: T_hashInt; begin result:=$ffffffff; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
 FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longint(val); end;
 FUNCTION T_realLiteral.hash: T_hashInt;
@@ -1349,7 +1376,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   end;
 //=======================================================================:?.hash
 //?.equals:=====================================================================
-FUNCTION T_literal.equals(CONST other: P_literal): boolean;
+function T_literal.equals(const other: P_literal): boolean;
   begin result:=(@self = other);  end;
 
 FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
@@ -1501,7 +1528,7 @@ FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_t
 
 //=====================================================================:?.equals
 //?.leqForSorting:==============================================================
-FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
+function T_literal.leqForSorting(const other: P_literal): boolean;
   begin
     result:=literalType<=other^.literalType;
   end;

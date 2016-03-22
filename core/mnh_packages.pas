@@ -1047,6 +1047,7 @@ INITIALIZATION
   //callbacks in mnh_litvar:
   disposeSubruleCallback :=@disposeSubruleImpl;
   subruleToStringCallback:=@subruleToStringImpl;
+  subruleToArityCallback:=@subruleToArityImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   evaluateCompatorCallback:=@evaluateComparator;
   //callbacks in doc

@@ -566,6 +566,12 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
+FUNCTION subruleToArityImpl(CONST p:pointer):string;
+  begin
+    result:=IntToStr(P_subrule(p)^.arity);
+  end;
+
+
 FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
