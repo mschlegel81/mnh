@@ -21,7 +21,6 @@ end;
 
 private ensureInstall->fileExists('install.mnh') ? void : begin
   writeFileLines('install.mnh','main->begin'|(
-    'doTests.bat'|
     'ensureMnhFileAssociations.mnh'|
     'ensureNotepad++Highlighting.mnh'|
     files('demos/*.mnh')|
