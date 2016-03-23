@@ -8,7 +8,8 @@ VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
-    parameters:T_arrayOfString;
+    mnhParameters:T_arrayOfString;
+    mainParameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
     directExecutionMode:boolean=false;
 //---------------:by command line parameters
@@ -78,7 +79,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         halt;
       end;
       context.createNormalContext(P_adapters(@consoleAdapters));
-      callMainInMain(parameters,context);
+      callMainInMain(mainParameters,context);
       context.destroy;
       halt;
     end;
@@ -94,23 +95,35 @@ FUNCTION parseCmdLine:T_tokenLocation;
       halt;
     end;
 
+  PROCEDURE addParameter(VAR list:T_arrayOfString; CONST index:longint);
+    begin
+      setLength(list,length(list)+1);
+      list[length(list)-1]:=paramStr(index);
+    end;
+
   VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       i    :longint;
       minEL:longint=2;
   begin
     result:=C_nilTokenLocation;
-    setLength(parameters,0);
+    setLength(mainParameters,0);
+    setLength(mnhParameters,0);
     for i:=1 to paramCount do begin
     if (fileOrCommandToInterpret='') or directExecutionMode then begin
-        if      paramStr(i)='+echo' then echo:=e_forcedOn
-        else if paramStr(i)='-echo' then echo:=e_forcedOff
-        else if paramStr(i)='+time' then time:=t_forcedOn
-        else if paramStr(i)='-time' then time:=t_forcedOff
-        else if paramStr(i)='-det'  then randseed:=0
-        else if paramStr(i)='-cmd'  then directExecutionMode:=true
-        else if startsWith(paramStr(i),'-out:') then addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5),false)
+        if      paramStr(i)='+echo' then begin echo:=e_forcedOn;           addParameter(mnhParameters,i); end
+        else if paramStr(i)='-echo' then begin echo:=e_forcedOff;          addParameter(mnhParameters,i); end
+        else if paramStr(i)='+time' then begin time:=t_forcedOn;           addParameter(mnhParameters,i); end
+        else if paramStr(i)='-time' then begin time:=t_forcedOff;          addParameter(mnhParameters,i); end
+        else if paramStr(i)='-det'  then begin randseed:=0;                addParameter(mnhParameters,i); end
+        else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
+        else if startsWith(paramStr(i),'-out:') then begin
+          addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5),false);
+          addParameter(mnhParameters,i);
+        end
+        {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-open@') then result:=guessLocationFromString(paramStr(i),true)
+        {$endif}
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
@@ -119,12 +132,13 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
+          addParameter(mnhParameters,i);
           if (minEL<0) or (minEL>5) then begin
             writeln('Invalid minimum error level given!');
             writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
             halt;
-          end;;
+          end;
         end else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
         end else begin
@@ -135,11 +149,9 @@ FUNCTION parseCmdLine:T_tokenLocation;
             halt;
           end;
         end;
-      end else begin
-        setLength(parameters,length(parameters)+1);
-        parameters[length(parameters)-1]:=paramStr(i);
-      end;
+      end else addParameter(mainParameters,i);
     end;
+    setMnhParameters(mnhParameters);
     //-----------------------------------------------------
 
     consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);

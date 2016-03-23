@@ -6,13 +6,14 @@ TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 
 VAR
-  intrinsicRuleMap           :specialize G_stringKeyMap<T_intFuncCallback>;
-  print_cs:system.TRTLCriticalSection;
+  intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
+  print_cs        :system.TRTLCriticalSection;
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
-
+PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
+VAR mnhParameters:P_listLiteral=nil;
 
 PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
   begin
@@ -28,6 +29,15 @@ PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_lit
     complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
     adapters.raiseError(complaintText,tokenLocation);
   end;
+
+PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
+  VAR i:longint;
+  begin
+    if mnhParameters<>nil then disposeLiteral(mnhParameters);
+    mnhParameters:=newListLiteral;
+    for i:=0 to length(p)-1 do mnhParameters^.appendString(p[i]);
+  end;
+
 {$undef INNER_FORMATTING}
 
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -65,13 +75,25 @@ FUNCTION type_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     else exit(newStringLiteral(params^.parameterListTypeString));
   end;
 
+FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      if mnhParameters=nil then mnhParameters:=newListLiteral;
+      result:=mnhParameters;
+      mnhParameters^.rereference;
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'type',@type_imp,'type(x);#Prints out the type of x');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
   system.initCriticalSection(print_cs);
 FINALIZATION
+  if mnhParameters<>nil then disposeLiteral(mnhParameters);
   intrinsicRuleMap.destroy;
   system.doneCriticalSection(print_cs);
+
 end.
