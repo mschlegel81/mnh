@@ -703,6 +703,30 @@ FUNCTION isAscii_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     then result:=newBoolLiteral(isAsciiEncoded(str0^.value));
   end;
 
+FUNCTION compress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newStringLiteral(CompressString(str0^.value));
+  end;
+
+FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR resultString:ansistring;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then begin
+      try
+        resultString:=decompressString(str0^.value);
+      except
+        context.adapters^.raiseError('Internal error on decompression. The string may not be a cleanly compressed string.',tokenLocation);
+        exit(nil);
+      end;
+      result:=newStringLiteral(resultString);
+    end;
+  end;
+
+
 INITIALIZATION
   //Functions on Strings:
   registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S');
@@ -728,6 +752,8 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B');
   registerRule(STRINGS_NAMESPACE,'utf8ToSys',@utf8ToSys_impl,'utf8ToSys(S);#Converts a string or a string list from UTF-8 to the system encoding');
   registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding to UTF-8');
-  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S);#Returns true if S is UTF8 encoded and false otherwise');
-  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S);#Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);#Returns true if S is UTF8 encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S');
+  registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
 end.
