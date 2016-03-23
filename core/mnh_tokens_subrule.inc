@@ -568,7 +568,7 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
 
 FUNCTION subruleToArityImpl(CONST p:pointer):string;
   begin
-    result:=IntToStr(P_subrule(p)^.arity);
+    result:=intToStr(P_subrule(p)^.arity);
   end;
 
 
