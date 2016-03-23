@@ -1113,11 +1113,10 @@ PROCEDURE TMnhForm.updateBreakpointGrid;
 
 PROCEDURE TMnhForm.setupInputRecForNewFile    (CONST index:longint);
   begin
-    with inputRec[index] do begin
+    if (index>=0) and (index<length(inputRec)) then with inputRec[index] do begin
       filePath:='';
       fileAccessAge:=0;
       changed:=false;
-
       editor.lines.clear;
       sheet.TabVisible:=true;
       updateSheetCaption(index);
