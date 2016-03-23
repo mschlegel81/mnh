@@ -43,7 +43,6 @@
 [ "demos/zeckendorf.mnh",                "",                                     false,         false,        false],
 //script name                    output                       delete output? use plotting? spearate 32/64-bit results?
 [ "packages/combinatorics.mnh",  "",                          false,         false,        false],
-[ "packages/shorten.mnh",        "",                          false,         false,        false],
 [ "packages/turtleGfx.mnh",      "packages/turtleGfx.png",    true,          true,         false],
 [ "regTest/hash.mnh",            "",                          false,         false,        false],
 [ "regTest/opTest.mnh",          "",                          false,         false,        false],

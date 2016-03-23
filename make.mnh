@@ -1,4 +1,4 @@
-USE regTest, hash, shorten;
+USE regTest, hash;
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:="'"&inFile.fileLines.replace("'","''")&"'";
@@ -7,18 +7,7 @@ private templateToInc(inFile,outFile<>inFile)->begin
   writeFile(outFile,outText);
 end;
 
-private tryPack(filename)->begin
-  local oldContents:=fileContents(filename);
-  local newContents:=shortenSilently(oldContents);
-  local oldContents:=escape(oldContents);
-  printf('%40s packed to %6.2d%%',filename,100*length(shorten.formatResult(newContents))/length(oldContents));
-
-  'fileExists('&escape(filename)&') ? void : writeFile('&escape(filename)&','&
-  (length(shorten.formatResult(newContents))<length(oldContents)
-   ? shorten.formatResult(newContents)
-   : oldContents)&');';
-end;
-
+private tryPack(filename)->'['&escape(filename)&','&escape(strings.compress(fileContents(filename)))&']';
 private ensureInstall->fileExists('install.mnh') ? void : begin
   writeFileLines('install.mnh','main->begin'|(
     'ensureMnhFileAssociations.mnh'|
@@ -26,8 +15,9 @@ private ensureInstall->fileExists('install.mnh') ? void : begin
     files('demos/*.mnh')|
           'demos/inputs/inputs.mnh'|
     files('packages/*.mnh'))
-    .pEach(file,tryPack(file))|
-    ["deleteFile(myPath);",
+    .each(file,(index=0 ? '[' : ',') & tryPack(file))|
+    ["].each(f,f[0].fileExists ? void : writeFile(f[0],decompress(f[1])));",
+     "deleteFile(myPath);",
      "execPipeless(executor,['-doc']);",
      "end;"]);
 end;
@@ -172,3 +162,5 @@ main(...)->... .each(p,
   : p in ['distro','build','clean','test','quicktest']
     ? main(p)
     : void);
+
+tryPack(myPath);
