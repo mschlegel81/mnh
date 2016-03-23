@@ -378,7 +378,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
         ruleBody:=assignmentToken^.next;
-
+        assignmentToken^.next:=nil;
         //plausis:
         if (ruleBody=nil) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Missing function body after assignment/declaration token.',assignmentToken^.location);
@@ -521,14 +521,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;
-          end else if not(context.adapters^.hasMessageOfType[mt_el5_systemError] or context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) then
-            context.cascadeDisposeToken(first)
-          else
-            first:=nil;
-        end else if (context.adapters^.hasMessageOfType[mt_el5_systemError] or context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) then
-          context.cascadeDisposeToken(first)
-        else
-          first:=nil;
+          end else context.cascadeDisposeToken(first);
+        end else context.cascadeDisposeToken(first);
       end;
 
     begin
