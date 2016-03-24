@@ -101,8 +101,7 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['bin32/mnh.exe','mnh.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
 private copyPairs:=[['mnh.exe','../mnh5.bin/mnh.exe'], 
-                    ['mnh_light.exe','../mnh5.bin/mnh_light.exe'],
-                    ['install.mnh','../mnh5.bin/install.mnh']];
+                    ['mnh_light.exe','../mnh5.bin/mnh_light.exe']];
 private verboseMove(src,dest)->begin
   printf('move %-19s -> %-19s',src,dest);
   moveFile(src,dest);
