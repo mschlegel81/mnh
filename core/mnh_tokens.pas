@@ -167,6 +167,7 @@ FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
     while t<>nil do begin
       case t^.tokType of
         tt_declare,tt_assign: if scopeLevel=0 then exit(t);
+        tt_each,tt_parallelEach,tt_agg,
         tt_begin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
         tt_end  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
       end;
