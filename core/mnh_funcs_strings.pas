@@ -707,7 +707,7 @@ FUNCTION compress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(CompressString(str0^.value));
+    then result:=newStringLiteral(compressString(str0^.value));
   end;
 
 FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
