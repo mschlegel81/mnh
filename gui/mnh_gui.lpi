@@ -77,7 +77,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="37">
+    <Units Count="38">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -248,6 +248,13 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mnh_plotForm"/>
       </Unit36>
+      <Unit37>
+        <Filename Value="newcentralpackagedialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="newCentralPackageForm"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="newCentralPackageDialog"/>
+      </Unit37>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

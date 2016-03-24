@@ -11,7 +11,7 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm;
+  mnh_plotForm,newCentralPackageDialog;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -111,6 +111,7 @@ TYPE
     variableEdit: TSynEdit;
     helpPopupMemo: TSynMemo;
     miOpenDemo: TMenuItem;
+    miNewCentralPackage: TMenuItem;
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
@@ -185,6 +186,7 @@ TYPE
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
     PROCEDURE miOpenDemoClick(Sender: TObject);
+    PROCEDURE miNewCentralPackageClick(Sender: TObject);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -225,7 +227,7 @@ TYPE
     PROCEDURE addDebugMessage(CONST m:T_storedMessage);
     PROCEDURE writeDebugOutput(CONST updateSteps:boolean);
 
-    PROCEDURE setupInputRecForNewFile    (CONST index:longint);
+    PROCEDURE setupInputRecForNewFile    (CONST index:longint; CONST newFileName:ansistring='');
     PROCEDURE setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
     FUNCTION updateSheetCaption(CONST index:longint):ansistring;
     FUNCTION getInputEditIndexForFilename(CONST fileName:ansistring):longint;
@@ -1132,13 +1134,14 @@ PROCEDURE TMnhForm.updateBreakpointGrid;
     debugSplitter.visible:=true;
   end;
 
-PROCEDURE TMnhForm.setupInputRecForNewFile    (CONST index:longint);
+PROCEDURE TMnhForm.setupInputRecForNewFile(CONST index:longint; CONST newFileName:ansistring='');
   begin
     if (index>=0) and (index<length(inputRec)) then with inputRec[index] do begin
-      filePath:='';
+      filePath:=newFileName;
       fileAccessAge:=0;
       changed:=false;
       editor.lines.clear;
+      if newFileName<>'' then _doSave_(index);
       sheet.TabVisible:=true;
       updateSheetCaption(index);
     end;
@@ -1447,6 +1450,28 @@ PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
 
     OpenDialog.fileName:=GetAppConfigDir(true)+'demos';
     miOpenClick(Sender);
+  end;
+
+PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
+  VAR mr:integer;
+  begin
+    if newCentralPackageForm.ShowModal=mrOk then begin
+      for mr:=0 to 9 do if not(inputRec[mr].sheet.TabVisible) then begin
+        setupInputRecForNewFile(mr,newCentralPackageForm.fileNameEdit.Caption);
+        PageControl.ActivePageIndex:=mr;
+        exit;
+      end;
+      with inputRec[PageControl.ActivePageIndex] do begin
+        if changed then begin
+          mr:=closeDialogForm.showOnLoad;
+          if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
+          if mr=mrCancel then exit;
+        end;
+        if filePath<>'' then SettingsForm.fileClosed(filePath);
+        processFileHistory;
+      end;
+      setupInputRecForNewFile(mr,newCentralPackageForm.fileNameEdit.Caption);
+    end;
   end;
 
 PROCEDURE TMnhForm.processSettings;

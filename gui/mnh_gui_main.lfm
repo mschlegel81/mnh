@@ -5769,6 +5769,10 @@ object MnhForm: TMnhForm
         ShortCut = 16462
         OnClick = miClearClick
       end
+      object miNewCentralPackage: TMenuItem
+        Caption = 'New central package'
+        OnClick = miNewCentralPackageClick
+      end
       object miOpen: TMenuItem
         Caption = 'Open'
         ShortCut = 16463
