@@ -114,9 +114,9 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   begin
     result := '';
     recursePath(extractRelativePath(expandFileName(''),extractFilePath(rootPath)));
+    if result = '' then recursePath(GetAppConfigDir(true));
     if result = '' then recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
     if result = '' then recursePath(extractRelativePath(expandFileName(''),''));
-    if result = '' then recursePath(extractRelativePath(GetAppConfigDir(true),''));
   end;
 
 FUNCTION locateSources: T_arrayOfString;
