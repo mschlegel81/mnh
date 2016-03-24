@@ -836,9 +836,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       first^.next:=context.disposeToken(first^.next);
       resultLiteral:=nil;
       //iterate over itList----------------------------------------------------------
-      if (aggregatorPresent<>no) and (itList^.size=0)
-      then context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation)
-      else if length(bodyRule)>0 then begin
+      if (aggregatorPresent<>no) and (itList^.size=0) then begin
+        context.adapters^.raiseError('Each construct with aggregator is invalid for empty lists to iterate',eachLocation);
+        finalizeAggregation;
+      end else if length(bodyRule)>0 then begin
         if inParallel
         then initFutures
         else initNonFutures;
