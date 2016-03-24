@@ -21,3 +21,5 @@ regTest/*.last
 setup.mnh
 ignored/*
 gui/mnh_gui.lps
+make*.log.txt
+core/res_*.inc

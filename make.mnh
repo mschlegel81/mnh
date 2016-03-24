@@ -30,8 +30,6 @@ relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
                                
 memoized private 
 currentCodeHash->begin
-  ensureDemos;
-  ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('doc/examples.txt','core/res_examples.inc');
   templateToInc('doc/html_template.txt','core/res_html_template.inc');
@@ -51,6 +49,8 @@ end;
 private binName(FI:int)->((FI and 1)>0 ? '.\' : 'bin32\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
 
 private exeHasWrongVersion(FI:int)->begin
+  ensureDemos;
+  ensurePackages;
   local exeName:=binName(FI);
   fileExists(exeName) ? begin
     local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');

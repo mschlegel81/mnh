@@ -1,5 +1,5 @@
-@set delp=C:\lazarus32\fpc\2.6.4\bin\i386-win32\delp 
-@set fpc=C:\lazarus32\fpc\2.6.4\bin\i386-win32\fpc
+@set delp=D:\dev\lazarus32\fpc\2.6.4\bin\i386-win32\delp 
+@set fpc=D:\dev\lazarus32\fpc\2.6.4\bin\i386-win32\fpc
 
 @if "%1"=="clean" @goto cleanup
 @goto run
