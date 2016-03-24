@@ -4,6 +4,7 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      mnh_tokLoc,myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mySys,mnh_html;
 FUNCTION parseCmdLine:T_tokenLocation;
+PROCEDURE makeAndShowDoc;
 VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -13,18 +14,17 @@ VAR fileOrCommandToInterpret:ansistring='';
     wantHelpDisplay:boolean=false;
     directExecutionMode:boolean=false;
 //---------------:by command line parameters
+PROCEDURE makeAndShowDoc;
+  begin
+    {$ifdef fullVersion}
+    findAndDocumentAllPackages;
+    OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'\index.html'),'\','/'));
+    {$else}
+    writeln('Generation of the documentation is only implemented in the full version.');
+    {$endif}
+  end;
 
 FUNCTION parseCmdLine:T_tokenLocation;
-  PROCEDURE makeAndShowDoc;
-    begin
-      {$ifdef fullVersion}
-      findAndDocumentAllPackages;
-      OpenURL('file:///'+replaceAll(expandFileName(htmlRoot.value+'\index.html'),'\','/'));
-      {$else}
-      writeln('Generation of the documentation is only implemented in the full version.');
-      {$endif}
-    end;
-
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},

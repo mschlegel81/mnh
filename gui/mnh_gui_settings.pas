@@ -6,7 +6,8 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,mnh_fileWrappers;
+  StdCtrls, myFiles, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,
+  mnh_fileWrappers,mnh_packages,myStringUtil;
 
 CONST
   STATE_SAVE_INTERVAL=ONE_MINUTE;
@@ -50,9 +51,16 @@ TYPE
     Label3: TLabel;
     PageControl1: TPageControl;
     TabSheet2: TTabSheet;
+    Label8: TLabel;
+    TabSheet1: TTabSheet;
+    Button1: TButton;
+    Button2: TButton;
+    uninstallToggleBox: TToggleBox;
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE Button1Click(Sender: TObject);
+    PROCEDURE Button2Click(Sender: TObject);
   private
     { private declarations }
     editorFontname: string;
@@ -104,7 +112,8 @@ IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
   begin
-    result := expandFileName(extractFilePath(paramStr(0)))+'mnh_gui.settings';
+    result := GetAppConfigDir(true)+'mnh_gui.settings';
+    writeln('SettingsFileName=',result);
   end;
 
 { T_editorState }
@@ -202,9 +211,19 @@ PROCEDURE T_formPosition.saveToFile(VAR F: T_file);
 { TSettingsForm }
 
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
-  VAR
-    ff: T_file;
-    i: longint;
+  PROCEDURE ensurePackages;
+    {$i res_ensurePackages.inc}
+    VAR code:T_arrayOfString;
+        i:longint;
+    begin
+      setLength(code,length(ensurePackages_mnh));
+      for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
+      append(code,'('+escapeString(GetAppConfigDir(true))+')');
+      runAlone(code);
+    end;
+
+  VAR ff: T_file;
+      i: longint;
 
   begin
     mainForm.create;
@@ -257,6 +276,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       doResetPlotOnEvaluation := false;
       editorState[0].visible:=true;
       activePage:=0;
+      ensurePackages;
     end;
     FontButton.Font.name := editorFontname;
     FontButton.Font.size := getFontSize;
@@ -297,6 +317,18 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
 PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
   begin
     saveSettings;
+  end;
+
+PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
+  {$i res_ensureNppHighlighting.inc}
+  begin
+    runAlone(ensureNotepad__Highlighting_mnh);
+  end;
+
+PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
+  {$i res_ensureMnhFileAssociations.inc}
+  begin
+    runAlone(ensureMnhFileAssociations_mnh);
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;

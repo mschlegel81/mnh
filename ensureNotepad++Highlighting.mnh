@@ -1,4 +1,4 @@
-main->(getEnv.get("APPDATA")&["/Notepad++","/Roaming/Notepad++","/Local/Notepad++"]).each(folder,
+(getEnv.get("APPDATA")&["/Notepad++","/Roaming/Notepad++","/Local/Notepad++"]).each(folder,
   folderExists(folder) ? begin
     local xmlOpeningTag:='<NotepadPlus>';
     local xmlClosingTag:='</NotepadPlus>';

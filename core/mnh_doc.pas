@@ -1,7 +1,6 @@
 UNIT mnh_doc;
 INTERFACE
 USES sysutils, myStringUtil, myGenerics, mnh_constants, mnh_litVar, mnh_html,mnh_fileWrappers;
-VAR htmlRoot:specialize G_lazyVar<string>;
 TYPE
   T_demoCodeToHtmlCallback=FUNCTION(CONST input:T_arrayOfString):T_arrayOfString;
   T_registerDocProcedure=PROCEDURE(CONST qualifiedId,explanation:ansistring);
@@ -44,12 +43,16 @@ PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 PROCEDURE makeHtmlFromTemplate;
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
+FUNCTION getHtmlRoot:ansistring;
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
     functionDocExamplesReady:boolean=false;
-
+    htmlRoot:ansistring;
 CONST PACKAGE_DOC_SUBFOLDER='package_doc';
+
+FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
+
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
   VAR newDoc:P_intrinsicFunctionDocumentation;
       oldDoc:P_intrinsicFunctionDocumentation;
@@ -194,7 +197,7 @@ PROCEDURE T_userPackageDocumentation.writePackageDoc;
       i:longint;
       blobLevel:longint=0;
   begin
-    assign(handle,htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
+    assign(handle,htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
     rewrite(handle);
     writeln(handle,'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">');
     writeln(handle,'<html><head><link rel="stylesheet" href="../style.css" type="text/css"><META http-equiv="Content-Type" content="text/html; charset=ASCII">');
@@ -341,8 +344,8 @@ PROCEDURE makeHtmlFromTemplate();
       VAR files:T_arrayOfString;
           i:longint;
       begin
-        CreateDir(htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
-        files:=find(htmlRoot.value+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true,false);
+        CreateDir(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER);
+        files:=find(htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+'*',true,false);
         for i:=0 to length(files)-1 do DeleteFile(files[i]);
       end;
 
@@ -417,7 +420,7 @@ PROCEDURE makeHtmlFromTemplate();
 
   FUNCTION builtInReady:boolean;
     begin
-      result:=fileExists(htmlRoot.value+DirectorySeparator+BUILTIN_FILE_NAME);
+      result:=fileExists(htmlRoot+DirectorySeparator+BUILTIN_FILE_NAME);
     end;
 
   FUNCTION handleCommand(cmd:ansistring):boolean;
@@ -450,7 +453,7 @@ PROCEDURE makeHtmlFromTemplate();
         with outFile do begin
           if isOpen then close(handle);
           if not((cmdParam=BUILTIN_FILE_NAME) and builtInReady) then begin
-            assign(handle,htmlRoot.value+'\'+cmdParam);
+            assign(handle,htmlRoot+'\'+cmdParam);
             rewrite(handle);
             isOpen:=true;
           end else isOpen:=false;
@@ -501,17 +504,6 @@ PROCEDURE makeHtmlFromTemplate();
     with outFile do if isOpen then close(handle);
   end;
 
-
-FUNCTION locateHtml:string;
-  CONST primary = 'doc';
-    VAR secondary:string;
-  begin
-    secondary:=extractFilePath(paramStr(0))+DirectorySeparator+primary;
-    if DirectoryExists(primary) then result:=primary
-    else if DirectoryExists(secondary) then result:=secondary
-    else result:='';
-  end;
-
 PROCEDURE disposeFunctionDocMap;
   VAR keys:T_arrayOfString;
       doc:P_intrinsicFunctionDocumentation;
@@ -526,11 +518,10 @@ PROCEDURE disposeFunctionDocMap;
   end;
 
 INITIALIZATION
-  htmlRoot.create(@locateHtml,nil);
-  htmlRoot.value;
+  htmlRoot:=GetAppConfigDir(true)+'doc';
+  if not(DirectoryExists(htmlRoot)) then CreateDir(htmlRoot);
   functionDocMap.create();
 FINALIZATION
   functionDocMap.destroy;
-  htmlRoot.destroy;
 
 end.

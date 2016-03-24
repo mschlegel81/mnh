@@ -20,6 +20,7 @@ TYPE
     FUNCTION showOnQuit: integer;
     FUNCTION showOnLoad: integer;
     FUNCTION showOnOutOfSync(CONST fileName:string): integer;
+    FUNCTION showOnUninstall: integer;
   end;
 
 VAR
@@ -60,6 +61,15 @@ FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName:string): integer;
     ButtonPanel1.CancelButton.Caption := 'Ignore changes';
     ButtonPanel1.CloseButton.Caption := 'Overwrite';
     result:=ShowModal;
+  end;
+
+FUNCTION TcloseDialogForm.showOnUninstall: integer;
+  begin
+    Caption:='Do you really want to uninstall MNH5?';
+    ButtonPanel1.OKButton.Caption := 'Uninstall and quit';
+    ButtonPanel1.CancelButton.Caption := 'Cancel';
+    ButtonPanel1.CloseButton.Caption := 'Quit without uninstalling';
+    result := ShowModal;
   end;
 
 end.

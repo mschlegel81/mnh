@@ -39,7 +39,7 @@ TYPE
     InputEdit9: TSynEdit;
     miClose: TMenuItem;
     miMinErrorlevel5: TMenuItem;
-    MenuItem3: TMenuItem;
+    miOpenDocumentation: TMenuItem;
     MenuItem4: TMenuItem;
     miMinErrorlevel1: TMenuItem;
     miMinErrorlevel2: TMenuItem;
@@ -110,6 +110,7 @@ TYPE
     UpdateTimeTimer: TTimer;
     variableEdit: TSynEdit;
     helpPopupMemo: TSynMemo;
+    miOpenDemo: TMenuItem;
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
@@ -183,6 +184,7 @@ TYPE
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
+    PROCEDURE miOpenDemoClick(Sender: TObject);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -604,7 +606,27 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR i:integer;
       state:T_editorState;
+
+  PROCEDURE uninstall;
+    {$i res_removeMnhFileAssociations.inc}
+    begin
+      runAlone(removeMnhFileAssociations_mnh);
+      runAlone('deleteDir('+escapeString(GetAppConfigDir(true))+')');
+      DeleteFile('mnh_light.exe');
+      deleteMyselfOnExit;
+      halt;
+    end;
+
   begin
+    if SettingsForm.uninstallToggleBox.Checked then begin
+      i:=closeDialogForm.showOnUninstall;
+      if i=mrCancel then begin
+        CloseAction:=caNone;
+        exit;
+      end;
+      if i=mrOk then uninstall;
+    end;
+
     if ad_evaluationRunning then ad_haltEvaluation;
     stepper.onAbort;
     for i:=0 to 9 do with inputRec[i] do begin
@@ -993,8 +1015,7 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
-    findAndDocumentAllPackages;
-    OpenURL('file:///'+replaceAll(expandFileName(htmlRoot.value+'\index.html'),'\','/'));
+    makeAndShowDoc;
   end;
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
@@ -1412,6 +1433,20 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end;
       doNotCheckFileBefore:=now+ONE_SECOND;
     end;
+  end;
+
+PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
+  {$i res_ensureDemos.inc}
+  VAR code:T_arrayOfString;
+      i:longint;
+  begin
+    setLength(code,length(ensureDemos_mnh));
+    for i:=0 to length(code)-1 do code[i]:=ensureDemos_mnh[i];
+    append(code,'('+escapeString(GetAppConfigDir(true))+')');
+    runAlone(code);
+
+    OpenDialog.fileName:=GetAppConfigDir(true)+'demos';
+    miOpenClick(Sender);
   end;
 
 PROCEDURE TMnhForm.processSettings;

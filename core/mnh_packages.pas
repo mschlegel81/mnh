@@ -172,7 +172,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
           tmp:=extractFileName(simpleMessage);
-          CopyFile(simpleMessage,htmlRoot.value+DirectorySeparator+tmp);
+          CopyFile(simpleMessage,getHtmlRoot+DirectorySeparator+tmp);
           append(result,'Image created: '+imageTag(tmp));
         end;
         {$endif}

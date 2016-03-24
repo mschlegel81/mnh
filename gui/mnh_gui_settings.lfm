@@ -1,7 +1,7 @@
 object SettingsForm: TSettingsForm
-  Left = 430
+  Left = 706
   Height = 240
-  Top = 144
+  Top = 344
   Width = 320
   Caption = 'MNH - Settings'
   ClientHeight = 240
@@ -73,6 +73,37 @@ object SettingsForm: TSettingsForm
         Width = 34
         Caption = 'Editor:'
         ParentColor = False
+      end
+    end
+    object TabSheet1: TTabSheet
+      Caption = 'installation'
+      ClientHeight = 212
+      ClientWidth = 312
+      object Button1: TButton
+        Left = 24
+        Height = 25
+        Top = 16
+        Width = 256
+        Caption = 'Install Notepad++ Highlighting'
+        OnClick = Button1Click
+        TabOrder = 0
+      end
+      object Button2: TButton
+        Left = 24
+        Height = 25
+        Top = 48
+        Width = 256
+        Caption = 'Add MNH file associations'
+        OnClick = Button2Click
+        TabOrder = 1
+      end
+      object uninstallToggleBox: TToggleBox
+        Left = 24
+        Height = 23
+        Top = 104
+        Width = 256
+        Caption = 'Uninstall and Delete'
+        TabOrder = 2
       end
     end
   end

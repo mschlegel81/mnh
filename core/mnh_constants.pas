@@ -1,6 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
-USES myGenerics,myStringUtil;
+USES myGenerics,myStringUtil,sysutils;
 TYPE
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
@@ -400,5 +400,14 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
     end;
     result.unique;
   end;
+
+FUNCTION getAppName: string;
+  begin
+    result:='MNH';
+  end;
+
+INITIALIZATION
+  OnGetApplicationName:=@getAppName;
+  if not(DirectoryExists(GetAppConfigDir(true))) then CreateDir(GetAppConfigDir(true));
 
 end.
