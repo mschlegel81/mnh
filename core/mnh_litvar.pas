@@ -1444,7 +1444,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
           result:=element [i];
           result^.rereference;
           checkedExit;
-        end else exit(newListLiteral);
+        end else exit(newVoidLiteral);
       end;
       lt_intList: begin
         result:=newListLiteral;
@@ -1467,7 +1467,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
         if indexBacking.mapBack<>nil then begin
           result:=indexBacking.mapBack^.get(other,nil);
-          if result=nil then exit(newListLiteral);
+          if result=nil then exit(newVoidLiteral);
           result^.rereference;
           exit(result);
         end else begin
@@ -1478,7 +1478,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
             result^.rereference;
             checkedExit;
           end;
-          exit(newListLiteral);
+          exit(newVoidLiteral);
         end;
       end else begin
         adapters.raiseError('get with a string as second parameter can only be applied to key-value-lists!', tokenLocation);
