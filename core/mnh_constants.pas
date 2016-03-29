@@ -91,8 +91,6 @@ TYPE
     tt_typeCheckString, tt_typeCheckStringList,
     tt_typeCheckNumeric, tt_typeCheckNumList,
     tt_typeCheckExpression,
-    tt_typeCheckNonemptyList,
-    tt_typeCheckEmptyList,
     tt_typeCheckKeyValueList,
     tt_semicolon,
     tt_optionalParameters,
@@ -163,8 +161,6 @@ CONST
     {tt_typeCheckNumeric}      [lt_int, lt_real],
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
-    {tt_typeCheckNonemptyList} [lt_list..lt_stringList, lt_keyValueList, lt_flatList],
-    {tt_typeCheckEmptyList}    [lt_emptyList],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
 
   C_tokenString: array[T_tokenType] of ansistring = ('','',
@@ -206,10 +202,7 @@ CONST
     ':string', ':stringList',
     ':numeric', ':numericList',
     ':expression',
-    '<>[]',
-    '=[]',
     ':keyValueList',
-    //special: [E]nd [O]f [L]ine
     ';',
     '...',
     'private',
@@ -218,7 +211,8 @@ CONST
     'persistent',
     'synchronized',
     'local',
-    '','');
+    '', //special: [E]nd [O]f [L]ine
+    '');
 
   C_typeString: array[T_literalType] of string = (
     'error',
@@ -381,9 +375,9 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
         result.add(C_tokenString[tt_each]);
         result.add(C_tokenString[tt_parallelEach]);
         result.add(C_tokenString[tt_agg]);
-        result.add(replaceOne(C_tokenString[tt_each]        ,'.',''));
-        result.add(replaceOne(C_tokenString[tt_parallelEach],'.',''));
-        result.add(replaceOne(C_tokenString[tt_agg]         ,'.',''));
+        result.add(replaceOne(C_tokenString[tt_each]        ,C_ID_QUALIFY_CHARACTER,''));
+        result.add(replaceOne(C_tokenString[tt_parallelEach],C_ID_QUALIFY_CHARACTER,''));
+        result.add(replaceOne(C_tokenString[tt_agg]         ,C_ID_QUALIFY_CHARACTER,''));
         result.add(C_tokenString[tt_when]);
         result.add(C_tokenString[tt_aggregatorConstructor]);
         result.add(C_tokenString[tt_while]);

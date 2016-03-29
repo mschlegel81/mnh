@@ -310,11 +310,9 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
                                                                   else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
       '>': if startsWith(C_tokenString[tt_comparatorGeq])         then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
                                                                   else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
-      '=': if startsWith(C_tokenString[tt_typeCheckEmptyList])    then begin parsedLength:=3; result.tokType:=tt_typeCheckEmptyList;    end else
-           if startsWith(C_tokenString[tt_comparatorListEq])      then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
+      '=': if startsWith(C_tokenString[tt_comparatorListEq])      then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
                                                                   else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
-      '<': if startsWith(C_tokenString[tt_typeCheckNonemptyList]) then begin parsedLength:=4; result.tokType:=tt_typeCheckNonemptyList; end else
-           if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
+      '<': if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
            if startsWith('<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
                                                                   else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
       '!': if startsWith('!=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end

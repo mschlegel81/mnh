@@ -187,8 +187,6 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
       tt_typeCheckString,  tt_typeCheckStringList,
       tt_typeCheckNumeric, tt_typeCheckNumList,
       tt_typeCheckExpression,
-      tt_typeCheckNonemptyList,
-      tt_typeCheckEmptyList,
       tt_typeCheckKeyValueList: if length(bracketStack)=0 then result:=true;
     end;
     checkStackAtEnd;

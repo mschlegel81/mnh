@@ -103,8 +103,6 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_typeCheckNumeric   ,
       tt_typeCheckNumList   ,
       tt_typeCheckExpression  ,
-      tt_typeCheckNonemptyList,
-      tt_typeCheckEmptyList,
       tt_typeCheckKeyValueList: result:=trimLeadingEquals(id+C_tokenString[restrictionType]);
       tt_comparatorEq,
       tt_comparatorNeq,
@@ -156,8 +154,8 @@ PROCEDURE T_patternElement.thinOutWhitelist;
         lt_string: typeWhitelist:=[lt_string];
         lt_boolean: typeWhitelist:=[lt_boolean];
         lt_emptyList: if restrictionType in [tt_comparatorEq,tt_comparatorListEq]
-          then typeWhitelist:=C_matchingTypes[tt_typeCheckEmptyList]
-          else typeWhitelist:=C_matchingTypes[tt_typeCheckNonemptyList];
+          then typeWhitelist:=[lt_emptyList]
+          else typeWhitelist:=[lt_list..lt_stringList, lt_keyValueList, lt_flatList];
       end;
     end;
   end;
