@@ -265,6 +265,9 @@ TYPE
     {$endif});
 
 CONST
+  {$ifdef fullVersion}
+  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..0] of T_messageType=(mt_plotCreatedWithInstantDisplay);
+  {$endif}
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
    -2,//mt_clearConsole,
    -2,//mt_printline,

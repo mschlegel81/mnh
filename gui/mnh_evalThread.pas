@@ -1,9 +1,9 @@
 UNIT mnh_evalThread;
 INTERFACE
 USES sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
-     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc;
+     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation;
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_die);
+  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
@@ -18,6 +18,7 @@ PROCEDURE ad_killEvaluationLoopSoftly;
 PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
 PROCEDURE ad_doReload(CONST L:TStrings);
+PROCEDURE ad_reEvaluateWithGUI;
 
 VAR evaluationState    :specialize G_safeVar<T_evaluationState>;
     endOfEvaluationText:specialize G_safeVar<ansistring>;
@@ -84,6 +85,12 @@ FUNCTION main(p:pointer):ptrint;
         preEval;
         callMainInMain(parametersForMainCall,mainEvaluationContext);
         postEval;
+      end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_reEvaluateWithGUI) then begin
+        preEval;
+        environment.mainPackageProvider^.setPath(getFileOrCommandToInterpretFromCommandLine);
+        setupOutputBehaviour(mainEvaluationContext.adapters^);
+        callMainInMain(mainParameters,mainEvaluationContext);
+        postEval;
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);
@@ -98,6 +105,15 @@ PROCEDURE ad_clearFile;
     if evaluationState.value=es_running then guiOutAdapters^.haltEvaluation;
     while evaluationState.value=es_running do sleep(1);
     environment.mainPackageProvider^.clear;
+  end;
+
+PROCEDURE ad_reEvaluateWithGUI;
+  begin
+    pendingRequest.value:=er_reEvaluateWithGUI;
+    if evaluationState.value=es_dead then begin
+      beginThread(@main);
+      sleep(10);
+    end;
   end;
 
 PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings);

@@ -6,7 +6,8 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Menus, ComCtrls, mnh_plotData,mnh_constants, mnh_out_adapters, mnh_evalThread, mnh_gui_settings;
+  Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
+  mnh_gui_settings, mnh_cmdLineInterpretation, mnh_tokLoc;
 
 TYPE
 
@@ -58,6 +59,7 @@ TYPE
     PROCEDURE plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
   private
 
     { private declarations }
@@ -222,6 +224,11 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
     end;
   end;
 
+procedure TplotForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+  begin
+    if reEvaluationWithGUIrequired then guiAdapters^.raiseCustomMessage(mt_el5_haltMessageReceived,'Plot form closed',C_nilTokenLocation);
+  end;
+
 PROCEDURE TplotForm.pullPlotSettingsToGui;
   VAR o:T_scalingOptions;
   begin
@@ -266,7 +273,7 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
 PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
-    if not(showing) then Show;
+    if not(showing) and guiAdapters^.noErrors then Show;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
     else if miAntiAliasing3.Checked then factor:=3

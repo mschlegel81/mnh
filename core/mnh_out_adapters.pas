@@ -124,6 +124,7 @@ TYPE
       PROCEDURE clearPrint;
       PROCEDURE ClearAll;
       FUNCTION noErrors: boolean; inline;
+      {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
@@ -163,7 +164,10 @@ TYPE
   {$endif}
 
 VAR
-  {$ifdef fullVersion}stepper:T_stepper;{$endif}
+  {$ifdef fullVersion}
+  stepper:T_stepper;
+  gui_started:boolean=false;
+  {$endif}
   nullAdapter:T_adapters;
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
@@ -486,8 +490,22 @@ PROCEDURE T_adapters.ClearAll;
 
 FUNCTION T_adapters.noErrors: boolean;
   begin
-    result:=maxErrorLevel<3;
+    result:=(maxErrorLevel<3)
+    {$ifdef fullVersion}
+    and not(hasNeedGUIerror)
+    {$endif};
   end;
+
+{$ifdef fullVersion}
+FUNCTION T_adapters.hasNeedGUIerror:boolean;
+  VAR i:longint;
+  begin
+    if gui_started then exit(false);
+    for i:=0 to length(   C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP)-1 do
+      if hasMessageOfType[C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP[i]] then exit(true);
+    result:=false;
+  end;
+{$endif}
 
 PROCEDURE T_adapters.haltEvaluation;
   begin

@@ -7,10 +7,11 @@ object plotForm: TplotForm
   ClientHeight = 220
   ClientWidth = 320
   Menu = MainMenu
+  OnClose = FormClose
   OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnResize = FormResize
-  LCLVersion = '1.2.6.0'
+  LCLVersion = '1.4.4.0'
   object plotImage: TImage
     Cursor = crCross
     Left = 0

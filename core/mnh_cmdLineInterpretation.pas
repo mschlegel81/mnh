@@ -5,22 +5,45 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      lclintf,mySys,mnh_html;
 FUNCTION parseCmdLine:T_tokenLocation;
 PROCEDURE makeAndShowDoc;
+FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
+PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
+
 VAR consoleAdapters:T_adapters;
+    reEvaluationWithGUIrequired:boolean=false;
+    mainParameters:T_arrayOfString;
+
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
     mnhParameters:T_arrayOfString;
-    mainParameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
     directExecutionMode:boolean=false;
+
+    echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
+    time:(t_forcedOn,t_default,t_forcedOff)=t_default;
+    minEL:longint=2;
 //---------------:by command line parameters
+PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
+  begin
+    adapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    adapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    adapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    adapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
+    adapters.minErrorLevel:=minEL;
+  end;
+
+FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
+  begin
+    result:=fileOrCommandToInterpret;
+  end;
+
 PROCEDURE makeAndShowDoc;
   begin
     {$ifdef fullVersion}
     findAndDocumentAllPackages;
     OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'\index.html'),'\','/'));
     {$else}
-    writeln('Generation of the documentation is only implemented in the full version.');
+    writeln('Generation of the documentation is only implemented in the full (i.e. non-light) version.');
     {$endif}
   end;
 
@@ -68,6 +91,17 @@ FUNCTION parseCmdLine:T_tokenLocation;
       {$endif}
     end;
 
+  PROCEDURE doDirect;
+    VAR context:T_evaluationContext;
+    begin
+      context.createNormalContext(P_adapters(@consoleAdapters));
+      environment.mainPackageProvider^.clear;
+      environment.mainPackageProvider^.appendLine(fileOrCommandToInterpret);
+      reloadMainPackage(lu_forDirectExecution,context);
+      context.destroy;
+      halt;
+    end;
+
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
     begin
@@ -80,17 +114,13 @@ FUNCTION parseCmdLine:T_tokenLocation;
       end;
       context.createNormalContext(P_adapters(@consoleAdapters));
       callMainInMain(mainParameters,context);
-      context.destroy;
-      halt;
-    end;
-
-  PROCEDURE doDirect;
-    VAR context:T_evaluationContext;
-    begin
-      context.createNormalContext(P_adapters(@consoleAdapters));
-      environment.mainPackageProvider^.clear;
-      environment.mainPackageProvider^.appendLine(fileOrCommandToInterpret);
-      reloadMainPackage(lu_forDirectExecution,context);
+      {$ifdef fullVersion}
+      if not(mnh_out_adapters.gui_started) and (context.adapters^.hasNeedGUIerror) then begin
+        reEvaluationWithGUIrequired:=true;
+        context.destroy;
+        exit;
+      end;
+      {$endif}
       context.destroy;
       halt;
     end;
@@ -101,10 +131,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
       list[length(list)-1]:=paramStr(index);
     end;
 
-  VAR echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
-      time:(t_forcedOn,t_default,t_forcedOff)=t_default;
-      i    :longint;
-      minEL:longint=2;
+  VAR i    :longint;
   begin
     result:=C_nilTokenLocation;
     setLength(mainParameters,0);
@@ -153,12 +180,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
     end;
     setMnhParameters(mnhParameters);
     //-----------------------------------------------------
-
-    consoleAdapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    consoleAdapters.minErrorLevel:=minEL;
+    setupOutputBehaviour(consoleAdapters);
 
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect

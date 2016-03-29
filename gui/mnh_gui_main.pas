@@ -603,6 +603,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
     debugStepFill:=0;
     debugStepOffset:=0;
+    mnh_out_adapters.gui_started:=true;
   end;
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -753,6 +754,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     end;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
+    if reEvaluationWithGUIrequired then begin
+      Hide;
+      ad_reEvaluateWithGUI;
+    end;
   end;
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
@@ -1436,6 +1441,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end;
       doNotCheckFileBefore:=now+ONE_SECOND;
     end;
+
+    if reEvaluationWithGUIrequired and not(isEvaluationRunning) and not(plotForm.Showing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
