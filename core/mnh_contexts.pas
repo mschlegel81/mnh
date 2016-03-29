@@ -17,7 +17,7 @@ TYPE
     PROCEDURE scopePush;
     PROCEDURE scopePop;
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
-    PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal);
+    PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal; CONST readonly:boolean);
     //For debugging:
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
   end;
@@ -102,21 +102,21 @@ FUNCTION T_valueStore.getVariable(CONST id:ansistring):P_namedVariable;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal);
+PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal; CONST readonly:boolean);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     i:=length(data);
     with data[i-1] do if marker=vsm_void then begin
       marker:=vsm_first;
-      new(v,create(id,value));
+      new(v,create(id,value,readonly));
       system.leaveCriticalSection(cs);
       exit;
     end;
     setLength(data,i+1);
     with data[i] do begin
       marker:=vsm_none;
-      new(v,create(id,value));
+      new(v,create(id,value,readonly));
     end;
     system.leaveCriticalSection(cs);
   end;

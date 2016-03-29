@@ -98,7 +98,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationC
   begin
     if (scope<>@context) then context.adopt(scope);
     context.valueStore.scopePush;
-    context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex));
+    context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex),true);
     if context.adapters^.noErrors then begin
       {$ifdef fullVersion}
       if stepper.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//next (p)Each step',C_nilTokenLocation);

@@ -54,7 +54,7 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
         system.initCriticalSection(rule_cs);
       end;
       rt_mutable_public, rt_mutable_private, rt_persistent_public, rt_persistent_private: begin
-        namedValue.create(id,newVoidLiteral);
+        namedValue.create(id,newVoidLiteral,false);
         system.initCriticalSection(rule_cs);
       end;
       rt_synchronized:
@@ -228,7 +228,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
   begin
     if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
       system.enterCriticalSection(rule_cs);
-      namedValue.setValue(value);
+      namedValue.setValue(value,context.adapters^);
       if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
     end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);

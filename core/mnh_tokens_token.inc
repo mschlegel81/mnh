@@ -1128,11 +1128,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newValue:=first^.next^.data;
       case kind of
         tt_assignNewBlockLocal: begin
-          context.valueStore.createVariable(first^.txt,newValue);
+          context.valueStore.createVariable(first^.txt,newValue,false);
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.getVariable(first^.txt)^.setValue(newValue);
+          context.getVariable(first^.txt)^.setValue(newValue,context.adapters^);
           first:=context.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin

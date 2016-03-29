@@ -288,10 +288,11 @@ TYPE
     private
       id:ansistring;
       value:P_literal;
+      readonly:boolean;
     public
-      CONSTRUCTOR create(CONST initialId:ansistring; CONST initialValue:P_literal);
+      CONSTRUCTOR create(CONST initialId:ansistring; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
-      PROCEDURE setValue(CONST newValue:P_literal);
+      PROCEDURE setValue(CONST newValue:P_literal; VAR adapters:T_adapters);
       FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
       FUNCTION getId:ansistring;
       FUNCTION getValue:P_literal;
@@ -2368,10 +2369,11 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation,adapters);
   end;
 
-CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValue:P_literal);
+CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
     id:=initialId;
     value:=initialValue;
+    readonly:=isReadOnly;
     if value<>nil then value^.rereference;
   end;
 
@@ -2380,8 +2382,9 @@ DESTRUCTOR T_namedVariable.destroy;
     if value<>nil then disposeLiteral(value);
   end;
 
-PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
+PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal; VAR adapters:T_adapters);
   begin
+    if readonly then adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',C_nilTokenLocation);
     disposeLiteral(value);
     value:=newValue;
     value^.rereference;
@@ -2391,6 +2394,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
   CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   VAR oldValue:P_literal;
   begin
+    if readonly then adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',location);
     oldValue:=value;
     case mutation of
       tt_cso_assignPlus..tt_cso_assignDiv: begin
