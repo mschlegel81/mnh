@@ -236,15 +236,18 @@ PROCEDURE initIntrinsicRuleList;
     ids:=mnh_funcs.intrinsicRuleMap.keySet;
     intrinsicRules.clear;
     for i:=0 to length(ids)-1 do begin
-      if pos('.',ids[i])<=0 then begin
+      if pos(C_ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
         intrinsicRules.add(    ids[i]);
         intrinsicRulesForCompletion.add(ids[i]);
+        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+ids[i]);
       end else begin
-        intrinsicRules.add(split(ids[i],'.')[0]);
-        intrinsicRules.add(split(ids[i],'.')[1]);
+        intrinsicRules.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
+        intrinsicRules.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
         intrinsicRulesForCompletion.add(ids[i]);
-        intrinsicRulesForCompletion.add(split(ids[i],'.')[0]);
-        intrinsicRulesForCompletion.add(split(ids[i],'.')[1]);
+        intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
+        intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
+        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
+        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
       end;
     end;
     list:=reservedWordsByClass(rwc_not_reserved);

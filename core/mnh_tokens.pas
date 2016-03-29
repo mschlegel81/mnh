@@ -122,7 +122,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
       tt_identifier_pon,
       tt_localUserRule_pon,
       tt_importedUserRule_pon,
-      tt_intrinsicRule_pon: result:='.'+txt;
+      tt_intrinsicRule_pon: result:=C_ID_QUALIFY_CHARACTER+txt;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,

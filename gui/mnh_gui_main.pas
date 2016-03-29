@@ -1310,9 +1310,9 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
   Shift: TShiftState);
   begin
-    if (pos('.',value)>0) then begin
+    if (pos(C_ID_QUALIFY_CHARACTER,value)>0) then begin
       if pos(sourceValue,value)<>1 then
-        value:=copy(value,pos('.',value)+1,length(value));
+        value:=copy(value,pos(C_ID_QUALIFY_CHARACTER,value)+1,length(value));
     end;
     wordsInEditor.clear;
   end;

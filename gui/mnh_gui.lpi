@@ -252,6 +252,7 @@
         <Filename Value="newcentralpackagedialog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="newCentralPackageForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="newCentralPackageDialog"/>
       </Unit37>

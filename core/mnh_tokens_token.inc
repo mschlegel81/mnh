@@ -50,7 +50,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring)
         tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
           inc(i);
-          t[i].txt:=t[i-1].txt+'.'+t[i].txt;
+          t[i].txt:=t[i-1].txt+C_ID_QUALIFY_CHARACTER+t[i].txt;
           t[i].tokType:=tt_identifier;
           package^.resolveRuleId(t[i],nil);
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
