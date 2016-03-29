@@ -113,7 +113,6 @@ IMPLEMENTATION
 FUNCTION settingsFileName: string;
   begin
     result := GetAppConfigDir(true)+'mnh_gui.settings';
-    writeln('SettingsFileName=',result);
   end;
 
 { T_editorState }
