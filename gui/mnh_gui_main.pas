@@ -11,7 +11,7 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog;
+  mnh_plotForm,newCentralPackageDialog,mnh_tables,Arith;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -1375,6 +1375,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //fast ones:================================================================
     //Show ask form?
     if askForm.displayPending then askForm.ShowModal;
+    if tableForm.displayPending then tableForm.ShowModal;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
     then aid:=updateSheetCaption(PageControl.ActivePageIndex)
@@ -1442,7 +1443,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       doNotCheckFileBefore:=now+ONE_SECOND;
     end;
 
-    if reEvaluationWithGUIrequired and not(isEvaluationRunning) and not(plotForm.Showing) then close;
+    if reEvaluationWithGUIrequired and not(isEvaluationRunning) and not(plotForm.showing) then close;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);

@@ -5,7 +5,8 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, Fil
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
      {$ifdef fullVersion}mnh_doc,{$endif}
-     mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_regex;
+     mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
+     mnh_funcs_regex;
 
 {$define include_interface}
 TYPE

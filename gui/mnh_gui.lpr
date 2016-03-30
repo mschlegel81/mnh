@@ -11,7 +11,7 @@ USES {$IFDEF UNIX} cthreads, cmem, {$ENDIF}
   mnh_funcs_system, mnh_litVar, mnh_packages, mnh_out_adapters,
   consoleAsk, mnh_constants, mnh_doc, mnh_html,
   SynHighlighterMnh, mnh_evalThread, mySys,
-  mnh_plotData,mnh_plotFuncs, mnh_plotForm, newCentralPackageDialog;
+  mnh_plotData,mnh_plotFuncs, mnh_plotForm, newCentralPackageDialog, mnh_tables;
 
 {$R *.res}
 
@@ -30,6 +30,7 @@ begin
   Application.CreateForm(TaskForm, askForm);
   Application.CreateForm(TplotForm, plotForm);
   Application.CreateForm(TnewCentralPackageForm, newCentralPackageForm);
+  Application.CreateForm(TtableForm, tableForm);
   Application.Run;
   showConsole;
 end.

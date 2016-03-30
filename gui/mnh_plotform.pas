@@ -59,7 +59,7 @@ TYPE
     PROCEDURE plotImageMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
     PROCEDURE plotImageMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   private
 
     { private declarations }
@@ -224,7 +224,7 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
     end;
   end;
 
-procedure TplotForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     if reEvaluationWithGUIrequired then guiAdapters^.raiseCustomMessage(mt_el5_haltMessageReceived,'Plot form closed',C_nilTokenLocation);
   end;

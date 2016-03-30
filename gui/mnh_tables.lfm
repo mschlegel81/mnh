@@ -1,0 +1,31 @@
+object tableForm: TtableForm
+  Left = 527
+  Height = 240
+  Top = 223
+  Width = 320
+  Caption = 'MNH - Table'
+  ClientHeight = 240
+  ClientWidth = 320
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '1.4.4.0'
+  object StringGrid: TStringGrid
+    Left = 0
+    Height = 240
+    Top = 0
+    Width = 320
+    Align = alClient
+    AlternateColor = clNone
+    FixedCols = 0
+    FixedRows = 0
+    GridLineWidth = 0
+    HeaderHotZones = [gzNormal, gzFixedCols]
+    HeaderPushZones = [gzNormal, gzFixedCols]
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing, goSmoothScroll, goCellEllipsis]
+    TabOrder = 0
+    OnButtonClick = StringGridButtonClick
+    OnSelectEditor = StringGridSelectEditor
+    OnValidateEntry = StringGridValidateEntry
+  end
+end
