@@ -115,7 +115,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
       context.createNormalContext(P_adapters(@consoleAdapters));
       callMainInMain(mainParameters,context);
       {$ifdef fullVersion}
-      if not(mnh_out_adapters.gui_started) and (context.adapters^.hasNeedGUIerror) then begin
+      if context.adapters^.hasNeedGUIerror then begin
         reEvaluationWithGUIrequired:=true;
         context.destroy;
         exit;

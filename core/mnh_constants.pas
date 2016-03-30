@@ -252,6 +252,7 @@ TYPE
     mt_el3_evalError,
     mt_el3_noMatchingMain,
     mt_el3_stackTrace,
+    mt_el3_userDefined,
     mt_el4_parsingError,
     mt_el5_systemError,
     mt_el5_haltMessageReceived,
@@ -262,12 +263,14 @@ TYPE
     mt_plotFileCreated,
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,
-    mt_plotSettingsChanged
+    mt_plotSettingsChanged,
+    mt_showTable
     {$endif});
 
 CONST
   {$ifdef fullVersion}
-  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..0] of T_messageType=(mt_plotCreatedWithInstantDisplay);
+  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..1] of T_messageType=(mt_plotCreatedWithInstantDisplay,
+                                                                      mt_showTable);
   {$endif}
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
    -2,//mt_clearConsole,
@@ -281,13 +284,14 @@ CONST
     3,//mt_el3_evalError,
     3,//mt_el3_noMatchingMain
     3,//mt_el3_stackTrace
+    3,//mt_el3_userDefined
     4,//mt_el4_parsingError,
     5,//mt_el5_systemError,
     5,//mt_el5_haltMessageReceived
    -1,//mt_endOfEvaluation
    -1,//mt_reloadRequired
    -1 //mt_timing_info
-   {$ifdef fullVersion},-1,-1,-1,-1{$endif});
+   {$ifdef fullVersion},-1,-1,-1,-1,-1{$endif});
 
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
@@ -306,6 +310,7 @@ CONST
     'Error ',
     'Error ',
     'Error [stack trace]',
+    'User-Error ',
     'Parsing Error ',
     'Sys. Error ',
     'Evaluation haltet (most probably by user).',
@@ -316,7 +321,8 @@ CONST
     'Image:',
     'Deferred plot request',
     'Instant plot request',
-    'Plot settings changed'
+    'Plot settings changed',
+    'Show table'
     {$endif});
 
   DOC_COMMENT_PREFIX='//*';

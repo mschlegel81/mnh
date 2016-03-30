@@ -11,7 +11,7 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,mnh_tables,Arith;
+  mnh_plotForm,newCentralPackageDialog,mnh_tables;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -756,6 +756,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     UpdateTimeTimer.Enabled:=true;
     if reEvaluationWithGUIrequired then begin
       Hide;
+      showConsole;
       ad_reEvaluateWithGUI;
     end;
   end;

@@ -162,8 +162,8 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
-    if (params=nil) or (params^.size=0) then context.adapters^.raiseError('Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then context.adapters^.raiseError(arg0^.toString,tokenLocation);
+    if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
+    else if (params<>nil) and (params^.size=1) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,arg0^.toString,tokenLocation);
     result:=nil;
   end;
 
