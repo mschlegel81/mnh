@@ -101,6 +101,7 @@ TYPE
     tt_modifier_mutable,
     tt_modifier_persistent,
     tt_modifier_synchronized,
+    tt_modifier_future,
     tt_modifier_local,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
@@ -211,6 +212,7 @@ CONST
     'mutable',
     'persistent',
     'synchronized',
+    'future',
     'local',
     '', //special: [E]nd [O]f [L]ine
     '');

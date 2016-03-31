@@ -790,7 +790,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),context);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context);
             if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
@@ -804,7 +804,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           i,j:longint;
       begin
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
-          task.createTask(bodyRule[j],i,itList^.value(i),context);
+          task.createTask(bodyRule[j],i,itList^.value(i),@context);
           if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing (pseudo-)future.',eachLocation)
           else begin
             task.evaluate(callDepth+1,context);
@@ -882,8 +882,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context));
-        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context));
+        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,false,context));
+        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,false,context));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;

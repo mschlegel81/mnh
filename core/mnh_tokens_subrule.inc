@@ -1,9 +1,14 @@
 {$ifdef include_interface}
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
+                 srt_future_public,
+                 srt_future_private,
                  srt_inline_for_literal,
                  srt_inline_for_each);
   P_subrule=^T_subrule;
+
+  { T_subrule }
+
   T_subrule=object
     private
       comment:ansistring;
@@ -11,6 +16,7 @@
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
+      future:P_futureTask;
       preparedBody:array of record
                      parIdx:longint;
                      token:T_token;
@@ -22,7 +28,7 @@
       FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,isFuture:boolean; VAR context:T_evaluationContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -48,7 +54,7 @@
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
+PROCEDURE T_subrule.constructExpression(CONST rep: P_token; VAR context: T_evaluationContext; CONST forEachBody: boolean);
   VAR t:P_token;
       inlineLiteral:P_literal;
   begin
@@ -87,18 +93,24 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
     end;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.create(CONST pat: T_pattern; CONST rep: P_token; CONST declAt: T_tokenLocation; CONST isPrivate, isFuture: boolean; VAR context: T_evaluationContext);
   begin
     called:=false;
-    if isPrivate then typ:=srt_normal_private
-                 else typ:=srt_normal_public;
+    if isPrivate then begin
+      if isFuture then typ:=srt_future_private
+                  else typ:=srt_normal_private;
+    end else begin
+      if isFuture then typ:=srt_future_public
+                  else typ:=srt_normal_public;
+    end;
     pattern:=pat;
     declaredAt:=declAt;
-    constructExpression(rep,context,false);
+    if isFuture then future:=pendingTasks.enqueue(rep,@context)
+                else constructExpression(rep,context,false);
     if needEmbrace(context.adapters^) then embrace;
   end;
 
-CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; VAR context: T_evaluationContext);
   begin
     called:=false;
     typ:=srt_inline_for_each;
@@ -125,7 +137,7 @@ PROCEDURE T_subrule.embrace;
     end;
   end;
 
-FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
+FUNCTION T_subrule.needEmbrace(VAR adapters: T_adapters): boolean;
   VAR bracketStack:array of longint;
   PROCEDURE push(CONST index:longint);
     begin
@@ -192,7 +204,7 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
     checkStackAtEnd;
   end;
 
-FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
+FUNCTION T_subrule.canUnbrace(CONST outerOp: T_tokenType): boolean;
   VAR bracketLevel,i:longint;
   begin
     if length(preparedBody)<=1 then exit(false);
@@ -228,7 +240,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createFromInline(CONST rep: P_token; VAR context: T_evaluationContext);
   VAR t:P_token;
   begin
     called:=false;
@@ -253,7 +265,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
     updatePatternForInline;
   end;
 
-CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok: P_token; VAR context: T_evaluationContext);
   VAR dummyBool:boolean;
       funcPtr:T_intFuncCallback=nil;
   begin
@@ -291,7 +303,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
     end else context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
   end;
 
-CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
+CONSTRUCTOR T_subrule.clone(CONST original: P_subrule);
   VAR i:longint;
   begin
     comment:=original^.comment;
@@ -311,7 +323,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
     end;
   end;
 
-CONSTRUCTOR T_subrule.createEnumConstant(CONST value: P_intLiteral; CONST location:T_tokenLocation);
+CONSTRUCTOR T_subrule.createEnumConstant(CONST value: P_intLiteral; CONST location: T_tokenLocation);
   begin
     comment:='';
     called:=true;
@@ -327,7 +339,7 @@ CONSTRUCTOR T_subrule.createEnumConstant(CONST value: P_intLiteral; CONST locati
     end;
   end;
 
-CONSTRUCTOR T_subrule.createRecordAccessor(CONST index: P_intLiteral; CONST location:T_tokenLocation);
+CONSTRUCTOR T_subrule.createRecordAccessor(CONST index: P_intLiteral; CONST location: T_tokenLocation);
   begin
     comment:='';
     called:=true;
@@ -373,7 +385,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
+FUNCTION T_subrule.replaces(CONST param: P_listLiteral; CONST selfLiteral: P_expressionLiteral; OUT firstRep, lastRep: P_token; VAR context: T_evaluationContext): boolean;
   VAR t:P_token;
       i:longint;
       remaining:P_listLiteral=nil;
@@ -405,6 +417,15 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
       called:=true;
+      if typ in [srt_future_public,srt_future_private] then begin
+        setLength(preparedBody,1);
+        preparedBody[0].token:=future^.getResultAsToken(context);
+        preparedBody[0].parIdx:=-1;
+        future^.free(context);
+        dispose(future,proFormaDestroy);
+        if typ=srt_future_private then typ:=srt_normal_private;
+        if typ=srt_future_public  then typ:=srt_normal_public;
+      end;
       with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
       for i:=1 to length(preparedBody)-1 do with preparedBody[i] do begin
@@ -436,7 +457,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     end;
   end;
 
-CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
+CONSTRUCTOR T_subrule.createFromOp(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST opLocation: T_tokenLocation);
   VAR i:longint;
       r:P_subrule;
   PROCEDURE appendToExpression(VAR T:T_token);
@@ -499,7 +520,7 @@ FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RH
     result:=newRule;
   end;
 
-CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation);
+CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original: P_expressionLiteral; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation);
   VAR origRule:P_subrule;
       i:longint;
   PROCEDURE appendToExpression(VAR T:T_token);
@@ -544,7 +565,7 @@ FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsi
     result:=newExpressionLiteral(newRule);
   end;
 
-FUNCTION T_subrule.toString:ansistring;
+FUNCTION T_subrule.toString: ansistring;
   VAR i:longint;
       prevIdLike,idLike:boolean;
   begin
@@ -570,7 +591,7 @@ FUNCTION subruleToArityImpl(CONST p:pointer):string;
   end;
 
 
-FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluate(CONST selfLiteral: P_expressionLiteral; CONST params: P_listLiteral; CONST callDepth: word; VAR context: T_evaluationContext): P_literal;
   VAR firstRep,lastRep:P_token;
   begin
     if replaces(params,selfLiteral,firstRep,lastRep,context) then begin
@@ -591,12 +612,12 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral: P_expressionLiteral; CONST callDepth: word; VAR context: T_evaluationContext): P_literal;
   begin
     result:=directEvaluate(selfLiteral,nil,callDepth,context);
   end;
 
-FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluateUnary(CONST x: P_literal; CONST selfLiteral: P_expressionLiteral; CONST callDepth: word; VAR context: T_evaluationContext): P_literal;
   VAR param:T_listLiteral;
   begin
     param.create;
@@ -605,7 +626,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
     param.destroy;
   end;
 
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
+FUNCTION T_subrule.directEvaluateComparator(CONST x, y: P_literal; CONST selfLiteral: P_expressionLiteral; CONST callDepth: word; VAR context: T_evaluationContext): boolean;
   VAR param:T_listLiteral;
       lit:P_literal;
   begin
@@ -622,7 +643,7 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
     if lit<>nil then disposeLiteral(lit);
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluateAggregator(CONST x, y: P_literal; CONST selfLiteral: P_expressionLiteral; CONST callDepth: word; VAR context: T_evaluationContext): P_literal;
   VAR param:T_listLiteral;
   begin
     param.create;
@@ -641,7 +662,7 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
   end;
 
 
-FUNCTION T_subrule.getInlineValue:P_literal;
+FUNCTION T_subrule.getInlineValue: P_literal;
   begin
     if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
     with preparedBody[0] do if token.tokType=tt_literal then begin
@@ -651,21 +672,22 @@ FUNCTION T_subrule.getInlineValue:P_literal;
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
+FUNCTION T_subrule.complainAboutUncalled(CONST ruleId: ansistring; CONST inMainPackage: boolean; VAR adapters: T_adapters): boolean;
   begin
     result:=not(called) and (typ=srt_normal_private);
     if inMainPackage and result then adapters.raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 
-FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
+FUNCTION T_subrule.getDocTxt(CONST ruleId: ansistring): ansistring;
   begin
     result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
-    if typ=srt_normal_private then result:=result+'private ';
+    if typ in [srt_normal_private,srt_future_private] then result:=result+C_tokenString[tt_modifier_private];
+    if typ in [srt_future_private,srt_future_public] then result:=result+C_tokenString[tt_modifier_future];
     result:=result+ruleId+pattern.toString+';';
     if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
   end;
 
-FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
+FUNCTION T_subrule.getDocHtml(CONST ruleId: ansistring): ansistring;
   CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
         zeroBlobLevel:longint=0;
   begin
@@ -678,7 +700,7 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
     result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString,zeroBlobLevel)+'</code></td></tr>';
   end;
 
-FUNCTION T_subrule.arity:longint;
+FUNCTION T_subrule.arity: longint;
   begin
     result:=length(pattern.sig);
   end;

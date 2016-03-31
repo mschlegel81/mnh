@@ -4,8 +4,6 @@
                      fts_evaluating, //set on dequeue
                      fts_ready); //set after evaluation
 
-  P_futureTask=^T_futureTask;
-
   { T_futureTask }
 
   T_futureTask=object
@@ -15,9 +13,11 @@
     next:P_futureTask;
     scope:P_evaluationContext;
 
-    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext);
+    CONSTRUCTOR createTask(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
+    CONSTRUCTOR createPlainFuture(CONST expression:P_token; CONST context:P_evaluationContext);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
     FUNCTION    getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
+    FUNCTION    getResultAsToken(VAR context:T_evaluationContext):T_token;
     PROCEDURE   free(VAR context:T_evaluationContext);
     DESTRUCTOR  proFormaDestroy;
   end;
@@ -32,7 +32,8 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext):P_futureTask;
+    FUNCTION  enqueue(CONST expression:P_token; CONST context:P_evaluationContext):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
   end;
@@ -75,45 +76,55 @@ PROCEDURE ensurePoolThreads;
 
 PROCEDURE limitPoolThreads(CONST newLimit:longint);
   begin
-    if newLimit>=0 then MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=newLimit;
+    if newLimit>=0 then MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=newLimit else exit;
     while poolThreadsRunning>MAX_NUMBER_OF_SECONDARY_WORKER_THREADS do sleep(100);
   end;
 
-CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx:longint; CONST x: P_literal; VAR context:T_evaluationContext);
+CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; CONST x: P_literal; CONST context: P_evaluationContext);
   VAR dummy:P_token;
       param:T_listLiteral;
   begin
-    scope:=@context;
+    scope:=context;
     eachIndex:=idx;
     param.create;
-    param.append(x,true,context.adapters^);
-    if expr^.replaces(@param,nil,task,dummy,context)
+    param.append(x,true,context^.adapters^);
+    if expr^.replaces(@param,nil,task,dummy,context^)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;
     next:=nil;
   end;
 
-PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context:T_evaluationContext);
+CONSTRUCTOR T_futureTask.createPlainFuture(CONST expression: P_token; CONST context: P_evaluationContext);
+  begin
+    scope:=context;
+    task:=expression;
+    eachIndex:=-1;
+    state:=fts_pending;
+  end;
+
+PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext);
   begin
     if (scope<>@context) then context.adopt(scope);
-    context.valueStore.scopePush;
-    context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex),true);
+    if eachIndex>=0 then begin
+      context.valueStore.scopePush;
+      context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex),true);
+    end;
     if context.adapters^.noErrors then begin
       {$ifdef fullVersion}
-      if stepper.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//next (p)Each step',C_nilTokenLocation);
+      if stepper.currentlyDebugging and (eachIndex>=0) then context.adapters^.raiseCustomMessage(mt_debug_step,'//next (p)Each step',C_nilTokenLocation);
       {$endif}
       reduceExpression(task,callDepth,context);
     end else begin
       context.cascadeDisposeToken(task);
       task:=nil;
     end;
-    context.valueStore.scopePop;
+    if eachIndex>=0 then context.valueStore.scopePop;
     if (scope<>@context) then context.adopt(nil);
     repeat state:=fts_ready until state=fts_ready;
   end;
 
-FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext): P_literal;
+FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_literal;
   VAR loc:T_tokenLocation;
       sleepTime:longint=0;
   begin
@@ -134,7 +145,32 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context:T_evaluationContext): P_lit
     end else result:=newErrorLiteral;
   end;
 
-PROCEDURE T_futureTask.free(VAR context:T_evaluationContext);
+FUNCTION T_futureTask.getResultAsToken(VAR context: T_evaluationContext): T_token;
+  VAR loc:T_tokenLocation;
+      sleepTime:longint=0;
+  begin
+    while state in [fts_pending,fts_evaluating] do begin
+      sleep(sleepTime);
+      if sleepTime<100 then inc(sleepTime);
+    end;
+    if (context.adapters^.noErrors) then begin
+      if (task<>nil) and (task^.next=nil) then begin
+        result.create;
+        result.define(task^);
+      end else begin
+        if task<>nil then loc:=task^.location else loc:=C_nilTokenLocation;
+        result.create;
+        result.define(loc,'',tt_literal,newErrorLiteral);
+        context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
+        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
+      end;
+    end else begin
+      result.create;
+      result.define(loc,'',tt_literal,newErrorLiteral);
+    end;
+  end;
+
+PROCEDURE T_futureTask.free(VAR context: T_evaluationContext);
   begin
     while state=fts_evaluating do sleep(1);
     context.cascadeDisposeToken(task);
@@ -163,7 +199,7 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; VAR context:T_evaluationContext):P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr: P_subrule; CONST idx: longint; CONST x: P_literal; CONST context: P_evaluationContext): P_futureTask;
   begin
     new(result,createTask(expr,idx,x,context));
     if result^.state=fts_pending then begin
@@ -182,7 +218,24 @@ FUNCTION T_taskQueue.enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_
     end;
   end;
 
-FUNCTION  T_taskQueue.dequeue:P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expression: P_token; CONST context: P_evaluationContext): P_futureTask;
+  begin
+    new(result,createPlainFuture(expression,context));
+    system.enterCriticalSection(cs);
+    if first=nil then begin
+      queuedCount:=1;
+      first:=result;
+      last:=result;
+    end else begin
+      inc(queuedCount);
+      last^.next:=result;
+      last:=result;
+    end;
+    ensurePoolThreads;
+    system.leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_taskQueue.dequeue: P_futureTask;
   begin
     system.enterCriticalSection(cs);
     if first=nil then result:=nil
@@ -195,7 +248,7 @@ FUNCTION  T_taskQueue.dequeue:P_futureTask;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
+PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_evaluationContext);
   VAR task:P_futureTask;
   begin
     task:=dequeue;
