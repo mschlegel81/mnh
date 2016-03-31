@@ -39,7 +39,7 @@ TYPE
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
-    procedure workerThreadCountEditEditingDone(Sender: TObject);
+    PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
   private
     { private declarations }
     //nonpersistent:
@@ -101,7 +101,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       settings.value^.activePage:=0;
       ensurePackages;
     end;
-    workerThreadCountEdit.Text:=IntToStr(settings.value^.workerThreadCount);
+    workerThreadCountEdit.text:=intToStr(settings.value^.workerThreadCount);
     FontButton.Font.name := settings.value^.editorFontname;
     FontButton.Font.size := getFontSize;
     FontButton.Caption := settings.value^.editorFontname;
@@ -155,11 +155,11 @@ PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
     runAlone(ensureMnhFileAssociations_mnh);
   end;
 
-procedure TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
+PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
   VAR newValue:longint;
   begin
-    newValue:=StrToIntDef(workerThreadCountEdit.Text,0);
-    if newValue<=0 then workerThreadCountEdit.Text:=IntToStr(settings.value^.workerThreadCount)
+    newValue:=strToIntDef(workerThreadCountEdit.text,0);
+    if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.value^.workerThreadCount)
                    else settings.value^.workerThreadCount:=newValue;
   end;
 

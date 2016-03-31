@@ -64,7 +64,7 @@ PROCEDURE saveSettings;
     settings.value^.saveToFile(settingsFileName);
   end;
 
-constructor T_settings.create;
+CONSTRUCTOR T_settings.create;
   VAR i:longint;
   begin
     workerThreadCount:=-1;
@@ -73,30 +73,27 @@ constructor T_settings.create;
     wasLoaded:=false;
   end;
 
-destructor T_settings.destroy;
+DESTRUCTOR T_settings.destroy;
   begin
   end;
 
 FUNCTION workerThreadCount:longint;
-  VAR F:T_file;
   begin
-    result:=0;
-    if settings.isObtained then result:=settings.value^.workerThreadCount;
-    if fileExists(settingsFileName) then begin
-      F.createToRead(settingsFileName);
-      Result:=F.readLongint;
-      F.destroy;
-    end;
-    if result<=0 then begin
-      result:=getNumberOfCPUs-1;
-      if result<1 then result:=1;
-    end;
+    result:=settings.value^.workerThreadCount;
+    if result>0 then exit(result);
+    result:=getNumberOfCPUs-1;
+    if result<1 then result:=1;
+    settings.value^.workerThreadCount:=result;
   end;
 
-function T_settings.loadFromFile(var F: T_file): boolean;
+FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
   VAR i:longint;
   begin
     workerThreadCount:=F.readLongint;
+    if workerThreadCount<=0 then begin
+      workerThreadCount:=getNumberOfCPUs-1;
+      if workerThreadCount<1 then workerThreadCount:=1;
+    end;
     fontSize:=f.readLongint;
     editorFontname := f.readAnsiString;
     antialiasedFonts:=f.readBoolean;
@@ -123,7 +120,7 @@ function T_settings.loadFromFile(var F: T_file): boolean;
     end else result:=false;
   end;
 
-procedure T_settings.saveToFile(var F: T_file);
+PROCEDURE T_settings.saveToFile(VAR F: T_file);
   VAR i:longint;
   begin
     f.writeLongint(workerThreadCount);
@@ -147,7 +144,7 @@ procedure T_settings.saveToFile(var F: T_file);
     F.writeLongint(activePage);
   end;
 
-procedure T_settings.reset;
+PROCEDURE T_settings.reset;
   VAR i:longint;
   begin
     for i := 0 to 9 do fileHistory[i] := '';
@@ -176,7 +173,7 @@ procedure T_settings.reset;
 CONSTRUCTOR T_formPosition.create;
   begin
     top:=0;
-    left:=0;
+    Left:=0;
     width:=500;
     height:=500;
     isFullscreen:=true;
@@ -270,7 +267,7 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
 FUNCTION obtainSettings:P_settings;
   begin
     new(result,create);
-    if FileExists(settingsFileName) then result^.loadFromFile(settingsFileName);
+    if fileExists(settingsFileName) then result^.loadFromFile(settingsFileName);
   end;
 
 PROCEDURE disposeSettings(settings:P_settings);
@@ -281,7 +278,7 @@ PROCEDURE disposeSettings(settings:P_settings);
 INITIALIZATION
   settings.create(@obtainSettings,nil);
 
-finalization
+FINALIZATION
   settings.destroy;
 
 end.

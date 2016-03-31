@@ -5,7 +5,7 @@ UNIT mnh_tables;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, ValEdit,
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids,
   mnh_litVar, mnh_constants, mnh_tokLoc, mnh_out_adapters, mnh_funcs,mnh_contexts;
 
 CONST
@@ -63,12 +63,16 @@ TYPE
     PROCEDURE StringGridValidateEntry(Sender: TObject; aCol, aRow: integer; CONST oldValue: string; VAR newValue: string);
     PROCEDURE StringGridSelectEditor(Sender: TObject; aCol, aRow: integer; VAR editor: TWinControl);
     PROCEDURE StringGridButtonClick(Sender: TObject; aCol, aRow: integer);
+    PROCEDURE StringGridSelectCell(Sender: TObject; aCol, aRow: integer; VAR CanSelect: boolean);
+    PROCEDURE StringGridKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
+    autoGrow:boolean;
     editMode:boolean;
     editModeResult_:ansistring;
     runModeResult_:P_listLiteral;
     cs:TRTLCriticalSection;
     table:T_sparseTable;
+    PROCEDURE updateTable;
   public
     displayPending:boolean;
     PROCEDURE initForEditing;
@@ -106,12 +110,16 @@ FUNCTION cellIdToCellIdx(CONST id:ansistring):T_cellIndex;
     end;
   end;
 
+FUNCTION rowName(CONST row:longint):ansistring;
+  begin
+    if row<=25 then result:=                                   chr(ord('A')+row       )
+               else result:=chr(ord('A')+row div 26-1) + chr(ord('A')+row mod 26);
+  end;
+
 FUNCTION cellIndexToId(CONST index:T_cellIndex):ansistring;
   begin
     if (index.col<0) or (index.row<0) or (index.row>701) then exit('');
-    if index.row<=25 then result:=                                   chr(ord('A')+index.row       )
-                     else result:=chr(ord('A')+index.row div 26-1) + chr(ord('A')+index.row mod 26);
-    result:=result+intToStr(index.col);
+    result:=rowName(index.row)+intToStr(index.col);
   end;
 
 { T_sparseTable }
@@ -391,24 +399,78 @@ PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TtableForm.StringGridValidateEntry(Sender: TObject; aCol, aRow: integer; CONST oldValue: string; VAR newValue: string);
-begin
-end;
+  begin
+    if newValue=oldValue then exit;
+    updateTable;
+  end;
 
 PROCEDURE TtableForm.StringGridSelectEditor(Sender: TObject; aCol, aRow: integer; VAR editor: TWinControl);
-begin
-  //StringGrid.EditorByStyle(cbsPickList);
-end;
+  begin
+  end;
 
 PROCEDURE TtableForm.StringGridButtonClick(Sender: TObject; aCol, aRow: integer);
 begin
 
 end;
 
+PROCEDURE TtableForm.StringGridSelectCell(Sender: TObject; aCol, aRow: integer; VAR CanSelect: boolean);
+begin
+end;
+
+PROCEDURE TtableForm.StringGridKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+begin
+  if autoGrow and (key=39) and (StringGrid.col=StringGrid.colCount-1) then begin
+    StringGrid.colCount:=StringGrid.colCount+1;
+    updateTable;
+  end;
+  if autoGrow and (key=40) and (StringGrid.row=StringGrid.RowCount-1) then begin
+    StringGrid.RowCount:=StringGrid.RowCount+1;
+    updateTable;
+  end;
+end;
+
+PROCEDURE TtableForm.updateTable;
+  VAR i:longint;
+      allEmpty:boolean;
+      offset:longint=0;
+  begin
+    if editMode then begin
+      for i:=1 to StringGrid.colCount-1 do StringGrid.Cells[i,0]:=rowName(i-1);
+      for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=intToStr(i);
+      offset:=1;
+    end;
+
+
+    StringGrid.AutoSizeColumns;
+    while StringGrid.RowCount>StringGrid.row+2 do begin
+      allEmpty:=true;
+      for i:=offset to StringGrid.colCount-1 do allEmpty:=allEmpty and (trim(StringGrid.Cells[i,StringGrid.RowCount-1])='');
+      if allEmpty then StringGrid.RowCount:=StringGrid.RowCount-1
+                  else break;
+    end;
+    while StringGrid.colCount>StringGrid.col+2 do begin
+      allEmpty:=true;
+      for i:=offset to StringGrid.RowCount-1 do allEmpty:=allEmpty and (trim(StringGrid.Cells[StringGrid.colCount-1,i])='');
+      if allEmpty then StringGrid.colCount:=StringGrid.colCount-1
+                  else break;
+    end;
+
+  end;
+
 PROCEDURE TtableForm.initForEditing;
   begin
     enterCriticalSection(cs);
     editMode:=true;
     table.create;
+    StringGrid.clear;
+    StringGrid.RowCount:=3;
+    StringGrid.colCount:=3;
+    StringGrid.FixedCols:=1;
+    StringGrid.FixedRows:=1;
+    StringGrid.GridLineWidth:=1;
+    autoGrow:=true;
+    updateTable;
+    ShowModal;
     leaveCriticalSection(cs);
   end;
 
@@ -417,6 +479,10 @@ PROCEDURE TtableForm.initForRunning;
     enterCriticalSection(cs);
     editMode:=false;
     table.create;
+    StringGrid.clear;
+    StringGrid.FixedCols:=0;
+    StringGrid.FixedRows:=0;
+    StringGrid.GridLineWidth:=0;
     leaveCriticalSection(cs);
   end;
 
