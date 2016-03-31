@@ -6,7 +6,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
-  SynHighlighterMnh, mnh_gui_settings, mnh_tokLoc,
+  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
@@ -112,6 +112,8 @@ TYPE
     helpPopupMemo: TSynMemo;
     miOpenDemo: TMenuItem;
     miNewCentralPackage: TMenuItem;
+    MenuItem3: TMenuItem;
+    miOpenTableEditor: TMenuItem;
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
@@ -187,6 +189,7 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
     PROCEDURE miOpenDemoClick(Sender: TObject);
     PROCEDURE miNewCentralPackageClick(Sender: TObject);
+    PROCEDURE miOpenTableEditorClick(Sender: TObject);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -1482,6 +1485,11 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
       setupInputRecForNewFile(mr,newCentralPackageForm.fileNameEdit.Caption);
     end;
   end;
+
+PROCEDURE TMnhForm.miOpenTableEditorClick(Sender: TObject);
+begin
+  tableForm.initForEditing;
+end;
 
 PROCEDURE TMnhForm.processSettings;
   VAR formPosition:T_formPosition;

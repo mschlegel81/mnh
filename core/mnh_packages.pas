@@ -3,7 +3,7 @@ INTERFACE
 USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
      EpikTimer,
-     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, //even more specific
+     mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
      mnh_funcs_regex;
@@ -84,8 +84,7 @@ VAR environment:T_packageEnvironment;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
-VAR MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:longint=3;
-    pendingTasks     :T_taskQueue;
+VAR pendingTasks     :T_taskQueue;
     timer: specialize G_lazyVar<TEpikTimer>;
 
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
@@ -401,11 +400,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
         if not(evaluateBody) and (ruleIsFuture or ruleIsMutable) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'mutable, persistent and future rules must be declared with :=',first^.location);
-          context.cascadeDisposeToken(first);
-          exit;
-        end;
-        if ruleIsMemoized and ruleIsFuture then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'A rule cannot be memoized and future at the same time.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
@@ -1063,10 +1057,6 @@ INITIALIZATION
   {$endif}
   //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
-  //worker thread setup
-  MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=getNumberOfCPUs-1;
-  if MAX_NUMBER_OF_SECONDARY_WORKER_THREADS<1 then
-     MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=1;
   {$include mnh_tokens_funcs.inc}
 {$undef include_initialization}
 

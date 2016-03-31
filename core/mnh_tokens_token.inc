@@ -784,7 +784,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR i,j:longint;
       begin
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
-        then maxFutureForwardInitialization:=MAX_NUMBER_OF_SECONDARY_WORKER_THREADS
+        then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);

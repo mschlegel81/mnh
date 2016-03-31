@@ -55,6 +55,7 @@ object SettingsForm: TSettingsForm
         Top = 56
         Width = 232
         Anchors = [akTop, akLeft, akRight]
+        NumbersOnly = True
         TabOrder = 1
         Text = 'FontSizeEdit'
       end
@@ -73,6 +74,37 @@ object SettingsForm: TSettingsForm
         Width = 34
         Caption = 'Editor:'
         ParentColor = False
+      end
+    end
+    object TabSheet3: TTabSheet
+      Caption = 'global'
+      ClientHeight = 212
+      ClientWidth = 312
+      object Label1: TLabel
+        Left = 8
+        Height = 15
+        Top = 8
+        Width = 86
+        Caption = 'Worker Threads:'
+        ParentColor = False
+      end
+      object Label4: TLabel
+        Left = 8
+        Height = 15
+        Top = 32
+        Width = 109
+        Caption = '...should be CPUs - 1'
+        ParentColor = False
+      end
+      object workerThreadCountEdit: TEdit
+        Left = 104
+        Height = 23
+        Top = 8
+        Width = 200
+        NumbersOnly = True
+        OnEditingDone = workerThreadCountEditEditingDone
+        TabOrder = 0
+        Text = '1'
       end
     end
     object TabSheet1: TTabSheet

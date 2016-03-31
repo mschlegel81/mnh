@@ -1,7 +1,7 @@
 object tableForm: TtableForm
-  Left = 527
+  Left = 766
   Height = 240
-  Top = 223
+  Top = 134
   Width = 320
   Caption = 'MNH - Table'
   ClientHeight = 240
@@ -25,7 +25,9 @@ object tableForm: TtableForm
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goEditing, goSmoothScroll, goCellEllipsis]
     TabOrder = 0
     OnButtonClick = StringGridButtonClick
+    OnKeyDown = StringGridKeyDown
     OnSelectEditor = StringGridSelectEditor
+    OnSelectCell = StringGridSelectCell
     OnValidateEntry = StringGridValidateEntry
   end
 end

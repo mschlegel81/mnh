@@ -68,16 +68,10 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 
 PROCEDURE ensurePoolThreads;
   begin
-    if (poolThreadsRunning<MAX_NUMBER_OF_SECONDARY_WORKER_THREADS) {$ifdef fullVersion} and not(stepper.currentlyDebugging) {$endif} then begin
+    if (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(stepper.currentlyDebugging) {$endif} then begin
       InterLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;
-  end;
-
-PROCEDURE limitPoolThreads(CONST newLimit:longint);
-  begin
-    if newLimit>=0 then MAX_NUMBER_OF_SECONDARY_WORKER_THREADS:=newLimit else exit;
-    while poolThreadsRunning>MAX_NUMBER_OF_SECONDARY_WORKER_THREADS do sleep(100);
   end;
 
 CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; CONST x: P_literal; CONST context: P_evaluationContext);

@@ -399,15 +399,6 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     then result:=getNames(P_subrule(P_expressionLiteral(params^.value(0))^.value));
   end;
 
-FUNCTION setThreadCount_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
-      limitPoolThreads(P_intLiteral(params^.value(0))^.value-1);
-      result:=newVoidLiteral;
-    end;
-  end;
-
 FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR src:T_arrayOfString;
       i,j:longint;
@@ -677,7 +668,6 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'setThreadCount',@setThreadCount_imp,'setThreadCount(n:int);#Sets the number of threads');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
