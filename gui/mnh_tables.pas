@@ -5,7 +5,7 @@ UNIT mnh_tables;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids,
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, ExtCtrls, StdCtrls,
   mnh_litVar, mnh_constants, mnh_tokLoc, mnh_out_adapters, mnh_funcs,mnh_contexts;
 
 CONST
@@ -57,6 +57,25 @@ TYPE
 
   TtableForm = class(TForm)
     StringGrid: TStringGrid;
+    editingPanel: TPanel;
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    CheckBox1: TCheckBox;
+    CheckBox2: TCheckBox;
+    Label1: TLabel;
+    Label2: TLabel;
+    rowCountEdit: TEdit;
+    columnCountEdit: TEdit;
+    Label3: TLabel;
+    cellStyleComboBox: TComboBox;
+    Label4: TLabel;
+    Edit1: TEdit;
+    Label5: TLabel;
+    Edit2: TEdit;
+    Label6: TLabel;
+    validatorComboBox: TComboBox;
+    Label7: TLabel;
+    picklistItemsMemo: TMemo;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);

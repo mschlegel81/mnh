@@ -26,8 +26,8 @@ end;
 
 { T_guiSettings }
 
-P_Settings=^T_Settings;
-T_Settings=object(T_serializable)
+P_Settings=^T_settings;
+T_settings=object(T_serializable)
   workerThreadCount:longint;
   editorFontname: string;
   fontSize:longint;
@@ -264,13 +264,13 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
     end;
   end;
 
-FUNCTION obtainSettings:P_settings;
+FUNCTION obtainSettings:P_Settings;
   begin
     new(result,create);
     if fileExists(settingsFileName) then result^.loadFromFile(settingsFileName);
   end;
 
-PROCEDURE disposeSettings(settings:P_settings);
+PROCEDURE disposeSettings(settings:P_Settings);
   begin
     dispose(settings,destroy);
   end;

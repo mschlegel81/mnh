@@ -1569,8 +1569,8 @@ PROCEDURE TMnhForm.processFileHistory;
 
 PROCEDURE formCycle(CONST ownId:longint);
   begin
-    if ownId=0 then MnhForm.Show
-               else plotForm.Show;
+    if ownId=0 then begin plotForm.Show; plotForm.BringToFront; plotForm.SetFocus; end
+               else begin MnhForm.Show; MnhForm.BringToFront; MnhForm.SetFocus; end;
   end;
 
 PROCEDURE lateInitialization;

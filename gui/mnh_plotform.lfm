@@ -11,6 +11,7 @@ object plotForm: TplotForm
   OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnResize = FormResize
+  Position = poScreenCenter
   LCLVersion = '1.4.4.0'
   object plotImage: TImage
     Cursor = crCross
@@ -30,93 +31,93 @@ object plotForm: TplotForm
     Panels = <>
   end
   object MainMenu: TMainMenu
-    left = 71
-    top = 92
+    left = 8
+    top = 8
     object MenuItem6: TMenuItem
-      Caption = 'Plot'
+      Caption = '&Plot'
       object miAutoReset: TMenuItem
         Caption = 'Reset plot options on evaluation'
         OnClick = miAutoResetClick
       end
     end
     object MenuItem1: TMenuItem
-      Caption = 'Quality'
+      Caption = '&Quality'
       object miAntiAliasing1: TMenuItem
         AutoCheck = True
-        Caption = 'No anti aliasing'
+        Caption = '&No anti aliasing'
         Checked = True
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing2: TMenuItem
         AutoCheck = True
-        Caption = '2x anti-aliasing'
+        Caption = '&2x anti-aliasing'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing3: TMenuItem
         AutoCheck = True
-        Caption = '3x anti-aliasing'
+        Caption = '&3x anti-aliasing'
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing4: TMenuItem
         AutoCheck = True
-        Caption = '4x anti-aliasing'
+        Caption = '&4x anti-aliasing'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing5: TMenuItem
         AutoCheck = True
-        Caption = '5x anti-aliasing'
+        Caption = '&5x anti-aliasing'
         RadioItem = True
         OnClick = miAntiAliasing1Click
       end
     end
     object MenuItem2: TMenuItem
-      Caption = 'Grid'
+      Caption = '&Grid'
       object MenuItem3: TMenuItem
-        Caption = 'x'
+        Caption = '&x'
         object miXGrid: TMenuItem
-          Caption = 'Coarse Grid'
+          Caption = '&Coarse Grid'
           OnClick = miXGridClick
         end
         object miXFinerGrid: TMenuItem
-          Caption = 'Fine Grid'
+          Caption = '&Fine Grid'
           OnClick = miXFinerGridClick
         end
         object miXTics: TMenuItem
-          Caption = 'Tics'
+          Caption = '&Tics'
           OnClick = miXTicsClick
         end
       end
       object MenuItem4: TMenuItem
-        Caption = 'y'
+        Caption = '&y'
         object miYGrid: TMenuItem
-          Caption = 'Coarse Grid'
+          Caption = '&Coarse Grid'
           OnClick = miYGridClick
         end
         object miYFinerGrid: TMenuItem
-          Caption = 'Fine Grid'
+          Caption = '&Fine Grid'
           OnClick = miYFinerGridClick
         end
         object miYTics: TMenuItem
-          Caption = 'Tics'
+          Caption = '&Tics'
           OnClick = miYTicsClick
         end
       end
     end
     object MenuItem5: TMenuItem
-      Caption = 'Scaling'
+      Caption = '&Scaling'
       object miPreserveAspect: TMenuItem
-        Caption = 'Preserve aspect ratio'
+        Caption = '&Preserve aspect ratio'
         OnClick = miPreserveAspectClick
       end
       object miAutoscaleX: TMenuItem
-        Caption = 'Autoscale x'
+        Caption = 'Autoscale &x'
         OnClick = miAutoscaleXClick
       end
       object miAutoscaleY: TMenuItem
-        Caption = 'Autoscale y'
+        Caption = 'Autoscale &y'
         OnClick = miAutoscaleYClick
       end
       object miLogscaleX: TMenuItem
@@ -124,7 +125,7 @@ object plotForm: TplotForm
         OnClick = miLogscaleXClick
       end
       object miLogscaleY: TMenuItem
-        Caption = 'Logscale y'
+        Caption = '&Logscale y'
         OnClick = miLogscaleYClick
       end
     end

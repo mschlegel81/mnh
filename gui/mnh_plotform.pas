@@ -274,6 +274,7 @@ PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) and guiAdapters^.noErrors then Show;
+    BringToFront;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
     else if miAntiAliasing3.Checked then factor:=3
