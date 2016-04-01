@@ -1,6 +1,16 @@
 UNIT mnh_settings;
 INTERFACE
 USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys;
+CONST
+  C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
+  ((text:'off';        interval:1E6),
+   (text:'1 minute';   interval:1/(24*60)),
+   (text:'2 minutes';  interval:2/(24*60)),
+   (text:'5 minutes';  interval:5/(24*60)),
+   (text:'10 minutes'; interval:10/(24*60)),
+   (text:'30 minutes'; interval:30/(24*60)),
+   (text:'1 hour';     interval:1/24));
+
 TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
@@ -27,8 +37,11 @@ end;
 { T_guiSettings }
 
 P_Settings=^T_settings;
+
+{ T_settings }
+
 T_settings=object(T_serializable)
-  workerThreadCount:longint;
+  cpuCount:longint;
   editorFontname: string;
   fontSize:longint;
   antialiasedFonts:boolean;
@@ -39,8 +52,10 @@ T_settings=object(T_serializable)
   editorState: array[0..9] of T_editorState;
   activePage:longint;
   outputBehaviour: T_outputBehaviour;
+  saveIntervalIdx:byte;
 
   wasLoaded:boolean;
+  savedAt:double;
 
   CONSTRUCTOR create;
   PROCEDURE reset;
@@ -48,6 +63,7 @@ T_settings=object(T_serializable)
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
 
+  FUNCTION savingRequested:boolean;
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
   FUNCTION historyItem(CONST index:longint):ansistring;
@@ -71,7 +87,7 @@ PROCEDURE saveSettings;
 CONSTRUCTOR T_settings.create;
   VAR i:longint;
   begin
-    workerThreadCount:=-1;
+    cpuCount:=0;
     mainForm.create;
     for i:=0 to length(editorState)-1 do editorState[i].create;
     wasLoaded:=false;
@@ -83,20 +99,20 @@ DESTRUCTOR T_settings.destroy;
 
 FUNCTION workerThreadCount:longint;
   begin
-    result:=settings.value^.workerThreadCount;
-    if result>0 then exit(result);
+    result:=settings.value^.cpuCount-1;
+    if result>=0 then exit(result);
     result:=getNumberOfCPUs-1;
-    if result<1 then result:=1;
-    settings.value^.workerThreadCount:=result;
+    if result<0 then result:=0;
+    settings.value^.cpuCount:=result+1;
   end;
 
 FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
   VAR i:longint;
   begin
-    workerThreadCount:=F.readLongint;
-    if workerThreadCount<=0 then begin
-      workerThreadCount:=getNumberOfCPUs-1;
-      if workerThreadCount<1 then workerThreadCount:=1;
+    cpuCount:=F.readLongint;
+    if cpuCount<=0 then begin
+      cpuCount:=getNumberOfCPUs-1;
+      if cpuCount<1 then cpuCount:=1;
     end;
     fontSize:=f.readLongint;
     editorFontname := f.readAnsiString;
@@ -114,17 +130,19 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     for i := 0 to 9 do fileHistory[i] := f.readAnsiString;
     for i:=0 to 9 do editorState[i].loadFromFile(f);
     activePage:=f.readLongint;
+    saveIntervalIdx:=f.readByte;
     if F.allOkay then result:=true
     else begin
       reset;
       result:=false;
     end;
+    savedAt:=now;
   end;
 
 PROCEDURE T_settings.saveToFile(VAR F: T_file);
   VAR i:longint;
   begin
-    f.writeLongint(workerThreadCount);
+    f.writeLongint(cpuCount);
     F.writeLongint(fontSize);
     F.writeAnsiString(editorFontname);
     F.writeBoolean(antialiasedFonts);
@@ -141,6 +159,13 @@ PROCEDURE T_settings.saveToFile(VAR F: T_file);
     for i:=0 to 9 do F.writeAnsiString(fileHistory [i]);
     for i:=0 to 9 do editorState[i].saveToFile(F);
     F.writeLongint(activePage);
+    f.writeByte(saveIntervalIdx);
+    savedAt:=now;
+  end;
+
+FUNCTION T_settings.savingRequested: boolean;
+  begin
+    result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
   end;
 
 PROCEDURE T_settings.reset;
@@ -167,6 +192,7 @@ PROCEDURE T_settings.reset;
     doResetPlotOnEvaluation := false;
     editorState[0].visible:=true;
     wasLoaded:=false;
+    savedAt:=now;
   end;
 
 FUNCTION T_settings.polishHistory: boolean;
@@ -191,7 +217,7 @@ FUNCTION T_settings.polishHistory: boolean;
     end;
   end;
 
-PROCEDURE T_settings.fileClosed(CONST fileName:ansistring);
+PROCEDURE T_settings.fileClosed(CONST fileName: ansistring);
   VAR i:longint;
   begin
     for i:=0 to length(fileHistory)-1 do if fileHistory[i]='' then begin

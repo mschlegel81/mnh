@@ -9,9 +9,6 @@ USES
   StdCtrls, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,
   mnh_packages,myStringUtil,mnh_settings;
 
-CONST
-  STATE_SAVE_INTERVAL=ONE_MINUTE;
-
 TYPE
 
   { TSettingsForm }
@@ -32,24 +29,21 @@ TYPE
     uninstallToggleBox: TToggleBox;
     TabSheet3: TTabSheet;
     Label1: TLabel;
-    Label4: TLabel;
     workerThreadCountEdit: TEdit;
+    Label4: TLabel;
+    autosaveComboBox: TComboBox;
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
-    procedure AntialiasCheckboxChange(Sender: TObject);
+    PROCEDURE AntialiasCheckboxChange(Sender: TObject);
+    PROCEDURE autosaveComboBoxChange(Sender: TObject);
   private
-    { private declarations }
-    savedAt:double;
-    function getFontSize: longint;
-    procedure setFontSize(const value: longint);
-    procedure saveSettings;
+    FUNCTION getFontSize: longint;
+    PROCEDURE setFontSize(CONST value: longint);
   public
-    { public declarations }
-    FUNCTION timeForSaving:boolean;
     PROPERTY fontSize:longint read getFontSize write setFontSize;
   end;
 
@@ -72,6 +66,8 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       runAlone(code);
     end;
 
+  VAR i:longint;
+
   begin
     EditorFontDialog.Font.name := settings.value^.editorFontname;
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
@@ -80,7 +76,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       settings.value^.activePage:=0;
       ensurePackages;
     end;
-    workerThreadCountEdit.text:=intToStr(settings.value^.workerThreadCount);
+    workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
     FontButton.Font.name := settings.value^.editorFontname;
     FontButton.Font.size := getFontSize;
     FontButton.Caption := settings.value^.editorFontname;
@@ -102,7 +98,10 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         end;
     end;
     settings.value^.polishHistory;
-    savedAt:=now;
+
+    autosaveComboBox.Items.clear;
+    for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
+    autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
@@ -138,13 +137,18 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
   VAR newValue:longint;
   begin
     newValue:=strToIntDef(workerThreadCountEdit.text,0);
-    if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.value^.workerThreadCount)
-                   else settings.value^.workerThreadCount:=newValue;
+    if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount)
+                   else settings.value^.cpuCount:=newValue;
   end;
 
-procedure TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
+PROCEDURE TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
   begin
     settings.value^.antialiasedFonts:=AntialiasCheckbox.Checked;
+  end;
+
+PROCEDURE TSettingsForm.autosaveComboBoxChange(Sender: TObject);
+  begin
+    settings.value^.saveIntervalIdx:=autosaveComboBox.ItemIndex;
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;
@@ -158,17 +162,5 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
     EditorFontDialog.Font.size := value;
     settings.value^.fontSize:=value;
   end;
-
-PROCEDURE TSettingsForm.saveSettings;
-  begin
-    mnh_settings.saveSettings;
-    savedAt:=now;
-  end;
-
-FUNCTION TSettingsForm.timeForSaving: boolean;
-  begin
-    result:=(now-savedAt>STATE_SAVE_INTERVAL);
-  end;
-
 
 end.

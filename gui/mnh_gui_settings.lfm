@@ -15,9 +15,9 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet2
+    ActivePage = TabSheet3
     Align = alClient
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object TabSheet2: TTabSheet
       Caption = 'display'
@@ -85,27 +85,37 @@ object SettingsForm: TSettingsForm
         Left = 8
         Height = 15
         Top = 8
-        Width = 86
-        Caption = 'Worker Threads:'
+        Width = 31
+        Caption = 'CPUs:'
         ParentColor = False
+      end
+      object workerThreadCountEdit: TEdit
+        Left = 72
+        Height = 23
+        Top = 8
+        Width = 232
+        NumbersOnly = True
+        OnEditingDone = workerThreadCountEditEditingDone
+        TabOrder = 0
+        Text = '1'
       end
       object Label4: TLabel
         Left = 8
         Height = 15
         Top = 32
-        Width = 109
-        Caption = '...should be CPUs - 1'
+        Width = 52
+        Caption = 'Autosave:'
         ParentColor = False
       end
-      object workerThreadCountEdit: TEdit
-        Left = 104
+      object autosaveComboBox: TComboBox
+        Left = 72
         Height = 23
-        Top = 8
-        Width = 200
-        NumbersOnly = True
-        OnEditingDone = workerThreadCountEditEditingDone
-        TabOrder = 0
-        Text = '1'
+        Top = 32
+        Width = 232
+        ItemHeight = 15
+        OnChange = autosaveComboBoxChange
+        Style = csDropDownList
+        TabOrder = 1
       end
     end
     object TabSheet1: TTabSheet

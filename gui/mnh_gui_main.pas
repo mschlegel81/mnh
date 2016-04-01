@@ -476,7 +476,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
                      else SetCurrentDir(ExtractFileDir(filePath));
     guiOutAdapter.flushClear;
     UpdateTimeTimerTimer(self);
-    UpdateTimeTimer.Interval:=20;
+    UpdateTimeTimer.interval:=20;
     doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
@@ -1413,15 +1413,15 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation;
       with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
-      UpdateTimeTimer.Interval:=MIN_INTERVALL;
+      UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
     if not(flushPerformed) and not(autosizingDone) then begin
-      UpdateTimeTimer.Interval:=UpdateTimeTimer.Interval+10;
-      if UpdateTimeTimer.Interval>MAX_INTERVALL then UpdateTimeTimer.Interval:=MAX_INTERVALL;
-    end else UpdateTimeTimer.Interval:=MIN_INTERVALL;
+      UpdateTimeTimer.interval:=UpdateTimeTimer.interval+10;
+      if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
+    end else UpdateTimeTimer.interval:=MIN_INTERVALL;
     //================================================================:slow ones
-    if SettingsForm.timeForSaving then begin
+    if settings.value^.savingRequested then begin
       for i:=0 to 9 do with inputRec[i] do begin
         if sheet.TabVisible
         then state.create(filePath,fileAccessAge,changed,editor.lines)

@@ -817,6 +817,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     begin
+      inParallel:=inParallel and
+                  (callDepth<STACK_DEPTH_LIMIT) and
+                  context.allowDelegation and
+                  {$ifdef fullVersion}not(stepper.currentlyDebugging) and{$endif}
+                  (workerThreadCount>0);
+
       eachLocation:=first^.location;
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
@@ -1245,7 +1251,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
-      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach((first^.next^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif})
+      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach(first^.next^.tokType=tt_parallelEach)
       else if cTokType[1]= tt_listBraceOpen then stack_push
       else stack_push_push;
     end;
@@ -1375,7 +1381,7 @@ tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
 tt_identifier_pon,tt_importedUserRule_pon,tt_localUserRule_pon,tt_intrinsicRule_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
-tt_each,tt_parallelEach: resolveEach((first^.next^.tokType=tt_parallelEach) and (callDepth<STACK_DEPTH_LIMIT) and context.allowDelegation {$ifdef fullVersion}and not(stepper.currentlyDebugging){$endif})}
+tt_each,tt_parallelEach: resolveEach(first^.next^.tokType=tt_parallelEach)}
 
 {$define FORBIDDEN_SEPARATORS:=
 tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
