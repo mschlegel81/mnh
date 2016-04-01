@@ -65,6 +65,7 @@ object SettingsForm: TSettingsForm
         Top = 80
         Width = 110
         Caption = 'Antialiased Fonts'
+        OnChange = AntialiasCheckboxChange
         TabOrder = 2
       end
       object Label8: TLabel

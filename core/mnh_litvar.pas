@@ -196,8 +196,6 @@ TYPE
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
-    FUNCTION equals(CONST other: P_literal): boolean; virtual;
-    FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION typeString:string; virtual;
   end;
 
@@ -1378,7 +1376,7 @@ FUNCTION T_listLiteral.hash: T_hashInt;
 //=======================================================================:?.hash
 //?.equals:=====================================================================
 FUNCTION T_literal.equals(CONST other: P_literal): boolean;
-  begin result:=(@self = other);  end;
+  begin result:=(@self = other) or (other^.literalType = literalType) and (other^.toString=toString);  end;
 
 FUNCTION T_intLiteral.equals(CONST other: P_literal): boolean;
   begin
@@ -1398,12 +1396,6 @@ FUNCTION T_stringLiteral.equals(CONST other: P_literal): boolean;
   begin
     result:=(@self = other)
            or (other^.literalType = lt_string) and (P_stringLiteral(other)^.value = val);
-  end;
-
-FUNCTION T_expressionLiteral.equals(CONST other: P_literal): boolean;
-  begin
-    result:=(@self = other)
-           or (other^.literalType = lt_expression) and (P_expressionLiteral(other)^.toString = toString);
   end;
 
 FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
@@ -1531,7 +1523,9 @@ FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_t
 //?.leqForSorting:==============================================================
 FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
   begin
-    result:=literalType<=other^.literalType;
+    if (other^.literalType = lt_expression)
+    then result:=toString<=other^.toString
+    else result:=literalType<=other^.literalType;
   end;
 
 FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
@@ -1563,14 +1557,6 @@ FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
     then result:=val<=P_stringLiteral(other)^.val
     else result:=(literalType<=other^.literalType);
   end;
-
-FUNCTION T_expressionLiteral.leqForSorting(CONST other: P_literal): boolean;
-  begin
-    if (other^.literalType = lt_expression)
-    then result:=toString<=other^.toString
-    else result:=literalType<=other^.literalType;
-  end;
-
 
 FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
   VAR i: longint;

@@ -14,7 +14,6 @@ TYPE
   {$include mnh_tokens_token.inc}
   {$include mnh_tokens_pattern.inc}
   P_rule=^T_rule;
-  P_futureTask=^T_futureTask;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
   {$include mnh_tokens_subrule.inc}
   {$include mnh_tokens_rule.inc}
@@ -364,7 +363,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleIsMutable:boolean=false;
           ruleIsPersistent:boolean=false;
           ruleIsSynchronized:boolean=false;
-          ruleIsFuture:boolean=false;
           //rule meta data
           ruleId:string;
           evaluateBody:boolean;
@@ -387,21 +385,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_persistent,tt_modifier_synchronized,tt_modifier_future]) do begin
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_persistent,tt_modifier_synchronized]) do begin
           if first^.tokType=tt_modifier_private      then ruleIsPrivate :=true;
           if first^.tokType=tt_modifier_memoized     then ruleIsMemoized:=true;
           if first^.tokType=tt_modifier_synchronized then ruleIsSynchronized:=true;
-          if first^.tokType=tt_modifier_future       then begin ruleIsFuture:=true; ruleIsSynchronized:=true; end;
           if first^.tokType in [tt_modifier_mutable,tt_modifier_persistent]  then begin
             ruleIsMutable   :=true;
             ruleIsPersistent:=(first^.tokType=tt_modifier_persistent);
+            evaluateBody    :=true;
           end;
           first:=context.disposeToken(first);
-        end;
-        if not(evaluateBody) and (ruleIsFuture or ruleIsMutable) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'mutable, persistent and future rules must be declared with :=',first^.location);
-          context.cascadeDisposeToken(first);
-          exit;
         end;
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Declaration does not start with an identifier.',first^.location);
@@ -520,7 +513,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if context.adapters^.noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart,semicolonPosition,context.adapters^);
           if context.adapters^.noErrors then begin
-            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,ruleIsFuture,context));
+            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,context));
             subRule^.comment:=lastComment; lastComment:='';
             if ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]
             then begin
@@ -1069,5 +1062,6 @@ FINALIZATION
     for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
     setLength(secondaryPackages,0);
   end;
+  timer.destroy;
 {$include mnh_tokens_fmtStmt.inc}
 end.

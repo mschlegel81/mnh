@@ -882,8 +882,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,false,context));
-        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,false,context));
+        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,context));
+        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,context));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;

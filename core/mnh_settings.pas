@@ -137,10 +137,8 @@ PROCEDURE T_settings.saveToFile(VAR F: T_file);
     end;
     F.writeBoolean(instantEvaluation);
     F.writeBoolean(doResetPlotOnEvaluation);
-    for i := 0 to 9 do F.writeAnsiString(fileHistory [i]);
-    for i:=0 to 9 do begin
-      editorState[i].saveToFile(F);
-    end;
+    for i:=0 to 9 do F.writeAnsiString(fileHistory [i]);
+    for i:=0 to 9 do editorState[i].saveToFile(F);
     F.writeLongint(activePage);
   end;
 
@@ -272,6 +270,7 @@ FUNCTION obtainSettings:P_Settings;
 
 PROCEDURE disposeSettings(settings:P_Settings);
   begin
+    settings^.saveToFile(settingsFileName);
     dispose(settings,destroy);
   end;
 

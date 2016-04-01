@@ -122,7 +122,7 @@ exit}
           if stepper.currentlyDebugging then context.adapters^.raiseCustomMessage(mt_debug_step,'//entering critical section for memoized rule failed - memoization disabled',declarationStart);
           {$endif}
           result:=false;
-          for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ in [srt_normal_public,srt_future_public])) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
+          for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
           if result then begin
             used:=true;
             wrapResultInPutCacheRule;

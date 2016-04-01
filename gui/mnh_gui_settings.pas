@@ -40,6 +40,7 @@ TYPE
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
+    procedure AntialiasCheckboxChange(Sender: TObject);
   private
     { private declarations }
     //nonpersistent:
@@ -161,6 +162,11 @@ PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);
     newValue:=strToIntDef(workerThreadCountEdit.text,0);
     if newValue<=0 then workerThreadCountEdit.text:=intToStr(settings.value^.workerThreadCount)
                    else settings.value^.workerThreadCount:=newValue;
+  end;
+
+procedure TSettingsForm.AntialiasCheckboxChange(Sender: TObject);
+  begin
+    settings.value^.antialiasedFonts:=AntialiasCheckbox.Checked;
   end;
 
 FUNCTION TSettingsForm.getFontSize: longint;

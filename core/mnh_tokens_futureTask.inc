@@ -4,8 +4,7 @@
                      fts_evaluating, //set on dequeue
                      fts_ready); //set after evaluation
 
-  { T_futureTask }
-
+  P_futureTask=^T_futureTask;
   T_futureTask=object
     eachIndex:longint;
     task:P_token;
