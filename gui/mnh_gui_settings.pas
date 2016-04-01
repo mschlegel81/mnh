@@ -43,36 +43,14 @@ TYPE
     procedure AntialiasCheckboxChange(Sender: TObject);
   private
     { private declarations }
-    //nonpersistent:
     savedAt:double;
-    FUNCTION getFontSize: longint;
-    PROCEDURE setFontSize(CONST value: longint);
-    FUNCTION getMainFormPosition:T_formPosition;
-    PROCEDURE setMainFormPosition(CONST value:T_formPosition);
-    FUNCTION getInstantEvaluation:boolean;
-    PROCEDURE setInstantEvaluation(CONST value:boolean);
-    FUNCTION getOutputBehaviour:T_outputBehaviour;
-    PROCEDURE setOutputBehaviour(CONST value:T_outputBehaviour);
-    FUNCTION getResetPlotOnEvaluation:boolean;
-    PROCEDURE setResetPlotOnEvaluation(CONST value:boolean);
-    FUNCTION getPageIndex:longint;
-    PROCEDURE setPageIndex(CONST value:longint);
+    function getFontSize: longint;
+    procedure setFontSize(const value: longint);
+    procedure saveSettings;
   public
     { public declarations }
-    PROPERTY fontSize: longint read getFontSize write setFontSize;
-    PROPERTY mainFormPosition: T_formPosition read getMainFormPosition write setMainFormPosition;
-    PROPERTY wantInstantEvaluation: boolean read getInstantEvaluation write setInstantEvaluation;
-    PROPERTY behaviour:T_outputBehaviour read getOutputBehaviour write setOutputBehaviour;
-    PROPERTY resetPlotOnEvaluation:boolean read getResetPlotOnEvaluation write setResetPlotOnEvaluation;
-    PROPERTY pageIndex:longint read getPageIndex write setPageIndex;
-    FUNCTION getEditorFontName: string;
-    PROCEDURE saveSettings;
     FUNCTION timeForSaving:boolean;
-    PROCEDURE setEditorState(CONST index:longint; CONST dat:T_editorState);
-    FUNCTION  getEditorState(CONST index:longint):T_editorState;
-    FUNCTION polishHistory: boolean;
-    PROCEDURE fileClosed(CONST fileName:ansistring);
-    FUNCTION historyItem(CONST index:longint):ansistring;
+    PROPERTY fontSize:longint read getFontSize write setFontSize;
   end;
 
 VAR
@@ -123,7 +101,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
         height := 480;
         end;
     end;
-    polishHistory;
+    settings.value^.polishHistory;
     savedAt:=now;
   end;
 
@@ -181,61 +159,6 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
     settings.value^.fontSize:=value;
   end;
 
-FUNCTION TSettingsForm.getMainFormPosition: T_formPosition;
-  begin
-    result:=settings.value^.mainForm;
-  end;
-
-PROCEDURE TSettingsForm.setMainFormPosition(CONST value: T_formPosition);
-  begin
-    settings.value^.mainForm:=value;
-  end;
-
-FUNCTION TSettingsForm.getInstantEvaluation: boolean;
-  begin
-    result:=settings.value^.instantEvaluation;
-  end;
-
-PROCEDURE TSettingsForm.setInstantEvaluation(CONST value: boolean);
-  begin
-    settings.value^.instantEvaluation:=value;
-  end;
-
-FUNCTION TSettingsForm.getOutputBehaviour: T_outputBehaviour;
-  begin
-    result:=settings.value^.outputBehaviour;
-  end;
-
-PROCEDURE TSettingsForm.setOutputBehaviour(CONST value: T_outputBehaviour);
-  begin
-    settings.value^.outputBehaviour:=value;
-  end;
-
-FUNCTION TSettingsForm.getResetPlotOnEvaluation: boolean;
-  begin
-    result:=settings.value^.doResetPlotOnEvaluation;
-  end;
-
-PROCEDURE TSettingsForm.setResetPlotOnEvaluation(CONST value: boolean);
-  begin
-    settings.value^.doResetPlotOnEvaluation:=value;
-  end;
-
-FUNCTION TSettingsForm.getPageIndex: longint;
-  begin
-    result:=settings.value^.activePage;
-  end;
-
-PROCEDURE TSettingsForm.setPageIndex(CONST value: longint);
-  begin
-    if (value>=0) and (value<=9) then settings.value^.activePage:=value;
-  end;
-
-FUNCTION TSettingsForm.getEditorFontName: string;
-  begin
-    result := settings.value^.editorFontname;
-  end;
-
 PROCEDURE TSettingsForm.saveSettings;
   begin
     mnh_settings.saveSettings;
@@ -247,61 +170,5 @@ FUNCTION TSettingsForm.timeForSaving: boolean;
     result:=(now-savedAt>STATE_SAVE_INTERVAL);
   end;
 
-PROCEDURE TSettingsForm.setEditorState(CONST index: longint; CONST dat: T_editorState);
-  begin
-    settings.value^.editorState[index]:=dat;
-  end;
-
-FUNCTION TSettingsForm.getEditorState(CONST index: longint): T_editorState;
-  begin
-    result:=settings.value^.editorState[index];
-  end;
-
-FUNCTION TSettingsForm.polishHistory: boolean;
-  VAR i, j: longint;
-  begin
-    with settings.value^ do begin
-      result := false;
-      for i:=0 to length(fileHistory)-1 do
-        if not(fileExists(fileHistory[i])) then begin
-          fileHistory[i]:='';
-          result:=true;
-        end;
-      for i:=1 to length(fileHistory)-1 do
-        if (fileHistory[i]<>'') then for j:=0 to i-1 do
-          if (expandFileName(fileHistory[i])=expandFileName(fileHistory[j])) then begin
-            fileHistory[i]:='';
-            result:=true;
-          end;
-      for i := 0 to length(fileHistory)-1 do if (fileHistory [i]='') then begin
-        for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
-        fileHistory[length(fileHistory)-1] := '';
-        result := true;
-      end;
-    end;
-  end;
-
-PROCEDURE TSettingsForm.fileClosed(CONST fileName:ansistring);
-  VAR i:longint;
-  begin
-    with settings.value^ do begin
-      for i:=0 to length(fileHistory)-1 do if fileHistory[i]='' then begin
-        fileHistory[i]:=fileName;
-        polishHistory;
-        exit;
-      end;
-      for i:=0 to length(fileHistory)-2 do fileHistory[i]:=fileHistory[i+1];
-      fileHistory[length(fileHistory)-1]:=fileName;
-      polishHistory;
-    end;
-  end;
-
-FUNCTION TSettingsForm.historyItem(CONST index: longint): ansistring;
-  begin
-    with settings.value^ do
-    if (index>=0) and (index<length(fileHistory))
-    then result:=fileHistory[index]
-    else result:='';
-  end;
 
 end.

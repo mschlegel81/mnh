@@ -47,6 +47,10 @@ T_settings=object(T_serializable)
   DESTRUCTOR destroy;
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
+
+  FUNCTION polishHistory: boolean;
+  PROCEDURE fileClosed(CONST fileName:ansistring);
+  FUNCTION historyItem(CONST index:longint):ansistring;
 end;
 
 PROCEDURE saveSettings;
@@ -107,17 +111,14 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     end;
     instantEvaluation := f.readBoolean;
     doResetPlotOnEvaluation := f.readBoolean;
-    for i := 0 to 9 do
-      fileHistory[i] := f.readAnsiString;
-
-    for i:=0 to 9 do begin
-      editorState[i].loadFromFile(f);
-    end;
+    for i := 0 to 9 do fileHistory[i] := f.readAnsiString;
+    for i:=0 to 9 do editorState[i].loadFromFile(f);
     activePage:=f.readLongint;
-    if F.allOkay then begin
+    if F.allOkay then result:=true
+    else begin
       reset;
       result:=false;
-    end else result:=false;
+    end;
   end;
 
 PROCEDURE T_settings.saveToFile(VAR F: T_file);
@@ -167,6 +168,49 @@ PROCEDURE T_settings.reset;
     editorState[0].visible:=true;
     wasLoaded:=false;
   end;
+
+FUNCTION T_settings.polishHistory: boolean;
+  VAR i, j: longint;
+  begin
+    result := false;
+    for i:=0 to length(fileHistory)-1 do
+      if not(fileExists(fileHistory[i])) then begin
+        fileHistory[i]:='';
+        result:=true;
+      end;
+    for i:=1 to length(fileHistory)-1 do
+      if (fileHistory[i]<>'') then for j:=0 to i-1 do
+        if (expandFileName(fileHistory[i])=expandFileName(fileHistory[j])) then begin
+          fileHistory[i]:='';
+          result:=true;
+        end;
+    for i := 0 to length(fileHistory)-1 do if (fileHistory [i]='') then begin
+      for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
+      fileHistory[length(fileHistory)-1] := '';
+      result := true;
+    end;
+  end;
+
+PROCEDURE T_settings.fileClosed(CONST fileName:ansistring);
+  VAR i:longint;
+  begin
+    for i:=0 to length(fileHistory)-1 do if fileHistory[i]='' then begin
+      fileHistory[i]:=fileName;
+      polishHistory;
+      exit;
+    end;
+    for i:=0 to length(fileHistory)-2 do fileHistory[i]:=fileHistory[i+1];
+    fileHistory[length(fileHistory)-1]:=fileName;
+    polishHistory;
+  end;
+
+FUNCTION T_settings.historyItem(CONST index: longint): ansistring;
+  begin
+    if (index>=0) and (index<length(fileHistory))
+    then result:=fileHistory[index]
+    else result:='';
+  end;
+
 
 CONSTRUCTOR T_formPosition.create;
   begin

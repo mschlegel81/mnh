@@ -455,10 +455,12 @@ PROCEDURE TMnhForm.doConditionalPlotReset;
 PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
   VAR index:longint;
   begin
-    if fileExists(SettingsForm.historyItem(historyIdx)) then begin
-      index:=getInputEditIndexForFilename(SettingsForm.historyItem(historyIdx));
-      if index>=0 then PageControl.ActivePageIndex:=index;
-    end else if SettingsForm.polishHistory then processFileHistory;
+    with settings.value^ do begin
+      if fileExists(historyItem(historyIdx)) then begin
+        index:=getInputEditIndexForFilename(historyItem(historyIdx));
+        if index>=0 then PageControl.ActivePageIndex:=index;
+      end else if polishHistory then processFileHistory;
+    end;
   end;
 
 PROCEDURE TMnhForm.doStartEvaluation;
@@ -639,7 +641,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       if sheet.TabVisible
       then state.create(filePath,fileAccessAge,changed,editor.lines)
       else state.create;
-      SettingsForm.setEditorState(i,state);
+      settings.value^.editorState[i]:=state;
     end;
   end;
 
@@ -696,16 +698,13 @@ PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState)
   end;
 
 PROCEDURE TMnhForm.FormResize(Sender: TObject);
-  VAR formPosition:T_formPosition;
   begin
-    if settingsReady then begin
-      formPosition.create;
-      formPosition.top   :=top;
-      formPosition.Left  :=Left;
-      formPosition.width :=width;
-      formPosition.height:=height;
-      formPosition.isFullscreen:=(WindowState=wsMaximized);
-      SettingsForm.mainFormPosition:=formPosition;
+    if settingsReady then with settings.value^ do begin
+      mainForm.top   :=top;
+      mainForm.Left  :=Left;
+      mainForm.width :=width;
+      mainForm.height:=height;
+      mainForm.isFullscreen:=(WindowState=wsMaximized);
     end else plotForm.pullPlotSettingsToGui();
     if helpPopupMemo.visible then positionHelpNotifier;
   end;
@@ -717,18 +716,17 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
     if not(settingsReady) then begin
       processSettings;
-      for i:=0 to 9 do begin
-        state:=SettingsForm.getEditorState(i);
-        inputRec[i].sheet.TabVisible:=state.visible;
-        if state.visible then begin
-          inputRec[i].changed:=state.changed;
-          inputRec[i].fileAccessAge:=state.fileAccessAge;
-          inputRec[i].filePath:=state.filePath;
-          state.getLines(inputRec[i].editor.lines);
+      for i:=0 to 9 do with settings.value^.editorState[i] do begin
+        inputRec[i].sheet.TabVisible:=visible;
+        if visible then begin
+          inputRec[i].changed      :=changed;
+          inputRec[i].fileAccessAge:=fileAccessAge;
+          inputRec[i].filePath     :=filePath;
+          getLines(inputRec[i].editor.lines);
         end;
         updateSheetCaption(i);
       end;
-      i:=SettingsForm.pageIndex;
+      i:=settings.value^.activePage;
       while (i>=0) and not(inputRec[i].sheet.TabVisible) do dec(i);
       if i<0 then begin
         i:=9;
@@ -852,7 +850,7 @@ PROCEDURE TMnhForm.miClearClick(Sender: TObject);
         if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
         if mr=mrCancel then exit;
       end;
-      if filePath<>'' then SettingsForm.fileClosed(filePath);
+      if filePath<>'' then settings.value^.fileClosed(filePath);
       processFileHistory;
     end;
     setupInputRecForNewFile(mr);
@@ -870,7 +868,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
       end;
       sheet.TabVisible:=false;
       if filePath<>'' then begin
-        SettingsForm.fileClosed(filePath);
+        settings.value^.fileClosed(filePath);
         processFileHistory;
       end;
     end;
@@ -906,7 +904,7 @@ PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
       debugSplitter.visible:=true;
       miEvalModeDirect.Checked:=true;
       miEvalModeDirectOnKeypress.Checked:=false;
-      SettingsForm.wantInstantEvaluation:=false;
+      settings.value^.instantEvaluation:=false;
       if ad_evaluationRunning then begin
         debugStepFill:=0;
         debugStepOffset:=0;
@@ -949,7 +947,7 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
     if settingsReady then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
       guiAdapters.doEchoDeclaration:=miDeclarationEcho.Checked;
-      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -958,7 +956,7 @@ PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
     if miEvalModeDirect.Checked then exit;
     miEvalModeDirect.Checked:=true;
     miEvalModeDirectOnKeypress.Checked:=false;
-    SettingsForm.wantInstantEvaluation:=false;
+    settings.value^.instantEvaluation:=false;
   end;
 
 PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
@@ -969,7 +967,7 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
     debugSplitter.visible:=false;
     miEvalModeDirect.Checked:=false;
     miEvalModeDirectOnKeypress.Checked:=true;
-    SettingsForm.wantInstantEvaluation:=true;
+    settings.value^.instantEvaluation:=true;
   end;
 
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
@@ -985,7 +983,7 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
     if settingsReady then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
       guiAdapters.doEchoInput:=miExpressionEcho.Checked;
-      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -994,7 +992,7 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
     if settingsReady then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
       guiAdapters.doShowExpressionOut:=miExpressionResult.Checked;
-      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -1048,7 +1046,7 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
         5: miMinErrorlevel5.Checked:=true;
       end;
       guiAdapters.minErrorLevel:=i;
-      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -1234,7 +1232,7 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
             if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
             if mr=mrCancel then exit;
           end;
-          if filePath<>'' then SettingsForm.fileClosed(filePath);
+          if filePath<>'' then settings.value^.fileClosed(filePath);
           processFileHistory;
         end;
         setupInputRecForNewFile(PageControl.ActivePageIndex);
@@ -1262,7 +1260,7 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
     if settingsReady then begin
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
       guiAdapters.doShowTimingInfo:=miTimingInfo.Checked;
-      SettingsForm.behaviour:=guiAdapters.outputBehaviour;
+      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
   end;
 
@@ -1299,7 +1297,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
   begin
     if PageControl.ActivePageIndex>=0 then begin
       SynCompletion.editor:=inputRec[PageControl.ActivePageIndex].editor;
-      SettingsForm.pageIndex:=PageControl.ActivePageIndex;
+      settings.value^.activePage:=PageControl.ActivePageIndex;
     end;
   end;
 
@@ -1428,9 +1426,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         if sheet.TabVisible
         then state.create(filePath,fileAccessAge,changed,editor.lines)
         else state.create;
-        SettingsForm.setEditorState(i,state);
+        settings.value^.editorState[i]:=state;
       end;
-      SettingsForm.saveSettings;
+      saveSettings;
     end;
 
     if (now>doNotCheckFileBefore) then begin
@@ -1479,7 +1477,7 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
           if mr=mrOk then if not(_doSave_(PageControl.ActivePageIndex)) then exit;
           if mr=mrCancel then exit;
         end;
-        if filePath<>'' then SettingsForm.fileClosed(filePath);
+        if filePath<>'' then settings.value^.fileClosed(filePath);
         processFileHistory;
       end;
       setupInputRecForNewFile(mr,newCentralPackageForm.fileNameEdit.Caption);
@@ -1496,15 +1494,14 @@ PROCEDURE TMnhForm.processSettings;
       i:longint;
   begin
     if not(settingsReady) then begin
-
-      formPosition:=SettingsForm.mainFormPosition;
+      formPosition:=settings.value^.mainForm;
       top   :=formPosition.top;
       Left  :=formPosition.Left;
       width :=formPosition.width;
       height:=formPosition.height;
       if formPosition.isFullscreen then WindowState:=wsMaximized;
 
-      with SettingsForm.behaviour do begin
+      with settings.value^.outputBehaviour do begin
         miDeclarationEcho.Checked:=doEchoDeclaration;
         miExpressionEcho.Checked:=doEchoInput;
         miExpressionResult.Checked:=doShowExpressionOut;
@@ -1514,17 +1511,17 @@ PROCEDURE TMnhForm.processSettings;
         miMinErrorlevel3.Checked:=minErrorLevel=3;
         miMinErrorlevel4.Checked:=minErrorLevel=4;
         miMinErrorlevel5.Checked:=minErrorLevel>=5;
-        guiAdapters.outputBehaviour:=SettingsForm.behaviour;
+        guiAdapters.outputBehaviour:=settings.value^.outputBehaviour;
       end;
 
-      plotForm.miAutoReset.Checked:=SettingsForm.resetPlotOnEvaluation;
-      miEvalModeDirect.Checked:=not(SettingsForm.wantInstantEvaluation);
-      miEvalModeDirectOnKeypress.Checked:=SettingsForm.wantInstantEvaluation;
+      plotForm.miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
+      miEvalModeDirect.Checked:=not(settings.value^.instantEvaluation);
+      miEvalModeDirectOnKeypress.Checked:=settings.value^.instantEvaluation;
       processFileHistory;
       settingsReady:=true;
     end;
 
-    InputEdit0.Font.name:=SettingsForm.getEditorFontName;
+    InputEdit0.Font.name:=settings.value^.editorFontname;
     InputEdit0.Font.size:=SettingsForm.fontSize;
     if SettingsForm.AntialiasCheckbox.Checked
     then InputEdit0.Font.quality:=fqCleartypeNatural
@@ -1557,13 +1554,13 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 9 do if SettingsForm.historyItem(i)='' then begin
+    for i:=0 to 9 do if settings.value^.historyItem(i)='' then begin
       historyMenuItem(i).Enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
       historyMenuItem(i).Enabled:=true;
       historyMenuItem(i).visible:=true;
-      historyMenuItem(i).Caption:=intToStr(i)+': '+SettingsForm.historyItem(i);
+      historyMenuItem(i).Caption:=intToStr(i)+': '+settings.value^.historyItem(i);
     end;
   end;
 

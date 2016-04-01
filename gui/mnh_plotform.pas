@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
-  mnh_gui_settings, mnh_cmdLineInterpretation, mnh_tokLoc;
+  mnh_gui_settings, mnh_cmdLineInterpretation, mnh_tokLoc, mnh_settings;
 
 TYPE
 
@@ -118,7 +118,7 @@ PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
 PROCEDURE TplotForm.miAutoResetClick(Sender: TObject);
   begin
     miAutoReset.Checked:=not(miAutoReset.Checked);
-    SettingsForm.resetPlotOnEvaluation:=miAutoReset.Checked;
+    settings.value^.doResetPlotOnEvaluation:=miAutoReset.Checked;
   end;
 
 PROCEDURE TplotForm.miAutoscaleXClick(Sender: TObject);
