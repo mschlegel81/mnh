@@ -711,7 +711,6 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
   VAR newCaret:TPoint;
-      state:T_editorState;
       i:longint;
   begin
     if not(settingsReady) then begin

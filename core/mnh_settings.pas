@@ -137,6 +137,7 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
       result:=false;
     end;
     savedAt:=now;
+    wasLoaded:=result;
   end;
 
 PROCEDURE T_settings.saveToFile(VAR F: T_file);

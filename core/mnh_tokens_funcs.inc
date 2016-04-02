@@ -314,18 +314,18 @@ FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR co
     package:=guessPackageForProvider(location.fileName);
     exTokens.create;
     exTokens.tokenizeAll(s,location,package,context.adapters^,false);
-    exTokens.step(package,dummyForLastComment);
+    exTokens.step(package,dummyForLastComment,context.adapters^);
     if exTokens.atEnd then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
       exit(nil);
     end else if not(context.adapters^.noErrors) then exit(nil); //Parsing error ocurred
     first:=context.newToken(exTokens.current);
     last:=first;
-    exTokens.step(package,dummyForLastComment);
+    exTokens.step(package,dummyForLastComment,context.adapters^);
     while not(exTokens.atEnd) do begin
       last^.next:=context.newToken(exTokens.current);
       last:=last^.next;
-      exTokens.step(package,dummyForLastComment);
+      exTokens.step(package,dummyForLastComment,context.adapters^);
     end;
     exTokens.destroy;
 

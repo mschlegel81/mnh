@@ -657,7 +657,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
   {$define stepToken:=
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-    fileTokens.step(@self,lastComment);
+    fileTokens.step(@self,lastComment,context.adapters^);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing}
 
   VAR localIdStack:T_idStack;
@@ -677,7 +677,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     //First step
-    fileTokens.step(@self,lastComment);
+    fileTokens.step(@self,lastComment,context.adapters^);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     first:=nil;
     last :=nil;
