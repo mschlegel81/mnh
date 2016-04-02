@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
-  mnh_gui_settings, mnh_cmdLineInterpretation, mnh_tokLoc, mnh_settings;
+   mnh_cmdLineInterpretation, mnh_tokLoc, mnh_settings;
 
 TYPE
 
@@ -284,26 +284,6 @@ PROCEDURE TplotForm.doPlot;
     guiAdapters^.plot.setScreenSize(plotImage.width,plotImage.height);
     guiAdapters^.plot.renderPlot(plotImage,factor);
   end;
-
-//TODO remove?
-//PROCEDURE TMnhForm.miExportPlotClick(Sender: TObject);
-//  VAR storeImage:TImage;
-//      rect:TRect;
-//  begin
-//    SaveDialog.Filter:='Portable network graphics (PNG)|*.png';
-//    if SaveDialog.execute then begin
-//      storeImage:=TImage.create(self);
-//      storeImage.SetInitialBounds(0,0,PlotTabSheet.width,PlotTabSheet.height);
-//      rect.top:=0;
-//      rect.left:=0;
-//      rect.Right:=PlotTabSheet.width;
-//      rect.Bottom:=PlotTabSheet.height;
-//      storeImage.Canvas.CopyRect(rect,plotImage.Canvas,rect);
-//      SaveDialog.fileName:=ChangeFileExt(SaveDialog.fileName,'.png');
-//      storeImage.Picture.PNG.saveToFile(SaveDialog.fileName);
-//      storeImage.free;
-//    end;
-//  end;
 
 end.
 

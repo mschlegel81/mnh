@@ -38,6 +38,7 @@ TYPE
   T_sparseTable=object
     definedCells:array of T_cell;
     colCount,RowCount:longint;
+    showGrid,autoGrow:boolean;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
@@ -147,6 +148,8 @@ CONSTRUCTOR T_sparseTable.create;
   begin
     colCount:=0;
     RowCount:=0;
+    autoGrow:=false;
+    showGrid:=false;
   end;
 
 DESTRUCTOR T_sparseTable.destroy;
