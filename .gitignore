@@ -23,3 +23,4 @@ ignored/*
 gui/mnh_gui.lps
 make*.log.txt
 core/res_*.inc
+core/res_html_template.inc

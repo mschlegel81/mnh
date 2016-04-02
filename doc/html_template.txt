@@ -1004,9 +1004,11 @@ The general syntax is: <code>
 Where <code>id</code> is an identifier,<br>
 <code>list</code> is a list or an expression returning a list,<br>
 <code>aggregator</code> (optional for <code>each</code> and <code>pEach</code>) is a full aggregator expression or a binary operator and<br>
-<code>body</code> is an expression or list of expressions.
+<code>body</code> is an expression or list of expressions.<br>
 
 <code>agg</code> is just a shorthand for an <code>each</code> construct without a body (consequently not needing an id to be used inside of the body).
+If <code>agg</code> is used with a body which neither a primitive aggregator (as e.g. <code>+</code>) nor an aggregator (as e.g. <code>aggregator({$0/(1+$1)})</code>) 
+but can be converted to an aggregator via the <a href="#aggregator">aggregator construct</a>, it will be converted to an aggregator.
 
 <h4><a name="construction">List construction</a></h4>
 To construct a list, ommit the aggregator. The body part is mandatory.<br>
@@ -1040,7 +1042,7 @@ More complex: a function returning the intersection of sets A and B<code>
 
 <h4><a name="aggregation">List aggregation</a></h4>
 To aggregate a list, use an aggregator but no body.<br>
-Restriction: the list must not be empty!<br>
+If the list is empty, <code>void</code> is returned.<br>
 Simple example: a function returing the sum of the argument:<code>
 <!--mnh-->
    in> sum([]):=0;
