@@ -742,6 +742,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
                 L^.rereference;
               end;
             end;
+            tt_operatorOrElse: if resultLiteral=nil then begin
+              lazyAbort:=true;
+              resultLiteral:=L;
+              L^.rereference;
+            end;
             else begin
               if resultLiteral=nil then begin
                 resultLiteral:=L; L^.rereference;
@@ -820,7 +825,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
       VAR i,j:longint;
       begin
-        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr])
+        if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
         initializedFutures:=0;
@@ -1334,6 +1339,27 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             {$ifdef fullVersion}reportableStep:=true;{$endif}
           end;
         end else raiseLazyBooleanError(first^.next^.location);
+        tt_operatorOrElse: if (cTokType[0]=tt_literal) then begin
+          if (P_literal(first^.data)^.literalType = lt_void) then begin
+            //void orElse ... -> ...
+            first:=context.disposeToken(first); //drop void
+            first:=context.disposeToken(first); //drop orElse
+            didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
+          end else begin
+            //<Lit> orElse ... -> <Lit>
+            p:=first^.next;
+            while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
+              if      p^.tokType in C_openingBrackets then inc(bracketLevel)
+              else if p^.tokType in C_closingBrackets then dec(bracketLevel);
+              p:=context.disposeToken(p);
+            end;
+            first^.next:=p;
+            didSubstitution:=true;
+            {$ifdef fullVersion}reportableStep:=true;{$endif}
+
+          end;
+        end;
         else begin
           setLength(stack,length(stack)+2);
           stack[length(stack)-2]:=first; first:=first^.next;
@@ -1474,7 +1500,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               {$ifdef fullVersion}reportableStep:=true;{$endif}
             end else process_op_lit;
           end;
-          tt_operatorAnd, tt_operatorOr, //operators with lazy evaluation ?
+          tt_operatorAnd, tt_operatorOr,
           tt_operatorXor, tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt,
           tt_operatorMod, tt_operatorPot, tt_operatorStrConcat, tt_operatorConcat, tt_operatorIn: process_op_lit;
           tt_braceOpen : case cTokType[1] of // ( | <Lit>

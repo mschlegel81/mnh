@@ -133,6 +133,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
   <li><h4><a href="#compOps"> Comparators </a></h4></li>
   <li><h4><a href="#logOps"> Logical operators </a></h4></li>
   <li><h4><a href="#stringOps"> String concatenation</a></h4></li>
+  <li><h4><a href="#orElseOp"> orElse</a></h4></li>  
 </ul>
 <h3><a href="#listOps"> List operators </a></h3>
 <h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
@@ -143,7 +144,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
 
 <h3><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
-All of those operators apart from <code>==</code>, <code>AND</code> and <code>OR</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
+All of those operators apart from <code>==</code>, <code>AND</code>, <code>OR</code> and <code>orElse</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
 [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span>  <span class="identifier">y</span>          <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="identifier">x1</span> <span class="operator">o</span> <span class="identifier">y</span> , <span class="operator">...</span>]
  <span class="identifier">x</span>          <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x</span>  <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
 [<span class="identifier">x0</span>,<span class="identifier">x1</span>,<span class="operator">...</span>] <span class="operator">o</span> [<span class="identifier">y0</span>,<span class="identifier">y1</span>,<span class="operator">...</span>] <span class="operator">-></span> [<span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y0</span>, <span class="identifier">x0</span> <span class="operator">o</span> <span class="identifier">y1</span>, <span class="operator">...</span>]
@@ -389,6 +390,59 @@ Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</cod
 
 <h4><a name="stringOps">String concatenation</a></h4>
 The <code>&</code>-operator for string concatenation (inspired from Excel) was introduced as the preferred method to concatenate strings.<br>
+In contrast to the <code>+</code> operator it allows for concatenation of any literals to a string.<br>
+Examples:<code>
+<!--mnh-->
+   in> 1&2+4;
+  out> '16'
+   in> 1&2=4;
+  out> false
+<!--end-->
+</code>
+
+<h4><a name="orElseOp">orElse</a></h4>
+The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. <code>
+<!--mnh-->
+   in> sum(L:numericList)->L.agg(+) orElse 0;
+   in> sum([1, 2, 3]);
+  out> 6
+   in> sum([]);
+  out> 0
+   in> void orElse 2;
+  out> 2
+   in> 1 orElse 2;
+  out> 1
+   in> 1+void orElse 2;
+  out> 1
+   in> false AND true orElse 2;
+  out> false
+   in> false OR true orElse 2;
+  out> true  
+<!--end-->
+</code>
+
+This is a lazy operator, i.e. the right-hand-side is evaluated only if necessary.<br>
+Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first non-<code>void</code> element is encountered.
+
+
+<h3><a name="listOps">List operators</a></h3>
+<table border="0">
+<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
+The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
+<!--mnh-->
+   x | y -> [x,y];
+   x |[y]-> [x,y];
+  [x]| y -> [x,y];
+  [x]|[y]-> [x,y];
+<!--end-->
+</code>
+However the result does not have to be a flat list; e.g.<code>
+<!--mnh-->
+  x |[[y]] -> [x,[y]];
+<!--end-->
+</code>
+</td></tr>
+
 <table border="0">
 <tr><td><code>&</code></td><td><h5>String concatenation</h5></td></tr><tr><td></td><td> </td></tr>
 </table>

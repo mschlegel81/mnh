@@ -75,7 +75,7 @@ TYPE
     //partially evaluated operators
     tt_unaryOpPlus, tt_unaryOpMinus,
     //special: string concatenation
-    tt_operatorStrConcat,
+    tt_operatorStrConcat, tt_operatorOrElse,
     //list operators:
     tt_operatorConcat, tt_operatorIn,
     //inline if: (<condition>?<then>:<else>)
@@ -133,7 +133,7 @@ CONST
   C_validNonVoidTypes: T_literalTypeSet=[lt_boolean..lt_flatList];
   C_validListTypes: T_literalTypeSet=[lt_list..lt_flatList];
   C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
-  C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
+  C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
   C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
@@ -158,7 +158,7 @@ CONST
     {tt_listBraceClose}     tt_EOL,
     {tt_list_constructor}   tt_listBraceClose,
     {tt_expBraceOpen}       tt_expBraceClose,
-    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
+    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
     {tt_iifCheck}           tt_iifElse);
 
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
@@ -167,7 +167,7 @@ CONST
     8, 9,                //lazy logical operators
     4, 4, 3, 3, 3, 3, 2, //arthmetical operators
     8, 8,                //unaries
-    5,                   //special: string concatenation
+    5, 9,                //special: string concatenation
     1, 7);   //list operators
 
   C_matchingTypes: array[tt_typeCheckScalar..tt_typeCheckKeyValueList] of T_literalTypeSet =
@@ -208,7 +208,7 @@ CONST
     //partially evaluated operators
     '+', '-',
     //special: string concatenation
-    '&',
+    '&', 'orElse',
     //list operators:
     '|', 'in',
     //inline if: (<condition>?<then>:<else>)
