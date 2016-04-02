@@ -106,6 +106,8 @@ TYPE
     tt_EOL,
     tt_blank);
 
+  T_tokenTypeSet=set of T_tokenType;
+
   T_literalType = (
     lt_error,
     lt_boolean,
@@ -131,13 +133,33 @@ CONST
   C_validNonVoidTypes: T_literalTypeSet=[lt_boolean..lt_flatList];
   C_validListTypes: T_literalTypeSet=[lt_list..lt_flatList];
   C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
-  C_operatorsForAggregators: set of T_tokenType=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
-  C_typeChecks: set of T_tokenType=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
+  C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorConcat];
+  C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
+  C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
   C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
     tt_identifier,
     tt_localUserRule,
     tt_importedUserRule,
     tt_intrinsicRule);
+  C_openingBrackets:T_tokenTypeSet=[tt_begin,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
+  C_closingBrackets:T_tokenTypeSet=[tt_end,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
+  C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
+    {tt_each}              (tt_braceClose,
+    {tt_parallelEach}       tt_braceClose,
+    {tt_agg}                tt_braceClose,
+    {tt_when,tt_while}      tt_EOL, tt_EOL,
+    {tt_begin}              tt_end,
+    {tt_end}                tt_EOL,
+    {tt_braceOpen}          tt_braceClose,
+    {tt_braceClose}         tt_EOL,
+    {tt_parList_constructor}tt_braceClose,
+    {tt_parList}            tt_EOL,
+    {tt_listBraceOpen}      tt_listBraceClose,
+    {tt_listBraceClose}     tt_EOL,
+    {tt_list_constructor}   tt_listBraceClose,
+    {tt_expBraceOpen}       tt_expBraceClose,
+    {tt_expBraceClose..tt_operatorIn} tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,tt_EOL,
+    {tt_iifCheck}           tt_iifElse);
 
   C_opPrecedence: array[tt_comparatorEq..tt_operatorIn] of byte =
    (6, 6, 6, 6, 6, 6, 6, //comparators

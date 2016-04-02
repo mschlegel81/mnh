@@ -428,14 +428,12 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; VA
       exit;
     end;
     while (t<>nil) and not((t^.tokType=tt_braceClose) and (bracketLevel=1)) do begin
-      case t^.tokType of
-        tt_braceOpen,tt_each,tt_parallelEach,tt_listBraceOpen ,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-        tt_braceClose                       ,tt_listBraceClose,tt_expBraceClose,tt_end  : dec(bracketLevel);
-        tt_separatorComma: if bracketLevel=1 then begin
-          result[length(result)-1].last:=p; //end of body part is token before comma
-          setLength(result,length(result)+1);
-          result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-        end;
+      if t^.tokType in C_openingBrackets then inc(bracketLevel)
+      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
+      else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
+        result[length(result)-1].last:=p; //end of body part is token before comma
+        setLength(result,length(result)+1);
+        result[length(result)-1].first:=t^.next; //start of next body part is token after comma
       end;
       p:=t; t:=t^.next;
     end;
@@ -1067,10 +1065,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       stack_push; //push "?"
       p:=first;
       while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
-        case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
-        end;
+        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
         prev:=p; p:=p^.next;
       end;
       if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
@@ -1080,10 +1076,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       tokenBeforeElse:=prev;
       while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
-        case p^.tokType of
-          tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-          tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
-        end;
+        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
         prev:=p; p:=p^.next;
       end;
       if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
@@ -1272,10 +1266,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             //false AND ... -> false
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse,tt_operatorLazyOr,tt_operatorOr]) and (bracketLevel=0)) do begin
-              case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
-              end;
+              if      p^.tokType in C_openingBrackets then inc(bracketLevel)
+              else if p^.tokType in C_closingBrackets then dec(bracketLevel);
               p:=context.disposeToken(p);
             end;
             first^.next:=p;
@@ -1288,10 +1280,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             //true OR ... -> true
             p:=first^.next;
             while not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon,tt_iifCheck,tt_iifElse]) and (bracketLevel=0)) do begin
-              case p^.tokType of
-                tt_braceOpen ,tt_each,tt_parallelEach, tt_listBraceOpen  ,tt_iifCheck,tt_expBraceOpen ,tt_begin: inc(bracketLevel);
-                tt_braceClose,                         tt_listBraceClose ,tt_iifElse ,tt_expBraceClose,tt_end  : dec(bracketLevel);
-              end;
+              if      p^.tokType in C_openingBrackets then inc(bracketLevel)
+              else if p^.tokType in C_closingBrackets then dec(bracketLevel);
               p:=context.disposeToken(p);
             end;
             first^.next:=p;

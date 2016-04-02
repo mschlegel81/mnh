@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants;
+USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters;
 TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
@@ -22,6 +22,8 @@ TYPE
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; VAR variableReport:T_variableReport):ansistring;
     FUNCTION singleTokenToString:ansistring;
+    FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
+    FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
   end;
@@ -62,7 +64,7 @@ DESTRUCTOR T_token.destroy;
     undefine;
   end;
 
-PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer);
+PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer);
   begin
     location:=tokenLocation;
     if (tokenText='') or (C_tokenString[tokenType]<>'')
@@ -72,7 +74,7 @@ PROCEDURE T_token.define(CONST tokenLocation:T_tokenLocation; CONST tokenText:an
     data:=ptr;
   end;
 
-PROCEDURE T_token.define(CONST original:T_token);
+PROCEDURE T_token.define(CONST original: T_token);
   begin
     location:=original.location;
     txt     :=original.txt;
@@ -96,13 +98,13 @@ PROCEDURE T_token.undefine;
     location:=C_nilTokenLocation;
   end;
 
-FUNCTION T_token.last:P_token;
+FUNCTION T_token.last: P_token;
   begin
     result:=@self;
     while result^.next<>nil do result:=result^.next;
   end;
 
-FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
+FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): ansistring;
   begin
     idLike:=false;
     case tokType of
@@ -142,7 +144,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansis
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
 
-FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; VAR variableReport:T_variableReport):ansistring;
+FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; VAR variableReport: T_variableReport): ansistring;
   begin
     if tokType=tt_literal then begin
       result:=variableReport.getLiteralStringOrGetAlias(P_literal(data));
@@ -150,7 +152,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; VAR v
     end else result:=toString(lastWasIdLike,idLike);
   end;
 
-FUNCTION T_token.singleTokenToString:ansistring;
+FUNCTION T_token.singleTokenToString: ansistring;
   VAR dummy:boolean;
   begin
     result:=toString(false,dummy);
@@ -158,24 +160,70 @@ FUNCTION T_token.singleTokenToString:ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.getDeclarationOrAssignmentToken:P_token;
-  VAR scopeLevel:longint=0;
-      t:P_token;
-  begin
-    result:=nil;
-    t:=@self;
-    while t<>nil do begin
-      case t^.tokType of
-        tt_declare,tt_assign: if scopeLevel=0 then exit(t);
-        tt_each,tt_parallelEach,tt_agg,
-        tt_begin,tt_braceOpen ,tt_expBraceOpen ,tt_listBraceOpen:  inc(scopeLevel);
-        tt_end  ,tt_braceClose,tt_expBraceClose,tt_listBraceClose: dec(scopeLevel);
+FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): boolean;
+  VAR bracketStack:array of P_token;
+  PROCEDURE push(CONST token:P_token);
+    begin
+      setLength(bracketStack,length(bracketStack)+1);
+      bracketStack[length(bracketStack)-1]:=token;
+    end;
+
+  FUNCTION popPlausible(CONST token:P_token):boolean;
+    begin
+      if length(bracketStack)<=0 then begin
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing opening bracket.',token^.location);
+        exit(false);
       end;
+      if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; open matches with "'+C_tokenString[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]]+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; close',token                               ^.location);
+        exit(false);
+      end;
+      setLength(bracketStack,length(bracketStack)-1);
+      result:=true;
+    end;
+
+  FUNCTION stackIsEmpty:boolean;
+    begin
+      if length(bracketStack)<=0 then exit(true);
+      adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing closing bracket.',bracketStack[length(bracketStack)-1]^.location);
+      result:=false;
+    end;
+
+  VAR t:P_token;
+  begin
+    setLength(bracketStack,0);
+    t:=@self;
+    result:=true;
+    while result and (t<>nil) do begin
+      if t^.tokType in C_openingBrackets then push(t)
+      else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
       t:=t^.next;
     end;
+    result:=result and stackIsEmpty;
   end;
 
-FUNCTION T_token.getRawToken:T_rawToken;
+FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLevel: longint; CONST initialLevel: longint): P_token;
+  VAR level:longint=0;
+      t:P_token;
+  begin
+    level:=initialLevel;
+    t:=@self;
+    while (t<>nil) do begin
+      if t^.tokType      in C_openingBrackets then inc(level)
+      else if t^.tokType in C_closingBrackets then dec(level);
+      if (level=onLevel) and (t^.tokType in types) then exit(t);
+      t:=t^.next;
+    end;
+    result:=nil;
+  end;
+
+FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
+  begin
+    result:=getTokenOnBracketLevel([tt_declare,tt_assign],0);
+  end;
+
+FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;

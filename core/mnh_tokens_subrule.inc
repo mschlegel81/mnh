@@ -18,8 +18,8 @@
 
       PROCEDURE updatePatternForInline;
       PROCEDURE embrace;
-      FUNCTION needEmbrace(VAR adapters:T_adapters):boolean;
-      FUNCTION canUnbrace(CONST outerOp:T_tokenType):boolean;
+      FUNCTION needEmbrace:boolean;
+      FUNCTION canUnbrace(CONST outerPrecedence:longint):boolean;
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
     public
       CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
@@ -95,7 +95,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declA
     pattern:=pat;
     declaredAt:=declAt;
     constructExpression(rep,context,false);
-    if needEmbrace(context.adapters^) then embrace;
+    if needEmbrace then embrace;
   end;
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
@@ -106,7 +106,6 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
     constructExpression(rep,context,true);
-    if needEmbrace(context.adapters^) then embrace;
   end;
 
 
@@ -125,55 +124,16 @@ PROCEDURE T_subrule.embrace;
     end;
   end;
 
-FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
-  VAR bracketStack:array of longint;
-  PROCEDURE push(CONST index:longint);
-    begin
-      setLength(bracketStack,length(bracketStack)+1);
-      bracketStack[length(bracketStack)-1]:=index;
-    end;
-
-  PROCEDURE pop(CONST index:longint);
-    FUNCTION compatible(CONST oT,ct:T_tokenType):boolean;
-      begin
-        result:=(oT in [tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor]) and (ct=tt_braceClose)
-             or (oT in [tt_listBraceOpen, tt_list_constructor]) and (ct=tt_listBraceClose)
-             or (oT=tt_expBraceOpen) and (ct=tt_expBraceClose)
-             or (oT=tt_begin) and (ct=tt_end);
-      end;
-
-    begin
-      if length(bracketStack)=0 then begin
-        adapters.raiseError('Unbalanced paranthesis: missing opening bracket',preparedBody[index].token.location);
-        exit;
-      end;
-      if not(compatible(preparedBody[bracketStack[length(bracketStack)-1]].token.tokType,
-                        preparedBody[index                               ].token.tokType)) then begin
-        adapters.raiseError('Unbalanced paranthesis: bracket mismatch (open)' ,preparedBody[bracketStack[length(bracketStack)-1]].token.location);
-        adapters.raiseError('Unbalanced paranthesis: bracket mismatch (close)',preparedBody[index                               ].token.location);
-      end;
-      setLength(bracketStack,length(bracketStack)-1);
-    end;
-
-  PROCEDURE checkStackAtEnd;
-    VAR i:longint;
-    begin
-      if length(bracketStack)>0 then for i:=0 to length(bracketStack)-1 do
-        adapters.raiseError('Unbalanced paranthesis: missing closing bracket',preparedBody[bracketStack[i]].token.location);
-      setLength(bracketStack,0);
-    end;
-
+FUNCTION T_subrule.needEmbrace:boolean;
   VAR i:longint;
+      level:longint=0;
   begin
-    setLength(bracketStack,0);
     if length(preparedBody)<=1 then exit(false);
-
     result:=false;
-    for i:=0 to length(preparedBody)-1 do case preparedBody[i].token.tokType of
-      tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen,tt_begin: push(i);
-      tt_braceClose, tt_listBraceClose, tt_expBraceClose,tt_end: pop(i);
-
-      tt_separatorComma, tt_separatorCnt,
+    for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
+      if      tokType in C_openingBrackets then inc(level)
+      else if tokType in C_closingBrackets then dec(level)
+      else if (tokType in[      tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
@@ -187,30 +147,23 @@ FUNCTION T_subrule.needEmbrace(VAR adapters:T_adapters):boolean;
       tt_typeCheckString,  tt_typeCheckStringList,
       tt_typeCheckNumeric, tt_typeCheckNumList,
       tt_typeCheckExpression,
-      tt_typeCheckKeyValueList: if length(bracketStack)=0 then result:=true;
+      tt_typeCheckKeyValueList]) and (level=0) then exit(true);
     end;
-    checkStackAtEnd;
   end;
 
-FUNCTION T_subrule.canUnbrace(CONST outerOp:T_tokenType):boolean;
-  VAR bracketLevel,i:longint;
+FUNCTION T_subrule.canUnbrace(CONST outerPrecedence:longint):boolean;
+  VAR i:longint;
+      level:longint=0;
   begin
     if length(preparedBody)<=1 then exit(false);
-    bracketLevel:=0;
+    level:=0;
     i:=length(preparedBody)-1;
     if (preparedBody[0].token.tokType<>tt_braceOpen) or
        (preparedBody[i].token.tokType<>tt_braceClose) then exit(false);
-    for i:=1 to length(preparedBody)-2 do begin
-      case preparedBody[i].token.tokType of
-        tt_each, tt_parallelEach, tt_braceOpen, tt_parList_constructor,tt_listBraceOpen,  tt_list_constructor, tt_expBraceOpen: inc(bracketLevel);
-        tt_braceClose, tt_listBraceClose, tt_expBraceClose: dec(bracketLevel);
-        tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-        tt_operatorAnd, tt_operatorOr, tt_operatorXor,
-        tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
-        tt_operatorStrConcat,
-        tt_operatorConcat, tt_operatorIn: if C_opPrecedence[preparedBody[i].token.tokType]>C_opPrecedence[outerOp] then exit(false);
-      end;
-      if bracketLevel<0 then exit(false);
+    for i:=1 to length(preparedBody)-2 do with preparedBody[i].token do begin
+      if tokType in C_openingBrackets then inc(level)
+      else if tokType in C_closingBrackets then dec(level)
+      else if (tokType in C_operatorsAndComparators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(false);
     end;
     result:=true;
   end;
@@ -249,7 +202,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
         parIdx:=-1;
       end;
     end;
-    if needEmbrace(context.adapters^) then embrace;
+    if needEmbrace then embrace;
     updatePatternForInline;
   end;
 
@@ -556,7 +509,7 @@ FUNCTION T_subrule.toString:ansistring;
     end;
     if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
     else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
-    else result:=pattern.toString+result;
+    else result:=pattern.toString+C_tokenString[tt_declare]+result;
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer):string;

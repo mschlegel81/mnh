@@ -267,6 +267,7 @@ out>                  void
 printline                          in>  @:1,1  f(x<1)->random;
 Note  @:1,1  Creating new rule: f
  in>  @:1,17 f(x)->f(x-1)+random;
+Note  @:1,17 Extending rule: f
  in>  @:1,38 f(3);
 out>  @:1,30 2.75506309582852
 out>                              void

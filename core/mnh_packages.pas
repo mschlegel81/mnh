@@ -655,6 +655,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
     end;
 
+  {$define stepToken:=
+    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+    fileTokens.step(@self,lastComment);
+    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing}
+
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
@@ -671,6 +676,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     with profiler do if active then tokenizing:=timer.value.Elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
+    //First step
     fileTokens.step(@self,lastComment);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     first:=nil;
@@ -688,9 +694,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
         localIdStack.clear;
         localIdStack.scopePush;
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-        fileTokens.step(@self,lastComment);
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+        stepToken;
 
         while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
           case fileTokens.current.tokType of
@@ -704,18 +708,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
           last      :=last^.next;
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-          fileTokens.step(@self,lastComment);
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+          stepToken;
         end;
 
       end else if (fileTokens.current.tokType=tt_semicolon) then begin
-        if first<>nil then interpret(first,fileTokens.current.location);
+        if (first<>nil) and (first^.areBracketsPlausible(context.adapters^))
+        then interpret(first,fileTokens.current.location)
+        else context.cascadeDisposeToken(first);
         last:=nil;
         first:=nil;
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-        fileTokens.step(@self,lastComment);
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+        stepToken;
       end else begin
         if first=nil then begin
           first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
@@ -725,9 +727,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           last      :=last^.next;
         end;
         last^.next:=nil;
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-        fileTokens.step(@self,lastComment);
-        with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+        stepToken;
       end;
     end;
     fileTokens.destroy;
@@ -855,8 +855,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ru
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
-    end else if (result^.ruleType<>ruleType) and (ruleType<>rt_normal) then begin
-      adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart);
+    end else begin
+      if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
+      then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
+      else adapters.raiseCustomMessage(mt_el1_note,'Extending rule: '+ruleId,ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;
   end;

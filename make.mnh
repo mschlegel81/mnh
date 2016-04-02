@@ -168,4 +168,3 @@ main(...)->... .each(p,
     ? main(p)
     : void);
 
-tryPack(myPath);
