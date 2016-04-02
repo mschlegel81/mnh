@@ -1,23 +1,16 @@
 <!--file style.css-->
-body {
-  padding-left: 1em;
-  font-family: Georgia, "Times New Roman",
-        Times, serif;
+*{margin: 0; padding: 0;}
+html, body, .Container {
+  font-family: Georgia, "Times New Roman",Times, serif;
   color: black;
-  background-color: #F2F2F2}
-h1 {
-  font-family: Helvetica, Geneva, Arial,
-        SunSans-Regular, sans-serif }
-code { font-family: Courier-New, Courier; white-space: pre }
-a:link {
-  color: #0000FF }
-a:visited {
-  color: #000066 }
-address {
-  margin-top: 1em;
-  padding-top: 1em;
-  border-top: thin dotted }
-table { display: inline-table}
+  background-color: #F2F2F2;
+  height: 100%;}
+ul{padding-left:20px;}
+li{padding-left: 10px;}
+code {font-family: Courier-New, Courier; white-space: pre}
+a:link {color: #0000FF }
+a:visited {color: #000066 }
+table {display: inline-table}
 .oben    { vertical-align:top}
 .red {color:#FF0000}
 .ruleHead  { vertical-align:top; background-color: #DDDDDD}
@@ -29,54 +22,88 @@ table { display: inline-table}
 .operator{color:#000088;font-weight:bold}
 .comment{color:#666666;font-style:italic}
 .error{color:#FF0000; background-color:#FFFF00}
+.Container:before {content: '';height: 100%;float: left;}
+.Header{margin-bottom: 0px;background-color: #DDDDDD; padding:0; text-align:center; font-size:32px;}
+.Content{position: relative;z-index: 1;margin: 0; padding: 0;}
+.Content:after {content: '';clear: both;display: block;}
+.Wrapper{position: absolute; width: 100%; height: 100%; }
+.Wrapper > div{height: 100%;}
+.navContent{background-color: #DDDDDD; float: left; margin-right: 10px;}
+.docContent{background-color: #F2F2F2; overflow: auto;}
 <!--file index.html-->
 <!--begin commonHead-->
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd">
-<html><head><link rel="stylesheet" href="style.css" type="text/css"><META http-equiv="Content-Type" content="text/html; charset=ASCII">
+<html><head><title>MNH 5</title><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><link rel="stylesheet" href="style.css" type="text/css"></head>
+<body><div class="Container"><div class="Header">MNH5 Documentation</div><div class="Content"><div class="Wrapper">
 <!--end-->
 <!--commonHead-->
-<title>MNH 5</title>
-</head>
-<body>
-<h2 align="center">MNH 5</h2>
-<div align="right"> <hr> </div>
-<h4><a href="quickstart.html">Quick start</a></h4>
-<h4><a href="types.html">Types</a></h4>
-<h4><a href="operators.html">Operators</a></h4>
-<h4><a href="functions.html">Functions</a></h4>
-<h4><a href="specials.html">Special constructs</a></h4>
-<h4><a href="builtin.html">Built-in Functions</a></h4>
-<h4><a href="formatStrings.html">Format Strings</a></h4>
-<h4><a href="packages.html">User packages</a></h4>
-<tr bgcolor="#FFFACD">
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  </ul>
+</div>
+<div class="docContent">
+MNH5 comes in 2 flavours (for each compilation target):<ul>
+  <li> <b>mnh</b>: a GUI version with plotting support
+  <li> <b>mnh_light</b>: a slimmed down console version without plotting support (for the cases where size matters)
+</ul>
+
+You can just start an executable of any flavour and start typing. Most of the inputs will result in understandable outputs (the exception being infinite loops,
+fork bombs and other "pathologic" examples).<br>
+<br>
+The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
+<!--mnh-->
+1+2;
+<!--end-->
+</code> Or an assignment<code>
+<!--mnh-->
+x:=1;
+<!--end-->
+</code> Or a declaration<code>
+<!--mnh-->
+f(x)->sin(x);
+<!--end-->
+</div>
 <!--begin commonFoot-->
-<div align="right"> <hr> </div> </body> </html>
+</div></div></div></body></html>
 <!--end-->
 <!--commonFoot-->
 <!--file packages.html-->
 <!--commonHead-->
-<title>MNH 5 - Packages</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Packages</h3>
-<div align="center"; class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure it is up to date.</div>
-<div align="right"><hr> </div>
-<h3><a href="#usage">Usage</a></h3>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
 <ul>
-  <li><h4><a href="#defining">Defining a package</a></h4></li>
-  <li><h4><a href="#importing">Importing a package</a></h4></li>
-  <li><h4><a href="#executables">Executable packages</a></h4></li>
-  <li><h4><a href="#comments">Comments</a></h4></li>
+<li><h4><a href="#usage">Usage</a></h4></li>
+<ul>
+  <li><h5><a href="#defining">Defining a package</a></h5></li>
+  <li><h5><a href="#importing">Importing a package</a></h5></li>
+  <li><h5><a href="#executables">Executable packages</a></h5></li>
+  <li><h5><a href="#comments">Comments</a></h5></li>
 </ul>
-<h3><a href="#defined">Currently defined packages</a></h3>
-
-<div align="right"><hr> </div>
-
+<li><h4><a href="#defined">Currently defined packages</a></h4></li>
+</ul> 
+  </ul>
+</div>
+<div class="docContent">
 <h3><a name="usage">Usage</a></h3>
 Packages form the major means to structure your implementation so that parts of it can be reused.<br>
 Each package is a collection of functions and expressions; each input to MNH is a package.<br>
 Expressions in a package will only be executed in interactive mode.<br>
-For details on how to define functions, see <a href="functions.html">MNH5 - Functions</a>
+For details on how to define functions, see <a href="functions.html">MNH5 - Functions</a><br>
 <h4><a name="defining">Defining a package</a></h4>
 To define a package, just create a file with the extension <code>.mnh</code> (or even simpler: start typing in interactive mode). The following restrictions apply:
 <ul>
@@ -84,8 +111,7 @@ To define a package, just create a file with the extension <code>.mnh</code> (or
   <br>Packages violating this convention cannot be imported by other packages.</li>
   <li>The package must be in the search paths of importing packages (see <a href="#importing">Importing a package</a>).
   <li>The filename must not be any of the built-in pseudo packages' identifiers.</li>
-</ul>
-
+</ul><br>
 <h4><a name="importing">Importing a package</a></h4>
 To import a package, start your package with a <i>use clause</i>, e.g.:<code>
 <!--mnh-->
@@ -102,46 +128,56 @@ Having imported a package, you might run into naming conflicts. All rules can be
    basic.sum([1,2,6]);
 <!--end-->
 </code>
-<h4><a name="executables">Executable packages</a></h4>
+<br><h4><a name="executables">Executable packages</a></h4>
 A package is <i>executable</i> if it contains a rule called <code>main</code>.
 Executable packages can be executed from the command line. If called as<code>
   mnh </code><i>packageName</i><code>.mnh
 </code>the nullary main function will be executed. If additional parameters are given, the respective n-ary main rule will be executed, e.g.<code>
   mnh </code><i>packageName</i><code>.mnh </code><i>parameter_1<code> </code> parameter_2</i><br>
-All input parameters will be passed as strings; consequently they must be converted to other types (e.g. using <code>softCast</code>) as needed.
+All input parameters will be passed as strings; consequently they must be converted to other types (e.g. using <code>softCast</code>) as needed.<br>
 
 <h4><a name="comments">Comments</a></h4>
 A comment is any string starting with <code>//</code> and ending with the following line break.<br>
 A <i>doc-</i>comment is a comment starting with <code>//*</code>. Doc-comments are always associated with the (sub-)rule following the comment.
 They will be shown here (if the page is regenerated).<br>
 Additionally, comments of the main rule are shown as help on the package on the command line, e.g.<br>
-<code>  mnh -h </code><i>packageName</i><code>.mnh</code>
+<code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
 
 <h3><a name="defined">Currently defined packages</a></h3>
+<div class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure these are up to date.</div>
 <!--USERPKG-->
+</div>
 <!--commonFoot-->
 <!--file operators.html-->
 <!--commonHead-->
-<title>MNH 5 - Operators</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Operators</h3>
-<div align="right"><hr> </div>
-<h3><a href="#scalarOps"> Scalar operators</a></h3>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
 <ul>
-  <li><h4><a href="#arithOps"> Arithmetic operators</a></h4></li>
-  <li><h4><a href="#compOps"> Comparators </a></h4></li>
-  <li><h4><a href="#logOps"> Logical operators </a></h4></li>
-  <li><h4><a href="#stringOps"> String concatenation</a></h4></li>
-  <li><h4><a href="#orElseOp"> orElse</a></h4></li>  
+<li><h4><a href="#scalarOps"> Scalar operators</a></h4></li>
+<ul>
+  <li><h5><a href="#arithOps"> Arithmetic operators</a></h5></li>
+  <li><h5><a href="#compOps"> Comparators </a></h5></li>
+  <li><h5><a href="#logOps"> Logical operators </a></h5></li>
+  <li><h5><a href="#stringOps"> String concatenation</a></h5></li>
+  <li><h5><a href="#orElseOp"> orElse</a></h5></li>  
 </ul>
-<h3><a href="#listOps"> List operators </a></h3>
-<h3><a href="#iifOps"> The ternary inline-if operator</a></h3>
-<h3><a href="#typecheckOps"> Type check operators</a></h3>
-<h3><a href="#assignmentOps"> Assignment operators</a></h3>
-<h3><a href="#cStyleOps"> C-Style operators</a></h3>
-<div align="right"><hr> </div>
-
+<li><h4><a href="#listOps"> List operators </a></h4></li>  
+<li><h4><a href="#iifOps"> The ternary inline-if operator</a></h4></li>  
+<li><h4><a href="#typecheckOps"> Type check operators</a></h4></li>  
+<li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>  
+<li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>  
+</ul> 
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+</ul>
+</div>
+<div class="docContent">
 <h3><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
 All of those operators apart from <code>==</code>, <code>AND</code>, <code>OR</code> and <code>orElse</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
@@ -424,28 +460,6 @@ The <code>orElse</code>-operator is intended for cases where the left-hand-side 
 This is a lazy operator, i.e. the right-hand-side is evaluated only if necessary.<br>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first non-<code>void</code> element is encountered.
 
-
-<h3><a name="listOps">List operators</a></h3>
-<table border="0">
-<tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
-The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
-<!--mnh-->
-   x | y -> [x,y];
-   x |[y]-> [x,y];
-  [x]| y -> [x,y];
-  [x]|[y]-> [x,y];
-<!--end-->
-</code>
-However the result does not have to be a flat list; e.g.<code>
-<!--mnh-->
-  x |[[y]] -> [x,[y]];
-<!--end-->
-</code>
-</td></tr>
-
-<table border="0">
-<tr><td><code>&</code></td><td><h5>String concatenation</h5></td></tr><tr><td></td><td> </td></tr>
-</table>
 <h3><a name="listOps">List operators</a></h3>
 <table border="0">
 <tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
@@ -579,29 +593,38 @@ The following C-Style operators are supported: <ul>
 </ul>
 While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
 the latter 2 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).
-
+</div>
 <!--commonFoot-->
 <!--file functions.html-->
 <!--commonHead-->
-<title>MNH 5 - Functions</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Functions</h3>
-<div align="right"><hr> </div>
-<h3><a     href="#calls">Calls</a></h3>
-<h3><a     href="#declarations">Declarations</a></h3>
-<h3><a     href="#assignments">Assignments</a></h3>
-<h3><a     href="#restrictions">Parameter restrictions</a></h3>
-<h3><a     href="#variadic">Variadic functions</a></h3>
-<h3><a     href="#beginEnd">Begin-End-Blocks</a></h3>
-<h3><a     href="#modifiers">Modifiers</a></h3><ul>
-<li><h4><a href="#privateMod">private</a></h4></li>
-<li><h4><a href="#memoizedMod">memoized</a></h4></li>
-<li><h4><a href="#synchronizedMod">synchronized</a></h4></li>
-<li><h4><a href="#mutableMod">mutable</a></h4></li>
-<li><h4><a href="#persistentMod">persistent</a></h4></li>
-<li><h4><a href="#localMod">local</a></h4></li></ul>
-<div align="right"><hr> </div>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+<ul>
+<li><h4><a     href="#calls">Calls</a></h4></li>
+<li><h4><a     href="#declarations">Declarations</a></h4></li>
+<li><h4><a     href="#assignments">Assignments</a></h4></li>
+<li><h4><a     href="#restrictions">Parameter restrictions</a></h4></li>
+<li><h4><a     href="#variadic">Variadic functions</a></h4></li>
+<li><h4><a     href="#beginEnd">Begin-End-Blocks</a></h4></li>
+<li><h4><a     href="#modifiers">Modifiers</a></h4><ul>
+<li><h5><a href="#privateMod">private</a></h5></li>
+<li><h5><a href="#memoizedMod">memoized</a></h5></li>
+<li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
+<li><h5><a href="#mutableMod">mutable</a></h5></li>
+<li><h5><a href="#persistentMod">persistent</a></h5></li>
+<li><h5><a href="#localMod">local</a></h5></li></ul></li>
+</ul>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  </ul>
+</div>
+<div class="docContent">
 <h3><a name="calls">Calls</a></h3>
 To keep it short:<ul>
 <li><b>Calling convention</b><br>
@@ -803,26 +826,36 @@ Functions modifying the value of a persistent value should be <a href="#synchron
 <h4><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
 It is only allowed in this context. Local variables always are mutable.
+</div>
 <!--commonFoot-->
 <!--file types.html-->
 <!--commonHead-->
-<title>MNH 5 - Types</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Types</h3>
-<div align="right"><hr> </div>
-<h3>      <a href="#intro">Introduction</a></h3>
-<h3>      <a href="#scalars">Scalar types</a></h3><ul>
-  <li><h4><a href="#booleans">Booleans</a></h4></li>
-  <li><h4><a href="#integers">Integers</a></h4></li>
-  <li><h4><a href="#reals">Reals</a></h4></li>
-  <li><h4><a href="#strings">Strings</a></h4></li>
-  <li><h4><a href="#expressions">Expressions</a></h4></li>
-  <li><h4><a href="#void">void</a></h4></li>
-  <li><h4><a href="#errors">Errors</a></h4></li>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+<ul>
+<li><h4><a href="#intro">Introduction</a></h4></li>
+<li><h4><a href="#scalars">Scalar types</a></h4><ul>
+  <li><h5><a href="#booleans">Booleans</a></h5></li>
+  <li><h5><a href="#integers">Integers</a></h5></li>
+  <li><h5><a href="#reals">Reals</a></h5></li>
+  <li><h5><a href="#strings">Strings</a></h5></li>
+  <li><h5><a href="#expressions">Expressions</a></h5></li>
+  <li><h5><a href="#void">void</a></h5></li>
+  <li><h5><a href="#errors">Errors</a></h5></li>
+</ul></li>
+<li><h4><a href="#lists">List types</a></h4></li>
 </ul>
-<h3>      <a href="#lists">List types</a></h3>
-<div align="right"><hr> </div>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  </ul>
+</div>
+<div class="docContent">
 <h3><a name="intro">Introduction</a></h3>
 MNH is <i>dynamically typed</i>, i.e. all types are only known at runtime. All types are either <i>scalars</i> (i.e. atomic values) or <i>lists</i>. <br>
 This page is about the representation and basic behaviour of the types. For details on the operators defined on these types see <a href="operators.html">MNH5 - Operators</a>.
@@ -995,57 +1028,36 @@ And finally there is the function <code>getInner</code> which allows access by i
 out> [2,5,8]
 <!--end-->
 </code>
-
-<!--commonFoot-->
-<!--file quickstart.html-->
-<!--commonHead-->
-<title>MNH 5 - Quick start</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Quickstart</h3>
-<div align="right"><hr> </div>
-MNH5 comes in 2 flavours (for each compilation target):<ul>
-  <li> <b>mnh</b>: a GUI version with plotting support
-  <li> <b>mnh_light</b>: a slimmed down console version without plotting support (for the cases where size matters)
-</ul>
-
-You can just start an executable of any flavour and start typing. Most of the inputs will result in understandable outputs (the exception being infinite loops,
-fork bombs and other "pathologic" examples).<br>
-<br>
-The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
-<!--mnh-->
-1+2;
-<!--end-->
-</code> Or an assignment<code>
-<!--mnh-->
-x:=1;
-<!--end-->
-</code> Or a declaration<code>
-<!--mnh-->
-f(x)->sin(x);
-<!--end-->
-
+</div>
 <!--commonFoot-->
 <!--file specials.html-->
 <!--commonHead-->
-<title>MNH 5 - Special constructs</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Special constructs</h3>
-<div align="right"><hr> </div>
-<h3><a href="#each">each and pEach</a></h3>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
 <ul>
-<li><h4><a href="#syntax">Syntax</a></h4></li>
-<li><h4><a href="#construction">List construction</a></h4></li>
-<li><h4><a href="#aggregation">List aggregation</a></h4></li>
-<li><h4><a href="#consAgg">List construction and aggregation</a></h4></li>
-<li><h4><a href="#parallelization">Parallelization</a></h4></li>
+<li><h4><a href="#each">each and pEach</a></h4></li>
+<ul>
+<li><h5><a href="#syntax">Syntax</a></h5></li>
+<li><h5><a href="#construction">List construction</a></h5></li>
+<li><h5><a href="#aggregation">List aggregation</a></h5></li>
+<li><h5><a href="#consAgg">List construction and aggregation</a></h5></li>
+<li><h5><a href="#parallelization">Parallelization</a></h5></li>
 </ul>
-<h3><a href="#aggregator">aggregator</a></h3>
-<h3><a href="#while">while</a></h3>
-<h3><a href="#when">when</a></h3>
-
-<div align="right"><hr> </div>
+<li><h4><a href="#aggregator">aggregator</a></h4></li>
+<li><h4><a href="#while">while</a></h4></li>
+<li><h4><a href="#when">when</a></h4></li>
+</ul>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  </ul>
+</div>
+<div class="docContent">
 <h3><a name="each">each and pEach</a></h3>
 <h4><a name="syntax">Syntax</a></h4>
 The general syntax is: <code>
@@ -1242,18 +1254,28 @@ is equivalent to:
   condition2 ? statement2 : void;
 <!--end-->
 </code> 
+</div>
 <!--commonFoot-->
 <!--file formatStrings.html-->
 <!--commonHead-->
-<title>MNH 5 - Format Strings</title>
-</head><body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Format Strings</h3>
-<h3><a href="#generalFmt">General formatting</a></h3>
-<h3><a href="#timeFmt">Time formatting</a></h3>
-
-<div align="right"><hr> </div>
+<div class="navContent">
+  <ul>
+  <li><h3><a href="index.html">Quick start</a></h4></li>
+  <li><h3><a href="types.html">Types</a></h4></li>
+  <li><h3><a href="operators.html">Operators</a></h4></li>
+  <li><h3><a href="functions.html">Functions</a></h4></li>
+  <li><h3><a href="specials.html">Special constructs</a></h4></li>
+  <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
+  <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
+<ul>
+<li><h4><a href="#generalFmt">General formatting</a></h4></li>
+<li><h4><a href="#timeFmt">Time formatting</a></h4></li>
+</ul>
+  <li><h3><a href="packages.html">User packages</a></h4></li>
+  </ul>
+</div>
+<div class="docContent">
 <h3><a name="generalFmt">General formatting</a></h3>
-
 Format Strings are used in conjunction with the builtin functions <a href="builtin.html#strings.format">strings.format</a> and 
 <a href="builtin.html#system.printf">system.printf</a>. They contain parts of the string which are independent from the remaining arguments and placeholders for the remaining arguments.
 
@@ -1340,14 +1362,9 @@ There are additional routines for formatting and parsing dates and times. Some o
 <tr><td><code>z</code>     </td><td>yes</td><td>milliseconds</td></tr>
 <tr><td><code>zzz</code>   </td><td>yes</td><td>milliseconds(leading zero)</td></tr>
 </table>
+</div>
 <!--commonFoot-->
 <!--file builtin.html-->
 <!--commonHead-->
-<title>MNH 5 - Built-in functions</title>
-</head>
-<body>
-<h2 align="center"><a href="index.html">MNH 5</a> - Built-in functions</h3>
-<table border="0" align="center">
 <!--BUILTIN-->
-</table>
 <!--commonFoot-->

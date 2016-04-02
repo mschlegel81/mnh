@@ -369,21 +369,25 @@ PROCEDURE makeHtmlFromTemplate();
     end;
 
   PROCEDURE documentBuiltIns(VAR outFile:text);
+    CONST prelude='<div class="navContent"><ul><li><h3><a href="index.html">Quick start</a></h4></li><li><h3><a href="types.html">Types</a></h4></li><li><h3><a href="operators.html">Operators</a></h4></li><li><h3><a href="functions.html">Functions</a></h4></li><li><h3><a href="specials.html">Special constructs</a></h4></li><li><h3><a href="builtin.html">Built-in Functions</a></h4></li><ul>';
+          interlude='</ul><li><h3><a href="formatStrings.html">Format Strings</a></h4></li><li><h3><a href="packages.html">User packages</a></h4></li></ul></div><div class="docContent"><table border="0" align="center">';
+          coda='</table></div>';
     VAR i: longint;
         n: T_namespace;
     begin
-      writeln(outFile, '<div align="right"><hr></div><br><div>');
+      writeln(outFile,prelude);
+      for n:=low(T_namespace) to high(T_namespace) do writeln(outFile,'<li><h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4></li>');
+      writeln(outFile,interlude);
       for n:=low(T_namespace) to high(T_namespace) do for i:=0 to length(builtInDoc[n])-1 do
         writeln(outFile, '<a href="#', builtInDoc[n][i]^.id, '">', builtInDoc[n][i]^.id, '</a> &nbsp; ');
-      writeln(outFile, '</div><br><div align="right"><hr></div>');
-      for n:=low(T_namespace) to high(T_namespace) do
-        writeln(outFile,'<h4><a href="#'+C_namespaceString[n]+'">'+C_namespaceString[n]+'</a></h4>');
+      writeln(outFile, '</div><br>');
 
       for n:=low(T_namespace) to high(T_namespace) do begin
         writeln(outFile,'<div align="right"><hr></div><h3><a name="'+C_namespaceString[n]+'">'+C_namespaceString[n]+'<a></h3>');
         for i:=0 to length(builtInDoc[n])-1 do writeln(outFile, '<a href="#', builtInDoc[n][i]^.id, '">', builtInDoc[n][i]^.id, '</a> &nbsp; ');
         for i:=0 to length(builtInDoc[n])-1 do write(outFile,builtInDoc[n][i]^.getHtml);
       end;
+      writeln(outFile,coda);
     end;
 
   TYPE T_include=record
@@ -415,13 +419,7 @@ PROCEDURE makeHtmlFromTemplate();
       end else result:=false;
     end;
 
-  CONST BUILTIN_FILE_NAME='builtin.html';
   VAR blobLevel:longint=0;
-
-  FUNCTION builtInReady:boolean;
-    begin
-      result:=fileExists(htmlRoot+DirectorySeparator+BUILTIN_FILE_NAME);
-    end;
 
   FUNCTION handleCommand(cmd:ansistring):boolean;
     FUNCTION commandParameter(CONST txt:ansistring):ansistring;
@@ -452,12 +450,10 @@ PROCEDURE makeHtmlFromTemplate();
       if startsWith(cmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
-          if not((cmdParam=BUILTIN_FILE_NAME) and builtInReady) then begin
-            assign(handle,htmlRoot+'\'+cmdParam);
-            rewrite(handle);
-            isOpen:=true;
-          end else isOpen:=false;
-
+          assign(handle,htmlRoot+'\'+cmdParam);
+          writeln('Now writing file: ',htmlRoot+'\'+cmdParam);
+          rewrite(handle);
+          isOpen:=true;
         end;
         exit(true);
       end;
@@ -489,7 +485,9 @@ PROCEDURE makeHtmlFromTemplate();
   {$include res_html_template.inc}
   VAR i:longint;
   begin
-    if not(builtInReady) then prepareBuiltInDocs;
+    writeln('Preparing built-in docs');
+    prepareBuiltInDocs;
+    writeln('Creating html doc in ',getHtmlRoot,' from template of ',length(doc_html_template_txt),' lines');
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;
