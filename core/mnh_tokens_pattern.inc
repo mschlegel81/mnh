@@ -29,6 +29,7 @@
 
     CONSTRUCTOR create;
     CONSTRUCTOR clone(original:T_pattern);
+    CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
     FUNCTION appendFreeId    (CONST parId:ansistring):longint;
@@ -36,6 +37,7 @@
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
+    FUNCTION idForIndexInline(CONST index:longint):ansistring;
     PROCEDURE finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
@@ -180,6 +182,21 @@ CONSTRUCTOR T_pattern.clone(original: T_pattern);
     end;
   end;
 
+CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
+  VAR i:longint;
+  begin
+    containsSelfPointer:=LHSPattern.containsSelfPointer
+                      or RHSPattern.containsSelfPointer;
+    hasOptionals:=LHSPattern.hasOptionals
+               or RHSPattern.hasOptionals;
+    setLength(sig,max(length(LHSPattern.sig),length(RHSPattern.sig)));
+    for i:=0 to length(sig)-1 do begin
+      if      (i<length(LHSPattern.sig)) and (LHSPattern.sig[i].id<>'') then sig[i]:=LHSPattern.sig[i]
+      else if (i<length(RHSPattern.sig)) and (RHSPattern.sig[i].id<>'') then sig[i]:=RHSPattern.sig[i]
+      else sig[i].createAnonymous;
+    end;
+  end;
+
 PROCEDURE T_pattern.clear;
   begin
     setLength(sig,0);
@@ -231,6 +248,14 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: ansistring): longint;
     if sig[i].id=id then                      exit(i) else
     if sig[i].id='' then begin sig[i].id:=id; exit(i); end;
     result:=appendFreeId(id);
+  end;
+
+FUNCTION T_pattern.idForIndexInline(CONST index:longint):ansistring;
+  begin
+    if index=SELF_TOKEN_PAR_IDX     then exit(SELF_TOKEN_TEXT);
+    if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);
+    result:=sig[index].id;
+    if result='' then result:='$'+IntToStr(index);
   end;
 
 PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);

@@ -3,6 +3,11 @@
                  srt_normal_private,
                  srt_inline_for_literal,
                  srt_inline_for_each);
+  T_preparedToken=record
+    parIdx:longint;
+    token:T_token;
+  end;
+
   P_subrule=^T_subrule;
   T_subrule=object
     private
@@ -11,10 +16,7 @@
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
-      preparedBody:array of record
-                     parIdx:longint;
-                     token:T_token;
-                   end;
+      preparedBody:array of T_preparedToken;
 
       PROCEDURE updatePatternForInline;
       PROCEDURE embrace;
@@ -392,13 +394,14 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
   VAR i:longint;
       r:P_subrule;
-  PROCEDURE appendToExpression(VAR T:T_token);
+  PROCEDURE appendToExpression(VAR T:T_preparedToken);
     begin
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(T);
-        parIdx:=-1;
+        token.define(T.token);
+        parIdx:=T.parIdx;
+        if parIdx>=0 then token.txt:=pattern.idForIndexInline(parIdx);
       end;
     end;
 
@@ -426,23 +429,35 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
   begin
     called:=false;
     declaredAt:=opLocation;
-    pattern.create;
+    //Pattern (including final parameter names)
+    if LHS^.literalType=lt_expression then begin
+      if RHS^.literalType=lt_expression
+      then pattern.combineForInline(P_subrule(P_expressionLiteral(LHS)^.value)^.pattern,
+                                    P_subrule(P_expressionLiteral(RHS)^.value)^.pattern)
+      else pattern.clone(P_subrule(P_expressionLiteral(LHS)^.value)^.pattern);
+    end else begin
+      if RHS^.literalType=lt_expression
+      then pattern.clone(P_subrule(P_expressionLiteral(RHS)^.value)^.pattern)
+      else pattern.create;
+    end;
+
     typ:=srt_inline_for_literal;
     setLength(preparedBody,0);
 
     if LHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(LHS)^.value;
-      if r^.canUnbrace(op) then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i].token)
-                           else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i].token);
+      if r^.canUnbrace(C_opPrecedence[op])
+      then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i])
+      else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
     end else appendToExpression(LHS);
     appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(RHS)^.value;
-      if r^.canUnbrace(op) then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i].token)
-                           else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i].token);
+      if r^.canUnbrace(C_opPrecedence[op]-1)
+      then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i])
+      else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
     end else appendToExpression(RHS);
     embrace;
-    updatePatternForInline;
   end;
 
 FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):pointer;
@@ -484,9 +499,9 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
 
     setLength(preparedBody,1);
     with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
-    if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceOpen);
+    if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceOpen);
     for i:=0 to length(origRule^.preparedBody)-1 do appendToExpression(origRule^.preparedBody[i].token);
-    if not(origRule^.canUnbrace(tt_unaryOpPlus)) then appendToExpression(tt_braceClose);
+    if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceClose);
     updatePatternForInline;
   end;
 
