@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil;
+USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil;
 TYPE
   P_codeProvider = ^T_codeProvider;
 
@@ -19,9 +19,9 @@ TYPE
     DESTRUCTOR destroy;
 
     FUNCTION getLines: T_arrayOfString;
-    PROCEDURE getLines(CONST value: TStrings);
+    PROCEDURE getLinesUTF8(CONST value: TStrings);
     PROCEDURE setLines(CONST value: T_arrayOfString);
-    PROCEDURE setLines(CONST value: TStrings);
+    PROCEDURE setLinesUTF8(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
     PROCEDURE appendLine(CONST value: ansistring);
 
@@ -146,7 +146,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
       repeat
         BlockRead(handle, block, length(block), actuallyRead);
         for i := 0 to actuallyRead-1 do
-          result := result+block [i];
+          result := result+block[i];
       until actuallyRead<length(block);
       close(handle);
     except
@@ -178,7 +178,7 @@ FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT a
         readln(handle,tempLine);
         if (lineIndex>=firstIdx) and (lineIndex<=lastIdx) then begin
           setLength(result, length(result)+1);
-          result [length(result)-1]:=tempLine;
+          result[length(result)-1]:=tempLine;
         end;
         inc(lineIndex);
       end;
@@ -206,7 +206,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
         j := 0;
         while (i<=length(textToWrite)) and (j<length(block)) do
           begin
-          block[j] := textToWrite [i];
+          block[j] := textToWrite[i];
           inc(i);
           inc(j);
           end;
@@ -238,7 +238,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
           result :='';
           repeat
             BlockRead(chandle, block, length(block), actuallyRead);
-            for i := 0 to actuallyRead-1 do content := content+block [i];
+            for i := 0 to actuallyRead-1 do content := content+block[i];
             pr:=pos(C_carriageReturnChar,content);
             pn:=pos(C_lineBreakChar,content);
             if (pn>0) and (pn<length(content)) or
@@ -272,7 +272,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
       SetTextLineEnding(handle,textLineEnding);
       rewrite(handle);
       for i := 0 to length(textToWrite)-1 do
-        writeln(handle, textToWrite [i]);
+        writeln(handle, textToWrite[i]);
       close(handle);
       result := true;
     except
@@ -307,8 +307,8 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
     try
       tempProcess := TProcess.create(nil);
       tempProcess.executable := executable;
-      if not asynch then tempProcess.options:=tempProcess.options + [poWaitOnExit];
-      for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters [i]);
+      if not asynch then tempProcess.options:=tempProcess.options +[poWaitOnExit];
+      for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       tempProcess.execute;
       tempProcess.free;
     except
@@ -321,7 +321,7 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
   begin
     result:=extractFileName(filenameOrPath);
     i := 1;
-    while (i<=length(result)) and (result [i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do inc(i);
+    while (i<=length(result)) and (result[i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do inc(i);
     result := copy(result, 1, i-1);
   end;
 
@@ -332,15 +332,15 @@ FUNCTION T_codeProvider.getLines: T_arrayOfString;
   begin
     setLength(result, length(lineData));
     for i := 0 to length(lineData)-1 do begin
-      result[i] := lineData [i];
+      result[i] := lineData[i];
     end;
   end;
 
-PROCEDURE T_codeProvider.getLines(CONST value: TStrings);
+PROCEDURE T_codeProvider.getLinesUTF8(CONST value: TStrings);
   VAR i:longint;
   begin
     value.clear;
-    for i:=0 to length(lineData)-1 do value.append(lineData[i]);
+    for i:=0 to length(lineData)-1 do value.append(SysToUTF8(lineData[i]));
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
@@ -350,23 +350,23 @@ PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
     setLength(lineData, length(value));
     for i := 0 to length(value)-1 do begin
       outOfSync:=outOfSync or (lineData[i]<>value[i]);
-      lineData[i] := value [i];
+      lineData[i] := value[i];
     end;
   end;
 
-PROCEDURE T_codeProvider.setLines(CONST value: TStrings);
+PROCEDURE T_codeProvider.setLinesUTF8(CONST value: TStrings);
   VAR i: longint;
     cleanCount: longint;
   begin
     cleanCount := value.count;
-    while (cleanCount>0) and (trim(value [cleanCount-1]) = '') do dec(cleanCount);
+    while (cleanCount>0) and (trim(value[cleanCount-1]) = '') do dec(cleanCount);
     if length(lineData)<>cleanCount then begin
       setLength(lineData, cleanCount);
       outOfSync:=true;
     end;
     for i := 0 to cleanCount-1 do begin
-      outOfSync := outOfSync or (trim(lineData [i])<>trim(value [i]));
-      lineData[i] := value [i];
+      outOfSync := outOfSync or (trim(lineData[i])<>trim(UTF8ToSys(value[i])));
+      lineData[i] := UTF8ToSys(value[i]);
     end;
     fileContentsEnforced:=true;
   end;
@@ -445,9 +445,9 @@ PROCEDURE T_codeProvider.load;
     L := fileLines(filePath, accessed);
     if accessed then begin
       setLength(lineData, length(L));
-      for i := 0 to length(L)-1 do lineData[i] := L [i];
+      for i := 0 to length(L)-1 do lineData[i] := L[i];
       i := length(lineData);
-      while (i>0) and (trim(lineData [i-1]) = '') do begin
+      while (i>0) and (trim(lineData[i-1]) = '') do begin
         setLength(lineData, i-1);
         dec(i);
       end;

@@ -247,8 +247,6 @@ TYPE
     end;
   end;
 
-  { T_guiOutAdapter }
-
   T_guiOutAdapter=object(T_collectingOutAdapter)
     CONSTRUCTOR create;
     DESTRUCTOR destroy; virtual;
@@ -296,8 +294,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           begin
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
               syn.lines.clear;
-              for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
-            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+              for j:=1 to length(multiMessage)-1 do  syn.lines.append(SysToUTF8(multiMessage[j]));
+            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(SysToUTF8(multiMessage[j]));
           end;
         mt_debug_step: begin
           MnhForm.addDebugMessage(storedMessages[i]);
@@ -311,20 +309,18 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         mt_reloadRequired: begin
           for j:=0 to 9 do with MnhForm.inputRec[i] do
-          if sheet.TabVisible and (filePath=simpleMessage) and not(changed) then begin
+          if sheet.TabVisible and (filePath=SysToUTF8(simpleMessage)) and not(changed) then begin
             editor.lines.loadFromFile(filePath);
             fileAge(filePath,fileAccessAge);
             changed:=false;
           end;
         end;
         mt_echo_input: begin
-          syn.lines.append(C_errorLevelTxt[messageType]+' '+simpleMessage);
-          //DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+simpleMessage);
+          syn.lines.append(C_errorLevelTxt[messageType]+' '+SysToUTF8(simpleMessage));
         end;
         mt_echo_declaration,
-        mt_echo_output:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+simpleMessage);
-        else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
-          //DebugForm.rollingAppend(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+simpleMessage);
+        mt_echo_output:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
+        else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
         end;
       end;
     end;
@@ -1104,14 +1100,14 @@ PROCEDURE TMnhForm.writeDebugOutput(CONST updateSteps:boolean);
       debugEdit.lines.clear;
       for lineIdx:=0 to debugStepFill-1 do begin
         datIdx:=lineIdxToDatIdx(lineIdx);
-        debugEdit.lines.append(debugStep[datIdx].simpleMessage);
+        debugEdit.lines.append(SysToUTF8(debugStep[datIdx].simpleMessage));
       end;
       debugEdit.ExecuteCommand(ecEditorBottom,' ',nil);
       debugEdit.ExecuteCommand(ecLineStart,' ',nil);
     end else datIdx:=lineIdxToDatIdx(debugEdit.CaretY-1);
     if datIdx>=0 then with debugStep[datIdx] do begin
       variableEdit.lines.clear;
-      for j:=0 to length(multiMessage)-1 do variableEdit.lines.append(multiMessage[j]);
+      for j:=0 to length(multiMessage)-1 do variableEdit.lines.append(SysToUTF8(multiMessage[j]));
       if not((location.fileName='') or (location.fileName='?')) then begin
         j:=getInputEditIndexForFilename(location.fileName);
         if j>=0 then begin

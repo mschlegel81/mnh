@@ -1,6 +1,6 @@
 UNIT mnh_evalThread;
 INTERFACE
-USES sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
+USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
      myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_die);
@@ -119,7 +119,7 @@ PROCEDURE ad_reEvaluateWithGUI;
 PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings);
   begin
     environment.mainPackageProvider^.setPath(path);
-    environment.mainPackageProvider^.setLines(L);
+    environment.mainPackageProvider^.setLinesUTF8(L);
     pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -131,7 +131,7 @@ PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistri
   VAR sp:longint;
   begin
     setLength(parametersForMainCall,0);
-    params:=trim(params);
+    params:=trim(UTF8ToSys(params));
     while params<>'' do begin
       sp:=pos(' ',params);
       if sp<=0 then begin
@@ -143,7 +143,7 @@ PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistri
       end;
     end;
     environment.mainPackageProvider^.setPath(path);
-    environment.mainPackageProvider^.setLines(L);
+    environment.mainPackageProvider^.setLinesUTF8(L);
     pendingRequest.value:=er_callMain;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -227,7 +227,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
   VAR i:longint;
   begin
-    environment.mainPackageProvider^.setLines(L);
+    environment.mainPackageProvider^.setLinesUTF8(L);
     if environment.mainPackageProvider^.getPath='' then begin
       result:=false;
       for i:=0 to L.count-1 do result:=result or (trim(L[i])<>'');
