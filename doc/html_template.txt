@@ -881,25 +881,53 @@ Strings are internally represented as ANSI-Strings, without length limitation.<b
 You can use one of the following representations:<br>
 <ul>
   <li><b>Pascal Strings</b>: Delimited by <code>'</code>. To insert a quote in the string, use <code>''</code>, e.g.:<code>
-<!--mnh-->
-  quote:='''';
-  doubleQuote:='"';
-  backslash:='\';
-<!--end-->  
+  <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">''''</span>;
+  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="literal">'"'</span>;
+  <span class="identifier">backslash</span><span class="operator">:=</span><span class="literal">'\'</span>;
 </code></li>
   <li><b>Java Strings</b> (rather: Strings inspired by Java): Delimited by <code>"</code>.
-  Within strings the following escape-sequences are defined:<ul>
-  <li><code>\n  </code> Line break</li>
-  <li><code>\r  </code> Carriage return</li>
-  <li><code>\t  </code> Tabulator</li>
-  <li><code>\\  </code> Backslash</li>
-  <li><code>\"  </code> The delimiter, a double quote</li>
-  </ul>
+  Within strings the following escape-sequences are defined:<br>
+  <table><tr class="ruleHead"><td>Sequence</td><td>Hex-Code</td><td></td></tr>
+  <tr><td><code>\n</code></td><td><code>#0A</code></td><td>Line break</td></tr>
+  <tr><td><code>\r</code></td><td><code>#0D</code></td><td>Carriage return</td></tr>
+  <tr><td><code>\t</code></td><td><code>#09</code></td><td>Tabulator</td></tr>
+  <tr><td><code>\\</code></td><td><code>#5C</code></td><td>Backslash</td></tr>
+  <tr><td><code>\"</code></td><td><code>#22</code></td><td>The delimiter, a double quote</td></tr>
+  <tr><td><code>\0</code></td><td><code>#00</code></td></tr>
+  <tr><td><code>\1</code></td><td><code>#01</code></td></tr>
+  <tr><td><code>\2</code></td><td><code>#02</code></td></tr>
+  <tr><td><code>\3</code></td><td><code>#03</code></td></tr>
+  <tr><td><code>\4</code></td><td><code>#04</code></td></tr>
+  <tr><td><code>\5</code></td><td><code>#05</code></td></tr>
+  <tr><td><code>\6</code></td><td><code>#06</code></td></tr>
+  <tr><td><code>\a</code></td><td><code>#07</code></td></tr>
+  <tr><td><code>\b</code></td><td><code>#08</code></td></tr>
+  <tr><td><code>\v</code></td><td><code>#0B</code></td></tr>
+  <tr><td><code>\f</code></td><td><code>#0C</code></td><td>Form feed</td></tr>
+  <tr><td><code>\S</code></td><td><code>#0E</code></td></tr>
+  <tr><td><code>\s</code></td><td><code>#0F</code></td></tr>
+  <tr><td><code>\d</code></td><td><code>#10</code></td></tr>
+  <tr><td><code>\A</code></td><td><code>#11</code></td></tr>
+  <tr><td><code>\B</code></td><td><code>#12</code></td></tr>
+  <tr><td><code>\C</code></td><td><code>#13</code></td></tr>
+  <tr><td><code>\D</code></td><td><code>#14</code></td></tr>
+  <tr><td><code>\N</code></td><td><code>#15</code></td></tr>
+  <tr><td><code>\X</code></td><td><code>#16</code></td></tr>
+  <tr><td><code>\T</code></td><td><code>#17</code></td></tr>
+  <tr><td><code>\Z</code></td><td><code>#18</code></td></tr>
+  <tr><td><code>\M</code></td><td><code>#19</code></td></tr>
+  <tr><td><code>\Y</code></td><td><code>#1A</code></td></tr>
+  <tr><td><code>\x</code></td><td><code>#1B</code></td></tr>
+  <tr><td><code>\F</code></td><td><code>#1C</code></td></tr>
+  <tr><td><code>\G</code></td><td><code>#1D</code></td></tr>
+  <tr><td><code>\R</code></td><td><code>#1E</code></td></tr>
+  <tr><td><code>\U</code></td><td><code>#1F</code></td></tr>
+  <tr><td><code>\-</code></td><td><code>#7F</code></td></tr>
+  </table><br>
   e.g.:<code>
-<!--mnh-->
-  quote:="'";
-  doubleQuote:="\"";
-  backslash:="\\";
+  <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">"'"</span>;
+  <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="literal">"\""</span>;
+  <span class="identifier">backslash</span><span class="operator">:=</span><span class="literal">"\\"</span>;
 <!--end-->  
 </code></li>
   <li><b>Blobs</b>:
