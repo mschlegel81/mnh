@@ -745,7 +745,8 @@ FUNCTION T_listLiteral.tail(CONST headSize:longint):P_listLiteral;
   VAR i,iMin:longint;
   begin
     iMin:=headSize;
-    if iMin>length(element) then iMin:=length(element);
+    if iMin>length(element) then iMin:=length(element)
+    else if iMin<0 then iMin:=0;
     result:=newListLiteral;
     for i:=iMin to length(element)-1 do result^.append(element[i],true,nullAdapter);
   end;
