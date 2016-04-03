@@ -17,12 +17,10 @@ private getWeeks(year,month)->begin
   local startingMonday :=firstDayOfMonth;
   while(formatTime('ddd',startingMonday)!='Mo',startingMonday-=1);
   local daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
-  daysOnTab:=daysOnTab
+  daysOnTab
   .group([0..size(daysOnTab)-1] div 7)
   .sort({$x[0]<$y[0]})
   .each(week,week.each(day,day<=0 ? '  ' : format('%2s',day)).join(' '));
-  while(daysOnTab.size<6,daysOnTab|='');
-  daysOnTab;
 end;
 
 private printCalendar(year)->begin
@@ -41,7 +39,10 @@ private printCalendar(year)->begin
     print(splitLine),
     printf@(lineFormat | nameOfMonth[[leftMonth..leftMonth+3]]),
     printf(lineFormat,weekDays,weekDays,weekDays,weekDays),
-    [0..5].each(i,printf(lineFormat,weeks[leftMonth,i],weeks[leftMonth+1,i],weeks[leftMonth+2,i],weeks[leftMonth+3,i])));
+    [0..5].each(i,printf(lineFormat,weeks[leftMonth  ,i] orElse "",
+                                    weeks[leftMonth+1,i] orElse "",
+                                    weeks[leftMonth+2,i] orElse "",
+                                    weeks[leftMonth+3,i] orElse "")));
   print(splitLine);
 end;
 
