@@ -26,7 +26,7 @@ CONST
 
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
-  SCRIPT_EXTENSION='.MNH';
+  SCRIPT_EXTENSION='.mnh';
   C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system'{$ifdef fullVersion},'plot','tables'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
 

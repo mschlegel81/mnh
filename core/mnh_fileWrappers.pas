@@ -81,33 +81,19 @@ PROCEDURE ensurePath(path:ansistring);
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-  FUNCTION nameToId(CONST fname: ansistring): ansistring;
-    begin
-      if uppercase(extractFileExt(fname)) = SCRIPT_EXTENSION then
-        begin
-        result := extractFileName(fname);
-        result := copy(result, 1, length(result)-length(SCRIPT_EXTENSION));
-        end
-      else
-        result := '';
-      if isReservedNamespace( lowercase(result)) then
-        result := '';
-    end;
-
   PROCEDURE recursePath(CONST path: ansistring);
-    VAR
-      info: TSearchRec;
+    VAR info: TSearchRec;
     begin
-      if FindFirst(path+'*', faAnyFile, info) = 0 then
-        repeat
-          if (info.Attr and faDirectory) = faDirectory then
-            begin
-            if (info.name<>'.') and (info.name<>'..') then
-              recursePath(path+info.name+DirectorySeparator);
-            end
-          else if nameToId(info.name) = id then
-            result := path+info.name;
-        until (findNext(info)<>0) or (result<>'');
+      if (FindFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
+         ((info.Attr and faDirectory)<>faDirectory)
+      then result:=path+info.name;
+      sysutils.FindClose(info);
+      if result<>'' then exit;
+
+      if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
+        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then
+          recursePath(path+info.name+DirectorySeparator);
+      until (findNext(info)<>0) or (result<>'');
       sysutils.FindClose(info);
     end;
 
@@ -123,20 +109,23 @@ FUNCTION locateSources: T_arrayOfString;
   PROCEDURE recursePath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
+      if (FindFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) then repeat
+        appendIfNew(result,path+info.name);
+      until (findNext(info)<>0);
+      sysutils.FindClose(info);
+
       if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
-        if (info.Attr and faDirectory) = faDirectory then begin
-          if (info.name<>'.') and (info.name<>'..') then
-            recursePath(path+info.name+DirectorySeparator);
-        end else if uppercase(extractFileExt(info.name)) = SCRIPT_EXTENSION then
-          appendIfNew(result,path+info.name);
+        if (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
       until (findNext(info)<>0);
       sysutils.FindClose(info);
     end;
 
   begin
     setLength(result, 0);
-    recursePath('');
+    recursePath(GetAppConfigDir(true));
+    recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
     recursePath(extractFilePath(paramStr(0)));
+    recursePath('');
   end;
 
 
