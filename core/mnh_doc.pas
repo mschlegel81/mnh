@@ -38,18 +38,29 @@ TYPE
     FUNCTION getHref(CONST fromHtmlRoot:boolean): ansistring;
   end;
 
-
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
 PROCEDURE makeHtmlFromTemplate;
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
+PROCEDURE ensureDemos;
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
 IMPLEMENTATION
 VAR packages: array of P_userPackageDocumentation;
     functionDocExamplesReady:boolean=false;
     htmlRoot:ansistring;
 CONST PACKAGE_DOC_SUBFOLDER='package_doc';
+
+PROCEDURE ensureDemos;
+  {$i res_ensureDemos.inc}
+  VAR code:T_arrayOfString;
+      i:longint;
+  begin
+    setLength(code,length(ensureDemos_mnh));
+    for i:=0 to length(code)-1 do code[i]:=ensureDemos_mnh[i];
+    append(code,'('+escapeString(GetAppConfigDir(true))+')');
+    demoCodeToHtmlCallback(code);
+  end;
 
 FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
 

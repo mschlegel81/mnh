@@ -999,6 +999,7 @@ PROCEDURE findAndDocumentAllPackages;
       provider:P_codeProvider;
       context:T_evaluationContext;
   begin
+    ensureDemos;
     context.createSanboxContext(P_adapters(@nullAdapter));
     sourceNames:=locateSources;
     for i:=0 to length(sourceNames)-1 do begin

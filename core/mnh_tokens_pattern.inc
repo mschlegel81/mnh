@@ -255,7 +255,7 @@ FUNCTION T_pattern.idForIndexInline(CONST index:longint):ansistring;
     if index=SELF_TOKEN_PAR_IDX     then exit(SELF_TOKEN_TEXT);
     if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);
     result:=sig[index].id;
-    if result='' then result:='$'+IntToStr(index);
+    if result='' then result:='$'+intToStr(index);
   end;
 
 PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);

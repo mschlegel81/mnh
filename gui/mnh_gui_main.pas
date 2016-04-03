@@ -1448,15 +1448,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
-  {$i res_ensureDemos.inc}
-  VAR code:T_arrayOfString;
-      i:longint;
   begin
-    setLength(code,length(ensureDemos_mnh));
-    for i:=0 to length(code)-1 do code[i]:=ensureDemos_mnh[i];
-    append(code,'('+escapeString(GetAppConfigDir(true))+')');
-    runAlone(code);
-
+    ensureDemos;
     OpenDialog.fileName:=GetAppConfigDir(true)+'demos';
     miOpenClick(Sender);
   end;
