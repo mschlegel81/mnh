@@ -4,15 +4,16 @@ object tableForm: TtableForm
   Top = 134
   Width = 537
   Caption = 'MNH - Table'
-  ClientHeight = 414
+  ClientHeight = 394
   ClientWidth = 537
+  Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '1.4.4.0'
   object StringGrid: TStringGrid
     Left = 232
-    Height = 414
+    Height = 394
     Top = 0
     Width = 305
     Align = alClient
@@ -32,11 +33,11 @@ object tableForm: TtableForm
   end
   object editingPanel: TPanel
     Left = 0
-    Height = 414
+    Height = 394
     Top = 0
     Width = 232
     Align = alLeft
-    ClientHeight = 414
+    ClientHeight = 394
     ClientWidth = 232
     TabOrder = 1
     object GroupBox1: TGroupBox
@@ -49,7 +50,7 @@ object tableForm: TtableForm
       ClientHeight = 75
       ClientWidth = 226
       TabOrder = 0
-      object CheckBox1: TCheckBox
+      object showGridCheckBox: TCheckBox
         Left = 8
         Height = 19
         Top = 0
@@ -57,7 +58,7 @@ object tableForm: TtableForm
         Caption = 'Show grid'
         TabOrder = 0
       end
-      object CheckBox2: TCheckBox
+      object autoGrowCheckBox: TCheckBox
         Left = 91
         Height = 19
         Top = 0
@@ -102,12 +103,12 @@ object tableForm: TtableForm
     end
     object GroupBox2: TGroupBox
       Left = 1
-      Height = 317
+      Height = 297
       Top = 96
       Width = 230
       Align = alClient
       Caption = 'Cell settings'
-      ClientHeight = 297
+      ClientHeight = 277
       ClientWidth = 226
       TabOrder = 1
       object Label3: TLabel
@@ -143,7 +144,7 @@ object tableForm: TtableForm
         Caption = 'Initial Value:'
         ParentColor = False
       end
-      object Edit1: TEdit
+      object initialValueEdit: TEdit
         Left = 8
         Height = 23
         Top = 56
@@ -159,7 +160,7 @@ object tableForm: TtableForm
         Caption = 'Expression for calculation:'
         ParentColor = False
       end
-      object Edit2: TEdit
+      object expressionEdit: TEdit
         Left = 8
         Height = 23
         Top = 104
@@ -202,6 +203,25 @@ object tableForm: TtableForm
         Top = 200
         Width = 218
         TabOrder = 4
+      end
+    end
+  end
+  object MainMenu: TMainMenu
+    left = 160
+    top = 148
+    object MenuItem1: TMenuItem
+      Caption = '&Table'
+      object miAccept: TMenuItem
+        Caption = '&Accept and Close'
+        OnClick = miAcceptClick
+      end
+      object miCancel: TMenuItem
+        Caption = '&Cancel and Close'
+        OnClick = miCancelClick
+      end
+      object miSwitchMode: TMenuItem
+        Caption = '&Test'
+        OnClick = miSwitchModeClick
       end
     end
   end

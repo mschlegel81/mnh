@@ -5,52 +5,61 @@ UNIT mnh_tables;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, ExtCtrls, StdCtrls,
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, ExtCtrls, StdCtrls, Menus,
   mnh_litVar, mnh_constants, mnh_tokLoc, mnh_out_adapters, mnh_funcs,mnh_contexts;
 
 CONST
+
+
+  C_CELL_STYLES:array[0..3] of string=('read only','normal','checkbox','dropdown');
+  C_CELL_STYLE_DEFAULT=1;
+
+  C_INITIAL_VALUE_DEFAULT='void';
+  C_EXPRESSION_VALUE_DEFAULT='void';
+  C_VALIDATOR_VALU_DEFAULT='void';
+
+
   C_READ_ONLY_KEY='readOnly';
   C_VALUE_KEY='value';
 
 TYPE
+
   T_cellIndex=record
     row,col:longint;
   end;
 
+  P_cell=^T_cell;
   T_cell=object
+    style:byte;
     index:T_cellIndex;
-    givenValue,
-    calculatedValue:P_literal;
-    readonly,
-    calculated,
-    ready:boolean;
+    initialValue,currentValue:P_literal;
+    calculatingExp,
+    validatingExp:P_expressionLiteral;
+    PickList:T_listLiteral;
 
-    CONSTRUCTOR create(CONST cellIndex:T_cellIndex; CONST initialValue:P_literal; CONST isReadOnly:boolean);
+    CONSTRUCTOR create(CONST cellIndex:T_cellIndex);
     DESTRUCTOR destroy;
     FUNCTION getValue:P_literal;
     PROCEDURE setValue(CONST L:P_literal; CONST EditorMode:boolean=false);
     PROCEDURE resetBeforeTableUpdate;
-
     FUNCTION getDefiningLiteral(VAR adapters:T_adapters):P_listLiteral;
   end;
 
   P_sparseTable=^T_sparseTable;
+
+  { T_sparseTable }
+
   T_sparseTable=object
-    definedCells:array of T_cell;
+    definedCells:array of P_cell;
     colCount,RowCount:longint;
     showGrid,autoGrow:boolean;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE initialize(CONST map:T_listLiteral; CONST location:T_tokenLocation; VAR adapters:T_adapters);
-
-    FUNCTION getCellValue(CONST row,col:longint):P_literal;
-    FUNCTION getCellValue(CONST index:T_cellIndex):P_literal;
-    FUNCTION getCellValue(CONST cellId:ansistring):P_literal;
-    FUNCTION getCellText(CONST row,col:longint):ansistring;
-    PROCEDURE setValue(CONST row,col:longint; CONST value:ansistring);
-    PROCEDURE setValue(CONST row,col:longint; CONST value:P_literal);
-    FUNCTION isCellEditable(CONST row,col:longint):boolean;
+    FUNCTION cell(CONST row,col:longint;   CONST createIfNonexistent:boolean=false):P_cell;
+    FUNCTION cell(CONST index:T_cellIndex; CONST createIfNonexistent:boolean=false):P_cell;
+    FUNCTION cell(CONST cellId:ansistring; CONST createIfNonexistent:boolean=false):P_cell;
     FUNCTION getDefiningLiteral(VAR adapters:T_adapters):P_listLiteral;
   end;
 
@@ -61,8 +70,8 @@ TYPE
     editingPanel: TPanel;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
-    CheckBox1: TCheckBox;
-    CheckBox2: TCheckBox;
+    showGridCheckBox: TCheckBox;
+    autoGrowCheckBox: TCheckBox;
     Label1: TLabel;
     Label2: TLabel;
     rowCountEdit: TEdit;
@@ -70,13 +79,18 @@ TYPE
     Label3: TLabel;
     cellStyleComboBox: TComboBox;
     Label4: TLabel;
-    Edit1: TEdit;
+    initialValueEdit: TEdit;
     Label5: TLabel;
-    Edit2: TEdit;
+    expressionEdit: TEdit;
     Label6: TLabel;
     validatorComboBox: TComboBox;
     Label7: TLabel;
     picklistItemsMemo: TMemo;
+    MainMenu: TMainMenu;
+    MenuItem1: TMenuItem;
+    miAccept: TMenuItem;
+    miCancel: TMenuItem;
+    miSwitchMode: TMenuItem;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -85,14 +99,17 @@ TYPE
     PROCEDURE StringGridButtonClick(Sender: TObject; aCol, aRow: integer);
     PROCEDURE StringGridSelectCell(Sender: TObject; aCol, aRow: integer; VAR CanSelect: boolean);
     PROCEDURE StringGridKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
+    procedure miCancelClick(Sender: TObject);
+    procedure miAcceptClick(Sender: TObject);
+    procedure miSwitchModeClick(Sender: TObject);
   private
-    autoGrow:boolean;
     editMode:boolean;
     editModeResult_:ansistring;
     runModeResult_:P_listLiteral;
     cs:TRTLCriticalSection;
     table:T_sparseTable;
     PROCEDURE updateTable;
+    PROCEDURE updateCellInfo;
   public
     displayPending:boolean;
     PROCEDURE initForEditing;
@@ -155,231 +172,180 @@ CONSTRUCTOR T_sparseTable.create;
 DESTRUCTOR T_sparseTable.destroy;
   VAR i:longint;
   begin
-    for i:=0 to length(definedCells)-1 do definedCells[i].destroy;
+    for i:=0 to length(definedCells)-1 do dispose(definedCells[i],destroy);
     setLength(definedCells,0);
   end;
 
 PROCEDURE T_sparseTable.initialize(CONST map: T_listLiteral; CONST location: T_tokenLocation; VAR adapters: T_adapters);
-  PROCEDURE initCell(CONST key:ansistring; CONST value:P_literal);
-    FUNCTION getValueForKey(CONST L:P_literal; CONST key:ansistring):P_literal;
-      VAR i:longint;
-          keyValuePair:P_listLiteral;
-      begin
-        if L^.literalType<>lt_keyValueList then exit(nil);
-        for i:=0 to P_listLiteral(L)^.size-1 do begin
-          keyValuePair:=P_listLiteral(P_listLiteral(L)^.value(i));
-          if P_stringLiteral(keyValuePair^.value(0))^.value=key then exit(keyValuePair^.value(1));
-        end;
-        result:=nil;
-      end;
-
-    VAR index:T_cellIndex;
-        i:longint;
-        tempValue:P_literal;
-        tempReadOnly:P_literal;
-    begin
-      index:=cellIdToCellIdx(key);
-      if (index.col<0) or (index.row<0) then begin
-        adapters.raiseError('Invalid cell specifier "'+key+'".',location);
-        exit;
-      end;
-      for i:=0 to length(definedCells)-1 do if definedCells[i].index=index then begin
-        adapters.raiseError('Duplicate cell specificaion for "'+key+'".',location);
-        exit;
-      end;
-      if (value^.literalType=lt_keyValueList) then begin
-        tempValue:=getValueForKey(value,C_VALUE_KEY);
-        tempReadOnly:=getValueForKey(value,C_READ_ONLY_KEY);
-      end else begin
-        tempReadOnly:=nil;
-        tempValue:=value;
-      end;
-      if value=nil then begin
-        adapters.raiseError('Missing value for cell "'+key+'".',location);
-        exit;
-      end;
-      if (tempReadOnly<>nil) and (tempReadOnly^.literalType<>lt_boolean) then begin
-        adapters.raiseError('Flag "'+C_READ_ONLY_KEY+'" must be a boolean for cell "'+key+'".',location);
-        exit;
-      end;
-      i:=length(definedCells);
-      setLength(definedCells,i+1);
-      definedCells[i].create(index,tempValue,(tempReadOnly<>nil) and P_boolLiteral(tempReadOnly)^.value);
-    end;
-
-  VAR i:longint;
+  //PROCEDURE initCell(CONST key:ansistring; CONST value:P_literal);
+  //  FUNCTION getValueForKey(CONST L:P_literal; CONST key:ansistring):P_literal;
+  //    VAR i:longint;
+  //        keyValuePair:P_listLiteral;
+  //    begin
+  //      if L^.literalType<>lt_keyValueList then exit(nil);
+  //      for i:=0 to P_listLiteral(L)^.size-1 do begin
+  //        keyValuePair:=P_listLiteral(P_listLiteral(L)^.value(i));
+  //        if P_stringLiteral(keyValuePair^.value(0))^.value=key then exit(keyValuePair^.value(1));
+  //      end;
+  //      result:=nil;
+  //    end;
+  //
+  //  VAR index:T_cellIndex;
+  //      i:longint;
+  //      tempValue:P_literal;
+  //      tempReadOnly:P_literal;
+  //  begin
+  //    index:=cellIdToCellIdx(key);
+  //    if (index.col<0) or (index.row<0) then begin
+  //      adapters.raiseError('Invalid cell specifier "'+key+'".',location);
+  //      exit;
+  //    end;
+  //    for i:=0 to length(definedCells)-1 do if definedCells[i].index=index then begin
+  //      adapters.raiseError('Duplicate cell specificaion for "'+key+'".',location);
+  //      exit;
+  //    end;
+  //    if (value^.literalType=lt_keyValueList) then begin
+  //      tempValue:=getValueForKey(value,C_VALUE_KEY);
+  //      tempReadOnly:=getValueForKey(value,C_READ_ONLY_KEY);
+  //    end else begin
+  //      tempReadOnly:=nil;
+  //      tempValue:=value;
+  //    end;
+  //    if value=nil then begin
+  //      adapters.raiseError('Missing value for cell "'+key+'".',location);
+  //      exit;
+  //    end;
+  //    if (tempReadOnly<>nil) and (tempReadOnly^.literalType<>lt_boolean) then begin
+  //      adapters.raiseError('Flag "'+C_READ_ONLY_KEY+'" must be a boolean for cell "'+key+'".',location);
+  //      exit;
+  //    end;
+  //    i:=length(definedCells);
+  //    setLength(definedCells,i+1);
+  //    definedCells[i].create(index,tempValue,(tempReadOnly<>nil) and P_boolLiteral(tempReadOnly)^.value);
+  //  end;
+  //
+  //VAR i:longint;
   begin
-    if length(definedCells)>0 then adapters.raiseError('Duplicate initialization of table',location);
-    if map.literalType=lt_emptyList then exit;
-    if map.literalType=lt_keyValueList then for i:=0 to map.size-1 do if adapters.noErrors then
-      initCell(P_stringLiteral(P_listLiteral(map.value(i))^.value(0))^.value,
-                               P_listLiteral(map.value(i))^.value(1));
+    //if length(definedCells)>0 then adapters.raiseError('Duplicate initialization of table',location);
+    //if map.literalType=lt_emptyList then exit;
+    //if map.literalType=lt_keyValueList then for i:=0 to map.size-1 do if adapters.noErrors then
+    //  initCell(P_stringLiteral(P_listLiteral(map.value(i))^.value(0))^.value,
+    //                           P_listLiteral(map.value(i))^.value(1));
   end;
 
-FUNCTION T_sparseTable.getCellValue(CONST row, col: longint): P_literal;
+FUNCTION T_sparseTable.cell(CONST row, col: longint; CONST createIfNonexistent: boolean): P_cell;
   VAR index:T_cellIndex;
   begin
     index.row:=row;
     index.col:=col;
-    result:=getCellValue(index);
+    result:=cell(index,createIfNonexistent);
   end;
 
-FUNCTION T_sparseTable.getCellValue(CONST index: T_cellIndex): P_literal;
+FUNCTION T_sparseTable.cell(CONST index: T_cellIndex; CONST createIfNonexistent: boolean): P_cell;
   VAR i:longint;
   begin
     for i:=0 to length(definedCells)-1 do
-      if definedCells[i].index=index then exit(definedCells[i].getValue);
-    result:=newVoidLiteral;
-  end;
-
-FUNCTION T_sparseTable.getCellValue(CONST cellId: ansistring): P_literal;
-  VAR index:T_cellIndex;
-  begin
-    index:=cellIdToCellIdx(cellId);
-    result:=getCellValue(index);
-  end;
-
-FUNCTION T_sparseTable.getCellText(CONST row, col: longint): ansistring;
-  VAR index:T_cellIndex;
-      i:longint;
-      value:P_literal;
-  begin
-    index.row:=row;
-    index.col:=col;
-    for i:=0 to length(definedCells)-1 do if definedCells[i].index=index then begin
-      value:=definedCells[i].getValue;
-      if value^.literalType=lt_void then result:=''
-                                    else result:=value^.toString;
-      disposeLiteral(value);
-      exit(result);
+      if definedCells[i]^.index=index then exit(definedCells[i]);
+    if createIfNonexistent then begin
+      new(result,create(index));
+      i:=length(definedCells);
+      setLength(definedCells,i+1);
+      definedCells[i]:=result;
+      if index.row>=RowCount then RowCount:=index.row+1;
+      if index.col>=colCount then colCount:=index.col+1;
     end;
-    result:='';
   end;
 
-PROCEDURE T_sparseTable.setValue(CONST row, col: longint; CONST value: ansistring);
-  VAR stringValue:P_stringLiteral;
-      softCastValue:P_scalarLiteral;
+FUNCTION T_sparseTable.cell(CONST cellId: ansistring; CONST createIfNonexistent: boolean): P_cell;
   begin
-    stringValue:=newStringLiteral(value);
-    softCastValue:=stringValue^.softCast;
-    disposeLiteral(stringValue);
-    setValue(row,col,softCastValue);
-  end;
-
-PROCEDURE T_sparseTable.setValue(CONST row, col: longint; CONST value: P_literal);
-  VAR index:T_cellIndex;
-      i:longint;
-  begin
-    index.row:=row;
-    index.col:=col;
-    for i:=0 to length(definedCells)-1 do if definedCells[i].index=index then begin
-      definedCells[i].setValue(value);
-      exit;
-    end;
-    i:=length(definedCells);
-    setLength(definedCells,i+1);
-    definedCells[i].create(index,value,false);
-    if row>=RowCount then RowCount:=row+1;
-    if col>=colCount then colCount:=col+1;
-  end;
-
-FUNCTION T_sparseTable.isCellEditable(CONST row, col: longint): boolean;
-  VAR index:T_cellIndex;
-      i:longint;
-  begin
-    index.row:=row;
-    index.col:=col;
-    for i:=0 to length(definedCells)-1 do if definedCells[i].index=index then exit(definedCells[i].readonly);
-    result:=true;
+    result:=cell(cellIdToCellIdx(cellId),createIfNonexistent);
   end;
 
 FUNCTION T_sparseTable.getDefiningLiteral(VAR adapters: T_adapters): P_listLiteral;
-  VAR i:longint;
   begin
-    result:=newListLiteral;
-    for i:=0 to length(definedCells)-1 do result^.append(definedCells[i].getDefiningLiteral(adapters),false,adapters);
+
   end;
 
 { T_cell }
 
-CONSTRUCTOR T_cell.create(CONST cellIndex: T_cellIndex; CONST initialValue: P_literal; CONST isReadOnly: boolean);
+CONSTRUCTOR T_cell.create(CONST cellIndex: T_cellIndex);
   begin
-    index:=cellIndex;
-    givenValue:=initialValue;
-    givenValue^.rereference;
-    readonly:=isReadOnly;
-    if givenValue^.literalType=lt_expression then begin
-      calculatedValue:=newVoidLiteral;
-      calculated:=true;
-      ready:=false;
-      readonly:=true;
-    end else begin
-      calculatedValue:=givenValue;
-      calculatedValue^.rereference;
-      calculated:=false;
-      ready:=true;
-    end;
+    //index:=cellIndex;
+    ////givenValue:=initialValue;
+    //givenValue^.rereference;
+    ////readonly:=isReadOnly;
+    //if givenValue^.literalType=lt_expression then begin
+    //  calculatedValue:=newVoidLiteral;
+    //  calculated:=true;
+    //  ready:=false;
+    //  readonly:=true;
+    //end else begin
+    //  calculatedValue:=givenValue;
+    //  calculatedValue^.rereference;
+    //  calculated:=false;
+    //  ready:=true;
+    //end;
   end;
 
 DESTRUCTOR T_cell.destroy;
   begin
-    disposeLiteral(calculatedValue);
-    disposeLiteral(givenValue);
+    //disposeLiteral(calculatedValue);
+    //disposeLiteral(givenValue);
   end;
 
 FUNCTION T_cell.getValue: P_literal;
   begin
-    result:=calculatedValue;
-    result^.rereference;
+    //result:=calculatedValue;
+    //result^.rereference;
   end;
 
 PROCEDURE T_cell.setValue(CONST L: P_literal; CONST EditorMode: boolean);
   begin
-    if EditorMode then begin
-      disposeLiteral(givenValue);
-      givenValue:=L;
-      L^.rereference;
-      disposeLiteral(calculatedValue);
-      if givenValue^.literalType=lt_expression then begin
-        calculatedValue:=newVoidLiteral;
-        calculated:=true;
-        ready:=false;
-        readonly:=true;
-      end else begin
-        calculatedValue:=givenValue;
-        calculatedValue^.rereference;
-        calculated:=false;
-        ready:=true;
-      end;
-    end else begin
-      disposeLiteral(calculatedValue);
-      calculatedValue:=L;
-    end;
+    //if EditorMode then begin
+    //  disposeLiteral(givenValue);
+    //  givenValue:=L;
+    //  L^.rereference;
+    //  disposeLiteral(calculatedValue);
+    //  if givenValue^.literalType=lt_expression then begin
+    //    calculatedValue:=newVoidLiteral;
+    //    calculated:=true;
+    //    ready:=false;
+    //    readonly:=true;
+    //  end else begin
+    //    calculatedValue:=givenValue;
+    //    calculatedValue^.rereference;
+    //    calculated:=false;
+    //    ready:=true;
+    //  end;
+    //end else begin
+    //  disposeLiteral(calculatedValue);
+    //  calculatedValue:=L;
+    //end;
   end;
 
 PROCEDURE T_cell.resetBeforeTableUpdate;
   begin
-    ready:=not(calculated);
+    //ready:=not(calculated);
   end;
 
 FUNCTION T_cell.getDefiningLiteral(VAR adapters:T_adapters): P_listLiteral;
   begin
-    if readonly and not(calculated) then begin
-      result:=
-        newListLiteral^ //Specifying Key-Value-Pair (Cell= CellName + CellContent)
-        .appendString(cellIndexToId(index))^
-        .append(newListLiteral^ //(CellContent = [ValuePair,ReadOnlyPair])
-                .append(newListLiteral^ //ValuePair = (ValueKey + value)
-                        .appendString(C_VALUE_KEY)^
-                        .append(givenValue,true,adapters),false,adapters)^
-                .append(newListLiteral^ //ReadOnlyPair = (ReadOnlyKey + flag)
-                        .appendString(C_READ_ONLY_KEY)^
-                        .appendBool(true),false,adapters),false,adapters);
-    end else begin
-      result:=newListLiteral^
-              .appendString(cellIndexToId(index))^
-              .append(givenValue,true,adapters);
-    end;
+    //if readonly and not(calculated) then begin
+    //  result:=
+    //    newListLiteral^ //Specifying Key-Value-Pair (Cell= CellName + CellContent)
+    //    .appendString(cellIndexToId(index))^
+    //    .append(newListLiteral^ //(CellContent = [ValuePair,ReadOnlyPair])
+    //            .append(newListLiteral^ //ValuePair = (ValueKey + value)
+    //                    .appendString(C_VALUE_KEY)^
+    //                    .append(givenValue,true,adapters),false,adapters)^
+    //            .append(newListLiteral^ //ReadOnlyPair = (ReadOnlyKey + flag)
+    //                    .appendString(C_READ_ONLY_KEY)^
+    //                    .appendBool(true),false,adapters),false,adapters);
+    //end else begin
+    //  result:=newListLiteral^
+    //          .appendString(cellIndexToId(index))^
+    //          .append(givenValue,true,adapters);
+    //end;
   end;
 
 FUNCTION displayTable_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -409,6 +375,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    if ModalResult<>mrOK then exit;
     enterCriticalSection(cs);
     runModeResult_:=table.getDefiningLiteral(nullAdapter);
     if editMode then begin
@@ -441,15 +408,30 @@ end;
 
 PROCEDURE TtableForm.StringGridKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
 begin
-  if autoGrow and (key=39) and (StringGrid.col=StringGrid.colCount-1) then begin
+  if (table.autoGrow or editMode) and (key=39) and (StringGrid.col=StringGrid.colCount-1) then begin
     StringGrid.colCount:=StringGrid.colCount+1;
     updateTable;
   end;
-  if autoGrow and (key=40) and (StringGrid.row=StringGrid.RowCount-1) then begin
+  if (table.autoGrow or editMode) and (key=40) and (StringGrid.row=StringGrid.RowCount-1) then begin
     StringGrid.RowCount:=StringGrid.RowCount+1;
     updateTable;
   end;
 end;
+
+procedure TtableForm.miCancelClick(Sender: TObject);
+  begin
+    ModalResult:=mrCancel;
+  end;
+
+procedure TtableForm.miAcceptClick(Sender: TObject);
+  begin
+    ModalResult:=mrOK;
+  end;
+
+procedure TtableForm.miSwitchModeClick(Sender: TObject);
+  begin
+
+  end;
 
 PROCEDURE TtableForm.updateTable;
   VAR i:longint;
@@ -461,9 +443,8 @@ PROCEDURE TtableForm.updateTable;
       for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=intToStr(i);
       offset:=1;
     end;
-
-
     StringGrid.AutoSizeColumns;
+    if not(table.autoGrow) then exit;
     while StringGrid.RowCount>StringGrid.row+2 do begin
       allEmpty:=true;
       for i:=offset to StringGrid.colCount-1 do allEmpty:=allEmpty and (trim(StringGrid.Cells[i,StringGrid.RowCount-1])='');
@@ -476,6 +457,14 @@ PROCEDURE TtableForm.updateTable;
       if allEmpty then StringGrid.colCount:=StringGrid.colCount-1
                   else break;
     end;
+    if editMode then begin
+      rowCountEdit.text:=intToStr(StringGrid.RowCount);
+      columnCountEdit.text:=intToStr(StringGrid.colCount);
+    end;
+  end;
+
+PROCEDURE TtableForm.updateCellInfo;
+  begin
 
   end;
 
@@ -490,7 +479,6 @@ PROCEDURE TtableForm.initForEditing;
     StringGrid.FixedCols:=1;
     StringGrid.FixedRows:=1;
     StringGrid.GridLineWidth:=1;
-    autoGrow:=true;
     updateTable;
     ShowModal;
     leaveCriticalSection(cs);
