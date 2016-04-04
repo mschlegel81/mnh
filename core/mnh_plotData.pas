@@ -103,6 +103,7 @@ TYPE
       FUNCTION oey(CONST y: double): double;
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
+      FUNCTION longtestYTic: ansistring;
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -111,8 +112,6 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE setScreenSize(CONST width, height: longint);
-      FUNCTION longtestYTic: ansistring;
-      FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
 
       FUNCTION realToScreen(CONST p: T_point): T_point;
@@ -662,20 +661,6 @@ FUNCTION T_plot.longtestYTic: ansistring;
     if result = '' then result:='.0E';
   end;
 
-FUNCTION T_plot.setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
-  begin with scalingOptions do begin
-    result:=false;
-    if ((axisStyle['y'] and C_tics)>0) and (xOffset<>yTicWidth+5) then begin
-      xOffset:=yTicWidth+5;
-      result:=true;
-    end;
-    if ((axisStyle['x'] and C_tics)>0) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
-      yOffset:=screenHeight-(xTicHeight+5);
-      result:=true;
-    end;
-    if result then setScreenSize(screenWidth, screenHeight);
-  end; end;
-
 PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
   VAR index:longint;
   begin
@@ -791,7 +776,6 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     range['x', 1]:=(range['x', 1]-holdX)*factor+holdX;
     range['y', 0]:=(range['y', 0]-holdY)*factor+holdY;
     range['y', 1]:=(range['y', 1]-holdY)*factor+holdY;
-    system.leaveCriticalSection(cs);
 
     rectA.top:=0;
     rectA.Left:=0;
@@ -804,6 +788,7 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     rectB.Bottom:=round((plotImage.height-pixelY)*factor+pixelY);
 
     plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
+    system.leaveCriticalSection(cs);
   end; end;
 
 PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
@@ -1218,11 +1203,24 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       //======================================================:coordinate system
     end;
 
-  VAR
-    renderImage: TImage;
+  FUNCTION setTextSize(CONST xTicHeight, yTicWidth: longint): boolean;
+    begin with scalingOptions do begin
+      result:=false;
+      if ((axisStyle['y'] and C_tics)>0) and (xOffset<>yTicWidth+5) then begin
+        xOffset:=yTicWidth+5;
+        result:=true;
+      end;
+      if ((axisStyle['x'] and C_tics)>0) and (yOffset<>screenHeight-(xTicHeight+5)) then begin
+        yOffset:=screenHeight-(xTicHeight+5);
+        result:=true;
+      end;
+      if result then setScreenSize(screenWidth, screenHeight);
+    end; end;
+
+  VAR renderImage: TImage;
   begin
     system.enterCriticalSection(cs);
-    repeat until not(setTextSize(plotImage.Canvas.TextHeight(longtestYTic),plotImage.Canvas.TextWidth(longtestYTic)));
+    setTextSize(plotImage.Canvas.TextHeight(longtestYTic),plotImage.Canvas.TextWidth(longtestYTic));
     if supersampling<=1 then  begin
       drawGridAndRows(plotImage.Canvas, 1);
       drawCoordSys(plotImage.Canvas);
