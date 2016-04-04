@@ -103,9 +103,7 @@ PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
 PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     plotImage.Align:=alClient;
-    if ad_evaluationRunning
-      then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
-      else doPlot();
+    doPlot();
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
