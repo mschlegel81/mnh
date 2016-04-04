@@ -99,9 +99,9 @@ TYPE
     PROCEDURE StringGridButtonClick(Sender: TObject; aCol, aRow: integer);
     PROCEDURE StringGridSelectCell(Sender: TObject; aCol, aRow: integer; VAR CanSelect: boolean);
     PROCEDURE StringGridKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
-    procedure miCancelClick(Sender: TObject);
-    procedure miAcceptClick(Sender: TObject);
-    procedure miSwitchModeClick(Sender: TObject);
+    PROCEDURE miCancelClick(Sender: TObject);
+    PROCEDURE miAcceptClick(Sender: TObject);
+    PROCEDURE miSwitchModeClick(Sender: TObject);
   private
     editMode:boolean;
     editModeResult_:ansistring;
@@ -375,7 +375,7 @@ PROCEDURE TtableForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if ModalResult<>mrOK then exit;
+    if ModalResult<>mrOk then exit;
     enterCriticalSection(cs);
     runModeResult_:=table.getDefiningLiteral(nullAdapter);
     if editMode then begin
@@ -418,17 +418,17 @@ begin
   end;
 end;
 
-procedure TtableForm.miCancelClick(Sender: TObject);
+PROCEDURE TtableForm.miCancelClick(Sender: TObject);
   begin
     ModalResult:=mrCancel;
   end;
 
-procedure TtableForm.miAcceptClick(Sender: TObject);
+PROCEDURE TtableForm.miAcceptClick(Sender: TObject);
   begin
-    ModalResult:=mrOK;
+    ModalResult:=mrOk;
   end;
 
-procedure TtableForm.miSwitchModeClick(Sender: TObject);
+PROCEDURE TtableForm.miSwitchModeClick(Sender: TObject);
   begin
 
   end;

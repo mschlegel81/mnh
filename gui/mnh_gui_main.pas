@@ -219,7 +219,7 @@ TYPE
 
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
-    PROCEDURE doStartEvaluation;
+    PROCEDURE doStartEvaluation(CONST reEvaluating:boolean=false);
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
@@ -459,7 +459,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end;
   end;
 
-PROCEDURE TMnhForm.doStartEvaluation;
+PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating:boolean=false);
   VAR i:longint;
   begin
     with evaluation do begin
@@ -467,12 +467,13 @@ PROCEDURE TMnhForm.doStartEvaluation;
       deferredUntil:=now+0.1*ONE_SECOND;
       start:=now;
     end;
-    with inputRec[PageControl.ActivePageIndex] do
-      if filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
-                     else SetCurrentDir(ExtractFileDir(filePath));
-    guiOutAdapter.flushClear;
-    UpdateTimeTimerTimer(self);
-    UpdateTimeTimer.interval:=20;
+    if not(reEvaluating) then begin
+      with inputRec[PageControl.ActivePageIndex] do
+        if filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
+                       else SetCurrentDir(ExtractFileDir(filePath));
+      guiOutAdapter.flushClear;
+      UpdateTimeTimerTimer(self);
+    end;
     doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
@@ -484,6 +485,7 @@ PROCEDURE TMnhForm.doStartEvaluation;
       for i:=0 to 9 do inputRec[i].editor.readonly:=true;
       stepper.doStart;
     end else stepper.setSignal(ds_run);
+    UpdateTimeTimer.interval:=20;
   end;
 
 PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
@@ -602,7 +604,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     guiAdapters.addConsoleOutAdapter;
     {$else}
     MenuItem3.Enabled:=false;
-    MenuItem3.Visible:=false;
+    MenuItem3.visible:=false;
     {$endif}
 
     debugStepFill:=0;
@@ -673,6 +675,7 @@ PROCEDURE TMnhForm.debugEditKeyPress(Sender: TObject; VAR key: char);
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   VAR i:longint;
   begin
+    if not(reEvaluationWithGUIrequired) then saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     for i:=0 to 9 do with inputRec[i] do begin
       highlighter.destroy;
@@ -756,7 +759,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     if reEvaluationWithGUIrequired then begin
       Hide;
       showConsole;
+      guiAdapters.addConsoleOutAdapter;
+      doStartEvaluation(true);
       ad_reEvaluateWithGUI;
+      sleep(UpdateTimeTimer.interval);
     end;
   end;
 

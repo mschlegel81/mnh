@@ -34,7 +34,6 @@ TYPE
     autosaveComboBox: TComboBox;
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
-    PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
@@ -114,11 +113,6 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
       FontButton.Font.size := getFontSize;
       FontButton.Caption := settings.value^.editorFontname;
     end;
-  end;
-
-PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
-  begin
-    saveSettings;
   end;
 
 PROCEDURE TSettingsForm.Button1Click(Sender: TObject);

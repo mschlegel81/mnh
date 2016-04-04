@@ -137,7 +137,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
     for i:=1 to paramCount do begin
-    if (fileOrCommandToInterpret='') or directExecutionMode then begin
+      if (fileOrCommandToInterpret='') or directExecutionMode then begin
         if      paramStr(i)='+echo' then begin echo:=e_forcedOn;           addParameter(mnhParameters,i); end
         else if paramStr(i)='-echo' then begin echo:=e_forcedOff;          addParameter(mnhParameters,i); end
         else if paramStr(i)='+time' then begin time:=t_forcedOn;           addParameter(mnhParameters,i); end

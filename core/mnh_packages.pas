@@ -588,8 +588,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         reduceExpression(t,0,context);
         with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
         //error handling if main returns more than one token:------------------
-        if (t=nil) or (t^.next<>nil) then
-          context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
+        if (t=nil) or (t^.next<>nil) then begin
+          {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
+          then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',fileTokenLocation(codeProvider))
+          else {$endif} context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
+        end;
         //------------------:error handling if main returns more than one token
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
