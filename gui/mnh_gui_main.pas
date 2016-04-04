@@ -600,6 +600,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
+    {$else}
+    MenuItem3.Enabled:=false;
+    MenuItem3.Visible:=false;
     {$endif}
 
     debugStepFill:=0;
