@@ -198,7 +198,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     if not(hasBuiltinNamespace) then begin
-      packageReference:=environment.mainPackage^.getPackageReferenceForId(id,guiOutAdapters^);
+      packageReference:=environment.mainPackage^.getPackageReferenceForId(id,nil);
       if packageReference.id<>'' then info.tokenExplanation:='Imported package ('+packageReference.path+')';
     end;
 

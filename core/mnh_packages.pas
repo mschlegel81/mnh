@@ -25,7 +25,7 @@ TYPE
   T_packageReference=object
     id,path:ansistring;
     pack:P_package;
-    CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+    CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
   end;
 
@@ -50,7 +50,7 @@ TYPE
       {$ifdef fullVersion}FUNCTION getDoc:P_userPackageDocumentation; {$endif}
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
-      FUNCTION getPackageReferenceForId(CONST id:string; VAR adapters:T_adapters):T_packageReference;
+      FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
       FUNCTION isReady:boolean;
 
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
@@ -259,11 +259,11 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
     pack.pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
   end; end;
 
-CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
     id:=packId;
     path:=locateSource(root,id);
-    if path='' then adapters.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
+    if (path='') and (adapters<>nil) then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;
 
@@ -294,8 +294,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           newId:string;
           rulesSet:T_ruleMap.KEY_VALUE_LIST;
           dummyRule:P_rule;
+          fullClause:string;
       begin
         locationForErrorFeedback:=first^.location;
+        fullClause:=tokensToString(first);
         temp:=first; first:=context.disposeToken(temp);
         while first<>nil do begin
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
@@ -309,13 +311,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             while (i<length(packageUses)) and (packageUses[i].id<>newId) do inc(i);
             if i<length(packageUses) then for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1]
                                      else setLength(packageUses,length(packageUses)+1);
-            packageUses[length(packageUses)-1].create(codeProvider^.getPath,first^.txt,first^.location,context.adapters^);
+            packageUses[length(packageUses)-1].create(codeProvider^.getPath,first^.txt,first^.location,context.adapters);
           end else if first^.tokType<>tt_separatorComma then begin
             context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,first^.location);
             exit;
           end;
           temp:=first; first:=context.disposeToken(temp);
         end;
+        if not(context.adapters^.noErrors) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,first^.location);
         if usecase<>lu_forDocGeneration then begin
           with profiler do if active then importing:=timer.value.Elapsed;
           for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
@@ -941,7 +945,7 @@ FUNCTION T_package.isImportedOrBuiltinPackage(CONST id:string):boolean;
     result:=false;
   end;
 
-FUNCTION T_package.getPackageReferenceForId(CONST id:string; VAR adapters:T_adapters):T_packageReference;
+FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
   VAR i:longint;
   begin
     for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(packageUses[i]);
