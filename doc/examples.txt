@@ -387,3 +387,10 @@ toMap([['A',1],['B',2],['C',0],['B',4]]);
 trueCount(10<[0..10]^2<50);
 
 unique([3,1,2,1,4,1,5]);
+
+//compress/decompress uses a hybridization of different compression algorithms
+//It is possible that the compressed string equals the original string.
+compress('Test');
+compress('Test').decompress;
+compress('Testtext');
+compress('Testtext').decompress;
