@@ -473,8 +473,8 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating:boolean=false);
                        else SetCurrentDir(ExtractFileDir(filePath));
       guiOutAdapter.flushClear;
       UpdateTimeTimerTimer(self);
+      doConditionalPlotReset;
     end;
-    doConditionalPlotReset;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
       debugStepFill:=0;
@@ -757,11 +757,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
     if reEvaluationWithGUIrequired then begin
-      Hide;
       showConsole;
-      guiAdapters.addConsoleOutAdapter;
+      {$ifndef debugMode}guiAdapters.addConsoleOutAdapter;{$endif}
       doStartEvaluation(true);
       ad_reEvaluateWithGUI;
+      plotForm.Caption:=plotForm.Caption+' - close to quit';
+      tableForm.Caption:=tableForm.Caption+' - close to quit';
       sleep(UpdateTimeTimer.interval);
     end;
   end;
@@ -1449,7 +1450,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       doNotCheckFileBefore:=now+ONE_SECOND;
     end;
 
-    if reEvaluationWithGUIrequired and not(isEvaluationRunning) and not(plotForm.showing) then close;
+    if reEvaluationWithGUIrequired then begin
+      hide;
+      if not(isEvaluationRunning) and not(plotForm.showing) then close;
+    end;
   end;
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
