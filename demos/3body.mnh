@@ -1,0 +1,49 @@
+USE rk4;
+
+private circlePoint(phi)->[cos(phi/180*4*arctan(1)),
+                           sin(phi/180*4*arctan(1))];
+
+private initialState:=
+  [circlePoint(  0),circlePoint( 90)  ,
+   circlePoint(120),[0,0],
+   circlePoint(240),-3*circlePoint(90)];
+
+
+private force(delta:numericList(2))->delta*sqr(delta).agg(+)^(3/2);
+
+private F:={[$x[1],
+             force($x[2]-$x[0])+force($x[4]-$x[0]),
+             $x[3],
+             force($x[0]-$x[2])*3+force($x[4]-$x[2]),
+             $x[5],
+             force($x[0]-$x[4])*3+force($x[2]-$x[4])]};
+
+private mutable trace0:=[];
+private mutable trace1:=[];
+private mutable trace2:=[];
+private synchronized plotState(F)->begin
+  local p0:=F[0]; trace0:=trace0.add(p0).trailing(50);
+  local p1:=F[2]; trace1:=trace1.add(p1).trailing(50);
+  local p2:=F[4]; trace2:=trace2.add(p2).trailing(50);
+  plot(trace0,'red l');
+  addPlot([p0],'red .');
+  addPlot(trace1,'green l');
+  addPlot([p1],'green .');
+  addPlot(trace2,'blue l');
+  addPlot([p2],'blue .');
+  plot.display;
+  sleep(0.01);
+end;
+
+private timeStepSize:=1E-2;
+
+main->begin
+  plot.setAxisStyle([3,3]);
+  plot.setRange([[-2,2],[-2,2]]);
+  local state:=initialState;
+  state.plotState;
+  while(true,
+    plotState(state:=RK4(F,RK4(F,state,timeStepSize),timeStepSize))
+  );
+end;
+
