@@ -50,7 +50,7 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,al
                    ['7', {begin local oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
                    ['8', {begin local oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
                    ['9', {begin local oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end}]]);
-  cleanInput.chars.each(c,OP[c]) | [turtlePos];
+  cleanInput.chars.each(c,OP[c]()) | [turtlePos];
 end;
 
 //*For reg-test
