@@ -1,7 +1,7 @@
 //This is the safest way to parallelize a list of tasks;
 private parallelize(...)->
-  size(...)=0 OR each(task,...,AND,task:expression) 
-  ? pEach(task,...,task())
+  size(...)=0 OR ... .each(task,task:expression,AND)
+  ? ... .PEach(task,task())
   : fail('parallelize expects expressions as arguments');
 
 //This must be a global variable because it is shared by different threads (A1 and A2)

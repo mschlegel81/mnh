@@ -26,32 +26,33 @@ turtle(startAngle:numeric,rotAngleInDegrees:numeric,drawChars:string,s:string,al
   local posStack:=[];
   local dirStack:=[];
   local rotAngle:=rotAngleInDegrees*degToRad;
-  cleanInput.chars.each(c,when(
-    c='0', begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='+', begin turtleDir-=rotAngle; void; end,
-    c='-', begin turtleDir+=rotAngle; void; end,
-    c='[', begin
-             posStack|=[turtlePos];
-             dirStack|=turtleDir;
-             void;
-           end,
-    c=']', begin
-             turtlePos:=trailing(posStack);
-             posStack := leading(posStack);
-             turtleDir:=trailing(dirStack);
-             dirStack := leading(dirStack);
-             [[Nan,Nan]] | turtlePos;
-           end,
-    c='1', begin local oldPos:=turtlePos; turtlePos+=  2*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='2', begin local oldPos:=turtlePos; turtlePos+=  4*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='3', begin local oldPos:=turtlePos; turtlePos+=  8*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='4', begin local oldPos:=turtlePos; turtlePos+= 16*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='5', begin local oldPos:=turtlePos; turtlePos+= 32*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='6', begin local oldPos:=turtlePos; turtlePos+= 64*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='7', begin local oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='8', begin local oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end,
-    c='9', begin local oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end)) | [turtlePos];
+  local OP:=toMap([['0', {begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['+', {begin turtleDir-=rotAngle; void; end}],
+                   ['-', {begin turtleDir+=rotAngle; void; end}],
+                   ['[', {begin
+                           posStack|=[turtlePos];
+                           dirStack|=turtleDir;
+                           void;
+                         end}],
+                   [']', {begin
+                           turtlePos:=trailing(posStack);
+                           posStack := leading(posStack);
+                           turtleDir:=trailing(dirStack);
+                           dirStack := leading(dirStack);
+                           [[Nan,Nan]] | turtlePos;
+                         end}],
+                   ['1', {begin local oldPos:=turtlePos; turtlePos+=  2*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['2', {begin local oldPos:=turtlePos; turtlePos+=  4*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['3', {begin local oldPos:=turtlePos; turtlePos+=  8*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['4', {begin local oldPos:=turtlePos; turtlePos+= 16*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['5', {begin local oldPos:=turtlePos; turtlePos+= 32*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['6', {begin local oldPos:=turtlePos; turtlePos+= 64*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['7', {begin local oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['8', {begin local oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+                   ['9', {begin local oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end}]]);
+  cleanInput.chars.each(c,OP[c]) | [turtlePos];
 end;
 
 //*For reg-test
 main->plot.setAxisStyle([0,0]) and plot(turtle(0,59,'F',[1..100].each(i,repeat('F',i),'+',&))) and renderToFile(replace(myPath,'.mnh','.png'),768,768,4);
+

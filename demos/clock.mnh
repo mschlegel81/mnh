@@ -9,15 +9,14 @@ end;
 main(...)->
 begin
   local proceed:=true;
-  pEach(task,[
-    {begin
-      ask('Press enter to quit.');
-      proceed:=false;
-    end},
-    {while(proceed,begin
-      clearPrint;
-      print('Press enter to quit.');
-      printTime(systime);
-      sleep(1);
-    end)}],task());
+  [{begin
+     ask('Press enter to quit.');
+     proceed:=false;
+   end},
+   {while(proceed,begin
+     clearPrint;
+     print('Press enter to quit.');
+     printTime(systime);
+     sleep(1);
+   end)}].PEach(task,task());
 end;
