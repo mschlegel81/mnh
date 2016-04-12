@@ -487,7 +487,7 @@ x in [y0,y1,...] -> x==y0 or x==y1 or ...;
 <!--end-->
 </code> or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:<code>
 <!--mnh-->
-x in Y -> Y.each(y,or,x==y);
+x in Y -> Y.each(y,x==y,OR);
 <!--end-->
 </code>
 </td></tr>
@@ -1092,6 +1092,7 @@ The general syntax is: <code>
 <!--mnh-->
   list.each(id,body,aggregator)
   list.pEach(id,body,aggregator)
+  list.PEach(id,body,aggregator)
   list.agg(aggregator)
 <!--end-->
 </code>
@@ -1178,6 +1179,8 @@ Compute Euler's number based on inverse factorials<code>
 
 <h4><a name="parallelization">Parallelization</a></h4>
 This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
+However <code>pEach</code> uses only as many threads as configured. If you want make sure that processing takes place in a parallel fashion, use the
+<code>PEach</code> keyword instead. <br>
 
 <h3><a name="aggregator">aggregator</a></h3>
 The <code>aggregator</code> construct can be used to mark an expression for the use within an each-/pEach-clause.<code>

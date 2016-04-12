@@ -30,7 +30,7 @@
                      '            <Keywords name="Keywords1">synchronized&#x000D;&#x000A;memoized&#x000D;&#x000A;private&#x000D;&#x000A;mutable&#x000D;&#x000A;persistent&#x000D;&#x000A;local</Keywords>',
                      '            <Keywords name="Keywords2">'&listBuiltin.each(f,pos('.',f)>0 ? f : [f,"."&f],|).sort({copy($x,pos('.',$x)+1,100)<=copy($y,pos('.',$y)+1,100)}).join('&#x000D;&#x000A;')&'</Keywords>',
                      '            <Keywords name="Keywords3">true&#x000D;&#x000A;false&#x000D;&#x000A;Nan&#x000D;&#x000A;Inf&#x000D;&#x000A;void</Keywords>',
-                     '            <Keywords name="Keywords4">.agg&#x000D;&#x000A;aggregator&#x000D;&#x000A;begin&#x000D;&#x000A;while&#x000D;&#x000A;.each&#x000D;&#x000A;.pEach&#x000D;&#x000A;.agg&#x000D;&#x000A;end&#x000D;&#x000A;when&#x000D;&#x000A;</Keywords>',
+                     '            <Keywords name="Keywords4">.agg&#x000D;&#x000A;aggregator&#x000D;&#x000A;begin&#x000D;&#x000A;while&#x000D;&#x000A;.each&#x000D;&#x000A;.pEach&#x000D;&#x000A;.PEach&#x000D;&#x000A;end&#x000D;&#x000A;when&#x000D;&#x000A;</Keywords>',
                      '            <Keywords name="Keywords5">$</Keywords>',
                      '            <Keywords name="Keywords6"></Keywords>',
                      '            <Keywords name="Keywords7"></Keywords>',
