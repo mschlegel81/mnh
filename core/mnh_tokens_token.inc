@@ -54,7 +54,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring;
           t[i].tokType:=tt_identifier;
           package^.resolveRuleId(t[i],nil);
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
-        tt_each,tt_parallelEach: if (i<length(t)-3) and
+        tt_each,tt_forcedParallelEach,tt_parallelEach: if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
          (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
          (t[i+3].tokType=tt_separatorComma) then begin
@@ -72,7 +72,7 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring;
           inc(i);
         end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
-         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach, tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
+         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
          (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
           if t[i].tokType=tt_operatorMinus
           then t[i].tokType:=tt_unaryOpMinus //unary - is special token
@@ -241,6 +241,9 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
         result.tokType:=tt_each;
       end else if startsWith(C_tokenString[tt_parallelEach]) then begin
         parsedLength:=length(C_tokenString[tt_parallelEach]);
+        result.tokType:=tt_parallelEach;
+      end else if startsWith(C_tokenString[tt_forcedParallelEach]) then begin
+        parsedLength:=length(C_tokenString[tt_forcedParallelEach]);
         result.tokType:=tt_parallelEach;
       end else if startsWith(C_tokenString[tt_agg]) then begin
         parsedLength:=length(C_tokenString[tt_agg]);
@@ -605,7 +608,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       context.adapters^.raiseError('Lazy boolean operators can only be applied to scalar booleans.',location);
     end;
 
-  PROCEDURE resolveEach(inParallel:boolean);
+  PROCEDURE resolveEach(eachType:T_tokenType);
     VAR bracketClosingEach:P_token;
         bodyRule:array of P_subrule;
         aggregatorLocation:T_tokenLocation;
@@ -828,11 +831,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
+        if eachType=tt_forcedParallelEach then maxFutureForwardInitialization:=maxLongint;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context,eachType=tt_forcedParallelEach);
             if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
@@ -859,11 +863,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
     begin
-      inParallel:=inParallel and
-                  (callDepth<STACK_DEPTH_LIMIT) and
-                  context.allowDelegation and
-                  {$ifdef fullVersion}not(stepper.currentlyDebugging) and{$endif}
-                  (workerThreadCount>0);
+      if (eachType=tt_parallelEach) and
+         (callDepth<STACK_DEPTH_LIMIT) and
+         context.allowDelegation and
+         {$ifdef fullVersion}not(stepper.currentlyDebugging) and{$endif}
+         (workerThreadCount>0)
+      then eachType:=tt_each;
 
       eachLocation:=first^.location;
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
@@ -886,11 +891,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         resultLiteral:=newVoidLiteral;
         finalizeAggregation;
       end else if length(bodyRule)>0 then begin
-        if inParallel
+        if eachType in [tt_parallelEach,tt_forcedParallelEach]
         then initFutures
         else initNonFutures;
       end else begin
-        if inParallel then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
+        if eachType in [tt_parallelEach,tt_forcedParallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to itList^.size-1 do if context.adapters^.noErrors then addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
@@ -1289,7 +1294,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
-      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach(first^.next^.tokType=tt_parallelEach)
+      else if cTokType[1] in [tt_each,tt_forcedParallelEach,tt_parallelEach] then resolveEach(first^.next^.tokType)
       else if cTokType[1]= tt_listBraceOpen then stack_push
       else stack_push_push;
     end;
@@ -1436,7 +1441,7 @@ tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: stack_push;
 tt_identifier_pon,tt_importedUserRule_pon,tt_localUserRule_pon,tt_intrinsicRule_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
-tt_each,tt_parallelEach: resolveEach(first^.next^.tokType=tt_parallelEach)}
+tt_each,tt_parallelEach,tt_forcedParallelEach: resolveEach(first^.next^.tokType)}
 
 {$define FORBIDDEN_SEPARATORS:=
 tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
@@ -1703,7 +1708,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
+          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);

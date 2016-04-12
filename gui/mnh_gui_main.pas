@@ -1451,7 +1451,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
 
     if reEvaluationWithGUIrequired then begin
-      hide;
+      Hide;
       if not(isEvaluationRunning) and not(plotForm.showing) then close;
     end;
   end;

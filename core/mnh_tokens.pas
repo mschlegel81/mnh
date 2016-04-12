@@ -82,7 +82,7 @@ PROCEDURE T_token.define(CONST original: T_token);
     data    :=original.data;
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
-      tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
+      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
   end;
@@ -91,7 +91,7 @@ PROCEDURE T_token.undefine;
   begin
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
-      tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
+      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then disposeLiteral(data);
       else data:=nil;
     end;
     tokType:=tt_EOL;
@@ -108,7 +108,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
   begin
     idLike:=false;
     case tokType of
-      tt_each, tt_parallelEach: begin
+      tt_each, tt_parallelEach, tt_forcedParallelEach: begin
         result:=C_tokenString[tokType];
         if txt<>'' then result:=result+'('+txt+','
                    else result:=C_tokenString[tt_agg]+'(';

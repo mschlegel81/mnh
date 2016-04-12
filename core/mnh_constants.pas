@@ -56,7 +56,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_agg, tt_when, tt_while,  tt_begin,  tt_end,
+    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_when, tt_while,  tt_begin,  tt_end,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -141,11 +141,12 @@ CONST
     tt_localUserRule,
     tt_importedUserRule,
     tt_intrinsicRule);
-  C_openingBrackets:T_tokenTypeSet=[tt_begin,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
+  C_openingBrackets:T_tokenTypeSet=[tt_begin,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_end,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
+    {tt_forcedParallelEach} tt_braceClose,
     {tt_agg}                tt_braceClose,
     {tt_when,tt_while}      tt_EOL, tt_EOL,
     {tt_begin}              tt_end,
@@ -191,7 +192,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    '.each', '.pEach', '.agg', 'when','while','begin','end',
+    '.each', '.pEach', '.PEach', '.agg', 'when','while','begin','end',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -378,6 +379,7 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
        (wordText=C_boolText[false]) then exit(rwc_specialLiteral);
     if (wordText=C_tokenString[tt_each]) or
        (wordText=C_tokenString[tt_parallelEach]) or
+       (wordText=C_tokenString[tt_forcedParallelEach]) or
        (wordText=C_tokenString[tt_when]) or
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
        (wordText=C_tokenString[tt_while]) or
@@ -406,9 +408,11 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
       rwc_specialConstruct: begin
         result.add(C_tokenString[tt_each]);
         result.add(C_tokenString[tt_parallelEach]);
+        result.add(C_tokenString[tt_forcedParallelEach]);
         result.add(C_tokenString[tt_agg]);
         result.add(replaceOne(C_tokenString[tt_each]        ,C_ID_QUALIFY_CHARACTER,''));
         result.add(replaceOne(C_tokenString[tt_parallelEach],C_ID_QUALIFY_CHARACTER,''));
+        result.add(replaceOne(C_tokenString[tt_forcedParallelEach],C_ID_QUALIFY_CHARACTER,''));
         result.add(replaceOne(C_tokenString[tt_agg]         ,C_ID_QUALIFY_CHARACTER,''));
         result.add(C_tokenString[tt_when]);
         result.add(C_tokenString[tt_aggregatorConstructor]);

@@ -258,7 +258,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
       token:=original^.preparedBody[i].token;
       case token.tokType of
         tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: P_literal(token.data)^.rereference;
-        tt_each,tt_parallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
+        tt_each,tt_parallelEach,tt_forcedParallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
       end;
       parIdx:=original^.preparedBody[i].parIdx;
     end;
