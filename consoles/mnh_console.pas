@@ -7,35 +7,29 @@ PROCEDURE interactiveMode;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
-      environment.mainPackageProvider^.clear;
-      repeat
-        write('>'); readln(nextInput);
-        nextInput:=trim(nextInput);
-        if uppercase(nextInput)='EXIT' then begin
-          hasExitSignal:=true;
-          exit;
-        end;
-        if (length(nextInput)>0) and (nextInput[length(nextInput)]='\') then begin
-          environment.mainPackageProvider^.appendLine(copy(nextInput,1,length(nextInput)-1));
-        end else begin
-          environment.mainPackageProvider^.appendLine(nextInput);
-          exit;
-        end;
-      until false;
+      write('>'); readln(nextInput);
+      nextInput:=trim(nextInput);
+      if uppercase(nextInput)='exit' then begin
+        hasExitSignal:=true;
+        exit;
+      end else if nextInput='\' then environment.mainPackageProvider^.clear
+      else
+      environment.mainPackageProvider^.appendLine(nextInput);
     end;
+
   VAR i:longint;
       context:T_evaluationContext;
   begin
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
-    writeln('Type "exit" to quit.');
-    writeln('end a line with a \ to continue the input.');
+    writeln('Type "exit" (case insensitive) to quit.');
+    writeln('Type \ to clear and restart.');
     context.createNormalContext(P_adapters(@consoleAdapters));
 
     readInputFromConsole;
     while not(hasExitSignal) do begin
-      reloadMainPackage(lu_forDirectExecution,context);
+      reloadMainPackage(lu_interactiveMode,context);
       readInputFromConsole;
     end;
     context.destroy;

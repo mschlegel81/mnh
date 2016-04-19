@@ -20,7 +20,7 @@ TYPE
   {$include mnh_tokens_futureTask.inc}
   {$include mnh_tokens_procBlock.inc}
   {$include mnh_tokens_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration);
+  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_interactiveMode);
 
   T_packageReference=object
     id,path:ansistring;
@@ -36,6 +36,7 @@ TYPE
       packageUses:array of T_packageReference;
       ready:boolean;
       codeProvider:P_codeProvider;
+      statementHashes:array of T_hashInt;
     public
       CONSTRUCTOR create(CONST provider:P_codeProvider);
       FUNCTION needReload:boolean;
@@ -71,6 +72,7 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
+FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
 
 TYPE T_packageEnvironment=record
        mainPackageProvider:P_codeProvider;
@@ -275,7 +277,8 @@ DESTRUCTOR T_packageReference.destroy;
   end;
 
 PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
-  VAR isFirstLine:boolean=true;
+  VAR statementCounter:longint=0;
+      evaluateAll:boolean=false;
       lastComment:ansistring;
       profiler:record
         active:boolean;
@@ -286,14 +289,37 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         interpretation:double;
       end = (active:false;unaccounted:0;importing:0;tokenizing:0;declarations:0;interpretation:0);
 
+  PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
+    VAR i,j:longint;
+        rulesSet:T_ruleMap.KEY_VALUE_LIST;
+        dummyRule:P_rule;
+    begin
+      with profiler do if active then importing:=timer.value.Elapsed;
+      for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
+      with profiler do if active then importing:=timer.value.Elapsed-importing;
+      i:=0;
+      while i<length(packageUses) do begin
+        if packageUses[i].pack=nil then begin
+          for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
+          setLength(packageUses,length(packageUses)-1);
+        end else inc(i);
+      end;
+      if context.adapters^.noErrors then for i:=length(packageUses)-1 downto 0 do begin
+         rulesSet:=packageUses[i].pack^.packageRules.entrySet;
+         for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
+           if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
+           then importedRules.put(rulesSet[j].key,rulesSet[j].value);
+           importedRules.put(packageUses[i].id+C_ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
+         end;
+      end;
+    end;
+
   PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
     PROCEDURE interpretUseClause;
       VAR temp:P_token;
           i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
           newId:string;
-          rulesSet:T_ruleMap.KEY_VALUE_LIST;
-          dummyRule:P_rule;
           fullClause:string;
       begin
         locationForErrorFeedback:=first^.location;
@@ -320,26 +346,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           temp:=first; first:=context.disposeToken(temp);
         end;
         if not(context.adapters^.noErrors) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,first^.location);
-        if usecase<>lu_forDocGeneration then begin
-          with profiler do if active then importing:=timer.value.Elapsed;
-          for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
-          with profiler do if active then importing:=timer.value.Elapsed-importing;
-          i:=0;
-          while i<length(packageUses) do begin
-            if packageUses[i].pack=nil then begin
-              for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1];
-              setLength(packageUses,length(packageUses)-1);
-            end else inc(i);
-          end;
-          if context.adapters^.noErrors then for i:=length(packageUses)-1 downto 0 do begin
-             rulesSet:=packageUses[i].pack^.packageRules.entrySet;
-             for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
-               if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
-               then importedRules.put(rulesSet[j].key,rulesSet[j].value);
-               importedRules.put(packageUses[i].id+C_ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
-             end;
-          end;
-        end;
+        if usecase<>lu_forDocGeneration then reloadAllPackages(locationForErrorFeedback);
       end;
 
     VAR assignmentToken:P_token;
@@ -529,15 +536,31 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end else context.cascadeDisposeToken(first);
       end;
 
+    VAR statementHash:T_hashInt;
     begin
       if first=nil then exit;
       if not(context.adapters^.noErrors) then begin
         context.cascadeDisposeToken(first);
         exit;
       end;
+      //conditional skipping for interactive mode
+      if (usecase=lu_interactiveMode) then begin
+        statementHash:=first^.hash;
+        if (statementCounter<length(statementHashes)) and (statementHashes[statementCounter]=statementHash) and not(evaluateAll) then begin
+          context.cascadeDisposeToken(first);
+          inc(statementCounter);
+          exit;
+        end;
+        evaluateAll:=true;
+        if (statementCounter>=length(statementHashes)) then setLength(statementHashes,statementCounter+1);
+        statementHashes[statementCounter]:=statementHash;
+        {$ifdef fullVersion}
+        context.adapters^.raiseCustomMessage(mt_evaluatedStatementInInteractiveMode,intToStr(statementCounter),first^.location);
+        {$endif}
+      end;
+      inc(statementCounter);
 
-      if isFirstLine then begin
-        isFirstLine:=false;
+      if statementCounter=1 then begin
         if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
            (first^.txt    ='USE') and
            (first^.next   <>nil) and
@@ -555,7 +578,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parseRule;
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
       end else if context.adapters^.noErrors then begin
-        if (usecase=lu_forDirectExecution) then begin
+        if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
@@ -670,14 +693,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
-    if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain]) then begin
-      profiler.active:=true;
+    if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
+      profiler.active:=usecase<>lu_interactiveMode;
       timer.value.clear;
       timer.value.start;
       profiler.unaccounted:=timer.value.Elapsed;
     end else profiler.active:=false;
 
-    clear;
+    if usecase<>lu_interactiveMode
+    then clear
+    else reloadAllPackages(fileTokenLocation(codeProvider));
 
     if ((usecase=lu_forCallingMain) or (codeProvider<>environment.mainPackageProvider)) and codeProvider^.fileHasChanged then codeProvider^.load;
     with profiler do if active then tokenizing:=timer.value.Elapsed;
@@ -766,6 +791,7 @@ CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
     codeProvider:=provider;
     packageRules.create;
     importedRules.create;
+    setLength(statementHashes,0);
   end;
 
 FUNCTION T_package.needReload: boolean;
@@ -783,6 +809,7 @@ PROCEDURE T_package.clear;
     packageRules.clear;
     importedRules.clear;
     setLength(packageUses,0);
+    setLength(statementHashes,0);
     ready:=false;
   end;
 

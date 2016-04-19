@@ -219,7 +219,7 @@ TYPE
 
     PROCEDURE doConditionalPlotReset;
     PROCEDURE openFromHistory(CONST historyIdx:byte);
-    PROCEDURE doStartEvaluation(CONST reEvaluating:boolean=false);
+    PROCEDURE doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
@@ -248,6 +248,7 @@ TYPE
   end;
 
   T_guiOutAdapter=object(T_collectingOutAdapter)
+    lineIndexPerEvaluatedStatement:array of longint;
     CONSTRUCTOR create;
     DESTRUCTOR destroy; virtual;
     FUNCTION flushToGui(VAR syn:TSynEdit):boolean;
@@ -270,6 +271,7 @@ VAR guiOutAdapter: T_guiOutAdapter;
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
     inherited create(at_gui,'*GUI*');
+    setLength(lineIndexPerEvaluatedStatement,0);
   end;
 
 DESTRUCTOR T_guiOutAdapter.destroy;
@@ -278,7 +280,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
   end;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
-  VAR i,j:longint;
+  VAR i,j,lineIndex,k:longint;
       instantPlotRequested:boolean=false;
       hasDebugMessage:boolean=false;
   begin
@@ -286,6 +288,20 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     result:=length(storedMessages)>0;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       case messageType of
+        mt_evaluatedStatementInInteractiveMode: begin
+          j:=strToIntDef(simpleMessage,-1);
+          if (j<0) then syn.lines.clear
+          else if j<length(lineIndexPerEvaluatedStatement) then begin
+            lineIndex:=lineIndexPerEvaluatedStatement[j];
+            for k:=syn.lines.count-1 downto lineIndex do syn.lines.Delete(k);
+            setLength(lineIndexPerEvaluatedStatement,j+1);
+            lineIndexPerEvaluatedStatement[j]:=syn.lines.count;
+          end else begin
+            if j=0 then syn.lines.clear;
+            setLength(lineIndexPerEvaluatedStatement,j+1);
+            lineIndexPerEvaluatedStatement[j]:=syn.lines.count;
+          end;
+        end;
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
         mt_plotCreatedWithInstantDisplay: instantPlotRequested:=true;
@@ -339,6 +355,7 @@ PROCEDURE T_guiOutAdapter.flushClear;
     system.enterCriticalSection(cs);
     clearMessages;
     clearConsole;
+    setLength(lineIndexPerEvaluatedStatement,0);
     system.leaveCriticalSection(cs);
   end;
 
@@ -459,7 +476,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end;
   end;
 
-PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating:boolean=false);
+PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
   VAR i:longint;
   begin
     with evaluation do begin
@@ -471,9 +488,11 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST reEvaluating:boolean=false);
       with inputRec[PageControl.ActivePageIndex] do
         if filePath='' then SetCurrentDir(ExtractFileDir(paramStr(0)))
                        else SetCurrentDir(ExtractFileDir(filePath));
-      guiOutAdapter.flushClear;
-      UpdateTimeTimerTimer(self);
-      doConditionalPlotReset;
+      if clearOutput then begin
+        guiOutAdapter.flushClear;
+        UpdateTimeTimerTimer(self);
+        doConditionalPlotReset;
+      end;
     end;
     underCursor.tokenText:='';
     if miDebug.Checked then begin
@@ -759,7 +778,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     if reEvaluationWithGUIrequired then begin
       showConsole;
       {$ifndef debugMode}guiAdapters.addConsoleOutAdapter;{$endif}
-      doStartEvaluation(true);
+      doStartEvaluation(true,true);
       ad_reEvaluateWithGUI;
       plotForm.Caption:=plotForm.Caption+' - close to quit';
       sleep(UpdateTimeTimer.interval);
@@ -770,8 +789,8 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>evaluation.deferredUntil then begin
-        doStartEvaluation;
-        with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
+        doStartEvaluation(false,false);
+        with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines,true);
       end else evaluation.required:=true;
     end;
     with inputRec[PageControl.ActivePageIndex] do begin
@@ -835,7 +854,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     if PageControl.ActivePageIndex<0 then exit;
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
-      doStartEvaluation;
+      doStartEvaluation(true,false);
       with inputRec[PageControl.ActivePageIndex] do ad_callMain(pseudoName(PageControl.ActivePageIndex),editor.lines,askForm.getLastAnswerReleasing);
     end else askForm.getLastAnswerReleasing;
   end;
@@ -977,8 +996,8 @@ PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>evaluation.deferredUntil then begin
-      doStartEvaluation;
-      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
+      doStartEvaluation(true,false);
+      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines,false);
     end else evaluation.required:=true;
   end;
 
@@ -1414,8 +1433,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
     if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
-      doStartEvaluation;
-      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines);
+      doStartEvaluation(false,false);
+      with inputRec[PageControl.ActivePageIndex] do ad_evaluate(pseudoName(PageControl.ActivePageIndex),editor.lines,true);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 

@@ -26,6 +26,7 @@ TYPE
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
+    FUNCTION hash:T_hashInt;
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
@@ -227,6 +228,32 @@ FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
+  end;
+
+FUNCTION T_token.hash:T_hashInt;
+  VAR i:longint;
+      pt:P_token;
+  begin
+    result:=0;
+    pt:=@self;
+    {$Q-}
+    while pt<>nil do begin
+      with pt^ do begin
+        case tokType of
+          tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon: result:=result*31+longint(tt_identifier_pon);
+          tt_identifier,    tt_localUserRule    ,tt_importedUserRule    ,tt_intrinsicRule    : result:=result*31+longint(tt_identifier);
+          else result:=result*31+longint(tokType);
+        end;
+        result:=result*31+length(txt);
+        for i:=1 to length(txt) do result:=result*31+ord(txt[i]);
+        case tokType of
+          tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: result:=result*31+P_literal(data)^.hash;
+          tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then result:=result*31+P_literal(data)^.hash else result:=result*31;
+        end;
+      end;
+      pt:=pt^.next;
+    end;
+    {$Q+}
   end;
 
 end.

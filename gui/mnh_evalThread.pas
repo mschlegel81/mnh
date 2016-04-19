@@ -3,14 +3,14 @@ INTERFACE
 USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
      myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation;
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_die);
+  T_evalRequest    =(er_none,er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
     location:T_tokenLocation;
   end;
 
-PROCEDURE ad_evaluate(CONST path:ansistring; CONST L:TStrings);
+PROCEDURE ad_evaluate(CONST path:ansistring; CONST L:TStrings; CONST interactive:boolean);
 PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring);
 PROCEDURE ad_haltEvaluation;
 FUNCTION ad_evaluationRunning:boolean;
@@ -81,6 +81,10 @@ FUNCTION main(p:pointer):ptrint;
         preEval;
         reloadMainPackage(lu_forDirectExecution,mainEvaluationContext);
         postEval;
+      end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluateInteractive) then begin
+        preEval;
+        reloadMainPackage(lu_interactiveMode,mainEvaluationContext);
+        postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
         callMainInMain(parametersForMainCall,mainEvaluationContext);
@@ -116,11 +120,13 @@ PROCEDURE ad_reEvaluateWithGUI;
     end;
   end;
 
-PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings);
+PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings; CONST interactive:boolean);
   begin
     environment.mainPackageProvider^.setPath(path);
     environment.mainPackageProvider^.setLinesUTF8(L);
-    pendingRequest.value:=er_evaluate;
+    if interactive
+    then pendingRequest.value:=er_evaluateInteractive
+    else pendingRequest.value:=er_evaluate;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
       sleep(10);
