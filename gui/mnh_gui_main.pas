@@ -11,7 +11,7 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,mnh_tables;
+  mnh_plotForm,newCentralPackageDialog;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -762,7 +762,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       doStartEvaluation(true);
       ad_reEvaluateWithGUI;
       plotForm.Caption:=plotForm.Caption+' - close to quit';
-      tableForm.Caption:=tableForm.Caption+' - close to quit';
       sleep(UpdateTimeTimer.interval);
     end;
   end;
@@ -1382,7 +1381,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //fast ones:================================================================
     //Show ask form?
     if askForm.displayPending then askForm.ShowModal;
-    if tableForm.displayPending then tableForm.ShowModal;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
     then aid:=updateSheetCaption(PageControl.ActivePageIndex)
@@ -1487,7 +1485,7 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miOpenTableEditorClick(Sender: TObject);
 begin
-  tableForm.initForEditing;
+  //tableForm.initForEditing;
 end;
 
 PROCEDURE TMnhForm.processSettings;
@@ -1581,7 +1579,7 @@ PROCEDURE lateInitialization;
 
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     mnh_plotForm.formCycleCallback:=@formCycle;
-    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
+    registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'',fc_asking);
     mnh_evalThread.initUnit;
   end;
 

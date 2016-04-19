@@ -77,7 +77,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="39">
+    <Units Count="38">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -256,13 +256,6 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="newCentralPackageDialog"/>
       </Unit37>
-      <Unit38>
-        <Filename Value="mnh_tables.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="tableForm"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-      </Unit38>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
