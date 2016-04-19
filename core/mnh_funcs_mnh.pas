@@ -194,32 +194,6 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then result:=recurse(arg0);
   end;
 
-FUNCTION addPrintAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR printAdapter:P_textFilePrintOnlyAdapter;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      new(printAdapter,create(str0^.value));
-      context.adapters^.addOutAdapter(printAdapter,true);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
-FUNCTION addFullAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      addOutfile(context.adapters^,str0^.value,true);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
-FUNCTION removeAdapter_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      context.adapters^.removeOutAdapter(str0^.value);
-      result:=newVoidLiteral;
-    end else result:=nil;
-  end;
-
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'string',@string_imp,'string(X);#Returns a string-representation of X');
@@ -231,8 +205,5 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'addPrintAdapter',@addPrintAdapter_imp,'addPrintAdapter(filename:string);#Adds a file recieving the print-output in addition to console outputs etc.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'addFullAdapter',@addFullAdapter_imp,'addFullAdapter(filename:string);#Adds a file receiving all outputs going to the adapter.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'removeAdapter',@removeAdapter_imp,'removeAdapter(filename:string);#Removes an adapter if present.');
 
 end.
