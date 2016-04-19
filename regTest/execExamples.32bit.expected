@@ -223,7 +223,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.addPrintAdapter','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.addFullAdapter','mnh.myPath','mnh.not','mnh.ord','mnh.removeAdapter']
+out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
@@ -404,6 +404,6 @@ out> 'Test'
  in> compress('Test').decompress;
 out> 'Test'
  in> compress('Testtext');
-out> '%R§KŞ'
+out> '¼¿¥ïR'
  in> compress('Testtext').decompress;
 out> 'Testtext'
