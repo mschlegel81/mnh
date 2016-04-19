@@ -179,13 +179,13 @@ FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 
 
 INITIALIZATION
-  registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
-  registerRule(MATH_NAMESPACE,'min',@min_imp,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');
-  registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)');
-  registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
-  registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
-  registerRule(MATH_NAMESPACE,'isInRange',@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite');
+  registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters',fc_pure);
+  registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)',fc_pure);
+  registerRule(MATH_NAMESPACE,'min',@min_imp,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters',fc_pure);
+  registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)',fc_pure);
+  registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number',fc_pure);
+  registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value',fc_pure);
+  registerRule(MATH_NAMESPACE,'isInRange',@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite',fc_pure);
   BUILTIN_MIN:=@min_imp;
   BUILTIN_MAX:=@max_imp;
 end.

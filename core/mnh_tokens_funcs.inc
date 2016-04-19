@@ -305,22 +305,24 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
-  VAR first,last,temp:P_token;
-      exTokens:T_tokenArray;
-      package:P_package;
+FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
+  VAR exTokens:T_tokenArray;
       dummyForLastComment:ansistring='';
+      last:P_token;
   begin
-    package:=guessPackageForProvider(location.fileName);
     exTokens.create;
     exTokens.tokenizeAll(s,location,package,context.adapters^,false);
     exTokens.step(package,dummyForLastComment,context.adapters^);
     if exTokens.atEnd then begin
       context.adapters^.raiseError('The parsed expression appears to be empty',location);
+      exTokens.destroy;
       exit(nil);
-    end else if not(context.adapters^.noErrors) then exit(nil); //Parsing error ocurred
-    first:=context.newToken(exTokens.current);
-    last:=first;
+    end else if not(context.adapters^.noErrors) then begin
+      exTokens.destroy;
+      exit(nil); //Parsing error ocurred
+    end;
+    result:=context.newToken(exTokens.current);
+    last:=result;
     exTokens.step(package,dummyForLastComment,context.adapters^);
     while not(exTokens.atEnd) do begin
       last^.next:=context.newToken(exTokens.current);
@@ -328,13 +330,41 @@ FUNCTION stringToExpression(s:ansistring; CONST location:T_tokenLocation; VAR co
       exTokens.step(package,dummyForLastComment,context.adapters^);
     end;
     exTokens.destroy;
+  end;
 
+FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
+  VAR token:P_token;
+  begin
+    token:=stringToTokens(s,location,package,context);
+    if token=nil then exit(nil);
+    if (token^.next=nil) then begin
+      if (token^.tokType=tt_literal) then begin
+        result:=token^.data;
+        result^.rereference;
+      end else result:=nil;
+    end else if context.adapters^.noErrors then begin
+      reduceExpression(token,0,context);
+      if (context.adapters^.noErrors) and (token<>nil) and (token^.tokType=tt_literal) and (token^.next=nil) then begin
+        result:=token^.data;
+        result^.rereference;
+      end else result:=nil;
+    end;
+    context.cascadeDisposeToken(token);
+  end;
+
+FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
+  VAR first,temp:P_token;
+      package:P_package;
+  begin
+    package:=guessPackageForProvider(location.fileName);
+    first:=stringToTokens(s,location,package,context);
+    if first=nil then exit(nil);
 
     if first^.tokType<>tt_expBraceOpen then begin
       temp:=context.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
-      last^.next:=context.newToken(location,'',tt_expBraceClose);
-      last:=last^.next;
+      temp:=first^.last;
+      temp^.next:=context.newToken(location,'',tt_expBraceClose);
     end;
 
     digestInlineExpression(first,context);
@@ -641,37 +671,37 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
-  registerRule(MATH_NAMESPACE,'sqrt',@sqrt_imp,'sqrt(n);#Returns the square root of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sin',@sin_imp,'sin(n);#Returns the sine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,'arcsin(n);#Returns the arcsine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'cos',@cos_imp,'cos(n);#Returns the cosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,'arccos(n);#Returns the arccosine of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'tan',@tan_imp,'tan(n);#Returns the tangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,'arctan(n);#Returns the arctangent of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'exp',@exp_imp,'exp(n);#Returns the exponential of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ln',@ln_imp,'ln(n);#Returns the natural logarithm of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'sqrt',@sqrt_imp,'sqrt(n);#Returns the square root of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'sin',@sin_imp,'sin(n);#Returns the sine of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'arcsin',@arcsin_imp,'arcsin(n);#Returns the arcsine of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'cos',@cos_imp,'cos(n);#Returns the cosine of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'arccos',@arccos_imp,'arccos(n);#Returns the arccosine of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'tan',@tan_imp,'tan(n);#Returns the tangent of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'arctan',@arctan_imp,'arctan(n);#Returns the arctangent of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'exp',@exp_imp,'exp(n);#Returns the exponential of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'ln',@ln_imp,'ln(n);#Returns the natural logarithm of numeric or expression parameter n',fc_pure);
   //Unary Boolean -> boolean
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'not',@not_imp,'not(b:boolean);#not(b:booleanList);#Returns the negated value of b#not(i:int);#not(i:intList);#Returns the bitwise negated value of i',fc_pure);
   //Unary Numeric -> same (i.e. I -> I, R -> R)
-  registerRule(MATH_NAMESPACE,'abs',@abs_imp,'abs(n);#Returns the absolute value of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,'sqr(n);#Returns the square of numeric or expression parameter n');
+  registerRule(MATH_NAMESPACE,'abs',@abs_imp,'abs(n);#Returns the absolute value of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'sqr',@sqr_imp,'sqr(n);#Returns the square of numeric or expression parameter n',fc_pure);
   //Unary Numeric -> Integer
-  registerRule(MATH_NAMESPACE,'sign',@sign_imp,'sign(n);#Returns the sign of numeric or expression parameter n');
-  registerRule(MATH_NAMESPACE,'ceil',@ceil_imp,'ceil(x);#Returns the smallest integer >=x#ceil(x,k);#Does the same but with k digits precision');
-  registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision');
+  registerRule(MATH_NAMESPACE,'sign',@sign_imp,'sign(n);#Returns the sign of numeric or expression parameter n',fc_pure);
+  registerRule(MATH_NAMESPACE,'ceil',@ceil_imp,'ceil(x);#Returns the smallest integer >=x#ceil(x,k);#Does the same but with k digits precision',fc_pure);
+  registerRule(MATH_NAMESPACE,'floor',@floor_imp,'floor(x);#Returns the largest integer <=x#floor(x,k);#Does the same but with k digits precision',fc_pure);
   //round might be binary...
-  registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision');
+  registerRule(MATH_NAMESPACE,'round',@round_imp,'round(x);#Returns the value of x, rounded to the nearest integer#round(x,k);#Returns the value of x rounded to k-digits precision',fc_pure);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-                                                         'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
-  registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+                                                         'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.',fc_stateful);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void',fc_outputViaAdapter);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S',fc_pure);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e',fc_pure);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e',fc_pure);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis',fc_pure);
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,'sandBoxExecute(source);#Executes the source (string or stringList) and returns created messages',fc_callingExternal);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf',@printf_imp,'fprint(formatString:string,...);#Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>',fc_outputViaAdapter);
+  registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>',fc_pure);
+  registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>',fc_pure);
+  registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>',fc_pure);
 {$endif}

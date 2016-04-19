@@ -3,19 +3,29 @@ INTERFACE
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
      myStringUtil,Classes,mySys{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
+  T_functionClass=(fc_pure,
+                   fc_semiPure, //not really pure, but only dependent on values which are immutable during execution
+                   fc_stateful,
+                   fc_asking,
+                   fc_outputViaAdapter,
+                   fc_outputGeneral,
+                   fc_readingExternal,
+                   fc_callingExternal,
+                   fc_tableContextOnly);
+
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 
 VAR
   intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
   print_cs        :system.TRTLCriticalSection;
 
-PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
+PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST functionClass:T_functionClass; CONST fullNameOnly:boolean=false);
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 VAR mnhParameters:P_listLiteral=nil;
 
-PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
+PROCEDURE registerRule(CONST namespace: T_namespace; CONST name: ansistring; CONST ptr: T_intFuncCallback; CONST explanation: ansistring; CONST functionClass:T_functionClass; CONST fullNameOnly: boolean);
   begin
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                    name,ptr);
@@ -23,14 +33,14 @@ PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
-PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
+PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST typ: T_literalType; CONST messageTail: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
   VAR complaintText:ansistring;
   begin
     complaintText:='Built in function '+functionName+' cannot be applied to type '+C_typeString[typ]+messageTail;
     adapters.raiseError(complaintText,tokenLocation);
   end;
 
-PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
+PROCEDURE setMnhParameters(CONST p: T_arrayOfString);
   VAR i:longint;
   begin
     if mnhParameters<>nil then disposeLiteral(mnhParameters);
@@ -86,10 +96,10 @@ FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
 INITIALIZATION
   intrinsicRuleMap.create;
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'type',@type_imp,'type(x);#Prints out the type of x');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.',fc_outputViaAdapter);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used',fc_outputViaAdapter);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'type',@type_imp,'type(x);#Prints out the type of x',fc_pure);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup',fc_semiPure);
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);

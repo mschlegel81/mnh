@@ -332,28 +332,28 @@ FUNCTION indexOf_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 INITIALIZATION
   //Functions on lists:
-  registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended');
-  registerRule(LIST_NAMESPACE,'head',@head_imp,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty');
-  registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
-  registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
-  registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L');
-  registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
-  registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
-  registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L:list);#Returns list L without duplicates and enhanced for faster lookup');
-  registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);#Returns key L without duplicate keys and enhanced for faster lookup');
-  registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
-  registerRule(LIST_NAMESPACE,'union',@setUnion,'union(A,...);#Returns a union of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'intersect',@setIntersect,'intersect(A,...);#Returns an intersection of all given parameters. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'minus',@setMinus,'minus(A,B);#Returns the asymmetric set difference of A and B. All parameters must be lists.');
-  registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.');
-  registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L');
-  registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B');
-  registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed');
-  registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);');
-  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);');
-  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'mapPut(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].');
+  registerRule(LIST_NAMESPACE,'add',@add_imp,'add(L,e);#Returns L with the new element e appended',fc_pure);
+  registerRule(LIST_NAMESPACE,'head',@head_imp,'head(L);#Returns the first element of list L or [] if L is empty#head(L,k);#Returns the first min(k,size(L)) elements of L or [] if L is empty',fc_pure);
+  registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements',fc_pure);
+  registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty',fc_pure);
+  registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L',fc_pure);
+  registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"',fc_pure);
+  registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);#Returns indexes I so that L%I==sort(L)',fc_pure);
+  registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L:list);#Returns list L without duplicates and enhanced for faster lookup',fc_pure);
+  registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);#Returns key L without duplicate keys and enhanced for faster lookup',fc_pure);
+  registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies',fc_pure);
+  registerRule(LIST_NAMESPACE,'union',@setUnion,'union(A,...);#Returns a union of all given parameters. All parameters must be lists.',fc_pure);
+  registerRule(LIST_NAMESPACE,'intersect',@setIntersect,'intersect(A,...);#Returns an intersection of all given parameters. All parameters must be lists.',fc_pure);
+  registerRule(LIST_NAMESPACE,'minus',@setMinus,'minus(A,B);#Returns the asymmetric set difference of A and B. All parameters must be lists.',fc_pure);
+  registerRule(LIST_NAMESPACE,'flatten',@flatten_imp,'flatten(L,...);#Returns all parameters as a flat list.',fc_pure);
+  registerRule(LIST_NAMESPACE,'size',@size_imp,'size(L);#Returns the number of elements in list L',fc_pure);
+  registerRule(LIST_NAMESPACE,'trueCount',@trueCount_impl,'trueCount(B:booleanList);#Returns the number of true values in B',fc_pure);
+  registerRule(LIST_NAMESPACE,'reverseList',@reverseList_impl,'reverse(L:list);#Returns L reversed',fc_pure);
+  registerRule(LIST_NAMESPACE,'get',@get_imp,'get(L:list,index);',fc_pure);
+  registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,'getInner(L:list,index);',fc_pure);
+  registerRule(LIST_NAMESPACE,'mapPut',@mapPut_imp,'mapPut(L:keyValueList,key:string,value);#Returns L with an additional or modified key-value-pair [key,value].',fc_pure);
   registerRule(LIST_NAMESPACE,'mapGet',@mapGet_imp,'mapGet(L:keyValueList,key:string);#Returns the element with matching key or the empty list if no such element was found.#'+
-                                            'mapGet(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.');
-  registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].');
-  registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.');
+                                            'mapGet(L:keyValueList,key:string,fallback);#Returns the element with matching key or fallback if no such element was found.',fc_pure);
+  registerRule(LIST_NAMESPACE,'drop',@mapDrop_imp,'drop(L:keyValueList,key:string);#Returns L without [key,?].',fc_pure);
+  registerRule(LIST_NAMESPACE,'indexOf',@indexOf_impl,'indexOf(B:booleanList);#Returns the indexes for which B is true.',fc_pure);
 end.

@@ -178,11 +178,12 @@ FUNCTION regexReplace_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       end;
     end;
   end;
-CONST SYNTAX_LINK='#For the syntax of regular expressions refer to <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
+
+CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="http://regexpstudio.com/TRegExpr/Help/RegExp_Syntax.html">the used library''s website.</a>';
 INITIALIZATION
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.'+SYNTAX_LINK);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(searchString,regex);#splits the string/-list searchString using string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
-  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(searchString,regex,replaceString);#replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#If lists are given they must have equal sizes.'+SYNTAX_LINK,true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matches', @regexMatch_imp,'matches(searchString,regex);#returns true if string/-list searchString matches string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK,fc_pure);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'matchComposite', @regexMatchComposite_imp,'matchComposite(searchString,regex);#returns a (list of) triplets: [match,position,length] for string/-list regex and searchString#If lists are given they must have equal sizes.'+SYNTAX_LINK,fc_pure);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'split',@regexSplit_imp,'split(searchString,regex);#splits the string/-list searchString using string/-list regex#If lists are given they must have equal sizes.'+SYNTAX_LINK,fc_pure, true);
+  mnh_funcs.registerRule(REGEX_NAMESPACE,'replace',@regexReplace_imp,'replace(searchString,regex,replaceString);#replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString#If lists are given they must have equal sizes.'+SYNTAX_LINK,fc_pure,true);
 
 end.
