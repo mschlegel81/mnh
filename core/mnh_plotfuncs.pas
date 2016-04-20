@@ -258,13 +258,36 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
                         else supersampling:=1;
       if (fileName = '') or (width<1) or (height<1) or (supersampling<1) then begin
         context.adapters^.raiseError(
-          'Function renderToFileImpl expects parameters (filename,width,height,[supersampling]).',
+          'Function renderToFile expects parameters (filename,width,height,[supersampling]).',
           tokenLocation);
         exit(nil);
       end;
       context.adapters^.plot.renderToFile(fileName,width,height,supersampling);
       context.adapters^.raiseCustomMessage(mt_plotFileCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
       result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION renderToString_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR width, height, supersampling: longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and
+      (params^.value(0)^.literalType = lt_int) and
+      (params^.value(1)^.literalType = lt_int) and
+      ((params^.size = 2) or (params^.size = 3) and
+      (params^.value(2)^.literalType = lt_int)) then begin
+      width:=P_intLiteral(params^.value(0))^.value;
+      height:=P_intLiteral(params^.value(1))^.value;
+      if params^.size>2 then supersampling:=P_intLiteral(params^.value(2))^.value
+                        else supersampling:=1;
+      if  (width<1) or (height<1) or (supersampling<1) then begin
+        context.adapters^.raiseError(
+          'Function renderToString expects parameters (filename,width,height,[supersampling]).',
+          tokenLocation);
+        exit(nil);
+      end;
+      result:=newStringLiteral(context.adapters^.plot.renderToString(width,height,supersampling));
     end;
   end;
 
@@ -322,9 +345,9 @@ INITIALIZATION
     'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot',fc_stateful);
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.',fc_outputGeneral);
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl,
+    'renderToString(width,height,[supersampling]);#Renders the current plot to a string.',fc_stateful);
   mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp,
     'display;#Displays the plot as soon as possible, even during evaluation.',fc_outputViaAdapter);
 
 end.
-
-

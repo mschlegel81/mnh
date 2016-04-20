@@ -169,14 +169,16 @@ TYPE
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
   end;
 
+  P_listLiteral = ^T_listLiteral;
   P_expressionLiteral = ^T_expressionLiteral;
-
   T_expressionLiteral = object(T_scalarLiteral)
   private
     val: pointer;
   public
     CONSTRUCTOR create(CONST value: pointer);
     FUNCTION value: pointer;
+    FUNCTION evaluate(CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+    FUNCTION arity:longint;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
@@ -219,7 +221,6 @@ TYPE
   P_literalKeyLiteralValueMap=^T_literalKeyLiteralValueMap;
   T_literalKeyLiteralValueMap=specialize G_literalKeyMap<P_literal>;
 
-  P_listLiteral = ^T_listLiteral;
   T_listLiteral = object(T_literal)
   private
     element: array of P_literal;
@@ -297,8 +298,6 @@ TYPE
       FUNCTION toString:ansistring;
   end;
 
-  { T_variableReport }
-
   T_variableReport=object
     private
       hashIdIdx:longint;
@@ -321,7 +320,9 @@ TYPE
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
   T_pointerToStringCallback = FUNCTION(CONST p: pointer): string;
+  T_pointerToIntCallback = FUNCTION(CONST p: pointer): longint;
   T_evaluateCompatorCallback = FUNCTION (CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
+  T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral;  CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
 
   T_format=object
     category:(fmtCat_decimal,
@@ -342,9 +343,10 @@ TYPE
 VAR
   disposeSubruleCallback: T_disposeSubruleCallback;
   subruleToStringCallback: T_pointerToStringCallback;
-  subruleToArityCallback: T_pointerToStringCallback;
+  subruleToArityCallback: T_pointerToIntCallback;
   subruleApplyOpCallback: T_subruleApplyOpCallback;
   evaluateCompatorCallback: T_evaluateCompatorCallback;
+  evaluateSubruleCallback:T_evaluateSubruleCallback;
 
 FUNCTION exp(CONST x:double):double; inline;
 
@@ -964,7 +966,7 @@ FUNCTION T_literal.typeString: string;
 
 FUNCTION T_expressionLiteral.typeString: string;
   begin
-    result:=C_typeString[literalType]+'('+subruleToArityCallback(val)+')';
+    result:=C_typeString[literalType]+'('+intToStr(arity)+')';
   end;
 
 FUNCTION T_listLiteral.typeString:string;
@@ -1408,6 +1410,18 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
     result:=true;
   end;
 
+//=====================================================================:?.equals
+
+FUNCTION T_expressionLiteral.evaluate(CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+  begin
+    result:=evaluateSubruleCallback(@self,parameters,context);
+  end;
+
+FUNCTION T_expressionLiteral.arity:longint;
+  begin
+    result:=subruleToArityCallback(val);
+  end;
+
 FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
   VAR i:longint;
   begin
@@ -1520,7 +1534,6 @@ FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_t
     checkedExit;
   end;
 
-//=====================================================================:?.equals
 //?.leqForSorting:==============================================================
 FUNCTION T_literal.leqForSorting(CONST other: P_literal): boolean;
   begin

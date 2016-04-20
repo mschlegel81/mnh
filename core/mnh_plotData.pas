@@ -2,7 +2,7 @@ UNIT mnh_plotData;
 
 INTERFACE
 
-USES sysutils, math, mnh_constants,Interfaces, ExtCtrls, Graphics, types;
+USES sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types;
 CONST
   C_lineStyle_none      =   0;
   C_lineStyle_straight  =   1;
@@ -125,6 +125,7 @@ TYPE
 
       PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
+      FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
   end;
 
 
@@ -661,7 +662,7 @@ FUNCTION T_plot.longtestYTic: ansistring;
     if result = '' then result:='.0E';
   end;
 
-PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
+PROCEDURE T_plot.addRow(CONST styleOptions: string; CONST rowData: T_dataRow);
   VAR index:longint;
   begin
     system.enterCriticalSection(cs);
@@ -734,7 +735,7 @@ FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
       (not(logscale['y']) or (sample[1]>=1E-100));
   end;
 
-PROCEDURE T_plot.setScalingOptions(CONST value:T_scalingOptions);
+PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
   VAR axis:char;
       i:longint;
   begin
@@ -754,7 +755,7 @@ PROCEDURE T_plot.setScalingOptions(CONST value:T_scalingOptions);
     system.leaveCriticalSection(cs);
   end;
 
-FUNCTION T_plot.getScalingOptions:T_scalingOptions;
+FUNCTION T_plot.getScalingOptions: T_scalingOptions;
   begin
     system.enterCriticalSection(cs);
     result:=scalingOptions;
@@ -1235,7 +1236,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
+PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
   VAR plotImage, storeImage: TImage;
       Rect: TRect;
   begin
@@ -1256,5 +1257,37 @@ PROCEDURE T_plot.renderToFile(CONST fileName:string; CONST width,height,supersam
     plotImage.free;
     system.leaveCriticalSection(cs);
   end;
+
+FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
+  VAR plotImage, storeImage: TImage;
+      memStream:TMemoryStream;
+      resultSize,i:longint;
+      Rect: TRect;
+  begin
+    system.enterCriticalSection(cs);
+    plotImage:=TImage.create(nil);
+    plotImage.SetInitialBounds(0, 0, width, height);
+    setScreenSize(width, height);
+    renderPlot(plotImage, supersampling);
+    storeImage:=TImage.create(plotImage);
+    storeImage.SetInitialBounds(0, 0, width, height);
+    Rect.top:=0;
+    Rect.Left:=0;
+    Rect.Right:=width;
+    Rect.Bottom:=height;
+    storeImage.Canvas.CopyRect(Rect, plotImage.Canvas, Rect);
+    memStream := TMemoryStream.create;
+    storeImage.Picture.PNG.SaveToStream(memStream);
+    resultSize:=memStream.position;
+    memStream.position:=0;
+    result:='';
+    for i:=0 to resultSize-1 do result:=result+chr(memStream.readByte);
+    memStream.free;
+    storeImage.free;
+    plotImage.free;
+    system.leaveCriticalSection(cs);
+  end;
+
+
 
 end.

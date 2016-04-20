@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
      mnh_tokLoc,myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mySys,mnh_html;
+     lclintf,mySys,mnh_html,mnh_funcs_server;
 FUNCTION parseCmdLine:T_tokenLocation;
 PROCEDURE makeAndShowDoc;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;

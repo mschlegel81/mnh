@@ -44,6 +44,7 @@
       FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
       FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
       FUNCTION arity:longint;
+      PROCEDURE increaseArity(CONST newArity:longint);
   end;
 
 {$endif}
@@ -490,9 +491,9 @@ FUNCTION subruleToStringImpl(CONST p:pointer):string;
     result:=P_subrule(p)^.toString;
   end;
 
-FUNCTION subruleToArityImpl(CONST p:pointer):string;
+FUNCTION subruleToArityImpl(CONST p:pointer):longint;
   begin
-    result:=intToStr(P_subrule(p)^.arity);
+    result:=P_subrule(p)^.arity;
   end;
 
 
@@ -566,6 +567,10 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
     tempcontext.destroy;
   end;
 
+FUNCTION evaluateSubrule(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+  begin
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluate(subruleLiteral,parameters,0,P_evaluationContext(context)^);
+  end;
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin
@@ -607,6 +612,11 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
 FUNCTION T_subrule.arity:longint;
   begin
     result:=length(pattern.sig);
+  end;
+
+PROCEDURE T_subrule.increaseArity(CONST newArity:longint);
+  begin
+    while length(pattern.sig)<newArity do pattern.appendFreeId('');
   end;
 
 {$endif}

@@ -266,7 +266,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core"/>
-      <OtherUnitFiles Value="..\core;..\..\common"/>
+      <OtherUnitFiles Value="..\core;..\..\common;..\..\common\synapse"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

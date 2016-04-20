@@ -81,7 +81,7 @@ TYPE T_packageEnvironment=record
      end;
 
 VAR environment:T_packageEnvironment;
-
+    killServersCallback:PROCEDURE;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
@@ -776,20 +776,25 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then begin
       finalize(context.adapters^);
       clearCachedFormats;
+      killServersCallback;
     end;
 
     with profiler do if active then begin
       unaccounted:=timer.value.Elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
       prettyPrintTime;
     end;
+  end;
 
+PROCEDURE disposeRule(VAR rule:P_rule);
+  begin
+    dispose(rule,destroy);
   end;
 
 CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
   begin
     setLength(packageUses,0);
     codeProvider:=provider;
-    packageRules.create;
+    packageRules.create(@disposeRule);
     importedRules.create;
     setLength(statementHashes,0);
   end;
@@ -800,12 +805,7 @@ FUNCTION T_package.needReload: boolean;
   end;
 
 PROCEDURE T_package.clear;
-  VAR rule:P_rule;
   begin
-    while packageRules.size>0 do begin
-      rule:=packageRules.dropAny;
-      dispose(rule,destroy);
-    end;
     packageRules.clear;
     importedRules.clear;
     setLength(packageUses,0);
@@ -1081,6 +1081,7 @@ INITIALIZATION
   subruleToArityCallback:=@subruleToArityImpl;
   subruleApplyOpCallback :=@subruleApplyOpImpl;
   evaluateCompatorCallback:=@evaluateComparator;
+  evaluateSubruleCallback:=@evaluateSubrule;
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;

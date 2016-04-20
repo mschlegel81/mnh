@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts;
+     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts,lclintf,httpUtil,math;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -12,6 +12,7 @@ IMPLEMENTATION
 {$define int0:=P_intLiteral(params^.value(0))}
 {$define int1:=P_intLiteral(params^.value(1))}
 {$define int2:=P_intLiteral(params^.value(2))}
+{$define real2:=P_realLiteral(params^.value(2))}
 {$define arg0:=params^.value(0)}
 {$define arg1:=params^.value(1)}
 {$define arg2:=params^.value(2)}
@@ -408,6 +409,13 @@ FUNCTION httpGet_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
+FUNCTION openUrl_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
+    then result:=newBoolLiteral(OpenURL(str0^.value))
+    else result:=nil;
+  end;
+
 FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -532,6 +540,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);#Moves a file from source to dest, returning true on success and false otherwise',fc_outputGeneral);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list',fc_readingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string',fc_readingExternal);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser',fc_callingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.',fc_readingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.',fc_readingExternal);
 end.
