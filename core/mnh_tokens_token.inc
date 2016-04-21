@@ -1,6 +1,11 @@
 {$ifdef include_interface}
 T_tokenArray=object
   private
+    blob:record
+      closer,
+      text:string;
+      start:T_tokenLocation;
+    end;
     T:array of T_token;
     i:longint;
     FUNCTION getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
@@ -31,13 +36,13 @@ DESTRUCTOR T_tokenArray.destroy;
     i:=-1;
   end;
 
-PROCEDURE T_tokenArray.append(CONST newTok:T_token);
+PROCEDURE T_tokenArray.append(CONST newTok: T_token);
   begin
     setLength(t,length(t)+1);
     t[length(t)-1]:=newTok;
   end;
 
-PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring; VAR adapters:T_adapters);
+PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistring; VAR adapters: T_adapters);
   begin
     repeat
       inc(i);
@@ -83,22 +88,22 @@ PROCEDURE T_tokenArray.step(CONST package:P_package; VAR lastComment:ansistring;
           (t[i].tokType<>tt_EOL);
   end;
 
-FUNCTION T_tokenArray.current:T_token;
+FUNCTION T_tokenArray.current: T_token;
   begin
     result:=t[i];
   end;
 
-PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType:T_tokenType);
+PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType: T_tokenType);
   begin
     t[i].tokType:=newTokType;
   end;
 
-FUNCTION T_tokenArray.atEnd:boolean;
+FUNCTION T_tokenArray.atEnd: boolean;
   begin
     result:=i>=length(t);
   end;
 
-FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
+FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
       lastComment:ansistring='';
       intrinsicFuncPtr:T_intFuncCallback;
@@ -121,7 +126,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining:T_rawTokenArray;
     for k:=0 to length(t)-1 do t[k].undefine;
   end;
 
-FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean=false):T_token;
+FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_tokenLocation; CONST inPackage: P_package; VAR adapters: T_adapters; CONST retainBlanks: boolean): T_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(CONST message:ansistring);
@@ -157,11 +162,37 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
   VAR id:ansistring;
       tt:T_tokenType;
   begin
+    writeln('Parsing ',line);
+    writeln('       '+StringOfChar(' ',lineLocation.column)+'^');
     result.location:=lineLocation;
     result.txt:='';
     result.tokType:=tt_EOL;
     result.data:=nil;
     result.next:=nil;
+    with blob do if closer<>'' then begin
+      //id now is rest of line
+      id:=copy(line,lineLocation.column,length(line));
+      if pos(closer,id)<=0 then begin
+        parsedLength:=length(id);
+        inc(lineLocation.column,parsedLength);
+        if text='' then text:=id
+                   else text:=text+C_lineBreakChar+id;
+      end else begin
+        parsedLength:=pos(closer,id)+length(closer)-1;
+        inc(lineLocation.column,parsedLength);
+        if text='' then text:=copy(id,1,pos(closer,id)-1)
+                   else text:=text+C_lineBreakChar+copy(id,1,pos(closer,id)-1);
+        result.txt:=closer;
+        closer:='';
+        exit(result);
+      end;
+    end else if text<>'' then begin
+      result.location:=start;
+      result.tokType:=tt_literal;
+      result.data:=newStringLiteral(text);
+      text:='';
+      exit(result);
+    end;
     if retainBlanks then begin
       while (lineLocation.column<=length(line)) and
             (line[lineLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do begin
@@ -226,8 +257,14 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
         end else begin
           result.tokType:=tt_EOL;
           if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
-          else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then result.txt:=SPECIAL_COMMENT_BLOB_BEGIN
-          else if startsWith(SPECIAL_COMMENT_BLOB_END)   then result.txt:=SPECIAL_COMMENT_BLOB_END;
+          else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then begin
+            result.txt:=SPECIAL_COMMENT_BLOB_BEGIN;
+            if length(line)>=lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)
+            then begin
+              blob.closer:=line[lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
+              parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
+            end else blob.closer:=DEFAULT_BLOB_END;
+          end;
         end;
       end else if startsWith(C_tokenString[tt_cso_assignDiv]) then begin
         parsedLength:=2;
@@ -329,7 +366,7 @@ FUNCTION T_tokenArray.getToken(CONST line:ansistring; VAR lineLocation:T_tokenLo
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-PROCEDURE T_tokenArray.tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation;  CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
+PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring; CONST location: T_tokenLocation; CONST inPackage: P_package; VAR adapters: T_adapters; CONST retainBlanks: boolean);
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
@@ -339,7 +376,6 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST inputString:ansistring; CONST location:
       next:=getToken(inputString,workLocation,inPackage,adapters,retainBlanks);
       if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
         if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then begin
-          workLocation.column:=length(inputString)+1;
           if retainBlanks then append(next);
         end else begin
           next.location:=workLocation;
@@ -364,55 +400,29 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     tokenArray.destroy;
   end;
 
-PROCEDURE T_tokenArray.tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
+PROCEDURE T_tokenArray.tokenizeAll(CONST provider: P_codeProvider; CONST inPackage: P_package; VAR adapters: T_adapters);
   VAR location:T_tokenLocation;
       lineIndex:longint;
       next:T_token;
       lines:T_arrayOfString;
-      blob:record
-        level :longint; //0 for "There is no blob"
-        text  :ansistring;
-        start :T_tokenLocation;
-      end;
 
   begin
-    blob.level:=0;
     lines:=provider^.getLines;
     location.fileName:=provider^.getPath;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;
-      if blob.level>0 then begin
-        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_END then dec(blob.level);
-        if trim(lines[lineIndex])=SPECIAL_COMMENT_BLOB_BEGIN then inc(blob.level);
-        if blob.level=0 then begin
-          next.create;
-          next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
-          append(next);
-        end else begin
-          if blob.text=C_carriageReturnChar
-          then blob.text:=                          lines[lineIndex]
-          else blob.text:=blob.text+C_lineBreakChar+lines[lineIndex];
-        end;
-      end else while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
+      while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
         next:=getToken(lines[lineIndex],location,inPackage,adapters);
-        if (next.tokType<>tt_EOL) or (next.txt<>'') then begin
-          if next.txt=SPECIAL_COMMENT_BLOB_BEGIN then with blob do begin
-            level:=1;
-            start:=location;
-            text:=C_carriageReturnChar;
-            lines[lineIndex]:='';
-          end else begin
-            append(next);
-          end;
-        end;
+        if (next.tokType<>tt_EOL) or (next.txt<>'') then append(next);
       end;
     end;
     //Handle unfinished blobs
-    if blob.level>0 then begin
+    if blob.text<>'' then begin
       next.create;
       next.define(blob.start,'',tt_literal,newStringLiteral(blob.text));
       append(next);
+      blob.text:='';
     end;
   end;
 

@@ -110,7 +110,7 @@ PROCEDURE ensureBuiltinDocExamples;
       repeat
         readln(examplesCache,htmlLine);
         if htmlLine<>'' then append(html,htmlLine);
-      until (htmlLine='') or EOF(examplesCache);
+      until (htmlLine='') or eof(examplesCache);
       for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
       setLength(code,0);
       setLength(html,0);
@@ -124,7 +124,7 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
-    if FileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
+    if fileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
       assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
       reset(examplesCache);
       //Read examples:---------------------------------------------------------------------
@@ -530,9 +530,7 @@ PROCEDURE makeHtmlFromTemplate();
   {$include res_html_template.inc}
   VAR i:longint;
   begin
-    writeln('Preparing built-in docs');
     prepareBuiltInDocs;
-    writeln('Creating html doc in ',getHtmlRoot,' from template of ',length(doc_html_template_txt),' lines');
     outFile.isOpen:=false;
     setLength(includes,0);
     context.mode:=none;

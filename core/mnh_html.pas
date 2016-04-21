@@ -61,8 +61,6 @@ FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
   VAR raw:T_rawTokenArray;
       i:longint;
   begin
-    if trim(line)=SPECIAL_COMMENT_BLOB_END then dec(blobLevel);
-    if blobLevel<0 then blobLevel:=0 else if blobLevel>0 then exit(line);
     result:='';
     raw:=rawTokenizeCallback(line);
     for i:=0 to length(raw)-1 do with raw[i] do begin
