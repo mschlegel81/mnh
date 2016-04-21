@@ -30,7 +30,7 @@ TYPE
 
 TYPE
   { TSynMnhSyn }
-  T_contextStackElement=(cse_bottom,cse_expression);
+  T_contextStackElement=(cse_bottom,cse_expression,cse_blobstring);
   T_contextStack=object
     private
       dat:array of T_contextStackElement;
@@ -184,6 +184,7 @@ PROCEDURE TSynMnhSyn.SetLine(CONST newValue: ansistring; LineNumber: integer);
     run := 0;
     fLineNumber := LineNumber;
     ResetRange;
+    if LineNumber=0 then contextStack.clear;
     next;
   end;
 
@@ -204,23 +205,17 @@ PROCEDURE TSynMnhSyn.next;
       i: longint;
       lc:T_messageType;
       specialLineCase:T_messageType;
-  FUNCTION startsWith(CONST prefix:shortString):boolean;
+
+  FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
     VAR k:longint;
     begin
-      result:=length(prefix)>0;
-      for k:=1 to length(prefix) do begin
-        if fLine[k-1]<>prefix[k] then exit(false);
-      end;
+      result:=length(part)>0;
+      for k:=1 to length(part) do if fLine[k-1+offset]<>part[k] then exit(false);
     end;
 
-  FUNCTION head:ansistring;
-    VAR i:longint;
+  FUNCTION startsWith(CONST prefix:shortString):boolean;
     begin
-      result:='';
-      i:=run;
-      while (i<run+20) and (fLine[i]<>#0) do begin
-        result:=result+fLine[i]; inc(i);
-      end;
+      result:=continuesWith(prefix,0);
     end;
 
   begin
@@ -300,7 +295,13 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
         if fLine [run] = '/' then begin
           inc(run);
-          if      fLine[run]='!' then fTokenId:=tkSpecialComment
+          if      fLine[run]='!' then begin
+            if contextStack.top=cse_blobstring
+            then fTokenId:=tkString
+            else fTokenId:=tkSpecialComment;
+            if continuesWith(SPECIAL_COMMENT_BLOB_BEGIN,run-2) then contextStack.push(cse_blobstring);
+            if continuesWith(SPECIAL_COMMENT_BLOB_END,run-2) then contextStack.pop(cse_blobstring);
+          end
           else if fLine[run]='*' then fTokenId:=tkDocComment
                                  else fTokenId:=tkComment;
           while fLine [run]<>#0 do inc(run);
@@ -407,6 +408,7 @@ FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
                   if (contextStack.top=cse_expression) or (fTokenId=tkSpecialComment)
                      then result.style:=result.style + [fsUnderline]
                      else result.style:=result.style - [fsUnderline];
+                  if (contextStack.top=cse_blobstring) and (fTokenId<>tkSpecialComment) then result:=styleTable[tkString];
                 end;
   end;
 
@@ -423,7 +425,6 @@ FUNCTION TSynMnhSyn.GetTokenPos: integer;
 PROCEDURE TSynMnhSyn.ResetRange;
   begin
     isMarked:=false;
-    contextStack.clear;
   end;
 
 PROCEDURE TSynMnhSyn.setRange(value: pointer);
