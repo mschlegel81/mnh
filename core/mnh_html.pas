@@ -1,7 +1,7 @@
 UNIT mnh_html;
 INTERFACE
 USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens;
-CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="10"/> '+
+CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="%"/> '+
   '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
   'lar, sans-serif } code { font-family: Courier-New, Courier; white-space: pre } table { display: inline-t'+
@@ -137,12 +137,7 @@ PROCEDURE T_htmlOutAdapter.flush;
   VAR handle:text;
       i,j:longint;
       zeroBlobLevel:longint=0;
-  FUNCTION htmlEscape(s:ansistring):ansistring;
-    begin
-      result:=replaceAll(
-              replaceAll(s,'<','&lt;'),
-                           '>','&gt;');
-    end;
+
   begin
     if length(storedMessages)=0 then exit;
     try
@@ -151,7 +146,7 @@ PROCEDURE T_htmlOutAdapter.flush;
       system.append(handle);
     end else begin
       rewrite(handle);
-      writeln(handle,HTML_FILE_START,'<table>');
+      writeln(handle,replaceOne(HTML_FILE_START,'%','10'),'<table>');
     end;
       for i:=0 to length(storedMessages)-1 do begin
         with storedMessages[i] do case messageType of
@@ -159,11 +154,11 @@ PROCEDURE T_htmlOutAdapter.flush;
 
           mt_printline:
           if length(multiMessage)<1 then writeln(handle,'<tr></tr>') else
-          if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]),'</code></td></tr>')
+          if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]),'</code></td></tr>')
           else begin
-            writeln(handle,'<tr><td></td><td></td><td><code>',htmlEscape(multiMessage[0]));
-            for j:=1 to length(multiMessage)-2 do writeln(handle,htmlEscape(multiMessage[j]));
-            writeln(handle,htmlEscape(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
+            writeln(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]));
+            for j:=1 to length(multiMessage)-2 do writeln(handle,escapeHtml(multiMessage[j]));
+            writeln(handle,escapeHtml(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
           end;
 
           mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');

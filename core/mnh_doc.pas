@@ -80,10 +80,12 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
+  CONST EXAMPLES_CACHE_FILE= '/examples.dat';
   VAR code:T_arrayOfString;
       i:longint;
       keys:T_arrayOfString;
       allDocs:array of P_intrinsicFunctionDocumentation;
+      examplesCache:text;
 
   PROCEDURE processExample;
     VAR html:T_arrayOfString;
@@ -91,6 +93,24 @@ PROCEDURE ensureBuiltinDocExamples;
     begin
       if (length(code)<=0) then exit;
       html:=demoCodeToHtmlCallback(code);
+      for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
+      for i:=0 to length(html)-1 do writeln(examplesCache,html[i]);
+      writeln(examplesCache,'');
+      setLength(code,0);
+      setLength(html,0);
+    end;
+
+  PROCEDURE restoreExample;
+    VAR html:T_arrayOfString;
+        htmlLine:ansistring;
+        i:longint;
+    begin
+      if (length(code)<=0) then exit;
+      setLength(html,0);
+      repeat
+        readln(examplesCache,htmlLine);
+        if htmlLine<>'' then append(html,htmlLine);
+      until (htmlLine='') or EOF(examplesCache);
       for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
       setLength(code,0);
       setLength(html,0);
@@ -104,14 +124,29 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
-
-    //Read examples:---------------------------------------------------------------------
-    setLength(code,0);
-    for i:=0 to length(doc_examples_txt)-1 do
-    if trim(doc_examples_txt[i])='' then processExample
-                                    else append(code,doc_examples_txt[i]);
-    processExample;
-    //---------------------------------------------------------------------:Read examples
+    if FileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
+      assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
+      reset(examplesCache);
+      //Read examples:---------------------------------------------------------------------
+      setLength(code,0);
+      for i:=0 to length(doc_examples_txt)-1 do
+      if trim(doc_examples_txt[i])='' then restoreExample
+                                      else append(code,doc_examples_txt[i]);
+      restoreExample;
+      //---------------------------------------------------------------------:Read examples
+      close(examplesCache);
+    end else begin
+      assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
+      rewrite(examplesCache);
+      //Read examples:---------------------------------------------------------------------
+      setLength(code,0);
+      for i:=0 to length(doc_examples_txt)-1 do
+      if trim(doc_examples_txt[i])='' then processExample
+                                      else append(code,doc_examples_txt[i]);
+      processExample;
+      //---------------------------------------------------------------------:Read examples
+      close(examplesCache);
+    end;
     functionDocExamplesReady:=true;
   end;
 
@@ -462,7 +497,6 @@ PROCEDURE makeHtmlFromTemplate();
         with outFile do begin
           if isOpen then close(handle);
           assign(handle,htmlRoot+'\'+cmdParam);
-          writeln('Now writing file: ',htmlRoot+'\'+cmdParam);
           rewrite(handle);
           isOpen:=true;
         end;
