@@ -1105,18 +1105,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
+      {$ifdef fullVersion}
       if stepper.currentlyDebugging then begin
         if parameterListLiteral=nil
         then context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first),first^.location)
         else context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first)+parameterListLiteral^.toParameterListString(true),first^.location);
         context.adapters^.raiseCustomMessage(mt_debug_step,'-> '+tokensToString(firstReplace),first^.location);
       end;
+      reportableStep:=true;
+      {$endif}
       context.disposeToken(first);
       if parameterListToken<>nil then context.disposeToken(parameterListToken);
       first:=firstReplace;
       lastReplace^.next:=firstTokenAfterCall;
       didSubstitution:=true;
-      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveInlineIf(CONST conditionLit:boolean); inline;
