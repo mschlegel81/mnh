@@ -1493,13 +1493,13 @@ object MnhForm: TMnhForm
       object TabSheet4: TTabSheet
         Caption = 'TabSheet4'
         ClientHeight = 97
-        ClientWidth = 471
+        ClientWidth = 477
         TabVisible = False
         inline InputEdit4: TSynEdit
           Left = 0
           Height = 97
           Top = 0
-          Width = 471
+          Width = 477
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'
@@ -5837,6 +5837,29 @@ object MnhForm: TMnhForm
         OnClick = miStartAnotherInstanceClick
       end
     end
+    object MenuItem5: TMenuItem
+      Caption = '&Search'
+      object miFind: TMenuItem
+        Caption = '&Find'
+        ShortCut = 16454
+        OnClick = miFindClick
+      end
+      object miReplace: TMenuItem
+        Caption = '&Replace'
+        ShortCut = 16466
+        OnClick = miReplaceClick
+      end
+      object miFindNext: TMenuItem
+        Caption = 'Find &Next'
+        ShortCut = 114
+        OnClick = miFindNextClick
+      end
+      object miFindPrevious: TMenuItem
+        Caption = 'Find &Previous'
+        ShortCut = 8306
+        OnClick = miFindPreviousClick
+      end
+    end
     object MenuItem2: TMenuItem
       Caption = '&Evaluation'
       ShortCut = 32837
@@ -6787,5 +6810,17 @@ object MnhForm: TMnhForm
       C1ECC1C1C1ECC0C0C0ECC0C0C0ECBEBEBEECBDBDBDECBCBCBCECBBBBBBECB9B9
       B9ECB8B8B8ECB7B7B7ECB6B6B6ECB4B4B4ECB2B2B2ECB0B0B0ECC3C3C3E1
     }
+  end
+  object FindDialog: TFindDialog
+    OnFind = FindDialogFind
+    left = 272
+    top = 209
+  end
+  object ReplaceDialog: TReplaceDialog
+    Options = [frDown, frReplace, frReplaceAll, frHidePromptOnReplace]
+    OnFind = ReplaceDialogFind
+    OnReplace = ReplaceDialogReplace
+    left = 400
+    top = 209
   end
 end

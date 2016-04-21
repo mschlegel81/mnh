@@ -4,7 +4,7 @@ UNIT mnh_gui_main;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, SynEdit, SynCompletion, Forms, Controls,
+  Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
   SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_tokLoc,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
@@ -114,6 +114,13 @@ TYPE
     miNewCentralPackage: TMenuItem;
     MenuItem3: TMenuItem;
     miOpenTableEditor: TMenuItem;
+    FindDialog: TFindDialog;
+    ReplaceDialog: TReplaceDialog;
+    MenuItem5: TMenuItem;
+    miFind: TMenuItem;
+    miReplace: TMenuItem;
+    miFindNext: TMenuItem;
+    miFindPrevious: TMenuItem;
     PROCEDURE BreakpointsGridKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
     PROCEDURE debugEditCommandProcessed(Sender: TObject;
@@ -190,6 +197,13 @@ TYPE
     PROCEDURE miOpenDemoClick(Sender: TObject);
     PROCEDURE miNewCentralPackageClick(Sender: TObject);
     PROCEDURE miOpenTableEditorClick(Sender: TObject);
+    PROCEDURE miFindClick(Sender: TObject);
+    PROCEDURE miReplaceClick(Sender: TObject);
+    PROCEDURE FindDialogFind(Sender: TObject);
+    PROCEDURE ReplaceDialogReplace(Sender: TObject);
+    PROCEDURE ReplaceDialogFind(Sender: TObject);
+    PROCEDURE miFindNextClick(Sender: TObject);
+    PROCEDURE miFindPreviousClick(Sender: TObject);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -1506,6 +1520,59 @@ PROCEDURE TMnhForm.miOpenTableEditorClick(Sender: TObject);
 begin
   //tableForm.initForEditing;
 end;
+
+PROCEDURE TMnhForm.miFindClick(Sender: TObject);
+  begin
+    FindDialog.execute;
+  end;
+
+PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
+  begin
+    ReplaceDialog.execute;
+  end;
+
+FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearchOptions;
+  begin
+    result:=[];
+    if frMatchCase       in FindOptions then include(result,ssoMatchCase);
+    if frWholeWord       in FindOptions then include(result,ssoWholeWord);
+    if frReplace         in FindOptions then include(result,ssoReplace);
+    if frReplaceAll      in FindOptions then include(result,ssoReplaceAll);
+    if frHideEntireScope in FindOptions then include(result,ssoEntireScope);
+    if frPromptOnReplace in FindOptions then include(result,ssoPrompt);
+    if frFindNext        in FindOptions then include(result,ssoFindContinue);
+    if not(frDown in FindOptions) then include(result,ssoBackwards);
+  end;
+
+PROCEDURE TMnhForm.FindDialogFind(Sender: TObject);
+  begin
+    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
+    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+  end;
+
+PROCEDURE TMnhForm.ReplaceDialogReplace(Sender: TObject);
+  begin
+    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
+    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(ReplaceDialog.FindText,ReplaceDialog.ReplaceText,FindOptionsToSearchOptions(ReplaceDialog.options));
+  end;
+
+PROCEDURE TMnhForm.ReplaceDialogFind(Sender: TObject);
+  begin
+    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
+    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(ReplaceDialog.FindText,ReplaceDialog.FindText,FindOptionsToSearchOptions(ReplaceDialog.options));
+  end;
+
+PROCEDURE TMnhForm.miFindNextClick(Sender: TObject);
+  begin
+    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
+    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+  end;
+
+PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
+  begin
+    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
+    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+  end;
 
 PROCEDURE TMnhForm.processSettings;
   VAR formPosition:T_formPosition;
