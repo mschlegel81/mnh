@@ -145,7 +145,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if paramStr(i)='-det'  then begin randseed:=0;                addParameter(mnhParameters,i); end
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         else if startsWith(paramStr(i),'-out:') then begin
-          addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5),false);
+          addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5));
           addParameter(mnhParameters,i);
         end
         {$ifdef fullVersion}

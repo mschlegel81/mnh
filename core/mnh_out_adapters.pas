@@ -21,10 +21,7 @@ TYPE
     minErrorLevel: shortint;
   end;
 
-  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,
-                 at_sessionDefinedPrintOnly,
-                 at_sessionDefinedTextFile,
-                 at_sessionDefinedHtmlFile);
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui);
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
@@ -72,14 +69,6 @@ TYPE
     PROCEDURE append(CONST message: T_storedMessage); virtual;
     PROCEDURE flush;
   end;
-
-  P_textFilePrintOnlyAdapter=^T_textFilePrintOnlyAdapter;
-  T_textFilePrintOnlyAdapter=object(T_textFileOutAdapter)
-    CONSTRUCTOR create(CONST fileName:ansistring);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE append(CONST message: T_storedMessage); virtual;
-  end;
-
 
   P_adapters=^T_adapters;
   T_adapters=object
@@ -197,23 +186,6 @@ PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
       setLength(multiMessage,length(multiMessage)+1);
       multiMessage[length(multiMessage)-1]:=s;
     end;
-  end;
-
-CONSTRUCTOR T_textFilePrintOnlyAdapter.create(CONST fileName: ansistring);
-  begin
-    inherited create(fileName);
-    adapterType:=at_sessionDefinedPrintOnly;
-  end;
-
-DESTRUCTOR T_textFilePrintOnlyAdapter.destroy;
-  begin
-    inherited destroy;
-  end;
-
-PROCEDURE T_textFilePrintOnlyAdapter.append(CONST message: T_storedMessage);
-  begin
-    if message.messageType<>mt_printline then exit;
-    inherited append(message);
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
@@ -409,12 +381,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
       if errorCount>30 then exit;
     end;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
-    if thisErrorLevel=mt_endOfEvaluation then
-    while i<length(adapter)-1 do begin
-      if adapter[i].ad^.adapterType in [at_sessionDefinedTextFile,at_sessionDefinedHtmlFile,at_sessionDefinedPrintOnly]
-      then removeOutAdapter(adapter[i].ad)
-      else inc(i);
-    end;
   end;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST message:T_storedMessage);
@@ -432,12 +398,6 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message:T_storedMessage);
       if errorCount>30 then exit;
     end;
     for i:=0 to length(adapter)-1 do adapter[i].ad^.append(message);
-    if message.messageType=mt_endOfEvaluation then
-    while i<length(adapter)-1 do begin
-      if adapter[i].ad^.adapterType in [at_sessionDefinedTextFile,at_sessionDefinedHtmlFile,at_sessionDefinedPrintOnly]
-      then removeOutAdapter(adapter[i].ad)
-      else inc(i);
-    end;
   end;
 
 PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;

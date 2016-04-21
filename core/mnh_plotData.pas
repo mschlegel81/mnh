@@ -1288,6 +1288,4 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     system.leaveCriticalSection(cs);
   end;
 
-
-
 end.
