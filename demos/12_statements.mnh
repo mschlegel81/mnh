@@ -1,5 +1,5 @@
 private txt:=split(
-//!BLOB START
+//!~
  1. "This is a numbered list of twelve statements."
  2. "Exactly 3 of the last 6 statements are true."
  3. "Exactly 2 of the even-numbered statements are true."
@@ -11,9 +11,7 @@ private txt:=split(
  9. "Exactly 3 of the first 6 statements are true."
 10. "The next two statements are both true."
 11. "Exactly 1 of statements 7, 8 and 9 are true."
-12. "Exactly 4 of the preceding statements are true."
-//!BLOB END
-,"\n");
+12. "Exactly 4 of the preceding statements are true."~,"\n");
 
 private
 check(T:booleanList)->T==[false,

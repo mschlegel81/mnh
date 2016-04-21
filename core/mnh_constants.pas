@@ -350,8 +350,7 @@ CONST
     {$endif});
 
   DOC_COMMENT_PREFIX='//*';
-  SPECIAL_COMMENT_BLOB_BEGIN='//!BLOB';
-  DEFAULT_BLOB_END='//!BLOB_END';
+  SPECIAL_COMMENT_BLOB_BEGIN='//!';
 
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;

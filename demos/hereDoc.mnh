@@ -1,8 +1,6 @@
 //*See <a href="http://rosettacode.org/wiki/Here_document">http://rosettacode.org/wiki/Here_document</a>
 main->print(
-//!BLOB START
+//!~
   This is a simple text...
        with a \ which would have to be escaped otherwise.
-    And indentations of course.
-//!BLOB END
-);
+    And indentations of course.~);

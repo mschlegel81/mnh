@@ -33,14 +33,18 @@ TYPE
   T_contextStackElement=(cse_bottom,cse_expression,cse_blobstring);
   T_contextStack=object
     private
-      dat:array of T_contextStackElement;
+      dat:array of record
+        e:T_contextStackElement;
+        endsWith:char;
+      end;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE push(CONST e:T_contextStackElement);
+      PROCEDURE push(CONST e:T_contextStackElement; CONST ender:char);
       PROCEDURE pop(CONST e:T_contextStackElement);
       FUNCTION top:T_contextStackElement;
+      FUNCTION topEnder:char;
   end;
 
   TSynMnhSyn = class(TSynCustomHighlighter)
@@ -94,21 +98,29 @@ VAR modifierStrings:T_listOfString;
 CONSTRUCTOR T_contextStack.create; begin clear; end;
 DESTRUCTOR T_contextStack.destroy; begin clear; end;
 PROCEDURE T_contextStack.clear; begin setLength(dat,0); end;
-PROCEDURE T_contextStack.push(CONST e:T_contextStackElement);
+PROCEDURE T_contextStack.push(CONST e: T_contextStackElement; CONST ender: char);
   begin
     setLength(dat,length(dat)+1);
-    dat[length(dat)-1]:=e;
+    dat[length(dat)-1].e:=e;
+    dat[length(dat)-1].endsWith:=ender;
   end;
 
-PROCEDURE T_contextStack.pop(CONST e:T_contextStackElement);
+PROCEDURE T_contextStack.pop(CONST e: T_contextStackElement);
   begin
-    if (length(dat)>0) and (dat[length(dat)-1]=e) then setLength(dat,length(dat)-1);
+    if (length(dat)>0) and (dat[length(dat)-1].e=e) then setLength(dat,length(dat)-1);
   end;
 
-FUNCTION T_contextStack.top:T_contextStackElement;
+FUNCTION T_contextStack.top: T_contextStackElement;
   begin
-    if (length(dat)>0) then result:=dat[length(dat)-1]
+    if (length(dat)>0) then result:=dat[length(dat)-1].e
                        else result:=cse_bottom;
+  end;
+
+FUNCTION T_contextStack.topEnder: char;
+  begin
+    if (length(dat)>0) and (dat[length(dat)-1].e=cse_blobstring)
+                      then result:=dat[length(dat)-1].endsWith
+                      else result:=#0;
   end;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
@@ -206,7 +218,7 @@ PROCEDURE TSynMnhSyn.next;
       lc:T_messageType;
       specialLineCase:T_messageType;
 
-  FUNCTION continuesWith(CONST part:shortstring; CONST offset:longint):boolean;
+  FUNCTION continuesWith(CONST part:shortString; CONST offset:longint):boolean;
     VAR k:longint;
     begin
       result:=length(part)>0;
@@ -243,10 +255,21 @@ PROCEDURE TSynMnhSyn.next;
         if run>0 then exit;
       end;
     end;
-    case fLine [run] of
+    if contextStack.top=cse_blobstring then begin
+      if fLine[run]=#0 then begin
+        fTokenId := tkNull;
+        exit;
+      end;
+      while (fLine[run]<>#0) and (fLine[run]<>contextStack.topEnder) do inc(run);
+      if fLine[run]=contextStack.topEnder then begin
+        contextStack.pop(cse_blobstring);
+        inc(run);
+      end;
+      fTokenId:=tkString;
+    end else case fLine [run] of
       #0: fTokenId := tkNull;
       '{': begin
-             if contextStack.top in [cse_bottom,cse_expression] then contextStack.push(cse_expression);
+             if contextStack.top in [cse_bottom,cse_expression] then contextStack.push(cse_expression,'}');
              inc(run);
              fTokenId := tkDefault;
            end;
@@ -295,12 +318,11 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
         if fLine [run] = '/' then begin
           inc(run);
-          if      fLine[run]='!' then begin
-            if contextStack.top=cse_blobstring
-            then fTokenId:=tkString
-            else fTokenId:=tkSpecialComment;
-            if continuesWith(SPECIAL_COMMENT_BLOB_BEGIN,run-2) then contextStack.push(cse_blobstring);
-            if continuesWith(SPECIAL_COMMENT_BLOB_END,run-2) then contextStack.pop(cse_blobstring);
+          if fLine[run]='!' then begin
+            fTokenId:=tkSpecialComment;
+            contextStack.push(cse_blobstring,fLine[run+1]);
+            inc(run,2);
+            exit;
           end
           else if fLine[run]='*' then fTokenId:=tkDocComment
                                  else fTokenId:=tkComment;

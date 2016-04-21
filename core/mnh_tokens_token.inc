@@ -2,7 +2,7 @@
 T_tokenArray=object
   private
     blob:record
-      closer,
+      closer:char;
       text:string;
       start:T_tokenLocation;
     end;
@@ -162,14 +162,12 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
   VAR id:ansistring;
       tt:T_tokenType;
   begin
-    writeln('Parsing ',line);
-    writeln('       '+StringOfChar(' ',lineLocation.column)+'^');
     result.location:=lineLocation;
     result.txt:='';
     result.tokType:=tt_EOL;
     result.data:=nil;
     result.next:=nil;
-    with blob do if closer<>'' then begin
+    with blob do if closer<>#0 then begin
       //id now is rest of line
       id:=copy(line,lineLocation.column,length(line));
       if pos(closer,id)<=0 then begin
@@ -183,7 +181,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         if text='' then text:=copy(id,1,pos(closer,id)-1)
                    else text:=text+C_lineBreakChar+copy(id,1,pos(closer,id)-1);
         result.txt:=closer;
-        closer:='';
+        closer:=#0;
         exit(result);
       end;
     end else if text<>'' then begin
@@ -263,7 +261,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
             then begin
               blob.closer:=line[lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
               parsedLength:=length(SPECIAL_COMMENT_BLOB_BEGIN)+1;
-            end else blob.closer:=DEFAULT_BLOB_END;
+            end else blob.closer:='''';
           end;
         end;
       end else if startsWith(C_tokenString[tt_cso_assignDiv]) then begin
@@ -1085,9 +1083,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             newLiteral:=newExpressionLiteral(inlineRule);
           end;
           inlineRule^.pattern.appendOptional;
-
           firstReplace:=context.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
-
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
@@ -1108,6 +1104,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
+      end;
+      if stepper.currentlyDebugging then begin
+        if parameterListLiteral=nil
+        then context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first),first^.location)
+        else context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first)+parameterListLiteral^.toParameterListString(true),first^.location);
+        context.adapters^.raiseCustomMessage(mt_debug_step,'-> '+tokensToString(firstReplace),first^.location);
       end;
       context.disposeToken(first);
       if parameterListToken<>nil then context.disposeToken(parameterListToken);
