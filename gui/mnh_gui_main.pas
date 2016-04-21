@@ -214,6 +214,7 @@ TYPE
       start:double;
       deferredUntil:double;
     end;
+    outputFocusedOnFind:boolean;
     forceInputEditFocusOnOutputEditMouseUp:boolean;
 
     doNotMarkWordBefore:double;
@@ -224,6 +225,7 @@ TYPE
     debugStep:array[0..DEBUG_LINE_COUNT-1] of T_storedMessage;
     debugStepFill,debugStepOffset:longint;
 
+    FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
     FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
@@ -453,7 +455,7 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker:boolean);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker: boolean);
   VAR i:longint;
   begin
     if not(isIdentifier(wordText,true)) then begin
@@ -490,7 +492,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
     end;
   end;
 
-PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
+PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
   begin
     with evaluation do begin
@@ -521,7 +523,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
     UpdateTimeTimer.interval:=20;
   end;
 
-PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
+PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump, updateMarker: boolean);
   VAR wordUnderCursor:string;
       newCaret:TPoint;
       pageIdx:longint;
@@ -813,8 +815,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
+PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
@@ -829,8 +830,7 @@ PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton; Shi
     inputEditReposition(inputRec[PageControl.ActivePageIndex].editor.PixelsToRowColumn(point),ssCtrl in Shift,true);
   end;
 
-PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
-  VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   VAR i:longint;
       commented:boolean=true;
   begin
@@ -1087,7 +1087,7 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
     end;
   end;
 
-FUNCTION TMnhForm._doSaveAs_(CONST index:longint): boolean;
+FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
@@ -1104,7 +1104,7 @@ FUNCTION TMnhForm._doSaveAs_(CONST index:longint): boolean;
     end else result:=false;
   end;
 
-FUNCTION TMnhForm._doSave_(CONST index:longint): boolean;
+FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
   VAR arr:T_arrayOfString;
       i:longint;
   begin
@@ -1121,14 +1121,14 @@ FUNCTION TMnhForm._doSave_(CONST index:longint): boolean;
     end;
   end;
 
-PROCEDURE TMnhForm.addDebugMessage(CONST m:T_storedMessage);
+PROCEDURE TMnhForm.addDebugMessage(CONST m: T_storedMessage);
   begin
     debugStep[debugStepOffset]:=m;
     if (debugStepFill<DEBUG_LINE_COUNT) then inc(debugStepFill);
     debugStepOffset:=(debugStepOffset+1) mod DEBUG_LINE_COUNT;
   end;
 
-PROCEDURE TMnhForm.writeDebugOutput(CONST updateSteps:boolean);
+PROCEDURE TMnhForm.writeDebugOutput(CONST updateSteps: boolean);
   FUNCTION lineIdxToDatIdx(CONST lineIdx:longint):longint;
     begin
       if debugStepFill<DEBUG_LINE_COUNT
@@ -1178,7 +1178,7 @@ PROCEDURE TMnhForm.updateBreakpointGrid;
     debugSplitter.visible:=true;
   end;
 
-PROCEDURE TMnhForm.setupInputRecForNewFile(CONST index:longint; CONST newFileName:ansistring='');
+PROCEDURE TMnhForm.setupInputRecForNewFile(CONST index: longint; CONST newFileName: ansistring);
   begin
     if (index>=0) and (index<length(inputRec)) then with inputRec[index] do begin
       filePath:=newFileName;
@@ -1191,7 +1191,7 @@ PROCEDURE TMnhForm.setupInputRecForNewFile(CONST index:longint; CONST newFileNam
     end;
   end;
 
-PROCEDURE TMnhForm.setupInputRecForLoadingFile(CONST index:longint; CONST fileName:ansistring);
+PROCEDURE TMnhForm.setupInputRecForLoadingFile(CONST index: longint; CONST fileName: ansistring);
   begin
     with inputRec[index] do begin
       filePath:=expandFileName(fileName);
@@ -1204,7 +1204,7 @@ PROCEDURE TMnhForm.setupInputRecForLoadingFile(CONST index:longint; CONST fileNa
     end;
   end;
 
-FUNCTION TMnhForm.updateSheetCaption(CONST index:longint):ansistring;
+FUNCTION TMnhForm.updateSheetCaption(CONST index: longint): ansistring;
   VAR i:longint;
   begin
     result:='';
@@ -1228,7 +1228,7 @@ FUNCTION TMnhForm.updateSheetCaption(CONST index:longint):ansistring;
     end;
   end;
 
-FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName:ansistring):longint;
+FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName: ansistring): longint;
   VAR i:longint;
       uName:ansistring;
   begin
@@ -1243,7 +1243,7 @@ FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName:ansistring):longin
     result:=-1;
   end;
 
-FUNCTION TMnhForm.pseudoName(CONST index:longint):ansistring;
+FUNCTION TMnhForm.pseudoName(CONST index: longint): ansistring;
   begin
     with inputRec[index] do if filePath<>'' then result:=filePath
                                             else result:='<new '+intToStr(index)+'>';
@@ -1307,16 +1307,14 @@ PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
     processSettings;
   end;
 
-PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
+PROCEDURE TMnhForm.OutputEditKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if ((key=13) and (ssCtrl in Shift)) then outputEditReposition(OutputEdit.CaretXY,true);
     if forceInputEditFocusOnOutputEditMouseUp and (PageControl.ActivePageIndex>=0) then ActiveControl:=inputRec[PageControl.ActivePageIndex].editor;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
-PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton;
-  Shift: TShiftState; X, Y: integer);
+PROCEDURE TMnhForm.OutputEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   VAR point:TPoint;
   begin
     point.x:=x;
@@ -1338,8 +1336,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
-  VAR CloseAction: TCloseAction);
+PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     miHelp.Checked:=false;
   end;
@@ -1351,8 +1348,7 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
     autosizeToggleBox.Checked:=false;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
-  Shift: TShiftState);
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   begin
     if (pos(C_ID_QUALIFY_CHARACTER,value)>0) then begin
       if pos(sourceValue,value)<>1 then
@@ -1523,11 +1519,13 @@ end;
 
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);
   begin
+    outputFocusedOnFind:=OutputEdit.Focused;
     FindDialog.execute;
   end;
 
 PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
   begin
+    outputFocusedOnFind:=OutputEdit.Focused;
     ReplaceDialog.execute;
   end;
 
@@ -1546,32 +1544,37 @@ FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearc
 
 PROCEDURE TMnhForm.FindDialogFind(Sender: TObject);
   begin
-    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
-    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+    editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
   end;
 
 PROCEDURE TMnhForm.ReplaceDialogReplace(Sender: TObject);
   begin
-    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
-    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(ReplaceDialog.FindText,ReplaceDialog.ReplaceText,FindOptionsToSearchOptions(ReplaceDialog.options));
+    editForSearch(true).SearchReplace(ReplaceDialog.FindText,ReplaceDialog.ReplaceText,FindOptionsToSearchOptions(ReplaceDialog.options));
   end;
 
 PROCEDURE TMnhForm.ReplaceDialogFind(Sender: TObject);
   begin
-    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
-    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(ReplaceDialog.FindText,ReplaceDialog.FindText,FindOptionsToSearchOptions(ReplaceDialog.options));
+    editForSearch(true).SearchReplace(ReplaceDialog.FindText,ReplaceDialog.FindText,FindOptionsToSearchOptions(ReplaceDialog.options));
   end;
 
 PROCEDURE TMnhForm.miFindNextClick(Sender: TObject);
   begin
-    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
-    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+    outputFocusedOnFind:=OutputEdit.Focused;
+    editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options)-[ssoBackwards]);
   end;
 
 PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
   begin
+    outputFocusedOnFind:=OutputEdit.Focused;
+    editForSearch(false).SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options)+[ssoBackwards]);
+  end;
+
+FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
+  begin
+    if outputFocusedOnFind and not(replacing) then exit(OutputEdit);
     if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(inputRec))
-    then inputRec[PageControl.ActivePageIndex].editor.SearchReplace(FindDialog.FindText,FindDialog.FindText,FindOptionsToSearchOptions(FindDialog.options));
+    then result:=inputRec[PageControl.ActivePageIndex].editor
+    else exit(OutputEdit); //not nice, but a valid fallback
   end;
 
 PROCEDURE TMnhForm.processSettings;
