@@ -14,9 +14,15 @@ TYPE
   TaskForm = class(TForm)
     ComboBox1: TComboBox;
     Label1: TLabel;
+    Button1: TButton;
+    Button2: TButton;
+    Button3: TButton;
     PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE Button1Click(Sender: TObject);
+    PROCEDURE Button2Click(Sender: TObject);
+    PROCEDURE Button3Click(Sender: TObject);
   private
     rejectNonmatchingInput: boolean;
     previousAnswers:array[0..31] of ansistring;
@@ -28,9 +34,9 @@ TYPE
     lastAnswer: ansistring;
     PROCEDURE initWithQuestion(CONST question: ansistring);
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
-    PROCEDURE initWithFileLines(CONST minIdx,maxIdx:longint);
     PROCEDURE lock;
     FUNCTION getLastAnswerReleasing: ansistring;
+    PROCEDURE setButtons(CONST enable:boolean; CONST count:byte);
   end;
 
 VAR
@@ -64,10 +70,29 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
     displayPending := false;
   end;
 
+PROCEDURE TaskForm.Button1Click(Sender: TObject);
+  begin
+    lastAnswer := Button1.Caption;
+    ModalResult := mrOk;
+  end;
+
+PROCEDURE TaskForm.Button2Click(Sender: TObject);
+  begin
+    lastAnswer := Button2.Caption;
+    ModalResult := mrOk;
+  end;
+
+PROCEDURE TaskForm.Button3Click(Sender: TObject);
+  begin
+    lastAnswer := Button3.Caption;
+    ModalResult := mrOk;
+  end;
+
 PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
   VAR i:longint;
   begin
     lock;
+    setButtons(false,0);
     rejectNonmatchingInput := false;
     lastAnswer := '';
     ComboBox1.Items.clear;
@@ -83,6 +108,7 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
   VAR i: longint;
   begin
     lock;
+    setButtons(length(options)<=3,length(options));
     rejectNonmatchingInput := true;
     lastAnswer := '';
     ComboBox1.Items.clear;
@@ -90,21 +116,9 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     Label1.Caption:=question;
     if length(options) = 0 then exit;
     for i := 0 to length(options)-1 do ComboBox1.Items.add(options [i]);
-    ComboBox1.AutoComplete := true;
-    ComboBox1.text := '';
-    displayPending := true;
-  end;
-
-PROCEDURE TaskForm.initWithFileLines(CONST minIdx,maxIdx:longint);
-  VAR i:longint;
-  begin
-    lock;
-    rejectNonmatchingInput := true;
-    lastAnswer := '';
-    ComboBox1.Items.clear;
-    Caption := 'Breakpoint at line No.';
-    Label1.Caption := Caption;
-    for i := minIdx to maxIdx do ComboBox1.Items.add(intToStr(i));
+    if length(options)>0 then Button1.Caption:=options[0];
+    if length(options)>1 then Button2.Caption:=options[1];
+    if length(options)>2 then button3.Caption:=options[2];
     ComboBox1.AutoComplete := true;
     ComboBox1.text := '';
     displayPending := true;
@@ -124,6 +138,24 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
     for i:=length(previousAnswers)-1 downto 1 do previousAnswers[i]:=previousAnswers[i-1];
     previousAnswers[0]:=lastAnswer;
     ownerThread := 0;
+  end;
+
+PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
+  VAR h:longint=0;
+  begin
+    if enable then begin
+      if count>=1 then begin Button1.Enabled:=true; Button1.visible:=true; end;
+      if count>=2 then begin Button2.Enabled:=true; Button2.visible:=true; end;
+      if count>=3 then begin Button3.Enabled:=true; button3.visible:=true; end;
+      ComboBox1.Enabled:=false;
+      ComboBox1.visible:=false;
+    end else begin
+      ComboBox1.Enabled:=true;
+      ComboBox1.visible:=true;
+      Button1.Enabled:=false; Button1.visible:=false;
+      Button2.Enabled:=false; Button2.visible:=false;
+      Button3.Enabled:=false; button3.visible:=false;
+    end;
   end;
 
 FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
