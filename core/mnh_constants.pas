@@ -18,6 +18,7 @@ TYPE
                        rwc_modifier);
 
 CONST
+  UTF8_ZERO_WIDTH_SPACE=#226#128#139;
   C_voidText= 'void';
   C_nanText = 'Nan';
   C_infText = 'Inf';
@@ -340,7 +341,7 @@ CONST
     'Evaluation haltet (most probably by user).',
     '',
     '',
-    ''
+    UTF8_ZERO_WIDTH_SPACE
     {$ifdef fullVersion},
     'Image:',
     'Deferred plot request',

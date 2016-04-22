@@ -347,12 +347,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             changed:=false;
           end;
         end;
-        mt_echo_input: begin
-          syn.lines.append(C_errorLevelTxt[messageType]+' '+SysToUTF8(simpleMessage));
-        end;
+        mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output:      syn.lines.append(C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
-        else begin           syn.lines.append(C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
+        mt_echo_output:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
+        else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
         end;
       end;
     end;

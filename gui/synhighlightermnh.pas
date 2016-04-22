@@ -24,9 +24,37 @@ TYPE
     tkModifier,
     tkNull,
     tkError,
+    tkWarning,
+    tkNote,
+    tkTimingNote,
     tkHighlightedItem,
     tkHashVariable);
   T_mnhSynFlavour=(msf_input,msf_output,msf_debugger,msf_guessing);
+
+CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
+{mt_clearConsole,                      } tkDefault,
+{mt_printline,                         } tkDefault,
+{mt_echo_input,                        } tkDefault,
+{mt_echo_declaration,                  } tkDefault,
+{mt_echo_output,                       } tkDefault,
+{mt_debug_step,                        } tkDefault,
+{mt_el1_note,                          } tkNote,
+{mt_el2_warning,                       } tkWarning,
+{mt_el3_evalError,                     } tkError,
+{mt_el3_noMatchingMain,                } tkError,
+{mt_el3_stackTrace,                    } tkError,
+{mt_el3_userDefined,                   } tkError,
+{mt_el4_parsingError,                  } tkError,
+{mt_el5_systemError,                   } tkError,
+{mt_el5_haltMessageReceived,           } tkError,
+{mt_endOfEvaluation,                   } tkDefault,
+{mt_reloadRequired,                    } tkNote,
+{mt_timing_info                        } tkTimingNote,
+{mt_plotFileCreated,                   } tkNote,
+{mt_plotCreatedWithDeferredDisplay,    } tkNote,
+{mt_plotCreatedWithInstantDisplay,     } tkNote,
+{mt_plotSettingsChanged,               } tkNote,
+{mt_evaluatedStatementInInteractiveMode} tkNote);
 
 TYPE
   { TSynMnhSyn }
@@ -142,6 +170,9 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkModifier        ]:=TSynHighlighterAttributes.create('Modifier');
     styleTable[tkNull            ]:=TSynHighlighterAttributes.create('Null');
     styleTable[tkError           ]:=TSynHighlighterAttributes.create('Error');
+    styleTable[tkWarning         ]:=TSynHighlighterAttributes.create('Warn');
+    styleTable[tkNote            ]:=TSynHighlighterAttributes.create('Note');
+    styleTable[tkTimingNote      ]:=TSynHighlighterAttributes.create('Time');
     styleTable[tkHighlightedItem ]:=TSynHighlighterAttributes.create('Highlighted');
     styleTable[tkHashVariable    ]:=TSynHighlighterAttributes.create('HashVariable');
 
@@ -154,6 +185,10 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkOperator        ].style:=[fsBold];
     styleTable[tkModifier        ].style:=[fsBold];
     styleTable[tkHashVariable    ].style:=[fsBold];
+    styleTable[tkError           ].style:=[fsBold];
+    styleTable[tkWarning         ].style:=[fsBold];
+    styleTable[tkNote            ].style:=[fsBold];
+    styleTable[tkTimingNote      ].style:=[fsBold];
 
     styleTable[tkComment         ].foreground:=$00999999;
     styleTable[tkDocComment      ].foreground:=$00999999;
@@ -164,11 +199,13 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkBultinRule      ].foreground:=$00FF0000;
     styleTable[tkSpecialRule     ].foreground:=$00FF0000;
     styleTable[tkOperator        ].foreground:=$00880000;
-    styleTable[tkNonStringLiteral].foreground:=$000000ff;
+    styleTable[tkNonStringLiteral].foreground:=$000000FF;
     styleTable[tkString          ].foreground:=$00008800;
-    styleTable[tkModifier        ].foreground:=$000088ff;
+    styleTable[tkModifier        ].foreground:=$000088FF;
     styleTable[tkNull            ].foreground:=$00000000;
-    styleTable[tkError           ].foreground:=$000000ff; styleTable[tkError].background:=$0000FFFF;
+    styleTable[tkError           ].foreground:=$000000FF; styleTable[tkError].background:=$0000FFFF;
+    styleTable[tkWarning         ].foreground:=$000000FF;
+    styleTable[tkTimingNote      ].Background:=$00EEEEEE;
     styleTable[tkHashVariable    ].foreground:=$00FF0000;
     styleTable[tkHashVariable    ].background:=$00FFEEDD;
 
@@ -228,32 +265,30 @@ PROCEDURE TSynMnhSyn.next;
   FUNCTION startsWith(CONST prefix:shortString):boolean;
     begin
       result:=continuesWith(prefix,0);
+      if result then writeln('Starts with "',prefix,'"');
     end;
 
   begin
     isMarked:=false;
     fTokenId := tkDefault;
     fTokenPos := run;
-    if (run = 0) then begin
-      if flavour in [msf_output,msf_guessing] then begin
-        specialLineCase:=mt_clearConsole;
-        i:=-1;
-        for lc:=low(T_messageType) to high(T_messageType) do if startsWith(C_errorLevelTxt[lc]) then begin
-          specialLineCase:=lc;
-          i:=length(C_errorLevelTxt[lc]);
-        end;
-        if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
-          i:=0;
-          while (fLine[i]<>#0) and (fLine[i]<>';') do inc(i);
-          if fLine[i]=';' then specialLineCase:=mt_echo_input;
-          i:=-1;
-        end;
-        if i>=0 then run:=i+1;
-        if C_errorLevelForMessageType[specialLineCase]>=3 then fTokenId:=tkError
-                                                          else fTokenId:=tkDefault;
-        if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
-        if run>0 then exit;
+    if (run = 0) and (flavour in [msf_output,msf_guessing]) then begin
+      specialLineCase:=mt_clearConsole;
+      i:=-1;
+      for lc:=low(T_messageType) to high(T_messageType) do if (C_errorLevelTxt[lc]<>'') and startsWith(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[lc]) then begin
+        specialLineCase:=lc;
+        i:=length(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[lc]);
       end;
+      if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
+        i:=0;
+        while (fLine[i]<>#0) and (fLine[i]<>';') do inc(i);
+        if fLine[i]=';' then specialLineCase:=mt_echo_input;
+        i:=-1;
+      end;
+      if i>=0 then run:=i+1;
+      fTokenId:=tokenKindForMt[specialLineCase];
+      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
+      if run>0 then exit;
     end;
     if contextStack.top=cse_blobstring then begin
       if fLine[run]=#0 then begin
