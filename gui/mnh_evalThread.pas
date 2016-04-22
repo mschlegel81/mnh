@@ -176,6 +176,12 @@ PROCEDURE ad_killEvaluationLoopSoftly;
   end;
 
 PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
+  PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
+    begin
+      ensureBuiltinDocExamples;
+      info.tokenExplanation:=info.tokenExplanation+prefix+'Builtin rule'+C_lineBreakChar+functionDocMap.get(id)^.getPlainText(C_lineBreakChar)+';';
+    end;
+
   VAR reservedWordClass: T_reservedWordClass;
       ns:T_namespace;
       packageReference: T_packageReference;
@@ -214,18 +220,19 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     case token.tokType of
       tt_intrinsicRule,tt_intrinsicRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        ensureBuiltinDocExamples;
-        info.tokenExplanation:=info.tokenExplanation+'Builtin rule'+C_lineBreakChar+functionDocMap.get(id)^.getPlainText(C_lineBreakChar)+';';
+        appendBuiltinRuleInfo;
       end;
       tt_importedUserRule,tt_importedUserRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(token.data)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(id) then appendBuiltinRuleInfo('hides ');
       end;
       tt_localUserRule,tt_localUserRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(token.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(token.data)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(id) then appendBuiltinRuleInfo('hides ');
       end;
     end;
   end;
