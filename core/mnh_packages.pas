@@ -136,10 +136,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
     adapter.doShowTimingInfo:=false;
     runAlone(input,@adapter);
     setLength(result,length(collector.storedMessages));
-    for i:=0 to length(result)-1 do begin
-      result[i]:=collector.storedMessages[i];
-      with result[i] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
-    end;
+    for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
     adapter.destroy;
     collector.destroy;
   end;
@@ -991,18 +988,16 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     r:=importedRules.valueSet;
     for i:=0 to length(r)-1 do begin
       if r[i]^.isReportable(value) then begin
-        if firstInBlock then variableReport.addCommentLine('imported:');
         firstInBlock:=false;
-        variableReport.addVariable(r[i]^.id, value);
+        variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
       end;
     end;
     setLength(r,0);
     r:=packageRules.valueSet;
     for i:=0 to length(r)-1 do begin
       if r[i]^.isReportable(value) then begin
-        if firstInBlock then variableReport.addCommentLine('in main package:');
         firstInBlock:=false;
-        variableReport.addVariable(r[i]^.id, value);
+        variableReport.addVariable(r[i]^.id, value, r[i]^.declarationStart);
       end;
     end;
     setLength(r,0);

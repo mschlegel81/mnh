@@ -127,7 +127,7 @@ DESTRUCTOR T_htmlOutAdapter.destroy;
 PROCEDURE T_htmlOutAdapter.append(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited append(message);
-    with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
+    with storedMessages[length(storedMessages)-1] do if messageType in [mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
 
@@ -162,7 +162,6 @@ PROCEDURE T_htmlOutAdapter.flush;
           mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
 
           mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage,zeroBlobLevel),'</code></td></tr>');
-          mt_debug_step:                                    writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',toHtmlCode(simpleMessage,zeroBlobLevel),'</code></td></tr>');
           {$ifdef fullVersion}
           mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
                                    imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');

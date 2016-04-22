@@ -58,7 +58,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         currentTask^.evaluate(0,tempcontext);
         sleepTime:=0;
       end;
-    until (sleepTime>=SLEEP_TIME_TO_QUIT) or (pendingTasks.destructionPending){$ifdef fullVersion} or stepper.currentlyDebugging{$endif};
+    until (sleepTime>=SLEEP_TIME_TO_QUIT) or (pendingTasks.destructionPending);
     tempcontext.destroy;
     result:=0;
     interlockedDecrement(poolThreadsRunning);
@@ -66,7 +66,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
 
 PROCEDURE ensurePoolThreads(CONST enforceNewThread:boolean);
   begin
-    if enforceNewThread or (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(stepper.currentlyDebugging) {$endif} then begin
+    if enforceNewThread or (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(currentlyDebugging) {$endif} then begin
       InterLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;
@@ -103,9 +103,6 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
       context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex),true);
     end;
     if context.adapters^.noErrors then begin
-      {$ifdef fullVersion}
-      if stepper.currentlyDebugging and (eachIndex>=0) then context.adapters^.raiseCustomMessage(mt_debug_step,'//next (p)Each step',C_nilTokenLocation);
-      {$endif}
       reduceExpression(task,callDepth,context);
     end else begin
       context.cascadeDisposeToken(task);

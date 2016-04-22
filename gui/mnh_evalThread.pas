@@ -159,7 +159,7 @@ PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistri
 
 PROCEDURE ad_haltEvaluation;
   begin
-    if evaluationState.value=es_running then stepper.onAbort;
+    if evaluationState.value=es_running then stepper.doStop;
     while not(guiOutAdapters^.hasMessageOfType[mt_el5_haltMessageReceived]) do guiOutAdapters^.haltEvaluation;
     repeat pendingRequest.value:=er_none; until pendingRequest.value=er_none;
   end;

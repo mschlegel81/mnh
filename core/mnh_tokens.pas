@@ -20,7 +20,6 @@ TYPE
     PROCEDURE undefine;
     FUNCTION last:P_token;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
-    FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; VAR variableReport:T_variableReport):ansistring;
     FUNCTION singleTokenToString:ansistring;
     FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
@@ -143,14 +142,6 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
       or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_operatorOrElse,tt_iifCheck,tt_iifElse])
     then result:=' '+result;
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
-  end;
-
-FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; VAR variableReport: T_variableReport): ansistring;
-  begin
-    if tokType=tt_literal then begin
-      result:=variableReport.getLiteralStringOrGetAlias(P_literal(data));
-      idLike:=false;
-    end else result:=toString(lastWasIdLike,idLike);
   end;
 
 FUNCTION T_token.singleTokenToString: ansistring;
