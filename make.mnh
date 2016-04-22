@@ -1,6 +1,6 @@
 USE regTest, hash;
 
-private templateToInc(inFile,outFile<>inFile)->begin
+private memoized templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;
   local pasId:=clean(inFile,['a'..'z','A'..'Z'],'_');
   local outText:=
@@ -13,27 +13,23 @@ end;
 
 private tryPack(filename)->'['&escape(filename)&','&escape(fileContents(filename))&']';
 
-private ensureDemos->fileExists('ensureDemos.mnh') ? void : begin
+private memoized ensureDemos->fileExists('ensureDemos.mnh') ? void : begin
   writeFileLines('ensureDemos.mnh','{'|
     (files('demos/*.mnh')|'demos/inputs/inputs.mnh')
     .each(file,(index=0 ? '[' : ',') & tryPack(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
-private ensurePackages->fileExists('ensurePackages.mnh') ? void : begin
+private memoized ensurePackages->fileExists('ensurePackages.mnh') ? void : begin
   writeFileLines('ensurePackages.mnh','{'|
     files('packages/*.mnh').each(file,(index=0 ? '[' : ',') & tryPack(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
-
-memoized private 
-relevantFiles->flatten(files(allFolders('.')&'\*.lpr'),
-                       files(allFolders('.')&'\*.pas'),
-                       files(allFolders('.')&'\*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
-                               
-memoized private 
+private
 currentCodeHash->begin
+  ensureDemos;
+  ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('doc/examples.txt','core/res_examples.inc');
   templateToInc('doc/html_template.txt','core/res_html_template.inc');
@@ -42,6 +38,9 @@ currentCodeHash->begin
   templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');  
   templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');  
   templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');    
+  local relevantFiles:=flatten(files(allFolders('.')&'\*.lpr'),
+                               files(allFolders('.')&'\*.pas'),
+                               files(allFolders('.')&'\*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
   //update code hash
   local result:=relevantFiles.pEach(filename,hash(fileContents(filename)),+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
@@ -53,8 +52,6 @@ end;
 private binName(FI:int)->((FI and 1)>0 ? '.\' : 'bin32\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
 
 private exeHasWrongVersion(FI:int)->begin
-  ensureDemos;
-  ensurePackages;
   local exeName:=binName(FI);
   fileExists(exeName) ? begin
     local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');
