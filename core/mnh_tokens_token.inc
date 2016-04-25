@@ -554,7 +554,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
   VAR stack:array of P_token;
       newLit:P_literal;
       didSubstitution:boolean;
-      {$ifdef fullVersion}reportableStep:boolean;{$endif}
       cTokType:array[-1..2] of T_tokenType;
 
   PROCEDURE initTokTypes; inline;
@@ -875,11 +874,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT) or
          not(context.allowDelegation) or
-         {$ifdef fullVersion}(stepper.currentlyDebugging) or{$endif}
          (workerThreadCount<=0))
       then eachType:=tt_each;
-
       eachLocation:=first^.location;
+      {$ifdef fullVersion}
+      if currentlyDebugging and (eachType=tt_parallelEach) then begin
+        eachType:=tt_each;
+        context.adapters^.raiseNote('Not parallelizing pEach during debugging.',eachLocation);
+      end;
+      if currentlyDebugging and (eachType=tt_forcedParallelEach) then begin
+        context.adapters^.raiseError('PEach is not allowed during debugging. Sorry.',eachLocation);
+        exit
+      end;
+      {$endif}
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
@@ -915,7 +922,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       disposeLiteral(itList);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
-      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveWhile;
@@ -992,7 +998,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       dispose(bodyRule,destroy);
       //----------------------------------------------------------------------cleanup
       didSubstitution:=true;
-      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE resolveWhen;
@@ -1045,7 +1050,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       setLength(bodyParts,0);
       didSubstitution:=true;
-      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
@@ -1105,15 +1109,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
       end;
-      {$ifdef fullVersion}
-      if stepper.currentlyDebugging then begin
-        if parameterListLiteral=nil
-        then context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first),first^.location)
-        else context.adapters^.raiseCustomMessage(mt_debug_step,safeTokenToString(first)+parameterListLiteral^.toParameterListString(true),first^.location);
-        context.adapters^.raiseCustomMessage(mt_debug_step,'-> '+tokensToString(firstReplace),first^.location);
-      end;
-      reportableStep:=true;
-      {$endif}
       context.disposeToken(first);
       if parameterListToken<>nil then context.disposeToken(parameterListToken);
       first:=firstReplace;
@@ -1175,7 +1170,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
-      {$ifdef fullVersion}reportableStep:=true;{$endif}
     end;
 
   PROCEDURE applyMutation;
@@ -1304,7 +1298,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.data:=newLit; //store new literal in head
         stack_popDestroy; //pop operator from stack
         stack_popDestroy; //pop LHS-Literal from stack
-        {$ifdef fullVersion}reportableStep:=true;{$endif}
       end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
@@ -1325,7 +1318,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first:=context.disposeToken(first); //drop true
             first:=context.disposeToken(first); //drop AND
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else begin
             //false AND ... -> false
             p:=first^.next;
@@ -1336,7 +1328,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             first^.next:=p;
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end;
         end else raiseLazyBooleanError(first^.next^.location);
         tt_operatorLazyOr:if (cTokType[0]=tt_literal) and (P_literal(first^.data)^.literalType=lt_boolean) then begin
@@ -1350,13 +1341,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             first^.next:=p;
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else begin
             //false OR ... -> ...
             first:=context.disposeToken(first); //drop false
             first:=context.disposeToken(first); //drop OR
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end;
         end else raiseLazyBooleanError(first^.next^.location);
         tt_operatorOrElse: if (cTokType[0]=tt_literal) then begin
@@ -1365,7 +1354,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             first:=context.disposeToken(first); //drop void
             first:=context.disposeToken(first); //drop orElse
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else begin
             //<Lit> orElse ... -> <Lit>
             p:=first^.next;
@@ -1376,8 +1364,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             first^.next:=p;
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
-
           end;
         end;
         else begin
@@ -1385,7 +1371,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           stack[length(stack)-2]:=first; first:=first^.next;
           stack[length(stack)-1]:=first; first:=first^.next;
           didSubstitution:=true;
-          {$ifdef fullVersion}reportableStep:=true;{$endif}
         end;
       end;
     end;
@@ -1398,26 +1383,17 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               getEnumName(TypeInfo(cTokType[ 2]),ord(cTokType[ 2]));
     end;
 
-  PROCEDURE currentStateMessage({$ifdef fullVersion}CONST debug:boolean{$endif});
+  PROCEDURE currentStateMessage();
     VAR i,i0:longint;
         prevWasIdLike:boolean=false;
         p:P_token;
         stepMessage:T_storedMessage;
-        {$ifdef fullVersion}
-        variableReport:T_variableReport;
-        {$endif}
     begin
       with stepMessage do begin
-        {$ifdef fullVersion}if debug then messageType:=mt_debug_step else {$endif}
         messageType:=mt_el3_stackTrace;
         simpleMessage:='';
         location:=first^.location;
       end;
-      {$ifdef fullVersion}
-      variableReport.create;
-      if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(variableReport);
-      context.reportVariables(variableReport);
-      {$endif}
       if length(stack)>16 then begin
         stepMessage.simpleMessage:='... ';
         i0:=length(stack)-16;
@@ -1425,21 +1401,17 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         stepMessage.simpleMessage:=' ';
         i0:=0;
       end;
-      for i:=i0 to length(stack)-1 do stepMessage.simpleMessage:=stepMessage.simpleMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike{$ifdef fullVersion},variableReport{$endif});
+      for i:=i0 to length(stack)-1 do stepMessage.simpleMessage:=stepMessage.simpleMessage+stack[i]^.toString(prevWasIdLike,prevWasIdLike);
       i:=0;
       stepMessage.simpleMessage:=stepMessage.simpleMessage+' # ';
       prevWasIdLike:=false;
       p:=first;
       while (p<>nil) and (i<16) do begin
-        stepMessage.simpleMessage:=stepMessage.simpleMessage+p^.toString(prevWasIdLike,prevWasIdLike{$ifdef fullVersion},variableReport{$endif});
+        stepMessage.simpleMessage:=stepMessage.simpleMessage+p^.toString(prevWasIdLike,prevWasIdLike);
         p:=p^.next;
         inc(i);
       end;
       if (p<>nil) then stepMessage.simpleMessage:=stepMessage.simpleMessage+' ...';
-      {$ifdef fullVersion}
-      variableReport.toStep(stepMessage);
-      variableReport.destroy;
-      {$endif}
       context.adapters^.raiseCustomMessage(stepMessage);
     end;
 
@@ -1466,6 +1438,7 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 tt_semicolon: if (cTokType[-1]=tt_begin) then begin
   if (cTokType[2]=tt_end) then begin
     stack_popDestroy;
+    {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut; {$endif}
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
     context.valueStore.scopePop;
@@ -1478,16 +1451,17 @@ tt_semicolon: if (cTokType[-1]=tt_begin) then begin
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
   begin
+    {$ifdef fullVersion}
+    if currentlyDebugging then stepper.steppingIn;
+    {$endif}
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
-    {$ifdef fullVersion} reportableStep:=false; {$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
       //writeln(tokensToString(first,10));      writeln(tokenContextString);
       {$ifdef fullVersion}
-      if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
-      reportableStep:=true;
+      if currentlyDebugging then stepper.stepping(first^.location,@context);
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
@@ -1517,7 +1491,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               //applied comparator is replaced by operator 'and'
               stack[length(stack)-1]^.tokType:=tt_operatorAnd;
               didSubstitution:=true;
-              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end else process_op_lit;
           end;
           tt_operatorAnd, tt_operatorOr,
@@ -1567,7 +1540,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 first^.next^.tokType:=tt_parList;
                 first^.next^.data:=newLit;        // -> | get (<Lit>|<NewList>) ...
               end;
-              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
@@ -1580,7 +1552,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first:=context.disposeToken(first); //dispose closing bracket
               stack_popLink; //pop parameter list
               stack_popLink; //pop FUNCTION
-              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
               P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true,context.adapters^);
@@ -1595,6 +1566,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               stack_popDestroy;
+              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1612,6 +1584,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               first:=context.disposeToken(first);
+              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1645,7 +1618,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           if first^.data<>nil then begin
             first^.tokType:=tt_literal;
             didSubstitution:=true;
-            {$ifdef fullVersion}reportableStep:=true;{$endif}
           end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
         tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack_push; end;
@@ -1664,7 +1636,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           first^.tokType:=tt_parList;
           stack_popLink;
           didSubstitution:=true;
-          {$ifdef fullVersion}reportableStep:=true;{$endif}
         end;
         tt_listBraceOpen: if cTokType[1]=tt_listBraceClose then begin
           //empty list
@@ -1713,7 +1684,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first^.next:=context.disposeToken(first^.next); //drop +
               first^.next:=context.disposeToken(first^.next); //drop )
               didSubstitution:=true;
-              {$ifdef fullVersion}reportableStep:=true;{$endif}
             end else startOrPushParameterList;
           end;
           tt_parList: applyRule(first^.next,first^.next^.next);
@@ -1741,10 +1711,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
-
-    {$ifdef fullVersion}
-    if reportableStep and stepper.stepping(first^.location) then currentStateMessage(true);
-    {$endif}
     {$ifndef debugMode}
     except
       on e:Exception do begin
@@ -1768,9 +1734,12 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         context.cascadeDisposeToken(first);
       end;
     end else begin
-      if (first<>nil) then currentStateMessage({$ifdef fullVersion} false{$endif});
+      if (first<>nil) then currentStateMessage();
       while (length(stack)>0) do stack_popLink;
     end;
+    {$ifdef fullVersion}
+    if currentlyDebugging then stepper.steppingOut;
+    {$endif}
   end;
 
 {$endif}

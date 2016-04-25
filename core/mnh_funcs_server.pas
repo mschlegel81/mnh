@@ -65,8 +65,14 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
        (arg1^.literalType=lt_expression) and
        (P_expressionLiteral(arg1)^.arity<=1) and
        (arg2^.literalType in [lt_int,lt_real]) then begin
-      if arg2^.literalType=lt_int then timeOut:=int2^.value/(24*60*60)
-                                  else timeOut:=real2^.value/(24*60*60);
+      {$ifdef fullVersion}
+      if currentlyDebugging then begin
+        context.adapters^.raiseError('Cannot start microserver in debug mode. Sorry.',tokenLocation);
+        exit(nil);
+      end;
+      {$endif}
+      if arg2^.literalType=lt_int then Timeout:=int2^.value/(24*60*60)
+                                  else Timeout:=real2^.value/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       if servingExpression^.arity=0 then begin
         new(servingSubrule,clone(servingExpression^.value));

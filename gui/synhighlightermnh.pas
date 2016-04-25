@@ -37,7 +37,6 @@ CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
 {mt_echo_input,                        } tkDefault,
 {mt_echo_declaration,                  } tkDefault,
 {mt_echo_output,                       } tkDefault,
-{mt_debug_step,                        } tkDefault,
 {mt_el1_note,                          } tkNote,
 {mt_el2_warning,                       } tkWarning,
 {mt_el3_evalError,                     } tkError,
@@ -199,13 +198,13 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     styleTable[tkBultinRule      ].foreground:=$00FF0000;
     styleTable[tkSpecialRule     ].foreground:=$00FF0000;
     styleTable[tkOperator        ].foreground:=$00880000;
-    styleTable[tkNonStringLiteral].foreground:=$000000FF;
+    styleTable[tkNonStringLiteral].foreground:=$000000ff;
     styleTable[tkString          ].foreground:=$00008800;
-    styleTable[tkModifier        ].foreground:=$000088FF;
+    styleTable[tkModifier        ].foreground:=$000088ff;
     styleTable[tkNull            ].foreground:=$00000000;
-    styleTable[tkError           ].foreground:=$000000FF; styleTable[tkError].background:=$0000FFFF;
-    styleTable[tkWarning         ].foreground:=$000000FF;
-    styleTable[tkTimingNote      ].Background:=$00EEEEEE;
+    styleTable[tkError           ].foreground:=$000000ff; styleTable[tkError].background:=$0000FFFF;
+    styleTable[tkWarning         ].foreground:=$000000ff;
+    styleTable[tkTimingNote      ].background:=$00EEEEEE;
     styleTable[tkHashVariable    ].foreground:=$00FF0000;
     styleTable[tkHashVariable    ].background:=$00FFEEDD;
 
@@ -265,7 +264,6 @@ PROCEDURE TSynMnhSyn.next;
   FUNCTION startsWith(CONST prefix:shortString):boolean;
     begin
       result:=continuesWith(prefix,0);
-      if result then writeln('Starts with "',prefix,'"');
     end;
 
   begin
@@ -287,7 +285,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
       if i>=0 then run:=i+1;
       fTokenId:=tokenKindForMt[specialLineCase];
-      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_debug_step]) then while (fLine[run]<>#0) do inc(run);
+      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input]) then while (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
     if contextStack.top=cse_blobstring then begin

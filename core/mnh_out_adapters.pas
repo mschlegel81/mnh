@@ -127,34 +127,53 @@ TYPE
   end;
 
   {$ifdef fullVersion}
-  T_debugSignal=(ds_wait,ds_run,ds_runUntilBreak,ds_verboseRunUntilBreak,ds_step);
+
+  { T_stepper }
 
   T_stepper=object
-    breakpoints:array of T_tokenLocation;
-    cs:TRTLCriticalSection;
-    signal:T_debugSignal;
-    toStep:longint;
+    private
+      waitingForGUI:boolean;
 
-    CONSTRUCTOR create;
-    DESTRUCTOR destroy;
-    FUNCTION stepping(CONST location:T_tokenLocation):boolean;
-    FUNCTION currentlyDebugging:boolean;
+      breakpoints:array of T_tokenLocation;
+      stepOutPending:boolean;
+      stepInPending:boolean;
+      stepPending:boolean;
+      stepLevel:longint;
 
-    PROCEDURE doStart;
-    PROCEDURE setSignal(CONST sig:T_debugSignal);
-    PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
-    PROCEDURE toggleBreakpoint(CONST fileName:ansistring; CONST line:longint);
-    PROCEDURE removeBreakpoint(CONST index:longint);
-    PROCEDURE doStep;
-    PROCEDURE doMultiStep(CONST stepCount:longint);
-    PROCEDURE onAbort;
-    FUNCTION haltet:boolean;
+      contextPointer:pointer;
+      packagePointer:pointer;
+      cancelling:boolean;
+      currentLine:T_tokenLocation;
+      currentLevel:longint;
+      cs:TRTLCriticalSection;
+      //Single instance. So this can be private.
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+    public
+      //To be called by evaluation-loop
+      PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToContext:pointer);
+      PROCEDURE steppingIn ();
+      PROCEDURE steppingOut();
+
+      //To be called by GUI
+      PROCEDURE doStart(CONST continue:boolean);
+      PROCEDURE clearBreakpoints;
+      PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
+      PROCEDURE doStepInto;
+      PROCEDURE doStepOut;
+      PROCEDURE doStep;
+      PROCEDURE doStop;
+      FUNCTION haltet:boolean;
+      FUNCTION context:pointer;
+      FUNCTION package:pointer;
+      FUNCTION loc:T_tokenLocation;
   end;
   {$endif}
 
 VAR
   {$ifdef fullVersion}
   stepper:T_stepper;
+  currentlyDebugging:boolean=false;
   gui_started:boolean=false;
   {$endif}
   nullAdapter:T_adapters;
@@ -210,7 +229,7 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 PROCEDURE T_textFileOutAdapter.append(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited append(message);
-    with storedMessages[length(storedMessages)-1] do if messageType in [mt_debug_step,mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
+    with storedMessages[length(storedMessages)-1] do if messageType in [mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
 
@@ -238,7 +257,7 @@ PROCEDURE T_textFileOutAdapter.flush;
             mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
             mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
             mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(simpleMessage);
             mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
             else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
               myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
@@ -581,7 +600,8 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST
     or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
     or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     case messageType of
-      mt_debug_step,mt_el3_stackTrace:
+      mt_timing_info: writeln(stdErr,'',errorMessage);
+      mt_el3_stackTrace:
         writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',replaceAll(errorMessage,#28,' '));
       mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
         writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',           errorMessage         );
@@ -650,7 +670,12 @@ PROCEDURE T_collectingOutAdapter.clearMessages;
 CONSTRUCTOR T_stepper.create;
   begin
     system.initCriticalSection(cs);
-    setSignal(ds_run);
+    setLength(breakpoints,0);
+    stepOutPending:=false;
+    stepInPending:=false;
+    stepPending:=false;
+    contextPointer:=nil;
+    cancelling:=false;
   end;
 
 DESTRUCTOR T_stepper.destroy;
@@ -658,7 +683,7 @@ DESTRUCTOR T_stepper.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_stepper.stepping(CONST location:T_tokenLocation):boolean;
+PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToContext: pointer);
   FUNCTION breakpointEncountered:boolean;
     VAR i:longint;
     begin
@@ -669,60 +694,95 @@ FUNCTION T_stepper.stepping(CONST location:T_tokenLocation):boolean;
     end;
 
   begin
-    if signal=ds_run then exit(false);
     system.enterCriticalSection(cs);
-    if signal in [ds_runUntilBreak,ds_verboseRunUntilBreak] then begin
-      if breakpointEncountered then begin
-        signal:=ds_wait;
-        result:=true;
-      end else result:=(signal=ds_verboseRunUntilBreak);
+    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) or (location=C_nilTokenLocation) then begin
       system.leaveCriticalSection(cs);
-      exit(result);
+      exit;
     end;
-    if signal=ds_wait then repeat
-      system.leaveCriticalSection(cs);
-      sleep(10);
-      system.enterCriticalSection(cs);
-    until signal<>ds_wait;
-    if signal=ds_step then begin
-      dec(toStep);
-      if toStep<=0 then signal:=ds_wait;
+    currentLine:=location;
+    contextPointer:=pointerToContext;
+    if (stepPending and (currentLevel<=stepLevel)) or breakpointEncountered then begin
+      stepInPending:=false;
+      stepOutPending:=false;
+      stepPending:=false;
+      waitingForGUI:=true;
+      repeat
+        system.leaveCriticalSection(cs);
+        sleep(10);
+        system.enterCriticalSection(cs);
+      until not(waitingForGUI);
     end;
     system.leaveCriticalSection(cs);
-    result:=true;
   end;
 
-FUNCTION T_stepper.currentlyDebugging:boolean;
-  begin result:=signal<>ds_run; end;
+PROCEDURE T_stepper.steppingIn();
+  begin
+    system.enterCriticalSection(cs);
+    inc(currentLevel);
+    if stepInPending then begin
+      stepPending:=true;
+      stepLevel:=currentLevel;
+      stepInPending:=false;
+    end;
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.steppingOut();
+  begin
+    system.enterCriticalSection(cs);
+    dec(currentLevel);
+    if stepOutPending then begin
+      stepPending:=true;
+      stepLevel:=currentLevel;
+      stepOutPending:=false;
+    end;
+    system.leaveCriticalSection(cs);
+  end;
 
 PROCEDURE T_stepper.doStep;
   begin
     system.enterCriticalSection(cs);
-    signal:=ds_step;
-    toStep:=1;
+    stepPending:=true;
+    stepLevel:=currentLevel;
+    waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.doStart;
+PROCEDURE T_stepper.doStop;
   begin
     system.enterCriticalSection(cs);
-    if length(breakpoints)=0 then signal:=ds_step
-                             else signal:=ds_runUntilBreak;
+    cancelling:=true;
+    waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.setSignal(CONST sig:T_debugSignal);
+PROCEDURE T_stepper.doStart(CONST continue:boolean);
   begin
     system.enterCriticalSection(cs);
-    signal:=sig;
+    if not(continue) then begin
+      stepPending:=(length(breakpoints)=0);
+      stepLevel:=0;
+      cancelling:=false;
+    end;
+    stepInPending:=false;
+    stepOutPending:=false;
+    waitingForGUI:=false;
+    currentLevel:=0;
+    currentLine:=C_nilTokenLocation;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.addBreakpoint(CONST fileName:ansistring; CONST line:longint);
+PROCEDURE T_stepper.clearBreakpoints;
+  begin
+    system.enterCriticalSection(cs);
+    setLength(breakpoints,0);
+    system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.addBreakpoint(CONST fileName: ansistring; CONST line: longint);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    signal:=ds_runUntilBreak;
     i:=length(breakpoints);
     setLength(breakpoints,i+1);
     breakpoints[i].fileName:=fileName;
@@ -730,48 +790,42 @@ PROCEDURE T_stepper.addBreakpoint(CONST fileName:ansistring; CONST line:longint)
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.toggleBreakpoint(CONST fileName:ansistring; CONST line:longint);
-  VAR i:longint;
+PROCEDURE T_stepper.doStepInto;
   begin
     system.enterCriticalSection(cs);
-    signal:=ds_runUntilBreak;
-    i:=0;
-    while (i<length(breakpoints)) and not((breakpoints[i].fileName=fileName) and (breakpoints[i].line=line)) do inc(i);
-    if i<length(breakpoints) then removeBreakpoint(i)
-                             else addBreakpoint(fileName,line);
+    stepInPending:=true;
+    waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
 
-
-PROCEDURE T_stepper.removeBreakpoint(CONST index:longint);
-  VAR i:longint;
+PROCEDURE T_stepper.doStepOut;
   begin
     system.enterCriticalSection(cs);
-    if (index>=0) and (index<length(breakpoints)) then begin
-      for i:=index to length(breakpoints)-2 do breakpoints[i]:=breakpoints[i+1];
-      setLength(breakpoints,length(breakpoints)-1);
-    end;
+    stepOutPending:=true;
+    waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.doMultiStep(CONST stepCount:longint);
+FUNCTION T_stepper.haltet: boolean;
   begin
     system.enterCriticalSection(cs);
-    signal:=ds_step;
-    toStep:=stepCount;
+    result:=waitingForGUI;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.onAbort;
+FUNCTION T_stepper.context: pointer;
   begin
-    signal:=ds_run;
+    result:=contextPointer;
   end;
 
-FUNCTION T_stepper.haltet:boolean;
+FUNCTION T_stepper.package: pointer;
   begin
-    system.enterCriticalSection(cs);
-    result:=(signal=ds_wait);
-    system.leaveCriticalSection(cs);
+    result:=packagePointer;
+  end;
+
+FUNCTION T_stepper.loc: T_tokenLocation;
+  begin
+    result:=currentLine;
   end;
 
 {$endif}
