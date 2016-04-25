@@ -315,6 +315,41 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       end;
     end;
 
+  {$ifdef fullVersion}
+  PROCEDURE wrapResult;
+    FUNCTION parId(CONST index:longint):string;
+      begin
+        result:=pattern.sig[index].id;
+        if result='' then result:='#'+intToStr(i);
+      end;
+
+    VAR newFirst,tmp:P_token;
+        i,i1:longint;
+    begin
+      //Example: f(x,y)->...
+      //add before: begin
+      //              local x:=x;
+      //              local y:=y;
+      //add after:  ; end
+      //pattern.sig[0].id;
+      newFirst:=context.newToken(C_nilTokenLocation,'',tt_begin);
+      tmp:=newFirst;
+      if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
+      for i:=0 to i1-1 do begin
+        tmp^.next:=context.newToken(C_nilTokenLocation,parId(i),tt_assignNewBlockLocal); tmp:=tmp^.next;
+        tmp^.next:=context.newToken(C_nilTokenLocation,'',tt_literal,param^.value(i));   tmp:=tmp^.next;
+        tmp^.next:=context.newToken(C_nilTokenLocation,'',tt_semicolon);                 tmp:=tmp^.next;
+        param^.value(i)^.rereference;
+      end;
+      tmp^.next:=firstRep;
+      firstRep:=newFirst;
+      lastRep^.next:=context.newToken(C_nilTokenLocation,'',tt_semicolon); lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(C_nilTokenLocation,'',tt_end); lastRep:=lastRep^.next;
+      lastRep^.txt:='#';
+      stepper.steppingIn();
+    end;
+  {$endif}
+
   begin
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
@@ -348,6 +383,9 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         end;
       end;
     end;
+    {$ifdef fullVersion}
+    if currentlyDebugging and result and (param<>nil) and (param^.size<>0) then wrapResult;
+    {$endif}
   end;
 
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);

@@ -67,7 +67,7 @@ DESTRUCTOR T_token.destroy;
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer);
   begin
     location:=tokenLocation;
-    if (tokenText='') or (C_tokenString[tokenType]<>'')
+    if (tokenText='') and (C_tokenString[tokenType]<>'')
       then txt:=C_tokenString[tokenType]
       else txt:=tokenText;
     tokType:=tokenType;

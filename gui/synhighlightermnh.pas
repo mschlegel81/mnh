@@ -264,7 +264,6 @@ PROCEDURE TSynMnhSyn.next;
   FUNCTION startsWith(CONST prefix:shortString):boolean;
     begin
       result:=continuesWith(prefix,0);
-      if result then writeln('Starts with "',prefix,'"');
     end;
 
   begin

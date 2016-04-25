@@ -138,10 +138,13 @@ TYPE
       stepOutPending:boolean;
       stepInPending:boolean;
       stepPending:boolean;
+      stepLevel:longint;
+
       contextPointer:pointer;
       packagePointer:pointer;
       cancelling:boolean;
       currentLine:T_tokenLocation;
+      currentLevel:longint;
       cs:TRTLCriticalSection;
       //Single instance. So this can be private.
       CONSTRUCTOR create;
@@ -149,11 +152,11 @@ TYPE
     public
       //To be called by evaluation-loop
       PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToContext:pointer);
-      PROCEDURE steppingIn (CONST location:T_tokenLocation; CONST pointerToContext:pointer; CONST callId:string);
-      PROCEDURE steppingOut(CONST location:T_tokenLocation; CONST pointerToContext:pointer; CONST callId:string);
+      PROCEDURE steppingIn ();
+      PROCEDURE steppingOut();
 
       //To be called by GUI
-      PROCEDURE doStart;
+      PROCEDURE doStart(CONST continue:boolean);
       PROCEDURE clearBreakpoints;
       PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
       PROCEDURE doStepInto;
@@ -254,7 +257,7 @@ PROCEDURE T_textFileOutAdapter.flush;
             mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
             mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
             mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
+            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(simpleMessage);
             mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
             else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
               myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
@@ -597,6 +600,7 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST
     or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
     or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     case messageType of
+      mt_timing_info: writeln(stdErr,'',errorMessage);
       mt_el3_stackTrace:
         writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',replaceAll(errorMessage,#28,' '));
       mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
@@ -691,13 +695,15 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToCon
 
   begin
     system.enterCriticalSection(cs);
-    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) then begin
+    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) or (location=C_nilTokenLocation) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
     currentLine:=location;
     contextPointer:=pointerToContext;
-    if stepPending or breakpointEncountered then begin
+    if (stepPending and (currentLevel<=stepLevel)) or breakpointEncountered then begin
+      stepInPending:=false;
+      stepOutPending:=false;
       stepPending:=false;
       waitingForGUI:=true;
       repeat
@@ -709,20 +715,35 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToCon
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingIn(CONST location: T_tokenLocation; CONST pointerToContext: pointer; CONST callId: string);
+PROCEDURE T_stepper.steppingIn();
   begin
-
+    system.enterCriticalSection(cs);
+    inc(currentLevel);
+    if stepInPending then begin
+      stepPending:=true;
+      stepLevel:=currentLevel;
+      stepInPending:=false;
+    end;
+    system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingOut(CONST location: T_tokenLocation; CONST pointerToContext: pointer; CONST callId: string);
+PROCEDURE T_stepper.steppingOut();
   begin
-
+    system.enterCriticalSection(cs);
+    dec(currentLevel);
+    if stepOutPending then begin
+      stepPending:=true;
+      stepLevel:=currentLevel;
+      stepOutPending:=false;
+    end;
+    system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_stepper.doStep;
   begin
     system.enterCriticalSection(cs);
     stepPending:=true;
+    stepLevel:=currentLevel;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -735,12 +756,19 @@ PROCEDURE T_stepper.doStop;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.doStart;
+PROCEDURE T_stepper.doStart(CONST continue:boolean);
   begin
     system.enterCriticalSection(cs);
-    stepPending:=(length(breakpoints)=0);
+    if not(continue) then begin
+      stepPending:=(length(breakpoints)=0);
+      stepLevel:=0;
+      cancelling:=false;
+    end;
+    stepInPending:=false;
+    stepOutPending:=false;
     waitingForGUI:=false;
-    cancelling:=false;
+    currentLevel:=0;
+    currentLine:=C_nilTokenLocation;
     system.leaveCriticalSection(cs);
   end;
 

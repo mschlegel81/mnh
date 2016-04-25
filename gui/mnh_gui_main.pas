@@ -11,7 +11,7 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts;
+  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts, SynEditMiscClasses, SynEditMarkupSpecialLine;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -198,6 +198,7 @@ TYPE
     PROCEDURE tbStepClick(Sender: TObject);
     PROCEDURE tbStepOutClick(Sender: TObject);
     PROCEDURE tbStopClick(Sender: TObject);
+    PROCEDURE InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
 
   private
     outputHighlighter,debugHighlighter,helpHighlighter:TSynMnhSyn;
@@ -208,6 +209,10 @@ TYPE
       start:double;
       deferredUntil:double;
     end;
+    lastStart:record
+      mainCall:boolean;
+      parameters:string;
+    end;
 
     outputFocusedOnFind:boolean;
     forceInputEditFocusOnOutputEditMouseUp:boolean;
@@ -215,6 +220,10 @@ TYPE
     doNotMarkWordBefore:double;
     doNotCheckFileBefore:double;
     breakPointHandlingPending:boolean;
+    debugLine:record
+      editor:TSynEdit;
+      line:longint;
+    end;
     wordsInEditor:T_listOfString;
 
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
@@ -392,7 +401,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
     if miDebug.Checked then begin
       currentlyDebugging:=true;
       for i:=0 to 9 do editorMeta[i].startDebugging;
-      stepper.doStart;
+      stepper.doStart(false);
       updateDebugParts;
       breakPointHandlingPending:=true;
     end else currentlyDebugging:=false;
@@ -457,6 +466,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
       deferredUntil:=now;
       start:=now;
     end;
+    lastStart.mainCall:=false;
     editorMeta[0].editor:=InputEdit0;
     editorMeta[1].editor:=InputEdit1;
     editorMeta[2].editor:=InputEdit2;
@@ -619,6 +629,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>evaluation.deferredUntil then begin
         doStartEvaluation(false,false);
+        lastStart.mainCall:=false;
         with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
       end else evaluation.required:=true;
     end;
@@ -675,7 +686,9 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     askForm.initWithQuestion('Please give command line parameters');
     if askForm.ShowModal=mrOk then begin
       doStartEvaluation(true,false);
-      with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,askForm.getLastAnswerReleasing);
+      lastStart.mainCall:=true;
+      lastStart.parameters:=askForm.getLastAnswerReleasing;
+      with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,lastStart.parameters);
     end else askForm.getLastAnswerReleasing;
   end;
 
@@ -778,6 +791,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>evaluation.deferredUntil then begin
       doStartEvaluation(true,false);
+      lastStart.mainCall:=false;
       with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,false);
     end else evaluation.required:=true;
   end;
@@ -973,8 +987,8 @@ PROCEDURE TMnhForm.updateDebugParts;
       handleButton(tbStop,ad_evaluationRunning,2);
       handleButton(tbRun,not(ad_evaluationRunning) or stepper.haltet,0);
       handleButton(tbStep,ad_evaluationRunning and stepper.haltet,4);
-      handleButton(tbStepIn,false,6);
-      handleButton(tbStepOut,false,8);
+      handleButton(tbStepIn,ad_evaluationRunning and stepper.haltet,6);
+      handleButton(tbStepOut,ad_evaluationRunning and stepper.haltet,8);
     end else begin
       for i:=0 to 9 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.ShowTabs:=false;
@@ -989,6 +1003,7 @@ PROCEDURE TMnhForm.handleBreak;
     VAR pageIdx:longint;
         newCaret:TPoint;
     begin
+      debugLine.line:=-1;
       if (stepper.loc.fileName='') or (stepper.loc.fileName='?') then exit;
       pageIdx:=getInputEditIndexForFilename(stepper.loc.fileName);
       if pageIdx>=0 then begin
@@ -996,6 +1011,9 @@ PROCEDURE TMnhForm.handleBreak;
         newCaret.x:=stepper.loc.column;
         newCaret.y:=stepper.loc.line;
         editorMeta[pageIdx].editor.CaretXY:=newCaret;
+        debugLine.editor:=editorMeta[pageIdx].editor;
+        debugLine.line:=newCaret.y;
+        editorMeta[pageIdx].editor.Repaint;
       end;
     end;
 
@@ -1017,7 +1035,7 @@ PROCEDURE TMnhForm.handleBreak;
 
     variablesStringGrid.RowCount:=length(report.dat)+1;
     for i:=0 to length(report.dat)-1 do begin
-      variablesStringGrid.cells[0,i+1]:=report.dat[i].location;
+      variablesStringGrid.Cells[0,i+1]:=report.dat[i].location;
       variablesStringGrid.Cells[1,i+1]:=report.dat[i].id;
       variablesStringGrid.Cells[2,i+1]:=report.dat[i].value^.typeString;
       variablesStringGrid.Cells[3,i+1]:=report.dat[i].value^.toString;
@@ -1122,7 +1140,7 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseA
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
-    autosizeToggleBox.top:=OutputEdit.top;
+    autosizeToggleBox.top:=outputPageControl.top;
     autosizeToggleBox.Checked:=false;
   end;
 
@@ -1195,8 +1213,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
     //progress time:------------------------------------------------------------
-    if stepper.haltet and isEvaluationRunning then aid:=C_tabChar+'[haltet]'
-    else if PageControl.ActivePageIndex>=0
+    if PageControl.ActivePageIndex>=0
     then aid:=C_tabChar+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretX)
     else aid:='';
     if isEvaluationRunning then begin
@@ -1215,7 +1232,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       miCallMain.Enabled:=not(isEvaluationRunning);
     end;
     //--------------------------------------------------:Halt/Run enabled states
-
     //================================================================:fast ones
     //slow ones:================================================================
     //if not(isEvaluationRunning) then for i:=0 to 9 do inputRec[i].editor.readonly:=false;
@@ -1228,6 +1244,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
     if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation(false,false);
+      lastStart.mainCall:=false;
       with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
@@ -1355,7 +1372,14 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
-    stepper.doStart;
+    if not(ad_evaluationRunning) then begin
+      doStartEvaluation(true,false);
+      if lastStart.mainCall then begin
+        with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,lastStart.parameters);
+      end else begin
+        with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
+      end;
+    end else stepper.doStart(true);
     updateDebugParts;
     breakPointHandlingPending:=true;
   end;
@@ -1385,6 +1409,11 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
     ad_haltEvaluation;
     stepper.doStop;
+  end;
+
+PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
+  begin
+    Special:=currentlyDebugging and ad_evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;

@@ -14,6 +14,7 @@ CONST
 
 FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
 OPERATOR := (x: T_tokenLocation): ansistring;
+OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_tokenLocation;
 IMPLEMENTATION
 
@@ -28,6 +29,11 @@ OPERATOR := (x: T_tokenLocation): ansistring;
   begin
     if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
     result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
+  end;
+
+OPERATOR = (CONST x,y:T_tokenLocation):boolean;
+  begin
+    result:=(x.fileName=y.fileName) and (x.line=y.line) and (x.column=y.column);
   end;
 
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_tokenLocation;

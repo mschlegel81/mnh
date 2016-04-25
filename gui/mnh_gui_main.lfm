@@ -31,9 +31,9 @@ object MnhForm: TMnhForm
     Top = 30
     Width = 666
     TabStop = False
-    ActivePage = TabSheet9
+    ActivePage = EditorTabSheet
     Align = alTop
-    TabIndex = 9
+    TabIndex = 0
     TabOrder = 1
     OnChange = PageControlChange
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
@@ -370,6 +370,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -729,6 +730,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -1088,6 +1090,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -1447,6 +1450,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -1806,6 +1810,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -2165,6 +2170,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -2524,6 +2530,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -2883,6 +2890,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -3242,6 +3250,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -3601,6 +3610,7 @@ object MnhForm: TMnhForm
         OnChange = InputEditChange
         OnProcessCommand = InputEditProcessUserCommand
         OnProcessUserCommand = InputEditProcessUserCommand
+        OnSpecialLineMarkup = InputEditSpecialLineMarkup
         inline SynLeftGutterPartList1: TSynGutterPartList
           object SynGutterLineNumber1: TSynGutterLineNumber
             Width = 17
@@ -4186,10 +4196,10 @@ object MnhForm: TMnhForm
     Top = 160
     Width = 666
     TabStop = False
-    ActivePage = outputTabSheet
+    ActivePage = variablesTabSheet
     Align = alClient
     ShowTabs = False
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 6
     object outputTabSheet: TTabSheet
       Caption = 'Output'
@@ -4684,15 +4694,23 @@ object MnhForm: TMnhForm
       ClientWidth = 658
       object variablesStringGrid: TStringGrid
         Left = 0
-        Height = 253
+        Height = 273
         Top = 0
         Width = 658
         Align = alClient
+        AutoEdit = False
         ColCount = 4
         FixedCols = 0
         Flat = True
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
         RowCount = 4
         TabOrder = 0
+        ColWidths = (
+          164
+          164
+          164
+          165
+        )
         Cells = (
           4
           0

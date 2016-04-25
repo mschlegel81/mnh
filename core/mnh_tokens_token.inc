@@ -874,11 +874,19 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT) or
          not(context.allowDelegation) or
-         {$ifdef fullVersion}currentlyDebugging or{$endif}
          (workerThreadCount<=0))
       then eachType:=tt_each;
-
       eachLocation:=first^.location;
+      {$ifdef fullVersion}
+      if currentlyDebugging and (eachType=tt_parallelEach) then begin
+        eachType:=tt_each;
+        context.adapters^.raiseNote('Not parallelizing pEach during debugging.',eachLocation);
+      end;
+      if currentlyDebugging and (eachType=tt_forcedParallelEach) then begin
+        context.adapters^.raiseError('PEach is not allowed during debugging. Sorry.',eachLocation);
+        exit
+      end;
+      {$endif}
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
         exit
@@ -1430,6 +1438,7 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 tt_semicolon: if (cTokType[-1]=tt_begin) then begin
   if (cTokType[2]=tt_end) then begin
     stack_popDestroy;
+    {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut; {$endif}
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
     context.valueStore.scopePop;
@@ -1442,6 +1451,9 @@ tt_semicolon: if (cTokType[-1]=tt_begin) then begin
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
   begin
+    {$ifdef fullVersion}
+    if currentlyDebugging then stepper.steppingIn;
+    {$endif}
     setLength(stack,0);
     {$ifndef debugMode} try {$endif}
     repeat
@@ -1554,6 +1566,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               stack_popDestroy;
+              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1571,6 +1584,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[2]=tt_end) and (cTokType[-1]=tt_begin) then begin
               first:=context.disposeToken(first);
+              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1723,6 +1737,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       if (first<>nil) then currentStateMessage();
       while (length(stack)>0) do stack_popLink;
     end;
+    {$ifdef fullVersion}
+    if currentlyDebugging then stepper.steppingOut;
+    {$endif}
   end;
 
 {$endif}
