@@ -10,30 +10,21 @@ private memoized connectedIdx(i:int)->COMPONENTS.each(c,i in c ? drop(c,i) : voi
 private memoized components(i)->COMPONENTS.each(c,i in c ? drop(c,i) : void);
 
 //*A board is solved when all components contain numbers [1..9]
-isSolved(Board)->COMPONENTS.each(c,Board[c].sort==[1..9],AND);
+private isSolved(Board)->COMPONENTS.each(c,Board[c].sort==[1..9],AND);
 //*A board is valid when all components may contain all numbers [1..9]
-isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
-                COMPONENTS.each(c,Board[c].flatten.unique==[1..9],AND);
+private isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
+                        COMPONENTS.each(c,Board[c].flatten.unique==[1..9],AND);
 //*A board's difficulty is given by the number of cells to fill
-difficulty(Board)->Board.each(cell,cell:int ? 0 : 1,+);
+private difficulty(Board)->Board.each(cell,cell:int ? 0 : 1,+);
 
+private
 initialBoard->begin
   local values:=1+random(9).sortPerm;
   local indexes:=[0..8]*9+random(9).sortPerm;
   [0..80].each(i,i in indexes ? values[indexes=i,0] : [1..9]);
 end;
-  
-testBoard:=
-[[1..9],  5   ,[1..9],  9   ,[1..9],[1..9],  6   ,[1..9],  1   ,
-   6   ,  3   ,[1..9],  8   ,[1..9],  5   ,[1..9],  4   ,[1..9],
- [1..9],[1..9],  7   ,[1..9],[1..9],[1..9],[1..9],[1..9],  9   ,
-   3   ,  6   ,[1..9],[1..9],[1..9],  4   ,[1..9],  1   ,[1..9],
- [1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],[1..9],
- [1..9],  9   ,[1..9],  5   ,[1..9],[1..9],[1..9],  8   ,  4   ,
-   1   ,[1..9],[1..9],[1..9],[1..9],[1..9],  4   ,[1..9],[1..9],
- [1..9],  8   ,[1..9],  3   ,[1..9],  9   ,[1..9],  6   ,  7   ,
-   9   ,[1..9],  3   ,[1..9],[1..9],  1   ,[1..9],  2   ,[1..9]];
 
+private
 printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+---------\n" : '',
                [0..8].each(col,begin
                  local i:=col+9*row;
@@ -41,8 +32,7 @@ printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+-------
                  " "&(B[i] :int ? B[i] : " ")&" ";
                end,&)))|B;
 
-debugPrint(B)->printf@("%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%\t%X%"|each(row,[0..8],B[row+9*[0..8]]));
-
+private
 solve(B)->begin
   local needRun:=isValid(B);
   local Board:=B;
@@ -73,6 +63,7 @@ solve(B)->begin
   Board;
 end;
 
+private
 bruteForceSolve(B)->begin
   local Board:=solve(B);
   isSolved(Board) ? Board : begin
@@ -121,9 +112,9 @@ randomRiddle->begin
     void;
   end);
   print('Generated a riddle with difficulty: ',riddle.difficulty);
-  //intIdx:=each(i,[0..80],(riddle%i):int ? i : void);
   riddle;
 end;
 
 //*For regression test: create a random riddle and print it out
 main->randomRiddle.printBoard;
+
