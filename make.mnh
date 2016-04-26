@@ -101,8 +101,6 @@ private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['mnh_light.exe','mnh64_light.exe'],
                     ['bin32/mnh.exe','mnh.exe'],
                     ['bin32/mnh_light.exe','mnh_light.exe']];
-private copyPairs:=[['mnh.exe','../mnh5.bin/mnh.exe'], 
-                    ['mnh_light.exe','../mnh5.bin/mnh_light.exe']];
 private verboseMove(src,dest)->begin
   printf('move %-19s -> %-19s',src,dest);
   moveFile(src,dest);
@@ -112,7 +110,6 @@ end;
 main('distro')->
   [0..3].each(i,build(i),AND) ? begin
     compress('64bit');
-    copyPairs.each(p,copyFile@p);
     movePairs.each(pair,verboseMove@pair,AND)
     ? begin
         compress('32bit');
