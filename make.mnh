@@ -42,14 +42,20 @@ currentCodeHash->begin
                                files(allFolders('.')&'\*.pas'),
                                files(allFolders('.')&'\*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
   //update code hash
-  local result:=relevantFiles.pEach(filename,hash(fileContents(filename)),+).hex;
+  local result:=relevantFiles.each(filename,hash(fileContents(filename)),+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
   ? void 
-  : writeFile('core/code_hash.inc',"writeln(':"&result&"');");
+  : begin
+      writeFile('core/code_hash.inc',"writeln(':"&result&"');");
+      print('core/code_hash.inc updated with current hash ',result);
+    end;
   result;
 end;
 
-private binName(FI:int)->((FI and 1)>0 ? '.\' : 'bin32\') & 'mnh' & ((FI and 2)>0 ? '' : '_light') & ((FI and 4)>0 ? '_debug' : '') & '.exe';
+private binName(FI:int)->format('%smnh%s%s.exe',
+                                (FI and 1)>0 ? '.\' : 'bin32\',
+                                (FI and 2)>0 ? ''   : '_light',
+                                (FI and 4)>0 ? '_debug' : '');
 
 private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);

@@ -1263,12 +1263,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end else UpdateTimeTimer.interval:=MIN_INTERVALL;
     //================================================================:slow ones
     if settings.value^.savingRequested then begin
-      for i:=0 to 9 do with editorMeta[i] do begin
-        if sheet.TabVisible
-        then state:=stateForSaving
-        else state.create;
-        settings.value^.editorState[i]:=state;
-      end;
+      for i:=0 to 9 do with editorMeta[i] do settings.value^.editorState[i]:=stateForSaving;
       saveSettings;
     end;
 

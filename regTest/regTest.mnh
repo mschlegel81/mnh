@@ -125,7 +125,7 @@ main(exe,...)->begin
   randomSample ? testFilter:=[] : void;
   local testCases:=TEST_CASE_DEFINITIONS.each(case,
                    (currentExeCanPlot OR not(case.get(NEED_PLOT_IDX))) AND
-                   (testFilter==[] OR testFilter.each(f,OR,pos(f,case.get(0))>=0)) ? case.get([0..2,4]) : void).sort;
+                   (testFilter==[] OR testFilter.each(f,pos(f,case.get(0))>=0,OR)) ? case.get([0..2,4]) : void).sort;
 
   //count already passed tests and remove them from the list
   testCases:=testCases.each(test,

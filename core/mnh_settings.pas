@@ -310,7 +310,7 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
       i:=f.readLongint;
       if i>=0 then begin
         setLength(lines,i);
-        for i:=0 to length(lines)-1 do lines[i]:=decompressString(f.readAnsiString);
+        for i:=0 to length(lines)-1 do lines[i]:=f.readAnsiString;
         result:=true;
       end else result:=false;
     end else begin
@@ -337,7 +337,7 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
     if changed then begin
       f.writeDouble(fileAccessAge);
       f.writeLongint(length(lines));
-      for i:=0 to length(lines)-1 do f.writeAnsiString(compressString(lines[i],0));
+      for i:=0 to length(lines)-1 do f.writeAnsiString(lines[i]);
     end;
     f.writeLongint(length(markedLines));
     for i:=0 to length(markedLines)-1 do f.writeLongint(markedLines[i]);
@@ -356,7 +356,7 @@ PROCEDURE disposeSettings(settings:P_Settings);
   end;
 
 INITIALIZATION
-  settings.create(@obtainSettings,nil);
+  settings.create(@obtainSettings,@disposeSettings);
 
 FINALIZATION
   settings.destroy;
