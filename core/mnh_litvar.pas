@@ -304,12 +304,12 @@ TYPE
     dat:array of record
           id:ansistring;
           value:P_literal;
-          location:T_tokenLocation;
+          location:string;
         end;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:T_tokenLocation);
-    PROCEDURE addVariable(CONST namedVar:P_namedVariable; CONST location:T_tokenLocation);
+    PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:string);
+    PROCEDURE addVariable(CONST namedVar:P_namedVariable; CONST location:string);
   end;
 
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
@@ -511,15 +511,23 @@ DESTRUCTOR T_variableReport.destroy;
     setLength(dat,0);
   end;
 
-PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal; CONST location: T_tokenLocation);
+PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal; CONST location: string);
+  VAR i,j:longint;
   begin
+    j:=0;
+    for i:=0 to length(dat)-1 do if dat[i].id<>id then begin
+      dat[i]:=dat[j];
+      inc(j);
+    end;
+    setLength(dat,j);
+
     setLength(dat,length(dat)+1);
     dat[length(dat)-1].id:=id;
     dat[length(dat)-1].value:=value;
     dat[length(dat)-1].location:=location;
   end;
 
-PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST location: T_tokenLocation);
+PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST location: string);
   begin
     addVariable(namedVar^.id,namedVar^.value,location);
   end;

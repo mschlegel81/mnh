@@ -20,6 +20,7 @@ T_editorMeta=object
   PROCEDURE toggleBreakpoint;
   FUNCTION pseudoName:ansistring;
   PROCEDURE setStepperBreakpoints;
+  PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -62,13 +63,18 @@ PROCEDURE T_editorMeta.setWorkingDir;
   end;
 
 FUNCTION T_editorMeta.stateForSaving:T_editorState;
+  VAR markedLines:T_arrayOfLongint;
+      i:longint;
   begin
+    setLength(markedLines,0);
+    for i:=0 to editor.Marks.count-1 do appendIfNew(markedLines,editor.Marks[i].line);
     if sheet.TabVisible
-    then result.create(filePath,fileAccessAge,changed,editor.lines)
+    then result.create(filePath,fileAccessAge,changed,editor.lines,markedLines)
     else result.create;
   end;
 
 PROCEDURE T_editorMeta.defineByState(CONST state:T_editorState);
+  VAR i:longint;
   begin
     sheet.TabVisible:=state.visible;
     if state.visible then begin
@@ -76,6 +82,7 @@ PROCEDURE T_editorMeta.defineByState(CONST state:T_editorState);
       fileAccessAge:=state.fileAccessAge;
       filePath     :=state.filePath;
       state.getLines(editor.lines);
+      for i:=0 to length(state.markedLines)-1 do _add_breakpoint_(state.markedLines[i]);
     end;
   end;
 
@@ -100,12 +107,7 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
       editor.Marks.remove(editor.Marks[i]);
       exit;
     end;
-    m:=TSynEditMark.create(editor);
-    m.line:=editor.CaretY;
-    m.ImageList:=MnhForm.breakpointsImagesList;
-    m.ImageIndex:=0;
-    m.visible:=true;
-    editor.Marks.add(m);
+    _add_breakpoint_(editor.CaretY);
   end;
 
 FUNCTION T_editorMeta.pseudoName:ansistring;
@@ -118,6 +120,17 @@ PROCEDURE T_editorMeta.setStepperBreakpoints;
   VAR i:longint;
   begin
     for i:=0 to editor.Marks.count-1 do stepper.addBreakpoint(pseudoName,editor.Marks[i].line);
+  end;
+
+PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex:longint);
+  VAR m:TSynEditMark;
+  begin
+    m:=TSynEditMark.create(editor);
+    m.line:=lineIndex;
+    m.ImageList:=MnhForm.breakpointsImagesList;
+    m.ImageIndex:=0;
+    m.visible:=true;
+    editor.Marks.add(m);
   end;
 
 {$endif}

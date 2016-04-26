@@ -1461,7 +1461,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       initTokTypes;
       //writeln(tokensToString(first,10));      writeln(tokenContextString);
       {$ifdef fullVersion}
-      if currentlyDebugging then stepper.stepping(first^.location,@context);
+      if currentlyDebugging then stepper.stepping(first^.location,first,@context);
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of

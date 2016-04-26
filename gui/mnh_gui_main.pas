@@ -11,7 +11,8 @@ USES
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
-  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts, SynEditMiscClasses, SynEditMarkupSpecialLine;
+  mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,
+  SynEditMiscClasses, SynEditMarkupSpecialLine,mnh_tokens;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -21,6 +22,8 @@ TYPE
   {$include editorMeta.inc}
   {$include guiOutAdapter.inc}
   {$undef includeInterface}
+
+  { TMnhForm }
 
   TMnhForm = class(TForm)
     autosizeToggleBox: TToggleBox;
@@ -119,6 +122,8 @@ TYPE
     outputTabSheet: TTabSheet;
     variablesTabSheet: TTabSheet;
     variablesStringGrid: TStringGrid;
+    GroupBox1: TGroupBox;
+    currentExpressionMemo: TSynMemo;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -500,7 +505,8 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     helpHighlighter:=TSynMnhSyn.create(nil,msf_guessing);
     helpPopupMemo.highlighter:=helpHighlighter;
     OutputEdit.ClearAll;
-    debugHighlighter:=TSynMnhSyn.create(nil,msf_debugger);
+    debugHighlighter:=TSynMnhSyn.create(nil,msf_input);
+    currentExpressionMemo.highlighter:=debugHighlighter;
     endOfEvaluationText.value:=msg;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
@@ -1021,16 +1027,14 @@ PROCEDURE TMnhForm.handleBreak;
       package:P_package;
       report:T_variableReport;
       i:longint;
-
+      first:P_token;
   begin
     if not(stepper).haltet then exit;
     jumpToFile;
 
     context:=P_evaluationContext(stepper.context);
-    package:=P_package(stepper.package);
     report.create;
-    if package<>nil then package^.reportVariables(report)
-    else if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(report);
+    if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(report);
     if context<>nil then context^.reportVariables(report);
 
     variablesStringGrid.RowCount:=length(report.dat)+1;
@@ -1040,6 +1044,10 @@ PROCEDURE TMnhForm.handleBreak;
       variablesStringGrid.Cells[2,i+1]:=report.dat[i].value^.typeString;
       variablesStringGrid.Cells[3,i+1]:=report.dat[i].value^.toString;
     end;
+
+    first:=stepper.token;
+    currentExpressionMemo.clear;
+    if first<>nil then currentExpressionMemo.lines.append(tokensToString(first));
 
     updateDebugParts;
     breakPointHandlingPending:=false;
@@ -1257,7 +1265,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if settings.value^.savingRequested then begin
       for i:=0 to 9 do with editorMeta[i] do begin
         if sheet.TabVisible
-        then state.create(filePath,fileAccessAge,changed,editor.lines)
+        then state:=stateForSaving
         else state.create;
         settings.value^.editorState[i]:=state;
       end;
@@ -1464,6 +1472,7 @@ PROCEDURE TMnhForm.processSettings;
     for i:=1 to 9 do editorMeta[i].editor.Font:=InputEdit0.Font;
 
     OutputEdit  .Font:=InputEdit0.Font;
+    currentExpressionMemo.Font:=InputEdit0.Font;
     helpPopupMemo.Font:=InputEdit0.Font;
     helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
   end;

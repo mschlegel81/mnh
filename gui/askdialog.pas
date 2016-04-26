@@ -118,7 +118,7 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     for i := 0 to length(options)-1 do ComboBox1.Items.add(options [i]);
     if length(options)>0 then Button1.Caption:=options[0];
     if length(options)>1 then Button2.Caption:=options[1];
-    if length(options)>2 then button3.Caption:=options[2];
+    if length(options)>2 then Button3.Caption:=options[2];
     ComboBox1.AutoComplete := true;
     ComboBox1.text := '';
     displayPending := true;
@@ -146,7 +146,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
     if enable then begin
       if count>=1 then begin Button1.Enabled:=true; Button1.visible:=true; end;
       if count>=2 then begin Button2.Enabled:=true; Button2.visible:=true; end;
-      if count>=3 then begin Button3.Enabled:=true; button3.visible:=true; end;
+      if count>=3 then begin Button3.Enabled:=true; Button3.visible:=true; end;
       ComboBox1.Enabled:=false;
       ComboBox1.visible:=false;
     end else begin
@@ -154,7 +154,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
       ComboBox1.visible:=true;
       Button1.Enabled:=false; Button1.visible:=false;
       Button2.Enabled:=false; Button2.visible:=false;
-      Button3.Enabled:=false; button3.visible:=false;
+      Button3.Enabled:=false; Button3.visible:=false;
     end;
   end;
 

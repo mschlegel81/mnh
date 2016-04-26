@@ -29,7 +29,7 @@ TYPE
     tkTimingNote,
     tkHighlightedItem,
     tkHashVariable);
-  T_mnhSynFlavour=(msf_input,msf_output,msf_debugger,msf_guessing);
+  T_mnhSynFlavour=(msf_input,msf_output,msf_guessing);
 
 CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
 {mt_clearConsole,                      } tkDefault,
@@ -410,13 +410,7 @@ PROCEDURE TSynMnhSyn.next;
         if (fLine [run] = '''') then inc(run);
         fTokenId := tkString;
       end;
-      '#': if flavour=msf_debugger then begin
-        inc(run);
-        if fLine[run] in ['0'..'9'] then begin
-          fTokenId := tkHashVariable;
-          while fLine [run] in ['0'..'9'] do inc(run);
-        end else fTokenId:=tkOperator;
-      end else begin
+      '#': begin
         fTokenId := tkDefault;
         inc(run);
       end

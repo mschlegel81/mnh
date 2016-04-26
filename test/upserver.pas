@@ -1,5 +1,5 @@
 PROGRAM upserver;
-USES Classes, blcksock, sockets, Synautil, sysutils;
+USES Classes, blcksock, sockets, synautil, sysutils;
 
 PROCEDURE AttendConnection(ASocket: TTCPBlockSocket);
 VAR
@@ -20,7 +20,7 @@ begin
   protocol := fetch(s, ' ');
 
   repeat
-    s := ASocket.RecvString(Timeout);
+    s := ASocket.RecvString(timeout);
     writeln(s);
   until s = '';
   writeln('URI=',uri);
@@ -59,7 +59,7 @@ begin
   repeat
     if ListenerSocket.canread(1000) then
     begin
-      ConnectionSocket.Socket := ListenerSocket.accept;
+      ConnectionSocket.socket := ListenerSocket.accept;
       writeln('Attending Connection. Error code (0=Success): ', ConnectionSocket.lasterror);
       AttendConnection(ConnectionSocket);
       ConnectionSocket.CloseSocket;

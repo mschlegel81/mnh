@@ -71,8 +71,8 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         exit(nil);
       end;
       {$endif}
-      if arg2^.literalType=lt_int then Timeout:=int2^.value/(24*60*60)
-                                  else Timeout:=real2^.value/(24*60*60);
+      if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
+                                  else timeout:=real2^.value/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
       if servingExpression^.arity=0 then begin
         new(servingSubrule,clone(servingExpression^.value));
@@ -129,7 +129,7 @@ PROCEDURE T_microserver.serve;
   FUNCTION timedOut:boolean;
     begin
       result:=(timeout> 0) and (now-lastActivity>timeout) or
-              (timeOut<=0) and hasKillRequest;
+              (timeout<=0) and hasKillRequest;
     end;
 
   CONST minSleepTime=1;
@@ -157,10 +157,10 @@ PROCEDURE T_microserver.serve;
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
-          then socket.sendString(P_scalarLiteral(response)^.stringForm)
-          else socket.sendString(P_scalarLiteral(response)^.toString);
+          then socket.SendString(P_scalarLiteral(response)^.stringForm)
+          else socket.SendString(P_scalarLiteral(response)^.toString);
           disposeLiteral(response);
-        end else socket.sendString(HTTP_404_RESPONSE);
+        end else socket.SendString(HTTP_404_RESPONSE);
         sleepTime:=minSleepTime;
       end else begin
         sleep(sleepTime);

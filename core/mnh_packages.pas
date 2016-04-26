@@ -980,15 +980,13 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 
 PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
-  VAR firstInBlock:boolean=true;
-      i:longint;
+  VAR i:longint;
       r:T_ruleMap.VALUE_TYPE_ARRAY;
       value:P_literal;
   begin
     r:=importedRules.valueSet;
     for i:=0 to length(r)-1 do begin
       if r[i]^.isReportable(value) then begin
-        firstInBlock:=false;
         variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
       end;
     end;
@@ -996,7 +994,6 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     r:=packageRules.valueSet;
     for i:=0 to length(r)-1 do begin
       if r[i]^.isReportable(value) then begin
-        firstInBlock:=false;
         variableReport.addVariable(r[i]^.id, value, r[i]^.declarationStart);
       end;
     end;

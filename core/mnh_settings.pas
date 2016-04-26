@@ -1,6 +1,6 @@
 UNIT mnh_settings;
 INTERFACE
-USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys;
+USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,myStringUtil;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -26,9 +26,10 @@ T_editorState=object(T_serializable)
   fileAccessAge:double;
   changed:boolean;
   lines:T_arrayOfString;
+  markedLines:T_arrayOfLongint;
 
   CONSTRUCTOR create;
-  CONSTRUCTOR create(CONST path:ansistring; CONST age:double; CONST change:boolean; CONST dat:TStrings);
+  CONSTRUCTOR create(CONST path:ansistring; CONST age:double; CONST change:boolean; CONST dat:TStrings; CONST markedIdx:T_arrayOfLongint);
   PROCEDURE getLines(CONST dat:TStrings);
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
@@ -275,9 +276,10 @@ CONSTRUCTOR T_editorState.create;
     fileAccessAge:=0;
     changed:=false;
     setLength(lines,0);
+    setLength(markedLines,0);
   end;
 
-CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONST change: boolean; CONST dat: TStrings);
+CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONST change: boolean; CONST dat: TStrings; CONST markedIdx: T_arrayOfLongint);
   VAR i:longint;
   begin
     visible:=true;
@@ -286,6 +288,7 @@ CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONS
     changed:=change;
     setLength(lines,dat.count);
     for i:=0 to dat.count-1 do lines[i]:=dat[i];
+    markedLines:=markedIdx;
   end;
 
 PROCEDURE T_editorState.getLines(CONST dat: TStrings);
@@ -307,7 +310,7 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
       i:=f.readLongint;
       if i>=0 then begin
         setLength(lines,i);
-        for i:=0 to length(lines)-1 do lines[i]:=f.readAnsiString;
+        for i:=0 to length(lines)-1 do lines[i]:=decompressString(f.readAnsiString);
         result:=true;
       end else result:=false;
     end else begin
@@ -316,6 +319,11 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
                 else visible:=false;
       result:=true;
     end;
+    i:=f.readLongint;
+    if i>=0 then begin
+      setLength(markedLines,i);
+      for i:=0 to length(markedLines)-1 do markedLines[i]:=f.readLongint;
+    end else result:=false;
   end;
 
 PROCEDURE T_editorState.saveToFile(VAR F: T_file);
@@ -329,8 +337,10 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
     if changed then begin
       f.writeDouble(fileAccessAge);
       f.writeLongint(length(lines));
-      for i:=0 to length(lines)-1 do f.writeAnsiString(lines[i]);
+      for i:=0 to length(lines)-1 do f.writeAnsiString(compressString(lines[i],0));
     end;
+    f.writeLongint(length(markedLines));
+    for i:=0 to length(markedLines)-1 do f.writeLongint(markedLines[i]);
   end;
 
 FUNCTION obtainSettings:P_Settings;
