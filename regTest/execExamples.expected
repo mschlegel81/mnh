@@ -149,7 +149,7 @@ out> [false,true,false]
  in> cos(-0.92);
 out> 0.605820156643463
  in> cos(3);
-out> -0.989992496600446
+out> -0.989992496600445
  in> cos({1+$x});
 out> {cos(1+$x)}
  in> exp(-0.92);
@@ -404,6 +404,6 @@ out> 'Test'
  in> compress('Test').decompress;
 out> 'Test'
  in> compress('Testtext');
-out> '¼¿¥ïR'
+out> '?????R'
  in> compress('Testtext').decompress;
 out> 'Testtext'

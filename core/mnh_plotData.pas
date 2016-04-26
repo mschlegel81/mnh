@@ -285,10 +285,12 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
         options:=trim(copy(options, sp+1, length(options)));
       end;
       mightBeColor:=true;
+      if part<>'.' then begin
       size:=strToFloatDef(part, Nan);
-      if not(isNan(size)) then begin
-        styleModifier:=size;
-        mightBeColor:=false;
+        if not(isNan(size)) then begin
+          styleModifier:=size;
+          mightBeColor:=false;
+        end;
       end;
       for i:=0 to length(C_styleName)-1 do with C_styleName[i] do
       if (part = name[0]) or (part = name[1]) then begin
@@ -1063,28 +1065,24 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             inc(i, 2);
             end;
           end;
-        if row[rowId].style.wantDot then
-          begin
+        if row[rowId].style.wantDot then begin
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
           target.Brush.color:=rowColor;
           symSize:=row[rowId].style.getSymbolWidth*scalingFactor;
-
-          for i:=0 to length(row[rowId].sample)-1 do
-            begin
+          for i:=0 to length(row[rowId].sample)-1 do begin
             sample:=row[rowId].sample[i];
             currentIsValid:=isSampleValid(sample);
-            if currentIsValid then
-              begin
+            if currentIsValid then begin
               sample:=realToScreen(sample);
               //target.Pixels[round(sample[0]*scalingFactor),round(sample[1]*scalingFactor)]:=rowColor;
               target.Ellipse(round(sample[0]*scalingFactor-symSize),
-                round(sample[1]*scalingFactor-symSize),
-                round(sample[0]*scalingFactor+symSize),
-                round(sample[1]*scalingFactor+symSize));
-              end;
+                             round(sample[1]*scalingFactor-symSize),
+                             round(sample[0]*scalingFactor+symSize),
+                             round(sample[1]*scalingFactor+symSize));
             end;
           end;
+        end;
         if row[rowId].style.wantPlus then
           begin
           target.Pen.style:=psSolid;
