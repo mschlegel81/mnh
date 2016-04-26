@@ -1,6 +1,6 @@
 UNIT mnh_settings;
 INTERFACE
-USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,myStringUtil;
+USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),

@@ -1,7 +1,7 @@
 UNIT mnh_funcs_system;
 INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts,lclintf,httpUtil,math;
+     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts,lclintf;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}

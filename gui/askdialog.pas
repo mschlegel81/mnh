@@ -141,7 +141,6 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
   end;
 
 PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
-  VAR h:longint=0;
   begin
     if enable then begin
       if count>=1 then begin Button1.Enabled:=true; Button1.visible:=true; end;

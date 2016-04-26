@@ -12,7 +12,7 @@ USES
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,
-  SynEditMiscClasses, SynEditMarkupSpecialLine,mnh_tokens;
+  SynEditMiscClasses, mnh_tokens;
 
 CONST DEBUG_LINE_COUNT=200;
       RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
@@ -1024,7 +1024,6 @@ PROCEDURE TMnhForm.handleBreak;
     end;
 
   VAR context:P_evaluationContext;
-      package:P_package;
       report:T_variableReport;
       i:longint;
       first:P_token;
@@ -1207,7 +1206,6 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       flushPerformed:boolean;
       autosizingDone:boolean;
       i,modalRes:longint;
-      state:T_editorState;
       currentFileAge:double;
   begin
     isEvaluationRunning:=ad_evaluationRunning;

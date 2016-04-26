@@ -16,7 +16,7 @@
     FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
-    PROCEDURE lateRHSResolution(VAR context:T_evaluationContext; CONST package:P_package);
+    PROCEDURE lateRHSResolution(VAR context:T_evaluationContext);
     PROCEDURE thinOutWhitelist;
     DESTRUCTOR destroy;
   end;
@@ -129,7 +129,7 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
   end;
 
-PROCEDURE T_patternElement.lateRHSResolution(VAR context:T_evaluationContext; CONST package:P_package);
+PROCEDURE T_patternElement.lateRHSResolution(VAR context:T_evaluationContext);
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
@@ -280,7 +280,7 @@ PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:
         then sig[i].restrictionIdx:=j;
 
     for i:=0 to length(sig)-1 do begin
-      sig[i].lateRHSResolution(context,package);
+      sig[i].lateRHSResolution(context);
       sig[i].thinOutWhitelist;
     end;
   end;

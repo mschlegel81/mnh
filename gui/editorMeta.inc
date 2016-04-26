@@ -101,7 +101,6 @@ PROCEDURE T_editorMeta.toggleComment;
 
 PROCEDURE T_editorMeta.toggleBreakpoint;
   VAR i:longint;
-      m:TSynEditMark;
   begin
     for i:=0 to editor.Marks.count-1 do if editor.Marks[i].line=editor.CaretY then begin
       editor.Marks.remove(editor.Marks[i]);
