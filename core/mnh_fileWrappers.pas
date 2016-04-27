@@ -1,11 +1,8 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil;
+USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil,LazUTF8;
 TYPE
   P_codeProvider = ^T_codeProvider;
-
-  { T_codeProvider }
-
   T_codeProvider = object
   private
     filePath: ansistring;
@@ -17,17 +14,13 @@ TYPE
     CONSTRUCTOR create;
     CONSTRUCTOR create(CONST path: ansistring);
     DESTRUCTOR destroy;
-
     FUNCTION getLines: T_arrayOfString;
     PROCEDURE getLinesUTF8(CONST value: TStrings);
     PROCEDURE setLines(CONST value: T_arrayOfString);
     PROCEDURE setLinesUTF8(CONST value: TStrings);
     PROCEDURE setLines(CONST value: ansistring);
     PROCEDURE appendLine(CONST value: ansistring);
-
-
     PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
-
     PROCEDURE setPath(CONST path: ansistring);
     FUNCTION getPath: ansistring;
     PROCEDURE load;
@@ -35,7 +28,6 @@ TYPE
     FUNCTION fileName: ansistring;
     FUNCTION fileHasChanged: boolean;
     FUNCTION fileIsOutOfSync: boolean;
-
     FUNCTION id: ansistring;
     PROCEDURE clear;
   end;
@@ -340,7 +332,7 @@ PROCEDURE T_codeProvider.getLinesUTF8(CONST value: TStrings);
   VAR i:longint;
   begin
     value.clear;
-    for i:=0 to length(lineData)-1 do value.append(SysToUTF8(lineData[i]));
+    for i:=0 to length(lineData)-1 do value.append(lineData[i]);
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
@@ -365,8 +357,8 @@ PROCEDURE T_codeProvider.setLinesUTF8(CONST value: TStrings);
       outOfSync:=true;
     end;
     for i := 0 to cleanCount-1 do begin
-      outOfSync := outOfSync or (trim(lineData[i])<>trim(UTF8ToSys(value[i])));
-      lineData[i] := UTF8ToSys(value[i]);
+      outOfSync := outOfSync or (trim(lineData[i])<>trim(value[i]));
+      lineData[i] := value[i];
     end;
     fileContentsEnforced:=true;
   end;

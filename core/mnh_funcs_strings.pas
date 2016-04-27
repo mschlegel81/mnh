@@ -1,6 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,FileUtil;
+USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -660,10 +660,10 @@ FUNCTION sysToUtf8_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_string: result:=newStringLiteral(SysToUTF8(str0^.value));
+      lt_string: result:=newStringLiteral(WinCPToUTF8(str0^.value));
       lt_stringList: begin
         result:=newListLiteral;
-        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(SysToUTF8(P_stringLiteral(value(i))^.value));
+        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(WinCPToUTF8(P_stringLiteral(value(i))^.value));
       end;
       lt_emptyList: begin
         result:=arg0;
@@ -677,10 +677,10 @@ FUNCTION utf8ToSys_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_string: result:=newStringLiteral(UTF8ToSys(str0^.value));
+      lt_string: result:=newStringLiteral(UTF8ToWinCP(str0^.value));
       lt_stringList: begin
         result:=newListLiteral;
-        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(UTF8ToSys(P_stringLiteral(value(i))^.value));
+        with list0^ do for i:=0 to size-1 do P_listLiteral(result)^.appendString(UTF8ToWinCP(P_stringLiteral(value(i))^.value));
       end;
       lt_emptyList: begin
         result:=arg0;

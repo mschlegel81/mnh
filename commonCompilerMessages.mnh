@@ -2,7 +2,7 @@ contains(fullString,subString)->pos(subString,fullString)>=0;
 
 ignore(s)->s.matches('^(mnh_litvar|mnh_funcs|mnh_tokens_funcs|consoleAsk|mnh_plotfuncs).* Hint: Parameter "(other|tokenLocation|context|adapters)" not used$') OR
            s.matches('^(mnh_gui_main|askdialog|mnh_debugform).* Hint: Parameter "Sender" not used$') OR
-           s.matches('^(blcksock\.pas|synacode\.pas|synafpc\.pas|synaip\.pas|synautil\.pas)');
+           s.matches('^(Compiling|blcksock\.pas|synacode\.pas|synafpc\.pas|synaip\.pas|synautil\.pas)');
 filter(S:stringList)->S.each(s,ignore(s) ? void : s);
 
 
