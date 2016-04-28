@@ -1,6 +1,6 @@
 UNIT mnh_funcs_server;
 INTERFACE
-USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_packages;
+USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics;
 TYPE
   P_microserver=^T_microserver;
   T_microserver=object
@@ -22,6 +22,8 @@ PROCEDURE killActiveServers;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
+{$define str1:=P_stringLiteral(params^.value(1))}
+{$define int0:=P_intLiteral(params^.value(0))}
 {$define int2:=P_intLiteral(params^.value(2))}
 {$define real2:=P_realLiteral(params^.value(2))}
 {$define arg0:=params^.value(0)}
@@ -48,9 +50,19 @@ PROCEDURE killActiveServers;
   end;
 
 FUNCTION wrapTextInHttp_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  CONST serverInfo='MNH5 via Synapse';
   begin
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newStringLiteral(wrapTextInHttp(str0^.value))
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
+      if params^.size=1                                     then exit(newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
+      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
+      result:=nil;
+    end else result:=nil;
+  end;
+
+FUNCTION httpError_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
+    then result:=newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
     else result:=nil;
   end;
 
@@ -99,7 +111,6 @@ CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_
     if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
     then timeout:=0
     else timeout:=timeout_;
-
     servingExpression:=servingExpression_;
     feedbackLocation:=feedbackLocation_;
     adapters:=parentContext.adapters;
@@ -132,7 +143,7 @@ PROCEDURE T_microserver.serve;
               (timeout<=0) and hasKillRequest;
     end;
 
-  CONST minSleepTime=1;
+  CONST minSleepTime=0;
         maxSleepTime=100;
 
   VAR request:ansistring;
@@ -141,6 +152,55 @@ PROCEDURE T_microserver.serve;
       sleepTime:longint=minSleepTime;
       socket:T_socketPair;
       context:T_evaluationContext;
+
+  PROCEDURE pushContextWithRequestData(CONST request:string);
+    VAR parts:T_arrayOfString;
+        parameters:P_listLiteral;
+        i:longint;
+
+    PROCEDURE addParameterPair(CONST pair:string);
+      FUNCTION code(CONST c:byte):string;
+        CONST hexDigit:array[0..15] of char=('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
+        begin
+          result:='%'+hexDigit[c shr 4]+hexDigit[c and 15];
+        end;
+
+      VAR keyAndValue:T_arrayOfString;
+          c:byte;
+          i:longint;
+          value:P_stringLiteral;
+          castValue:P_scalarLiteral;
+      begin
+        keyAndValue:=split(pair,'=');
+        while length(keyAndValue)<2 do append(keyAndValue,'');
+        for i:=0 to length(keyAndValue)-1 do
+        for c:=0 to 255 do keyAndValue[i]:=replaceAll(keyAndValue[i],code(c),chr(c));
+         value:=newStringLiteral(keyAndValue[1]);
+        castValue:=value^.softCast;
+        disposeLiteral(value);
+        parameters^.append(
+          newListLiteral^
+            .appendString(keyAndValue[0])^
+            .append(castValue,false,context.adapters^),
+          false,context.adapters^);
+      end;
+
+    begin
+      context.valueStore.scopePush;
+      context.valueStore.createVariable('fullRequest',newStringLiteral(request),true);
+      parts:=split(request,'?');
+      while (length(parts)<2) do append(parts,'');
+      context.valueStore.createVariable('path',newStringLiteral(parts[0]),true);
+      context.valueStore.createVariable('rawParameters',newStringLiteral(parts[1]),true);
+      parameters:=newListLiteral;
+      if length(parts[1])>0 then begin
+        parts:=split(parts[1],'&');
+        for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
+        parameters^.toKeyValueList;
+      end;
+      context.valueStore.createVariable('parameters',parameters,true);
+    end;
+
   begin
     socket.create(ip);
     context.createNormalContext(adapters);
@@ -148,12 +208,15 @@ PROCEDURE T_microserver.serve;
     up:=true;
     lastActivity:=now;
     repeat
-      request:=socket.getRequest;
+      request:=socket.getRequest(sleepTime);
       if request<>'' then begin
+        sleepTime:=minSleepTime;
         lastActivity:=now;
         requestLiteral.create;
         requestLiteral.appendString(request);
+        pushContextWithRequestData(request);
         response:=servingExpression^.evaluate(@requestLiteral,@context);
+        context.valueStore.scopePop;
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
@@ -161,7 +224,6 @@ PROCEDURE T_microserver.serve;
           else socket.SendString(P_scalarLiteral(response)^.toString);
           disposeLiteral(response);
         end else socket.SendString(HTTP_404_RESPONSE);
-        sleepTime:=minSleepTime;
       end else begin
         sleep(sleepTime);
         inc(sleepTime);
@@ -185,7 +247,8 @@ PROCEDURE T_microserver.killQuickly;
 INITIALIZATION
   system.initCriticalSection(serverCS);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'startServer',@startServer_impl,'startServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance',fc_stateful);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps the result in an http-response',fc_pure);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.',fc_pure);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.',fc_pure);
   killServersCallback:=@killActiveServers;
 FINALIZATION
   doneCriticalSection(serverCS);

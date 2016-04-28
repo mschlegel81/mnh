@@ -839,7 +839,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
         if eachType=tt_forcedParallelEach then maxFutureForwardInitialization:=maxLongint;
-        context.adapters^.raiseNote('Max forward futures = '+intToStr(maxFutureForwardInitialization),eachLocation);
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
