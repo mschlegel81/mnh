@@ -56,7 +56,7 @@ TYPE
     tt_blockLocalVariable,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_when, tt_while,  tt_begin,  tt_end,
+    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_when, tt_while, tt_begin, tt_end, tt_try,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -151,6 +151,7 @@ CONST
     {tt_when,tt_while}      tt_EOL, tt_EOL,
     {tt_begin}              tt_end,
     {tt_end}                tt_EOL,
+    {tt_try}                tt_EOL,
     {tt_braceOpen}          tt_braceClose,
     {tt_braceClose}         tt_EOL,
     {tt_parList_constructor}tt_braceClose,
@@ -192,7 +193,7 @@ CONST
     '', '', '', '', '','', '', '','',
     '', '', 'aggregator',
     //special operators
-    '.each', '.pEach', '.PEach', '.agg', 'when','while','begin','end',
+    '.each', '.pEach', '.PEach', '.agg', 'when','while','begin','end','try',
     //lists and list constructors
     '(', ')', '', '',
     '[', ']', '',
@@ -382,6 +383,7 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
        (wordText=C_tokenString[tt_aggregatorConstructor]) or
        (wordText=C_tokenString[tt_while]) or
        (wordText=C_tokenString[tt_begin]) or
+       (wordText=C_tokenString[tt_try]) or
        (wordText=C_tokenString[tt_end]) then exit(rwc_specialConstruct);
     for tt:=tt_comparatorEq to tt_listToParameterList do
       if wordText=C_tokenString[tt] then exit(rwc_operator);
@@ -416,6 +418,7 @@ FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
         result.add(C_tokenString[tt_aggregatorConstructor]);
         result.add(C_tokenString[tt_while]);
         result.add(C_tokenString[tt_begin]);
+        result.add(C_tokenString[tt_try]);
         result.add(C_tokenString[tt_end]);
       end;
       rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);

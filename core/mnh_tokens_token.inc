@@ -999,6 +999,51 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
+  PROCEDURE resolveTry;
+    VAR bodyParts:T_bodyParts;
+        closingBracket:P_token;
+        i:longint;
+        resultIndex:longint=-1;
+        oldAdapters:P_adapters;
+        collector:P_collectingOutAdapter;
+    begin
+      bodyParts:=getBodyParts(first,1,context,closingBracket);
+      if closingBracket=nil then exit;
+
+      if length(bodyParts)<>2 then begin
+        context.adapters^.raiseError('Invalid try-construct; Exactly two arguments (try-clause and except-clause) are expected.',first^.location);
+        exit;
+      end;
+
+      for i:=0 to length(bodyParts)-1 do begin
+        if bodyParts[i].last^.next<>closingBracket then context.disposeToken(bodyParts[i].last^.next);
+        bodyParts[i].last^.next:=nil;
+      end;
+
+      oldAdapters:=context.adapters;
+      context.adapters:=oldAdapters^.collectingClone(collector);
+
+      reduceExpression(bodyParts[0].first,callDepth+1,context);
+
+      if context.adapters^.noErrors then begin
+        for i:=0 to length(collector^.storedMessages)-1 do oldAdapters^.raiseCustomMessage(collector^.storedMessages[i]);
+        dispose(context.adapters,destroy);
+        context.cascadeDisposeToken(bodyParts[1].first);
+        resultIndex:=0;
+      end else begin
+        context.cascadeDisposeToken(bodyParts[0].first);
+        resultIndex:=1;
+      end;
+      context.adapters:=oldAdapters;
+
+      first^.tokType:=tt_braceOpen; //mutate try-token to (
+      first^.next:=bodyParts[resultIndex].first;
+      bodyParts[resultIndex].last^.next:=closingBracket;
+
+      setLength(bodyParts,0);
+      didSubstitution:=true;
+    end;
+
   PROCEDURE resolveWhen;
     VAR bodyParts:T_bodyParts;
         closingBracket:P_token;
@@ -1701,6 +1746,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_when: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
           resolveWhen;
+        end;
+        tt_try: if (cTokType[1]=tt_braceOpen) then begin
+          first^.next:=context.disposeToken(first^.next);
+          resolveTry;
         end;
 
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin

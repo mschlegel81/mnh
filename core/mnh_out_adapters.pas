@@ -1,5 +1,4 @@
 UNIT mnh_out_adapters;
-
 INTERFACE
 
 USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif};
@@ -118,18 +117,16 @@ TYPE
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
-      //PROCEDURE addFileOutAdapter(CONST fileName:ansistring);
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
       PROCEDURE removeOutAdapter(CONST name:ansistring);
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
+
+      FUNCTION collectingClone(OUT collector:P_collectingOutAdapter):P_adapters;
   end;
 
   {$ifdef fullVersion}
-
-  { T_stepper }
-
   T_stepper=object
     private
       waitingForGUI:boolean;
@@ -148,6 +145,7 @@ TYPE
       currentLevel:longint;
       cs:TRTLCriticalSection;
       //Single instance. So this can be private.
+      {$WARN 3018 OFF}{$WARN 3019 OFF}
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
     public
@@ -536,6 +534,14 @@ FUNCTION T_adapters.adapterCount: longint;
 FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;
   begin
     result:=adapter[index].ad;
+  end;
+
+FUNCTION T_adapters.collectingClone(OUT collector:P_collectingOutAdapter):P_adapters;
+  begin
+    new(result,create);
+    new(collector,create(at_unknown,'TEMP'));
+    result^.addOutAdapter(collector,true);
+    result^.outputBehaviour:=outputBehaviour;
   end;
 
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);
