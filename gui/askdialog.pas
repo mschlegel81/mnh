@@ -9,8 +9,6 @@ USES
   StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
 TYPE
   {$WARN 5024 OFF}
-  { TaskForm }
-
   TaskForm = class(TForm)
     ComboBox1: TComboBox;
     Label1: TLabel;
