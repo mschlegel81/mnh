@@ -1,5 +1,6 @@
 UNIT mnh_funcs_math;
 INTERFACE
+{$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,math,mnh_out_adapters,mnh_contexts;
 VAR BUILTIN_MIN,
     BUILTIN_MAX:T_intFuncCallback;

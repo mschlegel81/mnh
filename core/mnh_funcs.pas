@@ -1,5 +1,6 @@
 UNIT mnh_funcs;
 INTERFACE
+{$WARN 5024 OFF}
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
      myStringUtil,Classes,mySys{$ifdef fullVersion},mnh_doc{$endif};
 TYPE

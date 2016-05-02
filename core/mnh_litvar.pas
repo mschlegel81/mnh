@@ -1,9 +1,9 @@
 UNIT mnh_litVar;
-
+{$ifdef fullVersion}
+{$WARN 3018 OFF}{$WARN 3019 OFF}{$WARN 5024 OFF}
+{$endif}
 INTERFACE
-
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc;
-
 TYPE
   T_hashInt=dword;
 
@@ -15,13 +15,13 @@ TYPE
   T_literal = object
   private
     numberOfReferences: longint;
-  public
     CONSTRUCTOR init;
+    DESTRUCTOR destroy; virtual;
+  public
     PROCEDURE rereference;
     FUNCTION unreference: longint;
     FUNCTION getReferenceCount: longint;
 
-    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION toShorterString: ansistring; virtual;
@@ -53,7 +53,9 @@ TYPE
 
   P_voidLiteral = ^T_voidLiteral;
   T_voidLiteral = object(T_scalarLiteral)
-    CONSTRUCTOR create();
+    private
+      CONSTRUCTOR create();
+    public
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -63,8 +65,8 @@ TYPE
   T_boolLiteral = object(T_scalarLiteral)
   private
     val: boolean;
-  public
     CONSTRUCTOR create(CONST value: boolean);
+  public
     FUNCTION value: boolean;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
@@ -85,8 +87,8 @@ TYPE
   T_intLiteral = object(T_scalarLiteral)
   private
     val: int64;
-  public
     CONSTRUCTOR create(CONST value: int64);
+  public
     FUNCTION value: int64;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
@@ -115,8 +117,8 @@ TYPE
   T_realLiteral = object(T_scalarLiteral)
   private
     val: T_myFloat;
-  public
     CONSTRUCTOR create(CONST value: T_myFloat);
+  public
     FUNCTION value: T_myFloat;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
@@ -141,8 +143,9 @@ TYPE
   private
     cachedHash:T_hashInt;
     val: ansistring;
-  public
     CONSTRUCTOR create(CONST value: ansistring);
+    DESTRUCTOR destroy; virtual;
+  public
     FUNCTION value: ansistring;
     FUNCTION softCast: P_scalarLiteral;
     FUNCTION trim: P_stringLiteral;
@@ -174,8 +177,9 @@ TYPE
   T_expressionLiteral = object(T_scalarLiteral)
   private
     val: pointer;
-  public
     CONSTRUCTOR create(CONST value: pointer);
+    DESTRUCTOR destroy; virtual;
+  public
     FUNCTION value: pointer;
     FUNCTION evaluate(CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
     FUNCTION arity:longint;
@@ -193,7 +197,6 @@ TYPE
     FUNCTION opMod      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
-    DESTRUCTOR destroy; virtual;
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;

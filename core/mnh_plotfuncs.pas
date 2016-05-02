@@ -1,5 +1,6 @@
 UNIT mnh_plotFuncs;
 INTERFACE
+{$WARN 5024 OFF}
 USES sysutils, mnh_funcs,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts;
 
 FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

@@ -1,5 +1,6 @@
 UNIT mnh_funcs_strings;
 INTERFACE
+{$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,myStringUtil,sysutils,diff,mnh_contexts,LazUTF8;
 IMPLEMENTATION
 {$MACRO ON}

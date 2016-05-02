@@ -2,7 +2,6 @@ UNIT mnh_gui_main;
 
 {$mode objfpc}{$H+}
 INTERFACE
-
 USES
   Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
@@ -22,7 +21,7 @@ TYPE
   {$include editorMeta.inc}
   {$include guiOutAdapter.inc}
   {$undef includeInterface}
-
+  {$WARN 5024 OFF}
   { TMnhForm }
 
   TMnhForm = class(TForm)

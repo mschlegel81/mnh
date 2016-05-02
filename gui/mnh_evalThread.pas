@@ -36,7 +36,7 @@ VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
     parametersForMainCall:T_arrayOfString;
     intrinsicRulesForCompletion:T_listOfString;
-
+{$WARN 5024 OFF}
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR sleepTime:longint=0;

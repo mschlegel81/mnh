@@ -1,5 +1,6 @@
 UNIT mnh_funcs_system;
 INTERFACE
+{$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts,lclintf,
      LazFileUtils,LazUTF8;

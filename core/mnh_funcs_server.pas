@@ -1,5 +1,6 @@
 UNIT mnh_funcs_server;
 INTERFACE
+{$WARN 5024 OFF}
 USES sysutils,math,mnh_constants,mnh_funcs,httpUtil,mnh_contexts,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_packages,myStringUtil,myGenerics;
 TYPE
   P_microserver=^T_microserver;

@@ -100,6 +100,7 @@ TYPE
   public
     CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
     DESTRUCTOR destroy; override;
+    {$WARN 5024 OFF}
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;
     FUNCTION GetEol: boolean; override;
     FUNCTION getRange: pointer; override;
