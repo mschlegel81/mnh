@@ -1079,6 +1079,7 @@ out> [2,5,8]
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
 <li><h4><a href="#when">when</a></h4></li>
+<li><h4><a href="#try">try</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
@@ -1285,6 +1286,19 @@ is equivalent to:
   condition2 ? statement2 : void;
 <!--end-->
 </code> 
+</div>
+
+<h3><a name="try">try</a></h3>
+The <code>try</code> construct can be used for basic exception handling.<br>
+Syntax:<code>
+<!--mnh-->
+  try(body,exceptionHandling);
+<!--end-->
+</code>
+First <code>body</code> is executed. If no exception is encountered, <code>exceptionHandling</code> is ignored.<br>
+If there is an exception, <code>exceptionHandling</code> is executed and <b>all (!)</b> output produced within <code>body</code> is lost.
+This also includes console-output and plot generation!<br>
+Hence, plotting is discouraged within try-constructs.
 </div>
 <!--commonFoot-->
 <!--file formatStrings.html-->

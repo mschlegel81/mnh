@@ -1015,31 +1015,23 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         exit;
       end;
 
-      for i:=0 to length(bodyParts)-1 do begin
-        if bodyParts[i].last^.next<>closingBracket then context.disposeToken(bodyParts[i].last^.next);
-        bodyParts[i].last^.next:=nil;
-      end;
-
       oldAdapters:=context.adapters;
       context.adapters:=oldAdapters^.collectingClone(collector);
-
       reduceExpression(bodyParts[0].first,callDepth+1,context);
-
       if context.adapters^.noErrors then begin
         for i:=0 to length(collector^.storedMessages)-1 do oldAdapters^.raiseCustomMessage(collector^.storedMessages[i]);
         dispose(context.adapters,destroy);
         context.cascadeDisposeToken(bodyParts[1].first);
+        bodyParts[0].last:=bodyParts[0].first^.last;
         resultIndex:=0;
       end else begin
         context.cascadeDisposeToken(bodyParts[0].first);
         resultIndex:=1;
       end;
       context.adapters:=oldAdapters;
-
       first^.tokType:=tt_braceOpen; //mutate try-token to (
       first^.next:=bodyParts[resultIndex].first;
       bodyParts[resultIndex].last^.next:=closingBracket;
-
       setLength(bodyParts,0);
       didSubstitution:=true;
     end;
@@ -1055,11 +1047,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       bodyParts:=getBodyParts(first,1,context,closingBracket);
       if closingBracket=nil then exit;
-
-      for i:=0 to length(bodyParts)-1 do begin
-        if bodyParts[i].last^.next<>closingBracket then context.disposeToken(bodyParts[i].last^.next);
-        bodyParts[i].last^.next:=nil;
-      end;
 
       conditionIdx:=0;
       while (conditionIdx<length(bodyParts)-1) and context.adapters^.noErrors and (resultIndex<0) do begin
