@@ -126,6 +126,8 @@ TYPE
       PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
+
+      PROCEDURE copyFrom(VAR p:T_plot);
   end;
 
 
@@ -1284,6 +1286,32 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     storeImage.free;
     plotImage.free;
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.copyFrom(VAR p:T_plot);
+  VAR axis:char;
+      i:longint;
+  begin
+    system.EnterCriticalsection(cs);
+    system.EnterCriticalsection(p.cs);
+
+    screenWidth :=p.screenWidth;
+    screenHeight:=p.screenHeight;
+    xOffset:=p.xOffset;
+    yOffset:=p.yOffset;
+    for axis:='x' to 'y' do begin
+      setLength(tic[axis],length(p.tic[axis]));
+      for i:=0 to length(tic[axis])-1 do tic[axis,i]:=p.tic[axis,i];
+    end;
+    scalingOptions:=p.scalingOptions;
+    for i:=0 to length(row)-1 do row[i].destroy;
+    setLength(row,length(p.row));
+    for i:=0 to length(row)-1 do begin
+      row[i].create(i,p.row[i].sample);
+      row[i].style:=p.row[i].style;
+    end;
+    system.LeaveCriticalsection(p.cs);
+    system.LeaveCriticalsection(cs);
   end;
 
 end.

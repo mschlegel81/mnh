@@ -542,6 +542,9 @@ FUNCTION T_adapters.collectingClone(OUT collector:P_collectingOutAdapter):P_adap
     new(collector,create(at_unknown,'TEMP'));
     result^.addOutAdapter(collector,true);
     result^.outputBehaviour:=outputBehaviour;
+    {$ifdef fullVersion}
+    result^.plot.copyFrom(plot);
+    {$endif}
   end;
 
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);

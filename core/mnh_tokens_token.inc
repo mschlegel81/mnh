@@ -1019,8 +1019,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       context.adapters:=oldAdapters^.collectingClone(collector);
       reduceExpression(bodyParts[0].first,callDepth+1,context);
       if context.adapters^.noErrors then begin
+        oldAdapters^.plot.copyFrom(context.adapters^.plot);
         for i:=0 to length(collector^.storedMessages)-1 do oldAdapters^.raiseCustomMessage(collector^.storedMessages[i]);
-        dispose(context.adapters,destroy);
         context.cascadeDisposeToken(bodyParts[1].first);
         bodyParts[0].last:=bodyParts[0].first^.last;
         resultIndex:=0;
@@ -1028,6 +1028,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.cascadeDisposeToken(bodyParts[0].first);
         resultIndex:=1;
       end;
+      dispose(context.adapters,destroy);
       context.adapters:=oldAdapters;
       first^.tokType:=tt_braceOpen; //mutate try-token to (
       first^.next:=bodyParts[resultIndex].first;
