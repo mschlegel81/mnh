@@ -1,16 +1,16 @@
-@set delp=D:\dev\lazarus32\fpc\2.6.4\bin\i386-win32\delp 
-@set fpc=D:\dev\lazarus32\fpc\2.6.4\bin\i386-win32\fpc
+@set delp=D:\dev\lazarus32\fpc\3.0.0\bin\i386-win32\delp 
+@set fpc=D:\dev\lazarus32\fpc\3.0.0\bin\i386-win32\fpc
 
 @if "%1"=="clean" @goto cleanup
 @goto run
 
 
 :cleanup
-  @%delp% c:\lazarus\fpc\2.6.4\bin\i386-win32\delp . core util test consoles bin gui 
+  @%delp% c:\lazarus\fpc\3.0.0\bin\i386-win32\delp . core util test consoles bin gui 
   @goto end
 
 :run
-  set path=c:\lazarus\fpc\2.6.4\bin\i386-win32\
+  set path=c:\lazarus\fpc\3.0.0\bin\i386-win32\
   @For /f "tokens=1 delims=\." %%a in ('echo %1') do @del %%a.exe
 
   @For /f "tokens=1 delims=." %%a in ('echo %1') do %fpc% %%a.pas -S2 -gl -Fu..\..\common -Fu..\..\common\* -Fu..\core -Fu..\util -Filib\i386-win32 -FuC:\lazarus\components\synedit\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\packager\units\i386-win32 -Fugui -l -dLCL -dLCLwin32
