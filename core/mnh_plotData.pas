@@ -127,13 +127,11 @@ TYPE
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
-      PROCEDURE copyFrom(VAR p:T_plot);
+      PROCEDURE CopyFrom(VAR p:T_plot);
   end;
 
 
 IMPLEMENTATION
-{ T_sampleRow }
-
 CONSTRUCTOR T_sampleRow.create(CONST index: byte; CONST row:T_dataRow);
   VAR i:longint;
   begin
@@ -1288,12 +1286,12 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.copyFrom(VAR p:T_plot);
+PROCEDURE T_plot.CopyFrom(VAR p:T_plot);
   VAR axis:char;
       i:longint;
   begin
-    system.EnterCriticalsection(cs);
-    system.EnterCriticalsection(p.cs);
+    system.enterCriticalSection(cs);
+    system.enterCriticalSection(p.cs);
 
     screenWidth :=p.screenWidth;
     screenHeight:=p.screenHeight;
@@ -1310,8 +1308,8 @@ PROCEDURE T_plot.copyFrom(VAR p:T_plot);
       row[i].create(i,p.row[i].sample);
       row[i].style:=p.row[i].style;
     end;
-    system.LeaveCriticalsection(p.cs);
-    system.LeaveCriticalsection(cs);
+    system.leaveCriticalSection(p.cs);
+    system.leaveCriticalSection(cs);
   end;
 
 end.

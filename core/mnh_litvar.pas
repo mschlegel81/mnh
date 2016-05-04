@@ -366,6 +366,7 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
+FUNCTION messageToLiteral(CONST message:T_storedMessage):P_listLiteral;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
@@ -2509,6 +2510,21 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true,adapters);
       end;
     end;
+  end;
+
+FUNCTION messageToLiteral(CONST message:T_storedMessage):P_listLiteral;
+  VAR stringList:P_listLiteral;
+      i:longint;
+  begin
+    result:=newListLiteral;
+    if length(message.multiMessage)>=1 then begin
+      stringList:=newListLiteral;
+      for i:=0 to length(message.multiMessage)-1 do stringList^.appendString(message.multiMessage[i]);
+      result^.append(stringList,false,nullAdapter);
+      nullAdapter.ClearAll;
+    end else result^.appendString(message.simpleMessage);
+    result^.appendInt(C_errorLevelForMessageType[message.messageType]);
+    result^.appendString(message.location);
   end;
 
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);

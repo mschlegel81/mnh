@@ -123,7 +123,8 @@ TYPE
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
 
-      FUNCTION collectingClone(OUT collector:P_collectingOutAdapter):P_adapters;
+      FUNCTION collectingClone:P_adapters;
+      FUNCTION copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean):T_storedMessages;
   end;
 
   {$ifdef fullVersion}
@@ -384,7 +385,8 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
+  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -401,7 +403,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
     for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(thisErrorLevel,errorMessage,errorLocation);
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST message:T_storedMessage);
+PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[message.messageType] then
@@ -475,7 +477,7 @@ FUNCTION T_adapters.noErrors: boolean;
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_adapters.hasNeedGUIerror:boolean;
+FUNCTION T_adapters.hasNeedGUIerror: boolean;
   VAR i:longint;
   begin
     if gui_started then exit(false);
@@ -515,7 +517,7 @@ PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
     end;
   end;
 
-PROCEDURE T_adapters.removeOutAdapter(CONST name:ansistring);
+PROCEDURE T_adapters.removeOutAdapter(CONST name: ansistring);
   VAR i,j:longint;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].ad^.adapterName=name then begin
@@ -536,15 +538,52 @@ FUNCTION T_adapters.getAdapter(CONST index: longint): P_abstractOutAdapter;
     result:=adapter[index].ad;
   end;
 
-FUNCTION T_adapters.collectingClone(OUT collector:P_collectingOutAdapter):P_adapters;
+FUNCTION T_adapters.collectingClone: P_adapters;
+  VAR collector:P_collectingOutAdapter;
   begin
     new(result,create);
     new(collector,create(at_unknown,'TEMP'));
     result^.addOutAdapter(collector,true);
     result^.outputBehaviour:=outputBehaviour;
     {$ifdef fullVersion}
-    result^.plot.copyFrom(plot);
+    result^.plot.CopyFrom(plot);
     {$endif}
+  end;
+
+FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean): T_storedMessages;
+  VAR collector:P_collectingOutAdapter=nil;
+      i:longint;
+  PROCEDURE appendToResult;
+    begin
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=collector^.storedMessages[i];
+    end;
+  begin
+    for i:=0 to length(clone^.adapter)-1 do
+    if (collector=nil) and
+       (clone^.adapter[i].ad^.adapterType=at_unknown) and
+       (clone^.adapter[i].ad^.adapterName='TEMP') then collector:=P_collectingOutAdapter(clone^.adapter[i].ad);
+    setLength(result,0);
+    {$ifdef fullVersion}
+    if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
+                           clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
+                           clone^.hasMessageOfType[mt_plotCreatedWithInstantDisplay] or
+                           clone^.hasMessageOfType[mt_plotSettingsChanged]) then plot.CopyFrom(clone^.plot);
+    {$endif}
+    if (collector<>nil) then
+    for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
+      mt_el5_haltMessageReceived,
+      mt_endOfEvaluation,
+      mt_reloadRequired: begin appendToResult; raiseCustomMessage(collector^.storedMessages[i]); writeln('Raising custom message: ',collector^.storedMessages[i].simpleMessage); end;
+      else begin
+             if errorCase then appendToResult else begin
+               writeln('Raising custom message: ',collector^.storedMessages[i].simpleMessage);
+               raiseCustomMessage(collector^.storedMessages[i]);
+             end;
+
+      end;
+    end;
+    dispose(clone,destroy);
   end;
 
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);

@@ -1002,10 +1002,18 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
   PROCEDURE resolveTry;
     VAR bodyParts:T_bodyParts;
         closingBracket:P_token;
-        i:longint;
-        resultIndex:longint=-1;
+        errorCase:boolean;
         oldAdapters:P_adapters;
-        collector:P_collectingOutAdapter;
+        prev_allowDelegation:boolean;
+        messages:T_storedMessages;
+
+    FUNCTION messageLiteral:P_listLiteral;
+      VAR i:longint;
+      begin
+        result:=newListLiteral;
+        for i:=0 to length(messages)-1 do result^.append(messageToLiteral(messages[i]),false,context.adapters^);
+      end;
+
     begin
       bodyParts:=getBodyParts(first,1,context,closingBracket);
       if closingBracket=nil then exit;
@@ -1016,23 +1024,36 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
       oldAdapters:=context.adapters;
-      context.adapters:=oldAdapters^.collectingClone(collector);
+      prev_allowDelegation:=context.allowDelegation;
+      context.allowDelegation:=false;
+      context.adapters:=oldAdapters^.collectingClone;
       reduceExpression(bodyParts[0].first,callDepth+1,context);
       if context.adapters^.noErrors then begin
-        oldAdapters^.plot.copyFrom(context.adapters^.plot);
-        for i:=0 to length(collector^.storedMessages)-1 do oldAdapters^.raiseCustomMessage(collector^.storedMessages[i]);
         context.cascadeDisposeToken(bodyParts[1].first);
         bodyParts[0].last:=bodyParts[0].first^.last;
-        resultIndex:=0;
+        errorCase:=false;
       end else begin
         context.cascadeDisposeToken(bodyParts[0].first);
-        resultIndex:=1;
+        errorCase:=true;
       end;
-      dispose(context.adapters,destroy);
+      messages:=oldAdapters^.copyDataFromCollectingCloneDisposing(context.adapters,errorCase);
       context.adapters:=oldAdapters;
-      first^.tokType:=tt_braceOpen; //mutate try-token to (
-      first^.next:=bodyParts[resultIndex].first;
-      bodyParts[resultIndex].last^.next:=closingBracket;
+      context.allowDelegation:=prev_allowDelegation;
+      if errorCase then begin
+        first^.tokType:=tt_begin; //mutate try-token to begin
+        first^.next:=bodyParts[1].first;
+        bodyParts[1].last^.next:=context.newToken(bodyParts[1].last^.location,'',tt_semicolon);
+        bodyParts[1].last:=bodyParts[1].last^.next;
+        bodyParts[1].last^.next:=closingBracket;
+        closingBracket^.tokType:=tt_end; //mutate closing bracket to end
+        stack_push;
+        context.valueStore.scopePush;
+        context.valueStore.createVariable('messages',messageLiteral,true);
+      end else begin
+        first^.tokType:=tt_braceOpen; //mutate try-token to (
+        first^.next:=bodyParts[0].first;
+        bodyParts[0].last^.next:=closingBracket;
+      end;
       setLength(bodyParts,0);
       didSubstitution:=true;
     end;
