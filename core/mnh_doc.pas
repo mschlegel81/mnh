@@ -81,6 +81,26 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
+        httpServerExample:array[0..17] of string=
+(' in> startHttpServer(''127.0.0.1:60000'',',
+'       {begin',
+'         //Special variables available in serving expression: fullRequest, path, rawParameters and parameters',
+'         print("fullRequest=\t",fullRequest.escape,',
+'               "\npath=\t",path.escape,',
+'               "\nrawParameters=\t",rawParameters.escape,',
+'               "\nparameters=\t",parameters);',
+'         wrapTextInHttp("Hello world");',
+'       end},1);',
+' in> httpGet(''http://127.0.0.1:60000/index.html?x=0&y=3%2Ax'');',
+'out> void',
+'Note  @D:\dev\mnh5\ignored\serverTest.mnh:1,1 Microserver started. 127.0.0.1:60000',
+'fullRequest=   ''/index.html?x=0&y=3%2Ax''',
+'path=          ''/index.html''',
+'rawParameters= ''x=0&y=3%2Ax''',
+'parameters=    [[''x'',0],[''y'',''3*x'']]',
+'out> ''Hello world''',
+'Note  @D:\dev\mnh5\ignored\serverTest.mnh:1,1 Microserver stopped. 127.0.0.1:60000');
+
   VAR code:T_arrayOfString;
       i:longint;
       keys:T_arrayOfString;
@@ -120,9 +140,14 @@ PROCEDURE ensureBuiltinDocExamples;
     if functionDocExamplesReady then exit;
     keys:=functionDocMap.keySet;
     setLength(allDocs,0);
+
+    setLength(code,length(httpServerExample));
+    for i:=0 to length(code)-1 do if byte(i) in [11..15,17] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
+
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
+      allDocs[length(allDocs)-1]^.addExampleIfRelevant(httpServerExample,code);
     end;
     if fileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
       assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);

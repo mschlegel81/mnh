@@ -64,6 +64,8 @@ FUNCTION httpError_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
     then result:=newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
+    else if (params=nil) or (params^.size=0)
+    then result:=newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
     else result:=nil;
   end;
 
@@ -73,6 +75,10 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       servingExpression:P_expressionLiteral;
       servingSubrule:P_subrule;
   begin
+    if not(context.allowDelegation) then begin
+      context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
+      exit(newVoidLiteral);
+    end;
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
@@ -247,7 +253,7 @@ PROCEDURE T_microserver.killQuickly;
 
 INITIALIZATION
   system.initCriticalSection(serverCS);
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'startServer',@startServer_impl,'startServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance',fc_stateful);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.',fc_pure);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.',fc_pure);
   killServersCallback:=@killActiveServers;
