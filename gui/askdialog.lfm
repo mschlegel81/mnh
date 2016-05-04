@@ -10,10 +10,11 @@ object askForm: TaskForm
   ClientWidth = 342
   Constraints.MinHeight = 25
   Constraints.MinWidth = 200
+  FormStyle = fsStayOnTop
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poOwnerFormCenter
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.6.0.4'
   object ComboBox1: TComboBox
     Left = 0
     Height = 23

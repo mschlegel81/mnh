@@ -33,7 +33,7 @@ TYPE
     PROCEDURE initWithQuestion(CONST question: ansistring);
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
     PROCEDURE lock;
-    FUNCTION getLastAnswerReleasing: ansistring;
+    FUNCTION getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
     PROCEDURE setButtons(CONST enable:boolean; CONST count:byte);
   end;
 
@@ -53,6 +53,7 @@ PROCEDURE TaskForm.ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShif
     if (key = 13) and (not(rejectNonmatchingInput) or (ComboBox1.ItemIndex>=0)) then begin
       lastAnswer := ComboBox1.text;
       ModalResult := mrOk;
+      Hide;
     end;
   end;
 
@@ -72,18 +73,21 @@ PROCEDURE TaskForm.Button1Click(Sender: TObject);
   begin
     lastAnswer := Button1.Caption;
     ModalResult := mrOk;
+    Hide;
   end;
 
 PROCEDURE TaskForm.Button2Click(Sender: TObject);
   begin
     lastAnswer := Button2.Caption;
     ModalResult := mrOk;
+    Hide;
   end;
 
 PROCEDURE TaskForm.Button3Click(Sender: TObject);
   begin
     lastAnswer := Button3.Caption;
     ModalResult := mrOk;
+    Hide;
   end;
 
 PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
@@ -128,10 +132,17 @@ PROCEDURE TaskForm.lock;
     ownerThread := ThreadID;
   end;
 
-FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
+FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
   VAR i:longint;
   begin
-    while displayPending or showing do sleep(1);
+    while displayPending or showing do begin
+      sleep(10);
+      if (adapters<>nil) and not(adapters)^.noErrors then begin
+        displayPending:=false;
+        ModalResult:=0;
+        hide;
+      end;
+    end;
     result := lastAnswer;
     for i:=length(previousAnswers)-1 downto 1 do previousAnswers[i]:=previousAnswers[i-1];
     previousAnswers[0]:=lastAnswer;
@@ -141,9 +152,9 @@ FUNCTION TaskForm.getLastAnswerReleasing: ansistring;
 PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
   begin
     if enable then begin
-      if count>=1 then begin Button1.Enabled:=true; Button1.visible:=true; end;
-      if count>=2 then begin Button2.Enabled:=true; Button2.visible:=true; end;
-      if count>=3 then begin Button3.Enabled:=true; Button3.visible:=true; end;
+      Button1.Enabled:=count>=1; Button1.visible:=count>=1;
+      Button2.Enabled:=count>=2; Button2.visible:=count>=2;
+      Button3.Enabled:=count>=3; Button3.visible:=count>=3;
       ComboBox1.Enabled:=false;
       ComboBox1.visible:=false;
     end else begin
@@ -164,7 +175,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       (params^.value(0)^.literalType = lt_string) then begin
       system.enterCriticalSection(cs);
       askForm.initWithQuestion(P_stringLiteral(params^.value(0))^.value);
-      result := newStringLiteral(askForm.getLastAnswerReleasing);
+      result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
       system.leaveCriticalSection(cs);
     end
     else if (params<>nil) and (params^.size = 2) and
@@ -175,7 +186,7 @@ FUNCTION ask_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocat
       for i := 0 to length(opt)-1 do
         opt[i] := P_stringLiteral(P_listLiteral(params^.value(1))^.value(i))^.value;
       askForm.initWithQuestionAndOptions(P_stringLiteral(params^.value(0))^.value, opt);
-      result := newStringLiteral(askForm.getLastAnswerReleasing);
+      result := newStringLiteral(askForm.getLastAnswerReleasing(context.adapters));
       system.leaveCriticalSection(cs);
     end;
   end;

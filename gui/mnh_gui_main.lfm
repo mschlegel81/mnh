@@ -17,7 +17,7 @@ object MnhForm: TMnhForm
   OnKeyUp = FormKeyUp
   OnResize = FormResize
   OnShow = FormShow
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.6.0.4'
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
@@ -4090,11 +4090,13 @@ object MnhForm: TMnhForm
         ShortCut = 57379
       end>
     MouseActions = <>
+    MouseTextActions = <>
     MouseSelActions = <>
     Lines.Strings = (
       'helpPopupMemo'
     )
     Options = [eoAutoIndent, eoBracketHighlight, eoGroupUndo, eoNoCaret, eoNoSelection, eoSmartTabs, eoTabsToSpaces, eoTrimTrailingSpaces]
+    VisibleSpecialChars = [vscSpace, vscTabAtLast]
     ReadOnly = True
     RightEdge = -1
     ScrollBars = ssNone
@@ -5178,7 +5180,9 @@ object MnhForm: TMnhForm
               ShortCut = 57379
             end>
           MouseActions = <>
+          MouseTextActions = <>
           MouseSelActions = <>
+          VisibleSpecialChars = [vscSpace, vscTabAtLast]
           ReadOnly = True
           RightEdge = -1
           SelectedColor.BackPriority = 50
@@ -5437,13 +5441,6 @@ object MnhForm: TMnhForm
         OnClick = miDecFontSizeClick
       end
     end
-    object MenuItem3: TMenuItem
-      Caption = '&Tools'
-      object miOpenTableEditor: TMenuItem
-        Caption = 'Table editor'
-        OnClick = miOpenTableEditorClick
-      end
-    end
     object miHelpExternally: TMenuItem
       Caption = '&Help'
       ShortCut = 32840
@@ -5492,6 +5489,7 @@ object MnhForm: TMnhForm
     SelectedColor = clHighlight
     CaseSensitive = False
     Width = 262
+    AutoUseSingleIdent = True
     ShortCut = 16416
     EndOfTokenChr = '()[],{}+-*/&^:?<>='
     OnCodeCompletion = SynCompletionCodeCompletion

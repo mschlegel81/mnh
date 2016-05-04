@@ -14,8 +14,7 @@ USES
   SynEditMiscClasses, mnh_tokens, LazUTF8;
 
 CONST DEBUG_LINE_COUNT=200;
-      RUN_SILENT_ICON_INDEX:array[false..true] of longint=(5,2);
-      RUN_VERBOSE_ICON_INDEX:array[false..true] of longint=(6,3);
+
 TYPE
   {$define includeInterface}
   {$include editorMeta.inc}
@@ -100,8 +99,6 @@ TYPE
     helpPopupMemo: TSynMemo;
     miOpenDemo: TMenuItem;
     miNewCentralPackage: TMenuItem;
-    MenuItem3: TMenuItem;
-    miOpenTableEditor: TMenuItem;
     FindDialog: TFindDialog;
     ReplaceDialog: TReplaceDialog;
     MenuItem5: TMenuItem;
@@ -189,7 +186,6 @@ TYPE
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
     PROCEDURE miOpenDemoClick(Sender: TObject);
     PROCEDURE miNewCentralPackageClick(Sender: TObject);
-    PROCEDURE miOpenTableEditorClick(Sender: TObject);
     PROCEDURE miFindClick(Sender: TObject);
     PROCEDURE miReplaceClick(Sender: TObject);
     PROCEDURE FindDialogFind(Sender: TObject);
@@ -510,9 +506,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
-    {$else}
-    MenuItem3.Enabled:=false;
-    MenuItem3.visible:=false;
     {$endif}
     mnh_out_adapters.gui_started:=true;
     updateDebugParts;
@@ -692,9 +685,9 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     if askForm.ShowModal=mrOk then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=true;
-      lastStart.parameters:=askForm.getLastAnswerReleasing;
+      lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
       with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,lastStart.parameters);
-    end else askForm.getLastAnswerReleasing;
+    end else askForm.getLastAnswerReleasing(nil);
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
@@ -963,7 +956,7 @@ FUNCTION TMnhForm.getInputEditIndexForFilename(CONST fileName: ansistring): long
   begin
     uName:=expandFileName(fileName);
     for i:=0 to 9 do with editorMeta[i] do if sheet.TabVisible and ((filePath=uName) or (pseudoName=fileName)) then exit(i);
-    if copy(fileName,1,4)='<new' then exit;
+    if copy(fileName,1,4)='<new' then exit(-1);
     for i:=0 to 9 do with editorMeta[i] do
     if not(sheet.TabVisible) then begin
       setupInputRecForLoadingFile(i,uName);
@@ -1210,7 +1203,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     isEvaluationRunning:=ad_evaluationRunning;
     //fast ones:================================================================
     //Show ask form?
-    if askForm.displayPending then askForm.ShowModal;
+    if askForm.displayPending then askForm.show;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
     then aid:=updateSheetCaption(PageControl.ActivePageIndex)
@@ -1313,14 +1306,17 @@ PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miOpenTableEditorClick(Sender: TObject);
-begin
-  //tableForm.initForEditing;
-end;
-
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);
+  VAR wordUnderCursor:string;
   begin
-    outputFocusedOnFind:=OutputEdit.Focused;
+    if OutputEdit.Focused then begin
+      OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      outputFocusedOnFind:=true;
+    end else begin
+      with editorMeta[PageControl.ActivePageIndex] do wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
+      if wordUnderCursor<>'' then FindDialog.FindText:=wordUnderCursor;
+      outputFocusedOnFind:=false;
+    end;
     FindDialog.execute;
   end;
 
@@ -1483,6 +1479,7 @@ PROCEDURE TMnhForm.processFileHistory;
         7: result:=miFileHistory7;
         8: result:=miFileHistory8;
         9: result:=miFileHistory9;
+      else result:=nil;
       end;
     end;
   VAR i:longint;
