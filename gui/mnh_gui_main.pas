@@ -1203,7 +1203,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     isEvaluationRunning:=ad_evaluationRunning;
     //fast ones:================================================================
     //Show ask form?
-    if askForm.displayPending then askForm.show;
+    if askForm.displayPending then askForm.Show;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
     then aid:=updateSheetCaption(PageControl.ActivePageIndex)

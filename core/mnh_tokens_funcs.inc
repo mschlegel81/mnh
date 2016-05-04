@@ -442,6 +442,10 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end;
 
   begin
+    if not(context.allowDelegation) then begin
+      context.adapters^.raiseError('sandBoxExecute is not allowed in this context because delegation is disabled.',tokenLocation);
+      exit(newVoidLiteral);
+    end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string,lt_stringList]) then begin
       if params^.value(0)^.literalType=lt_string then src:=P_stringLiteral(params^.value(0))^.value else begin

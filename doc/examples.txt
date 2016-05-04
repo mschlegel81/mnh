@@ -257,11 +257,7 @@ upper(['Text','AbC']);
 t:=[0..1000]*0.006283;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300,4);
-
-printf("%s",
-       sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)')
-       .each(message,join(message,"\t")));
-     
+    
 abs({$x});
 
 abs(3);

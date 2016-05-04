@@ -140,7 +140,7 @@ FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
       if (adapters<>nil) and not(adapters)^.noErrors then begin
         displayPending:=false;
         ModalResult:=0;
-        hide;
+        Hide;
       end;
     end;
     result := lastAnswer;

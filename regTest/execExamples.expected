@@ -263,16 +263,8 @@ out>                  void
  in>                  plot.renderToFile('plotDemo1.png', 600, 300, 4);
 Image:                D:\dev\mnh5\plotDemo1.png
 out>                  void
- in>                              printf('%s', sandBoxExecute('f(x<1)->random; f(x)->f(x-1)+random; f(3)').each(message,join(message,"\t")));
-printline                          in>  @:1,1  f(x<1)->random;
-Note  @:1,1  Creating new rule: f
- in>  @:1,17 f(x)->f(x-1)+random;
-Note  @:1,17 Extending rule: f
- in>  @:1,38 f(3);
-out>  @:1,30 2.75506309582852
-out>                              void
- in>                              abs({$x});
-out>                              {abs($x)}
+ in>                  abs({$x});
+out>                  {abs($x)}
  in> abs(3);
 out> 3
  in> abs(-5/7);
@@ -344,11 +336,11 @@ out> ['X','Y','Z']
  in> minus([1..10]^2, 2*[0..50]);
 out> [1,9,25,49,81]
  in> sort(intRandom(10, 5));
-out> [1,2,3,5,9]
+out> [0,1,3,5,9]
  in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
 out> ['01','1','10','010','100']
  in> sortPerm(random(10));
-out> [0,2,3,4,8,7,9,5,6,1]
+out> [4,6,2,7,0,1,8,9,3,5]
  in> sortPerm(['a'..'c'..'a']);
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);
