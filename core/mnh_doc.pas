@@ -241,7 +241,6 @@ PROCEDURE T_userPackageDocumentation.writePackageDoc;
     end;
   VAR handle:text;
       i:longint;
-      blobLevel:longint=0;
   begin
     assign(handle,htmlRoot+DirectorySeparator+PACKAGE_DOC_SUBFOLDER+DirectorySeparator+docFileName);
     rewrite(handle);
@@ -255,7 +254,7 @@ PROCEDURE T_userPackageDocumentation.writePackageDoc;
     for i:=0 to length(rulesDoc)-1 do writeln(handle,rulesDoc[i]);
     writeln(handle, '</td></tr>'+'<tr class="oben"><td></ul>Used by: </td><td>'+getUsed+'</td></tr></table>');
     writeln(handle,'<div align="right"> <hr> </div><code>');
-    for i:=0 to length(sourceCode)-1 do writeln(handle,toHtmlCode(sourceCode[i],blobLevel));
+    for i:=0 to length(sourceCode)-1 do writeln(handle,toHtmlCode(sourceCode[i]));
     writeln(handle,'</code><div align="right"> <hr> </div> </body> </html>');
     close(handle);
   end;
@@ -305,7 +304,6 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   FUNCTION prettyHtml(s: ansistring): ansistring;
     VAR lines: T_arrayOfString;
         i: longint;
-        blobLevel:longint=0;
     begin
       setLength(lines, 0);
       while pos('#', s)>0 do begin
@@ -318,7 +316,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       for i:=0 to length(lines)-1 do
         begin
         if i>0 then result:=result+'<br>';
-        if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i],blobLevel)+'</code>'
+        if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i])+'</code>'
         else result:=result+lines [i];
       end;
     end;
@@ -465,8 +463,6 @@ PROCEDURE makeHtmlFromTemplate();
       end else result:=false;
     end;
 
-  VAR blobLevel:longint=0;
-
   FUNCTION handleCommand(cmd:ansistring):boolean;
     FUNCTION commandParameter(CONST txt:ansistring):ansistring;
       VAR i:longint;
@@ -512,7 +508,6 @@ PROCEDURE makeHtmlFromTemplate();
       end;
       if cmd=START_BEAUTIFY_CMD then begin
         context.mode:=beautifying;
-        blobLevel:=0;
         exit(true);
       end;
       if startsWith(cmd,START_INCLUDE_PREFIX) then begin
@@ -538,7 +533,7 @@ PROCEDURE makeHtmlFromTemplate();
     for i:=0 to length(doc_html_template_txt)-1 do begin
       case context.mode of
         none:            if not(handleCommand(doc_html_template_txt[i])) and outFile.isOpen then writeln(outFile.handle,doc_html_template_txt[i]);
-        beautifying:     if not(contextEnds(doc_html_template_txt[i]))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(doc_html_template_txt[i],blobLevel));
+        beautifying:     if not(contextEnds(doc_html_template_txt[i]))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(doc_html_template_txt[i]));
         definingInclude: if not(contextEnds(doc_html_template_txt[i]))   then append(context.include.content,doc_html_template_txt[i]);
       end;
     end;

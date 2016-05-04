@@ -152,14 +152,14 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
     for i:=0 to length(input)-1 do begin
       tmp:=trim(input[i]);
       if copy(tmp,1,2)='//'
-      then append(result,StringOfChar(' ',length(C_errorLevelTxt[mt_echo_input])+1)+toHtmlCode(tmp,blobLevel))
-      else append(result,                        C_errorLevelTxt[mt_echo_input]+' '+toHtmlCode(tmp,blobLevel));
+      then append(result,StringOfChar(' ',length(C_errorLevelTxt[mt_echo_input])+1)+toHtmlCode(tmp))
+      else append(result,                        C_errorLevelTxt[mt_echo_input]+' '+toHtmlCode(tmp));
     end;
     for i:=0 to length(messages)-1 do begin
       blobLevel:=0;
       with messages[i] do case messageType of
         mt_printline: append(result,multiMessage);
-        mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage,blobLevel));
+        mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage));
         mt_el1_note,
         mt_el2_warning: append(result,C_errorLevelTxt[messageType]+' '+simpleMessage);
         mt_el3_evalError,

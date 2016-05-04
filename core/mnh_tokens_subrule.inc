@@ -644,7 +644,7 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
       then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
       else result:=result+'<i>'+comment+'</i><br>';
     end;
-    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString,zeroBlobLevel)+'</code></td></tr>';
+    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
   end;
 
 FUNCTION T_subrule.arity:longint;

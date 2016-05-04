@@ -279,10 +279,9 @@ FUNCTION T_rule.getDocTxt:ansistring;
 FUNCTION T_rule.getDocHtml:ansistring;
   VAR anyPublic:boolean=false;
       i:longint;
-      zeroBlobLevel:longint=0;
   begin
     result:='<table><tr class="ruleHead"><td>';
-    result:=result+toHtmlCode(C_ruleTypeText[ruleType]+' ',zeroBlobLevel);
+    result:=result+toHtmlCode(C_ruleTypeText[ruleType]+' ');
     if id = 'main' then result:=result+'<b>'+id+'</b>' else result:=result+id;
     result:=result+'</td></tr>';
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin

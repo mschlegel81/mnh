@@ -29,7 +29,7 @@ VAR rawTokenizeCallback:T_rawTokenizeCallback;
 PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring);
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
-FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
+FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
@@ -57,7 +57,7 @@ FUNCTION imageTag(CONST fileName:ansistring):ansistring;
     result:='<img src="'+fileName+'" alt="'+fileName+'">';
   end;
 
-FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
+FUNCTION toHtmlCode(line:ansistring):ansistring;
   VAR raw:T_rawTokenArray;
       i:longint;
   begin
@@ -79,7 +79,6 @@ FUNCTION toHtmlCode(line:ansistring; VAR blobLevel:longint):ansistring;
         tt_comparatorEq..tt_cso_assignAppend: result:=result+span('operator',txt);
         tt_blank: begin
                     if (copy(trim(txt),1,2)='//') then result:=result+span('comment',txt) else result:=result+txt;
-                    if txt=SPECIAL_COMMENT_BLOB_BEGIN then inc(blobLevel);
                   end;
         else result:=result+txt;
       end;
@@ -161,7 +160,7 @@ PROCEDURE T_htmlOutAdapter.flush;
 
           mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
 
-          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage,zeroBlobLevel),'</code></td></tr>');
+          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
           {$ifdef fullVersion}
           mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
                                    imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
