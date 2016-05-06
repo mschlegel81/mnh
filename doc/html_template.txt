@@ -931,17 +931,12 @@ You can use one of the following representations:<br>
 <!--end-->  
 </code></li>
   <li><b>Blobs</b>:
-Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are delimited by the special comments
-<code>//!BLOB START</code> and <code>//!BLOB END</code>. An example:<code>
-<!--mnh-->
-  print(
-  //!BLOB START
+Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are started with a special comment
+<code>//!</code><b><i><code>symbol</code></i></b> (where <i><code>symbol</code></i></b> is one character) and ended with <b><i><code>symbol</code></i></b>. An example:<code>
+  <span class="builtin">print</span>(<span class="literal">//!$
   This is a simple text...
-       with a \ which would have to be escaped otherwise.
-    And indentations of course.
-  //!BLOB END
-  );
-<!--end-->
+       with a " and a ' one of which would have to be escaped otherwise.
+    And indentations of course.$</span>);
 </code>
 </li>
 </ul>
