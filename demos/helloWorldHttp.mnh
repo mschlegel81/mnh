@@ -1,0 +1,11 @@
+mutable counter:=0;
+main->begin
+  //start server without timeout (=0) -> server will stop on end of evaluation
+  startHttpServer('127.0.0.1:65432',{wrapTextInHttp("Hello world "&chars[counter+=1])},0);
+  //open provided URL
+  openUrl('http://127.0.0.1:65432');
+  //wait until server has received at least one request
+  while(counter=0,sleep(0.1));
+end;
+
+

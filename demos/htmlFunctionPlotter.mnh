@@ -1,0 +1,70 @@
+private FIELD_FMT:='<tr><td>%s:</td><td><INPUT TYPE="text" NAME="%s" VALUE="%s" SIZE=50 onkeydown="if (event.keyCode == 13) { this.form.submit(); return false; }"></td></tr>';
+
+private isValidReal(x)->x:numeric AND not(x.isNan) and not(x.isInfinite);
+memoized
+pageSet(rawParameters,parameters)->begin
+  //extract parameters in string form
+  local f_ :=(parameters['f'] orElse "sin(x)").replace('$','');
+  local x0_:=parameters['x0'] orElse "-3";
+  local x1_:=parameters['x1'] orElse "3";
+  local sp_:=parameters['samples'] orElse "1000";
+
+  local validationMessages:=[];
+  //transform function in string form to expression
+  local f:=void;
+  try(begin
+        //replace "x" by valid expression variable "$x"
+        f:=f_.replace('x','$x').expression;
+        f.arity==1
+        ? void
+        : validationMessages|='Function must unary.';
+        f(random):numeric
+        ? void
+        : validationMessages|='Function must return a numeric value.';
+      end,
+      validationMessages|=(escape(f_)&' is not a valid function.'));
+
+  isValidReal(local x0:=softCast(x0_))
+  ? void
+  : validationMessages|=(escape(x0_)&' is not a valid value for x0.');
+
+  isValidReal(local x1:=softCast(x1_))
+  ? void
+  : validationMessages|=(escape(x1_)&' is not a valid value for x1.');
+
+  local sp:=softCast(sp_);
+  sp:int AND 2<=sp<=10000
+  ? void
+  : validationMessages|=(escape(sp_)&' is not a valid value for samples.');
+
+  local htmlCode:='<HTML><HEAD><TITLE>Simple HTML function plotter</TITLE></HEAD><BODY><FORM name="myForm"><table>'&
+    format(FIELD_FMT,'Function:','f',f_)&
+    format(FIELD_FMT,'x0:','x0',x0_)&
+    format(FIELD_FMT,'x1:','x1',x1_)&
+    format(FIELD_FMT,'samples:','samples',sp_)&
+    '</table></FORM>';
+
+  local imageCode:='';
+  validationMessages==[]
+  ? begin
+      //if there are no validation messages, add link to image and generate image
+      htmlCode&='<img src="plotImg.png?'&rawParameters&'">';
+      local X:=([0,1]|random(sp-2)).sort*(x1-x0)+x0;
+      plot(X,f(X));
+      imageCode:=wrapTextInHttp(plot.renderToString(400,400,4),'image/png');
+    end
+  : begin
+      //if there are no validation messages, append them and return httpError(404) instead of image
+      htmlCode&=(validationMessages.join('<br>');
+      imageCode:=httpError;
+    end;
+
+  [['/page.html',wrapTextInHttp(htmlCode&'</BODY></HTML>')],
+   ['/plotImg.png',imageCode]];
+end;
+
+main->begin
+  startHttpServer('localhost:43210',{pageSet(rawParameters,parameters)[path] orElse httpError},0);
+  openUrl('http://localhost:43210/page.html');
+  ask('Press o.k. to shutdown server.',['o.k.']);
+end;
