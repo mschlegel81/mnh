@@ -360,6 +360,10 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
     first:=stringToTokens(s,location,package,context);
     if first=nil then exit(nil);
 
+    if not(first^.areBracketsPlausible(context.adapters^)) then begin
+      context.cascadeDisposeToken(first);
+      exit(nil);
+    end;
     if first^.tokType<>tt_expBraceOpen then begin
       temp:=context.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
