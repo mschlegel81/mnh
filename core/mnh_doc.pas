@@ -517,7 +517,7 @@ PROCEDURE makeHtmlFromTemplate();
       if startsWith(cmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
-          assign(handle,htmlRoot+'\'+cmdParam);
+          assign(handle,htmlRoot+DirectorySeparator+cmdParam);
           rewrite(handle);
           isOpen:=true;
         end;

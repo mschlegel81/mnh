@@ -3,30 +3,33 @@ object SettingsForm: TSettingsForm
   Height = 240
   Top = 344
   Width = 320
+  BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
   ClientHeight = 240
   ClientWidth = 320
+  FormStyle = fsStayOnTop
   OnCreate = FormCreate
+  OnShow = FormShow
   Position = poMainFormCenter
   LCLVersion = '1.6.0.4'
-  object PageControl1: TPageControl
+  object PageControl: TPageControl
     Left = 0
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet2
+    ActivePage = TabSheet_display
     Align = alClient
     TabIndex = 0
     TabOrder = 0
-    object TabSheet2: TTabSheet
+    object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 209
-      ClientWidth = 316
+      ClientHeight = 212
+      ClientWidth = 312
       object Label2: TLabel
         Left = 8
-        Height = 17
+        Height = 15
         Top = 24
-        Width = 36
+        Width = 27
         Caption = 'Font:'
         ParentColor = False
       end
@@ -34,7 +37,7 @@ object SettingsForm: TSettingsForm
         Left = 48
         Height = 25
         Top = 24
-        Width = 260
+        Width = 256
         Anchors = [akTop, akLeft, akRight]
         Caption = 'FontButton'
         OnClick = FontButtonClick
@@ -42,17 +45,17 @@ object SettingsForm: TSettingsForm
       end
       object Label3: TLabel
         Left = 8
-        Height = 17
+        Height = 15
         Top = 56
-        Width = 65
+        Width = 49
         Caption = 'Font size:'
         ParentColor = False
       end
       object FontSizeEdit: TEdit
         Left = 72
-        Height = 27
+        Height = 23
         Top = 56
-        Width = 236
+        Width = 232
         Anchors = [akTop, akLeft, akRight]
         NumbersOnly = True
         TabOrder = 1
@@ -60,23 +63,23 @@ object SettingsForm: TSettingsForm
       end
       object AntialiasCheckbox: TCheckBox
         Left = 8
-        Height = 24
+        Height = 19
         Top = 80
-        Width = 145
+        Width = 110
         Caption = 'Antialiased Fonts'
         OnChange = AntialiasCheckboxChange
         TabOrder = 2
       end
       object Label8: TLabel
         Left = 8
-        Height = 17
+        Height = 15
         Top = 0
-        Width = 47
+        Width = 34
         Caption = 'Editor:'
         ParentColor = False
       end
     end
-    object TabSheet3: TTabSheet
+    object TabSheet_global: TTabSheet
       Caption = 'global'
       ClientHeight = 209
       ClientWidth = 316
@@ -108,16 +111,16 @@ object SettingsForm: TSettingsForm
       end
       object autosaveComboBox: TComboBox
         Left = 72
-        Height = 31
+        Height = 23
         Top = 32
         Width = 232
-        ItemHeight = 0
+        ItemHeight = 15
         OnChange = autosaveComboBoxChange
         Style = csDropDownList
         TabOrder = 1
       end
     end
-    object TabSheet1: TTabSheet
+    object TabSheet_install: TTabSheet
       Caption = 'installation'
       ClientHeight = 209
       ClientWidth = 316
@@ -150,7 +153,11 @@ object SettingsForm: TSettingsForm
     end
   end
   object EditorFontDialog: TFontDialog
+    Width = 454
+    Height = 336
     Title = 'Select Font'
+    Font.Height = -13
+    Font.Name = 'Monospace'
     MinFontSize = 0
     MaxFontSize = 0
     Options = [fdNoSizeSel, fdWysiwyg]

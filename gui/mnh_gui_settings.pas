@@ -20,14 +20,14 @@ TYPE
     EditorFontDialog: TFontDialog;
     Label2: TLabel;
     Label3: TLabel;
-    PageControl1: TPageControl;
-    TabSheet2: TTabSheet;
+    PageControl: TPageControl;
+    TabSheet_display: TTabSheet;
     Label8: TLabel;
-    TabSheet1: TTabSheet;
+    TabSheet_install: TTabSheet;
     Button1: TButton;
     Button2: TButton;
     uninstallToggleBox: TToggleBox;
-    TabSheet3: TTabSheet;
+    TabSheet_global: TTabSheet;
     Label1: TLabel;
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
@@ -36,6 +36,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
+    PROCEDURE FormShow(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
@@ -101,11 +102,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
-    {$ifndef Windows}
-    TabSheet1.Visible:=false;
-    TabSheet1.Enabled:=false;
-    TabSheet1.TabVisible:=false;
-    {$endif}
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
@@ -130,6 +126,16 @@ PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
   {$i res_ensureMnhFileAssociations.inc}
   begin
     runAlone(ensureMnhFileAssociations_mnh);
+  end;
+
+PROCEDURE TSettingsForm.FormShow(Sender: TObject);
+  begin
+    writeln('Showing settings form.');
+    {$ifndef Windows}
+    TabSheet_install.visible:=false;
+    TabSheet_install.Enabled:=false;
+    TabSheet_install.TabVisible:=false;
+    {$endif}
   end;
 
 PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);

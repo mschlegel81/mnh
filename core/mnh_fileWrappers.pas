@@ -44,32 +44,12 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 FUNCTION locateSources: T_arrayOfString;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
-PROCEDURE ensurePath(path:ansistring);
+PROCEDURE ensurePath(CONST path:ansistring);
 
 IMPLEMENTATION
-PROCEDURE ensurePath(path:ansistring);
-  VAR newDir:string;
-      ensuredDir:string;
-      p,p2:longint;
+PROCEDURE ensurePath(CONST path:ansistring);
   begin
-    ensuredDir:='';
-    path:=extractFilePath(expandFileName(path));
-    if path[length(path)] in ['/','\'] then path:=copy(path,1,length(path)-1);
-    while path<>'' do begin
-      p:=pos('/',path);
-      p2:=pos('\',path);
-      if (p<=0) or (p2>0) and (p2<p) then p:=p2;
-      if p<=0 then begin
-        newDir:=path;
-        path:='';
-      end else begin
-        newDir:=copy(path,1,p-1);
-        path:=copy(path,p+1,length(path)-p);
-      end;
-      if ensuredDir='' then ensuredDir:=newDir
-                       else ensuredDir:=ensuredDir+DirectorySeparator+newDir;
-      CreateDir(ensuredDir);
-    end;
+    ForceDirectories(extractFilePath(expandFileName(path)));
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
