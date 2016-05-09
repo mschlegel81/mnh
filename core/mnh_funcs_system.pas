@@ -2,7 +2,7 @@ UNIT mnh_funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,Process,fphttpclient,FileUtil,windows,mySys,myStringUtil,mnh_contexts,lclintf,
+     sysutils, Classes,Process,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
      LazFileUtils,LazUTF8;
 IMPLEMENTATION
 {$MACRO ON}
@@ -423,13 +423,15 @@ FUNCTION beep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     if (params=nil) or (params^.size=0) then begin
       result:=newVoidLiteral;
       sysutils.beep;
+    {$ifdef Windows}
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       result:=newVoidLiteral;
       windows.beep(int0^.value,
                    int1^.value);
+    {$endif}
     end;
   end;
-
+{$ifdef Windows}
 FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION infoForLetter(CONST drive:char):P_literal;
     VAR DriveLetter: ansistring;
@@ -485,6 +487,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false,context.adapters^);
     end;
   end;
+{$endif}
 
 FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR e:T_arrayOfString;
@@ -542,6 +545,8 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list',fc_readingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string',fc_readingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser',fc_callingExternal);
+  {$ifdef Windows}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.',fc_readingExternal);
+  {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.',fc_readingExternal);
 end.

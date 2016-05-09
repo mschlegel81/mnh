@@ -345,6 +345,7 @@ PROCEDURE T_editorState.saveToFile(VAR F: T_file);
 
 FUNCTION obtainSettings:P_Settings;
   begin
+    ensurePath(settingsFileName);
     new(result,create);
     if fileExists(settingsFileName) then result^.loadFromFile(settingsFileName);
   end;

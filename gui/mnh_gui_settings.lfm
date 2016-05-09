@@ -8,25 +8,25 @@ object SettingsForm: TSettingsForm
   ClientWidth = 320
   OnCreate = FormCreate
   Position = poMainFormCenter
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.6.0.4'
   object PageControl1: TPageControl
     Left = 0
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet3
+    ActivePage = TabSheet2
     Align = alClient
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 0
     object TabSheet2: TTabSheet
       Caption = 'display'
-      ClientHeight = 212
-      ClientWidth = 312
+      ClientHeight = 209
+      ClientWidth = 316
       object Label2: TLabel
         Left = 8
-        Height = 15
+        Height = 17
         Top = 24
-        Width = 27
+        Width = 36
         Caption = 'Font:'
         ParentColor = False
       end
@@ -34,7 +34,7 @@ object SettingsForm: TSettingsForm
         Left = 48
         Height = 25
         Top = 24
-        Width = 256
+        Width = 260
         Anchors = [akTop, akLeft, akRight]
         Caption = 'FontButton'
         OnClick = FontButtonClick
@@ -42,17 +42,17 @@ object SettingsForm: TSettingsForm
       end
       object Label3: TLabel
         Left = 8
-        Height = 15
+        Height = 17
         Top = 56
-        Width = 49
+        Width = 65
         Caption = 'Font size:'
         ParentColor = False
       end
       object FontSizeEdit: TEdit
         Left = 72
-        Height = 23
+        Height = 27
         Top = 56
-        Width = 232
+        Width = 236
         Anchors = [akTop, akLeft, akRight]
         NumbersOnly = True
         TabOrder = 1
@@ -60,37 +60,37 @@ object SettingsForm: TSettingsForm
       end
       object AntialiasCheckbox: TCheckBox
         Left = 8
-        Height = 19
+        Height = 24
         Top = 80
-        Width = 110
+        Width = 145
         Caption = 'Antialiased Fonts'
         OnChange = AntialiasCheckboxChange
         TabOrder = 2
       end
       object Label8: TLabel
         Left = 8
-        Height = 15
+        Height = 17
         Top = 0
-        Width = 34
+        Width = 47
         Caption = 'Editor:'
         ParentColor = False
       end
     end
     object TabSheet3: TTabSheet
       Caption = 'global'
-      ClientHeight = 212
-      ClientWidth = 312
+      ClientHeight = 209
+      ClientWidth = 316
       object Label1: TLabel
         Left = 8
-        Height = 15
+        Height = 17
         Top = 8
-        Width = 31
+        Width = 39
         Caption = 'CPUs:'
         ParentColor = False
       end
       object workerThreadCountEdit: TEdit
         Left = 72
-        Height = 23
+        Height = 27
         Top = 8
         Width = 232
         NumbersOnly = True
@@ -100,18 +100,18 @@ object SettingsForm: TSettingsForm
       end
       object Label4: TLabel
         Left = 8
-        Height = 15
+        Height = 17
         Top = 32
-        Width = 52
+        Width = 69
         Caption = 'Autosave:'
         ParentColor = False
       end
       object autosaveComboBox: TComboBox
         Left = 72
-        Height = 23
+        Height = 31
         Top = 32
         Width = 232
-        ItemHeight = 15
+        ItemHeight = 0
         OnChange = autosaveComboBoxChange
         Style = csDropDownList
         TabOrder = 1
@@ -119,8 +119,8 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet1: TTabSheet
       Caption = 'installation'
-      ClientHeight = 212
-      ClientWidth = 312
+      ClientHeight = 209
+      ClientWidth = 316
       object Button1: TButton
         Left = 24
         Height = 25

@@ -5,7 +5,7 @@ object MnhForm: TMnhForm
   Width = 666
   AllowDropFiles = True
   Caption = 'MNH5'
-  ClientHeight = 464
+  ClientHeight = 484
   ClientWidth = 666
   Color = clWhite
   Menu = MainMenu1
@@ -20,8 +20,8 @@ object MnhForm: TMnhForm
   LCLVersion = '1.6.0.4'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 441
+    Height = 21
+    Top = 463
     Width = 666
     Panels = <>
   end
@@ -39,13 +39,13 @@ object MnhForm: TMnhForm
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
     object EditorTabSheet: TTabSheet
       Caption = 'Editor'
-      ClientHeight = 97
-      ClientWidth = 658
+      ClientHeight = 89
+      ClientWidth = 662
       inline InputEdit0: TSynEdit
         Left = 0
-        Height = 97
+        Height = 89
         Top = 0
-        Width = 658
+        Width = 662
         Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
@@ -398,8 +398,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet1: TTabSheet
       Caption = 'TabSheet1'
-      ClientHeight = 97
-      ClientWidth = 477
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit1: TSynEdit
         Left = 0
@@ -758,8 +758,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet2: TTabSheet
       Caption = 'TabSheet2'
-      ClientHeight = 97
-      ClientWidth = 471
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit2: TSynEdit
         Left = 0
@@ -1118,8 +1118,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet3: TTabSheet
       Caption = 'TabSheet3'
-      ClientHeight = 97
-      ClientWidth = 471
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit3: TSynEdit
         Left = 0
@@ -1478,8 +1478,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet4: TTabSheet
       Caption = 'TabSheet4'
-      ClientHeight = 97
-      ClientWidth = 477
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit4: TSynEdit
         Left = 0
@@ -1838,8 +1838,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet5: TTabSheet
       Caption = 'TabSheet5'
-      ClientHeight = 97
-      ClientWidth = 471
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit5: TSynEdit
         Left = 0
@@ -2198,8 +2198,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet6: TTabSheet
       Caption = 'TabSheet6'
-      ClientHeight = 97
-      ClientWidth = 658
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit6: TSynEdit
         Left = 0
@@ -2558,8 +2558,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet7: TTabSheet
       Caption = 'TabSheet7'
-      ClientHeight = 97
-      ClientWidth = 658
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit7: TSynEdit
         Left = 0
@@ -2918,8 +2918,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet8: TTabSheet
       Caption = 'TabSheet8'
-      ClientHeight = 97
-      ClientWidth = 471
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit8: TSynEdit
         Left = 0
@@ -3278,8 +3278,8 @@ object MnhForm: TMnhForm
     end
     object TabSheet9: TTabSheet
       Caption = 'TabSheet9'
-      ClientHeight = 97
-      ClientWidth = 658
+      ClientHeight = 89
+      ClientWidth = 662
       TabVisible = False
       inline InputEdit9: TSynEdit
         Left = 0
@@ -4194,7 +4194,7 @@ object MnhForm: TMnhForm
   end
   object outputPageControl: TPageControl
     Left = 0
-    Height = 281
+    Height = 303
     Top = 160
     Width = 666
     TabStop = False
@@ -4205,8 +4205,8 @@ object MnhForm: TMnhForm
     TabOrder = 6
     object outputTabSheet: TTabSheet
       Caption = 'Output'
-      ClientHeight = 273
-      ClientWidth = 658
+      ClientHeight = 299
+      ClientWidth = 662
       inline OutputEdit: TSynEdit
         Left = 0
         Height = 273
@@ -4692,13 +4692,13 @@ object MnhForm: TMnhForm
     end
     object variablesTabSheet: TTabSheet
       Caption = 'Variables'
-      ClientHeight = 273
-      ClientWidth = 658
+      ClientHeight = 299
+      ClientWidth = 662
       object variablesStringGrid: TStringGrid
         Left = 0
-        Height = 216
+        Height = 242
         Top = 57
-        Width = 658
+        Width = 662
         Align = alClient
         AutoEdit = False
         ColCount = 4
@@ -4733,18 +4733,18 @@ object MnhForm: TMnhForm
         Left = 0
         Height = 57
         Top = 0
-        Width = 658
+        Width = 662
         Align = alTop
         Caption = 'Current expression'
-        ClientHeight = 37
-        ClientWidth = 654
+        ClientHeight = 38
+        ClientWidth = 658
         TabOrder = 1
         inline currentExpressionMemo: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 37
+          Height = 38
           Top = 0
-          Width = 654
+          Width = 658
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'

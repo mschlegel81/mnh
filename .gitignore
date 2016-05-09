@@ -25,3 +25,5 @@ make*.log.txt
 core/res_*.inc
 core/res_html_template.inc
 core/res_examples.inc
+gui/lib/x86_64-linux/*
+gui/mnh

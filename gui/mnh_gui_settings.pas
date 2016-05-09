@@ -101,6 +101,11 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
+    {$ifndef Windows}
+    TabSheet1.Visible:=false;
+    TabSheet1.Enabled:=false;
+    TabSheet1.TabVisible:=false;
+    {$endif}
   end;
 
 PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);

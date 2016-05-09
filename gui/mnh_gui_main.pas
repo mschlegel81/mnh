@@ -519,7 +519,9 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       runAlone(removeMnhFileAssociations_mnh);
       runAlone('deleteDir('+escapeString(GetAppConfigDir(true))+')');
       DeleteFile('mnh_light.exe');
+      {$ifdef Windows}
       deleteMyselfOnExit;
+      {$endif}
       halt;
     end;
 
