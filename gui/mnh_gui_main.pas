@@ -611,6 +611,9 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
           editorMeta[i].editor.CaretXY:=newCaret;
         end;
       end;
+      {$ifndef Windows}
+      miIncFontSize.ShortCut:=16605;
+      {$endif}
     end;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;

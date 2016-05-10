@@ -5433,11 +5433,13 @@ object MnhForm: TMnhForm
       object miIncFontSize: TMenuItem
         Caption = 'Increase Font Size'
         ShortCut = 16571
+        ShortCutKey2 = 16491
         OnClick = miIncFontSizeClick
       end
       object miDecFontSize: TMenuItem
         Caption = 'Decrease Font Size'
         ShortCut = 16573
+        ShortCutKey2 = 16493
         OnClick = miDecFontSizeClick
       end
     end
