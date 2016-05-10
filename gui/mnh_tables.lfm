@@ -1,0 +1,41 @@
+object tableForm: TtableForm
+  Left = 486
+  Height = 240
+  Top = 301
+  Width = 320
+  Caption = '-'
+  ClientHeight = 220
+  ClientWidth = 320
+  Menu = tableMenu
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  Position = poOwnerFormCenter
+  LCLVersion = '1.6.0.4'
+  object stringGrid: TStringGrid
+    Left = 0
+    Height = 220
+    Top = 0
+    Width = 320
+    Align = alClient
+    BorderStyle = bsNone
+    FixedCols = 0
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing, goDblClickAutoSize, goSmoothScroll]
+    TabOrder = 0
+  end
+  object tableMenu: TMainMenu
+    left = 68
+    top = 85
+    object MenuItem1: TMenuItem
+      Caption = 'Display'
+      object mi_transpose: TMenuItem
+        Caption = 'Transpose'
+        OnClick = mi_transposeClick
+      end
+      object mi_comma: TMenuItem
+        Caption = 'Comma as decimal separator'
+        OnClick = mi_commaClick
+      end
+    end
+  end
+end

@@ -287,12 +287,13 @@ TYPE
     mt_plotCreatedWithDeferredDisplay,
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
-    mt_evaluatedStatementInInteractiveMode
+    mt_evaluatedStatementInInteractiveMode,
+    mt_displayTable
     {$endif});
 
 CONST
   {$ifdef fullVersion}
-  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..0] of T_messageType=(mt_plotCreatedWithInstantDisplay);
+  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..1] of T_messageType=(mt_plotCreatedWithInstantDisplay,mt_displayTable);
   {$endif}
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
    -2,//mt_clearConsole,
@@ -314,7 +315,8 @@ CONST
    -1//mt_timing_info
    {$ifdef fullVersion},
    -1,-1,-1,-1, //mt_plot...
-   -1 //mt_evaluatedStatementInInteractiveMode
+   -1, //mt_evaluatedStatementInInteractiveMode
+   -1  //mt_displayTable
    {$endif});
 
   SELF_TOKEN_TEXT='$self';
@@ -345,7 +347,8 @@ CONST
     'Deferred plot request',
     'Instant plot request',
     'Plot settings changed',
-    'Statement No.'
+    'Statement No.',
+    ''
     {$endif});
 
   DOC_COMMENT_PREFIX='//*';

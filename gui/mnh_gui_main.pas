@@ -11,7 +11,7 @@ USES
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,
-  SynEditMiscClasses, mnh_tokens, LazUTF8;
+  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables;
 
 CONST DEBUG_LINE_COUNT=200;
 
@@ -1206,6 +1206,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     //fast ones:================================================================
     //Show ask form?
     if askForm.displayPending then askForm.Show;
+    tableForm.conditionalDoShow;
     //Form caption:-------------------------------------------------------------
     if PageControl.ActivePageIndex>=0
     then aid:=updateSheetCaption(PageControl.ActivePageIndex)
@@ -1275,7 +1276,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     if reEvaluationWithGUIrequired then begin
       Hide;
-      if not(isEvaluationRunning) and not(plotForm.showing) then close;
+      if not(isEvaluationRunning) and not(plotForm.showing) and not(tableForm.showing) then close;
     end;
   end;
 

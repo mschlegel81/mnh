@@ -5,7 +5,7 @@ object MnhForm: TMnhForm
   Width = 666
   AllowDropFiles = True
   Caption = 'MNH5'
-  ClientHeight = 484
+  ClientHeight = 464
   ClientWidth = 666
   Color = clWhite
   Menu = MainMenu1
@@ -20,8 +20,8 @@ object MnhForm: TMnhForm
   LCLVersion = '1.6.0.4'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 21
-    Top = 463
+    Height = 23
+    Top = 441
     Width = 666
     Panels = <>
   end
@@ -39,13 +39,13 @@ object MnhForm: TMnhForm
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch, nboShowAddTabButton]
     object EditorTabSheet: TTabSheet
       Caption = 'Editor'
-      ClientHeight = 89
-      ClientWidth = 662
+      ClientHeight = 97
+      ClientWidth = 658
       inline InputEdit0: TSynEdit
         Left = 0
-        Height = 89
+        Height = 97
         Top = 0
-        Width = 662
+        Width = 658
         Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
@@ -4194,7 +4194,7 @@ object MnhForm: TMnhForm
   end
   object outputPageControl: TPageControl
     Left = 0
-    Height = 303
+    Height = 281
     Top = 160
     Width = 666
     TabStop = False
@@ -4692,13 +4692,13 @@ object MnhForm: TMnhForm
     end
     object variablesTabSheet: TTabSheet
       Caption = 'Variables'
-      ClientHeight = 299
-      ClientWidth = 662
+      ClientHeight = 273
+      ClientWidth = 658
       object variablesStringGrid: TStringGrid
         Left = 0
-        Height = 242
+        Height = 216
         Top = 57
-        Width = 662
+        Width = 658
         Align = alClient
         AutoEdit = False
         ColCount = 4
@@ -4733,18 +4733,18 @@ object MnhForm: TMnhForm
         Left = 0
         Height = 57
         Top = 0
-        Width = 662
+        Width = 658
         Align = alTop
         Caption = 'Current expression'
-        ClientHeight = 38
-        ClientWidth = 658
+        ClientHeight = 37
+        ClientWidth = 654
         TabOrder = 1
         inline currentExpressionMemo: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 38
+          Height = 37
           Top = 0
-          Width = 658
+          Width = 654
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'
