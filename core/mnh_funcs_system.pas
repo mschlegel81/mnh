@@ -519,6 +519,12 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
+FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then result:=newBoolLiteral(gui_started)
+                                        else result:=nil;
+  end;
+
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]',fc_stateful);
@@ -549,4 +555,5 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo',@driveInfo_imp,'driveInfo;#Returns info on the computer''''s drives/volumes.',fc_readingExternal);
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.',fc_readingExternal);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiActive',@isGuiActive_impl,'isGuiActive;#Returns true if GUI is showing and false otherwise.',fc_stateful);
 end.
