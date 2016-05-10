@@ -174,8 +174,8 @@ PROCEDURE T_settings.reset;
   VAR i:longint;
   begin
     for i := 0 to 9 do fileHistory[i] := '';
-    editorFontname := 'Courier New';
-    fontSize := 11;
+    editorFontname := '';
+    fontSize := 0;
     with mainForm do begin
       top := 0;
       Left := 0;

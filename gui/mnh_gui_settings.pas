@@ -45,6 +45,7 @@ TYPE
     PROCEDURE setFontSize(CONST value: longint);
   public
     PROPERTY fontSize:longint read getFontSize write setFontSize;
+    PROCEDURE ensureFont(CONST editorFont:TFont);
   end;
 
 VAR
@@ -69,7 +70,10 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
 
   begin
-    EditorFontDialog.Font.name := settings.value^.editorFontname;
+    if settings.value^.editorFontname<>'' then begin
+      EditorFontDialog.Font.name := settings.value^.editorFontname;
+      FontButton.Font.name := settings.value^.editorFontname;
+    end;
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
     if not(settings.value^.wasLoaded) then begin
@@ -77,28 +81,21 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       ensurePackages;
     end;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
-    FontButton.Font.name := settings.value^.editorFontname;
     FontButton.Font.size := getFontSize;
     FontButton.Caption := settings.value^.editorFontname;
     with settings.value^.mainForm do begin
-      if top<0 then
-        top := 0;
-      if Left<0 then
-        Left := 0;
-      if height>screen.height-top then
-        height := screen.height-top;
-      if width>screen.width-Left then
-        width := screen.width-Left;
-      if (height<0) or (width<0) then
-        begin
+      if top<0  then top := 0;
+      if Left<0 then Left := 0;
+      if height>screen.height-top then height := screen.height-top;
+      if width>screen.width-Left then width := screen.width-Left;
+      if (height<0) or (width<0) then  begin
         top := 0;
         Left := 0;
         width := 480;
         height := 480;
-        end;
+      end;
     end;
     settings.value^.polishHistory;
-
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
@@ -114,6 +111,17 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
       FontButton.Font.size := getFontSize;
       FontButton.Caption := settings.value^.editorFontname;
     end;
+  end;
+
+PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
+  begin
+    if settings.value^.editorFontname<>'' then exit;
+    settings.value^.editorFontname:=editorFont.name;
+    EditorFontDialog.Font.name := settings.value^.editorFontname;
+    FontButton.Font.name := settings.value^.editorFontname;
+    setFontSize(editorFont.size);
+    FontButton.Font.size := getFontSize;
+    FontButton.Caption := settings.value^.editorFontname;
   end;
 
 PROCEDURE TSettingsForm.Button1Click(Sender: TObject);

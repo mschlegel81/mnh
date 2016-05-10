@@ -1452,6 +1452,7 @@ PROCEDURE TMnhForm.processSettings;
       miEvalModeDirect.Checked:=not(settings.value^.instantEvaluation);
       miEvalModeDirectOnKeypress.Checked:=settings.value^.instantEvaluation;
       processFileHistory;
+      SettingsForm.ensureFont(InputEdit0.Font);
       settingsReady:=true;
     end;
 

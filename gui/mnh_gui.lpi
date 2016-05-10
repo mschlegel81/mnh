@@ -300,6 +300,7 @@
         <Filename Value="mnh_tables.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="tableForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit38>
     </Units>
