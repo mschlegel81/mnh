@@ -1,6 +1,6 @@
 UNIT mnh_settings;
 INTERFACE
-USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys;
+USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -77,7 +77,7 @@ IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
   begin
-    result := GetAppConfigDir(true)+'mnh_gui.settings';
+    result := configDir+'mnh_gui.settings';
   end;
 
 PROCEDURE saveSettings;

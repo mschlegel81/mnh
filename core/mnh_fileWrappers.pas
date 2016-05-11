@@ -72,7 +72,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
   begin
     result := '';
     recursePath(extractRelativePath(expandFileName(''),extractFilePath(rootPath)));
-    if result = '' then recursePath(GetAppConfigDir(true));
+    if result = '' then recursePath(configDir);
     if result = '' then recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
     if result = '' then recursePath(extractRelativePath(expandFileName(''),''));
   end;
@@ -94,7 +94,7 @@ FUNCTION locateSources: T_arrayOfString;
 
   begin
     setLength(result, 0);
-    recursePath(GetAppConfigDir(true));
+    recursePath(configDir);
     recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
     recursePath(extractFilePath(paramStr(0)));
     recursePath('');

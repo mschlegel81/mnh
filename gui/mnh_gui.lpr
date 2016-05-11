@@ -1,4 +1,4 @@
-{$MAXSTACKSIZE 100000000}
+{$ifdef windows}{$MAXSTACKSIZE 100000000}{$endif}
 PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}

@@ -517,7 +517,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     {$i res_removeMnhFileAssociations.inc}
     begin
       runAlone(removeMnhFileAssociations_mnh);
-      runAlone('deleteDir('+escapeString(GetAppConfigDir(true))+')');
+      runAlone('deleteDir('+escapeString(configDir)+')');
       DeleteFile('mnh_light.exe');
       {$ifdef Windows}
       deleteMyselfOnExit;
@@ -1286,7 +1286,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
     ensureDemos;
-    OpenDialog.fileName:=GetAppConfigDir(true)+'demos';
+    OpenDialog.fileName:=configDir+'demos';
     miOpenClick(Sender);
   end;
 

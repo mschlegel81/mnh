@@ -58,7 +58,7 @@ PROCEDURE ensureDemos;
   begin
     setLength(code,length(ensureDemos_mnh));
     for i:=0 to length(code)-1 do code[i]:=ensureDemos_mnh[i];
-    append(code,'('+escapeString(GetAppConfigDir(true))+')');
+    append(code,'('+escapeString(configDir)+')');
     demoCodeToHtmlCallback(code);
   end;
 
@@ -579,7 +579,7 @@ PROCEDURE disposeFunctionDocMap;
   end;
 
 INITIALIZATION
-  htmlRoot:=GetAppConfigDir(true)+'doc';
+  htmlRoot:=configDir+'doc';
   if not(DirectoryExists(htmlRoot)) then CreateDir(htmlRoot);
   functionDocMap.create();
 FINALIZATION

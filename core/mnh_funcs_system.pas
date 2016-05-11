@@ -521,7 +521,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 
 FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
-    if (params=nil) or (params^.size=0) then result:=newBoolLiteral(gui_started)
+    if (params=nil) or (params^.size=0) then result:=newBoolLiteral({$ifdef fullVersion}gui_started{$else}false{$endif})
                                         else result:=nil;
   end;
 

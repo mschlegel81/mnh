@@ -5,7 +5,7 @@ UNIT newCentralPackageDialog;
 INTERFACE
 
 USES
-  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, myStringUtil;
+  Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, myStringUtil,mnh_constants;
 
 TYPE
 
@@ -47,7 +47,7 @@ PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
   CONST FILE_EXISTS_COMPLAINT='File already exists';
         PACKAGE_NAME_COMPLAINT='Package name must be a valid identifier';
   begin
-    fileNameEdit.text:=GetAppConfigDir(true)+'packages'+DirectorySeparator+packageNameEdit.text+'.mnh';
+    fileNameEdit.text:=configDir+'packages'+DirectorySeparator+packageNameEdit.text+'.mnh';
     if not(isIdentifier(packageNameEdit.text,false)) then begin
       complaintLabel.Caption:=PACKAGE_NAME_COMPLAINT;
       complaintLabel.visible:=true;

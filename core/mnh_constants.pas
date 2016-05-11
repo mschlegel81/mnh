@@ -33,7 +33,7 @@ CONST
   C_eachIndexIdentifier='index';
 
 FUNCTION isQualified(CONST s:string):boolean;
-
+FUNCTION configDir:string;
 CONST
   LOGO:array[0..6] of string=(' ___      ___ ___   ___ ___   ___ ',
                               '|   \    /   |   \ |   |   | |   |  ______',
@@ -440,8 +440,17 @@ FUNCTION getAppName: string;
     result:='MNH';
   end;
 
+FUNCTION configDir:string;
+  begin
+    {$ifdef WINDOWS}
+    result:=GetAppConfigDir(true);
+    {$else}
+    result:=GetAppConfigDir(false);
+    {$endif}
+  end;
+
 INITIALIZATION
   OnGetApplicationName:=@getAppName;
-  if not(DirectoryExists(GetAppConfigDir(true))) then CreateDir(GetAppConfigDir(true));
+  ForceDirectories(configDir);
 
 end.

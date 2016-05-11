@@ -63,7 +63,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     begin
       setLength(code,length(ensurePackages_mnh));
       for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-      append(code,'('+escapeString(GetAppConfigDir(true))+')');
+      append(code,'('+escapeString(configDir)+')');
       runAlone(code);
     end;
 
@@ -138,7 +138,6 @@ PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);
   begin
-    writeln('Showing settings form.');
     {$ifndef Windows}
     TabSheet_install.visible:=false;
     TabSheet_install.Enabled:=false;
