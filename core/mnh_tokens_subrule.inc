@@ -319,7 +319,9 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
   PROCEDURE wrapResult;
     FUNCTION parId(CONST index:longint):string;
       begin
-        result:=pattern.sig[index].id;
+        if (index>=0) and (index<length(pattern.sig))
+        then result:=pattern.sig[index].id
+        else result:='';
         if result='' then result:='#'+intToStr(i);
       end;
 

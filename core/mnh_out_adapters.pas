@@ -385,8 +385,7 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType;
-  CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then

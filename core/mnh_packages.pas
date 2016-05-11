@@ -261,7 +261,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
     id:=packId;
-    path:=locateSource(root,id);
+    path:=locateSource(ExtractFilePath(root),id);
     if (path='') and (adapters<>nil) then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;
@@ -342,7 +342,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           temp:=first; first:=context.disposeToken(temp);
         end;
-        if not(context.adapters^.noErrors) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,first^.location);
+        if not(context.adapters^.noErrors) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,locationForErrorFeedback);
         if usecase<>lu_forDocGeneration then reloadAllPackages(locationForErrorFeedback);
       end;
 
