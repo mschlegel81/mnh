@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   Menus, ComCtrls, mnh_plotData, mnh_constants, mnh_out_adapters, mnh_evalThread,
-  mnh_cmdLineInterpretation, mnh_tokLoc, mnh_settings;
+  mnh_cmdLineInterpretation, mnh_tokLoc, mnh_settings, mnh_litVar, mnh_funcs, mnh_contexts;
 
 TYPE
 
@@ -268,11 +268,15 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
        else doPlot();
   end;
 
+VAR broughtToFront:double;
 PROCEDURE TplotForm.doPlot;
   VAR factor:longint;
   begin
     if not(showing) and guiAdapters^.noErrors then Show;
-    BringToFront;
+    if (now-broughtToFront)>5/(24*60*60) then begin
+      BringToFront;
+      broughtToFront:=now;
+    end;
     if      miAntiAliasing5.Checked then factor:=5
     else if miAntiAliasing4.Checked then factor:=4
     else if miAntiAliasing3.Checked then factor:=3
@@ -283,5 +287,14 @@ PROCEDURE TplotForm.doPlot;
     guiAdapters^.plot.renderPlot(plotImage,factor);
   end;
 
+FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=newBoolLiteral(gui_started and plotForm.showing);
+  end;
+
+
+INITIALIZATION
+  broughtToFront:=0;
+  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,'plotShowing;#Returns true if the plot is currently showing, false otherwise',fc_stateful);
 end.
 

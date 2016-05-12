@@ -29,6 +29,6 @@ main->print("Canonical form (as given by rosettacode.org):")|
             "\n  can be expanded to\t"     ,                        expandRange(exampleRange),
             "\n  and be re-compressed to\t",normalForm(extractRange(expandRange(exampleRange))) )|
       print("\nMNH form:")|
-      print("  The list\t"               ,                                exampleList,
-            "\n  can be represented as\t",           mnhForm(extractRange(exampleList)),
-            "\n  and be re-expanded to\t",expression(mnhForm(extractRange(exampleList)))());
+      print("  The list\t"               ,                                  exampleList,
+            "\n  can be represented as\t",             mnhForm(extractRange(exampleList)),
+            "\n  and be re-expanded to\t",toExpression(mnhForm(extractRange(exampleList)))());

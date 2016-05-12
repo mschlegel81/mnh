@@ -6,12 +6,12 @@ out> 1
 out> 2
  in> arity({printf('%s%s',$a,...)});
 out> 1
- in> expression('$x-$x^2+$x^3');
+ in> toExpression('$x-$x^2+$x^3');
 out> {($x-$x^2+$x^3)}
- in>                expression('');
+ in>                toExpression('');
 Error               The parsed expression appears to be empty
-Error [stack trace]   # expression('')
-out>                expression('')
+Error [stack trace]   # toExpression('')
+out>                toExpression('')
  in> not(true);
 out> false
  in> not([true, false, true]);
@@ -52,11 +52,11 @@ out> 3
 out> [1,2,true,'TEXT',1.5,'2,6']
  in> splitFileName('../test.txt');
 out> [['input','../test.txt'],['expanded','D:/dev/test.txt'],['relative','../test.txt'],['directory','..'],['filename','test.txt'],['extension','.txt'],['drive','D:']]
- in> string('a');
+ in> toString('a');
 out> 'a'
- in> string(234);
+ in> toString(234);
 out> '234'
- in> string([1, 2.6,'a', true,{$x}]);
+ in> toString([1, 2.6,'a', true,{$x}]);
 out> "[1,2.6,'a',true,{$x}]"
  in> abs(-0.92);
 out> 0.92
@@ -223,7 +223,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.string','mnh.executor','mnh.expression','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
+out> ['mnh.executor','mnh.parameterNames','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);

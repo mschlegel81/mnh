@@ -32,7 +32,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           if (j<0) then syn.lines.clear
           else if j<length(lineIndexPerEvaluatedStatement) then begin
             lineIndex:=lineIndexPerEvaluatedStatement[j];
-            for k:=syn.lines.count-1 downto lineIndex do syn.lines.Delete(k);
+            for k:=syn.lines.count-1 downto lineIndex do syn.lines.delete(k);
             setLength(lineIndexPerEvaluatedStatement,j+1);
             lineIndexPerEvaluatedStatement[j]:=syn.lines.count;
           end else begin
@@ -69,7 +69,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
-    if instantPlotRequested then plotForm.doPlot();
+    if instantPlotRequested then begin
+      plotForm.doPlot();
+      guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+    end;
     system.leaveCriticalSection(cs);
   end;
 

@@ -1,6 +1,6 @@
 USE balancedBrackets,helloWorld,josephus,roman,hereDoc,quine,variadic,shannonEntropy,
     lastSundays,concatInts,harshad,setConsolidation,subGen,pernicousNumbers,pascal,
-    clock,bestShuffle,primes,range_extract_expand,statistics,fibonacciWord,
+    clock,bestShuffle,primes,range_extract_expand,statistics,opTest,fibonacciWord,
     hamming,aliquotSequence,lindenmayer,aks,fractran,continuedFractions,rk4,
     piPlots,sierpinskiTriangle,fibonacci,root;
 
@@ -25,6 +25,7 @@ main->begin
   primes.main;
   range_extract_expand.main;
   statistics.main;
+  opTest.main;
   fibonacciWord.main;
   hamming.main;
   aliquotSequence.main;

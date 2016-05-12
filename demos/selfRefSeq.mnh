@@ -6,7 +6,7 @@ step(s:string)->
    .join;            //join the list to one string
 
 series(i:int)->begin
-  local s:=string(i);
+  local s:=toString(i);
   s:=sort(copy(s,[0..length(s)-1],1)).join;
   local result:=[];
   while(not(s in result),begin

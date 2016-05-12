@@ -64,7 +64,7 @@ memoized dividerSum(n:int)->dividers(n).agg(+);
 
 dividerPairs(n:int)->[2..floor(sqrt(n))].get(n mod [2..floor(sqrt(n))]=0).each(d,[d,n div d]);
 
-private testEx(e:expression)->printf("%-20s = %s",unbrace(string(e)),string(e()));
+private testEx(e:expression)->printf("%-20s = %s",unbrace(toString(e)),toString(e()));
 //*Call functions for reg-testing
 main->testEx({primes(100)}) |
       testEx({factorize(121350)}) |

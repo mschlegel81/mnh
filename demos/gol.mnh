@@ -38,7 +38,7 @@ step(w,t)->[0..size(w)-1].each(i,t.getInner(i).get(w[i]));
 playUntilStatic(w,sleepTime)->begin
   local world:=w;
   local wantQuit:=false;
-  pEach(task,[
+  [
  {while(not(wantQuit),begin
     printWorld(world);
     sleep(sleepTime);
@@ -50,16 +50,15 @@ playUntilStatic(w,sleepTime)->begin
  {begin
     ask('Press Enter to quit.');
     wantQuit:=true;
-  end}],task());
+  end}].PEach(task,task());
 end;
 
 
 playGui->begin
   local living:=true;
   local world:=initWorld;
-  [{begin ask('Press enter'); living:=false; end},
-   {while(living,plotWorld(world:=step(world)))}]
-  .pEach(task,task());
+  plotWorld(world);
+  while(plotShowing,plotWorld(world:=step(world)));
 end;
 
 
@@ -75,5 +74,3 @@ end;
 main->playSteps(initWorld,10);
 main("-long")->playUntilStatic(initWorld,0.05);
 main(steps)->playSteps(initWorld,softCast(steps));
-
-playGui;

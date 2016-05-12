@@ -8,6 +8,9 @@ IMPLEMENTATION
 {$define str1:=P_stringLiteral(params^.value(1))}
 {$define list0:=P_listLiteral(params^.value(0))}
 {$define list1:=P_listLiteral(params^.value(1))}
+{$define int0:=P_intLiteral(params^.value(0))}
+{$define real0:=P_realLiteral(params^.value(0))}
+{$define bool0:=P_boolLiteral(params^.value(0))}
 {$define arg0:=params^.value(0)}
 {$define arg1:=params^.value(1)}
 
@@ -34,7 +37,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=1) then result:=softCastRecurse(arg0);
   end;
 
-FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
@@ -42,6 +45,77 @@ FUNCTION string_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
         result:=arg0;
         result^.rereference;
       end else result:=newStringLiteral(arg0^.toString);
+    end;
+  end;
+{
+    result:=parseNumber(val, 1, false, len);
+    if (result<>nil) then
+      if (len = length(val)) then
+        exit(result)
+      else
+        disposeLiteral(result);
+    otherVal:=unescapeString(sysutils.trim(value),1, len);
+    if len = length(sysutils.trim(value)) then
+      exit(newStringLiteral(otherVal));
+    result:=@self;
+    rereference;
+}
+FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_boolean: begin result:=arg0; result^.rereference; end;
+      lt_string: if lowercase(str0^.value) = C_boolText[false] then exit(newBoolLiteral(false))
+            else if lowercase(str0^.value) = C_boolText[true]  then exit(newBoolLiteral(true));
+      lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
+         else if int0^.value=1 then exit(newBoolLiteral(true));
+      lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
+          else if real0^.value=1 then exit(newBoolLiteral(true));
+    end;
+  end;
+
+FUNCTION toInt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR len:longint;
+      i:int64;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_int: begin result:=arg0; result^.rereference; end;
+      lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+      lt_real: if real0^.value=round(real0^.value) then exit(newIntLiteral(round(real0^.value)));
+      lt_string: begin
+        result:=parseNumber(str0^.value,1,false,len);
+        if (result=nil) or (result^.literalType=lt_int) then exit(result);
+        //parsed a real number
+        if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
+          i:=round(P_realLiteral(result)^.value);
+          disposeLiteral(result);
+          result:=newIntLiteral(i);
+        end else begin
+          disposeLiteral(result);
+          result:=nil;
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION toReal_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR len:longint;
+      x:T_myFloat;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
+      lt_real: begin result:=arg0; result^.rereference; end;
+      lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+      lt_int: exit(newRealLiteral(int0^.value));
+      lt_string: begin
+        result:=parseNumber(str0^.value,1,false,len);
+        if (result=nil) or (result^.literalType=lt_real) then exit(result);
+        //parsed an integer
+        x:=P_intLiteral(result)^.value;
+        disposeLiteral(result);
+        result:=newRealLiteral(x);
+      end;
     end;
   end;
 
@@ -197,7 +271,10 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans',fc_pure);
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'string',@string_imp,'string(X);#Returns a string-representation of X',fc_pure);
+  registerRule(TYPECAST_NAMESPACE,'toString',@toString_imp,'toString(X);#Casts X to string',fc_pure);
+  registerRule(TYPECAST_NAMESPACE,'toBoolean',@toBoolean_imp,'toBoolean(X);#Casts X to boolean or throws an error if not possible',fc_pure);
+  registerRule(TYPECAST_NAMESPACE,'toInt',@toInt_imp,'toInt(X);#Casts X to int or throws an error if not possible',fc_pure);
+  registerRule(TYPECAST_NAMESPACE,'toReal',@toReal_imp,'toReal(X);#Casts X to real or throws an error if not possible',fc_pure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package',fc_semiPure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH',fc_semiPure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name',fc_pure);

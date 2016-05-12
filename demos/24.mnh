@@ -12,7 +12,7 @@ canSolve(set)->permutations(set).each(x,
                [y   +x[2],y   -x[2],y   *x[2],y   /x[2]].each(z,
               ([z   +x[3],z   -x[3],z   *x[3],z   /x[3]]=24).agg(OR),OR),OR),OR);
 private
-testSolution(s:string)->expression(s)()=24 ? s : void;
+testSolution(s:string)->toExpression(s)()=24 ? s : void;
 private
 findSolution(set)->head(flatten(permutations(set).each(x,
                    OPLIST.each(op1,OPLIST.each(op2,OPLIST.each(op3,
@@ -41,7 +41,7 @@ private playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another ro
                                                               : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
                                                                  print('A possible solution would have been: ',findSolution(set)) |
                                                                 (ask('Another round?',['yes','no'])='yes' ? playARound : void));
-private demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&string(set)&'.') |
+private demo(set)->print(' ?> Find an expression to calculate 24 from the numbers '&toString(set)&'.') |
                    print(' !> ',findSolution(set))|
                    print('The solution is valid.')|
                    print(" ?> Another round?\n !> no");

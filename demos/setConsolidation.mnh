@@ -1,7 +1,7 @@
-private unpack(s:string)->expression(replace(s,["{" ,","   ,"}"," "],
-                                               ["['","','","']",","]))();
-private pack(L)->replace("#"&string(L)&"#",["'",'"',"[","]","#{","}#"],
-                                           ['' ,'' ,"{","}" ,"[","]" ]);
+private unpack(s:string)->toExpression(replace(s,["{" ,","   ,"}"," "],
+                                                 ["['","','","']",","]))();
+private pack(L)->replace("#"&toString(L)&"#",["'",'"',"[","]","#{","}#"],
+                                             ['' ,'' ,"{","}" ,"[","]" ]);
 private consolidate(s:string)->unpack(s).consolidate.pack;
 private consolidate(ListOfSets<>[])->
   size(ListOfSets)=1

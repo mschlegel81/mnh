@@ -261,7 +261,7 @@ PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLo
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
     id:=packId;
-    path:=locateSource(ExtractFilePath(root),id);
+    path:=locateSource(extractFilePath(root),id);
     if (path='') and (adapters<>nil) then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;

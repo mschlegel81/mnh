@@ -7,9 +7,9 @@ plus(x:string,y:string)->begin
   local Y:=repeat('0',maxLen-length(y))&y;
   local carry:=0;
   while(length(X)>0,begin
-    local sum:=string(softCast(copy(X,length(X)-lengthLimit,lengthLimit))+
-                      softCast(copy(Y,length(Y)-lengthLimit,lengthLimit))+
-                      carry);
+    local sum:=toString(softCast(copy(X,length(X)-lengthLimit,lengthLimit))+
+                        softCast(copy(Y,length(Y)-lengthLimit,lengthLimit))+
+                        carry);
     sum:=repeat('0',lengthLimit-length(sum))&sum;
     X:=copy(X,0,length(X)-lengthLimit);
     Y:=copy(Y,0,length(Y)-lengthLimit);

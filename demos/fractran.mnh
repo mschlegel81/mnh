@@ -20,7 +20,7 @@ private isInteger(L:intList)->min(L)>=0;
 
 //*Turns an input string first into a list of tuples (denoting rational numbers) then to lists of prime factor powers
 private parseFractions(s:string)->
-  expression('[['&
+  toExpression('[['&
              replace(s,[' ', ',' ,'/'],
                        ['' ,'],[',','])&
              ']]')().each(tuple,rational@tuple);

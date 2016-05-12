@@ -24,7 +24,7 @@ private getWeeks(year,month)->begin
 end;
 
 private printCalendar(year)->begin
-  local digitIndexes:=string(year).chars.softCast;
+  local digitIndexes:=toString(year).chars.softCast;
   local bigYear:=[0..4].each(i,bigDigit[digitIndexes].getInner(i).join(' '));
   bigYear:=repeat(' ',(91-bigYear[0].length) div 2)&bigYear;
   print('+',repeat('-',91),'+');

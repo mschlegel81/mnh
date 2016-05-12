@@ -1,7 +1,7 @@
 object newCentralPackageForm: TnewCentralPackageForm
-  Left = 1616
+  Left = 379
   Height = 84
-  Top = 41
+  Top = 145
   Width = 401
   BorderStyle = bsDialog
   Caption = 'Create central package'
@@ -9,7 +9,7 @@ object newCentralPackageForm: TnewCentralPackageForm
   ClientWidth = 401
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.6.0.4'
   object Label1: TLabel
     Left = 8
     Height = 15

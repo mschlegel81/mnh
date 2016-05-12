@@ -390,26 +390,49 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
     context.disposeToken(first);
   end;
 
-FUNCTION expression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  FUNCTION primitiveExpression(CONST l:P_literal):P_expressionLiteral;
+    VAR first:P_token;
+    begin
+      //Create token-series { <Literal> }
+      first            :=context.newToken(tokenLocation,'',tt_expBraceOpen);
+      first^.next      :=context.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
+      first^.next^.next:=context.newToken(tokenLocation,'',tt_expBraceClose);
+      //Reduce to inline expression
+      digestInlineExpression(first,context);
+      result:=P_expressionLiteral(first^.data);
+      first^.tokType:=tt_EOL;
+      first^.data:=nil;
+      context.disposeToken(first);
+    end;
+
   FUNCTION expression_rec(CONST x:P_literal):P_literal;
     VAR i:longint;
     begin
       result:=nil;
       case x^.literalType of
         lt_string: result:=stringToExpression(P_stringLiteral(x)^.value,tokenLocation,context);
-        lt_list,lt_stringList,lt_emptyList:  begin
+        lt_list,lt_stringList,lt_emptyList,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_keyValueList,lt_flatList:  begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
             P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false,context.adapters^);
         end;
-        else result:=newErrorLiteralRaising('Cannot apply "expression" to literal of type '+C_typeString[x^.literalType],tokenLocation,context.adapters^);
+        lt_expression: begin result:=x; x^.rereference; end;
+        lt_boolean,lt_int,lt_real: result:=primitiveExpression(x);
+        else result:=newErrorLiteralRaising('Cannot apply "toExpression" to literal of type '+C_typeString[x^.literalType],tokenLocation,context.adapters^);
       end;
     end;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_list,lt_stringList,lt_emptyList,lt_string])
-    then result:=expression_rec(params^.value(0));
+    if (params<>nil) and (params^.size=1)
+    then begin
+      result:=expression_rec(params^.value(0));
+      if (result<>nil) and (result^.literalType=lt_listWithError) then begin
+        disposeLiteral(result);
+        result:=newErrorLiteral;
+      end;
+    end;
   end;
 
 FUNCTION arity_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -703,7 +726,7 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.',fc_stateful);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void',fc_outputViaAdapter);
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'expression',@expression_imp,'expression(S:string);#Returns an expression parsed from S',fc_pure);
+  registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S',fc_pure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e',fc_pure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e',fc_pure);
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',@group_imp,'group(list,grouping);#Re-groups list by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:expression);#Groups by grouping using aggregator on a per group basis',fc_pure);
