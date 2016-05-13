@@ -36,7 +36,7 @@ private isCorrectSolution(set,text)->
   : print('The solution is valid.') and true;
 
 private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
-private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&string(set)&'.'));
+private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&toString(set)&'.'));
 private playARound(set,answer)->isCorrectSolution(set,answer) ? (ask('Another round?',['yes','no'])='yes' ? playARound : void)
                                                               : (ask('Retry?',['yes','no'])='yes' ? playARound(set) :
                                                                  print('A possible solution would have been: ',findSolution(set)) |

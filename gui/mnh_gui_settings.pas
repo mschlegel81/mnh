@@ -70,16 +70,14 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
   VAR i:longint;
 
   begin
+    ensurePackages;
     if settings.value^.editorFontname<>'' then begin
       EditorFontDialog.Font.name := settings.value^.editorFontname;
       FontButton.Font.name := settings.value^.editorFontname;
     end;
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
-    if not(settings.value^.wasLoaded) then begin
-      settings.value^.activePage:=0;
-      ensurePackages;
-    end;
+    if not(settings.value^.wasLoaded) then settings.value^.activePage:=0;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
     FontButton.Font.size := getFontSize;
     FontButton.Caption := settings.value^.editorFontname;

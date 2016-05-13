@@ -55,7 +55,8 @@ FUNCTION parseCmdLine:T_tokenLocation;
                   {$I %DATE%},
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTARGET%});
+                  ' for ',{$I %FPCTargetOS%});
+
     end;
 
   PROCEDURE displayHelp;
@@ -65,7 +66,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
       consoleAdapters.printOut('compiled on: '+{$I %DATE%});
       consoleAdapters.printOut('         at: '+{$I %TIME%});
       consoleAdapters.printOut('FPC version: '+{$I %FPCVERSION%});
-      consoleAdapters.printOut('Target CPU : '+{$I %FPCTARGET%});
+      consoleAdapters.printOut('Target CPU : '+{$I %FPCTargetOS%});
       consoleAdapters.printOut('');
       consoleAdapters.printOut('Accepted parameters: ');
       consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');
@@ -155,7 +156,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
-                                                                     {$I %FPCTARGET%}); {$include code_hash.inc} halt; end
+                                                                     {$I %FPCTargetOS%}); {$include code_hash.inc} halt; end
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);

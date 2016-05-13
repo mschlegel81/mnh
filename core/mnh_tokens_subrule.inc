@@ -134,7 +134,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if      tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in[      tt_separatorComma, tt_separatorCnt,
+      else if (tokType in [tt_separatorComma, tt_separatorCnt,
       tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
       tt_operatorAnd, tt_operatorOr, tt_operatorXor,
       tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,

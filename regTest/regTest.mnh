@@ -6,10 +6,10 @@ private NEED_PLOT_IDX:=3;
 
 private mutable previouslyPassedTests:=0;
 
-private expectedResultName  (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname).filename&"#",".mnh#",(is32Bit?".32bit":"")&".expected");
-private lastResultName      (scriptname,is32Bit:boolean)->TEST_DIRECTORY&replace(splitFileName(scriptname).filename&"#",".mnh#",(is32Bit?".32bit":"")&".last");
-private expectedResultExists(scriptname,is32Bit:boolean)->fileExists(expectedResultName(scriptname,is32Bit));
-private expectedResult      (scriptname,is32Bit:boolean)->fileLines (expectedResultName(scriptname,is32Bit));
+private expectedResultName  (scriptname:string,target:string)->TEST_DIRECTORY&replace(splitFileName(scriptname).filename&"#",".mnh#","."&target&".expected");
+private lastResultName      (scriptname:string,target:string)->TEST_DIRECTORY&replace(splitFileName(scriptname).filename&"#",".mnh#","."&target&".last");
+private expectedResultExists(scriptname:string,target:string)->fileExists(expectedResultName(scriptname,target));
+private expectedResult      (scriptname:string,target:string)->fileLines (expectedResultName(scriptname,target));
 private storeResult(filename,data)-> writeFileLines(filename,data) ? void : void;
 
 private TEST_CASE_DEFINITIONS:=
@@ -80,11 +80,11 @@ end;
 //*Executes all tests with current interpreter
 main->main(executor);
 
-private memoized is64Bit(exe)->'x86_64'==(exec(exe,['-version']).split(' ').trailing.trailing);
+private memoized getTarget(exe)->exec(exe,['-version']).head.split(' ').trailing;
 
-private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,separate32BitOutput,FMT_STRING)->
+private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,FMT_STRING)->
   begin
-    local SRF:=separate32BitOutput AND not(executor.is64Bit);
+    local target:=getTarget(executor);
     delOutputBefore and outputFileName<>''
     ? deleteFile(ROOT_DIRECTORY&outputFileName)
     : void;
@@ -92,12 +92,12 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
     local scriptOutput:=exec(executor,["-det",ROOT_DIRECTORY&scriptName]) | (outputFileName="" ? [] : fileHash(ROOT_DIRECTORY&outputFileName));
     local scriptTime:=time-startTime;
     when(
-      not(expectedResultExists(scriptName,SRF)),
+      not(expectedResultExists(scriptName,target)),
         begin
-          printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&storeResult(expectedResultName(scriptName,SRF),scriptOutput));
+          printf(FMT_STRING,scriptName,scriptTime,"No reference result found. Storing "&(storeResult(expectedResultName(scriptName,target),scriptOutput)));
           []; //Test did not fail, so it is interpreted as passed
         end,
-      expectedResult(scriptName,SRF)==scriptOutput,
+      expectedResult(scriptName,target)==scriptOutput,
         begin
           printf(FMT_STRING,scriptName,scriptTime,'o.k.');
           markAsPassed(scriptName,exeHash,scriptTime);
@@ -105,9 +105,9 @@ private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,sepa
         end,
         begin
           printf(FMT_STRING,scriptName,scriptTime,"Results differ!");
-          storeResult(lastResultName(scriptName,SRF),scriptOutput);
-          [expectedResultName(scriptName,SRF),
-           lastResultName    (scriptName,SRF)];
+          storeResult(lastResultName(scriptName,target),scriptOutput);
+          [expectedResultName(scriptName,target),
+           lastResultName    (scriptName,target)];
         end);
   end;
 
@@ -125,7 +125,7 @@ main(exe,...)->begin
   randomSample ? testFilter:=[] : void;
   local testCases:=TEST_CASE_DEFINITIONS.each(case,
                    (currentExeCanPlot OR not(case.get(NEED_PLOT_IDX))) AND
-                   (testFilter==[] OR testFilter.each(f,pos(f,case.get(0))>=0,OR)) ? case.get([0..2,4]) : void).sort;
+                   (testFilter==[] OR testFilter.each(f,pos(f,case.get(0))>=0,OR)) ? case.get([0..2]) : void).sort;
 
   //count already passed tests and remove them from the list
   testCases:=testCases.each(test,
@@ -181,3 +181,6 @@ main(exe,...)->begin
   size(testCases)>0 ? print(previouslyPassedTests,' Tests were already marked as passed.') : void;
   allPassed;
 end;
+
+print(TEST_DIRECTORY.escape);
+print(ROOT_DIRECTORY.escape);

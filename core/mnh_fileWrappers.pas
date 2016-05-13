@@ -58,23 +58,27 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     begin
       if (FindFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
-      then result:=path+info.name;
+      then result:=expandFileName(path+info.name);
       sysutils.FindClose(info);
       if result<>'' then exit;
 
       if FindFirst(path+'*', faAnyFile, info) = 0 then repeat
-        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then
-          recursePath(path+info.name+DirectorySeparator);
+        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
       until (findNext(info)<>0) or (result<>'');
       sysutils.FindClose(info);
     end;
 
   begin
+    {$ifdef DEBUGMODE}
+    writeln('Root path is "',rootPath,'"');
+    writeln('Search folders: ',rootPath);
+    writeln('                ',configDir);
+    writeln('                ',extractFilePath(paramStr(0)));
+    {$endIf}
     result := '';
-    recursePath(extractRelativePath(expandFileName(''),extractFilePath(rootPath)));
+    recursePath(rootPath);
     if result = '' then recursePath(configDir);
-    if result = '' then recursePath(extractRelativePath(expandFileName(''),extractFilePath(paramStr(0))));
-    if result = '' then recursePath(extractRelativePath(expandFileName(''),''));
+    if result = '' then recursePath(extractFilePath(paramStr(0)));
   end;
 
 FUNCTION locateSources: T_arrayOfString;

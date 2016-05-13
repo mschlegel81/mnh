@@ -2,7 +2,7 @@ UNIT mnh_funcs;
 INTERFACE
 {$WARN 5024 OFF}
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
-     myStringUtil,Classes,mySys{$ifdef fullVersion},mnh_doc{$endif};
+     myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
   T_functionClass=(fc_pure,
                    fc_semiPure, //not really pure, but only dependent on values which are immutable during execution
@@ -11,8 +11,7 @@ TYPE
                    fc_outputViaAdapter,
                    fc_outputGeneral,
                    fc_readingExternal,
-                   fc_callingExternal,
-                   fc_tableContextOnly);
+                   fc_callingExternal);
 
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 

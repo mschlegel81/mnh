@@ -309,7 +309,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="mnh"/>
+      <Filename Value="mnh_debug"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\core"/>

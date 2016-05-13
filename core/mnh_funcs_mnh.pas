@@ -154,7 +154,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       name:=str0^.value;
       appendPair(result,'input',name);
       appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
-      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),name),'\','/'));
+      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),expandFileName(name)),'\','/'));
       if ExtractFileDir(name)=''
       then appendPair(result,'directory','.')
       else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
