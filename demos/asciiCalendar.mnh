@@ -15,7 +15,7 @@ private getWeeks(year,month)->begin
   local lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12 ? format('01.%2.2d.%4.4d',      1,year+1)
                                                          : format('01.%2.2d.%4.4d',month+1,year  )).round-1;
   local startingMonday :=firstDayOfMonth;
-  while(formatTime('ddd',startingMonday)!='Mo',startingMonday-=1);
+  while(formatTime('ddd',startingMonday).copy(0,2)!='Mo',startingMonday-=1);
   local daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
   daysOnTab
   .group([0..size(daysOnTab)-1] div 7)

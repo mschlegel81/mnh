@@ -55,8 +55,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
                   {$I %DATE%},
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTargetOS%});
-
+                  ' for ',{$I %FPCTARGET%});
     end;
 
   PROCEDURE displayHelp;
@@ -66,7 +65,7 @@ FUNCTION parseCmdLine:T_tokenLocation;
       consoleAdapters.printOut('compiled on: '+{$I %DATE%});
       consoleAdapters.printOut('         at: '+{$I %TIME%});
       consoleAdapters.printOut('FPC version: '+{$I %FPCVERSION%});
-      consoleAdapters.printOut('Target CPU : '+{$I %FPCTargetOS%});
+      consoleAdapters.printOut('Target CPU : '+{$I %FPCTARGET%});
       consoleAdapters.printOut('');
       consoleAdapters.printOut('Accepted parameters: ');
       consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');

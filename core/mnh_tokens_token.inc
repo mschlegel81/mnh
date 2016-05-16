@@ -1114,15 +1114,23 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
-        if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRule,context)) then begin
-          if parameterListLiteral=nil
-          then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
-          else begin
-            if (P_rule(first^.data)^.id='main')
-            then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.parameterListTypeString+':  '+parameterListLiteral^.toParameterListString(true),first^.location)
-            else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+        try
+          if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRule,context)) then begin
+            if parameterListLiteral=nil
+            then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
+            else begin
+              if (P_rule(first^.data)^.id='main')
+              then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.parameterListTypeString+':  '+parameterListLiteral^.toParameterListString(true),first^.location)
+              else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
+            end;
+            exit;
           end;
-          exit;
+        except
+          on e:Exception do begin
+            context.adapters^.raiseCustomMessage(mt_el5_systemError,'Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
+            context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,C_nilTokenLocation);
+            exit;
+          end;
         end;
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral,context);
