@@ -1,0 +1,7 @@
+See http://rosettacode.org/wiki/Monte_Carlo_methods
+n=     10 pi approximated as 3.2      
+n=    100 pi approximated as 3.28     
+n=   1000 pi approximated as 3.092    
+n=  10000 pi approximated as 3.1516   
+n= 100000 pi approximated as 3.14416  
+n=1000000 pi approximated as 3.138824 

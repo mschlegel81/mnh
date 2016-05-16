@@ -132,23 +132,23 @@ FUNCTION T_subrule.needEmbrace:boolean;
     if length(preparedBody)<=1 then exit(false);
     result:=false;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
+      if (tokType in [tt_separatorComma, tt_separatorCnt,
+            tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
+            tt_operatorAnd, tt_operatorOr, tt_operatorXor,
+            tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
+            tt_operatorStrConcat,
+            tt_operatorConcat, tt_operatorIn,
+            tt_iifCheck, tt_iifElse,
+            tt_typeCheckScalar,  tt_typeCheckList,
+            tt_typeCheckBoolean, tt_typeCheckBoolList,
+            tt_typeCheckInt,     tt_typeCheckIntList,
+            tt_typeCheckReal,    tt_typeCheckRealList,
+            tt_typeCheckString,  tt_typeCheckStringList,
+            tt_typeCheckNumeric, tt_typeCheckNumList,
+            tt_typeCheckExpression,
+            tt_typeCheckKeyValueList]) and (level=0) then exit(true);
       if      tokType in C_openingBrackets then inc(level)
-      else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in [tt_separatorComma, tt_separatorCnt,
-      tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-      tt_operatorAnd, tt_operatorOr, tt_operatorXor,
-      tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
-      tt_operatorStrConcat,
-      tt_operatorConcat, tt_operatorIn,
-      tt_iifCheck, tt_iifElse,
-      tt_typeCheckScalar,  tt_typeCheckList,
-      tt_typeCheckBoolean, tt_typeCheckBoolList,
-      tt_typeCheckInt,     tt_typeCheckIntList,
-      tt_typeCheckReal,    tt_typeCheckRealList,
-      tt_typeCheckString,  tt_typeCheckStringList,
-      tt_typeCheckNumeric, tt_typeCheckNumList,
-      tt_typeCheckExpression,
-      tt_typeCheckKeyValueList]) and (level=0) then exit(true);
+      else if tokType in C_closingBrackets then dec(level);
     end;
   end;
 

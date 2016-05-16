@@ -1,0 +1,12 @@
+Generating @3
+Generating @4
+Generating @5
+Generating @6
+Generating @7
+Generating @8
+Generating @9
+Ludic Numbers
+  The first 25 are: [1,2,3,5,7,11,13,17,23,25,29,37,41,43,47,53,61,67,71,77,83,89,91,97,107].
+  There are 142 lesser or equal to 1000.
+  The 2000..2005th are [21475,21481,21487,21493,21503,21511].
+  The triplets below 250 are (1,3,7),(5,7,11),(11,13,17),(23,25,29),(41,43,47),(173,175,179),(221,223,227),(233,235,239)
