@@ -6,10 +6,14 @@ USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=128;
       POLISH_FREQUENCY=64;
-      MEM_LIMIT:int64={$ifdef CPU32}
-                      1000000000;
+      MEM_LIMIT:int64={$ifdef WINDOWS}
+                        {$ifdef CPU32}
+                        1000000000;
+                        {$else}
+                        int64(maxLongint)*2;
+                        {$endif}
                       {$else}
-                      int64(maxLongint)*2;
+                      1000000000;
                       {$endif}
 
 TYPE

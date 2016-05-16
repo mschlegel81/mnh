@@ -83,9 +83,6 @@
             </Optimizations>
           </CodeGeneration>
           <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="False"/>
-            </Debugging>
             <LinkSmart Value="True"/>
           </Linking>
           <Other>
@@ -330,6 +327,11 @@
         <StackChecks Value="True"/>
       </Checks>
     </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseHeaptrc Value="True"/>
+      </Debugging>
+    </Linking>
     <Other>
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
