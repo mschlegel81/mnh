@@ -9,7 +9,7 @@ TYPE
 
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
-
+  T_arrayOfLiteral=array of P_literal;
   { T_literal }
 
   T_literal = object
@@ -216,6 +216,7 @@ TYPE
     FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
     FUNCTION keyValueList:KEY_VALUE_LIST;
+    FUNCTION keySet:T_arrayOfLiteral;
   end;
 
   P_literalKeyLongintValueMap=^T_literalKeyLongintValueMap;
@@ -299,8 +300,6 @@ TYPE
       FUNCTION getValue:P_literal;
       FUNCTION toString:ansistring;
   end;
-
-  { T_variableReport }
 
   T_variableReport=object
     dat:array of record
@@ -576,10 +575,23 @@ FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE
 FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
   VAR i,j,k:longint;
   begin
+    setLength(result,0);
     k:=0;
     for i:=0 to CACHE_MOD do for j:=0 to length(dat[i])-1 do begin
       setLength(result,k+1);
       result[k]:=dat[i,j];
+      inc(k);
+    end;
+  end;
+
+FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
+  VAR i,j,k:longint;
+  begin
+    setLength(result,0);
+    k:=0;
+    for i:=0 to CACHE_MOD do for j:=0 to length(dat[i])-1 do begin
+      setLength(result,k+1);
+      result[k]:=dat[i,j].key;
       inc(k);
     end;
   end;

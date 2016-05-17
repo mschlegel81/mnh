@@ -19,7 +19,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then x:=params^.value(0)
+    then x:=arg0
     else x:=params;
     if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
       result:=P_listLiteral(x)^.value(0);
@@ -34,7 +34,7 @@ FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       i,iMin:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
       L:=list0;
       iMin:=0;
       xMin:=P_scalarLiteral(L^.value(0));
@@ -55,7 +55,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1)
-    then x:=params^.value(0)
+    then x:=arg0
     else x:=params;
     if (x<>nil) and (x^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
       result:=P_listLiteral(x)^.value(0);
@@ -70,7 +70,7 @@ FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       i,iMin:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)<>nil) and (params^.value(0)^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
+    if (params<>nil) and (params^.size=1) and (arg0<>nil) and (arg0^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_numList,lt_stringList]) then begin
       L:=list0;
       iMin:=0;
       xMin:=P_scalarLiteral(L^.value(0));
@@ -92,8 +92,8 @@ FUNCTION isNan_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
-      case params^.value(0)^.literalType of
+       (arg0^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
+      case arg0^.literalType of
         lt_real: exit(newBoolLiteral(isNan(real0^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
@@ -120,8 +120,8 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and
-       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
-      case params^.value(0)^.literalType of
+       (arg0^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) then begin
+      case arg0^.literalType of
         lt_real: exit(newBoolLiteral(isInfinite(real0^.value)));
         lt_int:  exit(newBoolLiteral(false));
         lt_intList: begin
@@ -141,43 +141,77 @@ FUNCTION isInfinite_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION isInRange_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR r0,r1:T_myFloat;
-  FUNCTION inRange(CONST L:P_literal):boolean; inline;
-    VAR i:int64;
-        r:T_myFloat;
+FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR sets:specialize G_literalKeyMap<byte>;
+  PROCEDURE recurseBuildSets(CONST mustContain,mightContain:T_arrayOfLiteral);
+    VAR newMust,newMight:T_arrayOfLiteral;
+        newSet:P_listLiteral;
+        i:longint;
     begin
-      if l^.literalType=lt_real then begin
-        r:=P_realLiteral(l)^.value;
-        result:=not(isNan(r)) and not(isInfinite(r)) and (r0<=r) and (r<=r1);
+      if length(mightContain)>0 then begin
+        setLength(newMight,length(mightContain)-1);
+        for i:=0 to length(newMight)-1 do newMight[i]:=mightContain[i+1];
+        setLength(newMust,length(mustContain));
+        for i:=0 to length(newMust)-1 do newMust[i]:=mustContain[i];
+        recurseBuildSets(newMust,newMight);
+        setLength(newMust,length(newMust)+1);
+        newMust[length(newMust)-1]:=mightContain[0];
+        recurseBuildSets(newMust,newMight);
+        setLength(newMust,0);
+        SetLength(newMight,0);
       end else begin
-        i:=P_intLiteral(l)^.value;
-        result:=(r0<=i) and (i<=r1);
+        newSet:=newListLiteral;
+        for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true,context.adapters^);
+        newSet^.sort;
+        if sets.get(newSet,0)=0 then sets.put(newSet,1)
+                                else disposeLiteral(newSet);
       end;
     end;
-
-  VAR i:longint;
+  VAR mustContain,mightContain:T_arrayOfLiteral;
+      i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=3) and
-       (params^.value(0)^.literalType in [lt_real,lt_int,lt_realList,lt_intList,lt_numList,lt_emptyList]) and
-       (params^.value(1)^.literalType in [lt_real,lt_int]) and
-       (params^.value(2)^.literalType in [lt_real,lt_int]) then begin
-      if params^.value(1)^.literalType=lt_real
-        then r0:=P_realLiteral(params^.value(1))^.value
-        else r0:=P_intLiteral (params^.value(1))^.value;
-      if params^.value(2)^.literalType=lt_real
-        then r1:=P_realLiteral(params^.value(2))^.value
-        else r1:=P_intLiteral (params^.value(2))^.value;
-      if params^.value(0)^.literalType in [lt_real,lt_int] then exit(newBoolLiteral(inRange(params^.value(0))))
-      else begin
+    if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType in C_validListTypes then begin
+        sets.create;
+        setLength(mustContain,0);
+        SetLength(mightContain,list0^.size);
+        for i:=0 to length(mightContain)-1 do mightContain[i]:=list0^.value(i);
+        recurseBuildSets(mustContain,mightContain);
+        mustContain:=sets.keySet;
         result:=newListLiteral;
-        for i:=0 to list0^.size-1 do
-          P_listLiteral(result)^.appendBool(inRange(list0^.value(i)));
+        for i:=0 to length(mustContain)-1 do P_listLiteral(result)^.append(mustContain[i],false,context.adapters^);
+        sets.destroy;
+      end else begin
+        result:=newListLiteral^.append(newListLiteral                                       ,false,context.adapters^)
+                              ^.append(newOneElementListLiteral(arg0,true,context.adapters^),false,context.adapters^);
       end;
     end;
   end;
 
+FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR n,d:int64;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
+      n:=int0^.value;
+      if (n=1) or (n=0) then exit(newListLiteral^.appendInt(n));
+      result:=newListLiteral;
+      if n<0 then begin
+        n:=-n;
+        P_listLiteral(result)^.appendInt(-1);
+      end;
+      d:=2;
+      while d<=n do begin
+        while n mod d=0 do begin
+          n:=n div d;
+          P_listLiteral(result)^.appendInt(d);
+        end;
+        inc(d);
+      end;
+      if n>1 then P_listLiteral(result)^.appendInt(n);
+    end;
+  end;
 
 INITIALIZATION
   registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters',fc_pure);
@@ -186,7 +220,8 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)',fc_pure);
   registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number',fc_pure);
   registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value',fc_pure);
-  registerRule(MATH_NAMESPACE,'isInRange',@isInRange_impl,'isInRange(x,x0,x1);#Returns true, if x0<=x<=x1 and x is neither Not-A-Number nor infinite',fc_pure);
+  registerRule(MATH_NAMESPACE,'subSets',@subSets_impl,'subSets(S);Returns all distinct subsets of S',fc_pure);
+  registerRule(MATH_NAMESPACE,'factorize',@factorize_impl,'factorize(i:int);Returns a list of all prime factors of i',fc_pure);
   BUILTIN_MIN:=@min_imp;
   BUILTIN_MAX:=@max_imp;
 end.
