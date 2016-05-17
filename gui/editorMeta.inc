@@ -14,7 +14,7 @@ T_editorMeta=object
   FUNCTION caretInMainFormCoordinates:TPoint;
   PROCEDURE setMarkedWord(CONST wordText:string);
   PROCEDURE setWorkingDir;
-  FUNCTION stateForSaving:T_editorState;
+  PROCEDURE writeToEditorState(VAR state:T_editorState);
   PROCEDURE defineByState(CONST state:T_editorState);
   PROCEDURE toggleComment;
   PROCEDURE toggleBreakpoint;
@@ -62,15 +62,19 @@ PROCEDURE T_editorMeta.setWorkingDir;
                    else SetCurrentDir(ExtractFileDir(filePath));
   end;
 
-FUNCTION T_editorMeta.stateForSaving:T_editorState;
-  VAR markedLines:T_arrayOfLongint;
-      i:longint;
+PROCEDURE T_editorMeta.writeToEditorState(VAR state:T_editorState);
+  VAR i:longint;
   begin
-    setLength(markedLines,0);
-    for i:=0 to editor.Marks.count-1 do appendIfNew(markedLines,editor.Marks[i].line);
-    if sheet.TabVisible
-    then result.create(filePath,fileAccessAge,changed,editor.lines,markedLines)
-    else result.create;
+    state.visible:=sheet.TabVisible;
+    if not(state.visible) then exit;
+    setLength(state.markedLines,0);
+    for i:=0 to editor.Marks.count-1 do appendIfNew(state.markedLines,editor.Marks[i].line);
+
+    state.filePath:=filePath;
+    state.fileAccessAge:=fileAccessAge;
+    state.changed:=changed;
+    setLength(state.lines,editor.Lines.Count);
+    for i:=0 to length(State.lines)-1 do state.lines[i]:=editor.Lines[i];
   end;
 
 PROCEDURE T_editorMeta.defineByState(CONST state:T_editorState);

@@ -30,6 +30,7 @@ T_editorState=object(T_serializable)
 
   CONSTRUCTOR create;
   CONSTRUCTOR create(CONST path:ansistring; CONST age:double; CONST change:boolean; CONST dat:TStrings; CONST markedIdx:T_arrayOfLongint);
+  DESTRUCTOR destroy;
   PROCEDURE getLines(CONST dat:TStrings);
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
@@ -95,7 +96,9 @@ CONSTRUCTOR T_settings.create;
   end;
 
 DESTRUCTOR T_settings.destroy;
+  VAR i:longint;
   begin
+    for i:=0 to length(editorState)-1 do editorState[i].destroy;
   end;
 
 FUNCTION workerThreadCount:longint;
@@ -289,6 +292,14 @@ CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONS
     setLength(lines,dat.count);
     for i:=0 to dat.count-1 do lines[i]:=dat[i];
     markedLines:=markedIdx;
+  end;
+
+DESTRUCTOR T_editorState.destroy;
+  begin
+    filePath:='';
+    fileAccessAge:=0;
+    setLength(lines,0);
+    setLength(markedLines,0);
   end;
 
 PROCEDURE T_editorState.getLines(CONST dat: TStrings);

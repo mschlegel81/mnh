@@ -110,6 +110,7 @@ PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
     environment.mainPackageProvider:=codeProvider;
     package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
     package.destroy;
+    dispose(codeProvider,destroy);
     context.destroy;
     for i:=length(environment.secondaryPackages)-1 downto 0 do dispose(environment.secondaryPackages[i],destroy);
     setLength(environment.secondaryPackages,0);

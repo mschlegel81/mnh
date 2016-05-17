@@ -67,15 +67,23 @@ FUNCTION getHtmlRoot:ansistring; begin result:=htmlRoot; end;
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
   VAR newDoc:P_intrinsicFunctionDocumentation;
       oldDoc:P_intrinsicFunctionDocumentation;
+      outdatedDoc:P_intrinsicFunctionDocumentation;
+      replaceQualified:boolean=false;
+      replaceUnqualified:boolean=false;
   begin
     new(newDoc,create(qualifiedId));
     newDoc^.description:=explanation;
     newDoc^.unqualifiedAccess:=not(qualifiedOnly);
+    replaceQualified:=functionDocMap.containsKey(qualifiedId,outdatedDoc);
     functionDocMap.put(qualifiedId,newDoc);
     if not(qualifiedOnly) then begin
-      if functionDocMap.containsKey(newDoc^.unqualifiedId,oldDoc) then oldDoc^.unqualifiedAccess:=false;
+      if functionDocMap.containsKey(newDoc^.unqualifiedId,oldDoc) then begin
+        oldDoc^.unqualifiedAccess:=false;
+        replaceUnqualified:=true;
+      end;
       functionDocMap.put(newDoc^.unqualifiedId,newDoc);
     end;
+    if replaceQualified and replaceUnqualified then dispose(outdatedDoc,destroy);
   end;
 
 PROCEDURE ensureBuiltinDocExamples;
@@ -309,7 +317,6 @@ FUNCTION shortName(CONST id:ansistring):ansistring;
   begin
     if isQualified(id) then result:=split(id,'.')[1] else result:=id;
   end;
-
 
 CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
@@ -578,11 +585,30 @@ PROCEDURE disposeFunctionDocMap;
     functionDocMap.destroy;
   end;
 
+PROCEDURE disposeIntrinsicFunctionDocumentation(VAR p:P_intrinsicFunctionDocumentation);
+  begin
+    dispose(p,destroy);
+    p:=nil;
+  end;
+
+PROCEDURE finalizeFunctionDocMap;
+  VAR entries:functionDocMap.KEY_VALUE_LIST;
+      values:specialize G_list<P_intrinsicFunctionDocumentation>;
+      i:longint;
+  begin
+    entries:=functionDocMap.entrySet;
+    functionDocMap.destroy;
+    values.create;
+    for i:=0 to length(entries)-1 do values.add(entries[i].value);
+    values.unique;
+    for i:=0 to values.size-1 do dispose(values[i],destroy);
+  end;
+
 INITIALIZATION
   htmlRoot:=configDir+'doc';
   if not(DirectoryExists(htmlRoot)) then CreateDir(htmlRoot);
   functionDocMap.create();
 FINALIZATION
-  functionDocMap.destroy;
+  finalizeFunctionDocMap;
 
 end.

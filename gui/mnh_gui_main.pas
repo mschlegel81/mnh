@@ -537,7 +537,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
     if ad_evaluationRunning then ad_haltEvaluation;
     stepper.doStop;
-    for i:=0 to 9 do settings.value^.editorState[i]:=editorMeta[i].stateForSaving;
+    for i:=0 to 9 do editorMeta[i].writeToEditorState(settings.value^.editorState[i]);
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -545,6 +545,8 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     if not(reEvaluationWithGUIrequired) then saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;
+    debugHighlighter.destroy;
+    helpHighlighter.destroy;
     ad_killEvaluationLoopSoftly;
     wordsInEditor.destroy;
   end;
@@ -1259,7 +1261,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end else UpdateTimeTimer.interval:=MIN_INTERVALL;
     //================================================================:slow ones
     if settings.value^.savingRequested then begin
-      for i:=0 to 9 do with editorMeta[i] do settings.value^.editorState[i]:=stateForSaving;
+      for i:=0 to 9 do editorMeta[i].writeToEditorState(settings.value^.editorState[i]);
       saveSettings;
     end;
 
