@@ -1,6 +1,6 @@
 USE balancedBrackets,helloWorld,josephus,roman,hereDoc,quine,variadic,shannonEntropy,
     lastSundays,concatInts,harshad,setConsolidation,subGen,pernicousNumbers,pascal,
-    clock,bestShuffle,primes,range_extract_expand,statistics,opTest,fibonacciWord,
+    clock,bestShuffle,range_extract_expand,statistics,opTest,fibonacciWord,
     hamming,aliquotSequence,lindenmayer,aks,fractran,continuedFractions,rk4,
     piPlots,sierpinskiTriangle,fibonacci,root;
 
@@ -22,7 +22,6 @@ main->begin
   pascal.main;
   clock.main;
   bestShuffle.main;
-  primes.main;
   range_extract_expand.main;
   statistics.main;
   opTest.main;

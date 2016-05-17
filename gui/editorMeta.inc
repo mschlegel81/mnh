@@ -73,8 +73,8 @@ PROCEDURE T_editorMeta.writeToEditorState(VAR state:T_editorState);
     state.filePath:=filePath;
     state.fileAccessAge:=fileAccessAge;
     state.changed:=changed;
-    setLength(state.lines,editor.Lines.Count);
-    for i:=0 to length(State.lines)-1 do state.lines[i]:=editor.Lines[i];
+    setLength(state.lines,editor.lines.count);
+    for i:=0 to length(state.lines)-1 do state.lines[i]:=editor.lines[i];
   end;
 
 PROCEDURE T_editorMeta.defineByState(CONST state:T_editorState);

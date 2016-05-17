@@ -124,12 +124,6 @@ out> [0,2,2,4]
 out> [0.0,0.33,0.67,1.0]
  in> round(20/3,[-1..3]);
 out> [10.0,7.0,6.7,6.67,6.667]
- in> isInRange(7, 0, 10);
-out> true
- in> isInRange(7, 0.3,+Inf);
-out> true
- in> isInRange([0..9]/10, 0.3, 0.57);
-out> [false,false,false,true,true,true,false,false,false,false]
  in> isInfinite(Nan);
 out> false
  in> isInfinite(+Inf);

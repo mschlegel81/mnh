@@ -60,10 +60,10 @@ T_settings=object(T_serializable)
   savedAt:double;
 
   CONSTRUCTOR create;
-  PROCEDURE reset;
   DESTRUCTOR destroy;
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
+  PROCEDURE initDefaults;
 
   FUNCTION savingRequested:boolean;
   FUNCTION polishHistory: boolean;
@@ -115,7 +115,7 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
   begin
     cpuCount:=F.readLongint;
     if cpuCount<=0 then begin
-      cpuCount:=getNumberOfCPUs-1;
+      cpuCount:=getNumberOfCPUs;
       if cpuCount<1 then cpuCount:=1;
     end;
     fontSize:=f.readLongint;
@@ -137,7 +137,7 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     saveIntervalIdx:=f.readByte;
     if F.allOkay then result:=true
     else begin
-      reset;
+      initDefaults;
       result:=false;
     end;
     savedAt:=now;
@@ -168,17 +168,12 @@ PROCEDURE T_settings.saveToFile(VAR F: T_file);
     savedAt:=now;
   end;
 
-FUNCTION T_settings.savingRequested: boolean;
+PROCEDURE T_settings.initDefaults;
   begin
-    result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
-  end;
-
-PROCEDURE T_settings.reset;
-  VAR i:longint;
-  begin
-    for i := 0 to 9 do fileHistory[i] := '';
-    editorFontname := '';
-    fontSize := 0;
+    cpuCount:=getNumberOfCPUs;
+    editorFontname:='';
+    fontSize:=0;
+    antialiasedFonts:=false;
     with mainForm do begin
       top := 0;
       Left := 0;
@@ -193,11 +188,16 @@ PROCEDURE T_settings.reset;
       doShowTimingInfo:=false;
       minErrorLevel:=3;
     end;
-    instantEvaluation := true;
-    doResetPlotOnEvaluation := false;
-    editorState[0].visible:=true;
+    instantEvaluation:=false;
+    doResetPlotOnEvaluation:=true;
+    saveIntervalIdx:=0;
     wasLoaded:=false;
     savedAt:=now;
+  end;
+
+FUNCTION T_settings.savingRequested: boolean;
+  begin
+    result:=(now-savedAt)>C_SAVE_INTERVAL[saveIntervalIdx].interval;
   end;
 
 FUNCTION T_settings.polishHistory: boolean;
@@ -358,7 +358,9 @@ FUNCTION obtainSettings:P_Settings;
   begin
     ensurePath(settingsFileName);
     new(result,create);
-    if fileExists(settingsFileName) then result^.loadFromFile(settingsFileName);
+    if fileExists(settingsFileName)
+    then result^.loadFromFile(settingsFileName)
+    else result^.initDefaults;
   end;
 
 PROCEDURE disposeSettings(settings:P_Settings);

@@ -144,6 +144,7 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
   VAR i:longint;
   begin
+    result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin

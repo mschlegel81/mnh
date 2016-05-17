@@ -1,5 +1,3 @@
-USE primes;
-
 memoized
 private Ulam(1)->[[1]];
 private Ulam(n)->(n and 1)=0 ? [[n*n..n*(n-1)+1]] | [0..n-2].each(j,(Ulam(n-1).get(j))|(n*(n-1)-j))

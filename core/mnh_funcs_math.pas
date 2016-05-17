@@ -158,7 +158,7 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         newMust[length(newMust)-1]:=mightContain[0];
         recurseBuildSets(newMust,newMight);
         setLength(newMust,0);
-        SetLength(newMight,0);
+        setLength(newMight,0);
       end else begin
         newSet:=newListLiteral;
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true,context.adapters^);
@@ -175,7 +175,7 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       if arg0^.literalType in C_validListTypes then begin
         sets.create;
         setLength(mustContain,0);
-        SetLength(mightContain,list0^.size);
+        setLength(mightContain,list0^.size);
         for i:=0 to length(mightContain)-1 do mightContain[i]:=list0^.value(i);
         recurseBuildSets(mustContain,mightContain);
         mustContain:=sets.keySet;
@@ -213,6 +213,38 @@ FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
+FUNCTION primes_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  FUNCTION sievePrimes(CONST pMax:int64):P_listLiteral;
+    VAR isPrime:array of boolean;
+        i,p:longint;
+        imax:longint;
+    begin
+      if pMax<2 then exit(newListLiteral);
+      setLength(isPrime,pMax+1);
+      isPrime[0]:=false;
+      isPrime[1]:=false;
+      for i:=2 to length(isPrime)-1 do isPrime[i]:=true;
+      p:=2;
+      while p*p<length(isPrime) do begin
+        i:=p*p;
+        while i<length(isPrime) do begin
+          isPrime[i]:=false;
+          inc(i,p);
+        end;
+        inc(p);
+        while (p<length(isPrime)) and not(isPrime[p]) do inc(p);
+      end;
+      result:=newListLiteral;
+      for i:=2 to length(isPrime)-1 do if isPrime[i] then result^.appendInt(i);
+      setLength(isPrime,0);
+    end;
+
+  begin
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int)
+    then result:=sievePrimes(int0^.value)
+    else result:=nil;
+  end;
+
 INITIALIZATION
   registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters',fc_pure);
   registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)',fc_pure);
@@ -220,8 +252,9 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'argMin',@argMin_imp,'argMin(L);#Returns the index of the smallest element out of list L (or the first index if ambiguous)',fc_pure);
   registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number',fc_pure);
   registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value',fc_pure);
-  registerRule(MATH_NAMESPACE,'subSets',@subSets_impl,'subSets(S);Returns all distinct subsets of S',fc_pure);
-  registerRule(MATH_NAMESPACE,'factorize',@factorize_impl,'factorize(i:int);Returns a list of all prime factors of i',fc_pure);
+  registerRule(MATH_NAMESPACE,'subSets',@subSets_impl,'subSets(S);#Returns all distinct subsets of S',fc_pure);
+  registerRule(MATH_NAMESPACE,'factorize',@factorize_impl,'factorize(i:int);#Returns a list of all prime factors of i',fc_pure);
+  registerRule(MATH_NAMESPACE,'primes',@primes_impl,'primes(pMax:int);#Returns prime numbers up to pMax',fc_pure);
   BUILTIN_MIN:=@min_imp;
   BUILTIN_MAX:=@max_imp;
 end.

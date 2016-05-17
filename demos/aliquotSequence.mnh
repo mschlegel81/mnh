@@ -1,9 +1,4 @@
-memoized private dividerSum(n:int)->
-  n<=1 ? 0 : begin
-    local C:=[2..floor(sqrt(n))];
-    C:=C.get(n mod C = 0);
-    unique(1|C|(n div C)).agg(+);
-  end;
+private dividerSum(n:int)->n<=1 ? 0 : factorize(n).subSets.each(s,s.agg(*) orElse 1,+)-n;
 
 private classify(n:int)->
   begin
