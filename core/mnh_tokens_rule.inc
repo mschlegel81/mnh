@@ -270,7 +270,7 @@ CONST C_ruleTypeText:array[T_ruleType] of string=(
 FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
-    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.fileName;
+    result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
     if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then
       result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);

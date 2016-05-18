@@ -7,7 +7,7 @@ TYPE
   T_evaluationState=(es_dead,es_idle,es_running);
   T_tokenInfo=record
     tokenText, tokenExplanation:ansistring;
-    location:T_tokenLocation;
+    location:T_searchTokenLocation;
   end;
 
 PROCEDURE ad_evaluate(CONST path:ansistring; CONST L:TStrings; CONST interactive:boolean);
@@ -217,7 +217,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     token.create;
-    token.define(fileTokenLocation(environment.mainPackageProvider),id,tt_identifier,environment.mainPackage);
+    token.define(packageTokenLocation(environment.mainPackage),id,tt_identifier,environment.mainPackage);
     environment.mainPackage^.resolveRuleId(token,nil);
     case token.tokType of
       tt_intrinsicRule,tt_intrinsicRule_pon: begin

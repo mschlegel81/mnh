@@ -30,7 +30,7 @@ TYPE
   end;
 
   { T_package }
-  T_package=object
+  T_package=object(T_abstractPackage)
     private
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
@@ -53,6 +53,7 @@ TYPE
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
       FUNCTION isReady:boolean;
+      FUNCTION getPath:ansistring; virtual;
 
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
     end;
@@ -178,29 +179,6 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
         {$endif}
       end;
     end;
-  end;
-
-FUNCTION guessPackageForProvider(CONST providerPath:ansistring):P_package;
-  VAR packId:string;
-      i:longint;
-  begin with environment do begin
-    if providerPath=mainPackage^.codeProvider^.getPath then exit(mainPackage);
-    for i:=0 to length(secondaryPackages)-1 do
-      if providerPath=secondaryPackages[i]^.codeProvider^.getPath then exit(secondaryPackages[i]);
-    if (providerPath='?') or (providerPath='') then exit(mainPackage);
-    packId:=filenameToPackageId(providerPath);
-    if packId=mainPackageProvider^.id then exit(mainPackage);
-    if packId=mainPackage^.codeProvider^.id then exit(mainPackage);
-    for i:=0 to length(mainPackage^.packageUses)-1 do
-      if packId=mainPackage^.packageUses[i].id then exit(mainPackage^.packageUses[i].pack);
-    for i:=0 to length(secondaryPackages)-1 do
-      if packId=secondaryPackages[i]^.codeProvider^.id then exit(secondaryPackages[i]);
-    result:=mainPackage;
-  end; end;
-
-FUNCTION guessPackageForToken(CONST token:T_token):P_package;
-  begin
-    result:=guessPackageForProvider(token.location.fileName);
   end;
 
 {$define include_implementation}
@@ -598,25 +576,25 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         i:longint;
     begin
       if not(ready) or not(context.adapters^.noErrors) then begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',fileTokenLocation(codeProvider));
+        context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',packageTokenLocation(@self));
         exit;
       end;
       if not(packageRules.containsKey('main',mainRule)) then begin
-        context.adapters^.raiseError('The specified package contains no main rule.',fileTokenLocation(codeProvider));
+        context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
-        t:=context.newToken(fileTokenLocation(environment.mainPackageProvider),'main',tt_localUserRule,mainRule);
+        t:=context.newToken(packageTokenLocation(@self),'main',tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
-        t^.next:=context.newToken(fileTokenLocation(environment.mainPackageProvider),'',tt_parList,parametersForMain);
+        t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
         with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
         reduceExpression(t,0,context);
         with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
-          then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',fileTokenLocation(codeProvider))
-          else {$endif} context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',fileTokenLocation(codeProvider));
+          then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',packageTokenLocation(@self))
+          else {$endif} context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',packageTokenLocation(@self));
         end;
         //------------------:error handling if main returns more than one token
         //special handling if main returns an expression:----------------------
@@ -673,13 +651,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         interpretation_:=fmt(interpretation);
         unaccounted_   :=fmt(unaccounted   );
         total_         :=fmt(totalTime     );
-        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),fileTokenLocation(codeProvider));
-        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),fileTokenLocation(codeProvider));
-        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),fileTokenLocation(codeProvider));
-        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),fileTokenLocation(codeProvider));
-        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),fileTokenLocation(codeProvider));
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),fileTokenLocation(codeProvider));
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),fileTokenLocation(codeProvider));
+        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),packageTokenLocation(@self));
+        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),packageTokenLocation(@self));
+        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),packageTokenLocation(@self));
+        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),packageTokenLocation(@self));
+        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),packageTokenLocation(@self));
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),packageTokenLocation(@self));
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),packageTokenLocation(@self));
       end;
     end;
 
@@ -700,7 +678,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     if usecase<>lu_interactiveMode
     then clear
-    else reloadAllPackages(fileTokenLocation(codeProvider));
+    else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or (codeProvider<>environment.mainPackageProvider)) and codeProvider^.fileHasChanged then codeProvider^.load;
     with profiler do if active then tokenizing:=timer.value.Elapsed;
@@ -824,7 +802,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      adapters.raiseCustomMessage(mt_reloadRequired,codeProvider^.getPath,fileTokenLocation(codeProvider));
+      adapters.raiseCustomMessage(mt_reloadRequired,codeProvider^.getPath,packageTokenLocation(@self));
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
@@ -922,7 +900,7 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage,adapters) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused package '+codeProvider^.id,fileTokenLocation(codeProvider));
+    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused package '+codeProvider^.id,packageTokenLocation(@self));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUncalled(false,adapters);
@@ -975,10 +953,11 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
   VAR i:longint;
   begin
     for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(packageUses[i]);
-    result.create(codeProvider^.getPath,'',fileTokenLocation(codeProvider),adapters);
+    result.create(codeProvider^.getPath,'',packageTokenLocation(@self),adapters);
   end;
 
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
+FUNCTION T_package.getPath:ansistring; begin result:=codeProvider^.getPath; end;
 
 PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;

@@ -95,7 +95,7 @@ PROCEDURE T_token.undefine;
       else data:=nil;
     end;
     tokType:=tt_EOL;
-    location.fileName:='';
+    location.package:=nil;
     location.column:=0;
     location.line:=0;
   end;

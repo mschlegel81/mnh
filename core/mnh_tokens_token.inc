@@ -388,7 +388,7 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       location:T_tokenLocation;
       adapters:T_adapters;
   begin
-    location.fileName:='';
+    location.package:=nil;
     location.line:=0;
     location.column:=1;
     tokenArray.create;
@@ -407,7 +407,7 @@ PROCEDURE T_tokenArray.tokenizeAll(CONST provider: P_codeProvider; CONST inPacka
 
   begin
     lines:=provider^.getLines;
-    location.fileName:=provider^.getPath;
+    location.package:=inPackage;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
       location.column:=1;
@@ -1309,7 +1309,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       with newFunctionToken^ do begin
         tokType:=C_ponToFunc[tokType];
         if tokType=tt_identifier then begin
-          if data=nil then data:=guessPackageForToken(newFunctionToken^);
+          if data=nil then data:=newFunctionToken^.location.package;
           if fallbackIsPossible
           then P_package(data)^.resolveRuleId(newFunctionToken^,nil) //Do not pass adapters, because we try to handle complaints separately
           else P_package(data)^.resolveRuleId(newFunctionToken^,context.adapters);
@@ -1718,13 +1718,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             first^.tokType:=tt_literal;
             didSubstitution:=true;
           end else begin
-            if first^.data=nil then first^.data:=guessPackageForToken(first^);
+            if first^.data=nil then first^.data:=first^.location.package;
             P_package(first^.data)^.resolveRuleId(first^,context.adapters);
             didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
           end;
         end;
         tt_identifier_pon: begin
-          if first^.data=nil then first^.data:=guessPackageForToken(first^);
+          if first^.data=nil then first^.data:=first^.location.package;
           P_package(first^.data)^.resolveRuleId(first^,context.adapters);
           didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
@@ -1732,7 +1732,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
             if cTokType[2]=tt_identifier then begin
-              if first^.next^.next^.data=nil then first^.next^.next^.data:=guessPackageForToken(first^.next^.next^);
+              if first^.next^.next^.data=nil then first^.next^.next^.data:=first^.next^.next^.location.package;
               P_package(first^.next^.next^.data)^.resolveRuleId(first^.next^.next^,context.adapters);
               cTokType[2]:=first^.next^.next^.tokType;
             end;

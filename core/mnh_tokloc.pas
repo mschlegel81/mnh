@@ -1,37 +1,65 @@
 UNIT mnh_tokLoc;
 INTERFACE
-USES sysutils, mnh_fileWrappers;
+USES sysutils, mnh_fileWrappers,mnh_constants;
 TYPE
-  T_tokenLocation = record
-    fileName:ansistring;
+  T_searchTokenLocation = record
+    fileName: ansistring;
     line, column: longint;
   end;
 
-FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
-OPERATOR := (x: T_tokenLocation): ansistring;
+  T_tokenLocation = record
+    package:P_abstractPackage;
+    line, column: longint;
+  end;
+
+FUNCTION fileTokenLocation(CONST provider: P_codeProvider): T_searchTokenLocation;
+FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
+OPERATOR := (CONST x: T_tokenLocation): ansistring;
+OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
+OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
-FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_tokenLocation;
+FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
 IMPLEMENTATION
 
-FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
+FUNCTION fileTokenLocation(CONST provider: P_codeProvider): T_searchTokenLocation;
   begin
     result.fileName := provider^.getPath;
     result.line := 1;
     result.column := 1;
   end;
 
-OPERATOR := (x: T_tokenLocation): ansistring;
+FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
+  begin
+    result.package:=package;
+    result.line := 1;
+    result.column := 1;
+  end;
+
+OPERATOR := (CONST x: T_tokenLocation): ansistring;
+  begin
+    if (x.package=nil) or (x.line=0) and (x.column=0) then exit('');
+    result:='@'+x.package^.getPath+':'+intToStr(x.line)+','+intToStr(x.column);
+  end;
+
+OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
   begin
     if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
     result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
   end;
 
-OPERATOR = (CONST x,y:T_tokenLocation):boolean;
+OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
   begin
-    result:=(x.fileName=y.fileName) and (x.line=y.line) and (x.column=y.column);
+    if x.package=nil then result.fileName:='?' else result.fileName:=x.package^.getPath;
+    result.column:=x.column;
+    result.line:=x.line;
   end;
 
-FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_tokenLocation;
+OPERATOR = (CONST x,y:T_tokenLocation):boolean;
+  begin
+    result:=(x.package=y.package) and (x.line=y.line) and (x.column=y.column);
+  end;
+
+FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_searchTokenLocation;
   VAR i0,i1,i2:longint;
   begin
     result.fileName:='';

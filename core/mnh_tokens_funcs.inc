@@ -356,7 +356,7 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
   VAR first,temp:P_token;
       package:P_package;
   begin
-    package:=guessPackageForProvider(location.fileName);
+    package:=P_package(location.package);
     first:=stringToTokens(s,location,package,context);
     if first=nil then exit(nil);
 

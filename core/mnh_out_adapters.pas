@@ -8,7 +8,7 @@ TYPE
     messageType : T_messageType;
     simpleMessage: ansistring;
     multiMessage: T_arrayOfString;
-    location: T_tokenLocation;
+    location: T_searchTokenLocation;
   end;
   T_storedMessages = array of T_storedMessage;
 
@@ -31,7 +31,7 @@ TYPE
     DESTRUCTOR destroy; virtual; abstract;
     PROCEDURE clearConsole; virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
-    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual; abstract;
+    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation); virtual; abstract;
     PROCEDURE append(CONST message:T_storedMessage); virtual;
   end;
 
@@ -41,7 +41,7 @@ TYPE
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
-    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
+    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation); virtual;
   end;
 
   P_collectingOutAdapter = ^T_collectingOutAdapter;
@@ -52,7 +52,7 @@ TYPE
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
-    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation); virtual;
+    PROCEDURE messageOut(CONST messageType:T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation); virtual;
     PROCEDURE append(CONST message:T_storedMessage); virtual;
     PROCEDURE clearMessages;
   end;
@@ -103,11 +103,11 @@ TYPE
       PROPERTY outputBehaviour : T_outputBehaviour read getOutputBehaviour write setOutputBehaviour;
 
       PROCEDURE clearErrors;
-      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+      PROCEDURE raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE raiseCustomMessage(CONST message:T_storedMessage);
-      PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-      PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
-      PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+      PROCEDURE raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
+      PROCEDURE raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE ClearAll;
@@ -134,7 +134,7 @@ TYPE
     private
       waitingForGUI:boolean;
 
-      breakpoints:array of T_tokenLocation;
+      breakpoints:array of T_searchTokenLocation;
       stepOutPending:boolean;
       stepInPending:boolean;
       stepPending:boolean;
@@ -160,7 +160,7 @@ TYPE
       //To be called by GUI
       PROCEDURE doStart(CONST continue:boolean);
       PROCEDURE clearBreakpoints;
-      PROCEDURE addBreakpoint(CONST fileName:ansistring; CONST line:longint);
+      PROCEDURE addBreakpoint(CONST fileName:string; CONST line:longint);
       PROCEDURE doStepInto;
       PROCEDURE doStepOut;
       PROCEDURE doStep;
@@ -181,7 +181,7 @@ VAR
   nullAdapter:T_adapters;
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
-FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
 PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
 IMPLEMENTATION
 FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
@@ -191,7 +191,7 @@ FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
     else result:=defaultFormatting(messageType,simpleMessage,location);
   end;
 
-FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_tokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
   begin
     case messageType of
       mt_printline: result:=message;
@@ -387,7 +387,7 @@ PROCEDURE T_adapters.clearErrors;
     errorCount:=0;
   end;
 
-PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
@@ -422,7 +422,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   end;
 
 PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
-  CONST errorLocation: T_tokenLocation);
+  CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el3_evalError] then
@@ -432,7 +432,7 @@ PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
   end;
 
 PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring;
-  CONST errorLocation: T_tokenLocation);
+  CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el2_warning] then
@@ -442,7 +442,7 @@ PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring;
   end;
 
 PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring;
-  CONST errorLocation: T_tokenLocation);
+  CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
     if maxErrorLevel< C_errorLevelForMessageType[mt_el1_note] then
@@ -488,7 +488,7 @@ FUNCTION T_adapters.hasNeedGUIerror: boolean;
   end;
 {$endif}
 
-CONST C_nilTokenLocation: T_tokenLocation = (fileName:'?'; line: 0; column: 0);
+CONST C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 PROCEDURE T_adapters.haltEvaluation;
   begin
     raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
@@ -652,7 +652,7 @@ PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
     end;
   end;
 
-PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
     if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
     or (messageType in [mt_endOfEvaluation,mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}])
@@ -700,7 +700,7 @@ PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
     append(msg);
   end;
 
-PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_tokenLocation);
+PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR msg:T_storedMessage;
   begin
     if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
@@ -749,14 +749,14 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
     VAR i:longint;
     begin
       for i:=0 to length(breakpoints)-1 do
-        if (breakpoints[i].fileName=location.fileName) and
-           (breakpoints[i].line    =location.line    ) then exit(true);
+        if (breakpoints[i].fileName=location.package^.getPath) and
+           (breakpoints[i].line    =location.line            ) then exit(true);
       result:=false;
     end;
 
   begin
     system.enterCriticalSection(cs);
-    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) then begin
+    if cancelling or (location.package=currentLine.package) and (location.line=currentLine.line) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -788,7 +788,7 @@ PROCEDURE T_stepper.steppingIn;
       stepLevel:=currentLevel;
       stepInPending:=false;
     end else if stepPending and (stepLevel=currentLevel) then begin
-      currentLine.fileName:='';
+      currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
     end;
@@ -806,7 +806,7 @@ PROCEDURE T_stepper.steppingOut;
       stepOutPending:=false;
     end;
     if stepPending and (stepLevel=currentLevel) then begin
-      currentLine.fileName:='';
+      currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
     end;
@@ -843,7 +843,7 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
     stepOutPending:=false;
     waitingForGUI:=false;
     currentLevel:=0;
-    currentLine.fileName:='';
+    currentLine.package:=nil;
     currentLine.column:=0;
     currentLine.line:=0;
     system.leaveCriticalSection(cs);
@@ -856,7 +856,7 @@ PROCEDURE T_stepper.clearBreakpoints;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.addBreakpoint(CONST fileName: ansistring; CONST line: longint);
+PROCEDURE T_stepper.addBreakpoint(CONST fileName:string; CONST line: longint);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);

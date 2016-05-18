@@ -429,7 +429,7 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump, update
   end;
 
 PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint; CONST doJump: boolean);
-  VAR loc:T_tokenLocation;
+  VAR loc:T_searchTokenLocation;
       newCaret:TPoint;
       pageIdx:longint;
   begin
@@ -991,8 +991,8 @@ PROCEDURE TMnhForm.handleBreak;
         newCaret:TPoint;
     begin
       debugLine.line:=-1;
-      if (stepper.loc.fileName='') or (stepper.loc.fileName='?') then exit;
-      pageIdx:=getInputEditIndexForFilename(stepper.loc.fileName);
+      if (stepper.loc.package=nil) then exit;
+      pageIdx:=getInputEditIndexForFilename(stepper.loc.package^.getPath);
       if pageIdx>=0 then begin
         PageControl.ActivePageIndex:=pageIdx;
         newCaret.x:=stepper.loc.column;

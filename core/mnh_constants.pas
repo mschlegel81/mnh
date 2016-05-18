@@ -17,6 +17,10 @@ TYPE
                        rwc_specialConstruct,
                        rwc_operator,
                        rwc_modifier);
+  P_abstractPackage=^T_abstractPackage;
+  T_abstractPackage=object
+    FUNCTION getPath:ansistring; virtual; abstract;
+  end;
 
 CONST
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;

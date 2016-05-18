@@ -1,12 +1,12 @@
 object MnhForm: TMnhForm
-  Left = 506
+  Left = 507
   Height = 484
   Top = 145
-  Width = 666
+  Width = 665
   AllowDropFiles = True
   Caption = 'MNH5'
   ClientHeight = 464
-  ClientWidth = 666
+  ClientWidth = 665
   Color = clWhite
   Menu = MainMenu1
   OnChangeBounds = FormResize
@@ -22,14 +22,14 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 23
     Top = 441
-    Width = 666
+    Width = 665
     Panels = <>
   end
   object PageControl: TPageControl
     Left = 0
     Height = 125
     Top = 30
-    Width = 666
+    Width = 665
     TabStop = False
     ActivePage = EditorTabSheet
     Align = alTop
@@ -40,12 +40,12 @@ object MnhForm: TMnhForm
     object EditorTabSheet: TTabSheet
       Caption = 'Editor'
       ClientHeight = 97
-      ClientWidth = 658
+      ClientWidth = 657
       inline InputEdit0: TSynEdit
         Left = 0
         Height = 97
         Top = 0
-        Width = 658
+        Width = 657
         Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
@@ -3642,7 +3642,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 5
     Top = 155
-    Width = 666
+    Width = 665
     Align = alTop
     OnMoved = Splitter1Moved
     ResizeAnchor = akTop
@@ -4147,7 +4147,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 30
     Top = 0
-    Width = 666
+    Width = 665
     ButtonHeight = 30
     ButtonWidth = 30
     Caption = 'DebugToolbar'
@@ -4196,7 +4196,7 @@ object MnhForm: TMnhForm
     Left = 0
     Height = 281
     Top = 160
-    Width = 666
+    Width = 665
     TabStop = False
     ActivePage = variablesTabSheet
     Align = alClient
@@ -4693,12 +4693,12 @@ object MnhForm: TMnhForm
     object variablesTabSheet: TTabSheet
       Caption = 'Variables'
       ClientHeight = 273
-      ClientWidth = 658
+      ClientWidth = 657
       object variablesStringGrid: TStringGrid
         Left = 0
         Height = 216
         Top = 57
-        Width = 658
+        Width = 657
         Align = alClient
         AutoEdit = False
         ColCount = 4
@@ -4733,18 +4733,18 @@ object MnhForm: TMnhForm
         Left = 0
         Height = 57
         Top = 0
-        Width = 658
+        Width = 657
         Align = alTop
         Caption = 'Current expression'
         ClientHeight = 37
-        ClientWidth = 654
+        ClientWidth = 653
         TabOrder = 1
         inline currentExpressionMemo: TSynMemo
           Cursor = crIBeam
           Left = 0
           Height = 37
           Top = 0
-          Width = 654
+          Width = 653
           Align = alClient
           Font.Height = -13
           Font.Name = 'Courier New'

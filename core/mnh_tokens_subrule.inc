@@ -268,7 +268,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
-    declaredAt.fileName:='';
+    declaredAt.package:=nil;
     declaredAt.column:=0;
     declaredAt.line:=0;
     pattern.destroy;

@@ -123,9 +123,8 @@ FUNCTION myPath_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if (tokenLocation.fileName='?') or
-         (tokenLocation.fileName='') then result:=newStringLiteral('<Unknown>')
-                                     else result:=newStringLiteral(tokenLocation.fileName);
+      if tokenLocation.package=nil then result:=newStringLiteral('<Unknown>')
+                                   else result:=newStringLiteral(tokenLocation.package^.getPath);
     end;
   end;
 
