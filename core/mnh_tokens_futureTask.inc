@@ -16,7 +16,7 @@
     CONSTRUCTOR createPlainFuture(CONST expression:P_token; CONST context:P_evaluationContext);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
     FUNCTION    getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
-    FUNCTION    getResultAsToken(VAR context:T_evaluationContext):T_token;
+    //FUNCTION    getResultAsToken(VAR context:T_evaluationContext):T_token;
     PROCEDURE   free(VAR context:T_evaluationContext);
     DESTRUCTOR  proFormaDestroy;
   end;
@@ -79,7 +79,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; C
     scope:=context;
     eachIndex:=idx;
     param.create;
-    param.append(x,true,context^.adapters^);
+    param.append(x,true);
     if expr^.replaces(@param,nil,task,dummy,context^)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
@@ -127,37 +127,45 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
         result^.rereference;
       end else begin
         result:=newErrorLiteral;
-        if task<>nil then loc:=task^.location else loc:=C_nilTokenLocation;
+        if task<>nil then loc:=task^.location else begin
+          loc.fileName:='';
+          loc.column:=0;
+          loc.line:=0;
+        end;
         context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
         context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
       end;
     end else result:=newErrorLiteral;
   end;
 
-FUNCTION T_futureTask.getResultAsToken(VAR context: T_evaluationContext): T_token;
-  VAR loc:T_tokenLocation;
-      sleepTime:longint=0;
-  begin
-    while state in [fts_pending,fts_evaluating] do begin
-      sleep(sleepTime);
-      if sleepTime<100 then inc(sleepTime);
-    end;
-    if (context.adapters^.noErrors) then begin
-      if (task<>nil) and (task^.next=nil) then begin
-        result.create;
-        result.define(task^);
-      end else begin
-        if task<>nil then loc:=task^.location else loc:=C_nilTokenLocation;
-        result.create;
-        result.define(loc,'',tt_literal,newErrorLiteral);
-        context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
-        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
-      end;
-    end else begin
-      result.create;
-      result.define(loc,'',tt_literal,newErrorLiteral);
-    end;
-  end;
+//FUNCTION T_futureTask.getResultAsToken(VAR context: T_evaluationContext): T_token;
+//  VAR loc:T_tokenLocation;
+//      sleepTime:longint=0;
+//  begin
+//    while state in [fts_pending,fts_evaluating] do begin
+//      sleep(sleepTime);
+//      if sleepTime<100 then inc(sleepTime);
+//    end;
+//    if (context.adapters^.noErrors) then begin
+//      if (task<>nil) and (task^.next=nil) then begin
+//        result.create;
+//        result.define(task^);
+//      end else begin
+//        if task<>nil then loc:=task^.location else begin
+//          loc.fileName:='';
+//          loc.column:=0;
+//          loc.line:=0;
+//        end;
+//        result.create;
+//        result.define(loc,'',tt_literal,newErrorLiteral);
+//        context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
+//        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
+//      end;
+//    end else begin
+//      result.create;
+//      result.define(loc,'',tt_literal,newErrorLiteral);
+//    end;
+//  end;
 
 PROCEDURE T_futureTask.free(VAR context: T_evaluationContext);
   begin

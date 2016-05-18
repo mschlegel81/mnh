@@ -388,7 +388,8 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
       location:T_tokenLocation;
       adapters:T_adapters;
   begin
-    location:=C_nilTokenLocation;
+    location.fileName:='';
+    location.line:=0;
     location.column:=1;
     tokenArray.create;
     adapters.create;
@@ -734,13 +735,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         case aggregatorPresent of
           no: begin
             if resultLiteral=nil then resultLiteral:=newListLiteral;
-            P_listLiteral(resultLiteral)^.append(L,true,context.adapters^);
+            P_listLiteral(resultLiteral)^.append(L,true);
           end;
           yes_as_operator: case aggregatorToken of
             tt_operatorConcat: begin
               if resultLiteral=nil then resultLiteral:=newListLiteral;
               if (L^.literalType in [lt_error, lt_boolean, lt_int, lt_real, lt_string, lt_expression])
-              then P_listLiteral(resultLiteral)^.append   (L, true,context.adapters^)
+              then P_listLiteral(resultLiteral)^.append   (L, true)
               else P_listLiteral(resultLiteral)^.appendAll(P_listLiteral(L));
             end;
             tt_operatorLazyAnd, tt_operatorLazyOr: if resultLiteral=nil then begin
@@ -897,7 +898,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if not(parseBodyOk) then exit;
       if (P_literal(first^.data)^.literalType in C_validListTypes)
       then itList:=first^.data
-      else itList:=newOneElementListLiteral(first^.data,false,context.adapters^);
+      else itList:=newOneElementListLiteral(first^.data,false);
 
       first^.next:=context.disposeToken(first^.next);
       resultLiteral:=nil;
@@ -1011,7 +1012,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       VAR i:longint;
       begin
         result:=newListLiteral;
-        for i:=0 to length(messages)-1 do result^.append(messageToLiteral(messages[i]),false,context.adapters^);
+        for i:=0 to length(messages)-1 do result^.append(messageToLiteral(messages[i]),false);
       end;
 
     begin
@@ -1128,7 +1129,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         except
           on e:Exception do begin
             context.adapters^.raiseCustomMessage(mt_el5_systemError,'Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
-            context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,C_nilTokenLocation);
+            context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,first^.location);
             exit;
           end;
         end;
@@ -1327,8 +1328,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         //resolved rule ID mutate x.y -> y(x)
         //if key is defined:      x.y -> get(x,"y")
         if key=''
-        then newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false,context.adapters^))
-        else newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false,context.adapters^)^.appendString(key));
+        then newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false))
+        else newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false)^.appendString(key));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
         first^.next^.data:=nil;
@@ -1592,7 +1593,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 stack_popLink; // -> | <Lit> <NewList> ...
                 newLit:=newListLiteral;
                 P_listLiteral(newLit)^
-                .append(first^.data,false,context.adapters^)^
+                .append(first^.data,false)^
                 .appendAll(first^.next^.data);
                 disposeLiteral(first^.next^.data);
                 first^.tokType:=tt_intrinsicRule;
@@ -1607,7 +1608,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
-              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true,context.adapters^);
+              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
               stack[length(stack)-1]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
               first:=context.disposeToken(first); //dispose literal
               first:=context.disposeToken(first); //dispose closing bracket
@@ -1615,7 +1616,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               stack_popLink; //pop FUNCTION
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
-              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true,context.adapters^);
+              P_listLiteral(stack[length(stack)-1]^.data)^.append(first^.data,true);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               didSubstitution:=true;
@@ -1779,8 +1780,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$ifndef debugMode}
     except
       on e:Exception do begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth),C_nilTokenLocation);
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,e.message,C_nilTokenLocation);
+        context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
+        context.adapters^.raiseSystemError(e.message);
       end;
     end;
     {$endif}
@@ -1794,10 +1795,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
                  context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
       while (length(stack)>0) do stack_popDestroy;
-      if (callDepth=0) then begin
-        context.adapters^.raiseNote('Cleaning up partial result after system error',C_nilTokenLocation);
-        context.cascadeDisposeToken(first);
-      end;
+      if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
       if (first<>nil) then currentStateMessage();
       while (length(stack)>0) do stack_popLink;

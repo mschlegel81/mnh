@@ -268,7 +268,9 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
-    declaredAt:=C_nilTokenLocation;
+    declaredAt.fileName:='';
+    declaredAt.column:=0;
+    declaredAt.line:=0;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
@@ -334,19 +336,19 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       //              local y:=y;
       //add after:  ; end
       //pattern.sig[0].id;
-      newFirst:=context.newToken(C_nilTokenLocation,'',tt_begin);
+      newFirst:=context.newToken(declaredAt,'',tt_begin);
       tmp:=newFirst;
       if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
       for i:=0 to i1-1 do begin
-        tmp^.next:=context.newToken(C_nilTokenLocation,parId(i),tt_assignNewBlockLocal); tmp:=tmp^.next;
-        tmp^.next:=context.newToken(C_nilTokenLocation,'',tt_literal,param^.value(i));   tmp:=tmp^.next;
-        tmp^.next:=context.newToken(C_nilTokenLocation,'',tt_semicolon);                 tmp:=tmp^.next;
+        tmp^.next:=context.newToken(declaredAt,parId(i),tt_assignNewBlockLocal); tmp:=tmp^.next;
+        tmp^.next:=context.newToken(declaredAt,'',tt_literal,param^.value(i));   tmp:=tmp^.next;
+        tmp^.next:=context.newToken(declaredAt,'',tt_semicolon);                 tmp:=tmp^.next;
         param^.value(i)^.rereference;
       end;
       tmp^.next:=firstRep;
       firstRep:=newFirst;
-      lastRep^.next:=context.newToken(C_nilTokenLocation,'',tt_semicolon); lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(C_nilTokenLocation,'',tt_end); lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon); lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(declaredAt,'',tt_end); lastRep:=lastRep^.next;
       lastRep^.txt:='#';
       stepper.steppingIn();
     end;
@@ -567,7 +569,7 @@ FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_ex
   VAR param:T_listLiteral;
   begin
     param.create;
-    param.append(x,true,context.adapters^);
+    param.append(x,true);
     result:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
   end;
@@ -577,8 +579,8 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
       lit:P_literal;
   begin
     param.create;
-    param.append(x,true,context.adapters^);
-    param.append(y,true,context.adapters^);
+    param.append(x,true);
+    param.append(y,true);
     lit:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
     if (context.adapters^.noErrors) and (lit<>nil) and (lit^.literalType=lt_boolean) then result:=P_boolLiteral(lit)^.value
@@ -593,8 +595,8 @@ FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiter
   VAR param:T_listLiteral;
   begin
     param.create;
-    param.append(x,true,context.adapters^);
-    param.append(y,true,context.adapters^);
+    param.append(x,true);
+    param.append(y,true);
     result:=directEvaluate(selfLiteral,@param,callDepth,context);
     param.destroy;
   end;

@@ -52,20 +52,20 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         end else begin
           result:=newListLiteral;
           for i:=0 to list1^.size-1 do
-            P_listLiteral(result)^.append(posInt(arg0,list1^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(posInt(arg0,list1^.value(i)),false);
         end;
       end else begin
         if arg1^.literalType=lt_string then begin
           result:=newListLiteral;
           for i:=0 to list0^.size-1 do
             P_listLiteral(result)^.append(posInt(list0^.value(i),
-                                                               arg1           ),false,context.adapters^);
+                                                               arg1           ),false);
         end else begin
           if list0^.size=list1^.size then begin
             result:=newListLiteral;
             for i:=0 to list0^.size-1 do
               P_listLiteral(result)^.append(posInt(list0^.value(i),
-                                                   list1^.value(i)),false,context.adapters^);
+                                                   list1^.value(i)),false);
           end else context.adapters^.raiseError('Incompatible list lengths for function pos.',tokenLocation)
         end;
       end;
@@ -149,7 +149,7 @@ FUNCTION chars_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       result:=chars_internal(arg0);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
-      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false,context.adapters^);
+      for i:=0 to list0^.size-1 do P_listLiteral(result)^.append(chars_internal(list0^.value(i)),false);
     end else if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
       for i:=0 to 255 do P_listLiteral(result)^.appendString(chr(i));
@@ -189,7 +189,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         rest:ansistring;
     begin
       firstSplitterPos(s^.value,sp0,sp1);
-      if sp0<0 then exit(newOneElementListLiteral(s,true,context.adapters^));
+      if sp0<0 then exit(newOneElementListLiteral(s,true));
       result:=newListLiteral;
       rest:=s^.value;
       while sp0>0 do begin
@@ -208,7 +208,7 @@ FUNCTION split_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         lt_list,lt_stringList,lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(p)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(splitRecurse(P_listLiteral(p)^.value(i)),false);
         end
        else result:=newErrorLiteralRaising('Cannot split non-string varables ',tokenLocation,context.adapters^);
       end;
@@ -266,7 +266,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_list,lt_stringList,lt_emptyList:  begin
         result:=newListLiteral;
         for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
+          P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
         if result^.literalType = lt_listWithError then begin
           disposeLiteral(result);
           result:=newErrorLiteral;
@@ -625,27 +625,27 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
       result:=newListLiteral^
              .append(newListLiteral^
                     .appendString('adds')^
-                    .appendInt(diff.DiffStats.adds),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.adds),false)^
              .append(newListLiteral^
                     .appendString('deletes')^
-                    .appendInt(diff.DiffStats.deletes),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.deletes),false)^
              .append(newListLiteral^
                     .appendString('matches')^
-                    .appendInt(diff.DiffStats.matches),false,context.adapters^)^
+                    .appendInt(diff.DiffStats.matches),false)^
              .append(newListLiteral^
                     .appendString('modifies')^
-                    .appendInt(diff.DiffStats.modifies),false,context.adapters^);
+                    .appendInt(diff.DiffStats.modifies),false);
       {$ifdef withEditScript}
       comp:=newListLiteral;
       for i:=0 to diff.count-1 do begin
         case diff.Compares[i].kind of
-          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
-          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false,context.adapters^);
+          ckNone:   comp^.append(newListLiteral^.appendString('.')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
+          ckAdd:    comp^.append(newListLiteral^.appendString('+')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
+          ckDelete: comp^.append(newListLiteral^.appendString('-')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
+          ckModify: comp^.append(newListLiteral^.appendString('M')^.appendInt(diff.Compares[i].oldIndex1)^.appendInt(diff.Compares[i].oldIndex2),false);
         end;
       end;
-      P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false,context.adapters^),false,context.adapters^);
+      P_listLiteral(result)^.append(newListLiteral^.appendString('edit')^.append(comp,false),false);
       {$endif}
       diff.destroy;
     end;

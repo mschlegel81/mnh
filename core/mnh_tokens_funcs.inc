@@ -12,7 +12,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_real: try result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value)); except result:=newRealLiteral(Nan) end;
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
       end;
       else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
     end;
@@ -83,7 +83,7 @@ FUNCTION not_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         lt_list,lt_booleanList, lt_intList, lt_emptyList: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(not_rec(P_listLiteral(x)^.value(i)),false);
         end;
         else raiseNotApplicableError('not',x^.literalType,'',tokenLocation,context.adapters^);
       end;
@@ -107,7 +107,7 @@ FUNCTION recurse(CONST x:P_literal):P_literal;
       lt_real: result:=newRealLiteral(CALL_MACRO(P_realLiteral(x)^.value));
       lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
         result:=newListLiteral;
-        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
+        for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
       end;
       else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
     end;
@@ -143,7 +143,7 @@ UNARY_NUM_TO_SAME;
         lt_real: result:=newIntLiteral(CALL_MACRO(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false,context.adapters^);
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse1(P_listLiteral(x)^.value(i)),false);
         end;
         else raiseNotApplicableError(ID_MACRO,x^.literalType,'',tokenLocation,context.adapters^);
       end;
@@ -171,7 +171,7 @@ UNARY_NUM_TO_SAME;
           lt_int: result:=myRound(P_realLiteral(x)^.value,P_intLiteral(y)^.value);
           lt_list,lt_intList,lt_emptyList: begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false,context.adapters^);
+            for i:=0 to P_listLiteral(y)^.size-1 do P_listLiteral(result)^.append(recurse2(x,P_listLiteral(y)^.value(i)),false);
           end;
           else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,context.adapters^);
         end;
@@ -179,11 +179,11 @@ UNARY_NUM_TO_SAME;
           lt_error,lt_listWithError: begin result:=y; result^.rereference; end;
           lt_int: begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false,context.adapters^);
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),y),false);
           end;
           lt_list,lt_intList,lt_emptyList: if P_listLiteral(x)^.size=P_listLiteral(y)^.size then begin
             result:=newListLiteral;
-            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false,context.adapters^);
+            for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(recurse2(P_listLiteral(x)^.value(i),P_listLiteral(y)^.value(i)),false);
           end else context.adapters^.raiseError('Incompatible list lengths given for built in function '+ID_MACRO,tokenLocation);
           else raiseNotApplicableError(ID_MACRO,y^.literalType,' (second parameter)',tokenLocation,context.adapters^);
         end;
@@ -225,7 +225,7 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         lt_real: result:=newIntLiteral(sign(P_realLiteral(x)^.value));
         lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList: begin
           result:=newListLiteral;
-          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false,context.adapters^);
+          for i:=0 to P_listLiteral(x)^.size-1 do P_listLiteral(result)^.append(sign_rec(P_listLiteral(x)^.value(i)),false);
         end;
         else raiseNotApplicableError('sign',x^.literalType,'',tokenLocation,context.adapters^);
       end;
@@ -244,7 +244,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   PROCEDURE appendPair(VAR result:P_literal; CONST el0:string; CONST el1:P_literal);
     begin
-      P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false,context.adapters^),false,context.adapters^);
+      P_listLiteral(result)^.append(newListLiteral^.appendString(el0)^.append(el1,false),false);
     end;
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
@@ -415,7 +415,7 @@ FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         lt_list,lt_stringList,lt_emptyList,lt_booleanList,lt_intList,lt_realList,lt_numList,lt_keyValueList,lt_flatList:  begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(expression_rec(P_listLiteral(x)^.value(i)),false);
         end;
         lt_expression: begin result:=x; x^.rereference; end;
         lt_boolean,lt_int,lt_real: result:=primitiveExpression(x);
@@ -489,7 +489,7 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
         P_listLiteral(result)^.append(
            headByMessageType(messageType)^
           .appendString(ansistring(location))^
-          .appendString(simpleMessage),false,context.adapters^);
+          .appendString(simpleMessage),false);
       end;
     end;
   end;
@@ -531,7 +531,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
       if aggregator=nil then begin
         if resultLiteral=nil then resultLiteral:=newListLiteral;
-        P_listLiteral(resultLiteral)^.append(L,true,context.adapters^);
+        P_listLiteral(resultLiteral)^.append(L,true);
       end else begin
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
@@ -541,7 +541,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
           end else begin
-            context.adapters^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,C_nilTokenLocation);
+            context.adapters^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
             exit;
           end;
         end;
@@ -571,7 +571,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         addToAggregation(keyList[inputIndex],listToGroup^.value(inputIndex));
       groupList:=groupMap.keyValueList;
       result:=newListLiteral;
-      for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false,context.adapters^);
+      for outputIndex:=0 to length(groupList)-1 do P_listLiteral(result)^.append(groupList[outputIndex].value,false);
       groupMap.destroy;
     end;
   end;
@@ -629,8 +629,8 @@ FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
           result:=newListLiteral;
           L:=P_listLiteral(params^.value(1));
           for i:=0 to L^.size-1 do case(L^.value(i)^.literalType) of
-            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value(i))^.value),false,context.adapters^);
-            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value(i))^.value),false,context.adapters^);
+            lt_int : P_listLiteral(result)^.append(fmtIt(P_intLiteral (L^.value(i))^.value),false);
+            lt_real: P_listLiteral(result)^.append(fmtIt(P_realLiteral(L^.value(i))^.value),false);
           end;
         end;
       end;

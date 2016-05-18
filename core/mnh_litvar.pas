@@ -239,7 +239,7 @@ TYPE
   public
     CONSTRUCTOR create;
     FUNCTION toParameterListString(CONST isFinalized: boolean): ansistring;
-    FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters):P_listLiteral;
+    FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_listLiteral;
     FUNCTION appendString(CONST s:ansistring):P_listLiteral;
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
     FUNCTION appendInt   (CONST i:int64):P_listLiteral;
@@ -353,7 +353,7 @@ FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral; inline;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral; inline;
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral; inline;
 FUNCTION newListLiteral: P_listLiteral; inline;
-FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters): P_listLiteral; inline;
+FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral; inline;
 FUNCTION newErrorLiteral: P_scalarLiteral; inline;
 FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
 FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
@@ -430,10 +430,10 @@ FUNCTION newListLiteral: P_listLiteral;
     new(result, create);
   end;
 
-FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean; VAR adapters:T_adapters): P_listLiteral;
+FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral;
   begin
     result:=newListLiteral;
-    result^.append(value, incRefs,adapters);
+    result^.append(value, incRefs);
   end;
 
 FUNCTION newErrorLiteral: P_scalarLiteral;
@@ -697,7 +697,7 @@ FUNCTION T_listLiteral.head(CONST headSize: longint): P_listLiteral;
     imax:=headSize;
     if imax>length(element) then imax:=length(element);
     result:=newListLiteral;
-    for i:=0 to imax-1 do result^.append(element[i],true,nullAdapter);
+    for i:=0 to imax-1 do result^.append(element[i],true);
   end;
 
 FUNCTION T_listLiteral.tail:P_listLiteral;
@@ -710,7 +710,7 @@ FUNCTION T_listLiteral.tail(CONST headSize:longint):P_listLiteral;
     if iMin>length(element) then iMin:=length(element)
     else if iMin<0 then iMin:=0;
     result:=newListLiteral;
-    for i:=iMin to length(element)-1 do result^.append(element[i],true,nullAdapter);
+    for i:=iMin to length(element)-1 do result^.append(element[i],true);
   end;
 
 FUNCTION T_listLiteral.trailing:P_literal;
@@ -915,7 +915,7 @@ FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters
       i: longint;
   begin
     res:=newListLiteral;
-    for i:=0 to length(element)-1 do res^.append(element [i]^.negate(minusLocation,adapters), false,adapters);
+    for i:=0 to length(element)-1 do res^.append(element [i]^.negate(minusLocation,adapters), false);
     result:=res;
   end;
 //=====================================================================:?.negate
@@ -1418,7 +1418,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         i1:=length(element);
         for j:=0 to length(P_listLiteral(other)^.element)-1 do begin
           i:=P_intLiteral(P_listLiteral(other)^.element [j])^.val;
-          if (i>=0) and (i<i1) then P_listLiteral(result)^.append(element [i], true,adapters);
+          if (i>=0) and (i<i1) then P_listLiteral(result)^.append(element [i], true);
         end;
         checkedExit;
       end;
@@ -1428,7 +1428,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         if i1 = length(P_listLiteral(other)^.element) then
         for i:=0 to length(P_listLiteral(other)^.element)-1 do
         if P_boolLiteral(P_listLiteral(other)^.element [i])^.val then
-          P_listLiteral(result)^.append(element [i], true,adapters);
+          P_listLiteral(result)^.append(element [i], true);
         checkedExit;
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
@@ -1457,7 +1457,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
           for j:=0 to P_listLiteral(other)^.size-1 do begin
             L:=indexBacking.mapBack^.get(P_listLiteral(other)^.element[j],nil);
             if L<>nil then begin
-              P_listLiteral(result)^.append(L,true,adapters);
+              P_listLiteral(result)^.append(L,true);
               break;
             end;
           end;
@@ -1466,7 +1466,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
             key:=P_stringLiteral(P_listLiteral(other)^.element [j])^.value;
             i:=0; while i<length(element) do
             if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.value = key then begin
-              P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true,adapters);
+              P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true);
               i:=length(element);
             end else inc(i);
           end;
@@ -1486,7 +1486,7 @@ FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_t
     result:=newListLiteral;
     for i:=0 to length(element)-1 do
     if element[i]^.literalType in C_validListTypes
-    then result^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false,adapters)
+    then result^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false)
     else begin
       disposeLiteral(result);
       exit(nil);
@@ -1643,11 +1643,11 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR adapters: T_adapters): P_listLiteral;
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_listLiteral;
   begin
     result:=@self;
     if L = nil then begin
-      adapters.raiseError('Trying to append NIL literal to list', C_nilTokenLocation);
+      raise Exception.create('Trying to append NIL literal to list');
       exit;
     end;
     if L^.literalType=lt_void then exit;
@@ -1711,28 +1711,28 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; VAR ad
 
 FUNCTION T_listLiteral.appendString(CONST s: ansistring): P_listLiteral;
   begin
-    result:=append(newStringLiteral(s),false,nullAdapter);
+    result:=append(newStringLiteral(s),false);
   end;
 
 FUNCTION T_listLiteral.appendBool(CONST b: boolean): P_listLiteral;
   begin
-    result:=append(newBoolLiteral(b),false,nullAdapter);
+    result:=append(newBoolLiteral(b),false);
   end;
 
 FUNCTION T_listLiteral.appendInt(CONST i: int64): P_listLiteral;
   begin
-    result:=append(newIntLiteral(i),false,nullAdapter);
+    result:=append(newIntLiteral(i),false);
   end;
 
 FUNCTION T_listLiteral.appendReal(CONST r: T_myFloat): P_listLiteral;
   begin
-    result:=append(newRealLiteral(r),false,nullAdapter);
+    result:=append(newRealLiteral(r),false);
   end;
 
 FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral): P_listLiteral;
   VAR i: longint;
   begin
-    for i:=0 to length(L^.element)-1 do append(L^.element [i], true,nullAdapter);
+    for i:=0 to length(L^.element)-1 do append(L^.element [i], true);
     result:=@self;
   end;
 
@@ -1743,7 +1743,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
     c0, c1: char;
   begin
     if not (nextAppendIsRange) then begin
-      append(L, true,adapters);
+      append(L, true);
       exit;
     end;
     nextAppendIsRange:=false;
@@ -2177,7 +2177,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 P_listLiteral(result)^.append(
                   resolveOperator(LHS, op, P_listLiteral(RHS)^.element[i],
                   tokenLocation,adapters),
-                  false,adapters);
+                  false);
               checkedExit;
             end;
             lt_booleanList..lt_emptyList,lt_flatList: begin
@@ -2190,17 +2190,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_comparatorGeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (LHS,P_listLiteral(RHS)^.element[i]));
                 tt_comparatorLss:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (LHS,P_listLiteral(RHS)^.element[i]));
                 tt_comparatorGrt:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(LHS,P_listLiteral(RHS)^.element[i]));
-                tt_operatorAnd:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorOr:         for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorXor:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorPlus:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorMinus:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorMult:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorMod:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorPot:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
+                tt_operatorAnd:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorOr:         for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorXor:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorPlus:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorMinus:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorMult:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorMod:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorPot:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
               end;
               checkedExit;
             end;
@@ -2213,7 +2213,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 P_listLiteral(result)^.append(
                   resolveOperator(P_listLiteral(LHS)^.element [i], op,
                   RHS, tokenLocation,adapters),
-                  false,adapters);
+                  false);
               checkedExit;
             end;
             lt_list..lt_flatList: begin
@@ -2226,7 +2226,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   P_listLiteral(result)^.append(resolveOperator(
                     P_listLiteral(LHS)^.element [i], op,
                     P_listLiteral(RHS)^.element [i], tokenLocation,adapters),
-                    false,adapters);
+                    false);
                 checkedExit;
               end else invalidLengthExit;
             end;
@@ -2242,17 +2242,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_comparatorGeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element [i],RHS));
                 tt_comparatorLss:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element [i],RHS));
                 tt_comparatorGrt:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element [i],RHS));
-                tt_operatorAnd:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorOr:         for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorXor:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorPlus:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorMinus:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorMult:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorMod:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorPot:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
-                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters),false,adapters);
+                tt_operatorAnd:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorOr:         for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorXor:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorPlus:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMinus:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMult:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMod:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorPot:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters),false);
               end;
               checkedExit;
             end;
@@ -2266,7 +2266,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   P_listLiteral(result)^.append(resolveOperator(
                     P_listLiteral(LHS)^.element [i], op,
                     P_listLiteral(RHS)^.element [i], tokenLocation,adapters),
-                    false,adapters);
+                    false);
                 checkedExit;
               end else invalidLengthExit;
             end;
@@ -2283,17 +2283,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   tt_comparatorGeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
                   tt_comparatorLss:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
                   tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
-                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false,adapters);
+                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
                 end;
                 checkedExit;
               end else invalidLengthExit;
@@ -2303,10 +2303,10 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       tt_operatorConcat: begin
         result:=newListLiteral;
         if (LHS^.literalType in C_validScalarTypes)
-        then P_listLiteral(result)^.append   (LHS,true,adapters)
+        then P_listLiteral(result)^.append   (LHS,true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(LHS));
         if (RHS^.literalType in C_validScalarTypes)
-        then P_listLiteral(result)^.append   (RHS,true,adapters)
+        then P_listLiteral(result)^.append   (RHS,true)
         else P_listLiteral(result)^.appendAll(P_listLiteral(RHS));
         checkedExit;
       end;
@@ -2344,7 +2344,7 @@ DESTRUCTOR T_namedVariable.destroy;
 
 PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal; VAR adapters:T_adapters);
   begin
-    if readonly then adapters.raiseError('Mutation of constant "'+id+'" is not allowed.',C_nilTokenLocation);
+    if readonly then raise Exception.create('Mutation of constant "'+id+'" is not allowed.');
     disposeLiteral(value);
     value:=newValue;
     value^.rereference;
@@ -2378,7 +2378,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
       tt_cso_assignAppend: begin
         if (oldValue^.literalType in C_validListTypes) and (oldValue^.getReferenceCount=1) then begin
           if (RHS^.literalType in C_validScalarTypes)
-          then P_listLiteral(oldValue)^.append(RHS, true,adapters)
+          then P_listLiteral(oldValue)^.append(RHS, true)
           else P_listLiteral(oldValue)^.appendAll(P_listLiteral(RHS));
           result:=oldValue;
           result^.rereference;
@@ -2435,8 +2435,8 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       end;
       map^.append(
         newListLiteral^
-       .append(key  ,true,adapters)^
-       .append(value,true,adapters),false,adapters);
+       .append(key  ,true)^
+       .append(value,true),false);
       result:=map;
     end;
   end;
@@ -2470,11 +2470,11 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
         resultList:=newListLiteral;
         if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
           fallbackList:=P_listLiteral(fallback);
-          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.element[i],fallbackList^.element[i]),true,adapters);
+          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.element[i],fallbackList^.element[i]),true);
         end else begin
           for i:=0 to keyList^.size-1 do begin
             result:=back^.get(keyList^.element[i],fallback);
-            if result<>nil then resultList^.append(result,true,adapters);
+            if result<>nil then resultList^.append(result,true);
           end;
         end;
         if tempBack then dispose(back,destroy);
@@ -2519,7 +2519,7 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       key:=P_stringLiteral(params^.element[1]);
       for i:=0 to length(map^.element)-1 do begin
         keyValuePair:=P_listLiteral(map^.element[i]);
-        if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true,adapters);
+        if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
       end;
     end;
   end;
@@ -2532,7 +2532,7 @@ FUNCTION messageToLiteral(CONST message:T_storedMessage):P_listLiteral;
     if length(message.multiMessage)>=1 then begin
       stringList:=newListLiteral;
       for i:=0 to length(message.multiMessage)-1 do stringList^.appendString(message.multiMessage[i]);
-      result^.append(stringList,false,nullAdapter);
+      result^.append(stringList,false);
       nullAdapter.ClearAll;
     end else result^.appendString(message.simpleMessage);
     result^.appendInt(C_errorLevelForMessageType[message.messageType]);

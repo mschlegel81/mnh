@@ -17,7 +17,7 @@ FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      P_listLiteral(result)^.append(arg1,true,context.adapters^);
+      P_listLiteral(result)^.append(arg1,true);
     end;
   end;
 
@@ -105,7 +105,7 @@ FUNCTION mapOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
 
 FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
-    begin result:=newListLiteral^.appendInt(count)^.append(value,true,nullAdapter); end;
+    begin result:=newListLiteral^.appendInt(count)^.append(value,true); end;
 
   TYPE T_freqMap=specialize G_literalKeyMap<longint>;
   VAR freqMap:T_freqMap;
@@ -121,7 +121,7 @@ FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_to
     for i:=0 to list^.size-1 do freqMap.put(list^.value(i),freqMap.get(list^.value(i),0)+1);
     freqList:=freqMap.keyValueList;
     result:=newListLiteral;
-    for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false,nullAdapter);
+    for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false);
     freqMap.destroy;
   end;
 
@@ -145,7 +145,7 @@ FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
     result:=newListLiteral;
     resultList:=resultSet.keyValueList;
-    for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true,nullAdapter);
+    for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true);
     setLength(resultList,0);
     resultSet.destroy;
   end;
@@ -172,7 +172,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     resultList:=resultSet.keyValueList;
     result:=newListLiteral;
     for j:=0 to length(resultList)-1 do if resultList[j].value=i then
-      P_listLiteral(result)^.append(resultList[j].key,true,nullAdapter);
+      P_listLiteral(result)^.append(resultList[j].key,true);
     setLength(resultList,0);
     resultSet.destroy;
   end;
@@ -195,7 +195,7 @@ FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=newListLiteral;
     for i:=0 to LHS^.size-1 do
       if not(rhsSet.get(LHS^.value(i),false))
-      then P_listLiteral(result)^.append(LHS^.value(i),true,nullAdapter);
+      then P_listLiteral(result)^.append(LHS^.value(i),true);
     rhsSet.destroy;
   end;
 
@@ -205,7 +205,7 @@ FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     begin
       for i:=0 to L^.size-1 do
       if L^.value(i)^.literalType in [lt_error,lt_boolean,lt_int,lt_real,lt_string,lt_expression]
-      then P_listLiteral(result)^.append(L^.value(i),true,context.adapters^)
+      then P_listLiteral(result)^.append(L^.value(i),true)
       else recurse_flatten(P_listLiteral(L^.value(i)));
     end;
 
@@ -253,7 +253,7 @@ FUNCTION reverseList_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
       result:=newListLiteral;
       for i:=list0^.size-1 downto 0 do
-        P_listLiteral(result)^.append(list0^.value(i),true,context.adapters^);
+        P_listLiteral(result)^.append(list0^.value(i),true);
     end;
   end;
 
@@ -280,14 +280,14 @@ FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then result:=list0^.get(arg1,tokenLocation,context.adapters^)
     else if (params<>nil) and (params^.size>=2) and (arg0^.literalType in C_validListTypes) then begin
       tmpPar.create;
-      tmpPar.append(params^.value(0),true,context.adapters^)^
-            .append(params^.value(1),true,context.adapters^);
+      tmpPar.append(params^.value(0),true)^
+            .append(params^.value(1),true);
       result:=get_imp(@tmpPar,tokenLocation,context);
       tmpPar.destroy;
       if result<>nil then begin
         tmpPar.create;
-        tmpPar.append(result,false,context.adapters^);
-        for i:=2 to params^.size-1 do tmpPar.append(params^.value(i),true,context.adapters^);
+        tmpPar.append(result,false);
+        for i:=2 to params^.size-1 do tmpPar.append(params^.value(i),true);
         result:=get_imp(@tmpPar,tokenLocation,context);
         tmpPar.destroy;
       end;
@@ -303,14 +303,14 @@ FUNCTION getInner_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     then result:=list0^.getInner(arg1,tokenLocation,context.adapters^)
     else if (params<>nil) and (params^.size>=2) and (arg0^.literalType in C_validListTypes) then begin
       tmpPar.create;
-      tmpPar.append(params^.value(0),true,context.adapters^)^
-            .append(params^.value(1),true,context.adapters^);
+      tmpPar.append(params^.value(0),true)^
+            .append(params^.value(1),true);
       result:=getInner_imp(@tmpPar,tokenLocation,context);
       tmpPar.destroy;
       if result<>nil then begin
         tmpPar.create;
-        tmpPar.append(result,false,context.adapters^);
-        for i:=2 to params^.size-1 do tmpPar.append(params^.value(i),true,context.adapters^);
+        tmpPar.append(result,false);
+        for i:=2 to params^.size-1 do tmpPar.append(params^.value(i),true);
         result:=getInner_imp(@tmpPar,tokenLocation,context);
         tmpPar.destroy;
       end;

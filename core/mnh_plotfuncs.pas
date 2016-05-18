@@ -185,10 +185,10 @@ FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLo
       result:=newListLiteral^
              .append(newListLiteral^
                     .appendReal(o.range['x',0])^
-                    .appendReal(o.range['x',1]),false,context.adapters^)^
+                    .appendReal(o.range['x',1]),false)^
              .append(newListLiteral^
                     .appendReal(o.range['y',0])^
-                    .appendReal(o.range['y',1]),false,context.adapters^);
+                    .appendReal(o.range['y',1]),false);
     end;
   end;
 

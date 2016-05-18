@@ -234,7 +234,7 @@ PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_ev
     setLength(secondaryPackages,j);
     used.destroy;
     //-------------------------------------------------------------:housekeeping
-    context.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+    context.adapters^.logEndOfEvaluation;
   end; end;
 
 PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
@@ -501,7 +501,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               end;
             end;
           end;
-          rulePattern.finalizeRefs(context,@self);
+          rulePattern.finalizeRefs(ruleDeclarationStart,context,@self);
           context.disposeToken(first);
           first:=context.disposeToken(closingBracket);
         end;
@@ -513,7 +513,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
         if (usecase=lu_forDocGeneration) then begin
           context.cascadeDisposeToken(ruleBody);
-          ruleBody:=context.newToken(C_nilTokenLocation,'',tt_literal,newVoidLiteral);
+          ruleBody:=context.newToken(ruleDeclarationStart,'',tt_literal,newVoidLiteral);
         end else begin
           rulePattern.toParameterIds(ruleBody);
           if evaluateBody and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
@@ -673,13 +673,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         interpretation_:=fmt(interpretation);
         unaccounted_   :=fmt(unaccounted   );
         total_         :=fmt(totalTime     );
-        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),C_nilTokenLocation);
-        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),C_nilTokenLocation);
-        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),C_nilTokenLocation);
-        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),C_nilTokenLocation);
-        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),C_nilTokenLocation);
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),C_nilTokenLocation);
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),C_nilTokenLocation);
+        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),fileTokenLocation(codeProvider));
+        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),fileTokenLocation(codeProvider));
+        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),fileTokenLocation(codeProvider));
+        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),fileTokenLocation(codeProvider));
+        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),fileTokenLocation(codeProvider));
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),fileTokenLocation(codeProvider));
+                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),fileTokenLocation(codeProvider));
       end;
     end;
 
@@ -763,7 +763,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.destroy;
     localIdStack.destroy;
     if (context.adapters^.noErrors)
-    then begin if first<>nil then interpret(first,C_nilTokenLocation); end
+    then begin if first<>nil then interpret(first,first^.location); end
     else context.cascadeDisposeToken(first);
     ready:=usecase<>lu_forDocGeneration;
 
@@ -824,7 +824,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     setLength(ruleList,0);
     if wroteBack then begin
       codeProvider^.save;
-      adapters.raiseCustomMessage(mt_reloadRequired,codeProvider^.getPath,C_nilTokenLocation);
+      adapters.raiseCustomMessage(mt_reloadRequired,codeProvider^.getPath,fileTokenLocation(codeProvider));
     end;
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(adapters);
   end;
@@ -922,7 +922,7 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage,adapters) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused package '+codeProvider^.id,C_nilTokenLocation);
+    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused package '+codeProvider^.id,fileTokenLocation(codeProvider));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUncalled(false,adapters);
@@ -975,7 +975,7 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
   VAR i:longint;
   begin
     for i:=0 to length(packageUses)-1 do if packageUses[i].id=id then exit(packageUses[i]);
-    result.create(codeProvider^.getPath,'',C_nilTokenLocation,adapters);
+    result.create(codeProvider^.getPath,'',fileTokenLocation(codeProvider),adapters);
   end;
 
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
@@ -1006,7 +1006,7 @@ PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluat
   begin
     context.adapters^.clearErrors;
     environment.mainPackage^.load(lu_forCallingMain,context,parameters);
-    context.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+    context.adapters^.logEndOfEvaluation;
   end;
 
 PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);

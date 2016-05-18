@@ -88,7 +88,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
               newListLiteral^.
               appendString(regex.match   [i])^.
               appendInt   (regex.MatchPos[i])^.
-              appendInt   (regex.MatchLen[i]),false,context.adapters^);
+              appendInt   (regex.MatchLen[i]),false);
           end;
         until not(regex.ExecNext);
       except
@@ -108,7 +108,7 @@ FUNCTION regexMatchComposite_imp(CONST params:P_listLiteral; CONST tokenLocation
       else if i1=0 then result:=regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false,context.adapters^);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexMatchComposite(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
     end;
   end;
@@ -144,7 +144,7 @@ FUNCTION regexSplit_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
       else if i1=0 then result:=regexSplit(triplet(params^.value(1),params^.value(0),nil,0))
       else begin
         result:=newListLiteral;
-        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false,context.adapters^);
+        for i:=0 to i1-1 do P_listLiteral(result)^.append(regexSplit(triplet(params^.value(1),params^.value(0),nil,i)),false);
       end;
     end;
   end;

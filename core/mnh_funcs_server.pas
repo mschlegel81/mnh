@@ -188,8 +188,8 @@ PROCEDURE T_microserver.serve;
         parameters^.append(
           newListLiteral^
             .appendString(keyAndValue[0])^
-            .append(castValue,false,context.adapters^),
-          false,context.adapters^);
+            .append(castValue,false),
+          false);
       end;
 
     begin

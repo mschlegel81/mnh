@@ -7,9 +7,6 @@ TYPE
     line, column: longint;
   end;
 
-CONST
-  C_nilTokenLocation: T_tokenLocation = (fileName:'?'; line: 0; column: 0);
-
 FUNCTION fileTokenLocation(provider: P_codeProvider): T_tokenLocation;
 OPERATOR := (x: T_tokenLocation): ansistring;
 OPERATOR = (CONST x,y:T_tokenLocation):boolean;
@@ -37,7 +34,9 @@ OPERATOR = (CONST x,y:T_tokenLocation):boolean;
 FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithoutCaret:boolean):T_tokenLocation;
   VAR i0,i1,i2:longint;
   begin
-    result:=C_nilTokenLocation;
+    result.fileName:='';
+    result.line:=0;
+    result.column:=0;
     i0:=1;
     while (i0<=length(s)) and (s[i0]<>'@') do inc(i0);
     result.fileName:='';
@@ -49,9 +48,12 @@ FUNCTION guessLocationFromString(CONST s:ansistring; CONST acceptFilenameWithout
     i1:=i0+1;
     while (i1<=length(s)) and (s[i1] in ['0'..'9']) do inc(i1);
     if (i1>length(s)) or (s[i1]<>',') then begin
-      if acceptFilenameWithoutCaret
-      then exit(result)
-      else exit(C_nilTokenLocation);
+      if not(acceptFilenameWithoutCaret) then begin
+        result.fileName:='';
+        result.line:=0;
+        result.column:=0;
+      end;
+      exit(result);
     end;
     i2:=i1+1;
     while (i1<=length(s)) and (s[i2] in ['0'..'9']) do inc(i2);

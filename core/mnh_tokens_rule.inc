@@ -44,7 +44,7 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
     used:=false;
     valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
-    declarationEnd:=C_nilTokenLocation;
+    declarationEnd:=startAt;
     ruleType:=ruleTyp;
     id:=ruleId;
     setLength(subrules,0);
@@ -102,7 +102,7 @@ exit}
     begin
       useParam^.rereference; //rereference useParam because it is used below
       newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newOneElementListLiteral(useParam,true,context.adapters^)); t:=newFirst^.next;
+      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newOneElementListLiteral(useParam,true)); t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
       lastRep^.next:=context.newToken(firstRep^.location, '', tt_braceClose);
@@ -128,7 +128,7 @@ exit}
         lit:=cache^.get(useParam);
         if lit<>nil then begin
           lit^.rereference;
-          firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,lit);
+          firstRep:=context.newToken(declarationStart,'',tt_literal,lit);
           lastRep:=firstRep;
           CLEAN_EXIT(true);
         end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context) then begin
@@ -140,9 +140,9 @@ exit}
           end;
           lastRep:=firstRep^.last;
           if not(context.adapters^.noErrors) then begin
-            if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),C_nilTokenLocation);
+            if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.cascadeDisposeToken(firstRep);
-            firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,newErrorLiteral);
+            firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
           end;
           used:=true;
@@ -152,7 +152,7 @@ exit}
       end;
       rt_synchronized: begin
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context) then begin
-          if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',C_nilTokenLocation)
+          if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
             reduceExpression(firstRep,callDepth+1,context);
@@ -168,7 +168,7 @@ exit}
         result:=(includePrivateRules or (ruleType in [rt_mutable_public,rt_persistent_public])) and ((param=nil) or (param^.size=0));
         if result then begin
           system.enterCriticalSection(rule_cs);
-          firstRep:=context.newToken(C_nilTokenLocation,'',tt_literal,namedValue.getValue);
+          firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
           used:=true;
@@ -216,7 +216,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
       namedValue.setValue(value,context.adapters^);
       if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',C_nilTokenLocation);
+    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',declarationStart);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

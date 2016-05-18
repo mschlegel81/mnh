@@ -23,7 +23,7 @@ FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         lt_list..lt_listWithError: begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do
-            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(softCastRecurse(P_listLiteral(x)^.value(i)),false);
         end;
         else begin
           x^.rereference;
@@ -142,7 +142,7 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       P_listLiteral(result)^.append(
         newListLiteral^.
         appendString(el0)^.
-        appendString(el1),false,context.adapters^);
+        appendString(el1),false);
     end;
   VAR name:string;
       i:longint;
@@ -164,8 +164,8 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true,context.adapters^);
-        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,context),false,context.adapters^);
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
+        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,context),false);
         disposeLiteral(tmpParam);
       end;
     end;
@@ -258,7 +258,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         else begin
           result:=newListLiteral;
           for i:=0 to P_listLiteral(x)^.size-1 do if context.adapters^.noErrors then
-            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false,context.adapters^);
+            P_listLiteral(result)^.append(recurse(P_listLiteral(x)^.value(i)),false);
         end;
       end;
     end;

@@ -186,8 +186,8 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       fpar:=newListLiteral;
       for k:=1 to params^.size-1 do
       if params^.value(k)^.literalType in C_validListTypes
-      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true,context.adapters^)
-      else fpar^.append(              params^.value(k)               ,true,context.adapters^);
+      then fpar^.append(P_listLiteral(params^.value(k))^.value(index),true)
+      else fpar^.append(              params^.value(k)               ,true);
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(

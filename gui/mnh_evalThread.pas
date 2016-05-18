@@ -67,7 +67,7 @@ FUNCTION main(p:pointer):ptrint;
       then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
       else endOfEvaluationText.value:='Done in '+myTimeToStr(now-startOfEvaluation);
       while not(mainEvaluationContext.adapters^.hasMessageOfType[mt_endOfEvaluation])
-      do mainEvaluationContext.adapters^.raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+      do mainEvaluationContext.adapters^.logEndOfEvaluation;
       sleepTime:=0;
     end;
 
@@ -189,7 +189,9 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
       token:T_token;
   begin
     info.tokenText:=id;
-    info.location:=C_nilTokenLocation;
+    info.location.fileName:='';
+    info.location.column:=0;
+    info.location.line:=0;
     reservedWordClass:=isReservedWord(id);
     case reservedWordClass of
       rwc_specialLiteral:   begin info.tokenExplanation:='Reserved word: special literal';   exit; end;
@@ -215,7 +217,7 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     token.create;
-    token.define(C_nilTokenLocation,id,tt_identifier,environment.mainPackage);
+    token.define(fileTokenLocation(environment.mainPackageProvider),id,tt_identifier,environment.mainPackage);
     environment.mainPackage^.resolveRuleId(token,nil);
     case token.tokType of
       tt_intrinsicRule,tt_intrinsicRule_pon: begin

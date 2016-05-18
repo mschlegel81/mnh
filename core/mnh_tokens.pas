@@ -95,7 +95,9 @@ PROCEDURE T_token.undefine;
       else data:=nil;
     end;
     tokType:=tt_EOL;
-    location:=C_nilTokenLocation;
+    location.fileName:='';
+    location.column:=0;
+    location.line:=0;
   end;
 
 FUNCTION T_token.last: P_token;

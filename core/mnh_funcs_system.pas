@@ -66,13 +66,13 @@ FUNCTION filesOrDirs_impl(CONST pathOrPathList:P_literal; CONST filesAndNotFolde
     if pathOrPathList^.literalType=lt_string then begin
       found:=find(searchString(0),filesAndNotFolders,recurseSubDirs);
       if recurseSubDirs and DirectoryExists(P_stringLiteral(pathOrPathList)^.value)
-                                        then result^.append(pathOrPathList,true,nullAdapter);
+                                        then result^.append(pathOrPathList,true);
       for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
     end else if pathOrPathList^.literalType=lt_stringList then begin
       for j:=0 to P_listLiteral(pathOrPathList)^.size-1 do begin
         found:=find(searchString(j),filesAndNotFolders,recurseSubDirs);
         if recurseSubDirs and DirectoryExists(P_stringLiteral(P_listLiteral(pathOrPathList)^.value(j))^.value)
-                                          then result^.append(P_listLiteral(pathOrPathList)^.value(j),true,nullAdapter);
+                                          then result^.append(P_listLiteral(pathOrPathList)^.value(j),true);
         for i:=0 to length(found)-1 do result^.appendString(replaceAll(found[i],'\','/'));
       end;
     end;
@@ -360,7 +360,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       resultAsList^.append(
         newListLiteral^.
         appendString(key)^.
-        append(value,false,context.adapters^),false,context.adapters^);
+        append(value,false),false);
     end;
 
   VAR i:longint;
@@ -386,8 +386,8 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true,context.adapters^);
-        P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation,context),false,context.adapters^);
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
+        P_listLiteral(result)^.append(fileInfo_imp(tmpParam,tokenLocation,context),false);
         disposeLiteral(tmpParam);
       end;
     end;
@@ -450,7 +450,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         result:=newListLiteral;
       end else exit(newVoidLiteral);
       infoMap:=newListLiteral;
-      P_listLiteral(result)^.appendString(drive)^.append(infoMap,false,context.adapters^);
+      P_listLiteral(result)^.appendString(drive)^.append(infoMap,false);
 
       infoPair:=newListLiteral;
       infoPair^.appendString('type');
@@ -461,7 +461,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         DRIVE_CDROM:     infoPair^.appendString('CD_ROM'   );
         DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
       end;
-      infoMap^.append(infoPair,false,context.adapters^);
+      infoMap^.append(infoPair,false);
 
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
@@ -471,12 +471,12 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       infoMap^.append(
         newListLiteral^.
         appendString('serial')^.
-        appendInt(VolumeSerialNumber),false,context.adapters^);
+        appendInt(VolumeSerialNumber),false);
 
       infoMap^.append(
         newListLiteral^.
         appendString('label')^.
-        appendString(DriveLetter),false,context.adapters^);
+        appendString(DriveLetter),false);
     end;
 
   VAR c:char;
@@ -484,7 +484,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       result:=newListLiteral;
-      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false,context.adapters^);
+      for c:='A' to 'Z' do P_listLiteral(result)^.append(infoForLetter(c),false);
     end;
   end;
 {$endif}
@@ -504,7 +504,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
         if length(env)=1 then exit(result^.appendString(env[0])) else begin
           inner:=newListLiteral;
           for k:=0 to length(env)-1 do inner^.appendString(env[k]);
-          result:=result^.append(inner,false,context.adapters^);
+          result:=result^.append(inner,false);
         end;
       end;
     end;
@@ -514,7 +514,7 @@ FUNCTION getEnv_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     if (params=nil) or (params^.size=0) then begin
       e:=getEnvironment;
       result:=newListLiteral;
-      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false,context.adapters^);
+      for i:=0 to length(e)-1 do P_listLiteral(result)^.append(environmentPair(e[i]),false);
       setLength(e,0);
     end;
   end;

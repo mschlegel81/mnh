@@ -114,6 +114,8 @@ TYPE
       FUNCTION noErrors: boolean; inline;
       {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
+      PROCEDURE logEndOfEvaluation;
+      PROCEDURE raiseSystemError(CONST errorMessage: ansistring);
 
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
@@ -224,7 +226,7 @@ CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
-  begin messageOut(mt_endOfEvaluation,'',C_nilTokenLocation); flush; inherited destroy; end;
+  begin flush; inherited destroy; end;
 
 PROCEDURE T_textFileOutAdapter.append(CONST message: T_storedMessage);
   begin
@@ -486,9 +488,20 @@ FUNCTION T_adapters.hasNeedGUIerror: boolean;
   end;
 {$endif}
 
+CONST C_nilTokenLocation: T_tokenLocation = (fileName:'?'; line: 0; column: 0);
 PROCEDURE T_adapters.haltEvaluation;
   begin
     raiseCustomMessage(mt_el5_haltMessageReceived, '', C_nilTokenLocation);
+  end;
+
+PROCEDURE T_adapters.logEndOfEvaluation;
+  begin
+    raiseCustomMessage(mt_endOfEvaluation,'',C_nilTokenLocation);
+  end;
+
+PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
+  begin
+    raiseCustomMessage(mt_el5_systemError,errorMessage,C_nilTokenLocation);
   end;
 
 PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter;
@@ -743,7 +756,7 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
 
   begin
     system.enterCriticalSection(cs);
-    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) or (location=C_nilTokenLocation) then begin
+    if cancelling or (location.fileName=currentLine.fileName) and (location.line=currentLine.line) then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
@@ -774,7 +787,11 @@ PROCEDURE T_stepper.steppingIn;
       stepPending:=true;
       stepLevel:=currentLevel;
       stepInPending:=false;
-    end else if stepPending and (stepLevel=currentLevel) then currentLine:=C_nilTokenLocation;
+    end else if stepPending and (stepLevel=currentLevel) then begin
+      currentLine.fileName:='';
+      currentLine.column:=0;
+      currentLine.line:=0;
+    end;
     system.leaveCriticalSection(cs);
   end;
 
@@ -788,7 +805,11 @@ PROCEDURE T_stepper.steppingOut;
       stepLevel:=currentLevel;
       stepOutPending:=false;
     end;
-    if stepPending and (stepLevel=currentLevel) then currentLine:=C_nilTokenLocation;
+    if stepPending and (stepLevel=currentLevel) then begin
+      currentLine.fileName:='';
+      currentLine.column:=0;
+      currentLine.line:=0;
+    end;
     system.leaveCriticalSection(cs);
   end;
 
@@ -822,7 +843,9 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
     stepOutPending:=false;
     waitingForGUI:=false;
     currentLevel:=0;
-    currentLine:=C_nilTokenLocation;
+    currentLine.fileName:='';
+    currentLine.column:=0;
+    currentLine.line:=0;
     system.leaveCriticalSection(cs);
   end;
 

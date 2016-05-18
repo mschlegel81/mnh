@@ -16,7 +16,7 @@
     FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
-    PROCEDURE lateRHSResolution(VAR context:T_evaluationContext);
+    PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
     PROCEDURE thinOutWhitelist;
     DESTRUCTOR destroy;
   end;
@@ -38,7 +38,7 @@
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     FUNCTION idForIndexInline(CONST index:longint):ansistring;
-    PROCEDURE finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);
+    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext; CONST package:P_package);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
@@ -129,17 +129,17 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
           and restrictionValue^.isInRelationTo(tt_comparatorListEq,pe.restrictionValue));
   end;
 
-PROCEDURE T_patternElement.lateRHSResolution(VAR context:T_evaluationContext);
+PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
-      tok:=context.newToken(C_nilTokenLocation,restrictionId,tt_identifier,nil);
+      tok:=context.newToken(location,restrictionId,tt_identifier,nil);
       reduceExpression(tok,0,context);
       if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
         restrictionId:='';
         restrictionValue:=tok^.data;
         restrictionValue^.rereference;
-      end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',C_nilTokenLocation);
+      end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
       context.cascadeDisposeToken(tok);
     end;
   end;
@@ -258,7 +258,7 @@ FUNCTION T_pattern.idForIndexInline(CONST index:longint):ansistring;
     if result='' then result:='$'+intToStr(index);
   end;
 
-PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:P_package);
+PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext; CONST package:P_package);
   VAR i,j:longint;
 
   begin
@@ -280,7 +280,7 @@ PROCEDURE T_pattern.finalizeRefs(VAR context:T_evaluationContext; CONST package:
         then sig[i].restrictionIdx:=j;
 
     for i:=0 to length(sig)-1 do begin
-      sig[i].lateRHSResolution(context);
+      sig[i].lateRHSResolution(location,context);
       sig[i].thinOutWhitelist;
     end;
   end;

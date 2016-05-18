@@ -161,7 +161,7 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         setLength(newMight,0);
       end else begin
         newSet:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true,context.adapters^);
+        for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
         newSet^.sort;
         if sets.get(newSet,0)=0 then sets.put(newSet,1)
                                 else disposeLiteral(newSet);
@@ -180,11 +180,11 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         recurseBuildSets(mustContain,mightContain);
         mustContain:=sets.keySet;
         result:=newListLiteral;
-        for i:=0 to length(mustContain)-1 do P_listLiteral(result)^.append(mustContain[i],false,context.adapters^);
+        for i:=0 to length(mustContain)-1 do P_listLiteral(result)^.append(mustContain[i],false);
         sets.destroy;
       end else begin
-        result:=newListLiteral^.append(newListLiteral                                       ,false,context.adapters^)
-                              ^.append(newOneElementListLiteral(arg0,true,context.adapters^),false,context.adapters^);
+        result:=newListLiteral^.append(newListLiteral                     ,false)
+                              ^.append(newOneElementListLiteral(arg0,true),false);
       end;
     end;
   end;
