@@ -2,8 +2,8 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
      mnh_tokLoc,myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mySys,mnh_html,mnh_funcs_server;
-FUNCTION parseCmdLine:T_tokenLocation;
+     lclintf,mnh_html,mnh_funcs_server;
+PROCEDURE parseCmdLine;
 PROCEDURE makeAndShowDoc;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
@@ -47,7 +47,7 @@ PROCEDURE makeAndShowDoc;
     {$endif}
   end;
 
-FUNCTION parseCmdLine:T_tokenLocation;
+PROCEDURE parseCmdLine;
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
@@ -133,7 +133,6 @@ FUNCTION parseCmdLine:T_tokenLocation;
 
   VAR i    :longint;
   begin
-    result:=C_nilTokenLocation;
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
     for i:=1 to paramCount do begin
@@ -148,9 +147,6 @@ FUNCTION parseCmdLine:T_tokenLocation;
           addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5));
           addParameter(mnhParameters,i);
         end
-        {$ifdef fullVersion}
-        else if startsWith(paramStr(i),'-open@') then result:=guessLocationFromString(paramStr(i),true)
-        {$endif}
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},

@@ -45,7 +45,6 @@ TYPE
     miMinErrorlevel3: TMenuItem;
     miMinErrorlevel4: TMenuItem;
     miTimingInfo: TMenuItem;
-    miStartAnotherInstance: TMenuItem;
     miDebug: TMenuItem;
     miCallMain: TMenuItem;
     miHelp: TMenuItem;
@@ -166,7 +165,6 @@ TYPE
     PROCEDURE miOpenClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
-    PROCEDURE miStartAnotherInstanceClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
@@ -254,7 +252,6 @@ TYPE
   end;
 
 VAR MnhForm: TMnhForm;
-    locationToOpenOnFormStartup:T_tokenLocation;
 
 PROCEDURE lateInitialization;
 PROCEDURE formCycle(CONST ownId:longint);
@@ -598,21 +595,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
         editorMeta[i].editor.SetFocus;
       end else setupInputRecForNewFile(0);
       SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
-
-      if (locationToOpenOnFormStartup.fileName<>'') and
-         (locationToOpenOnFormStartup.fileName<>C_nilTokenLocation.fileName) and
-         fileExists(locationToOpenOnFormStartup.fileName) then begin
-
-        i:=getInputEditIndexForFilename(locationToOpenOnFormStartup.fileName);
-        if i>=0 then begin
-          PageControl.ActivePageIndex:=i;
-          newCaret.x:=locationToOpenOnFormStartup.column;
-          if newCaret.x<=0 then newCaret.x:=1;
-          newCaret.y:=locationToOpenOnFormStartup.line;
-          if newCaret.y<=0 then newCaret.y:=1;
-          editorMeta[i].editor.CaretXY:=newCaret;
-        end;
-      end;
       {$ifndef Windows}
       miIncFontSize.ShortCut:=16605;
       {$endif}
@@ -1089,11 +1071,6 @@ PROCEDURE TMnhForm.miSaveClick(Sender: TObject);
     _doSave_(PageControl.ActivePageIndex);
   end;
 
-PROCEDURE TMnhForm.miStartAnotherInstanceClick(Sender: TObject);
-  begin
-    runCommandAsyncOrPipeless(paramStr(0),C_EMPTY_STRING_ARRAY,true);
-  end;
-
 PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
   begin
     if settingsReady then begin
@@ -1527,7 +1504,6 @@ INITIALIZATION
   guiOutAdapter.create;
   guiAdapters.create;
   mnh_plotForm.guiAdapters:=@guiAdapters;
-  locationToOpenOnFormStartup:=C_nilTokenLocation;
 
 FINALIZATION
   guiAdapters.destroy;

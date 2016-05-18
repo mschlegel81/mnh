@@ -16,7 +16,7 @@ USES {$IFDEF UNIX} cthreads, cmem, {$ENDIF}
 {$R *.res}
 
 begin
-  locationToOpenOnFormStartup:=parseCmdLine;
+  parseCmdLine;
   hideConsole;
 
   mnh_gui_main.lateInitialization;

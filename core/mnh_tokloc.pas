@@ -1,7 +1,5 @@
 UNIT mnh_tokLoc;
-
 INTERFACE
-
 USES sysutils, mnh_fileWrappers;
 TYPE
   T_tokenLocation = record

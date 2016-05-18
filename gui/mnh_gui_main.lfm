@@ -5320,10 +5320,6 @@ object MnhForm: TMnhForm
         Caption = 'New Item39'
         OnClick = miFileHistory9Click
       end
-      object miStartAnotherInstance: TMenuItem
-        Caption = 'Start another instance'
-        OnClick = miStartAnotherInstanceClick
-      end
     end
     object MenuItem5: TMenuItem
       Caption = '&Search'
