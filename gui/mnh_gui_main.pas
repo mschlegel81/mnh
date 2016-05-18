@@ -1152,10 +1152,6 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   begin
-    if (pos(C_ID_QUALIFY_CHARACTER,value)>0) then begin
-      if pos(sourceValue,value)<>1 then
-        value:=copy(value,pos(C_ID_QUALIFY_CHARACTER,value)+1,length(value));
-    end;
     wordsInEditor.clear;
   end;
 
@@ -1192,6 +1188,10 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
+    if (length(s)>1) and (s[length(s)]=C_ID_QUALIFY_CHARACTER) then begin
+      s                          :=C_ID_QUALIFY_CHARACTER;
+      SynCompletion.CurrentString:=C_ID_QUALIFY_CHARACTER;
+    end;
     for i:=0 to wordsInEditor.size-1 do
       if pos(s,wordsInEditor[i])=1 then SynCompletion.ItemList.add(wordsInEditor[i]);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
