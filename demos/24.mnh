@@ -24,15 +24,15 @@ private getRiddle(set,false)->getRiddle(randomSet);
 private getRiddle(set,true )->set;
 
 private isCorrectSolution(set,text)->
-    not(each(c,text.chars,AND,c in (set&"") | OPLIST | [' ','(',')']))
+    not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
   ? print('The input contains an invalid character.') and false
   : '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
     '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
   ? print('The input contains an invalid character sequence.') and false
-  : not(sort(each(c,copy(text,[0..length(text)-1],1),c in ['0'..'9'] ? softCast(c) : void)) == sort(set))
-  ? print('The input uses other numbers than the given input set: ',each(c,copy(text,[0..length(text)-1],1),c in ['0'..'9'] ? softCast(c) : void)) and false
-  : not(expression(text)()=24)
-  ? print('The input does not evaluate to 24 but to ',expression(text)(),'.') and false
+  : not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
+  ? print('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void)) and false
+  : not(toExpression(text)()=24)
+  ? print('The input does not evaluate to 24 but to ',toExpression(text)(),'.') and false
   : print('The solution is valid.') and true;
 
 private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
