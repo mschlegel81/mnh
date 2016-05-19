@@ -575,8 +575,7 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
-  VAR newCaret:TPoint;
-      i:longint;
+  VAR i:longint;
   begin
     if not(settingsReady) then begin
       processSettings;

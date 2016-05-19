@@ -1,7 +1,7 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
-     mnh_tokLoc,myStringUtil,sysutils,myGenerics,mnh_contexts,
+     myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mnh_html,mnh_funcs_server;
 PROCEDURE parseCmdLine;
 PROCEDURE makeAndShowDoc;
