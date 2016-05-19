@@ -105,11 +105,10 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
-        provider:P_codeProvider;
         package:T_package;
     begin
-      new(provider,create(fileOrCommandToInterpret));
-      package.create(provider,nil);
+      package.create(nil);
+      package.setSourcePath(fileOrCommandToInterpret);
 
       fileOrCommandToInterpret:='';
       if wantHelpDisplay then begin

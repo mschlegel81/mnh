@@ -5,7 +5,6 @@ USES myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
       consolePackage:T_package;
-      consoleProvider:P_codeProvider;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
@@ -14,16 +13,14 @@ PROCEDURE interactiveMode;
       if uppercase(nextInput)='exit' then begin
         hasExitSignal:=true;
         exit;
-      end else if nextInput='\' then consoleProvider^.clear
-      else
-      consoleProvider^.appendLine(nextInput);
+      end else if nextInput='\' then consolePackage.clearSource
+      else consolePackage.appendSource(nextInput);
     end;
 
   VAR i:longint;
       context:T_evaluationContext;
   begin
-    new(consoleProvider,create);
-    consolePackage.create(consoleProvider,nil);
+    consolePackage.create(nil);
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
@@ -38,7 +35,6 @@ PROCEDURE interactiveMode;
     end;
     context.destroy;
     consolePackage.destroy;
-    dispose(consoleProvider,destroy);
   end;
 
 begin

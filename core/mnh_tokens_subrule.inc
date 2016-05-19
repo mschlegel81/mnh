@@ -640,7 +640,6 @@ FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
 
 FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
   CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-        zeroBlobLevel:longint=0;
   begin
     result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
     if comment<>'' then begin

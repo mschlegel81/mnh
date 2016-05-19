@@ -19,7 +19,7 @@ T_tokenArray=object
     FUNCTION atEnd:boolean;
     FUNCTION getRawTokensUndefining:T_rawTokenArray;
     PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
-    PROCEDURE tokenizeAll(CONST provider:P_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
+    PROCEDURE tokenizeAll(VAR provider:T_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
 end;
 
 {$endif}
@@ -399,14 +399,14 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     tokenArray.destroy;
   end;
 
-PROCEDURE T_tokenArray.tokenizeAll(CONST provider: P_codeProvider; CONST inPackage: P_package; VAR adapters: T_adapters);
+PROCEDURE T_tokenArray.tokenizeAll(VAR provider: T_codeProvider; CONST inPackage: P_package; VAR adapters: T_adapters);
   VAR location:T_tokenLocation;
       lineIndex:longint;
       next:T_token;
       lines:T_arrayOfString;
 
   begin
-    lines:=provider^.getLines;
+    lines:=provider.getLines;
     location.package:=inPackage;
     for lineIndex:=0 to length(lines)-1 do begin
       location.line:=lineIndex+1;
