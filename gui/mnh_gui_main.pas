@@ -1013,7 +1013,7 @@ PROCEDURE TMnhForm.handleBreak;
 
     context:=P_evaluationContext(stepper.context);
     report.create;
-    if environment.mainPackage<>nil then environment.mainPackage^.reportVariables(report);
+    guiPackage.reportVariables(report);
     if context<>nil then context^.reportVariables(report);
 
     variablesStringGrid.RowCount:=length(report.dat)+1;

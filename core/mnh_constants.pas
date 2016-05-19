@@ -300,6 +300,9 @@ CONST
   {$ifdef fullVersion}
   C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..1] of T_messageType=(mt_plotCreatedWithInstantDisplay,mt_displayTable);
   {$endif}
+  C_MESSAGE_TYPES_IGNORED_BY_SANDBOX:set of T_messageType=[mt_endOfEvaluation,mt_reloadRequired,mt_timing_info
+  {$ifdef fullVersion},mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged,mt_evaluatedStatementInInteractiveMode,mt_displayTable{$endif}];
+
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
    -2,//mt_clearConsole,
    -2,//mt_printline,

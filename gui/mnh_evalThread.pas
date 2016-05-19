@@ -1,7 +1,7 @@
 UNIT mnh_evalThread;
 INTERFACE
 USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
-     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8;
+     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8, mnh_fileWrappers;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -30,12 +30,13 @@ PROCEDURE initIntrinsicRuleList;
 PROCEDURE initUnit;
 
 VAR guiOutAdapters:P_adapters;
-
+    guiPackage:T_package;
 IMPLEMENTATION
 VAR pendingRequest   :specialize G_safeVar<T_evalRequest>;
     unitIsInitialized:boolean=false;
     parametersForMainCall:T_arrayOfString;
     intrinsicRulesForCompletion:T_listOfString;
+    guiProvider:P_codeProvider;
 {$WARN 5024 OFF}
 FUNCTION main(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
@@ -60,7 +61,7 @@ FUNCTION main(p:pointer):ptrint;
 
   PROCEDURE postEval;
     begin
-      environment.mainPackage^.updateLists(userRules);
+      guiPackage.updateLists(userRules);
       updateCompletionList;
       evaluationState.value:=es_idle;
       if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
@@ -79,21 +80,22 @@ FUNCTION main(p:pointer):ptrint;
     repeat
       if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluate) then begin
         preEval;
-        reloadMainPackage(lu_forDirectExecution,mainEvaluationContext);
+        guiPackage.load(lu_forDirectExecution,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_evaluateInteractive) then begin
         preEval;
-        reloadMainPackage(lu_interactiveMode,mainEvaluationContext);
+        guiPackage.load(lu_interactiveMode,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_callMain) then begin
         preEval;
-        callMainInMain(parametersForMainCall,mainEvaluationContext);
+        guiPackage.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
         postEval;
       end else if (evaluationState.value=es_idle) and (pendingRequest.value=er_reEvaluateWithGUI) then begin
         preEval;
-        environment.mainPackageProvider^.setPath(getFileOrCommandToInterpretFromCommandLine);
+        guiProvider^.setPath(getFileOrCommandToInterpretFromCommandLine);
+        guiProvider^.load;
         setupOutputBehaviour(mainEvaluationContext.adapters^);
-        callMainInMain(mainParameters,mainEvaluationContext);
+        guiPackage.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
         postEval;
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
@@ -102,13 +104,6 @@ FUNCTION main(p:pointer):ptrint;
     until (pendingRequest.value=er_die);
     evaluationState.value:=es_dead;
     mainEvaluationContext.destroy;
-  end;
-
-PROCEDURE ad_clearFile;
-  begin
-    if evaluationState.value=es_running then guiOutAdapters^.haltEvaluation;
-    while evaluationState.value=es_running do sleep(1);
-    environment.mainPackageProvider^.clear;
   end;
 
 PROCEDURE ad_reEvaluateWithGUI;
@@ -122,8 +117,8 @@ PROCEDURE ad_reEvaluateWithGUI;
 
 PROCEDURE ad_evaluate(CONST path:ansistring; CONST L: TStrings; CONST interactive:boolean);
   begin
-    environment.mainPackageProvider^.setPath(path);
-    environment.mainPackageProvider^.setLinesUTF8(L);
+    guiProvider^.setPath(path);
+    guiProvider^.setLinesUTF8(L);
     if interactive
     then pendingRequest.value:=er_evaluateInteractive
     else pendingRequest.value:=er_evaluate;
@@ -148,8 +143,8 @@ PROCEDURE ad_callMain(CONST path:ansistring; CONST L: TStrings; params: ansistri
         params:=trim(copy(params,sp+1,length(params)));
       end;
     end;
-    environment.mainPackageProvider^.setPath(path);
-    environment.mainPackageProvider^.setLinesUTF8(L);
+    guiProvider^.setPath(path);
+    guiProvider^.setLinesUTF8(L);
     pendingRequest.value:=er_callMain;
     if evaluationState.value=es_dead then begin
       beginThread(@main);
@@ -212,13 +207,13 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
     end;
 
     if not(hasBuiltinNamespace) then begin
-      packageReference:=environment.mainPackage^.getPackageReferenceForId(id,nil);
+      packageReference:=guiPackage.getPackageReferenceForId(id,nil);
       if packageReference.id<>'' then info.tokenExplanation:='Imported package ('+packageReference.path+')';
     end;
 
     token.create;
-    token.define(packageTokenLocation(environment.mainPackage),id,tt_identifier,environment.mainPackage);
-    environment.mainPackage^.resolveRuleId(token,nil);
+    token.define(packageTokenLocation(@guiPackage),id,tt_identifier,@guiPackage);
+    guiPackage.resolveRuleId(token,nil);
     case token.tokType of
       tt_intrinsicRule,tt_intrinsicRule_pon: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
@@ -242,11 +237,11 @@ PROCEDURE ad_explainIdentifier(CONST id:ansistring; VAR info:T_tokenInfo);
 FUNCTION ad_needSave(CONST L: TStrings):boolean;
   VAR i:longint;
   begin
-    environment.mainPackageProvider^.setLinesUTF8(L);
-    if environment.mainPackageProvider^.getPath='' then begin
+    guiProvider^.setLinesUTF8(L);
+    if guiProvider^.getPath='' then begin
       result:=false;
       for i:=0 to L.count-1 do result:=result or (trim(L[i])<>'');
-    end else result:=environment.mainPackageProvider^.fileIsOutOfSync;
+    end else result:=guiProvider^.fileIsOutOfSync;
   end;
 
 PROCEDURE ad_doReload(CONST L: TStrings);
@@ -254,8 +249,8 @@ PROCEDURE ad_doReload(CONST L: TStrings);
       i:longint;
   begin
     L.clear;
-    if environment.mainPackageProvider^.fileHasChanged then environment.mainPackageProvider^.load;
-    lines:=environment.mainPackageProvider^.getLines;
+    if guiProvider^.fileHasChanged then guiProvider^.load;
+    lines:=guiProvider^.getLines;
     for i:=0 to length(lines)-1 do L.append(lines[i]);
   end;
 
@@ -290,6 +285,8 @@ PROCEDURE initIntrinsicRuleList;
 
 PROCEDURE initUnit;
   begin
+    new(guiProvider,create);
+    guiPackage.create(guiProvider,nil);
     pendingRequest.create(er_none);
     evaluationState.create(es_dead);
     endOfEvaluationText.create('');
@@ -312,5 +309,7 @@ FINALIZATION
     intrinsicRules.destroy;
     userRules.destroy;
     completionList.destroy;
+    guiPackage.destroy;
+    dispose(guiProvider,destroy);
   end;
 end.

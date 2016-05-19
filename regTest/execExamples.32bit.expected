@@ -248,17 +248,15 @@ out> ['text','abc']
 out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
- in>                  t :=[0..1000]*0.006283;
-Note                  Creating new rule: t
- in>                  plot(t, sin(t));
-Deferred plot request
-Deferred plot request
-out>                  void
- in>                  plot.renderToFile('plotDemo1.png', 600, 300, 4);
-Image:                D:\dev\mnh5\plotDemo1.png
-out>                  void
- in>                  abs({$x});
-out>                  {abs($x)}
+ in>   t :=[0..1000]*0.006283;
+Note   Creating new rule: t
+ in>   plot(t, sin(t));
+out>   void
+ in>   plot.renderToFile('plotDemo1.png', 600, 300, 4);
+Image: D:\dev\mnh5\plotDemo1.png
+out>   void
+ in>   abs({$x});
+out>   {abs($x)}
  in> abs(3);
 out> 3
  in> abs(-5/7);

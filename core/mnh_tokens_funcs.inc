@@ -481,7 +481,7 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
       end;
       messages:=runAlone(src);
       result:=newListLiteral;
-      for i:=0 to length(messages)-1 do with messages[i] do begin
+      for i:=0 to length(messages)-1 do with messages[i] do if not(messageType in C_MESSAGE_TYPES_IGNORED_BY_SANDBOX) then begin
         if length(multiMessage)>0 then begin
           simpleMessage:=multiMessage[0];
           for j:=1 to length(multiMessage)-1 do simpleMessage:=simpleMessage+C_lineBreakChar+multiMessage[j];

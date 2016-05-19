@@ -1,9 +1,11 @@
 {$MAXSTACKSIZE 100000000}
 PROGRAM mnh_console;
-USES mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils, mnh_constants, mnh_out_adapters;
+USES myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils, mnh_constants, mnh_out_adapters, mnh_fileWrappers;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
+      consolePackage:T_package;
+      consoleProvider:P_codeProvider;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
@@ -12,14 +14,16 @@ PROCEDURE interactiveMode;
       if uppercase(nextInput)='exit' then begin
         hasExitSignal:=true;
         exit;
-      end else if nextInput='\' then environment.mainPackageProvider^.clear
+      end else if nextInput='\' then consoleProvider^.clear
       else
-      environment.mainPackageProvider^.appendLine(nextInput);
+      consoleProvider^.appendLine(nextInput);
     end;
 
   VAR i:longint;
       context:T_evaluationContext;
   begin
+    new(consoleProvider,create);
+    consolePackage.create(consoleProvider,nil);
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
@@ -29,10 +33,12 @@ PROCEDURE interactiveMode;
 
     readInputFromConsole;
     while not(hasExitSignal) do begin
-      reloadMainPackage(lu_interactiveMode,context);
+      consolePackage.load(lu_interactiveMode,context,C_EMPTY_STRING_ARRAY);
       readInputFromConsole;
     end;
     context.destroy;
+    consolePackage.destroy;
+    dispose(consoleProvider,destroy);
   end;
 
 begin

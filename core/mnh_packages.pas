@@ -27,20 +27,24 @@ TYPE
     pack:P_package;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
+    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   end;
 
-  { T_package }
   T_package=object(T_abstractPackage)
     private
+      mainPackage:P_package;
+      secondaryPackages:array of P_package;
+
       packageRules,importedRules:T_ruleMap;
       packageUses:array of T_packageReference;
       ready:boolean;
       codeProvider:P_codeProvider;
       statementHashes:array of T_hashInt;
     public
-      CONSTRUCTOR create(CONST provider:P_codeProvider);
+      CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION needReload:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
+      PROCEDURE loadForDocumentation;
       PROCEDURE clear;
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
@@ -53,14 +57,16 @@ TYPE
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
       FUNCTION isReady:boolean;
+      FUNCTION isMain:boolean;
       FUNCTION getPath:ansistring; virtual;
 
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
     end;
 
-PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
-PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
-PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
+//PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
+//PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
+//PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
+FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
 {$ifdef fullVersion}
 PROCEDURE findAndDocumentAllPackages;
 {$endif}
@@ -75,52 +81,35 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evalu
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
 FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
 
-TYPE T_packageEnvironment=record
-       mainPackageProvider:P_codeProvider;
-       secondaryPackages:array of P_package;
-       mainPackage      :P_package;
-     end;
-
-VAR environment:T_packageEnvironment;
-    killServersCallback:PROCEDURE;
+VAR killServersCallback:PROCEDURE;
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
 VAR pendingTasks     :T_taskQueue;
     timer: specialize G_lazyVar<TEpikTimer>;
 
+FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
+  VAR tempProvider:P_codeProvider;
+  begin
+    new(tempProvider,create);
+    tempProvider^.setLines(code);
+    tempProvider^.setPath(nameOrPseudoName);
+    new(result,create(tempProvider,nil));
+  end;
+
 PROCEDURE runAlone(CONST input:T_arrayOfString; adapter:P_adapters);
   VAR context:T_evaluationContext;
       codeProvider:P_codeProvider;
       package:T_package;
-      stash:T_packageEnvironment;
-      i:longint;
   begin
-    //stash current environment
-    stash.mainPackage:=environment.mainPackage;
-    stash.mainPackageProvider:=environment.mainPackageProvider;
-    setLength(stash.secondaryPackages,length(environment.secondaryPackages));
-    for i:=0 to length(stash.secondaryPackages)-1 do stash.secondaryPackages[i]:=environment.secondaryPackages[i];
-    setLength(environment.secondaryPackages,0);
-
     context.createSanboxContext(adapter);
     new(codeProvider,create);
     codeProvider^.setLines(input);
-    package.create(codeProvider);
-    environment.mainPackage:=@package;
-    environment.mainPackageProvider:=codeProvider;
+    package.create(codeProvider,nil);
     package.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
     package.destroy;
     dispose(codeProvider,destroy);
     context.destroy;
-    for i:=length(environment.secondaryPackages)-1 downto 0 do dispose(environment.secondaryPackages[i],destroy);
-    setLength(environment.secondaryPackages,0);
-
-    //unstash environment
-    environment.mainPackage:=stash.mainPackage;
-    environment.mainPackageProvider:=stash.mainPackageProvider;
-    setLength(environment.secondaryPackages,length(stash.secondaryPackages));
-    for i:=0 to length(environment.secondaryPackages)-1 do environment.secondaryPackages[i]:=stash.secondaryPackages[i];
   end;
 
 FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
@@ -146,7 +135,6 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
 FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
   VAR messages:T_storedMessages;
       i:longint;
-      blobLevel:longint=0;
       tmp:ansistring;
   begin
     messages:=runAlone(input);
@@ -158,7 +146,6 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
       else append(result,                        C_errorLevelTxt[mt_echo_input]+' '+toHtmlCode(tmp));
     end;
     for i:=0 to length(messages)-1 do begin
-      blobLevel:=0;
       with messages[i] do case messageType of
         mt_printline: append(result,multiMessage);
         mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage));
@@ -191,51 +178,31 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 {$include mnh_tokens_funcs.inc}
 {$include mnh_tokens_fmtStmt.inc}
 
-PROCEDURE reloadMainPackage(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext);
-  VAR i,j:longint;
-      used:T_listOfString;
-  begin with environment do begin
-    context.adapters^.clearErrors;
-    mainPackage^.load(usecase,context,C_EMPTY_STRING_ARRAY);
-    //housekeeping:-------------------------------------------------------------
-    used.create;
-    for j:=0 to length(mainPackage^.packageUses)-1 do used.add(mainPackage^.packageUses[j].id);
-    for i:=0 to length(secondaryPackages)-1 do
-    for j:=0 to length(secondaryPackages[i]^.packageUses)-1 do used.add(secondaryPackages[i]^.packageUses[j].id);
-    used.unique;
-    j:=0;
-    for i:=0 to length(secondaryPackages)-1 do begin
-      if used.contains(secondaryPackages[i]^.codeProvider^.id) then begin
-        if j<>i then secondaryPackages[j]:=secondaryPackages[i]; inc(j);
-      end else dispose(secondaryPackages[j],destroy);
-    end;
-    setLength(secondaryPackages,j);
-    used.destroy;
-    //-------------------------------------------------------------:housekeeping
-    context.adapters^.logEndOfEvaluation;
-  end; end;
-
-PROCEDURE loadPackage(VAR pack:T_packageReference; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
+PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   VAR i:longint;
       newSource:P_codeProvider=nil;
-  begin with environment do begin
-    for i:=0 to length(secondaryPackages)-1 do
-      if secondaryPackages[i]^.codeProvider^.id = pack.id then begin
-        if secondaryPackages[i]^.ready then begin
-          if secondaryPackages[i]^.needReload then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-          pack.pack:=secondaryPackages[i];
-          exit;
-        end else begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cyclic package dependencies encountered; already loading "'+pack.id+'"',tokenLocation);
-          exit;
+  begin
+    with containingPackage^.mainPackage^ do begin
+
+
+      for i:=0 to length(secondaryPackages)-1 do
+        if secondaryPackages[i]^.codeProvider^.id = id then begin
+          if secondaryPackages[i]^.ready then begin
+            if secondaryPackages[i]^.needReload then secondaryPackages[i]^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+            pack:=secondaryPackages[i];
+            exit;
+          end else begin
+            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cyclic package dependencies encountered; already loading "'+id+'"',tokenLocation);
+            exit;
+          end;
         end;
-      end;
-    new(newSource,create(pack.path));
-    new(pack.pack,create(newSource));
-    setLength(secondaryPackages,length(secondaryPackages)+1);
-    secondaryPackages[length(secondaryPackages)-1]:=pack.pack;
-    pack.pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
-  end; end;
+      new(newSource,create(path));
+      new(pack,create(newSource,containingPackage^.mainPackage));
+      setLength(secondaryPackages,length(secondaryPackages)+1);
+      secondaryPackages[length(secondaryPackages)-1]:=pack;
+      pack^.load(lu_forImport,context,C_EMPTY_STRING_ARRAY);
+    end;
+  end;
 
 CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
@@ -271,7 +238,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         dummyRule:P_rule;
     begin
       with profiler do if active then importing:=timer.value.Elapsed;
-      for i:=0 to length(packageUses)-1 do loadPackage(packageUses[i],locationForErrorFeedback,context);
+      for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
       with profiler do if active then importing:=timer.value.Elapsed-importing;
       i:=0;
       while i<length(packageUses) do begin
@@ -669,6 +636,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   VAR localIdStack:T_idStack;
       first,last:P_token;
   begin
+    if isMain then context.adapters^.clearErrors;
     if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
       profiler.active:=usecase<>lu_interactiveMode;
       timer.value.clear;
@@ -680,7 +648,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then clear
     else reloadAllPackages(packageTokenLocation(@self));
 
-    if ((usecase=lu_forCallingMain) or (codeProvider<>environment.mainPackageProvider)) and codeProvider^.fileHasChanged then codeProvider^.load;
+    if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider^.fileHasChanged then codeProvider^.load;
     with profiler do if active then tokenizing:=timer.value.Elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
@@ -759,6 +727,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       unaccounted:=timer.value.Elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
       prettyPrintTime;
     end;
+    if isMain then context.adapters^.logEndOfEvaluation;
+  end;
+
+PROCEDURE T_package.loadForDocumentation;
+  VAR silentContext:T_evaluationContext;
+  begin
+    silentContext.createSanboxContext(P_adapters(@nullAdapter));
+    nullAdapter.clearErrors;
+    load(lu_forDocGeneration,silentContext,C_EMPTY_STRING_ARRAY);
+    silentContext.destroy;
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -766,8 +744,12 @@ PROCEDURE disposeRule(VAR rule:P_rule);
     dispose(rule,destroy);
   end;
 
-CONSTRUCTOR T_package.create(CONST provider: P_codeProvider);
+CONSTRUCTOR T_package.create(CONST provider: P_codeProvider; CONST mainPackage_:P_package);
   begin
+    mainPackage:=mainPackage_;
+    if mainPackage=nil then mainPackage:=@self;
+    setLength(secondaryPackages,0);
+
     setLength(packageUses,0);
     codeProvider:=provider;
     packageRules.create(@disposeRule);
@@ -808,9 +790,11 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
+  VAR i:longint;
   begin
     clear;
-    if codeProvider<>environment.mainPackageProvider then dispose(codeProvider,destroy);
+    if not(isMain) then dispose(codeProvider,destroy);
+    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
     packageRules.destroy;
     importedRules.destroy;
     setLength(packageUses,0);
@@ -958,6 +942,7 @@ FUNCTION T_package.getPackageReferenceForId(CONST id:string; CONST adapters:P_ad
 
 FUNCTION T_package.isReady:boolean; begin result:=ready; end;
 FUNCTION T_package.getPath:ansistring; begin result:=codeProvider^.getPath; end;
+FUNCTION T_package.isMain:boolean; begin result:=(@self=mainPackage); end;
 
 PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
@@ -980,23 +965,22 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     setLength(r,0);
   end;
 
-
-PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
-  begin
-    context.adapters^.clearErrors;
-    environment.mainPackage^.load(lu_forCallingMain,context,parameters);
-    context.adapters^.logEndOfEvaluation;
-  end;
-
-PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
-  VAR silentContext:T_evaluationContext;
-  begin
-    silentContext.createSanboxContext(P_adapters(@nullAdapter));
-    nullAdapter.clearErrors;
-    reloadMainPackage(lu_forDocGeneration,silentContext);
-    environment.mainPackage^.printHelpOnMain(adapters);
-    silentContext.destroy;
-  end;
+//PROCEDURE callMainInMain(CONST parameters:T_arrayOfString; VAR context:T_evaluationContext);
+//  begin
+//    context.adapters^.clearErrors;
+//    environment.mainPackage^.load(lu_forCallingMain,context,parameters);
+//    context.adapters^.logEndOfEvaluation;
+//  end;
+//
+//PROCEDURE printMainPackageDocText(VAR adapters:T_adapters);
+//  VAR silentContext:T_evaluationContext;
+//  begin
+//    silentContext.createSanboxContext(P_adapters(@nullAdapter));
+//    nullAdapter.clearErrors;
+//    reloadMainPackage(lu_forDocGeneration,silentContext);
+//    environment.mainPackage^.printHelpOnMain(adapters);
+//    silentContext.destroy;
+//  end;
 
 {$ifdef fullVersion}
 PROCEDURE findAndDocumentAllPackages;
@@ -1011,7 +995,7 @@ PROCEDURE findAndDocumentAllPackages;
     sourceNames:=locateSources;
     for i:=0 to length(sourceNames)-1 do begin
       new(provider,create(sourceNames[i]));
-      p.create(provider);
+      p.create(provider,nil);
       nullAdapter.clearErrors;
       p.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
       addPackageDoc(p.getDoc);
@@ -1036,16 +1020,10 @@ PROCEDURE disposeTimer(t:TEpikTimer);
   end;
 
 {$undef include_implementation}
-VAR i:longint;
 INITIALIZATION
   timer.create(@initTimer,@disposeTimer);
 {$define include_initialization}
 {$include mnh_tokens_fmtStmt.inc}
-  with environment do begin
-    new(mainPackageProvider,create);
-    new(mainPackage,create(mainPackageProvider));
-    setLength(secondaryPackages,0);
-  end;
   pendingTasks.create;
 
   //callbacks in mnh_litvar:
@@ -1067,12 +1045,6 @@ INITIALIZATION
 FINALIZATION
 {$define include_finalization}
   pendingTasks.destroy;
-  with environment do begin
-    dispose(mainPackage,destroy);
-    dispose(mainPackageProvider,destroy);
-    for i:=length(secondaryPackages)-1 downto 0 do dispose(secondaryPackages[i],destroy);
-    setLength(secondaryPackages,0);
-  end;
   timer.destroy;
 {$include mnh_tokens_fmtStmt.inc}
 end.

@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_html,mnh_funcs_server;
+     lclintf,mnh_html,mnh_funcs_server,mnh_fileWrappers;
 PROCEDURE parseCmdLine;
 PROCEDURE makeAndShowDoc;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
@@ -93,27 +93,34 @@ PROCEDURE parseCmdLine;
 
   PROCEDURE doDirect;
     VAR context:T_evaluationContext;
+        package:P_package;
     begin
       context.createNormalContext(P_adapters(@consoleAdapters));
-      environment.mainPackageProvider^.clear;
-      environment.mainPackageProvider^.appendLine(fileOrCommandToInterpret);
-      reloadMainPackage(lu_forDirectExecution,context);
+      package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
+      package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
+      dispose(package,destroy);
       context.destroy;
       halt;
     end;
 
   PROCEDURE fileMode;
     VAR context:T_evaluationContext;
+        provider:P_codeProvider;
+        package:T_package;
     begin
-      environment.mainPackageProvider^.setPath(fileOrCommandToInterpret);
+      new(provider,create(fileOrCommandToInterpret));
+      package.create(provider,nil);
+
       fileOrCommandToInterpret:='';
       if wantHelpDisplay then begin
-        environment.mainPackageProvider^.load;
-        printMainPackageDocText(consoleAdapters);
+        package.loadForDocumentation;
+        package.printHelpOnMain(consoleAdapters);
+        package.destroy;
         halt;
       end;
       context.createNormalContext(P_adapters(@consoleAdapters));
-      callMainInMain(mainParameters,context);
+      package.load(lu_forCallingMain,context,mainParameters);
+      package.destroy;
       {$ifdef fullVersion}
       if context.adapters^.hasNeedGUIerror then begin
         reEvaluationWithGUIrequired:=true;
