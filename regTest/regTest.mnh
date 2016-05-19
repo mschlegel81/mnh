@@ -79,7 +79,7 @@ end;
 //*Executes all tests with current interpreter
 main->main(executor);
 
-private memoized is64Bit(exe)->'x86_64'==(exec(exe,['-version']).split(' ').trailing.trailing);
+private memoized is64Bit(exe)->'x86_64'==(exec(exe,['-version']).head.split(' ').trailing(2).head);
 
 private runTest(executor,exeHash, scriptName,outputFileName,delOutputBefore,separate32BitOutput,FMT_STRING)->
   begin

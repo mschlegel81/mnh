@@ -55,7 +55,7 @@ PROCEDURE parseCmdLine;
                   {$I %DATE%},
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTARGET%});
+                  ' for ',{$I %FPCTARGET%},' ',{$I %FPCTargetOS%});
     end;
 
   PROCEDURE displayHelp;
