@@ -1,5 +1,0 @@
-See http://rosettacode.org/wiki/Hailstone_sequence
-Series starting @27 has 112 elements
-Starting with: [27,82,41,124] and
-  ending with: [8,4,2,1]
-Max length=351 for starting value 77031
