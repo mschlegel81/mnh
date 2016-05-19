@@ -9,7 +9,7 @@ TYPE
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
-    txt     :shortString;
+    txt     :ansistring;
     tokType :T_tokenType;
     data    :pointer;
 
