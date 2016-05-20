@@ -5246,7 +5246,6 @@ object MnhForm: TMnhForm
     top = 80
     object MenuItem1: TMenuItem
       Caption = '&File'
-      ShortCut = 32838
       object mi_settings: TMenuItem
         Caption = 'Settings'
         ShortCut = 16464
@@ -5346,7 +5345,6 @@ object MnhForm: TMnhForm
     end
     object MenuItem2: TMenuItem
       Caption = '&Evaluation'
-      ShortCut = 32837
       object miHaltEvalutaion: TMenuItem
         Caption = 'HALT EVALUATION!'
         Enabled = False
@@ -5379,7 +5377,6 @@ object MnhForm: TMnhForm
     end
     object submenuEditorAppearance: TMenuItem
       Caption = '&Appearance'
-      ShortCut = 32833
       object miExpressionEcho: TMenuItem
         Caption = 'Expression echo'
         OnClick = miExpressionEchoClick
@@ -5441,7 +5438,6 @@ object MnhForm: TMnhForm
     end
     object miHelpExternally: TMenuItem
       Caption = '&Help'
-      ShortCut = 32840
       object miHelp: TMenuItem
         Caption = 'Display help popup'
         ShortCut = 112
