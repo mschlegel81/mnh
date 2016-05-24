@@ -68,7 +68,7 @@ PROCEDURE parseCmdLine;
       consoleAdapters.printOut('Target CPU : '+{$I %FPCTARGET%});
       consoleAdapters.printOut('');
       consoleAdapters.printOut('Accepted parameters: ');
-      consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [-det] [(-cmd commandToExecute) | (filename [parameters])]');
+      consoleAdapters.printOut('  [-h/-version] [+echo/-echo] [-el#] [(-cmd commandToExecute) | (filename [parameters])]');
       consoleAdapters.printOut('  filename          if present the file is interpreted; parameters are passed if present');
       consoleAdapters.printOut('                    if not present, interactive mode is entered');
       consoleAdapters.printOut('  +echo             force echo on (default for interactive mode)');
@@ -77,7 +77,6 @@ PROCEDURE parseCmdLine;
       consoleAdapters.printOut('  -time             force time off (default for interpretation mode)');
       consoleAdapters.printOut('  -el#              set minimum error level for output; valid values: [0..5], default=2');
       consoleAdapters.printOut('  -h                display this help and quit');
-      consoleAdapters.printOut('  -det              force deterministic "random" numbers');
       consoleAdapters.printOut('  -version          show version info and exit');
       consoleAdapters.printOut('  -codeHash         show codeHash and exit');
       consoleAdapters.printOut('  -cmd              directly execute the following command');
@@ -146,7 +145,6 @@ PROCEDURE parseCmdLine;
         else if paramStr(i)='-echo' then begin echo:=e_forcedOff;          addParameter(mnhParameters,i); end
         else if paramStr(i)='+time' then begin time:=t_forcedOn;           addParameter(mnhParameters,i); end
         else if paramStr(i)='-time' then begin time:=t_forcedOff;          addParameter(mnhParameters,i); end
-        else if paramStr(i)='-det'  then begin randseed:=0;                addParameter(mnhParameters,i); end
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         else if startsWith(paramStr(i),'-out:') then begin
           addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5));

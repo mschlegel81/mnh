@@ -1,4 +1,4 @@
-USE regTest, hash;
+USE hash;
 
 private memoized templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;
@@ -94,14 +94,11 @@ end : true;
 
 
 private compress(suffix)->
-  (size(files('regTest/*.last'))=0 ? regTest.main('mnh.exe','randomSample') AND regTest.main('mnh_light.exe','randomSample')
-                                   : regTest.main('mnh.exe')                AND regTest.main('mnh_light.exe'))
-  ? begin
-      local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix),'mnh.exe','mnh_light.exe'];
-      execPipeless("c:/Program Files/7-Zip/7z.exe",zipParams);
-      execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",zipParams);
-    end
-  : ask("Regression test failed! Distro will not be created!\nPress Enter.");
+  begin
+    local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix),'mnh.exe','mnh_light.exe'];
+    execPipeless("c:/Program Files/7-Zip/7z.exe",zipParams);
+    execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",zipParams);
+  end;  
 
 private movePairs:=[['mnh.exe','mnh64.exe'],
                     ['mnh_light.exe','mnh64_light.exe'],
@@ -112,7 +109,7 @@ private verboseMove(src,dest)->begin
   moveFile(src,dest);
 end;
                     
-//*Make distro 7z - including build and regTest if needed
+//*Make distro 7z - including build if needed
 main('distro')->
   [0..3].each(i,build(i),AND) ? begin
     compress('64bit');
@@ -146,20 +143,14 @@ main('clean')->begin
    files('doc/*.html')|
    files('doc/*.css')|
    files('install.mnh')|
-   files('make*.log.txt')|
-   files('regTest/*.last')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
-  sandBoxExecute('USE passedTestsStore; passedTestsStore.main("clear");');
+   files('make*.log.txt')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
      
 //*Tests all files
 main('test')->[3..0].each(i,
   build(i), 
-  regTest.main(binName(i)),AND);
-
-//*Tests some files - randomly
-main('quicktest')->[3..0].each(i,
-  build(i),
-  regTest.main(binName(i),'randomSample'),AND);
+  print('Testing ',binName(i)),
+  binName(i).execPipeless(['demos/regTest.mnh','doc/examples.txt'.splitFileName.expanded]));  
 
 //*Several steps in succession
 main(...)->... .each(p,
@@ -168,7 +159,6 @@ main(...)->... .each(p,
     ? build(i) OR true
     :             false,or)
   ? void
-  : p in ['distro','build','clean','test','quicktest']
+  : p in ['distro','build','clean','test']
     ? main(p)
     : void);
-

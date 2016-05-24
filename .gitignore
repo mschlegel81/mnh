@@ -28,3 +28,4 @@ core/res_examples.inc
 gui/lib/x86_64-linux/*
 gui/mnh
 gui/mnh_debug
+demos/*.testLog
