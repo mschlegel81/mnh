@@ -1008,13 +1008,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         prev_allowDelegation:boolean;
         messages:T_storedMessages;
 
-    FUNCTION messageLiteral:P_listLiteral;
-      VAR i:longint;
-      begin
-        result:=newListLiteral;
-        for i:=0 to length(messages)-1 do result^.append(messageToLiteral(messages[i]),false);
-      end;
-
     begin
       bodyParts:=getBodyParts(first,1,context,closingBracket);
       if closingBracket=nil then exit;
@@ -1049,7 +1042,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         closingBracket^.tokType:=tt_end; //mutate closing bracket to end
         stack_push;
         context.valueStore.scopePush;
-        context.valueStore.createVariable('messages',messageLiteral,true);
+        context.valueStore.createVariable('messages',messagesToLiteral(messages),true);
       end else begin
         first^.tokType:=tt_braceOpen; //mutate try-token to (
         first^.next:=bodyParts[0].first;

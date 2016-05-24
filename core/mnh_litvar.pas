@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 {$WARN 3018 OFF}{$WARN 3019 OFF}{$WARN 5024 OFF}
 {$endif}
 INTERFACE
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo;
 TYPE
   T_hashInt=dword;
 
@@ -365,13 +365,36 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
-FUNCTION messageToLiteral(CONST message:T_storedMessage):P_listLiteral;
+FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-127..128] of T_intLiteral;
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
+
+FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
+  FUNCTION headByMessageType(CONST messageType:T_messageType):P_listLiteral;
+    begin
+      if C_errorLevelTxt[messageType]=''
+      then result:=newListLiteral^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
+      else result:=newListLiteral^.appendString(C_errorLevelTxt[messageType]);
+    end;
+
+  VAR i,j:longint;
+  begin
+    result:=newListLiteral;
+    for i:=0 to length(messages)-1 do with messages[i] do if not(messageType in messageTypeBlackList) then begin
+      if length(multiMessage)>0 then begin
+        simpleMessage:=multiMessage[0];
+        for j:=1 to length(multiMessage)-1 do simpleMessage:=simpleMessage+C_lineBreakChar+multiMessage[j];
+      end;
+      result^.append(
+         headByMessageType(messageType)^
+        .appendString(ansistring(location))^
+        .appendString(simpleMessage),false);
+    end;
+  end;
 
 FUNCTION exp(CONST x:double):double; inline;
   begin
@@ -2522,21 +2545,6 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
         if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
       end;
     end;
-  end;
-
-FUNCTION messageToLiteral(CONST message:T_storedMessage):P_listLiteral;
-  VAR stringList:P_listLiteral;
-      i:longint;
-  begin
-    result:=newListLiteral;
-    if length(message.multiMessage)>=1 then begin
-      stringList:=newListLiteral;
-      for i:=0 to length(message.multiMessage)-1 do stringList^.appendString(message.multiMessage[i]);
-      result^.append(stringList,false);
-      nullAdapter.ClearAll;
-    end else result^.appendString(message.simpleMessage);
-    result^.appendInt(C_errorLevelForMessageType[message.messageType]);
-    result^.appendString(message.location);
   end;
 
 CONSTRUCTOR T_format.create(CONST formatString: ansistring);

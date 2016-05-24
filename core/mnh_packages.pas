@@ -115,7 +115,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
       adapter:T_adapters;
       i:longint;
   begin
-    collector.create(at_unknown,'');
+    collector.create(at_unknown);
     adapter.create;
     adapter.addOutAdapter(@collector,false);
     adapter.minErrorLevel:=0;
@@ -470,8 +470,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;
-          end else context.cascadeDisposeToken(first);
-        end else context.cascadeDisposeToken(first);
+          end else begin
+            context.cascadeDisposeToken(first);
+            context.cascadeDisposeToken(ruleBody);
+          end;
+        end else begin
+          context.cascadeDisposeToken(first);
+          context.cascadeDisposeToken(ruleBody);
+        end;
       end;
 
     VAR statementHash:T_hashInt;

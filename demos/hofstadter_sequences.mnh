@@ -1,0 +1,33 @@
+//Hofstadters Figur-Figur-Folgen
+memoized R(1):=1;
+R(n>1)->R(n-1)+S(n-1);
+memoized S(1):=2;
+S(2):=4;
+S(n>2)->[1..R(n)].minus([1..n].each(k,R(k))).sort[n-1];
+
+//Hofstadters G-Folge
+memoized G(0):=0;
+G(n>0)->n-G(G(n-1));
+
+//Hofstadters H-Folge
+memoized H(0):=0;
+H(n>0)->n-H(n-1).H.H;
+
+//Hofstadters "verheiratete Folgen"
+memoized F(0):=1; F(n>0)->n-M(F(n-1));
+memoized M(0):=0; M(n>0)->n-F(M(n-1));
+
+//Hofstadters Q-Folge
+memoized Q(n<=2):=1;
+Q(n)->Q(n-Q(n-1))+Q(n-Q(n-2));
+
+main->begin
+  print('(OEIS A005228) R: ',[1..20].each(n,R(n)).join(', '));
+  print('(OEIS A030124) S: ',[1..20].each(n,S(n)).join(', '));
+  print('(OEIS A005206) G: ',[1..20].each(n,G(n)).join(', '));
+  print('(OEIS A005374) H: ',[1..20].each(n,H(n)).join(', '));
+  print('(OEIS A005378) F: ',[1..20].each(n,F(n)).join(', '));
+  print('(OEIS A005379) M: ',[1..20].each(n,M(n)).join(', '));
+  print('(OEIS A005185) Q: ',[1..20].each(n,Q(n)).join(', '));
+end;
+

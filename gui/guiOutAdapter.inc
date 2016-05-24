@@ -10,7 +10,7 @@ end;
 {$ifdef includeImplementation}
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    inherited create(at_gui,'*GUI*');
+    inherited create(at_gui);
     setLength(lineIndexPerEvaluatedStatement,0);
   end;
 

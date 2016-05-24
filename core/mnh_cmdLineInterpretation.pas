@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_html,mnh_funcs_server,mnh_fileWrappers;
+     lclintf,mnh_html,mnh_funcs_server;
 PROCEDURE parseCmdLine;
 PROCEDURE makeAndShowDoc;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
@@ -110,7 +110,6 @@ PROCEDURE parseCmdLine;
       package.create(nil);
       package.setSourcePath(fileOrCommandToInterpret);
 
-      fileOrCommandToInterpret:='';
       if wantHelpDisplay then begin
         package.loadForDocumentation;
         package.printHelpOnMain(consoleAdapters);

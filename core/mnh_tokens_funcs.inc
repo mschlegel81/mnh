@@ -458,16 +458,7 @@ FUNCTION parameterNames_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
 
 FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR src:T_arrayOfString;
-      i,j:longint;
-      messages:T_storedMessages;
-
-  FUNCTION headByMessageType(CONST messageType:T_messageType):P_listLiteral;
-    begin
-      if C_errorLevelTxt[messageType]=''
-      then result:=newListLiteral^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
-      else result:=newListLiteral^.appendString(C_errorLevelTxt[messageType]);
-    end;
-
+      i:longint;
   begin
     if not(context.allowDelegation) then begin
       context.adapters^.raiseError('sandBoxExecute is not allowed in this context because delegation is disabled.',tokenLocation);
@@ -475,22 +466,13 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
     end;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_string,lt_stringList]) then begin
-      if params^.value(0)^.literalType=lt_string then src:=P_stringLiteral(params^.value(0))^.value else begin
+      if params^.value(0)^.literalType=lt_string
+      then src:=P_stringLiteral(params^.value(0))^.value
+      else begin
         setLength(src,0);
         for i:=0 to P_listLiteral(params^.value(0))^.size-1 do append(src,P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value);
       end;
-      messages:=runAlone(src);
-      result:=newListLiteral;
-      for i:=0 to length(messages)-1 do with messages[i] do if not(messageType in C_MESSAGE_TYPES_IGNORED_BY_SANDBOX) then begin
-        if length(multiMessage)>0 then begin
-          simpleMessage:=multiMessage[0];
-          for j:=1 to length(multiMessage)-1 do simpleMessage:=simpleMessage+C_lineBreakChar+multiMessage[j];
-        end;
-        P_listLiteral(result)^.append(
-           headByMessageType(messageType)^
-          .appendString(ansistring(location))^
-          .appendString(simpleMessage),false);
-      end;
+      result:=messagesToLiteral(runAlone(src),C_MESSAGE_TYPES_IGNORED_BY_SANDBOX);
     end;
   end;
 

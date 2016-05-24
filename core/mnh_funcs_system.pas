@@ -19,6 +19,13 @@ IMPLEMENTATION
 {$define arg1:=params^.value(1)}
 {$define arg2:=params^.value(2)}
 
+FUNCTION resetRandom_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin randseed:=0; result:=newVoidLiteral; end else
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin randseed:=int0^.value; result:=newVoidLiteral; end;
+  end;
+
 FUNCTION random_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i,count:longint;
   begin
@@ -525,7 +532,30 @@ FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
                                         else result:=nil;
   end;
 
+FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
+  begin new(result,create(at_unknown)); end;
+
+VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
+FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      if collector.isObtained
+      then collector.value^.clearMessages
+      else context.adapters^.addOutAdapter(collector.value,true);
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
+FUNCTION collectedOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0)
+    then result:=messagesToLiteral(collector.value^.storedMessages)
+    else result:=nil;
+  end;
+
 INITIALIZATION
+  collector.create(@newCollectingOutAdapter,nil);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl,'resetRandom(seed:int);#Resets internal PRNG with the given seed',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern',fc_readingExternal);
@@ -556,4 +586,10 @@ INITIALIZATION
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.',fc_readingExternal);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiActive',@isGuiActive_impl,'isGuiActive;#Returns true if GUI is showing and false otherwise.',fc_stateful);
+
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput',@collectOutput_impl,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput',fc_stateful);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,'collectedOutput;#Returns messages collected since the last call of collectOutput.',fc_stateful);
+
+FINALIZATION
+  collector.destroy;
 end.

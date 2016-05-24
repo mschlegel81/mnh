@@ -217,7 +217,6 @@ FUNCTION primes_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   FUNCTION sievePrimes(CONST pMax:int64):P_listLiteral;
     VAR isPrime:array of boolean;
         i,p:longint;
-        imax:longint;
     begin
       if pMax<2 then exit(newListLiteral);
       setLength(isPrime,pMax+1);

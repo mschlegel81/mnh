@@ -107,7 +107,7 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
-    inherited create(at_htmlFile,fileName);
+    inherited create(at_htmlFile);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;
     lastWasEndOfEvaluation:=true;
@@ -133,8 +133,6 @@ PROCEDURE T_htmlOutAdapter.append(CONST message: T_storedMessage);
 PROCEDURE T_htmlOutAdapter.flush;
   VAR handle:text;
       i,j:longint;
-      zeroBlobLevel:longint=0;
-
   begin
     if length(storedMessages)=0 then exit;
     try

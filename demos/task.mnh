@@ -5,12 +5,12 @@ private persistent runningTask:=[];
 
 private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
 begin
-  allTasks:=each(t,allTasks,
-                 t%0=runningTask%0
+  allTasks:=allTasks.each(t,
+                 t[0]==runningTask[0]
                  ? begin
                      printf("Task %s finished after %{formatTime('hh:nn:ss',$1)}s; total time spent: %{formatTime('hh:nn:ss',$2)}s",
-                      t%0,systime-runningTask%2,t%1+systime-runningTask%2);
-                     [t%0,                      t%1+systime-runningTask%2];
+                      t[0],systime-runningTask[2],t[1]+systime-runningTask[2]);
+                     [t[0],                       t[1]+systime-runningTask[2]];
                    end
                  : t);
   runningTask:=[];
@@ -21,19 +21,25 @@ main()->begin
   endTask;
   print('All tasks:');
   printf("  %s\t%{$1:string?$1:formatTime('hh:nn:ss',$1)}s",
-    'Task'      | allTasks%%0,
-    'Time spent'| allTasks%%1);
+    'Task'      | allTasks.getInner(0),
+    'Time spent'| allTasks.getInner(1));
 end;
 
 //*Resumes a task
 main('?')->size(allTasks)>0 
-           ? main(ask('Task to resume',allTasks%%0))
+           ? main(ask('Task to resume',allTasks.getInner(0)))
            : print('There are no tasks to resume.');
 
 //*Resumes a task or starts a new one
 main(taskName)->begin
   endTask;
-  trueCount(allTasks%%0=taskName)=0
-  ? begin allTasks|=[leading(runningTask:=[taskName,0,systime])]; print('New task ',taskName); end
-  : begin runningTask:=(allTasks%(allTasks%%0=taskName)%0)|systime; print('Resmuming task ',taskName); end;
+  (allTasks.getInner(0)=taskName).agg(OR)
+  ? begin
+      runningTask:=(allTasks.get(allTasks.getInner(0)=taskName).get(0))|systime;
+      print('Resmuming task ',taskName);
+    end
+  : begin
+      allTasks|=[leading(runningTask:=[taskName,0,systime])];
+      print('New task ',taskName);
+    end;
 end;

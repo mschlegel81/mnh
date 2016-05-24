@@ -1,7 +1,7 @@
 UNIT mnh_evalThread;
 INTERFACE
 USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
-     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8, mnh_fileWrappers;
+     myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8;
 TYPE
   T_evalRequest    =(er_none,er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
@@ -56,10 +56,12 @@ FUNCTION main(p:pointer):ptrint;
       startOfEvaluation:=now;
     end;
 
-  PROCEDURE postEval;
+  PROCEDURE postEval(CONST includeLists:boolean=true);
     begin
-      guiPackage.updateLists(userRules);
-      updateCompletionList;
+      if includeLists then begin
+        guiPackage.updateLists(userRules);
+        updateCompletionList;
+      end;
       evaluationState.value:=es_idle;
       if mainEvaluationContext.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]
       then endOfEvaluationText.value:='Aborted after '+myTimeToStr(now-startOfEvaluation)
@@ -92,7 +94,7 @@ FUNCTION main(p:pointer):ptrint;
         guiPackage.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
         setupOutputBehaviour(mainEvaluationContext.adapters^);
         guiPackage.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
-        postEval;
+        postEval(false);
       end else begin
         if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
         if pendingRequest.value=er_none then sleep(sleepTime);

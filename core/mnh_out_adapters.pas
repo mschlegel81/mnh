@@ -20,14 +20,13 @@ TYPE
     minErrorLevel: shortint;
   end;
 
-  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui);
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,at_sandboxAdapter);
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
     adapterType:T_adapterType;
-    adapterName:ansistring;
     outputBehaviour:T_outputBehaviour;
-    CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
+    CONSTRUCTOR create(CONST typ:T_adapterType);
     DESTRUCTOR destroy; virtual; abstract;
     PROCEDURE clearConsole; virtual; abstract;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual; abstract;
@@ -48,7 +47,7 @@ TYPE
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
     cs:TRTLCriticalSection;
-    CONSTRUCTOR create(CONST typ:T_adapterType; CONST name:ansistring);
+    CONSTRUCTOR create(CONST typ:T_adapterType);
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
@@ -72,6 +71,7 @@ TYPE
   P_adapters=^T_adapters;
   T_adapters=object
     private
+      nextAdapterId:longint;
       stackTraceCount:longint;
       errorCount:longint;
       maxErrorLevel: shortint;
@@ -120,7 +120,6 @@ TYPE
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
-      PROCEDURE removeOutAdapter(CONST name:ansistring);
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -211,7 +210,7 @@ PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
   begin
-    inherited create(at_textFile,fileName);
+    inherited create(at_textFile);
     lastWasEndOfEvaluation:=true;
     longestLineUpToNow:=0;
     outputFileName:=expandFileName(fileName);
@@ -363,6 +362,7 @@ CONSTRUCTOR T_adapters.create;
     plot.createWithDefaults;
     {$endif}
     setLength(adapter,0);
+    nextAdapterId:=0;
   end;
 
 DESTRUCTOR T_adapters.destroy;
@@ -504,11 +504,11 @@ PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
     raiseCustomMessage(mt_el5_systemError,errorMessage,C_nilTokenLocation);
   end;
 
-PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter;
-  CONST destroyIt: boolean);
+PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   begin
     setLength(adapter,length(adapter)+1);
     adapter[length(adapter)-1].ad:=p;
+    inc(nextAdapterId);
     adapter[length(adapter)-1].doDestroy:=destroyIt;
   end;
 
@@ -529,17 +529,6 @@ PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
     end;
   end;
 
-PROCEDURE T_adapters.removeOutAdapter(CONST name: ansistring);
-  VAR i,j:longint;
-  begin
-    for i:=0 to length(adapter)-1 do if adapter[i].ad^.adapterName=name then begin
-      if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
-      for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
-      setLength(adapter,length(adapter)-1);
-      exit;
-    end;
-  end;
-
 FUNCTION T_adapters.adapterCount: longint;
   begin
     result:=length(adapter);
@@ -554,7 +543,7 @@ FUNCTION T_adapters.collectingClone: P_adapters;
   VAR collector:P_collectingOutAdapter;
   begin
     new(result,create);
-    new(collector,create(at_unknown,'TEMP'));
+    new(collector,create(at_sandboxAdapter));
     result^.addOutAdapter(collector,true);
     result^.outputBehaviour:=outputBehaviour;
     {$ifdef fullVersion}
@@ -573,8 +562,7 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
   begin
     for i:=0 to length(clone^.adapter)-1 do
     if (collector=nil) and
-       (clone^.adapter[i].ad^.adapterType=at_unknown) and
-       (clone^.adapter[i].ad^.adapterName='TEMP') then collector:=P_collectingOutAdapter(clone^.adapter[i].ad);
+       (clone^.adapter[i].ad^.adapterType=at_sandboxAdapter) then collector:=P_collectingOutAdapter(clone^.adapter[i].ad);
     setLength(result,0);
     {$ifdef fullVersion}
     if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
@@ -598,10 +586,9 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
     dispose(clone,destroy);
   end;
 
-CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);
+CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
   begin
     adapterType:=typ;
-    adapterName:=name;
     with outputBehaviour do begin
       doEchoDeclaration:=false;
       doEchoInput:=false;
@@ -622,7 +609,7 @@ PROCEDURE T_abstractOutAdapter.append(CONST message:T_storedMessage);
 
 CONSTRUCTOR T_consoleOutAdapter.create;
   begin
-    inherited create(at_console,'');
+    inherited create(at_console);
   end;
 
 DESTRUCTOR T_consoleOutAdapter.destroy;
@@ -671,9 +658,9 @@ PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST
     end;
   end;
 
-CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST name:ansistring);
+CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType);
   begin
-    inherited create(typ,name);
+    inherited create(typ);
     system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
