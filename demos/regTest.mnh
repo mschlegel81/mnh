@@ -13,7 +13,7 @@ private validateCollectedOutput->begin
   local stateMessage:='';
   clearPrint;
   collectOutput;
-  print("\nTest finished at ",formatTime('c',systime));
+  print("Test finished at ",formatTime('c',systime));
   fileExists(expectedResultName)
   ? begin
       expectedResultName.fileLines==printOut
@@ -30,9 +30,9 @@ private validateCollectedOutput->begin
       expectedResultName.writeFileLines(printOut);
     end;
   printf('%s',exec(executor,['-version'])| (myCodeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
-
+  print('');
   printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
-  logName.writeFileLines(logName.fileLines | printOut);
+  logName.writeFileLines(printOut | logName.fileLines);
 end;
 
 private printExecute([])->void;
