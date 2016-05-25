@@ -1,4 +1,4 @@
-main->each(folder,getEnv%"APPDATA"&["/Notepad++","/Roaming/Notepad++","/Local/Notepad++"],
+main->getEnv["APPDATA"]&["/Notepad++","/Roaming/Notepad++","/Local/Notepad++"].each(folder,
   folderExists(folder) ? begin
     local xmlOpeningTag:='<NotepadPlus>';
     local xmlClosingTag:='</NotepadPlus>';

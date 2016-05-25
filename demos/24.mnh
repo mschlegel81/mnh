@@ -47,6 +47,6 @@ private demo(set)->print(' ?> Find an expression to calculate 24 from the number
                    print(" ?> Another round?\n !> no");
 
 //*Demo - mainly for reg-testing
-main->print('This is a demo - start with any argument to play.',resetRandom)|demo(getRiddle);
+main('demo')->print('This is a demo - start with any argument to play.',resetRandom)|demo(getRiddle);
 
-main(arg)->playARound;
+main->playARound;

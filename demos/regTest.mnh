@@ -107,7 +107,7 @@ end;
 main(examplesFile:string)->testAlreadyPassed ? void : begin
   resetRandom;
   collectOutput;
-  ['100doors.mnh','12_statements.mnh','24.mnh','99bottles.mnh'].each(source,printf('%s',executor.exec(['-el5',(myPath.splitFileName.directory)&'/'&source])));
+  ['100doors.mnh','12_statements.mnh','24.mnh','99bottles.mnh'].each(source,printf('%s',executor.exec(['-el5',(myPath.splitFileName.directory)&'/'&source,'demo'])));
   testRegular;
   canPlot
   ? testPlotting
@@ -119,5 +119,3 @@ main(examplesFile:string)->testAlreadyPassed ? void : begin
 end;
 
 main->main('');
-
-flavourString;
