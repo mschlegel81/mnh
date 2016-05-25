@@ -53,10 +53,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             end else for j:=0 to length(multiMessage)-1 do syn.lines.append(SysToUTF8(multiMessage[j]));
           end;
         mt_endOfEvaluation: begin
-          for j:=0 to 9 do MnhForm.editorMeta[j].doneDebugging;
+          for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].doneDebugging;
           MnhForm.updateDebugParts;
         end;
-        mt_reloadRequired:  for j:=0 to 9 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
+        mt_reloadRequired:  for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));

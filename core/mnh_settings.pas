@@ -29,7 +29,6 @@ T_editorState=object(T_serializable)
   markedLines:T_arrayOfLongint;
 
   CONSTRUCTOR create;
-  CONSTRUCTOR create(CONST path:ansistring; CONST age:double; CONST change:boolean; CONST dat:TStrings; CONST markedIdx:T_arrayOfLongint);
   DESTRUCTOR destroy;
   PROCEDURE getLines(CONST dat:TStrings);
   FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
@@ -50,8 +49,8 @@ T_settings=object(T_serializable)
   mainForm:T_formPosition;
   instantEvaluation: boolean;
   doResetPlotOnEvaluation: boolean;
-  fileHistory: array[0..9] of ansistring;
-  editorState: array[0..9] of T_editorState;
+  fileHistory: array[0..19] of ansistring;
+  editorState: array of T_editorState;
   activePage:longint;
   outputBehaviour: T_outputBehaviour;
   saveIntervalIdx:byte;
@@ -87,11 +86,10 @@ PROCEDURE saveSettings;
   end;
 
 CONSTRUCTOR T_settings.create;
-  VAR i:longint;
   begin
     cpuCount:=0;
     mainForm.create;
-    for i:=0 to length(editorState)-1 do editorState[i].create;
+    setLength(editorState,0);
     wasLoaded:=false;
   end;
 
@@ -99,6 +97,7 @@ DESTRUCTOR T_settings.destroy;
   VAR i:longint;
   begin
     for i:=0 to length(editorState)-1 do editorState[i].destroy;
+    setLength(editorState,0);
   end;
 
 FUNCTION workerThreadCount:longint;
@@ -131,8 +130,14 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     end;
     instantEvaluation := f.readBoolean;
     doResetPlotOnEvaluation := f.readBoolean;
-    for i := 0 to 9 do fileHistory[i] := f.readAnsiString;
-    for i:=0 to 9 do editorState[i].loadFromFile(f);
+    for i := 0 to length(fileHistory)-1 do fileHistory[i] := f.readAnsiString;
+    i:=f.readLongint;
+    if (i<0) or not(f.allOkay) then exit(false);
+    setLength(editorState,i);
+    for i:=0 to length(editorState)-1 do begin
+      editorState[i].create;
+      editorState[i].loadFromFile(F);
+    end;
     activePage:=f.readLongint;
     saveIntervalIdx:=f.readByte;
     if F.allOkay then result:=true
@@ -146,6 +151,7 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
 
 PROCEDURE T_settings.saveToFile(VAR F: T_file);
   VAR i:longint;
+      visibleEditorCount:longint=0;
   begin
     f.writeLongint(cpuCount);
     F.writeLongint(fontSize);
@@ -161,14 +167,17 @@ PROCEDURE T_settings.saveToFile(VAR F: T_file);
     end;
     F.writeBoolean(instantEvaluation);
     F.writeBoolean(doResetPlotOnEvaluation);
-    for i:=0 to 9 do F.writeAnsiString(fileHistory [i]);
-    for i:=0 to 9 do editorState[i].saveToFile(F);
+    for i:=0 to length(fileHistory)-1 do F.writeAnsiString(fileHistory [i]);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
+    f.writeLongint(visibleEditorCount);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToFile(F);
     F.writeLongint(activePage);
     f.writeByte(saveIntervalIdx);
     savedAt:=now;
   end;
 
 PROCEDURE T_settings.initDefaults;
+  VAR i:longint;
   begin
     cpuCount:=getNumberOfCPUs;
     editorFontname:='';
@@ -193,6 +202,9 @@ PROCEDURE T_settings.initDefaults;
     saveIntervalIdx:=0;
     wasLoaded:=false;
     savedAt:=now;
+    for i:=0 to length(editorState)-1 do editorState[i].destroy;
+    setLength(editorState,1);
+    editorState[0].create;
   end;
 
 FUNCTION T_settings.savingRequested: boolean;
@@ -282,18 +294,6 @@ CONSTRUCTOR T_editorState.create;
     setLength(markedLines,0);
   end;
 
-CONSTRUCTOR T_editorState.create(CONST path: ansistring; CONST age: double; CONST change: boolean; CONST dat: TStrings; CONST markedIdx: T_arrayOfLongint);
-  VAR i:longint;
-  begin
-    visible:=true;
-    filePath:=path;
-    fileAccessAge:=age;
-    changed:=change;
-    setLength(lines,dat.count);
-    for i:=0 to dat.count-1 do lines[i]:=dat[i];
-    markedLines:=markedIdx;
-  end;
-
 DESTRUCTOR T_editorState.destroy;
   begin
     filePath:='';
@@ -312,8 +312,6 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
 FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
   VAR i:longint;
   begin
-    visible:=f.readBoolean;
-    if not(visible) then exit(true);
     filePath:=f.readAnsiString;
     changed:=f.readBoolean;
     if changed then begin
@@ -340,8 +338,6 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
 PROCEDURE T_editorState.saveToFile(VAR F: T_file);
   VAR i:longint;
   begin
-    f.writeBoolean(visible);
-    if not(visible) then exit;
     if filePath<>'' then filePath:=expandFileName(filePath);
     f.writeAnsiString(filePath);
     f.writeBoolean(changed);
