@@ -312,6 +312,7 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
 FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
   VAR i:longint;
   begin
+    visible:=true;
     filePath:=f.readAnsiString;
     changed:=f.readBoolean;
     if changed then begin
