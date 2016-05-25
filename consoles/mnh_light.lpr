@@ -1,5 +1,5 @@
 {$MAXSTACKSIZE 100000000}
-PROGRAM mnh_console;
+program mnh_light;
 USES myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils, mnh_constants, mnh_out_adapters, mnh_fileWrappers;
 
 PROCEDURE interactiveMode;
@@ -10,7 +10,7 @@ PROCEDURE interactiveMode;
     begin
       write('>'); readln(nextInput);
       nextInput:=trim(nextInput);
-      if uppercase(nextInput)='exit' then begin
+      if uppercase(nextInput)='EXIT' then begin
         hasExitSignal:=true;
         exit;
       end else if nextInput='\' then consolePackage.clearSource
@@ -41,3 +41,4 @@ begin
   parseCmdLine;
   interactiveMode;
 end.
+

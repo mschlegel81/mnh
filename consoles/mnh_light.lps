@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="9"/>
+    <BuildModes Active="Deploy"/>
+    <Units Count="4">
+      <Unit0>
+        <Filename Value="mnh_light.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <CursorPos X="36" Y="13"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="..\core\mnh_fileWrappers.pas"/>
+        <EditorIndex Value="1"/>
+        <CursorPos X="7" Y="3"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\core\mnh_funcs_system.pas"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="118" Y="5"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\common\httpUtil.pas"/>
+        <EditorIndex Value="3"/>
+        <CursorPos X="27" Y="9"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit3>
+    </Units>
+    <JumpHistory Count="6" HistoryIndex="5">
+      <Position1>
+        <Filename Value="mnh_light.lpr"/>
+      </Position1>
+      <Position2>
+        <Filename Value="mnh_light.lpr"/>
+        <Caret Line="45" TopLine="27"/>
+      </Position2>
+      <Position3>
+        <Filename Value="mnh_light.lpr"/>
+        <Caret Line="3"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\core\mnh_fileWrappers.pas"/>
+      </Position4>
+      <Position5>
+        <Filename Value="..\core\mnh_funcs_system.pas"/>
+      </Position5>
+      <Position6>
+        <Filename Value="..\..\common\httpUtil.pas"/>
+      </Position6>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>

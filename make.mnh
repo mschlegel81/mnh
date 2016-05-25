@@ -75,7 +75,7 @@ exeHasWrongVersion(FI) ? begin
                         : '../lazarus32/fpc/3.0.0/bin/i386-win32/fpc.exe';
   local exeName:=binName(FI);
   local parameters:=
-       (full ? ['gui\mnh_gui.lpr','-dfullVersion'] : 'consoles\mnh_console.pas')|
+       (full ? ['gui\mnh_gui.lpr','-dfullVersion'] : ['consoles\mnh_light.lpr','-Os'])|
        ('-o'&exeName)|
        (debug ? ['-gl','-ddebugMode']
               : ['-O4','-CX','-XX','-Si']) |
@@ -87,8 +87,11 @@ exeHasWrongVersion(FI) ? begin
   printf('Compiling %-25s logging to %s',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
 
-  exec('..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp',['.','core','..\common','..\common\synapse','test','consoles','bin32','gui\lib\i386-win32','gui\lib\x86_64-win64','gui']);
+  exec('..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp',['.','core','..\common','..\common\synapse','test','consoles','bin32','gui\lib\i386-win32','gui\lib\x86_64-win64','gui','consoles\lib\i386-win32','consoles\lib\x86_64-win64']);
   (files('./*.lfm')|files('bin32/*.lfm')|files('./mnh_gui.obj')).each(file,deleteFile(file));
+  full OR debug
+  ? void
+  : execPipeless('..\upx.exe',['--ultra-brute',binName(FI)]);
   not(exeHasWrongVersion(FI));
 end : true;
 
