@@ -59,7 +59,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_reloadRequired:  for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
+        mt_echo_output,
+        mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
         else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
         end;
       end;
