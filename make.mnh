@@ -146,6 +146,15 @@ main('clean')->begin
    files('doc/*.html')|
    files('doc/*.css')|
    files('install.mnh')|
+   files('ensureDemos.mnh')|
+   files('ensurePackages.mnh')|
+   files('core/res_examples.inc')|
+   files('core/res_html_template.inc')|
+   files('core/res_ensureMnhFileAssociations.inc')|
+   files('core/res_removeMnhFileAssociations.inc')|
+   files('core/res_ensureNppHighlighting.inc')|
+   files('core/res_ensureDemos.inc')|
+   files('core/res_ensurePackages.inc')|
    files('make*.log.txt')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
 end;
      
