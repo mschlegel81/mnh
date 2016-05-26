@@ -9,6 +9,8 @@
 *.png
 *.ppu
 *.settings
+*.lps
+*.compiled
 Thumbs.db
 core/code_hash.inc
 demos/inputs/kjv.txt
@@ -17,15 +19,12 @@ doTests.bat
 doc/style.css
 gui/lib/i386-win32/*
 gui/lib/x86_64-win64/*
+gui/lib/x86_64-linux/*
 regTest/*.last
-setup.mnh
 ignored/*
 gui/mnh_gui.lps
 make*.log.txt
 core/res_*.inc
-core/res_html_template.inc
-core/res_examples.inc
-gui/lib/x86_64-linux/*
 gui/mnh
 gui/mnh_debug
 demos/*.testLog

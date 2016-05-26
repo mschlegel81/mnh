@@ -256,7 +256,9 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'startHttpServer',@startServer_impl,'startHttpServer(urlAndPort:string,requestToResponseFunc:expression(1),timeoutInSeconds:numeric);#Starts a new microserver-instance',fc_stateful);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'wrapTextInHttp',@wrapTextInHttp_impl,'wrapTextInHttp(s:string);#Wraps s in an http-response (type: "text/html")#wrapTextInHttp(s:string,type:string);#Wraps s in an http-response of given type.',fc_pure);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpError',@httpError_impl,'httpError;#Returns http-representation of error 404.#httpError(code:int);#Returns http-representation of given error code.',fc_pure);
+  {$ifdef fullVersion}
   killServersCallback:=@killActiveServers;
+  {$endif}
 FINALIZATION
   doneCriticalSection(serverCS);
 

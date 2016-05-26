@@ -1,6 +1,6 @@
 UNIT mnh_packages;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, mySys, FileUtil, //utilities
+USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
@@ -84,7 +84,9 @@ FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evalu
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
 FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
 
+{$ifdef fullVersion}
 VAR killServersCallback:PROCEDURE;
+{$endif}
 {$undef include_interface}
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT=60000;
@@ -721,7 +723,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     then begin
       finalize(context.adapters^);
       clearCachedFormats;
+      {$ifdef fullVersion}
       killServersCallback;
+      {$endif}
     end;
 
     with profiler do if active then begin

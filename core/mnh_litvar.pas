@@ -409,10 +409,6 @@ FUNCTION exp(CONST x:double):double; inline;
 
 PROCEDURE disposeLiteral(VAR l: P_literal);
   begin
-    //if l = nil then begin
-    //  writeln(stdErr, 'disposing NIL literal ?!?');
-    //  exit;
-    //end;
     if l^.unreference<=0 then dispose(l, destroy);
     l:=nil;
   end;

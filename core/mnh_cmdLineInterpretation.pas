@@ -1,8 +1,8 @@
 UNIT mnh_cmdLineInterpretation;
 INTERFACE
-USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc{$endif},mnh_packages,
+USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_funcs_server{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_html,mnh_funcs_server;
+     lclintf,mnh_html;
 PROCEDURE parseCmdLine;
 PROCEDURE makeAndShowDoc;
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
