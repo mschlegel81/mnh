@@ -79,6 +79,9 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     recursePath(rootPath);
     if result = '' then recursePath(configDir);
     if result = '' then recursePath(extractFilePath(paramStr(0)));
+    {$ifdef DEBUGMODE}
+    writeln('Found: ',result);
+    {$endif}
   end;
 
 FUNCTION locateSources: T_arrayOfString;

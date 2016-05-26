@@ -20,9 +20,9 @@ begin
   hideConsole;
 
   mnh_gui_main.lateInitialization;
-  Application.Title:='MNH5 - GUI';
-  RequireDerivedFormResource := True;
-  Application.Initialize;
+  Application.title:='MNH5 - GUI';
+  RequireDerivedFormResource := true;
+  Application.initialize;
 
   Application.CreateForm(TMnhForm, MnhForm);
   Application.CreateForm(TSettingsForm, SettingsForm);
@@ -31,6 +31,6 @@ begin
   Application.CreateForm(TplotForm, plotForm);
   Application.CreateForm(TnewCentralPackageForm, newCentralPackageForm);
   Application.CreateForm(TtableForm, tableForm);
-  Application.Run;
+  Application.run;
   showConsole;
 end.

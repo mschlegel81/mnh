@@ -93,6 +93,9 @@
         <UseHeaptrc Value="True"/>
       </Debugging>
     </Linking>
+    <Other>
+      <CustomOptions Value="-dDebugMode"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

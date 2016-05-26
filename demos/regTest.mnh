@@ -70,7 +70,9 @@ end;
 
 private testRegular->begin
   anagram.main;
-  flavourString=='Linux_x86_64' ? void : ackermann.main;
+  flavourString.matches('Linux')
+  ? void
+  : ackermann.main;
   asciiCalendar.main;
   benford.main;
   stringFib.main;

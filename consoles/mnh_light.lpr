@@ -1,6 +1,6 @@
-{$MAXSTACKSIZE 100000000}
-program mnh_light;
-USES myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils, mnh_constants, mnh_out_adapters, mnh_fileWrappers;
+{$ifdef WINDOWS}{$MAXSTACKSIZE 100000000}{$endif}
+PROGRAM mnh_light;
+USES {$ifdef UNIX}cmem, cthreads,{$endif} mnh_constants,myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,mnh_out_adapters, mnh_fileWrappers;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
