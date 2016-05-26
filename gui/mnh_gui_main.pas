@@ -1354,8 +1354,9 @@ PROCEDURE TMnhForm.processFileHistory;
 
 PROCEDURE formCycle(CONST ownId:longint);
   begin
-    if ownId=0 then begin plotForm.Show; plotForm.BringToFront; plotForm.SetFocus; end
-               else begin MnhForm.Show; MnhForm.BringToFront; MnhForm.SetFocus; end;
+    if      ownId=0 then begin plotForm.Show;  plotForm.BringToFront;  plotForm.SetFocus; end
+    else if ownId=1 then begin tableForm.Show; tableForm.BringToFront; tableForm.SetFocus; end
+                    else begin MnhForm.Show;   MnhForm.BringToFront;   MnhForm.SetFocus; end;
   end;
 
 PROCEDURE lateInitialization;
@@ -1368,6 +1369,7 @@ PROCEDURE lateInitialization;
 
     mnh_evalThread.guiOutAdapters:=@guiAdapters;
     mnh_plotForm.formCycleCallback:=@formCycle;
+    mnh_tables.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     mnh_evalThread.initUnit;
   end;

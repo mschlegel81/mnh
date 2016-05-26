@@ -1,7 +1,7 @@
 object tableForm: TtableForm
-  Left = 486
+  Left = 355
   Height = 240
-  Top = 301
+  Top = 217
   Width = 320
   Caption = '-'
   ClientHeight = 220
@@ -10,6 +10,7 @@ object tableForm: TtableForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyUp = FormKeyUp
   Position = poOwnerFormCenter
   LCLVersion = '1.6.0.4'
   object stringGrid: TStringGrid
@@ -20,14 +21,15 @@ object tableForm: TtableForm
     Align = alClient
     BorderStyle = bsNone
     FixedCols = 0
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing, goDblClickAutoSize, goSmoothScroll]
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
     TabOrder = 0
+    OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu
     left = 68
-    top = 85
+    top = 16
     object MenuItem1: TMenuItem
-      Caption = 'Display'
+      Caption = '&Display'
       object mi_transpose: TMenuItem
         Caption = 'Transpose'
         OnClick = mi_transposeClick
@@ -37,5 +39,27 @@ object tableForm: TtableForm
         OnClick = mi_commaClick
       end
     end
+    object MenuItem2: TMenuItem
+      Caption = '&Export'
+      object mi_exportCsvSemicolon: TMenuItem
+        Caption = 'Export to ";"-separated csv'
+        OnClick = mi_exportCsvSemicolonClick
+      end
+      object mi_exportCsvTab: TMenuItem
+        Caption = 'Export to tab-separated csv...'
+        OnClick = mi_exportCsvTabClick
+      end
+      object mi_exportText: TMenuItem
+        Caption = 'Export to text...'
+        OnClick = mi_exportTextClick
+      end
+    end
+  end
+  object SaveTableDialog: TSaveDialog
+    Title = 'Export as'
+    Filter = 'All|*.*|CSV|*.csv|Text|*.txt'
+    FilterIndex = 2
+    left = 8
+    top = 16
   end
 end

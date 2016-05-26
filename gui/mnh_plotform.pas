@@ -73,7 +73,7 @@ TYPE
 VAR
   plotForm: TplotForm;
   guiAdapters:P_adapters;
-  formCycleCallback    : PROCEDURE(CONST ownId:longint) = nil;
+  formCycleCallback: PROCEDURE(CONST ownId:longint) = nil;
 
 IMPLEMENTATION
 VAR plotSubsystem:record

@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
   mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_tokLoc,
-  myGenerics,myStringUtil;
+  myGenerics,myStringUtil,mnh_fileWrappers;
 
 TYPE
 
@@ -15,15 +15,26 @@ TYPE
 
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    mi_exportText: TMenuItem;
+    mi_exportCsvTab: TMenuItem;
+    mi_exportCsvSemicolon: TMenuItem;
     mi_transpose: TMenuItem;
     mi_comma: TMenuItem;
+    SaveTableDialog: TSaveDialog;
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
+    PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE mi_commaClick(Sender: TObject);
+    PROCEDURE mi_exportCsvSemicolonClick(Sender: TObject);
+    PROCEDURE mi_exportCsvTabClick(Sender: TObject);
+    PROCEDURE mi_exportTextClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
+    PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
+      );
   private
     { private declarations }
     cs:TRTLCriticalSection;
@@ -40,6 +51,7 @@ TYPE
 
 VAR
   tableForm: TtableForm;
+  formCycleCallback    : PROCEDURE(CONST ownId:longint) = nil;
 
 IMPLEMENTATION
 {$R *.lfm}
@@ -81,16 +93,54 @@ begin
   doneCriticalSection(cs);
 end;
 
+PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1);
+  end;
+
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
     mi_comma.Checked:=not(mi_comma.Checked);
     fillTable;
   end;
 
+PROCEDURE TtableForm.mi_exportCsvSemicolonClick(Sender: TObject);
+  begin
+    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,';',false,true);
+  end;
+
+PROCEDURE TtableForm.mi_exportCsvTabClick(Sender: TObject);
+  begin
+    if SaveTableDialog.execute then StringGrid.SaveToCSVFile(SaveTableDialog.fileName,C_tabChar,false,true);
+  end;
+
+PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
+  VAR i,j:longint;
+      content:T_arrayOfString;
+      row:ansistring;
+  begin
+    if SaveTableDialog.execute then begin
+      setLength(content,StringGrid.RowCount-1);
+      for i:=1 to StringGrid.RowCount-1 do begin
+        row:='';
+        for j:=0 to StringGrid.ColCount-1 do row:=row+StringGrid.Cells[j,i]+C_tabChar;
+        content[i-1]:=row;
+      end;
+      content:=formatTabs(content);
+      writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding);
+    end;
+  end;
+
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
   begin
     mi_transpose.Checked:=not(mi_transpose.Checked);
     fillTable;
+  end;
+
+PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    FormKeyUp(Sender,key,Shift);
+    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=Rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
   end;
 
 PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
@@ -129,6 +179,7 @@ PROCEDURE TtableForm.fillTable;
       rowLit:P_literal;
       cellLit:P_literal;
   begin
+    if currentLiteral=nil then exit;
     dataRows:=currentLiteral^.size;
     setLength(cellContents,dataRows);
     if currentLiteral^.literalType=lt_stringList then begin
