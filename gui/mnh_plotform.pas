@@ -295,6 +295,6 @@ FUNCTION plotShowing(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
 
 INITIALIZATION
   broughtToFront:=0;
-  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,'plotShowing;#Returns true if the plot is currently showing, false otherwise',fc_stateful);
+  registerRule(PLOT_NAMESPACE,'plotShowing',@plotShowing,'plotShowing;#Returns true if the plot is currently showing, false otherwise');
 end.
 

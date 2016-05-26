@@ -316,39 +316,39 @@ INITIALIZATION
     '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+
     '#  HSV$,$,$; //With three real numbers in range [0,1]'+
     '#  HUE$; //With one real number '+
-    '#  GREY$; //With one real number in range [0,1]',fc_outputViaAdapter);
+    '#  GREY$; //With one real number in range [0,1]');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot,
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
-    '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]',fc_outputViaAdapter);
+    '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setAutoscale', @setAutoscale,
-    'setAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.',fc_outputViaAdapter);
+    'setAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'getAutoscale', @getAutoscale,
-    'getAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.',fc_stateful);
+    'getAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setLogscale', @setLogscale,
-    'setLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.',fc_outputViaAdapter);
+    'setLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'getLogscale', @getLogscale,
-    'getLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.',fc_stateful);
+    'getLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setRange', @setPlotRange,
-    'setRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.',fc_outputViaAdapter);
+    'setRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'getRange', @getPlotRange,
-    'getRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]',fc_stateful);
+    'getRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setAxisStyle', @setAxisStyle,
     'setAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
     '#  0; //no tics, no grid#  1; //tics, no gris'+
     '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
-    '#  6; //no tics, finer grid#  7; //tics and finer grid',fc_outputViaAdapter);
+    '#  6; //no tics, finer grid#  7; //tics and finer grid');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'getAxisStyle', @getAxisStyle,
-    'getAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.',fc_stateful);
+    'getAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setPreserveAspect', @setPreserveAspect,
-    'setPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.',fc_outputViaAdapter);
+    'setPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'getPreserveAspect', @getPreserveAspect,
-    'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot',fc_stateful);
+    'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
-    'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.',fc_outputGeneral);
+    'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl,
-    'renderToString(width,height,[supersampling]);#Renders the current plot to a string.',fc_stateful);
+    'renderToString(width,height,[supersampling]);#Renders the current plot to a string.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'display',@display_imp,
-    'display;#Displays the plot as soon as possible, even during evaluation.',fc_outputViaAdapter);
+    'display;#Displays the plot as soon as possible, even during evaluation.');
 
 end.

@@ -187,7 +187,7 @@ FUNCTION TtableForm.isDisplayPending: boolean;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.',fc_outputGeneral);
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.');
 
 end.
 

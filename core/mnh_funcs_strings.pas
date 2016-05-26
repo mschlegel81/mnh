@@ -733,31 +733,31 @@ FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
 
 INITIALIZATION
   //Functions on Strings:
-  registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);#Returns the characters in S as a list#chars;#Returns all ANSI characters in natural ordering',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string,splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'join',@join_impl,'join(L:list);#Returns a string-concatenation of all elements in L#join(L:list,joiner:string);#Returns a string-concatenation of all elements, with joiner between.',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'trim',@trim_imp,'trim(S:string);#Returns string S without leading or trailing spaces',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'trimLeft',@trimLeft_imp,'trimLeft(S:string);#Returns string S without leading spaces',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'trimRight',@trimRight_imp,'trimRight(S:string);#Returns string S without trailing spaces',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'upper',@upper_imp,'upper(S:string);#Returns an uppercase representation of S',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'lower',@lower_imp,'lower(S:string);#Returns an lowercase representation of S',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'unbrace',@unbrace_imp,'unbrace(S:string);#Returns an unbraced representation of S',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'escape',@escape_imp,'escape(S:string);#Returns an escaped representation of S',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script for strings A and B or string lists A and B',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'utf8ToSys',@utf8ToSys_impl,'utf8ToSys(S);#Converts a string or a string list from UTF-8 to the system encoding',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding to UTF-8',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);#Returns true if S is UTF8 encoded and false otherwise',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#As above but with a specified algorithm:#  1: deflate#  2: huffman with default model#  3: huffman with another model#  other: try out algorithms and return the shortest representation#  The first character of the result indicates the algorithm used',fc_pure);
-  registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S',fc_pure);
+  registerRule(STRINGS_NAMESPACE,'length',@length_imp,'length(S:string);#Returns the number of characters in string S');
+  registerRule(STRINGS_NAMESPACE,'pos',@pos_imp,'pos(subString,searchInString);#Returns the index of the first occurence of subString in searchInString or -1 if there is none');
+  registerRule(STRINGS_NAMESPACE,'copy',@copy_imp,'copy(S,start,length):#Returns the substring of S starting at index start and having specified length');
+  registerRule(STRINGS_NAMESPACE,'chars',@chars_imp,'chars(S);#Returns the characters in S as a list#chars;#Returns all ANSI characters in natural ordering');
+  registerRule(STRINGS_NAMESPACE,'split',@split_imp,'split(S:string,splitter:string);#Returns a list of strings obtained by splitting S at the specified splitters#The splitters themselves are not contained in the result');
+  registerRule(STRINGS_NAMESPACE,'join',@join_impl,'join(L:list);#Returns a string-concatenation of all elements in L#join(L:list,joiner:string);#Returns a string-concatenation of all elements, with joiner between.');
+  registerRule(STRINGS_NAMESPACE,'trim',@trim_imp,'trim(S:string);#Returns string S without leading or trailing spaces');
+  registerRule(STRINGS_NAMESPACE,'trimLeft',@trimLeft_imp,'trimLeft(S:string);#Returns string S without leading spaces');
+  registerRule(STRINGS_NAMESPACE,'trimRight',@trimRight_imp,'trimRight(S:string);#Returns string S without trailing spaces');
+  registerRule(STRINGS_NAMESPACE,'upper',@upper_imp,'upper(S:string);#Returns an uppercase representation of S');
+  registerRule(STRINGS_NAMESPACE,'lower',@lower_imp,'lower(S:string);#Returns an lowercase representation of S');
+  registerRule(STRINGS_NAMESPACE,'unbrace',@unbrace_imp,'unbrace(S:string);#Returns an unbraced representation of S');
+  registerRule(STRINGS_NAMESPACE,'escape',@escape_imp,'escape(S:string);#Returns an escaped representation of S');
+  registerRule(STRINGS_NAMESPACE,'replaceOne',@replaceOne_impl,'replaceOne(source:string,lookFor,replaceBy);#Replaces the first occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'replace',@replace_impl,'replace(source:string,lookFor,replaceBy);#Recursively replaces all occurences of lookFor in source by replaceBy#lookFor and replaceBy may be of type string or stringList');
+  registerRule(STRINGS_NAMESPACE,'repeat',@repeat_impl,'repeat(s:string,k:int);#Returns a string containing s repeated k times');
+  registerRule(STRINGS_NAMESPACE,'clean',@clean_impl,'clean(s,whiteList:stringList,instead:string);#Replaces all characters in s which are not in whitelist by instead. Whitelist must be a list of characters, instead must be a character');
+  registerRule(STRINGS_NAMESPACE,'tokenSplit',@tokenSplit_impl,'tokenSplit(S:string);#tokenSplit(S:string,language:string);#Returns a list of strings from S for a given language#Languages: <code>MNH, Pascal, Java</code>');
+  registerRule(STRINGS_NAMESPACE,'reverseString',@reverseString_impl,'reverseString(S:string);#reverseString(S:stringList);#Returns returns S reversed');
+  registerRule(STRINGS_NAMESPACE,'diff',@diff_impl,'diff(A,B);#Shows diff statistics and edit script for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'diffStats',@diffStats_impl,'diffStats(A,B);#Shows diff statistics for strings A and B or string lists A and B');
+  registerRule(STRINGS_NAMESPACE,'utf8ToSys',@utf8ToSys_impl,'utf8ToSys(S);#Converts a string or a string list from UTF-8 to the system encoding');
+  registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding to UTF-8');
+  registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);#Returns true if S is UTF8 encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise');
+  registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#As above but with a specified algorithm:#  1: deflate#  2: huffman with default model#  3: huffman with another model#  other: try out algorithms and return the shortest representation#  The first character of the result indicates the algorithm used');
+  registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
 end.

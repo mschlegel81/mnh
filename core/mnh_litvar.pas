@@ -10,8 +10,6 @@ TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
-  { T_literal }
-
   T_literal = object
   private
     numberOfReferences: longint;
