@@ -30,3 +30,4 @@ gui/mnh_debug
 demos/*.testLog
 ensureDemos.mnh
 ensurePackages.mnh
+*.zip

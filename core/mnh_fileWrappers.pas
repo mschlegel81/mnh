@@ -33,6 +33,7 @@ TYPE
   end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
@@ -110,7 +111,7 @@ FUNCTION locateSources: T_arrayOfString;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
   VAR handle: file of char;
-      block: array[0..1023] of char;
+      block: array[0..4095] of char;
       actuallyRead, i: longint;
   begin
     if trim(name) = '' then begin
@@ -133,6 +134,39 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
       result := '';
     end;
   end;
+
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
+  VAR handle: file of char;
+      block: array[0..4095] of char;
+      actuallyRead, i: longint;
+      space:boolean=true;
+  begin
+    lineCount:=0;
+    wordCount:=0;
+    byteCount:=0;
+    if trim(name) = '' then exit;
+    lineCount:=1;
+    try
+      assign(handle, name);
+      reset(handle);
+      repeat
+        BlockRead(handle, block, length(block), actuallyRead);
+        inc(byteCount,actuallyRead);
+        for i := 0 to actuallyRead-1 do case block[i] of
+          C_lineBreakChar: begin inc(lineCount); if not(space) then inc(wordCount); space:=true; end;
+          ' ':             begin                 if not(space) then inc(wordCount); space:=true; end;
+          else space:=false;
+        end;
+      until actuallyRead<length(block);
+      close(handle);
+    except
+      lineCount:=0;
+      wordCount:=0;
+      byteCount:=0;
+    end;
+    if byteCount=0 then lineCount:=0;
+  end;
+
 
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
   begin
@@ -171,7 +205,7 @@ FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT a
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   VAR
     handle: file of char;
-    block: array[0..1023] of char;
+    block: array[0..4095] of char;
     i, j: longint;
   begin
     if trim(name) = '' then exit(false);
@@ -205,7 +239,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
   PROCEDURE findTextLineEnding;
     FUNCTION currentTextLineEnding(): string;
       VAR chandle: file of char;
-          block: array[0..1023] of char;
+          block: array[0..4095] of char;
           actuallyRead, i: longint;
           content:ansistring='';
           pr,pn:longint;

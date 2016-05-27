@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, mnh_funcs, myGenerics, mySys, mnh_out_adapters,mnh_constants,
+  StdCtrls, mnh_funcs, myGenerics, mnh_out_adapters, mnh_constants,
   mnh_packages,myStringUtil,mnh_settings;
 
 TYPE

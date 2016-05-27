@@ -362,7 +362,6 @@ FUNCTION obtainSettings:P_Settings;
 
 PROCEDURE disposeSettings(settings:P_Settings);
   begin
-    settings^.saveToFile(settingsFileName);
     dispose(settings,destroy);
   end;
 
