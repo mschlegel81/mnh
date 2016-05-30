@@ -1,6 +1,6 @@
 UNIT mnh_settings;
 INTERFACE
-USES myFiles,myGenerics,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants;
+USES myFiles,myGenerics,myStringUtil,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -35,12 +35,7 @@ T_editorState=object(T_serializable)
   PROCEDURE saveToFile(VAR F:T_file);           virtual;
 end;
 
-{ T_guiSettings }
-
 P_Settings=^T_settings;
-
-{ T_settings }
-
 T_settings=object(T_serializable)
   cpuCount:longint;
   editorFontname: string;
@@ -54,7 +49,8 @@ T_settings=object(T_serializable)
   activePage:longint;
   outputBehaviour: T_outputBehaviour;
   saveIntervalIdx:byte;
-
+  textLogName:string;
+  logPerRun:boolean;
   wasLoaded:boolean;
   savedAt:double;
 
@@ -68,6 +64,7 @@ T_settings=object(T_serializable)
   FUNCTION polishHistory: boolean;
   PROCEDURE fileClosed(CONST fileName:ansistring);
   FUNCTION historyItem(CONST index:longint):ansistring;
+  FUNCTION getLogName:string;
 end;
 
 PROCEDURE saveSettings;
@@ -140,6 +137,9 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     end;
     activePage:=f.readLongint;
     saveIntervalIdx:=f.readByte;
+    textLogName:=f.readAnsiString;
+    logPerRun:=f.readBoolean;
+
     if F.allOkay then result:=true
     else begin
       initDefaults;
@@ -173,6 +173,8 @@ PROCEDURE T_settings.saveToFile(VAR F: T_file);
     for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToFile(F);
     F.writeLongint(activePage);
     f.writeByte(saveIntervalIdx);
+    f.writeAnsiString(textLogName);
+    f.writeBoolean(logPerRun);
     savedAt:=now;
   end;
 
@@ -205,6 +207,8 @@ PROCEDURE T_settings.initDefaults;
     for i:=0 to length(editorState)-1 do editorState[i].destroy;
     setLength(editorState,1);
     editorState[0].create;
+    textLogName:='';
+    logPerRun:=false;
   end;
 
 FUNCTION T_settings.savingRequested: boolean;
@@ -254,6 +258,12 @@ FUNCTION T_settings.historyItem(CONST index: longint): ansistring;
     else result:='';
   end;
 
+FUNCTION T_settings.getLogName:string;
+  begin
+    if trim(textLogName)='' then exit('');
+    if pos('?',textLogName)<=0 then exit(textLogName);
+    result:=replaceAll(replaceAll(textLogName,'??','?'),'?',FormatDateTime('yyyymmdd_hhnnsszzz',now));
+  end;
 
 CONSTRUCTOR T_formPosition.create;
   begin

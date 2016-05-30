@@ -14,13 +14,18 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    logNameEdit: TEdit;
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
     FontSizeEdit: TEdit;
     EditorFontDialog: TFontDialog;
     Label2: TLabel;
     Label3: TLabel;
+    Label5: TLabel;
     PageControl: TPageControl;
+    rbLogOff: TRadioButton;
+    rbLogPerProgramStart: TRadioButton;
+    rbLogPerRun: TRadioButton;
     TabSheet_display: TTabSheet;
     Label8: TLabel;
     TabSheet_install: TTabSheet;
@@ -37,6 +42,8 @@ TYPE
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
+    PROCEDURE logNameEditChange(Sender: TObject);
+    PROCEDURE rbLogOffChange(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
@@ -94,6 +101,11 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
       end;
     end;
     settings.value^.polishHistory;
+    logNameEdit.text:=settings.value^.textLogName;
+    if logNameEdit.text=''            then rbLogOff.Checked:=true
+    else if settings.value^.logPerRun then rbLogPerRun.Checked:=true
+                                      else rbLogPerProgramStart.Checked:=true;
+
     autosaveComboBox.Items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.Items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=settings.value^.saveIntervalIdx;
@@ -141,6 +153,25 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
     TabSheet_install.Enabled:=false;
     TabSheet_install.TabVisible:=false;
     {$endif}
+  end;
+
+PROCEDURE TSettingsForm.logNameEditChange(Sender: TObject);
+  begin
+    settings.value^.textLogName:=logNameEdit.text;
+    if settings.value^.getLogName='' then rbLogOff.Checked:=true
+    else if settings.value^.logPerRun then rbLogPerRun.Checked:=true
+                                      else rbLogPerProgramStart.Checked:=true;
+  end;
+
+PROCEDURE TSettingsForm.rbLogOffChange(Sender: TObject);
+  begin
+    if rbLogOff.Checked then begin
+      logNameEdit.text:='';
+      settings.value^.textLogName:='';
+    end else begin
+      settings.value^.logPerRun:=rbLogPerRun.Checked;
+      if not(rbLogOff.Checked) and (settings.value^.getLogName='') then rbLogOff.Checked:=true;
+    end;
   end;
 
 PROCEDURE TSettingsForm.workerThreadCountEditEditingDone(Sender: TObject);

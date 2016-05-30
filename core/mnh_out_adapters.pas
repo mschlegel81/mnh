@@ -523,6 +523,7 @@ PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
   VAR i,j:longint;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].ad=p then begin
+      if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
       for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
       setLength(adapter,length(adapter)-1);
       exit;

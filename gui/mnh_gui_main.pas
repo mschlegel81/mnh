@@ -235,7 +235,7 @@ PROCEDURE formCycle(CONST ownId:longint);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
-
+    tempAdapter: P_abstractOutAdapter;
 {$R *.lfm}
 {$define includeImplementation}
 {$include editorMeta.inc}
@@ -356,6 +356,7 @@ PROCEDURE TMnhForm.openFromHistory(CONST historyIdx: byte);
 
 PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
+      logName:string;
   begin
     with evaluation do begin
       required:=false;
@@ -368,6 +369,15 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
         guiOutAdapter.flushClear;
         UpdateTimeTimerTimer(self);
         doConditionalPlotReset;
+      end;
+      logName:=settings.value^.textLogName;
+      if logName<>'' then begin
+        if tempAdapter=nil
+        then tempAdapter:=addOutfile(guiAdapters,logName)
+        else if settings.value^.logPerRun then begin
+          guiAdapters.removeOutAdapter(tempAdapter);
+          tempAdapter:=addOutfile(guiAdapters,logName);
+        end;
       end;
     end;
     underCursor.tokenText:='';
@@ -506,8 +516,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
     for i:=0 to length(FileNames)-1 do PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
   end;
 
-PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
-  );
+PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) then formCycle(0)
     else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
@@ -1319,6 +1328,8 @@ PROCEDURE TMnhForm.processSettings;
     currentExpressionMemo.Font:=OutputEdit.Font;
     helpPopupMemo.Font:=OutputEdit.Font;
     helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
+
+    if (tempAdapter<>nil) and not(settings.value^.getLogName<>'') then guiAdapters.removeOutAdapter(tempAdapter);
   end;
 
 PROCEDURE TMnhForm.processFileHistory;
@@ -1376,6 +1387,7 @@ INITIALIZATION
   guiOutAdapter.create;
   guiAdapters.create;
   mnh_plotForm.guiAdapters:=@guiAdapters;
+  tempAdapter:=nil;
 
 FINALIZATION
   guiAdapters.destroy;

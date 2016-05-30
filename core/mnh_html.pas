@@ -26,14 +26,14 @@ TYPE
 
 VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
-PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring);
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring):P_abstractOutAdapter;
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
-PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring);
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring):P_abstractOutAdapter;
   VAR htmlOutAdapter:P_htmlOutAdapter;
       fileOutAdapter:P_textFileOutAdapter;
   begin
@@ -41,9 +41,11 @@ PROCEDURE addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring);
     then begin
       new(htmlOutAdapter,create(fileName));
       adapters.addOutAdapter(htmlOutAdapter,true);
+      result:=htmlOutAdapter;
     end else begin
       new(fileOutAdapter,create(fileName));
       adapters.addOutAdapter(fileOutAdapter,true);
+      result:=fileOutAdapter;
     end;
   end;
 
