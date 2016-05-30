@@ -198,7 +198,9 @@ CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
   end;
 
 PROCEDURE T_pattern.clear;
+  VAR i:longint;
   begin
+    for i:=0 to length(sig)-1 do sig[i].destroy;
     setLength(sig,0);
     containsSelfPointer:=false;
     hasOptionals:=false;

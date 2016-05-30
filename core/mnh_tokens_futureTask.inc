@@ -95,19 +95,20 @@ CONSTRUCTOR T_futureTask.createPlainFuture(CONST expression: P_token; CONST cont
   end;
 
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext);
+  VAR idxLit:P_intLiteral;
   begin
     if (scope<>@context) then context.adopt(scope);
-    if eachIndex>=0 then begin
-      context.valueStore.scopePush;
-      context.valueStore.createVariable(C_eachIndexIdentifier,newIntLiteral(eachIndex),true);
-    end;
+    context.valueStore.scopePush;
+    idxLit:=newIntLiteral(eachIndex);
+    context.valueStore.createVariable(C_eachIndexIdentifier,idxLit,true);
+    idxLit^.unreference;
     if context.adapters^.noErrors then begin
       reduceExpression(task,callDepth,context);
     end else begin
       context.cascadeDisposeToken(task);
       task:=nil;
     end;
-    if eachIndex>=0 then context.valueStore.scopePop;
+    context.valueStore.scopePop;
     if (scope<>@context) then context.adopt(nil);
     repeat state:=fts_ready until state=fts_ready;
   end;
