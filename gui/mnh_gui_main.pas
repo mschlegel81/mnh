@@ -503,9 +503,7 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
 PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
   VAR i:longint;
   begin
-    for i:=0 to length(FileNames)-1 do
-      if uppercase(extractFileExt(FileNames[i]))=SCRIPT_EXTENSION
-      then addOrGetEditorMetaForFile(FileNames[i]);
+    for i:=0 to length(FileNames)-1 do PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(FileNames[i]);
   end;
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
