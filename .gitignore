@@ -31,3 +31,6 @@ demos/*.testLog
 ensureDemos.mnh
 ensurePackages.mnh
 *.zip
+mnh
+mnh_light
+libimpmySys.a
