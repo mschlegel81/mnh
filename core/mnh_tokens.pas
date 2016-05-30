@@ -74,7 +74,7 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
     tokType:=tokenType;
     data:=ptr;
     {$ifdef DEBUGMODE}
-    if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+IntToStr(tokenLocation.line)+':'+IntToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
+    if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
@@ -91,7 +91,7 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
     {$ifdef DEBUGMODE}
-    if location.package=nil then raise Exception.create('Creating token without package in location @'+IntToStr(location.line)+':'+IntToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
+    if location.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 

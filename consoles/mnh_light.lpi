@@ -22,7 +22,7 @@
     </VersionInfo>
     <BuildModes Count="2">
       <Item1 Name="Default" Default="True"/>
-      <Item2 Name="Deploy">
+      <Item2 Name="deployment">
         <CompilerOptions>
           <Version Value="11"/>
           <PathDelim Value="\"/>
