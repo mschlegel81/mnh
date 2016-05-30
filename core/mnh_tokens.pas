@@ -65,6 +65,7 @@ DESTRUCTOR T_token.destroy;
   end;
 
 PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer);
+  {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
     if (tokenText='') and (C_tokenString[tokenType]<>'')
@@ -72,9 +73,13 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
       else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
+    {$ifdef DEBUGMODE}
+    if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+IntToStr(tokenLocation.line)+':'+IntToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
+    {$endif}
   end;
 
 PROCEDURE T_token.define(CONST original: T_token);
+  {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=original.location;
     txt     :=original.txt;
@@ -85,6 +90,9 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
+    {$ifdef DEBUGMODE}
+    if location.package=nil then raise Exception.create('Creating token without package in location @'+IntToStr(location.line)+':'+IntToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
+    {$endif}
   end;
 
 PROCEDURE T_token.undefine;

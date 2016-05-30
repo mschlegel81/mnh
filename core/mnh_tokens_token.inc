@@ -257,6 +257,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           if      startsWith(DOC_COMMENT_PREFIX)         then result.txt:=trim(copy(line,length(DOC_COMMENT_PREFIX)+lineLocation.column,length(line)-length(DOC_COMMENT_PREFIX)+1-lineLocation.column))
           else if startsWith(SPECIAL_COMMENT_BLOB_BEGIN) then begin
             result.txt:=SPECIAL_COMMENT_BLOB_BEGIN;
+            blob.start:=lineLocation;
             if length(line)>=lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)
             then begin
               blob.closer:=line[lineLocation.column+length(SPECIAL_COMMENT_BLOB_BEGIN)];
