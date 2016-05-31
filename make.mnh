@@ -129,7 +129,7 @@ main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->begin
-  allFolders('..').each(f,
+  allFolders('.').each(f,
        splitFileName(f).filename in ["nppBackup","backup"]
        ? begin
            print('Deleting ',f);
