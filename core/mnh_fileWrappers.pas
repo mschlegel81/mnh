@@ -35,7 +35,6 @@ TYPE
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
-FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
@@ -169,13 +168,7 @@ PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:lon
 
 
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
-  begin
-    result:=fileLines(name,0,maxLongint,accessed);
-  end;
-
-FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT accessed: boolean): T_arrayOfString;
   VAR handle: textFile;
-      lineIndex:longint=0;
       tempLine:ansistring;
   begin
     setLength(result, 0);
@@ -187,13 +180,10 @@ FUNCTION fileLines(CONST name: ansistring; CONST firstIdx,lastIdx:longint; OUT a
       accessed := true;
       assign(handle, name);
       reset(handle);
-      while not (eof(handle)) and (lineIndex<=lastIdx) do begin
+      while not (eof(handle)) do begin
         readln(handle,tempLine);
-        if (lineIndex>=firstIdx) and (lineIndex<=lastIdx) then begin
-          setLength(result, length(result)+1);
-          result[length(result)-1]:=tempLine;
-        end;
-        inc(lineIndex);
+        setLength(result, length(result)+1);
+        result[length(result)-1]:=tempLine;
       end;
       close(handle);
     except

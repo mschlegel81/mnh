@@ -150,20 +150,6 @@ FUNCTION fileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         disposeLiteral(result);
         result:=newListLiteral;
       end;
-    end else if (params<>nil) and (params^.size=3) and
-                (arg0^.literalType=lt_string) and
-                (arg1^.literalType=lt_int) and
-                (arg2^.literalType=lt_int) then begin
-      L:=fileLines(str0^.value,
-                   int1^.value,
-                   int2^.value,accessed);
-      result:=newListLiteral;
-      for i:=0 to length(L)-1 do P_listLiteral(result)^.appendString(L[i]);
-      if not(accessed) then begin
-        context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
-        disposeLiteral(result);
-        result:=newListLiteral;
-      end;
     end;
   end;
 
@@ -581,8 +567,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileLines',@fileLines_impl,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost#'+
-                                                         'fileLines(filename:string,firstIdx:int,lastIdx:int);#Returns the specified range of lines or the empty list if no line was found in the range. Indexes are inclusive and start with 0.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileLines',@fileLines_impl,'fileLines(filename:string);#Returns the contents of the specified file as a list of strings#Information on the line breaks is lost');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
                                                                               'writeFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
