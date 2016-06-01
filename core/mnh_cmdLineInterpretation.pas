@@ -107,9 +107,6 @@ PROCEDURE parseCmdLine;
       {$endif}
       consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
-      {$ifdef fullVersion}
-      consoleAdapters.printOut('  -open<location>  Open the given file at location');
-      {$endif}
     end;
 
   PROCEDURE doDirect;
@@ -157,7 +154,8 @@ PROCEDURE parseCmdLine;
       list[length(list)-1]:=paramStr(index);
     end;
 
-  VAR i    :longint;
+  VAR i:longint;
+      quitImmediate:boolean=false;
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
@@ -173,11 +171,13 @@ PROCEDURE parseCmdLine;
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
-        else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; halt; end
+        else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
-                                                                     {$I %FPCTargetOS%}); {$include code_hash.inc} halt; end
-        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; halt; end
+                                                                     {$I %FPCTargetOS%}); {$include code_hash.inc} quitImmediate:=true; end
+        {$ifdef fullVersion}
+        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; quitImmediate:=true; end
+        {$endif}
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
           addParameter(mnhParameters,i);
@@ -199,6 +199,7 @@ PROCEDURE parseCmdLine;
         end;
       end else addParameter(mainParameters,i);
     end;
+    if quitImmediate then halt;;
     setMnhParameters(mnhParameters);
     //-----------------------------------------------------
     setupOutputBehaviour(consoleAdapters);

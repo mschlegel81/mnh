@@ -553,10 +553,13 @@ object MnhForm: TMnhForm
     Color = 15790320
     Images = debugItemsImageList
     ParentColor = False
+    ParentShowHint = False
+    ShowHint = True
     TabOrder = 5
     Visible = False
     object tbRun: TToolButton
       Left = 1
+      Hint = 'Run/continue (F5)'
       Top = 2
       Caption = 'tbRun'
       ImageIndex = 0
@@ -564,6 +567,7 @@ object MnhForm: TMnhForm
     end
     object tbStepIn: TToolButton
       Left = 35
+      Hint = 'step into (F6)'
       Top = 2
       Caption = 'tbStepIn'
       ImageIndex = 6
@@ -571,6 +575,7 @@ object MnhForm: TMnhForm
     end
     object tbStep: TToolButton
       Left = 69
+      Hint = 'step (F7)'
       Top = 2
       Caption = 'tbStep'
       ImageIndex = 4
@@ -578,6 +583,7 @@ object MnhForm: TMnhForm
     end
     object tbStepOut: TToolButton
       Left = 103
+      Hint = 'step out (F8)'
       Top = 2
       Caption = 'tbStepOut'
       ImageIndex = 8
@@ -585,6 +591,7 @@ object MnhForm: TMnhForm
     end
     object tbStop: TToolButton
       Left = 137
+      Hint = 'halt/cancel (F12)'
       Top = 2
       Caption = 'tbStop'
       ImageIndex = 2
@@ -1850,6 +1857,13 @@ object MnhForm: TMnhForm
       object miOpenDemo: TMenuItem
         Caption = 'Open demo'
         OnClick = miOpenDemoClick
+      end
+    end
+    object MenuItem3: TMenuItem
+      Caption = '&Code'
+      object mi_insertFilename: TMenuItem
+        Caption = 'Insert &Filename'
+        OnClick = mi_insertFilenameClick
       end
     end
   end

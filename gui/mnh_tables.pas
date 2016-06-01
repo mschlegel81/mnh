@@ -32,9 +32,6 @@ USES
   myGenerics,myStringUtil,mnh_fileWrappers;
 
 TYPE
-
-  { TtableForm }
-
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
@@ -55,8 +52,7 @@ TYPE
     PROCEDURE mi_exportCsvTabClick(Sender: TObject);
     PROCEDURE mi_exportTextClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
-    PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState
-      );
+    PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     { private declarations }
     cs:TRTLCriticalSection;
@@ -250,6 +246,7 @@ PROCEDURE TtableForm.fillTable;
       for j:=0 to length(cellContents[i])-1 do
       StringGrid.Cells[j,i+1]:=cellContents[i,j];
     end;
+    StringGrid.FixedRows:=1;
   end;
 
 FUNCTION TtableForm.isDisplayPending: boolean;

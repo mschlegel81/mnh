@@ -48,6 +48,8 @@ TYPE
   TMnhForm = class(TForm)
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
+    MenuItem3: TMenuItem;
+    mi_insertFilename: TMenuItem;
     miClose: TMenuItem;
     miMinErrorlevel5: TMenuItem;
     miOpenDocumentation: TMenuItem;
@@ -168,6 +170,7 @@ TYPE
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
+    procedure mi_insertFilenameClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
@@ -582,6 +585,10 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
+    if (PageControl.ActivePageIndex<0) or
+       (PageControl.ActivePageIndex>=length(editorMeta)) or
+       (not(editorMeta[PageControl.ActivePageIndex].sheet.TabVisible)) then exit;
+
     if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.IsActive) then begin
       if now>evaluation.deferredUntil then begin
         doStartEvaluation(false,false);
@@ -599,6 +606,12 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,false,false);
+    if currentlyDebugging and ad_evaluationRunning then begin
+      if (key=116) and tbRun    .Enabled then tbRunClick(sender);
+      if (key=117) and tbStepIn .Enabled then tbStepInClick(sender);
+      if (key=118) and tbStep   .Enabled then tbStepClick(sender);
+      if (key=119) and tbStepOut.Enabled then tbStepOutClick(sender);
+    end;
   end;
 
 PROCEDURE TMnhForm.InputEditMouseDown(Sender: TObject; button: TMouseButton;
@@ -943,6 +956,7 @@ FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring):longint
     editorMeta[i].editor.Font:=OutputEdit.Font;
     if newFileName<>'' then _doSave_(i);
     result:=i;
+    if miDebug.Checked then editorMeta[i].editor.Gutter.MarksPart.visible:=true;
   end;
 
 FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint;
@@ -986,6 +1000,11 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
       guiAdapters.doShowTimingInfo:=miTimingInfo.Checked;
       settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
     end;
+  end;
+
+procedure TMnhForm.mi_insertFilenameClick(Sender: TObject);
+  begin
+    if OpenDialog.Execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.FileName));
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);
@@ -1290,8 +1309,7 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
     stepper.doStop;
   end;
 
-PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer;
-  VAR Special: boolean; Markup: TSynSelectedColor);
+PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
     Special:=currentlyDebugging and ad_evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;

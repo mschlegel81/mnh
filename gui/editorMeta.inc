@@ -45,6 +45,7 @@ T_editorMeta=object
   PROCEDURE setWorkingDir;
   PROCEDURE writeToEditorState(CONST settings:P_Settings);
   PROCEDURE toggleComment;
+  PROCEDURE insertText(CONST s:string);
   PROCEDURE toggleBreakpoint;
   FUNCTION pseudoName(CONST short:boolean=false):ansistring;
   PROCEDURE setStepperBreakpoints;
@@ -73,6 +74,8 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.Align:=alClient;
     editor.ScrollBars:=ssAutoBoth;
     editor.WantTabs:=false;
+    editor.Gutter.MarksPart.visible:=false;
+    editor.Gutter.CodeFoldPart.Visible:=false;
 
     editor.OnChange:=@MnhForm.InputEditChange;
     editor.OnKeyUp:=@MnhForm.InputEditKeyDown;
@@ -276,6 +279,15 @@ PROCEDURE T_editorMeta.toggleComment;
     for i:=i0 to i1 do commented:=commented and (copy(trim(editor.lines[i]),1,2)='//');
     if commented then for i:=i0 to i1 do editor.lines[i]:=replaceOne(editor.lines[i],'//','')
                  else for i:=i0 to i1 do editor.lines[i]:='//'+editor.lines[i];
+  end;
+
+PROCEDURE T_editorMeta.insertText(CONST s:string);
+  VAR lineIdx,colIdx:longint;
+  begin
+    lineIdx:=editor.CaretY-1;
+    colIdx:=editor.CaretX;
+    editor.lines[lineIdx]:=copy(editor.lines[lineIdx],1,colIdx)+s+
+                           copy(editor.lines[lineIdx],colIdx+1,length(editor.lines[lineIdx]));
   end;
 
 PROCEDURE T_editorMeta.toggleBreakpoint;
