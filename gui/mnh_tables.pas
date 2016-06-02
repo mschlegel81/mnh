@@ -118,6 +118,7 @@ end;
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2);
+  end;
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
   begin
