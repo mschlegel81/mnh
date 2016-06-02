@@ -170,7 +170,7 @@ TYPE
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
-    procedure mi_insertFilenameClick(Sender: TObject);
+    PROCEDURE mi_insertFilenameClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
       Shift: TShiftState);
@@ -607,10 +607,10 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     then inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,false,false);
     if currentlyDebugging and ad_evaluationRunning then begin
-      if (key=116) and tbRun    .Enabled then tbRunClick(sender);
-      if (key=117) and tbStepIn .Enabled then tbStepInClick(sender);
-      if (key=118) and tbStep   .Enabled then tbStepClick(sender);
-      if (key=119) and tbStepOut.Enabled then tbStepOutClick(sender);
+      if (key=116) and tbRun    .Enabled then tbRunClick(Sender);
+      if (key=117) and tbStepIn .Enabled then tbStepInClick(Sender);
+      if (key=118) and tbStep   .Enabled then tbStepClick(Sender);
+      if (key=119) and tbStepOut.Enabled then tbStepOutClick(Sender);
     end;
   end;
 
@@ -835,7 +835,7 @@ FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
       fileAge(filePath,fileAccessAge);
       changed:=false;
       result:=true;
-      Caption:=editorMeta[i].updateSheetCaption;
+      Caption:=editorMeta[index].updateSheetCaption;
     end else result:=false;
   end;
 
@@ -1002,9 +1002,9 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
     end;
   end;
 
-procedure TMnhForm.mi_insertFilenameClick(Sender: TObject);
+PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
-    if OpenDialog.Execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.FileName));
+    if OpenDialog.execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.fileName));
   end;
 
 PROCEDURE TMnhForm.mi_settingsClick(Sender: TObject);

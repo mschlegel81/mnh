@@ -38,6 +38,16 @@ object tableForm: TtableForm
         Caption = 'Comma as decimal separator'
         OnClick = mi_commaClick
       end
+      object miIncreaseFontSize: TMenuItem
+        Caption = '&Increase font size'
+        ShortCut = 16571
+        OnClick = miIncreaseFontSizeClick
+      end
+      object miDecreaseFontSize: TMenuItem
+        Caption = '&Decrease font size'
+        ShortCut = 16573
+        OnClick = miDecreaseFontSizeClick
+      end
     end
     object MenuItem2: TMenuItem
       Caption = '&Export'

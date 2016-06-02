@@ -750,11 +750,20 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     PROCEDURE addToAggregation(L:P_literal; CONST doDispose:boolean); inline;
       VAR newLit:P_literal;
       begin
-        if L=nil then begin
+        if not(context.adapters^.noErrors) then begin
+          if (L<>nil) and doDispose then disposeLiteral(L);
+          exit;
+        end;
+        if (L=nil) then begin
           if resultLiteral=nil then resultLiteral:=newErrorLiteral;
           context.adapters^.raiseError('Error performing aggregation in each-construct - NIL literal encountered',eachLocation);
           exit;
-        end else if L^.literalType=lt_void then exit;
+        end else if L^.literalType=lt_void then exit
+        else if L^.literalType in [lt_error,lt_listWithError] then begin
+          if doDispose then disposeLiteral(L);
+          context.adapters^.raiseError('Error performing aggregation in each-construct - ERROR literal encountered',eachLocation);
+          exit;
+        end;
         case aggregatorPresent of
           no: begin
             if resultLiteral=nil then resultLiteral:=newListLiteral;
@@ -935,7 +944,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else initNonFutures;
       end else begin
         if eachType in [tt_parallelEach,tt_forcedParallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
-        for i:=0 to itList^.size-1 do if context.adapters^.noErrors then addToAggregation(itList^.value(i),false);
+        for i:=0 to itList^.size-1 do addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
       //----------------------------------------------------------iterate over itList

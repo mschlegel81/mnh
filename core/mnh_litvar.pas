@@ -300,7 +300,7 @@ TYPE
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION contains(CONST other: P_literal): boolean;
     FUNCTION get(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-    FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_listLiteral;
+    FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION typeString:string; virtual;
     FUNCTION parameterListTypeString:string;
   end;
@@ -1434,7 +1434,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
 {$define checkedExit:=
   if result^.literalType = lt_listWithError then begin
     disposeLiteral(result);
-    result:=nil;
+    result:=newErrorLiteral;
   end;
   exit(result)}
   VAR i,i1,j:longint;
@@ -1488,7 +1488,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         end;
       end else begin
         adapters.raiseError('get with a string as second parameter can only be applied to key-value-lists!', tokenLocation);
-        exit(nil);
+        exit(newErrorLiteral);
       end;
       lt_stringList: if literalType in [lt_keyValueList,lt_emptyList] then begin
         result:=newListLiteral;
@@ -1513,22 +1513,23 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         checkedExit;
       end else begin
         adapters.raiseError('get with a stringList as second parameter can only be applied to key-value-lists!', tokenLocation);
-        exit(nil);
+        exit(newErrorLiteral);
       end;
       lt_emptyList: exit(newListLiteral);
     end;
+    if result=nil then exit(newErrorLiteral);
   end;
 
-FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters): P_listLiteral;
+FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters): P_literal;
   VAR i:longint;
   begin
     result:=newListLiteral;
     for i:=0 to length(element)-1 do
     if element[i]^.literalType in C_validListTypes
-    then result^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false)
+    then P_listLiteral(result)^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false)
     else begin
       disposeLiteral(result);
-      exit(nil);
+      exit(newErrorLiteral);
     end;
     checkedExit;
   end;

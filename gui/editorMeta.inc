@@ -75,7 +75,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.ScrollBars:=ssAutoBoth;
     editor.WantTabs:=false;
     editor.Gutter.MarksPart.visible:=false;
-    editor.Gutter.CodeFoldPart.Visible:=false;
+    editor.Gutter.CodeFoldPart.visible:=false;
 
     editor.OnChange:=@MnhForm.InputEditChange;
     editor.OnKeyUp:=@MnhForm.InputEditKeyDown;

@@ -35,6 +35,8 @@ TYPE
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
+    miIncreaseFontSize: TMenuItem;
+    miDecreaseFontSize: TMenuItem;
     mi_exportText: TMenuItem;
     mi_exportCsvTab: TMenuItem;
     mi_exportCsvSemicolon: TMenuItem;
@@ -47,6 +49,8 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE miDecreaseFontSizeClick(Sender: TObject);
+    PROCEDURE miIncreaseFontSizeClick(Sender: TObject);
     PROCEDURE mi_commaClick(Sender: TObject);
     PROCEDURE mi_exportCsvSemicolonClick(Sender: TObject);
     PROCEDURE mi_exportCsvTabClick(Sender: TObject);
@@ -114,6 +118,17 @@ end;
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2);
+
+PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
+  begin
+    StringGrid.Font.size:=StringGrid.Font.size-1;
+    StringGrid.AutoSizeColumns;
+  end;
+
+PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
+  begin
+    StringGrid.Font.size:=StringGrid.Font.size+1;
+    StringGrid.AutoSizeColumns;
   end;
 
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);

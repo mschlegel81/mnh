@@ -263,11 +263,6 @@ FUNCTION T_settings.polishHistory: boolean;
 PROCEDURE T_settings.fileClosed(CONST fileName: ansistring);
   VAR i:longint;
   begin
-    for i:=0 to length(fileHistory)-1 do if fileHistory[i]='' then begin
-      fileHistory[i]:=fileName;
-      polishHistory;
-      exit;
-    end;
     for i:=0 to length(fileHistory)-2 do fileHistory[i]:=fileHistory[i+1];
     fileHistory[length(fileHistory)-1]:=fileName;
     polishHistory;

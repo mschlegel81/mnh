@@ -43,7 +43,7 @@ currentCodeHash->begin
   local relevantFiles:=flatten(files(allFolders('.')&'/*.lpr'),
                                files(allFolders('.')&'/*.pas'),
                                files(allFolders('.')&'/*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
-  executor.exec(['../checkstyle.mnh','fix']);
+  executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=relevantFiles.each(filename,hash(fileContents(filename)),+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 

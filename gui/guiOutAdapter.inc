@@ -66,7 +66,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
         mt_plotCreatedWithInstantDisplay: instantPlotRequested:=true;
-        mt_plotCreatedWithDeferredDisplay: begin end;
+        mt_displayTable,mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin

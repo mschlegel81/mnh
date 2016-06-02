@@ -14,7 +14,7 @@ pageSet(rawParameters,parameters)->begin
   local f:=void;
   try(begin
         //replace "x" by valid expression variable "$x"
-        f:=f_.replace('x','$x').expression;
+        f:=f_.replace('x','$x').toExpression;
         f.arity==1
         ? void
         : validationMessages|='Function must unary.';
@@ -55,7 +55,7 @@ pageSet(rawParameters,parameters)->begin
     end
   : begin
       //if there are no validation messages, append them and return httpError(404) instead of image
-      htmlCode&=(validationMessages.join('<br>');
+      htmlCode&=validationMessages.join('<br>');
       imageCode:=httpError;
     end;
 
