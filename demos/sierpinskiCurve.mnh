@@ -31,7 +31,7 @@ sc(depth)->begin
 end;
 
 main->begin
-  plot.setAxisStyle([0,0]);
+  plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);
   plot   (sc(1),'l 32 GREY0.96875');
   addPlot(sc(2),'l 16 GREY0.9375');
   addPlot(sc(3),'l  8 GREY0.875');

@@ -54,21 +54,27 @@ CONST
 
 TYPE
   T_colorChannel = (cc_red, cc_green, cc_blue);
+  T_color = array[T_colorChannel] of byte;
+  T_scaleAndColor = record
+    lineWidth:longint;
+    symbolRadius:longint;
+    symbolWidth:longint;
+    lineColor:longint;
+    solidColor:longint;
+  end;
   T_point = array[0..1] of double;
   T_dataRow = array of T_point;
   T_style = object
     title: string;
     style: byte;
-    color: array[T_colorChannel] of byte;
+    color: T_color;
     styleModifier: double;
     CONSTRUCTOR create(CONST index: byte);
     DESTRUCTOR destroy;
     PROCEDURE parseStyle(CONST styleString: ansistring);
 
-    FUNCTION getTColor: longint;
-    FUNCTION getIntLineWidth(CONST scalingFactor: double): longint;
-    FUNCTION getSymbolWidth: double;
-    FUNCTION getSymbolRad: double;
+    FUNCTION getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
+
     FUNCTION wantStraightLines: boolean;
     FUNCTION wantLeftSteps: boolean;
     FUNCTION wantRightSteps: boolean;
@@ -103,6 +109,7 @@ TYPE
     axisStyle: array['x'..'y'] of byte;
     autoscale, logscale: array['x'..'y'] of boolean;
     preserveAspect: boolean;
+    relativeFontSize: double;
   end;
 
   P_plot =^T_plot;
@@ -126,6 +133,7 @@ TYPE
       PROCEDURE setScalingOptions(CONST value:T_scalingOptions);
       FUNCTION  getScalingOptions:T_scalingOptions;
       FUNCTION longtestYTic: ansistring;
+      PROCEDURE setScreenSize(CONST width, height: longint; CONST skipTics:boolean=false);
     public
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
@@ -133,7 +141,6 @@ TYPE
       PROCEDURE setDefaults;
       DESTRUCTOR destroy;
       PROCEDURE clear;
-      PROCEDURE setScreenSize(CONST width, height: longint);
       PROCEDURE addRow(CONST styleOptions: string; CONST rowData:T_dataRow);
 
       FUNCTION realToScreen(CONST p: T_point): T_point;
@@ -145,7 +152,8 @@ TYPE
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
-      PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
+      PROCEDURE renderPlot(VAR plotImage: TImage);
+      PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
       FUNCTION renderToString(CONST width,height,supersampling:longint):ansistring;
 
@@ -154,6 +162,8 @@ TYPE
 
 
 IMPLEMENTATION
+VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
+
 CONSTRUCTOR T_sampleRow.create(CONST index: byte; CONST row:T_dataRow);
   VAR i:longint;
   begin
@@ -182,8 +192,6 @@ DESTRUCTOR T_sampleRow.destroy;
   begin
     setLength(sample, 0);
   end;
-
-{ T_style }
 
 CONST
   C_defaultColor: array[0..5] of record
@@ -326,26 +334,28 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
     if style = 0 then style:=C_lineStyle_straight;
   end;
 
-FUNCTION T_style.getTColor: longint;
-  begin
-    result:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
-  end;
+FUNCTION T_style.getLineScaleAndColor(CONST scalingFactor:double):T_scaleAndColor;
+  FUNCTION toByte(CONST d:double):byte;
+    begin
+      if d>255 then result:=255 else if d<0 then result:=0 else result:=round(d);
+    end;
 
-FUNCTION T_style.getIntLineWidth(CONST scalingFactor: double): longint;
+  VAR ideal:double;
   begin
-    result:=trunc(styleModifier*scalingFactor);
-    if (random<frac(styleModifier*scalingFactor)) then inc(result);
-    if result<0 then result:=0;
-  end;
-
-FUNCTION T_style.getSymbolWidth: double;
-  begin
-    result:=3*styleModifier;
-  end;
-
-FUNCTION T_style.getSymbolRad: double;
-  begin
-    result:=3/sqrt(2)*styleModifier;
+    result.solidColor:=color [cc_red] or (color [cc_green] shl 8) or (color [cc_blue] shl 16);
+    //line width
+    ideal:=styleModifier*scalingFactor;
+    if ideal>1 then begin
+      result.lineWidth:=round(ideal);
+      result.lineColor:=result.solidColor;
+    end else begin
+      result.lineWidth:=1;
+      result.lineColor:=toByte(color[cc_red  ]*ideal + 255*(1-ideal))
+                    or (toByte(color[cc_green]*ideal + 255*(1-ideal)) shl  8)
+                    or (toByte(color[cc_blue ]*ideal + 255*(1-ideal)) shl 16);
+    end;
+    result.symbolWidth :=round(scalingFactor*3        *styleModifier);
+    result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
 
 FUNCTION T_style.wantStraightLines: boolean;
@@ -424,6 +434,7 @@ PROCEDURE T_plot.setDefaults;
         autoscale[axis]:=true;
       end;
       preserveAspect:=true;
+      relativeFontSize:=10;
     end;
     clear;
     system.leaveCriticalSection(cs);
@@ -444,7 +455,21 @@ PROCEDURE T_plot.clear;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
+FUNCTION niceText(CONST value, scale: longint): string;
+  CONST suf: array[0..3] of string = ('', '0', '00', '000');
+  begin
+    if value = 0 then exit('0');
+    if (scale>=-3) and (scale<0) then begin
+      result:=intToStr(value);
+      while length(result)<-scale do result:='0'+result;
+      exit(copy(result, 1, length(result)+scale)+'.'+copy(result, length(result)+1+scale, -scale));
+    end else if (scale>=0) and (scale<3)
+    then exit(intToStr(value)+suf[scale])
+    else exit(intToStr(value)+'E'+intToStr(scale));
+  end;
+
+
+PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:boolean=false);
   PROCEDURE getRanges;
     VAR axis: char;
         i: longint;
@@ -512,16 +537,20 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
     end; end;
 
   PROCEDURE initTics(CONST axis: char);
+    FUNCTION isOnScreen(CONST screenPos:double):boolean;
+      begin
+        result:=not(isNan(screenPos)) and
+                not(isInfinite(screenPos)) and
+                not(screenPos<0) and
+                not((axis = 'y') and (screenPos>screenHeight)) and
+                not((axis = 'x') and (screenPos>screenWidth ));
+      end;
+
     PROCEDURE addTic(CONST realPos: double; CONST realTxt: ansistring; CONST isMajorTic: boolean);
       VAR screenPos: double;
       begin
         screenPos:=realToScreen(axis, realPos);
-        if not(isNan(screenPos)) and
-           not(isInfinite(screenPos)) and
-           not(screenPos<0) and
-           not((axis = 'y') and (screenPos>screenHeight)) and
-           not((axis = 'x') and (screenPos>screenWidth ))
-        then begin
+        if isOnScreen(screenPos) then begin
           setLength(tic[axis], length(tic[axis])+1);
           with tic[axis][length(tic[axis])-1] do begin
             pos:=screenPos;
@@ -547,47 +576,6 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
         end;
       end;
 
-    FUNCTION niceText(CONST value, scale: longint): string;
-      CONST suf: array[0..3] of string = ('', '0', '00', '000');
-      begin
-        if value = 0 then exit('0');
-        if (scale>=-3) and (scale<0) then begin
-          result:=intToStr(value);
-          while length(result)<-scale do result:='0'+result;
-          exit(copy(result, 1, length(result)+scale)+'.'+copy(result, length(result)+1+scale, -scale));
-        end else if (scale>=0) and (scale<3)
-        then exit(intToStr(value)+suf[scale])
-        else exit(intToStr(value)+'E'+intToStr(scale));
-      end;
-
-    FUNCTION tooManyTotalTics: boolean;
-      CONST distanceTol = 5;
-      VAR i: longint;
-          lastPos: double;
-      begin
-        lastPos:=-1E50;
-        for i:=0 to length(tic[axis])-1 do begin
-          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
-          lastPos:=tic[axis][i].pos;
-        end;
-        result:=false;
-      end;
-
-    FUNCTION tooManyMajorTics: boolean;
-      VAR i: longint;
-          distanceTol: longint;
-          lastPos: double;
-      begin
-        if axis = 'y' then distanceTol:=(screenHeight-yOffset)
-                      else distanceTol:=xOffset;
-        lastPos:=-1E50;
-        for i:=0 to length(tic[axis])-1 do if tic[axis][i].major then begin
-          if abs(tic[axis][i].pos-lastPos)<distanceTol then exit(true);
-          lastPos:=tic[axis][i].pos;
-        end;
-        result:=false;
-      end;
-
     PROCEDURE initLinearTics(CONST power, majorTicRest, minorTicRest: longint);
       VAR j: longint;
       begin
@@ -598,70 +586,65 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
         if j mod minorTicRest = 0 then addTic(pot10(power)*j, niceText(j div 10, power+1), (j mod majorTicRest) = 0);
       end;
 
-    VAR i, j: longint;
+    PROCEDURE initLogTics(CONST ppot:longint);
+      VAR i:longint;
+          j:byte;
+      begin with scalingOptions do begin
+        setLength(tic[axis], 0);
+        if ppot=-1 then begin
+          for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+            addTic(pot10(i)*j,niceText(j,i),true);
+        end else if ppot=0 then begin
+          for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+            addTic(pot10(i)*j,niceText(j,i),j in [1,2,5]);
+        end else if ppot=1 then begin
+          for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
+            addTic(pot10(i)*j,niceText(j,i),j=1);
+        end else begin
+          for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
+            if (i mod (ppot-1)=0) then addTic(pot10(i),niceText(1,i),i mod ppot=0);
+        end;
+      end; end;
+
+    VAR i:longint;
+        j:byte;
+        k:longint;
+        logRange:double;
     begin with scalingOptions do begin
       if logscale[axis] then begin
-        setLength(tic[axis], 0);
+        //Tics: ... 0.5 0.6 0.7 0.8 0.9 1 2 3 4 5 ...
+        k:=0;
         for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
-          addTic(pot10(i)*j, niceText(j, i), true);
-        if not(tooManyMajorTics) and not(tooManyTotalTics) then exit;
-
-        setLength(tic[axis], 0);
-        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
-          addTic(pot10(i)*j, niceText(j, i), (j = 1) or (j = 2) or (j = 5));
-        if not(tooManyMajorTics) and not(tooManyTotalTics) then exit;
-
-        setLength(tic[axis], 0);
-        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 9 do
-          addTic(pot10(i)*j, niceText(j, i), j = 1);
-
-        if not(tooManyMajorTics) then begin
-          if tooManyTotalTics then begin
-            setLength(tic[axis], 0);
-            for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do begin
-              addTic(pot10(i), niceText(1, i), true);
-              addTic(pot10(i)*2, niceText(2, i), false);
-              addTic(pot10(i)*5, niceText(5, i), false);
-            end;
-          end else exit;
+        if isOnScreen(realToScreen(axis,pot10(i)*j)) then inc(k);
+        if k<15 then begin
+          initLogTics(-1);
           exit;
         end;
-
-        for j:=2 to 10 do begin
-          if not(tooManyMajorTics) then exit else setLength(tic[axis], 0);
+        //Tics: ... 0.5 1 2 5 10 20 50 ...
+        k:=0;
+        for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do for j:=1 to 5 do
+        if (j in [1,2,5]) and isOnScreen(realToScreen(axis,pot10(i)*j)) then inc(k);
+        if k<15 then begin
+          initLogTics(0);
+          exit;
+        end;
+        //Tics: ... 0.01 0.1 1 10 100 ...
+        for j:=1 to 60 do begin
+          k:=0;
           for i:=floor(range[axis, 0]) to ceil(range[axis, 1]) do
-            addTic(pot10(i), niceText(1, i), (i mod j) = 0);
+          if (i mod j = 0) and isOnScreen(realToScreen(axis,pot10(i))) then inc(k);
+          if k<15 then begin
+            initLogTics(j);
+            exit;
+          end;
         end;
       end else begin
-        i:=floor(ln(range[axis, 1]-range[axis, 0])/ln(10))-3;
-        repeat
-          initLinearTics(i, 10, 1);
-          if not(tooManyMajorTics) then begin
-            if tooManyTotalTics then initLinearTics(i, 10, 2)
-                                else exit;
-            if tooManyTotalTics then initLinearTics(i, 10, 5)
-                                else exit;
-          end;
-          initLinearTics(i, 20, 1);
-          if not(tooManyMajorTics) then begin
-            if tooManyTotalTics then initLinearTics(i, 20, 2)
-                                else exit;
-            if tooManyTotalTics then initLinearTics(i, 20, 5)
-                                else exit;
-            if tooManyTotalTics then initLinearTics(i, 20, 10)
-                                else exit;
-          end;
-          initLinearTics(i, 50, 1);
-          if not(tooManyMajorTics) then begin
-            if tooManyTotalTics then initLinearTics(i, 50, 2)
-                                else exit;
-            if tooManyTotalTics then initLinearTics(i, 50, 5)
-                                else exit;
-            if tooManyTotalTics then initLinearTics(i, 50, 10)
-                                else exit;
-          end;
-          inc(i);
-        until false;
+        if (preserveAspect)
+        then logRange:=0.5*(log10(range['x',1]-range['x',0])
+                           +log10(range['y',1]-range['y',0]))
+        else logRange:=log10(range[axis,1]-range[axis,0]);
+        i:=round(logRange-1.8);
+        initLinearTics(i,10,1);
       end;
     end; end;
 
@@ -672,8 +655,10 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint);
     if (scalingOptions.axisStyle['y'] and C_tics)=0 then xOffset:=0;
     if (scalingOptions.axisStyle['x'] and C_tics)=0 then yOffset:=height;
     getRanges;
-    initTics('x');
-    initTics('y');
+    if not(skipTics) then begin
+      initTics('x');
+      initTics('y');
+    end;
     system.leaveCriticalSection(cs);
   end;
 
@@ -775,6 +760,7 @@ PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
         for i:=0 to 1 do range[axis,i]:=olx(range[axis,i]);
       end;
       preserveAspect:=(logscale['x'] = logscale['y']) and value.preserveAspect;
+      relativeFontSize:=value.relativeFontSize;
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -841,21 +827,19 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
   end; end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint);
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   PROCEDURE drawGridAndRows(CONST target: TCanvas; CONST scalingFactor: longint);
     VAR
       rowId, i, x, y, yBaseLine:longint;
       lastX: longint = 0;
       lastY: longint = 0;
-      symSize: double;
       lastWasValid, currentIsValid: boolean;
       sample: T_point;
       patternIdx: byte;
-      rowColor: longint;
+      scaleAndColor:T_scaleAndColor;
 
     PROCEDURE drawPatternRect(x0, y0, x1, y1: longint);
-      VAR
-        x, y, locY: longint;
+      VAR x, y, locY: longint;
       begin
         if (x0<0) then x0:=0 else if x0>screenWidth*scalingFactor then
           x0:=screenWidth*scalingFactor;
@@ -881,29 +865,31 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             begin
             for y:=yBaseLine to locY do
               if (x and 1)+2*(y and 1) = patternIdx then
-                target.Pixels[x, y]:=rowColor;
+                target.Pixels[x, y]:=scaleAndColor.solidColor;
             end
           else
             for y:=yBaseLine downto locY do
               if (x and 1)+2*(y and 1) = patternIdx then
-                target.Pixels[x, y]:=rowColor;
+                target.Pixels[x, y]:=scaleAndColor.solidColor;
           end;
       end;
 
     begin
+      setScreenSize(plotImage.width,plotImage.height);
       //Clear:------------------------------------------------------------------
       target.Brush.style:=bsSolid;
       target.Brush.color:=clWhite;
       target.Pen.style:=psClear;
       target.Pen.EndCap:=pecSquare;
-      target.FillRect(0, 0, target.width-1, target.height-1);
+      target.FillRect(0, 0, plotImage.width-1, plotImage.height-1);
       target.clear;
       //------------------------------------------------------------------:Clear
       //coordinate grid:========================================================
       target.Pen.style:=psSolid;
-      target.Pen.width:=scalingFactor;
       //minor grid:-------------------------------------------------------------
-      target.Pen.color:=$DDDDDD;
+      scaleAndColor:=MINOR_TIC_STYLE.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
       if (scalingOptions.axisStyle['y'] and C_finerGrid) = C_finerGrid then
       for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if not(major) then begin
         y:=round(pos*scalingFactor);
@@ -916,7 +902,9 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       end;
       //-------------------------------------------------------------:minor grid
       //major grid:-------------------------------------------------------------
-      target.Pen.color:=$BBBBBB;
+      scaleAndColor:=MAJOR_TIC_STYLE.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
+      target.Pen.color:=scaleAndColor.lineColor;
+      target.Pen.width:=scaleAndColor.lineWidth;
       if (scalingOptions.axisStyle['y'] and C_grid) = C_grid then
       for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
         y:=round(pos*scalingFactor);
@@ -935,14 +923,14 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       if yBaseLine<0 then yBaseLine:=0
       else if yBaseLine>=target.height then yBaseLine:=target.height-1;
       for rowId:=0 to length(row)-1 do begin
-        rowColor:=row[rowId].style.getTColor;
+        scaleAndColor:=row[rowId].style.getLineScaleAndColor(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000);
         patternIdx:=rowId and 3;
 
         if row[rowId].style.wantStraightLines then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row[rowId].sample)-1 do begin
@@ -966,8 +954,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         end else if row[rowId].style.wantLeftSteps then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row[rowId].sample)-1 do
@@ -997,8 +985,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         else if row[rowId].style.wantRightSteps then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
           lastWasValid:=false;
           for i:=0 to length(row[rowId].sample)-1 do
@@ -1028,8 +1016,8 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         else if row[rowId].style.wantBars then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecRound;
 
           lastWasValid:=false;
@@ -1064,7 +1052,7 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           begin
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
-          target.Brush.color:=rowColor;
+          target.Brush.color:=scaleAndColor.solidColor;
           lastWasValid:=false;
           i:=0;
           while i+1<length(row[rowId].sample) do
@@ -1090,28 +1078,26 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
         if row[rowId].style.wantDot then begin
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
-          target.Brush.color:=rowColor;
-          symSize:=row[rowId].style.getSymbolWidth*scalingFactor;
+          target.Brush.color:=scaleAndColor.solidColor;
           for i:=0 to length(row[rowId].sample)-1 do begin
             sample:=row[rowId].sample[i];
             currentIsValid:=isSampleValid(sample);
             if currentIsValid then begin
               sample:=realToScreen(sample);
               //target.Pixels[round(sample[0]*scalingFactor),round(sample[1]*scalingFactor)]:=rowColor;
-              target.Ellipse(round(sample[0]*scalingFactor-symSize),
-                             round(sample[1]*scalingFactor-symSize),
-                             round(sample[0]*scalingFactor+symSize),
-                             round(sample[1]*scalingFactor+symSize));
+              target.Ellipse(round(sample[0]*scalingFactor-scaleAndColor.symbolWidth),
+                             round(sample[1]*scalingFactor-scaleAndColor.symbolWidth),
+                             round(sample[0]*scalingFactor+scaleAndColor.symbolWidth),
+                             round(sample[1]*scalingFactor+scaleAndColor.symbolWidth));
             end;
           end;
         end;
         if row[rowId].style.wantPlus then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecSquare;
-          symSize:=row[rowId].style.getSymbolWidth*scalingFactor;
           for i:=0 to length(row[rowId].sample)-1 do
             begin
             sample:=row[rowId].sample[i];
@@ -1119,47 +1105,44 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
             if currentIsValid then
               begin
               sample:=realToScreen(sample);
-              target.line(round(sample[0]*scalingFactor-symSize),
-                round(sample[1]*scalingFactor),
-                round(sample[0]*scalingFactor+symSize),
-                round(sample[1]*scalingFactor));
-              target.line(round(sample[0]*scalingFactor), round(
-                sample[1]*scalingFactor-symSize),
-                round(sample[0]*scalingFactor),
-                round(sample[1]*scalingFactor+symSize));
+              target.line(round(sample[0]*scalingFactor-scaleAndColor.symbolWidth),
+                          round(sample[1]*scalingFactor),
+                          round(sample[0]*scalingFactor+scaleAndColor.symbolWidth),
+                          round(sample[1]*scalingFactor));
+              target.line(round(sample[0]*scalingFactor),
+                          round(sample[1]*scalingFactor-scaleAndColor.symbolWidth),
+                          round(sample[0]*scalingFactor),
+                          round(sample[1]*scalingFactor+scaleAndColor.symbolWidth));
               end;
             end;
           end;
         if row[rowId].style.wantCross then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecSquare;
-          symSize:=row[rowId].style.getSymbolRad*scalingFactor;
-          for i:=0 to length(row[rowId].sample)-1 do
-            begin
+          for i:=0 to length(row[rowId].sample)-1 do begin
             sample:=row[rowId].sample[i];
             currentIsValid:=isSampleValid(sample);
-            if currentIsValid then
-              begin
+            if currentIsValid then begin
               sample:=realToScreen(sample);
-              target.line(round(sample[0]*scalingFactor-symSize),
-                round(sample[1]*scalingFactor-symSize),
-                round(sample[0]*scalingFactor+symSize),
-                round(sample[1]*scalingFactor+symSize));
-              target.line(round(sample[0]*scalingFactor+symSize),
-                round(sample[1]*scalingFactor-symSize),
-                round(sample[0]*scalingFactor-symSize),
-                round(sample[1]*scalingFactor+symSize));
-              end;
+              target.line(round(sample[0]*scalingFactor-scaleAndColor.symbolRadius),
+                          round(sample[1]*scalingFactor-scaleAndColor.symbolRadius),
+                          round(sample[0]*scalingFactor+scaleAndColor.symbolRadius),
+                          round(sample[1]*scalingFactor+scaleAndColor.symbolRadius));
+              target.line(round(sample[0]*scalingFactor+scaleAndColor.symbolRadius),
+                          round(sample[1]*scalingFactor-scaleAndColor.symbolRadius),
+                          round(sample[0]*scalingFactor-scaleAndColor.symbolRadius),
+                          round(sample[1]*scalingFactor+scaleAndColor.symbolRadius));
             end;
           end;
+        end;
         if row[rowId].style.wantImpulses then
           begin
           target.Pen.style:=psSolid;
-          target.Pen.color:=rowColor;
-          target.Pen.width:=row[rowId].style.getIntLineWidth(scalingFactor);
+          target.Pen.color:=scaleAndColor.lineColor;
+          target.Pen.width:=scaleAndColor.lineWidth;
           target.Pen.EndCap:=pecSquare;
           for i:=0 to length(row[rowId].sample)-1 do
             begin
@@ -1176,17 +1159,6 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
           end;
         end;
       //===============================================================:row data
-    end;
-
-  PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
-    VAR ARect: TRect;
-        X, Y: integer;
-    begin
-      X:=round(Source.width*factor);
-      Y:=round(Source.height*factor);
-      ARect:=Rect(0, 0, X, Y);
-      dest.Canvas.AntialiasingMode:=amOn;
-      dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
     end;
 
   PROCEDURE drawCoordSys(CONST target: TCanvas);
@@ -1238,22 +1210,41 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling: longint)
       if result then setScreenSize(screenWidth, screenHeight);
     end; end;
 
-  VAR renderImage: TImage;
   begin
     system.enterCriticalSection(cs);
+    setScreenSize(plotImage.width,plotImage.height);
+    plotImage.Canvas.Font.size:=round(sqrt(sqr(plotImage.width)+sqr(plotImage.height))/1000*scalingOptions.relativeFontSize);
     setTextSize(plotImage.Canvas.TextHeight(longtestYTic),plotImage.Canvas.TextWidth(longtestYTic));
-    if supersampling<=1 then  begin
-      drawGridAndRows(plotImage.Canvas, 1);
-      drawCoordSys(plotImage.Canvas);
-    end else begin
-      renderImage:=TImage.create(plotImage);
-      renderImage.SetInitialBounds(0, 0, screenWidth*supersampling, screenHeight*supersampling);
-      drawGridAndRows(renderImage.Canvas, supersampling);
-      scale(renderImage, plotImage, 1/supersampling);
-      renderImage.free;
-      drawCoordSys(plotImage.Canvas);
-    end;
+    drawGridAndRows(plotImage.Canvas, 1);
+    drawCoordSys(plotImage.Canvas);
     system.leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
+  PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
+    VAR ARect: TRect;
+        X, Y: integer;
+    begin
+      X:=round(Source.width*factor);
+      Y:=round(Source.height*factor);
+      ARect:=Rect(0, 0, X, Y);
+      dest.Canvas.AntialiasingMode:=amOn;
+      dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
+    end;
+
+  VAR renderImage: TImage;
+  begin
+    if supersampling<=1 then begin
+      renderPlot(plotImage);
+      exit;
+    end;
+    renderImage:=TImage.create(nil);
+    renderImage.SetInitialBounds(0,0,plotImage.width*supersampling,plotImage.height*supersampling);
+    renderPlot(renderImage);
+    scale(renderImage,plotImage,1/supersampling);
+    renderImage.destroy;
+    //set screen size to fix GUI interaction (panning, zooming, etc.)
+    setScreenSize(plotImage.width,plotImage.height,true);
   end;
 
 PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
@@ -1263,8 +1254,7 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, super
     system.enterCriticalSection(cs);
     plotImage:=TImage.create(nil);
     plotImage.SetInitialBounds(0, 0, width, height);
-    setScreenSize(width, height);
-    renderPlot(plotImage, supersampling);
+    renderPlot(plotImage,supersampling);
     storeImage:=TImage.create(plotImage);
     storeImage.SetInitialBounds(0, 0, width, height);
     Rect.top:=0;
@@ -1287,8 +1277,7 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     system.enterCriticalSection(cs);
     plotImage:=TImage.create(nil);
     plotImage.SetInitialBounds(0, 0, width, height);
-    setScreenSize(width, height);
-    renderPlot(plotImage, supersampling);
+    renderPlot(plotImage,supersampling);
     storeImage:=TImage.create(plotImage);
     storeImage.SetInitialBounds(0, 0, width, height);
     Rect.top:=0;
@@ -1334,4 +1323,10 @@ PROCEDURE T_plot.CopyFrom(VAR p:T_plot);
     system.leaveCriticalSection(cs);
   end;
 
+INITIALIZATION
+  MAJOR_TIC_STYLE.create(0); MAJOR_TIC_STYLE.styleModifier:=0.2;
+  MINOR_TIC_STYLE.create(0); MINOR_TIC_STYLE.styleModifier:=0.1;
+FINALIZATION
+  MAJOR_TIC_STYLE.destroy;
+  MINOR_TIC_STYLE.destroy;
 end.

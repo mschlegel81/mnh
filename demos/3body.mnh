@@ -38,8 +38,7 @@ end;
 private timeStepSize:=1E-2;
 
 main->begin
-  plot.setAxisStyle([3,3]);
-  plot.setRange([[-2,2],[-2,2]]);
+  plot.setOptions([['x0',-2],['y0',-2],['x1',2],['y1',2],['axisStyleX',3],['axisStyleY',3]]);
   local state:=initialState;
   state.plotState;
   while(true,

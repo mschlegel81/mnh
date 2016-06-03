@@ -305,7 +305,6 @@ PROCEDURE TplotForm.doPlot;
     else if miAntiAliasing2.Checked then factor:=2
     else                                 factor:=1;
     guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
-    guiAdapters^.plot.setScreenSize(plotImage.width,plotImage.height);
     guiAdapters^.plot.renderPlot(plotImage,factor);
   end;
 

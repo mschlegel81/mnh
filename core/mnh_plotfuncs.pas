@@ -25,14 +25,6 @@ INTERFACE
 {$WARN 5024 OFF}
 USES sysutils, mnh_funcs,mnh_litVar,mnh_tokLoc,mnh_out_adapters,mnh_plotData,math,mnh_constants,mnh_contexts;
 
-FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION addPlot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-
 IMPLEMENTATION
 FUNCTION fReal(CONST X: P_literal): double; inline;
   begin
@@ -119,148 +111,99 @@ FUNCTION plot(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; 
     else result:=addPlot(params, tokenLocation,context);
   end;
 
-FUNCTION setAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size = 1) and
-       (params^.value(0)^.literalType = lt_booleanList) and
-       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      o:=context.adapters^.plot.options;
-      o.autoscale['x']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value;
-      o.autoscale['y']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value;
-      context.adapters^.plot.options:=o;
-      context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
-      result:=newVoidLiteral;
-    end;
-  end;
-
-FUNCTION getAutoscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
+FUNCTION getOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR opt:T_scalingOptions;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      o:=context.adapters^.plot.options;
+      opt:=context.adapters^.plot.options;
       result:=newListLiteral^
-             .appendBool(o.autoscale['x'])^
-             .appendBool(o.autoscale['y']);
+        .append(newListLiteral^.appendString('x0'            )^.appendReal(opt.range['x',0]),false)^
+        .append(newListLiteral^.appendString('x1'            )^.appendReal(opt.range['x',1]),false)^
+        .append(newListLiteral^.appendString('y0'            )^.appendReal(opt.range['y',0]),false)^
+        .append(newListLiteral^.appendString('y1'            )^.appendReal(opt.range['y',1]),false)^
+        .append(newListLiteral^.appendString('fontsize'      )^.appendReal(opt.relativeFontSize),false)^
+        .append(newListLiteral^.appendString('preserveAspect')^.appendBool(opt.preserveAspect),false)^
+        .append(newListLiteral^.appendString('autoscaleX'    )^.appendBool(opt.autoscale['x']),false)^
+        .append(newListLiteral^.appendString('autoscaleY'    )^.appendBool(opt.autoscale['y']),false)^
+        .append(newListLiteral^.appendString('logscaleX'     )^.appendBool(opt.logscale['x']),false)^
+        .append(newListLiteral^.appendString('logscaleY'     )^.appendBool(opt.logscale['y']),false)^
+        .append(newListLiteral^.appendString('axisStyleX'    )^.appendInt(opt.axisStyle['x']),false)^
+        .append(newListLiteral^.appendString('axisStyleY'    )^.appendInt(opt.axisStyle['y']),false);
     end;
   end;
 
-FUNCTION setLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size = 1) and
-       (params^.value(0)^.literalType = lt_booleanList) and
-       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      o:=context.adapters^.plot.options;
-      o.logscale['x']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(0))^.value;
-      o.logscale['y']:=P_boolLiteral(P_listLiteral(params^.value(0))^.value(1))^.value;
-      context.adapters^.plot.options:=o;
-      context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
-      result:=newVoidLiteral;
-    end;
-  end;
-
-FUNCTION getLogscale(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      o:=context.adapters^.plot.options;
-      result:=newListLiteral^
-             .appendBool(o.logscale['x'])^
-             .appendBool(o.logscale['y']);
-    end;
-  end;
-
-FUNCTION setPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR x, y: P_literal;
-      o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size = 1) and
-      (params^.value(0)^.literalType = lt_list) and
-      (P_listLiteral(params^.value(0))^.size = 2) then begin
-      x:=P_listLiteral(params^.value(0))^.value(0);
-      y:=P_listLiteral(params^.value(0))^.value(1);
-      if (x^.literalType in [lt_intList, lt_realList, lt_numList]) and (P_listLiteral(x)^.size = 2) and (y^.literalType in [lt_intList, lt_realList, lt_numList]) and (P_listLiteral(y)^.size = 2) then begin
-        o:=context.adapters^.plot.options;
-        o.range['x',0]:=fReal(P_listLiteral(x)^.value(0));
-        o.range['x',1]:=fReal(P_listLiteral(x)^.value(1));
-        o.range['y',0]:=fReal(P_listLiteral(y)^.value(0));
-        o.range['y',1]:=fReal(P_listLiteral(y)^.value(1));
-        context.adapters^.plot.options:=o;
-        context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
-        result:=newVoidLiteral;
+FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR opt:T_scalingOptions;
+      allOkay:boolean=true;
+  PROCEDURE matchKey(CONST key:string; CONST value:P_literal);
+    PROCEDURE fail;
+      begin
+        context.adapters^.raiseWarning('invalid plot option ; key="'+key+'" is not known or not compatible with value '+value^.toString,tokenLocation);
+        allOkay:=false;
       end;
-    end;
-  end;
 
-FUNCTION getPlotRange(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
+    VAR f:double;
+    begin
+      if (key='x0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) then fail else opt.range['x',0]:=f;
+      end else
+      if (key='x1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) then fail else opt.range['x',1]:=f;
+      end else
+      if (key='y0'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) then fail else opt.range['y',0]:=f;
+      end else
+      if (key='y1'            ) and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) then fail else opt.range['y',1]:=f;
+      end else
+      if (key='fontsize'      ) and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) then fail else opt.relativeFontSize:=f;
+      end else
+      if (key='preserveAspect') and (value^.literalType=lt_boolean) then begin
+        opt.preserveAspect:=P_boolLiteral(value)^.value;
+      end else
+      if (key='autoscaleX'    ) and (value^.literalType=lt_boolean) then begin
+        opt.autoscale['x']:=P_boolLiteral(value)^.value;
+      end else
+      if (key='autoscaleY'    ) and (value^.literalType=lt_boolean) then begin
+        opt.autoscale['y']:=P_boolLiteral(value)^.value;
+      end else
+      if (key='logscaleX'     ) and (value^.literalType=lt_boolean) then begin
+        opt.logscale['x']:=P_boolLiteral(value)^.value;
+      end else
+      if (key='logscaleY'     ) and (value^.literalType=lt_boolean) then begin
+        opt.logscale['y']:=P_boolLiteral(value)^.value;
+      end else
+      if (key='axisStyleX'    ) and (value^.literalType=lt_int) then begin
+        opt.axisStyle['x']:=P_intLiteral(value)^.value and 7;
+      end else
+      if (key='axisStyleY'    ) and (value^.literalType=lt_int) then begin
+        opt.axisStyle['y']:=P_intLiteral(value)^.value and 7;
+      end else fail;
+    end;
+
+  VAR pair:P_listLiteral;
+      i:longint;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      o:=context.adapters^.plot.options;
-      result:=newListLiteral^
-             .append(newListLiteral^
-                    .appendReal(o.range['x',0])^
-                    .appendReal(o.range['x',1]),false)^
-             .append(newListLiteral^
-                    .appendReal(o.range['y',0])^
-                    .appendReal(o.range['y',1]),false);
-    end;
-  end;
-
-FUNCTION setAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size = 1) and
-       (params^.value(0)^.literalType = lt_intList) and
-       (P_listLiteral(params^.value(0))^.size = 2) then begin
-      o:=context.adapters^.plot.options;
-      o.axisStyle['x']:=P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value and 255;
-      o.axisStyle['y']:=P_intLiteral(P_listLiteral(params^.value(0))^.value(0))^.value and 255;
-      context.adapters^.plot.options:=o;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_keyValueList) then begin
+      opt:=context.adapters^.plot.options;
+      for i:=0 to P_listLiteral(params^.value(0))^.size-1 do begin
+        pair:=P_listLiteral(P_listLiteral(params^.value(0))^.value(i));
+        matchKey(P_stringLiteral(pair^.value(0))^.value,
+                                 pair^.value(1));
+      end;
+      result:=newBoolLiteral(allOkay);
+    end else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType in [lt_real,lt_int,lt_boolean]) then begin
+      opt:=context.adapters^.plot.options;
+      matchKey(P_stringLiteral(params^.value(0))^.value,params^.value(1));
+      result:=newBoolLiteral(allOkay);
+    end else allOkay:=false;
+    if allOkay then begin
+      context.adapters^.plot.options:=opt;
       context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
-      result:=newVoidLiteral;
     end;
-  end;
-
-FUNCTION getAxisStyle(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params=nil) or (params^.size=0) then begin
-      o:=context.adapters^.plot.options;
-      result:=newListLiteral^
-             .appendInt(o.axisStyle['x'])^
-             .appendInt(o.axisStyle['y']);
-    end;
-  end;
-
-FUNCTION setPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR o:T_scalingOptions;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size = 1) and
-       (params^.value(0)^.literalType = lt_boolean) then begin
-      o:=context.adapters^.plot.options;
-      o.preserveAspect:=P_boolLiteral(params^.value(0))^.value;
-      context.adapters^.plot.options:=o;
-      context.adapters^.raiseCustomMessage(mt_plotSettingsChanged,'',tokenLocation);
-      result:=newVoidLiteral;
-    end;
-  end;
-
-FUNCTION getPreserveAspect(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    if (params=nil) or (params^.size=0)
-    then result:=newBoolLiteral(context.adapters^.plot.options.preserveAspect)
-    else result:=nil;
   end;
 
 FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -343,29 +286,11 @@ INITIALIZATION
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus t in [t0,t1]'+'#addPlot(xExpression,yExpression,t0,t1,samples,[options]); //adds plot of yExpression versus xExpression for t in [t0,t1]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setAutoscale', @setAutoscale,
-    'setAutoscale([forX,forY]);#Sets autoscale per axis and returns true#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getAutoscale', @getAutoscale,
-    'getAutoscale;#Returns the current autoscale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setLogscale', @setLogscale,
-    'setLogscale([forX,forY]);#Sets log-scale per axis#Expects a tuple of two booleans as parameter.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getLogscale', @getLogscale,
-    'getLogscale;#Returns the current log-scale settings per axis as a tuple of two booleans.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setRange', @setPlotRange,
-    'setRange([[x0,x1],[y0,y1]]);#Sets the plot-range for the next plot.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getRange', @getPlotRange,
-    'getRange;#Returns the plot-range of the last plot as a nested list: [[x0,x1],[y0,y1]]');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setAxisStyle', @setAxisStyle,
-    'setAxisStyle([sx,sy]);#Sets the axis style for the next plot. #valid options are:'+
-    '#  0; //no tics, no grid#  1; //tics, no gris'+
-    '#  2; //no tics, coarse grid#  3; //tics, and coarse grid'+
-    '#  6; //no tics, finer grid#  7; //tics and finer grid');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getAxisStyle', @getAxisStyle,
-    'getAxisStyle([sx,sy]);#Returns the current axis-style as a tuple of two integers.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'setPreserveAspect', @setPreserveAspect,
-    'setPreserveAspect(b:boolean);#Sets or un-sets preservation of aspect ratio for the next plot.');
-  mnh_funcs.registerRule(PLOT_NAMESPACE,'getPreserveAspect', @getPreserveAspect,
-    'getPreserveAspect;#Returns a boolean indicating whether the aspect ratio will be preserverd for the next plot');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions,
+    'getOptions;#returns plot options as a key-value-list.');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions,
+    'setOptions(set:keyValueList);#Sets options via a key value list of the same form as returned by plot.getOptions#'+
+    'setOptions(key:string,value);#Sets a single plot option');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl,
