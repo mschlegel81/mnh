@@ -4265,13 +4265,13 @@ true xor false = true
 (OEIS A005378) F: 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 11, 11, 12, 13
 (OEIS A005379) M: 0, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 12
 (OEIS A005185) Q: 1, 1, 2, 3, 3, 4, 5, 5, 6, 6, 6, 8, 8, 8, 10, 9, 10, 11, 11, 12
-Hash of demos/barnsleyFern.png is D23BE853
-Hash of demos/fractalPlant.png is 797636E8
-Hash of demos/kochCurve.png is 3C47C9CB
-Hash of demos/sierpinskiCurve.png is FBA58B12
+Hash of demos/barnsleyFern.png is 2A1BB25C
+Hash of demos/fractalPlant.png is B99380A8
+Hash of demos/kochCurve.png is 41731335
+Hash of demos/sierpinskiCurve.png is 3AB24074
 Path length after construction is 1534.011
 Path length after polishing is    1501.698
-Hash of demos/travellingSalesmanProblem.png is 7A4CD03C
+Hash of demos/travellingSalesmanProblem.png is C6052EF2
 Hash of demos/turtleGfx.png is FB769509
 Examples file has 385 lines
  in> arity({3});
@@ -4604,11 +4604,11 @@ out> ['X','Y','Z']
  in> minus([1..10]^2, 2*[0..50]);
 out> [1,9,25,49,81]
  in> sort(intRandom(10, 5));
-out> [1,3,5,8,8]
+out> [0,3,5,7,7]
  in> sort(['01','10','100','1','010'],{softCast($x)<=softCast($y)});
 out> ['01','1','10','010','100']
  in> sortPerm(random(10));
-out> [1,4,8,0,3,6,2,9,7,5]
+out> [0,6,4,9,8,5,7,2,3,1]
  in> sortPerm(['a'..'c'..'a']);
 out> [0,4,1,3,2]
  in> intersect([0..1000]^2,[0..1000]^3);

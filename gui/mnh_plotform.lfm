@@ -69,6 +69,7 @@ object plotForm: TplotForm
       object miAntiAliasing3: TMenuItem
         AutoCheck = True
         Caption = '&3x anti-aliasing'
+        RadioItem = True
         OnClick = miAntiAliasing1Click
       end
       object miAntiAliasing4: TMenuItem

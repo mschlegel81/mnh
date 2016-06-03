@@ -1079,16 +1079,24 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
           target.Pen.style:=psClear;
           target.Brush.style:=bsSolid;
           target.Brush.color:=scaleAndColor.solidColor;
+          if scaleAndColor.symbolWidth>=1 then
           for i:=0 to length(row[rowId].sample)-1 do begin
             sample:=row[rowId].sample[i];
             currentIsValid:=isSampleValid(sample);
             if currentIsValid then begin
               sample:=realToScreen(sample);
-              //target.Pixels[round(sample[0]*scalingFactor),round(sample[1]*scalingFactor)]:=rowColor;
               target.Ellipse(round(sample[0]*scalingFactor-scaleAndColor.symbolWidth),
                              round(sample[1]*scalingFactor-scaleAndColor.symbolWidth),
                              round(sample[0]*scalingFactor+scaleAndColor.symbolWidth),
                              round(sample[1]*scalingFactor+scaleAndColor.symbolWidth));
+            end;
+          end else for i:=0 to length(row[rowId].sample)-1 do begin
+            sample:=row[rowId].sample[i];
+            currentIsValid:=isSampleValid(sample);
+            if currentIsValid then begin
+              sample:=realToScreen(sample);
+              target.Pixels[round(sample[0]*scalingFactor),
+                            round(sample[1]*scalingFactor)]:=scaleAndColor.lineColor;
             end;
           end;
         end;
