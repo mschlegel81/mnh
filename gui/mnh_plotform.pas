@@ -40,6 +40,8 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    miIncFontSize: TMenuItem;
+    miDecFontSize: TMenuItem;
     miAutoReset: TMenuItem;
     miLogscaleX: TMenuItem;
     miLogscaleY: TMenuItem;
@@ -65,10 +67,13 @@ TYPE
     PROCEDURE FormKeyPress(Sender: TObject; VAR key: char);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormResize(Sender: TObject);
+    PROCEDURE FormShow(Sender: TObject);
     PROCEDURE miAntiAliasing1Click(Sender: TObject);
     PROCEDURE miAutoResetClick(Sender: TObject);
     PROCEDURE miAutoscaleXClick(Sender: TObject);
     PROCEDURE miAutoscaleYClick(Sender: TObject);
+    PROCEDURE miDecFontSizeClick(Sender: TObject);
+    PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miLogscaleXClick(Sender: TObject);
     PROCEDURE miLogscaleYClick(Sender: TObject);
     PROCEDURE miPreserveAspectClick(Sender: TObject);
@@ -128,6 +133,13 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
     doPlot();
   end;
 
+PROCEDURE TplotForm.FormShow(Sender: TObject);
+  begin
+    {$ifdef UNIX}
+    miIncFontSize.ShortCut:=16605;
+    {$endif}
+  end;
+
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
     if ad_evaluationRunning
@@ -151,6 +163,28 @@ PROCEDURE TplotForm.miAutoscaleYClick(Sender: TObject);
   begin
     miAutoscaleY.Checked:=not(miAutoscaleY.Checked);
     pushSettingsToPlotContainer;
+  end;
+
+PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
+  VAR o:T_scalingOptions;
+  begin
+    o:=guiAdapters^.plot.options;
+    o.relativeFontSize:=o.relativeFontSize/1.1;
+    guiAdapters^.plot.options:=o;
+    if ad_evaluationRunning
+    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    else doPlot();
+  end;
+
+PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
+  VAR o:T_scalingOptions;
+  begin
+    o:=guiAdapters^.plot.options;
+    o.relativeFontSize:=o.relativeFontSize*1.1;
+    guiAdapters^.plot.options:=o;
+    if ad_evaluationRunning
+    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    else doPlot();
   end;
 
 PROCEDURE TplotForm.miLogscaleXClick(Sender: TObject);

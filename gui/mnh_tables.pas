@@ -32,6 +32,9 @@ USES
   myGenerics,myStringUtil,mnh_fileWrappers;
 
 TYPE
+
+  { TtableForm }
+
   TtableForm = class(TForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
@@ -49,6 +52,7 @@ TYPE
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+    PROCEDURE FormShow(Sender: TObject);
     PROCEDURE miDecreaseFontSizeClick(Sender: TObject);
     PROCEDURE miIncreaseFontSizeClick(Sender: TObject);
     PROCEDURE mi_commaClick(Sender: TObject);
@@ -118,6 +122,13 @@ end;
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2);
+  end;
+
+PROCEDURE TtableForm.FormShow(Sender: TObject);
+  begin
+    {$ifdef UNIX}
+    miIncreaseFontSize.ShortCut:=16605;
+    {$endif}
   end;
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);

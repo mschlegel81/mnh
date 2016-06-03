@@ -11,8 +11,9 @@ object plotForm: TplotForm
   OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnResize = FormResize
+  OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '1.4.4.0'
+  LCLVersion = '1.6.0.4'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
@@ -38,6 +39,16 @@ object plotForm: TplotForm
       object miAutoReset: TMenuItem
         Caption = 'Reset plot options on evaluation'
         OnClick = miAutoResetClick
+      end
+      object miIncFontSize: TMenuItem
+        Caption = 'Increase Font Size'
+        ShortCut = 16571
+        OnClick = miIncFontSizeClick
+      end
+      object miDecFontSize: TMenuItem
+        Caption = 'Decrease Font Size'
+        ShortCut = 16573
+        OnClick = miDecFontSizeClick
       end
     end
     object MenuItem1: TMenuItem

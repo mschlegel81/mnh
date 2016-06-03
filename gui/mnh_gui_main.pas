@@ -596,7 +596,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
         with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
       end else evaluation.required:=true;
     end;
-    editorMeta[PageControl.ActivePageIndex].changed:=true;
+    editorMeta[PageControl.ActivePageIndex].changed:=editorMeta[PageControl.ActivePageIndex].editor.Modified;
     Caption:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
   end;
 
@@ -688,7 +688,7 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
 
     mr:=-1;
     for i:=0 to length(editorMeta)-1 do if editorMeta[i].sheet.TabVisible then mr:=i;
-    if mr=-1 then addEditorMetaForNewFile()
+    if mr=-1 then PageControl.ActivePageIndex:=addEditorMetaForNewFile()
              else PageControl.ActivePageIndex:=mr;
   end;
 
