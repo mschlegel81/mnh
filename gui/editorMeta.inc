@@ -222,10 +222,14 @@ PROCEDURE T_editorMeta.initForNewFile;
 
 PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
   begin
-    if sheet.TabVisible and not(changed) and (filePath=SysToUTF8(fileName)) then begin
+    if sheet.TabVisible and (filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
       editor.lines.loadFromFile(filePath);
       fileAge(filePath,fileAccessAge);
       changed:=false;
+    end else if sheet.TabVisible and (fileName=pseudoName) and (guiPackage.getCodeProvider^.getPath=pseudoName) then begin
+      guiPackage.getCodeProvider^.getLinesUTF8(editor.lines);
+      fileAge(filePath,fileAccessAge);
+      editor.Modified:=changed;
     end;
   end;
 

@@ -89,6 +89,7 @@ TYPE
       PROCEDURE appendSource(CONST line:string);
       {$endif}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+      FUNCTION getCodeProvider:P_codeProvider;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -1012,6 +1013,11 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
       end;
     end;
     setLength(r,0);
+  end;
+
+FUNCTION T_package.getCodeProvider:P_codeProvider;
+  begin
+    result:=@codeProvider;
   end;
 
 {$ifdef fullVersion}
