@@ -1,4 +1,5 @@
 USE hash;
+private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(['gui\lib\i386-win32','gui\lib\x86_64-linux','gui\lib\x86_64-win64','consoles\lib\i386-win32','consoles\lib\x86_64-linux','consoles\lib\x86_64-win64']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;
@@ -89,7 +90,8 @@ exeHasWrongVersion(FI) ? begin
   full OR debug
   ? void
   : execPipeless('..\upx.exe',['-9',binName(FI)]);
-  not(exeHasWrongVersion(FI));
+  delp;
+  not(exeHasWrongVersion(FI));  
 end : true;
 
 
@@ -153,6 +155,7 @@ main('clean')->begin
    files('core/res_ensureDemos.inc')|
    files('core/res_ensurePackages.inc')|
    files('make*.log.txt')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  delp;   
 end;
      
 //*Tests all files
