@@ -156,6 +156,7 @@ TYPE
       waitingForGUI:boolean;
 
       breakpoints:array of T_searchTokenLocation;
+      breakSoonest:boolean;
       stepOutPending:boolean;
       stepInPending:boolean;
       stepPending:boolean;
@@ -163,6 +164,7 @@ TYPE
 
       contextPointer:pointer;
       tokenPointer:pointer;
+      stackPointer:pointer;
 
       cancelling:boolean;
       currentLine:T_tokenLocation;
@@ -174,7 +176,7 @@ TYPE
       DESTRUCTOR destroy;
     public
       //To be called by evaluation-loop
-      PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToFirst,pointerToContext:pointer);
+      PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToFirst,pointerToContext,pointerToStack:pointer);
       PROCEDURE steppingIn ();
       PROCEDURE steppingOut();
 
@@ -188,7 +190,8 @@ TYPE
       PROCEDURE doStop;
       FUNCTION haltet:boolean;
       FUNCTION context:pointer;
-      FUNCTION token: pointer;
+      FUNCTION token:pointer;
+      FUNCTION stack:pointer;
       FUNCTION loc:T_tokenLocation;
   end;
   {$endif}
@@ -754,7 +757,7 @@ DESTRUCTOR T_stepper.destroy;
     system.doneCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext: pointer);
+PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext, pointerToStack: pointer);
   FUNCTION breakpointEncountered:boolean;
     VAR i:longint;
     begin
@@ -766,14 +769,15 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
 
   begin
     system.enterCriticalSection(cs);
-    if cancelling or (location.package=currentLine.package) and (location.line=currentLine.line) then begin
+    if cancelling then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
     currentLine:=location;
-    if (stepPending and (currentLevel<=stepLevel)) or breakpointEncountered then begin
+    if breakSoonest or (stepPending and (currentLevel<=stepLevel)) or breakpointEncountered then begin
       contextPointer:=pointerToContext;
       tokenPointer:=pointerToFirst;
+      stackPointer:=pointerToStack;
 
       stepInPending:=false;
       stepOutPending:=false;
@@ -792,12 +796,14 @@ PROCEDURE T_stepper.steppingIn;
   begin
     system.enterCriticalSection(cs);
     inc(currentLevel);
-    //writeln('Stepping into level ',currentLevel);
+    writeln('Stepping into level ',currentLevel,'; stepInPending=',stepInPending);
     if stepInPending then begin
       stepPending:=true;
       stepLevel:=currentLevel;
+      breakSoonest:=true;
       stepInPending:=false;
     end else if stepPending and (stepLevel=currentLevel) then begin
+      breakSoonest:=true;
       currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
@@ -808,14 +814,16 @@ PROCEDURE T_stepper.steppingIn;
 PROCEDURE T_stepper.steppingOut;
   begin
     system.enterCriticalSection(cs);
+    writeln('Stepping out of level ',currentLevel);
     dec(currentLevel);
-    //writeln('Stepping out of level ',currentLevel);
     if stepOutPending then begin
+      breakSoonest:=true;
       stepPending:=true;
       stepLevel:=currentLevel;
       stepOutPending:=false;
     end;
     if stepPending and (stepLevel=currentLevel) then begin
+      breakSoonest:=true;
       currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
@@ -827,8 +835,8 @@ PROCEDURE T_stepper.doStep;
   begin
     system.enterCriticalSection(cs);
     stepPending:=true;
+    breakSoonest:=true;
     stepLevel:=currentLevel;
-    //writeln('Stepping on level',currentLevel);
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -837,6 +845,7 @@ PROCEDURE T_stepper.doStop;
   begin
     system.enterCriticalSection(cs);
     cancelling:=true;
+    breakSoonest:=false;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -849,6 +858,7 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
       stepLevel:=0;
       cancelling:=false;
     end;
+    breakSoonest:=false;
     stepInPending:=false;
     stepOutPending:=false;
     waitingForGUI:=false;
@@ -881,6 +891,7 @@ PROCEDURE T_stepper.doStepInto;
   begin
     system.enterCriticalSection(cs);
     stepInPending:=true;
+    breakSoonest:=false;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -889,6 +900,7 @@ PROCEDURE T_stepper.doStepOut;
   begin
     system.enterCriticalSection(cs);
     stepOutPending:=true;
+    breakSoonest:=false;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -908,6 +920,11 @@ FUNCTION T_stepper.context: pointer;
 FUNCTION T_stepper.token: pointer;
   begin
     result:=tokenPointer;
+  end;
+
+FUNCTION T_stepper.stack:pointer;
+  begin
+    result:=stackPointer;
   end;
 
 FUNCTION T_stepper.loc: T_tokenLocation;

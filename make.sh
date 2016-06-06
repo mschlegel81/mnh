@@ -9,8 +9,9 @@ if [ ! -f core/code_hash.inc                     ]; then echo "writeln(':xxxxxxx
 lazbuild -B --bm=deployment consoles/mnh_light.lpi
 consoles/mnh_light make.mnh prepare
 lazbuild --bm=deployment consoles/mnh_light.lpi
-lazbuild -B --bm=deployment gui/mnh_gui.lpi
 mv consoles/mnh_light .
+./mnh_light demos/regTest.mnh doc/examples.txt &
+lazbuild -B --bm=deployment gui/mnh_gui.lpi
 mv gui/mnh .
 ./mnh demos/regTest.mnh doc/examples.txt 
-./mnh_light demos/regTest.mnh doc/examples.txt 
+

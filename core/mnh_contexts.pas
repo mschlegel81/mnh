@@ -147,7 +147,13 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do with data[i] do if v<>nil then variableReport.addVariable(v,'local');
+    i:=length(data)-1;
+    while (i>=0) and (data[i].marker=vsm_none) do dec(i);
+    if i<0 then i:=0;
+    while (i<length(data)) do begin
+      with data[i] do if v<>nil then variableReport.addVariable(v,'local');
+      inc(i);
+    end;
     system.leaveCriticalSection(cs);
   end;
 

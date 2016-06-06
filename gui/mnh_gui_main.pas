@@ -910,8 +910,10 @@ PROCEDURE TMnhForm.handleBreak;
       report:T_variableReport;
       i:longint;
       first:P_token;
+      stack:P_tokenStack;
   begin
     if not(stepper).haltet then exit;
+    breakPointHandlingPending:=false;
     jumpToFile;
 
     context:=P_evaluationContext(stepper.context);
@@ -928,11 +930,11 @@ PROCEDURE TMnhForm.handleBreak;
     end;
 
     first:=stepper.token;
+    stack:=stepper.stack;
     currentExpressionMemo.clear;
-    if first<>nil then currentExpressionMemo.lines.append(tokensToString(first));
+    if first<>nil then currentExpressionMemo.lines.append(stack^.toString(first,30));
 
     updateDebugParts;
-    breakPointHandlingPending:=false;
   end;
 
 FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring):longint;
@@ -960,14 +962,26 @@ FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring):longint
   end;
 
 FUNCTION TMnhForm.addOrGetEditorMetaForFile(CONST fileName: ansistring): longint;
+  FUNCTION isPseudoName:boolean;
+    begin
+      result:=(length(fileName)>1)
+          and (fileName[1]='<')
+          and (fileName[length(fileName)]='>');
+    end;
+
   VAR filePath:ansistring;
       i:longint;
   begin
-    filePath:=expandFileName(fileName);
-    for i:=0 to length(editorMeta)-1 do if editorMeta[i].pseudoName=filePath then exit(i);
-    result:=addEditorMetaForNewFile();
-    editorMeta[result].setFile(filePath);
-    editorMeta[result].editor.Font:=OutputEdit.Font;
+    if isPseudoName then begin
+      for i:=0 to length(editorMeta)-1 do if (editorMeta[i].sheet.TabVisible) and (editorMeta[i].pseudoName=fileName) then exit(i);
+      result:=-1;
+    end else begin
+      filePath:=expandFileName(fileName);
+      for i:=0 to length(editorMeta)-1 do if (editorMeta[i].sheet.TabVisible) and (editorMeta[i].filePath=filePath) then exit(i);
+      result:=addEditorMetaForNewFile();
+      editorMeta[result].setFile(filePath);
+      editorMeta[result].editor.Font:=OutputEdit.Font;
+    end;
   end;
 
 PROCEDURE TMnhForm.miMinErrorlevel1Click(Sender: TObject); begin _setErrorlevel_(1); end;
@@ -1179,7 +1193,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       doNotCheckFileBefore:=now+1;
       for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if sheet.TabVisible and (filePath<>'') and not(changed) then begin
         fileAge(filePath,currentFileAge);
-        if currentFileAge>fileAccessAge then begin
+        if currentFileAge<>fileAccessAge then begin
           modalRes:=closeDialogForm.showOnOutOfSync(filePath);
           if modalRes=mrOk then reloadFile(filePath);
           if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
@@ -1355,7 +1369,11 @@ PROCEDURE TMnhForm.processSettings;
       settingsReady:=true;
 
       setLength(editorMeta,length(settings.value^.editorState));
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].create(i,settings.value^.editorState[i]);
+      stepper.clearBreakpoints;
+      for i:=0 to length(editorMeta)-1 do begin
+        editorMeta[i].create(i,settings.value^.editorState[i]);
+        editorMeta[i].setStepperBreakpoints;
+      end;
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;

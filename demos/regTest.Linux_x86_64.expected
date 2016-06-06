@@ -4286,7 +4286,7 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in>                toExpression('');
 Error               The parsed expression appears to be empty
-Error [stack trace]   # toExpression('')
+Error [stack trace]  # toExpression('')
 out>                toExpression('')
  in> not(true);
 out> false
@@ -4316,7 +4316,7 @@ out> 65
 out> -1
  in>                ord(2.1);
 Error               ord can only be applied to booleans, ints and strings
-Error [stack trace]   # <ERR>
+Error [stack trace]  # <ERR>
 out>                <ERR>
  in> softCast('A');
 out> 'A'
@@ -4480,11 +4480,11 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in>                fail;
 User-Error          Fail.
-Error [stack trace]   # fail
+Error [stack trace]  # fail
 out>                fail
  in>                fail("Told you this wouldn't work!");
 User-Error          "Told you this wouldn't work!"
-Error [stack trace]   # fail("Told you this wouldn't work!")
+Error [stack trace]  # fail("Told you this wouldn't work!")
 out>                fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
@@ -4619,7 +4619,7 @@ out> [1.0,0.5,0.333333333333333,0.25,0.2,0.666666666666667,0.4]
 out> true
  in>                driveInfo.C;
 Parsing Error       Cannot resolve ID "driveInfo"
-Error [stack trace]   # driveInfo.C
+Error [stack trace]  # driveInfo.C
 out>                driveInfo.C
  in> drop([['A', 1],['B', 2],['C', 0]],'B');
 out> [['A',1],['C',0]]
