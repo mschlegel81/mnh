@@ -1120,7 +1120,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
       if (first^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+        {$ifndef DEBUGMODE}
         try
+        {$endif}
           if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRule,context)) then begin
             if parameterListLiteral=nil
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
@@ -1131,6 +1133,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
             exit;
           end;
+        {$ifndef DEBUGMODE}
         except
           on e:Exception do begin
             context.adapters^.raiseCustomMessage(mt_el5_systemError,'Severe error trying to apply user defined rule '+P_rule(first^.data)^.id,first^.location);
@@ -1138,6 +1141,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             exit;
           end;
         end;
+        {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral,context);
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);

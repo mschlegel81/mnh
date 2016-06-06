@@ -112,7 +112,7 @@ VAR killServersCallback:PROCEDURE;
 {$endif}
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT=60000;
+CONST STACK_DEPTH_LIMIT={$ifdef WINDOWS}60000{$else}7100{$endif};
 VAR pendingTasks     :T_taskQueue;
     timer: specialize G_lazyVar<TEpikTimer>;
 

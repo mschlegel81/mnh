@@ -1102,12 +1102,14 @@ FUNCTION T_intLiteral.opPot(CONST other: P_scalarLiteral; CONST tokenLocation: T
         tx, rx: T_myFloat;
     begin
       if y>=0 then begin
+        {$Q-}
         temp:=1;
         while y>0 do begin
           if odd(y) then temp:=temp*x;
           x:=int64(x)*int64(x);
           y:=y shr 1;
         end;
+        {$Q+}
         result:=newIntLiteral(temp);
       end else begin
         rx:=1/x;
@@ -1333,47 +1335,47 @@ FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tok
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=$ffffffff; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
-FUNCTION T_intLiteral .hash: T_hashInt; begin result:=longint(lt_int) xor longint(val); end;
+FUNCTION T_intLiteral .hash: T_hashInt; begin {$R-} result:=longint(lt_int) xor longint(val); {$R+} end;
 FUNCTION T_realLiteral.hash: T_hashInt;
   begin
-    {$Q-}
+    {$Q-}{$R-}
     result:=0;
     move(val, result, sizeOf(result));
     result:=result xor longint(lt_real);
-    {$Q+}
+    {$Q+}{$R+}
   end;
 
 FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     if cachedHash<>0 then exit(cachedHash);
-    {$Q-}
+    {$Q-}{$R-}
     result:=T_hashInt(lt_string)+T_hashInt(length(val));
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
     cachedHash:=result;
-    {$Q+}
+    {$Q+}{$R+}
   end;
 
 FUNCTION T_expressionLiteral.hash: T_hashInt;
   VAR i:longint;
       s:string;
   begin
-    {$Q-}
+    {$Q-}{$R-}
     s:= toString;
     result:=T_hashInt(lt_expression)+T_hashInt(length(s));
     for i:=1 to length(s) do result:=result*31+ord(s[i]);
-    {$Q+}
+    {$Q+}{$R+}
   end;
 
 FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
     if cachedHash<>0 then exit(cachedHash);
-    {$Q-}
+    {$Q-}{$R-}
     result:=T_hashInt(lt_list)+T_hashInt(length(element));
     for i:=0 to length(element)-1 do result:=result*31+element [i]^.hash;
     cachedHash:=0;
-    {$Q+}
+    {$Q+}{$R+}
   end;
 //=======================================================================:?.hash
 //?.equals:=====================================================================
