@@ -56,12 +56,12 @@ end;
 {$ifdef includeImplementation}
 
 CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
-  PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST shortCut:TShortCut);
+  PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
       keyStroke:=editor.Keystrokes.add;
       keyStroke.command:=command;
-      keyStroke.ShortCut:=shortCut;
+      keyStroke.ShortCut:=ShortCut;
     end;
 
   begin
