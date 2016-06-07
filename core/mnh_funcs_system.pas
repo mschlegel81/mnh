@@ -410,17 +410,18 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 
 FUNCTION fileStats_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR lineCount,wordCount,byteCount:longint;
+      hash:T_hashInt;
       i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      fileStats(str0^.value,lineCount,wordCount,byteCount);
-      result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount);
+      fileStats(str0^.value,lineCount,wordCount,byteCount,hash);
+      result:=newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash);
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_stringList) then begin
       result:=newListLiteral;
       for i:=0 to list0^.size-1 do begin
-        fileStats(P_stringLiteral(list0^.value(i))^.value,lineCount,wordCount,byteCount);
-        P_listLiteral(result)^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount),false);
+        fileStats(P_stringLiteral(list0^.value(i))^.value,lineCount,wordCount,byteCount,hash);
+        P_listLiteral(result)^.append(newListLiteral^.appendInt(lineCount)^.appendInt(wordCount)^.appendInt(byteCount)^.appendInt(hash),false);
       end;
     end;
   end;
@@ -603,7 +604,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'copyFile',@copyFile_imp,'copyFile(source:string,dest:string);#Copies a file from source to dest, returning true on success and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);#Moves a file from source to dest, returning true on success and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);#Retuns a triplet [lineCount,wordCount,byteCount].');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);#Retuns a triplet [lineCount,wordCount,byteCount,hash].');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'httpGet',@httpGet_imp,'httpGet(URL:string);#Retrieves the contents of the given URL and returns them as a string');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'openUrl',@openUrl_imp,'openUrl(URL:string);#Opens the URL in the default browser');
   {$ifdef Windows}

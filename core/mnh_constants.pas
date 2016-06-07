@@ -24,6 +24,7 @@ UNIT mnh_constants;
 INTERFACE
 USES myGenerics,myStringUtil,sysutils;
 TYPE
+  T_hashInt=dword;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
                STRINGS_NAMESPACE        ,

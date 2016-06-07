@@ -55,7 +55,7 @@ TYPE
   end;
 
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
@@ -148,20 +148,26 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
     stream.destroy;
   end;
 
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
-  VAR stream:TFileStream;
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
+  VAR stream:TMemoryStream;
       i:longint;
+      b:byte;
       space:boolean=true;
   begin
-    stream:=TFileStream.create(name,fmOpenRead);
+    stream:=TMemoryStream.create;
     lineCount:=0;
     wordCount:=0;
-    byteCount:=0;;
+    byteCount:=0;
+    hash:=0;
     if trim(name) = '' then exit;
     try
+      stream.loadFromFile(name);
       stream.Seek(0,soFromBeginning);
       byteCount:=stream.size;
-      for i:=1 to byteCount do case stream.readByte of
+      hash:=T_hashInt(lt_string)+T_hashInt(byteCount);
+      for i:=1 to byteCount do begin
+        b:=stream.readByte;
+        case b of
         ord('a')..ord('z'),ord('A')..ord('Z'): begin
           if space then inc(wordCount);
           space:=false;
@@ -171,11 +177,16 @@ PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:lon
           space:=true;
         end;
         else space:=true;
+        end;
+        {$Q-}{$R-}
+        hash:=hash*31+b;
+        {$Q+}{$R+}
       end;
     except
       lineCount:=0;
       wordCount:=0;
       byteCount:=0;
+      hash:=0;
     end;
     stream.destroy;
   end;

@@ -27,8 +27,6 @@ UNIT mnh_litVar;
 INTERFACE
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo;
 TYPE
-  T_hashInt=dword;
-
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
