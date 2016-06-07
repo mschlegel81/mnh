@@ -47,7 +47,7 @@ FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorGrt,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end;
+    end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
   end;
 
 FUNCTION argMax_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -83,7 +83,7 @@ FUNCTION min_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       result:=P_listLiteral(x)^.value(0);
       for i:=1 to P_listLiteral(x)^.size-1 do if P_scalarLiteral(P_listLiteral(x)^.value(i))^.isInRelationTo(tt_comparatorLss,P_scalarLiteral(result)) then result:=P_listLiteral(x)^.value(i);
       result^.rereference;
-    end;
+    end else if (x<>nil) and (x^.literalType in [lt_emptyList]) then exit(newVoidLiteral);
   end;
 
 FUNCTION argMin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

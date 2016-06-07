@@ -42,14 +42,13 @@ FUNCTION length_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   VAR i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then begin
-      case arg0^.literalType of
-        lt_string: result:=newIntLiteral(length(str0^.value));
-        lt_stringList: begin
-          result:=newListLiteral;
-          for i:=0 to list0^.size-1 do
-            P_listLiteral(result)^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
-        end;
+    if (params<>nil) and (params^.size=1) then
+    case arg0^.literalType of
+      lt_string: result:=newIntLiteral(length(str0^.value));
+      lt_stringList,lt_emptyList: begin
+        result:=newListLiteral;
+        for i:=0 to list0^.size-1 do
+          P_listLiteral(result)^.appendInt(length(P_stringLiteral(list0^.value(i))^.value));
       end;
     end;
   end;

@@ -129,156 +129,116 @@ FUNCTION locateSources: T_arrayOfString;
     recursePath('');
   end;
 
-
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-  VAR handle: file of char;
-      block: array[0..4095] of char;
-      actuallyRead, i: longint;
+  VAR stream:TMemoryStream;
+      size,i:longint;
   begin
-    if trim(name) = '' then begin
-      accessed := false;
-      exit;
-    end;
+    stream:=TMemoryStream.create;
+    accessed:=false;
     try
-      accessed := true;
-      assign(handle, name);
-      reset(handle);
-      result := '';
-      repeat
-        BlockRead(handle, block, length(block), actuallyRead);
-        for i := 0 to actuallyRead-1 do
-          result := result+block[i];
-      until actuallyRead<length(block);
-      close(handle);
+      stream.loadFromFile(name);
+      accessed:=true;
+      size:=stream.size;
+      stream.Seek(0,soFromBeginning);
+      setLength(result,size);
+      for i:=1 to size do result[i]:=chr(stream.readByte);
     except
-      accessed := false;
-      result := '';
+      accessed:=false;
     end;
+    stream.destroy;
   end;
 
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint);
-  VAR handle: file of char;
-      block: array[0..4095] of char;
-      actuallyRead, i: longint;
+  VAR stream:TFileStream;
+      i:longint;
       space:boolean=true;
   begin
+    stream:=TFileStream.create(name,fmOpenRead);
     lineCount:=0;
     wordCount:=0;
-    byteCount:=0;
+    byteCount:=0;;
     if trim(name) = '' then exit;
-    lineCount:=1;
     try
-      assign(handle, name);
-      reset(handle);
-      repeat
-        BlockRead(handle, block, length(block), actuallyRead);
-        inc(byteCount,actuallyRead);
-        for i := 0 to actuallyRead-1 do case block[i] of
-          C_lineBreakChar: begin inc(lineCount); if not(space) then inc(wordCount); space:=true; end;
-          ' ':             begin                 if not(space) then inc(wordCount); space:=true; end;
-          else space:=false;
+      stream.Seek(0,soFromBeginning);
+      byteCount:=stream.size;
+      for i:=1 to byteCount do case stream.readByte of
+        ord('a')..ord('z'),ord('A')..ord('Z'): begin
+          if space then inc(wordCount);
+          space:=false;
         end;
-      until actuallyRead<length(block);
-      close(handle);
+        ord(C_lineBreakChar): begin
+          inc(lineCount);
+          space:=true;
+        end;
+        else space:=true;
+      end;
     except
       lineCount:=0;
       wordCount:=0;
       byteCount:=0;
     end;
-    if byteCount=0 then lineCount:=0;
+    stream.destroy;
   end;
 
-
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
-  VAR handle: textFile;
-      tempLine:ansistring;
+  VAR strings:TStringList;
+      i:longint;
   begin
-    setLength(result, 0);
-    if trim(name) = '' then begin
-      accessed := false;
-      exit;
-    end;
+    strings:=TStringList.create;
+    accessed:=false;
     try
-      accessed := true;
-      assign(handle, name);
-      reset(handle);
-      while not (eof(handle)) do begin
-        readln(handle,tempLine);
-        setLength(result, length(result)+1);
-        result[length(result)-1]:=tempLine;
-      end;
-      close(handle);
+      strings.loadFromFile(name);
+      accessed:=true;
+      setLength(result,strings.count);
+      for i:=0 to length(result)-1 do result[i]:=strings[i];
     except
-      accessed := false;
-      setLength(result, 0);
+      accessed:=false;
     end;
+    strings.destroy;
   end;
 
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
-  VAR
-    handle: file of char;
-    block: array[0..4095] of char;
-    i, j: longint;
+  VAR stream:TFileStream;
+      i:longint;
   begin
-    if trim(name) = '' then exit(false);
+    stream:=TFileStream.create(name,fmOpenWrite);
     try
-      ensurePath(name);
-      result := true;
-      assign(handle, name);
-      rewrite(handle);
-      i := 1;
-      while i<=length(textToWrite) do begin
-        j := 0;
-        while (i<=length(textToWrite)) and (j<length(block)) do
-          begin
-          block[j] := textToWrite[i];
-          inc(i);
-          inc(j);
-          end;
-        BlockWrite(handle, block, j);
-      end;
-      close(handle);
+      stream.Seek(0,soFromBeginning);
+      for i:=1 to length(textToWrite) do stream.writeByte(ord(textToWrite[i]));
+      result:=true;
     except
-      result := false;
+      result:=false;
     end;
+    stream.destroy;
   end;
 
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
-  VAR handle: textFile;
-      i: longint;
+  VAR i,j: longint;
       textLineEnding:string;
+      stream:TFileStream;
 
   PROCEDURE findTextLineEnding;
     FUNCTION currentTextLineEnding(): string;
-      VAR chandle: file of char;
-          block: array[0..4095] of char;
-          actuallyRead, i: longint;
-          content:ansistring='';
-          pr,pn:longint;
+      VAR stream:TFileStream;
+          i:longint;
+          c:array[0..1] of char=(#0,#0);
       begin
+        result:='';
+        stream:=TFileStream.create(name,fmOpenRead);
         try
-          assign(chandle, name);
-          reset(chandle);
-          content := '';
-          result :='';
-          repeat
-            BlockRead(chandle, block, length(block), actuallyRead);
-            for i := 0 to actuallyRead-1 do content := content+block[i];
-            pr:=pos(C_carriageReturnChar,content);
-            pn:=pos(C_lineBreakChar,content);
-            if (pn>0) and (pn<length(content)) or
-               (pr>0) and (pr<length(content)) then begin
-              if (pr<=0) and (pn>0) then result:=C_lineBreakChar
-              else if (pn<=0) and (pr>0) then result:=C_carriageReturnChar
-              else if (pr>0) and (pn=pr+1) then result:=C_carriageReturnChar+C_lineBreakChar
-              else if (pn>0) and (pr=pn+1) then result:=C_lineBreakChar+C_carriageReturnChar;
-           end;
-          until (actuallyRead<length(block)) or (result<>'');
-          close(chandle);
+          stream.Seek(0,soFromBeginning);
+          i:=stream.size;
+          while (i>0) and (result='') do begin
+            c[0]:=c[1]; c[1]:=chr(stream.readByte);
+            dec(i);
+            if (c[0]=C_carriageReturnChar) and (c[1]=C_lineBreakChar) or
+               (c[0]=C_lineBreakChar) and (c[1]=C_carriageReturnChar)
+            then result:=c[0]+c[1]
+            else if c[0]=C_lineBreakChar then result:=c[0];
+          end;
         except
-          result :=LineEnding;
         end;
-        content := '';
+        stream.destroy;
         if result='' then result:=LineEnding;
       end;
 
@@ -293,21 +253,24 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     try
       ensurePath(name);
       findTextLineEnding;
-      assign(handle, name);
-      SetTextLineEnding(handle,textLineEnding);
-      rewrite(handle);
-      for i := 0 to length(textToWrite)-1 do
-        writeln(handle, textToWrite[i]);
-      close(handle);
+      stream:=TFileStream.create(name,fmCreate);
+      for i:=0 to length(textToWrite)-1 do begin
+        for j:=1 to length(textToWrite[i]) do stream.writeByte(ord(textToWrite[i][j]));
+        for j:=1 to length(textLineEnding) do stream.writeByte(ord(textLineEnding[j]));
+      end;
+      stream.destroy;
       result := true;
     except
-      result := false;
+      on e:Exception do begin
+        result := false;
+        writeln(stdErr,'Erron in writeFile Lines: ',e.message,'; ',e.ClassName);
+      end;
     end;
   end;
 
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
   VAR info: TSearchRec;
-    path: ansistring;
+      path: ansistring;
   begin
     path := extractFilePath(pattern);
     setLength(result, 0);

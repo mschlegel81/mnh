@@ -1,5 +1,11 @@
 USE hash;
-private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(['gui\lib\i386-win32','gui\lib\x86_64-linux','gui\lib\x86_64-win64','consoles\lib\i386-win32','consoles\lib\x86_64-linux','consoles\lib\x86_64-win64']);
+private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execAsync(
+       ['gui\lib\i386-win32',
+        'gui\lib\x86_64-linux',
+        'gui\lib\x86_64-win64',
+   'consoles\lib\i386-win32',
+   'consoles\lib\x86_64-linux',
+   'consoles\lib\x86_64-win64']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;

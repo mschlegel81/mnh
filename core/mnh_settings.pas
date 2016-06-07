@@ -22,7 +22,7 @@
 
 UNIT mnh_settings;
 INTERFACE
-USES myFiles,myGenerics,myStringUtil,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants;
+USES myGenerics,myStringUtil,dateutils,Classes,sysutils,mnh_fileWrappers,mnh_out_adapters,mySys,mnh_constants,serializationUtil;
 CONST
   C_SAVE_INTERVAL:array[0..6] of record text:string; interval:double; end=
   ((text:'off';        interval:1E6),
@@ -38,8 +38,9 @@ T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
   isFullscreen: boolean;
   CONSTRUCTOR create;
-  FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
-  PROCEDURE saveToFile(VAR F:T_file);           virtual;
+  FUNCTION getSerialVersion:dword; virtual;
+  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
 end;
 
 T_editorState=object(T_serializable)
@@ -52,9 +53,10 @@ T_editorState=object(T_serializable)
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
-  PROCEDURE getLines(CONST dat:TStrings);
-  FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
-  PROCEDURE saveToFile(VAR F:T_file);           virtual;
+  PROCEDURE getLines(CONST dat: TStrings);
+  FUNCTION getSerialVersion:dword; virtual;
+  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
 end;
 
 P_Settings=^T_settings;
@@ -78,8 +80,9 @@ T_settings=object(T_serializable)
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
-  FUNCTION  loadFromFile(VAR F:T_file):boolean; virtual;
-  PROCEDURE saveToFile(VAR F:T_file);           virtual;
+  FUNCTION getSerialVersion:dword; virtual;
+  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
   PROCEDURE initDefaults;
 
   FUNCTION savingRequested:boolean;
@@ -128,41 +131,44 @@ FUNCTION workerThreadCount:longint;
     settings.value^.cpuCount:=result+1;
   end;
 
-FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
+FUNCTION T_settings.getSerialVersion:dword; begin result:=1644235074; end;
+FUNCTION T_settings.LoadFromStream(VAR stream:T_streamWrapper): boolean;
   VAR i:longint;
   begin
-    cpuCount:=F.readLongint;
+    if not inherited LoadFromStream(stream) then exit(false);
+
+    cpuCount:=stream.readLongint;
     if cpuCount<=0 then begin
       cpuCount:=getNumberOfCPUs;
       if cpuCount<1 then cpuCount:=1;
     end;
-    fontSize:=f.readLongint;
-    editorFontname := f.readAnsiString;
-    antialiasedFonts:=f.readBoolean;
-    mainForm.loadFromFile(f);
+    fontSize:=stream.readLongint;
+    editorFontname := stream.readAnsiString;
+    antialiasedFonts:=stream.readBoolean;
+    mainForm.LoadFromStream(stream);
     with outputBehaviour do begin
-      doEchoInput := f.readBoolean;
-      doEchoDeclaration := f.readBoolean;
-      doShowExpressionOut := f.readBoolean;
-      doShowTimingInfo:= f.readBoolean;
-      minErrorLevel:=f.readShortint;
+      doEchoInput := stream.readBoolean;
+      doEchoDeclaration := stream.readBoolean;
+      doShowExpressionOut := stream.readBoolean;
+      doShowTimingInfo:= stream.readBoolean;
+      minErrorLevel:=stream.readShortint;
     end;
-    instantEvaluation := f.readBoolean;
-    doResetPlotOnEvaluation := f.readBoolean;
-    for i := 0 to length(fileHistory)-1 do fileHistory[i] := f.readAnsiString;
-    i:=f.readLongint;
-    if (i<0) or not(f.allOkay) then exit(false);
+    instantEvaluation := stream.readBoolean;
+    doResetPlotOnEvaluation := stream.readBoolean;
+    for i := 0 to length(fileHistory)-1 do fileHistory[i] := stream.readAnsiString;
+    i:=stream.readLongint;
+    if (i<0) or not(stream.allOkay) then exit(false);
     setLength(editorState,i);
     for i:=0 to length(editorState)-1 do begin
       editorState[i].create;
-      editorState[i].loadFromFile(F);
+      editorState[i].LoadFromStream(stream);
     end;
-    activePage:=f.readLongint;
-    saveIntervalIdx:=f.readByte;
-    textLogName:=f.readAnsiString;
-    logPerRun:=f.readBoolean;
+    activePage:=stream.readLongint;
+    saveIntervalIdx:=stream.readByte;
+    textLogName:=stream.readAnsiString;
+    logPerRun:=stream.readBoolean;
 
-    if F.allOkay then result:=true
+    if stream.allOkay then result:=true
     else begin
       initDefaults;
       result:=false;
@@ -171,32 +177,33 @@ FUNCTION T_settings.loadFromFile(VAR F: T_file): boolean;
     wasLoaded:=result;
   end;
 
-PROCEDURE T_settings.saveToFile(VAR F: T_file);
+PROCEDURE T_settings.SaveToStream(VAR stream:T_streamWrapper);
   VAR i:longint;
       visibleEditorCount:longint=0;
   begin
-    f.writeLongint(cpuCount);
-    F.writeLongint(fontSize);
-    F.writeAnsiString(editorFontname);
-    F.writeBoolean(antialiasedFonts);
-    mainForm.saveToFile(F);
+    inherited SaveToStream(stream);
+    stream.writeLongint(cpuCount);
+    stream.writeLongint(fontSize);
+    stream.writeAnsiString(editorFontname);
+    stream.writeBoolean(antialiasedFonts);
+    mainForm.SaveToStream(stream);
     with outputBehaviour do begin
-      F.writeBoolean(doEchoInput);
-      F.writeBoolean(doEchoDeclaration);
-      F.writeBoolean(doShowExpressionOut);
-      F.writeBoolean(doShowTimingInfo);
-      F.writeShortint(minErrorLevel);
+      stream.writeBoolean(doEchoInput);
+      stream.writeBoolean(doEchoDeclaration);
+      stream.writeBoolean(doShowExpressionOut);
+      stream.writeBoolean(doShowTimingInfo);
+      stream.writeShortint(minErrorLevel);
     end;
-    F.writeBoolean(instantEvaluation);
-    F.writeBoolean(doResetPlotOnEvaluation);
-    for i:=0 to length(fileHistory)-1 do F.writeAnsiString(fileHistory [i]);
+    stream.writeBoolean(instantEvaluation);
+    stream.writeBoolean(doResetPlotOnEvaluation);
+    for i:=0 to length(fileHistory)-1 do stream.writeAnsiString(fileHistory [i]);
     for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
-    f.writeLongint(visibleEditorCount);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToFile(F);
-    F.writeLongint(activePage);
-    f.writeByte(saveIntervalIdx);
-    f.writeAnsiString(textLogName);
-    f.writeBoolean(logPerRun);
+    stream.writeLongint(visibleEditorCount);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].SaveToStream(stream);
+    stream.writeLongint(activePage);
+    stream.writeByte(saveIntervalIdx);
+    stream.writeAnsiString(textLogName);
+    stream.writeBoolean(logPerRun);
     savedAt:=now;
   end;
 
@@ -291,23 +298,26 @@ CONSTRUCTOR T_formPosition.create;
     isFullscreen:=true;
   end;
 
-FUNCTION T_formPosition.loadFromFile(VAR F: T_file): boolean;
+FUNCTION T_formPosition.getSerialVersion:dword; begin result:=1529642236; end;
+FUNCTION T_formPosition.LoadFromStream(VAR stream:T_streamWrapper):boolean;
   begin
-    top   :=f.readLongint;
-    Left  :=f.readLongint;
-    width :=f.readLongint;
-    height:=f.readLongint;
-    isFullscreen:=f.readBoolean;
+    if not inherited LoadFromStream(stream) then exit(false);
+    top   :=stream.readLongint;
+    Left  :=stream.readLongint;
+    width :=stream.readLongint;
+    height:=stream.readLongint;
+    isFullscreen:=stream.readBoolean;
     result:=true;
   end;
 
-PROCEDURE T_formPosition.saveToFile(VAR F: T_file);
+PROCEDURE T_formPosition.SaveToStream(VAR stream:T_streamWrapper);
   begin
-    f.writeLongint(top);
-    f.writeLongint(Left);
-    f.writeLongint(width);
-    f.writeLongint(height);
-    f.writeBoolean(isFullscreen);
+    inherited SaveToStream(stream);
+    stream.writeLongint(top);
+    stream.writeLongint(Left);
+    stream.writeLongint(width);
+    stream.writeLongint(height);
+    stream.writeBoolean(isFullscreen);
   end;
 
 CONSTRUCTOR T_editorState.create;
@@ -336,18 +346,21 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
     for i:=0 to length(lines)-1 do dat.append(lines[i]);
   end;
 
-FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
+FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366165; end;
+
+FUNCTION T_editorState.LoadFromStream(VAR stream:T_streamWrapper):boolean;
   VAR i:longint;
   begin
+    if not inherited LoadFromStream(stream) then exit(false);
     visible:=true;
-    filePath:=f.readAnsiString;
-    changed:=f.readBoolean;
+    filePath:=stream.readAnsiString;
+    changed:=stream.readBoolean;
     if changed then begin
-      fileAccessAge:=f.readDouble;
-      i:=f.readLongint;
+      fileAccessAge:=stream.readDouble;
+      i:=stream.readLongint;
       if i>=0 then begin
         setLength(lines,i);
-        for i:=0 to length(lines)-1 do lines[i]:=f.readAnsiString;
+        for i:=0 to length(lines)-1 do lines[i]:=stream.readAnsiString;
         result:=true;
       end else result:=false;
     end else begin
@@ -356,26 +369,27 @@ FUNCTION T_editorState.loadFromFile(VAR F: T_file): boolean;
                 else visible:=false;
       result:=true;
     end;
-    i:=f.readLongint;
+    i:=stream.readLongint;
     if i>=0 then begin
       setLength(markedLines,i);
-      for i:=0 to length(markedLines)-1 do markedLines[i]:=f.readLongint;
+      for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
     end else result:=false;
   end;
 
-PROCEDURE T_editorState.saveToFile(VAR F: T_file);
+PROCEDURE T_editorState.SaveToStream(VAR stream:T_streamWrapper);
   VAR i:longint;
   begin
+    inherited SaveToStream(stream);
     if filePath<>'' then filePath:=expandFileName(filePath);
-    f.writeAnsiString(filePath);
-    f.writeBoolean(changed);
+    stream.writeAnsiString(filePath);
+    stream.writeBoolean(changed);
     if changed then begin
-      f.writeDouble(fileAccessAge);
-      f.writeLongint(length(lines));
-      for i:=0 to length(lines)-1 do f.writeAnsiString(lines[i]);
+      stream.writeDouble(fileAccessAge);
+      stream.writeLongint(length(lines));
+      for i:=0 to length(lines)-1 do stream.writeAnsiString(lines[i]);
     end;
-    f.writeLongint(length(markedLines));
-    for i:=0 to length(markedLines)-1 do f.writeLongint(markedLines[i]);
+    stream.writeLongint(length(markedLines));
+    for i:=0 to length(markedLines)-1 do stream.writeLongint(markedLines[i]);
   end;
 
 FUNCTION obtainSettings:P_Settings;
