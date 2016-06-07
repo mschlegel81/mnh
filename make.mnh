@@ -52,7 +52,7 @@ currentCodeHash->begin
                                files(allFolders('.')&'/*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
   executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
-  local result:=relevantFiles.each(filename,hash(fileContents(filename)),+).hex;
+  local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
   ? void 
   : begin
