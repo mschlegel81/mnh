@@ -1,0 +1,134 @@
+USE testLog,
+    '../demos/100doors.mnh',
+    '../demos/12_statements.mnh',
+    '../demos/24.mnh',
+    '../demos/99bottles.mnh',
+    '../demos/anagram.mnh',
+    '../demos/ackermann.mnh',
+    '../demos/asciiCalendar.mnh',
+    '../demos/barnsleyFern.mnh',
+    '../demos/benford.mnh',
+    '../demos/stringFib.mnh',
+    '../demos/countTheCoins.mnh',
+    '../demos/dice7fromDice5.mnh',
+    '../demos/digitSquareSum.mnh',
+    '../demos/ethiopian.mnh',
+    '../demos/fractalPlant.mnh',
+    '../demos/gol.mnh',
+    '../demos/hailstone.mnh',
+    '../demos/hofstadterConway.mnh',
+    '../demos/huffmann.mnh',
+    '../demos/importing.mnh',
+    '../demos/kochCurve.mnh',
+    '../demos/ludic.mnh',
+    '../demos/magicSquare.mnh',
+    '../demos/maze.mnh',
+    '../demos/monteCarloPi.mnh',
+    '../demos/pythagoras.mnh',
+    '../demos/selfRefSeq.mnh',
+    '../demos/semordnilap.mnh',
+    '../demos/sierpinskiCarpet.mnh',
+    '../demos/sierpinskiCurve.mnh',
+    '../demos/travellingSalesmanProblem.mnh',
+    '../demos/sudoku.mnh',
+    '../demos/ulam.mnh',
+    '../demos/unbiasedRandom.mnh',
+    '../demos/vampire.mnh',
+    '../demos/weasel.mnh',
+    '../demos/wordCount.mnh',
+    '../demos/y.mnh',
+    '../demos/zeckendorf.mnh',
+    '../demos/turtleGfx.mnh',
+    '../demos/hash.mnh',
+    '../demos/opTest.mnh',
+    '../demos/hofstadter_sequences.mnh';
+
+private printExecute([])->void;
+private printExecute(code:stringList)->begin
+  local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
+  printf("%s\t%s",out.getInner(0),out.getInner(2));
+end;
+
+private executeExamples(examplesFile:string)->begin
+  local codeToExecute:=[];
+  print('Examples file has ',fileLines(examplesFile).size,' lines');
+  fileLines(examplesFile).each(line,
+    line=='' ? begin
+      printExecute(codeToExecute);
+      codeToExecute:=[];
+    end : codeToExecute|=line);
+  printExecute(codeToExecute);
+end;;
+
+private testPlotting(call:expression(0), file:string)->begin
+  local filePath:=(myPath.splitFileName.directory)&'/'&file;
+  deleteFile(filePath);
+  call();
+  printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
+end;
+
+private testPlotting->begin
+  testPlotting({barnsleyFern.main},'../demos/barnsleyFern.png');
+  testPlotting({fractalPlant.main},'../demos/fractalPlant.png');
+  testPlotting({kochCurve.main},'../demos/kochCurve.png');
+  testPlotting({sierpinskiCurve.main},'../demos/sierpinskiCurve.png');
+  testPlotting({travellingSalesmanProblem.main},'../demos/travellingSalesmanProblem.png');
+  testPlotting({turtleGfx.main},'../demos/turtleGfx.png');
+end;
+
+private testRegular->begin
+  toId('100doors.main');
+  toId('12_statements.main');
+  toId('24.main')('demo');
+  toId('99bottles.main');
+  anagram.main;
+  flavourString.matches('Linux')
+  ? void
+  : ackermann.main;
+  asciiCalendar.main;
+  benford.main;
+  stringFib.main;
+  countTheCoins.main;
+  dice7fromDice5.main;
+  digitSquareSum.main;
+  ethiopian.main;
+  gol.main;
+  hailstone.main;
+  hofstadterConway.main;
+  huffmann.main;
+  importing.main;
+  ludic.main;
+  magicSquare.main;
+  maze.main;
+  monteCarloPi.main;
+  pythagoras.main;
+  selfRefSeq.main;
+  semordnilap.main;
+  sierpinskiCarpet.main;
+  sudoku.main;
+  ulam.main;
+  unbiasedRandom.main;
+  vampire.main;
+  weasel.main;
+  wordCount.main;
+  y.main;
+  zeckendorf.main;
+  hash.main;
+  opTest.main;
+  hofstadter_sequences.main;
+end;
+
+main(examplesFile:string)->testAlreadyPassed ? void : begin
+  resetRandom;
+  collectOutput;  
+  testRegular;
+  canPlot
+  ? testPlotting
+  : void;
+  examplesFile==''
+  ? void
+  : executeExamples(examplesFile);
+  validateCollectedOutput;
+end;
+
+main->main('');

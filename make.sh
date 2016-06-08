@@ -10,8 +10,8 @@ lazbuild -B --bm=deployment consoles/mnh_light.lpi
 consoles/mnh_light make.mnh prepare
 lazbuild --bm=deployment consoles/mnh_light.lpi
 mv consoles/mnh_light .
-./mnh_light demos/regTest.mnh doc/examples.txt
+./mnh_light regTest/regTest.mnh doc/examples.txt
 lazbuild -B --bm=deployment gui/mnh_gui.lpi
 mv gui/mnh .
-./mnh demos/regTest.mnh doc/examples.txt 
+./mnh regTest/regTest.mnh doc/examples.txt 
 

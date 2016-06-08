@@ -1,4 +1,4 @@
-USE hash;
+USE hash,testLog;
 private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execAsync(
        ['gui\lib\i386-win32',
         'gui\lib\x86_64-linux',
@@ -80,7 +80,6 @@ exeHasWrongVersion(FI) ? begin
   local bin64:=(FI and 1)>0;
   local full :=(FI and 2)>0;
   local debug:=(FI and 4)>0;
-
   local compiler:=bin64 ? '..\lazarus64\lazbuild.exe'
                         : '..\lazarus32\lazbuild.exe';
   local exeName:=binName(FI);
@@ -119,7 +118,15 @@ end;
                     
 //*Make distro 7z - including build if needed
 main('distro')->
-  [0..3].each(i,build(i),AND) ? begin
+  [0..3].each(i,
+    begin
+      local buildOk:=build(i);
+      local testOk:=testAlreadyPassed(binName(i));
+      buildOk ? void : print('Building of ',binName(i),' failed');
+      testOk ? void : print(binName(i),' has not been tested successfully');
+      buildOk and testOk;
+    end,
+    AND) ? begin
     call7z(['mnh.exe','mnh_light.exe'],'64bit');
     movePairs.each(pair,verboseMove@pair,AND)
     ? begin
@@ -129,6 +136,7 @@ main('distro')->
     : print('Error moving files! 32bit distro has not been created!');
     //Linux executables exist and are less than one hour old
     ['mnh','mnh_light'].each(file,fileExists(file) AND systime-file.fileInfo["time"]<1/24,AND)
+    AND linuxTestsPassed
     ? begin
         execPipeless('..\upx.exe',['-9','mnh_light']);
         call7z(['mnh','mnh_light'],'64bit_Linux');
@@ -175,7 +183,9 @@ end;
 main('test')->[0..3].each(i,
   build(i), 
   print('Testing ',binName(i)),
-  binName(i).execPipeless(['-el5','demos/regTest.mnh','doc/examples.txt'.splitFileName.expanded]));  
+  testAlreadyPassed(binName(i))
+  ? void
+  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]));
 
 //*Only prepare code hash
 main('prepare')->currentCodeHash;
