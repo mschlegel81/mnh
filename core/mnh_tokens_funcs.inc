@@ -703,6 +703,37 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
   end;
 
+FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+      id:string;
+      tempPackage:T_package;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=P_package(tokenLocation.package)^.inspect
+    else if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      id:=P_stringLiteral(params^.value(0))^.value;
+
+      with P_package(tokenLocation.package)^ do
+        for i:=0 to length(packageUses)-1 do
+        if (packageUses[i].id=id) or (packageUses[i].path=id)
+        then exit(packageUses[i].pack^.inspect);
+
+      if not(FileExists(id)) then id:=locateSource(ExtractFilePath(tokenLocation.package^.getPath),id);
+
+      if (id<>'') and FileExists(id) then begin
+        tempPackage.create(nil);
+        tempPackage.setSourcePath(id);
+        tempPackage.loadForDocumentation;
+        result:=tempPackage.inspect;
+        tempPackage.destroy;
+        exit(result);
+      end;
+
+      result:=newListLiteral;
+      context.adapters^.raiseNote('Cannot locate package with id or path "'+id+'"',tokenLocation);
+    end;
+  end;
+
 {$endif}
 {$ifdef include_initialization}
   //Unary Numeric -> real
@@ -739,4 +770,5 @@ FUNCTION parseTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   registerRule(STRINGS_NAMESPACE,'format',@format_imp,'format(formatString:string,...);#Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'formatTime',@formatTime_imp,'formatTime(formatString:string,t);#Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>');
   registerRule(STRINGS_NAMESPACE,'parseTime',@parseTime_imp,'parseTime(formatString:string,input:string);#Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect',@inspect_imp,'source;#Returs the source code');
 {$endif}

@@ -48,6 +48,7 @@ TYPE
     id,path:ansistring;
     pack:P_package;
     CONSTRUCTOR create(CONST root,packId:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+    CONSTRUCTOR createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
     DESTRUCTOR destroy;
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   end;
@@ -90,6 +91,7 @@ TYPE
       {$endif}
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       FUNCTION getCodeProvider:P_codeProvider;
+      FUNCTION inspect:P_listLiteral;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -228,7 +230,20 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
   begin
     id:=packId;
     path:=locateSource(extractFilePath(root),id);
-    if (path='') and (adapters<>nil) then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation);
+    if (path='')
+    then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation)
+    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
+    pack:=nil;
+  end;
+
+CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
+  begin
+    path:=ExtractFilePath(tokenLocation.package^.getPath)+path_;
+    id:=filenameToPackageId(path_);
+    if not(FileExists(path)) and FileExists(path_) then path:=path_;
+    if not(FileExists(path))
+    then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package "'+path+'"',tokenLocation)
+    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
     pack:=nil;
   end;
 
@@ -279,36 +294,35 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
   PROCEDURE interpret(VAR first:P_token; CONST semicolonPosition:T_tokenLocation);
     PROCEDURE interpretUseClause;
-      VAR temp:P_token;
-          i,j:longint;
+      VAR i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
           newId:string;
           fullClause:string;
       begin
         locationForErrorFeedback:=first^.location;
         fullClause:=tokensToString(first);
-        temp:=first; first:=context.disposeToken(temp);
+        first:=context.disposeToken(first);
         while first<>nil do begin
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
-            if isQualified(newId) then begin
-              context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing qualified identifier '+first^.singleTokenToString,first^.location);
-              exit;
-            end;
-            //no duplicates are created; packages are always added at the end
-            i:=0;
-            while (i<length(packageUses)) and (packageUses[i].id<>newId) do inc(i);
-            if i<length(packageUses) then for j:=i to length(packageUses)-2 do packageUses[j]:=packageUses[j+1]
-                                     else setLength(packageUses,length(packageUses)+1);
+            setLength(packageUses,length(packageUses)+1);
             packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
-          end else if first^.tokType<>tt_separatorComma then begin
+          end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
+            newId:=P_stringLiteral(first^.data)^.value;
+            setLength(packageUses,length(packageUses)+1);
+            packageUses[length(packageUses)-1].createWithSpecifiedPath(newId,first^.location,context.adapters);
+          end else if first^.tokType<>tt_separatorComma then
             context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
-            context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,first^.location);
-            exit;
-          end;
-          temp:=first; first:=context.disposeToken(temp);
+          first:=context.disposeToken(first);
         end;
-        if not(context.adapters^.noErrors) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,locationForErrorFeedback);
+        for i:=1 to length(packageUses)-1 do for j:=0 to i-1 do
+          if (ExpandFileName(packageUses[i].path)=ExpandFileName(packageUses[j].path))
+          or (packageUses[i].id=packageUses[j].id) then context.adapters^.raiseError('Duplicate import: '+packageUses[i].id,locationForErrorFeedback);
+        if not(context.adapters^.noErrors) then begin
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,locationForErrorFeedback);
+          for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
+          SetLength(packageUses,0);
+        end;
         if usecase<>lu_forDocGeneration then reloadAllPackages(locationForErrorFeedback);
       end;
 
@@ -533,7 +547,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if (first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
            (first^.txt    ='USE') and
            (first^.next   <>nil) and
-           (first^.next^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
+           ((first^.next^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule])
+            or (first^.next^.tokType=tt_literal) and (P_literal(first^.next^.data)^.literalType=lt_string))
         then begin
           interpretUseClause;
           exit;
@@ -1018,6 +1033,43 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
 FUNCTION T_package.getCodeProvider:P_codeProvider;
   begin
     result:=@codeProvider;
+  end;
+
+FUNCTION T_package.inspect:P_listLiteral;
+  FUNCTION usesList:P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=newListLiteral;
+      for i:=0 to length(packageUses)-1 do result^.append(newListLiteral^.appendString(packageUses[i].id)^.appendString(packageUses[i].path),false);
+    end;
+
+  FUNCTION rulesList:P_listLiteral;
+    VAR i:longint;
+        allRules:array of P_rule;
+    begin
+      allRules:=packageRules.valueSet;
+      result:=newListLiteral;
+      for i:=0 to length(allRules)-1 do
+        result^.append(allRules[i]^.inspect,false);
+    end;
+
+  begin
+    result:=newListLiteral^
+      .append(newListLiteral^
+              .appendString('id')^
+              .appendString(codeProvider.id),false)^
+      .append(newListLiteral^
+              .appendString('path')^
+              .appendString(getPath),false)^
+      .append(newListLiteral^
+              .appendString('source')^
+              .appendString(join(codeProvider.getLines,C_lineBreakChar)),false)^
+      .append(newListLiteral^
+              .appendString('uses')^
+              .append(usesList,false),false)^
+      .append(newListLiteral^
+              .appendString('declares')^
+              .append(rulesList,false),false);
   end;
 
 {$ifdef fullVersion}

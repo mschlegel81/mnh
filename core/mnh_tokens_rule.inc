@@ -58,6 +58,7 @@
       FUNCTION getDocHtml:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
+      FUNCTION inspect:P_listLiteral;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -346,6 +347,56 @@ FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;
     if value=nil then exit(false);
     value^.unreference;
     result:=true;
+  end;
+
+FUNCTION T_rule.inspect:P_listLiteral;
+  FUNCTION ruleTypeString:ansistring;
+    begin
+      case ruleType of
+        rt_normal:result:='normal';
+        rt_memoized:result:='memoized';
+        rt_mutable_public,
+        rt_mutable_private:result:='mutable';
+        rt_persistent_public,
+        rt_persistent_private:result:='persistent';
+        rt_synchronized:result:='synchronized';
+        else result:='';
+      end;
+    end;
+
+  FUNCTION typeString:ansistring;
+    begin
+      case ruleType of
+        rt_mutable_public,
+        rt_persistent_public:result:='public';
+        rt_mutable_private,
+        rt_persistent_private:result:='private';
+        else result:='';
+      end;
+    end;
+
+  FUNCTION subrulesList:P_listLiteral;
+    VAR i:longint;
+    begin
+      if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then begin
+        result:=newListLiteral^.append(newListLiteral^
+          .append(newListLiteral^.appendString('pattern')^.appendString('()'),false)^
+          .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
+          .append(newListLiteral^.appendString('type')^.appendString(typeString),false)^
+          .append(newListLiteral^.appendString('comment')^.appendString(''),false)^
+          .append(newListLiteral^.appendString('body')^.appendString(namedValue.getValue^.toString),false),false);
+      end else begin
+        result:=newListLiteral;
+        for i:=0 to length(subrules)-1 do
+          result^.append(subrules[i]^.inspect,false);
+      end;
+    end;
+
+  begin
+    result:=newListLiteral^.appendString(id)^.append(newListLiteral^
+      .append(newListLiteral^.appendString('type')^.appendString(ruleTypeString),false)^
+      .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
+      .append(newListLiteral^.appendString('subrules')^.append(subrulesList,false),false),false);
   end;
 
 {$endif}

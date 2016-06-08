@@ -22,7 +22,7 @@
 
 UNIT mnh_fileWrappers;
 INTERFACE
-USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil,LazUTF8;
+USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object
@@ -316,12 +316,8 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
   end;
 
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
-  VAR i:longint;
   begin
-    result:=extractFileName(filenameOrPath);
-    i := 1;
-    while (i<=length(result)) and (result[i] in ['a'..'z', 'A'..'Z', '0'..'9', '_']) do inc(i);
-    result := copy(result, 1, i-1);
+    result:=ExtractFileNameOnly(filenameOrPath);
   end;
 
 { T_codeProvider }

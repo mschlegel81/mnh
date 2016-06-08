@@ -55,7 +55,7 @@
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
-      FUNCTION toString:ansistring;
+      FUNCTION toString(CONST includePattern:boolean=true):ansistring;
       FUNCTION directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateUnary(CONST x:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
@@ -67,6 +67,7 @@
       FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
+      FUNCTION inspect:P_listLiteral;
   end;
 
 {$endif}
@@ -535,7 +536,7 @@ FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsi
     result:=newExpressionLiteral(newRule);
   end;
 
-FUNCTION T_subrule.toString:ansistring;
+FUNCTION T_subrule.toString(CONST includePattern:boolean=true):ansistring;
   VAR i:longint;
       prevIdLike,idLike:boolean;
   begin
@@ -545,6 +546,7 @@ FUNCTION T_subrule.toString:ansistring;
       result:=result+preparedBody[i].token.toString(prevIdLike,idLike);
       prevIdLike:=idLike;
     end;
+    if not(includePattern) then exit(result);
     if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
     else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
     else result:=pattern.toString+C_tokenString[tt_declare]+result;
@@ -680,6 +682,26 @@ FUNCTION T_subrule.arity:longint;
 PROCEDURE T_subrule.increaseArity(CONST newArity:longint);
   begin
     while length(pattern.sig)<newArity do pattern.appendFreeId('');
+  end;
+
+FUNCTION T_subrule.inspect:P_listLiteral;
+  FUNCTION typeString:string;
+    begin
+      case typ of
+        srt_normal_public     : result:='public';
+        srt_normal_private    : result:='private';
+        srt_inline_for_literal: result:='for_literal';
+        srt_inline_for_each   : result:='for_each';
+      end;
+    end;
+
+  begin
+    result:=newListLiteral^
+      .append(newListLiteral^.appendString('pattern')^.appendString(pattern.toString),false)^
+      .append(newListLiteral^.appendString('location')^.appendString(declaredAt),false)^
+      .append(newListLiteral^.appendString('type')^.appendString(typeString),false)^
+      .append(newListLiteral^.appendString('comment')^.appendString(comment),false)^
+      .append(newListLiteral^.appendString('body')^.appendString(toString(false)),false);
   end;
 
 {$endif}
