@@ -1753,9 +1753,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_parList: applyRule(first^.next,first^.next^.next);
         end;
 
-        tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue : case cTokType[1] of
+        tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-          tt_parList: applyRule(first^.next,first^.next^.next);
+          tt_parList: if cTokType[0]<>tt_toId then applyRule(first^.next,first^.next^.next)
+          else begin
+            if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^.value(0)^.literalType=lt_string) then begin
+              first^.tokType:=tt_identifier;
+              first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^.value(0))^.value;
+              first^.next:=context.disposeToken(first^.next);
+              didSubstitution:=true;
+            end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
+          end;
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
           tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;

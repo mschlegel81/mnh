@@ -69,19 +69,7 @@ FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       end else result:=newStringLiteral(arg0^.toString);
     end;
   end;
-{
-    result:=parseNumber(val, 1, false, len);
-    if (result<>nil) then
-      if (len = length(val)) then
-        exit(result)
-      else
-        disposeLiteral(result);
-    otherVal:=unescapeString(sysutils.trim(value),1, len);
-    if len = length(sysutils.trim(value)) then
-      exit(newStringLiteral(otherVal));
-    result:=@self;
-    rereference;
-}
+
 FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
