@@ -46,7 +46,7 @@ end;
 
 P_tokenStack=^T_TokenStack;
 T_TokenStack=object
-  fill:longint;
+  topIndex:longint;
   dat:array of P_token;
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -594,7 +594,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
   PROCEDURE initTokTypes; inline;
     begin
-      if stack.fill>=0 then cTokType[-1]:=stack.dat[stack.fill]^.tokType
+      if stack.topIndex>=0 then cTokType[-1]:=stack.dat[stack.topIndex]^.tokType
                        else cTokType[-1]:=tt_EOL;
       if first<>nil then begin
         cTokType[0]:=first^.tokType;
@@ -1358,10 +1358,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       if (cTokType[1] in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]]) or
          (cTokType[1] in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
       then begin
-        newLit:=resolveOperator(stack.dat[stack.fill-1]^.data,
-                                stack.dat[stack.fill]^.tokType,
+        newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                stack.dat[stack.topIndex]^.tokType,
                                 first^.data,
-                                stack.dat[stack.fill]^.location,
+                                stack.dat[stack.topIndex]^.location,
                                 context.adapters^);
         disposeLiteral(first^.data);
         first^.data:=newLit; //store new literal in head
@@ -1529,7 +1529,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_unaryOpPlus: begin stack.popDestroy(context); didSubstitution:=true; end;
           tt_unaryOpMinus: begin
-            newLit:=P_literal(first^.data)^.negate(stack.dat[stack.fill]^.location,context.adapters^);
+            newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^);
             disposeLiteral(first^.data);
             first^.data:=newLit;
             stack.popDestroy(context);
@@ -1538,16 +1538,16 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_comparatorEq..tt_comparatorListEq: begin //operators with special cascading
             if (cTokType[1] in [tt_comparatorEq..tt_comparatorListEq]) then begin
               // x < y < z -> [x < y] and y < z
-              newLit:=resolveOperator(stack.dat[stack.fill-1]^.data,
-                                      stack.dat[stack.fill]^.tokType,
+              newLit:=resolveOperator(stack.dat[stack.topIndex-1]^.data,
+                                      stack.dat[stack.topIndex]^.tokType,
                                       first^.data,
-                                      stack.dat[stack.fill]^.location,
+                                      stack.dat[stack.topIndex]^.location,
                                       context.adapters^);
               //LHS literal is now result of first comparison (still a literal)
-              disposeLiteral(stack.dat[stack.fill-1]^.data);
-              stack.dat[stack.fill-1]^.data:=newLit;
+              disposeLiteral(stack.dat[stack.topIndex-1]^.data);
+              stack.dat[stack.topIndex-1]^.data:=newLit;
               //applied comparator is replaced by operator 'and'
-              stack.dat[stack.fill]^.tokType:=tt_operatorAnd;
+              stack.dat[stack.topIndex]^.tokType:=tt_operatorAnd;
               didSubstitution:=true;
             end else process_op_lit;
           end;
@@ -1563,13 +1563,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_SEMICOLON_HANDLING;
             COMMON_CASES;
             FORBIDDEN_SEPARATORS;
-            else context.adapters^.raiseError('Unable to resolve paranthesis!',stack.dat[stack.fill]^.location);
+            else context.adapters^.raiseError('Unable to resolve paranthesis!',stack.dat[stack.topIndex]^.location);
           end;
           tt_list_constructor: case cTokType[1] of
             tt_separatorComma, tt_separatorCnt: begin // [ | <Lit> ,
               repeat
-                P_listLiteral(stack.dat[stack.fill]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
-                if first^.next^.tokType=tt_separatorCnt then P_listLiteral(stack.dat[stack.fill]^.data)^.setRangeAppend;
+                P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
+                if first^.next^.tokType=tt_separatorCnt then P_listLiteral(stack.dat[stack.topIndex]^.data)^.setRangeAppend;
                 first:=context.disposeToken(first);
                 first:=context.disposeToken(first);
 
@@ -1578,13 +1578,13 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               didSubstitution:=true;
             end;
             tt_listBraceClose: begin // [ | <Lit> ] ...
-              P_listLiteral(stack.dat[stack.fill]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.appendConstructing(first^.data,first^.next^.location,context.adapters^);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               stack.popLink(first);   // -> ? | [ ...
               first^.tokType:=tt_literal; // -> ? | <NewList>
               didSubstitution:=true;
-              if (stack.fill>=0) and (stack.dat[stack.fill]^.tokType=tt_literal) then begin
+              if (stack.topIndex>=0) and (stack.dat[stack.topIndex]^.tokType=tt_literal) then begin
                 // <Lit> | <NewList> ...
                 stack.popLink(first); // -> | <Lit> <NewList> ...
                 newLit:=newListLiteral;
@@ -1604,8 +1604,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_parList_constructor: case cTokType[1] of
             tt_braceClose: begin // <F> <par(> | <Lit> ) -> <F> <par>
-              P_listLiteral(stack.dat[stack.fill]^.data)^.append(first^.data,true);
-              stack.dat[stack.fill]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.append(first^.data,true);
+              stack.dat[stack.topIndex]^.tokType:=tt_parList; //mutate <tt_parList_constructor> -> <tt_parList>
               first:=context.disposeToken(first); //dispose literal
               first:=context.disposeToken(first); //dispose closing bracket
               stack.popLink(first); //pop parameter list
@@ -1613,7 +1613,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               didSubstitution:=true;
             end;
             tt_separatorComma: begin // <F> <par(> | <Lit> , -> <F> <par(> |
-              P_listLiteral(stack.dat[stack.fill]^.data)^.append(first^.data,true);
+              P_listLiteral(stack.dat[stack.topIndex]^.data)^.append(first^.data,true);
               first:=context.disposeToken(first);
               first:=context.disposeToken(first);
               didSubstitution:=true;
@@ -1773,9 +1773,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         end;
 
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
-          if (P_literal(stack.dat[stack.fill]^.data)^.literalType=lt_boolean)
-          then resolveInlineIf(P_boolLiteral(stack.dat[stack.fill]^.data)^.value)
-          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.fill]^.data)^.literalType]+': '+stack.dat[stack.fill]^.singleTokenToString,first^.location);
+          if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
+          then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
+          else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
@@ -1788,19 +1788,19 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     end;
     {$endif}
     if context.adapters^.noErrors then begin
-      if (stack.fill>=0) or (first^.next<>nil) then begin
-        if first=nil then while (stack.fill>=0) do stack.popLink(first);
+      if (stack.topIndex>=0) or (first^.next<>nil) then begin
+        if first=nil then while (stack.topIndex>=0) do stack.popLink(first);
         context.adapters^.raiseError('Cannot reduce expression.',first^.location);
         context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,maxLongint),first^.location);
         context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
       end;
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
                  context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
-      while (stack.fill>=0) do stack.popDestroy(context);
+      while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
       if (first<>nil) then currentStateMessage();
-      while (stack.fill>=0) do stack.popLink(first);
+      while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}
     if currentlyDebugging then stepper.steppingOut;
@@ -1811,7 +1811,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
 CONSTRUCTOR T_TokenStack.create;
   begin
     setLength(dat,0);
-    fill:=-1;
+    topIndex:=-1;
   end;
 
 DESTRUCTOR T_TokenStack.destroy;
@@ -1821,24 +1821,24 @@ DESTRUCTOR T_TokenStack.destroy;
 
 PROCEDURE T_TokenStack.popDestroy(VAR context: T_evaluationContext);
   begin
-    context.disposeToken(dat[fill]);
-    dec(fill);
-    if fill<length(dat)-100 then setLength(dat,fill+1);
+    context.disposeToken(dat[topIndex]);
+    dec(topIndex);
+    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
   end;
 
 PROCEDURE T_TokenStack.popLink(VAR first: P_token);
   begin
-    dat[fill]^.next:=first;
-    first:=dat[fill];
-    dec(fill);
-    if fill<length(dat)-100 then setLength(dat,fill+1);
+    dat[topIndex]^.next:=first;
+    first:=dat[topIndex];
+    dec(topIndex);
+    if topIndex<length(dat)-100 then setLength(dat,topIndex+1);
   end;
 
 PROCEDURE T_TokenStack.push(VAR first: P_token);
   begin
-    inc(fill);
-    if fill>=length(dat) then setLength(dat,length(dat)+10);
-    dat[fill]:=first;
+    inc(topIndex);
+    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    dat[topIndex]:=first;
     first:=first^.next;
   end;
 
@@ -1847,11 +1847,11 @@ FUNCTION T_TokenStack.toString(CONST first: P_token; CONST tokenLimit: longint):
       prevWasIdLike:boolean=false;
       p:P_token;
   begin
-    if fill>=0 then begin
-      i0:=fill-tokenLimit;
+    if topIndex>=0 then begin
+      i0:=topIndex-tokenLimit;
       if i0<0 then i0:=0;
       if i0>0 then result:='... ' else result:='';
-      for i:=i0 to fill do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
+      for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
     end;
     result:=result+' # ';
     prevWasIdLike:=false;
