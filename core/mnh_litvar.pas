@@ -244,7 +244,8 @@ TYPE
 
   T_listLiteral = object(T_literal)
   private
-    element: array of P_literal;
+    dat: array of P_literal;
+    datFill:longint;
     cachedHash: T_hashInt;
     strictType: T_literalType;
     nextAppendIsRange: boolean;
@@ -663,7 +664,8 @@ CONSTRUCTOR T_listLiteral.create;
   begin
     inherited init;
     cachedHash:=0;
-    setLength(element, 0);
+    setLength(dat, 0);
+    datFill:=0;
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
     with indexBacking do begin
@@ -685,8 +687,9 @@ DESTRUCTOR T_expressionLiteral.destroy;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i: longint;
   begin
-    for i:=0 to length(element)-1 do if element [i]<>nil then disposeLiteral(element[i]);
-    setLength(element, 0);
+    for i:=0 to datFill-1 do if dat[i]<>nil then disposeLiteral(dat[i]);
+    setLength(dat, 0);
+    datFill:=0;
     strictType:=lt_emptyList;
     nextAppendIsRange:=false;
     dropIndexes;
@@ -711,20 +714,20 @@ FUNCTION T_boolLiteral      .value: boolean;    begin result:=val; end;
 FUNCTION T_expressionLiteral.value: pointer;    begin result:=val; end;
 FUNCTION T_listLiteral      .value(index: longint): P_literal;
   begin
-    result:=element [index];
+    result:=dat[index];
   end;
 //======================================================================:?.value
 
 FUNCTION T_listLiteral.size: longint;
   begin
-    result:=length(element);
+    result:=datFill;
   end;
 
 FUNCTION T_listLiteral.head:P_literal;
   begin
-    if length(element)=0
+    if datFill=0
     then result:=@self
-    else result:=element[0];
+    else result:=dat[0];
     result^.rereference;
   end;
 
@@ -732,9 +735,10 @@ FUNCTION T_listLiteral.head(CONST headSize: longint): P_listLiteral;
   VAR i,imax:longint;
   begin
     imax:=headSize;
-    if imax>length(element) then imax:=length(element);
+    if imax>datFill then imax:=datFill;
     result:=newListLiteral;
-    for i:=0 to imax-1 do result^.append(element[i],true);
+    setLength(result^.dat,imax);
+    for i:=0 to imax-1 do result^.append(dat[i],true);
   end;
 
 FUNCTION T_listLiteral.tail:P_listLiteral;
@@ -744,28 +748,29 @@ FUNCTION T_listLiteral.tail(CONST headSize:longint):P_listLiteral;
   VAR i,iMin:longint;
   begin
     iMin:=headSize;
-    if iMin>length(element) then iMin:=length(element)
+    if iMin>datFill then iMin:=datFill
     else if iMin<0 then iMin:=0;
     result:=newListLiteral;
-    for i:=iMin to length(element)-1 do result^.append(element[i],true);
+    setLength(result^.dat,datFill-iMin);
+    for i:=iMin to datFill-1 do result^.append(dat[i],true);
   end;
 
 FUNCTION T_listLiteral.trailing:P_literal;
   begin
-    if length(element)=0
+    if datFill=0
     then result:=@self
-    else result:=element[length(element)-1];
+    else result:=dat[datFill-1];
     result^.rereference;
   end;
 
 FUNCTION T_listLiteral.trailing(CONST trailSize:longint):P_listLiteral;
-  begin result:=tail(length(element)-trailSize); end;
+  begin result:=tail(datFill-trailSize); end;
 
 FUNCTION T_listLiteral.leading:P_listLiteral;
-  begin result:=head(length(element)-1); end;
+  begin result:=head(datFill-1); end;
 
 FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
-  begin result:=head(length(element)-trailSize); end;
+  begin result:=head(datFill-trailSize); end;
 //?.toString:===================================================================
 FUNCTION T_literal.toString: ansistring; begin result:='<ERR>';                      end;
 FUNCTION T_voidLiteral      .toString: ansistring; begin result:=C_voidText;                   end;
@@ -777,11 +782,11 @@ FUNCTION T_expressionLiteral.toString: ansistring; begin result:=subruleToString
 FUNCTION T_listLiteral      .toString: ansistring;
   VAR i: longint;
   begin
-    if length(element) = 0 then result:='[]'
+    if datFill = 0 then result:='[]'
     else begin
-      result:='['+element[0]^.toString;
-      for i:=1 to length(element)-1 do
-        result:=result+','+element[i]^.toString;
+      result:='['+dat[0]^.toString;
+      for i:=1 to datFill-1 do
+        result:=result+','+dat[i]^.toString;
       result:=result+']';
     end;
   end;
@@ -789,11 +794,11 @@ FUNCTION T_listLiteral      .toString: ansistring;
 FUNCTION T_listLiteral.listConstructorToString:ansistring;
   VAR i:longint;
   begin
-    if length(element) = 0 then result:='['
+    if datFill = 0 then result:='['
     else begin
-      result:='['+element[0]^.toString;
-      for i:=1 to length(element)-1 do
-        result:=result+','+element[i]^.toString;
+      result:='['+dat[0]^.toString;
+      for i:=1 to datFill-1 do
+        result:=result+','+dat[i]^.toString;
       if nextAppendIsRange then result:=result+'..'
                            else result:=result+',';
     end;
@@ -804,10 +809,10 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
   VAR
     i: longint;
   begin
-    if length(element) = 0 then if isFinalized then exit('()')
-                                               else exit('(');
-    result:=element [0]^.toString;
-    for i:=1 to length(element)-1 do result:=result+','+element [i]^.toString;
+    if datFill = 0 then if isFinalized then exit('()')
+                                       else exit('(');
+    result:=dat[0]^.toString;
+    for i:=1 to datFill-1 do result:=result+','+dat[i]^.toString;
     if isFinalized then result:='('+result+')'
     else result:='('+result+',';
   end;
@@ -823,15 +828,15 @@ FUNCTION T_stringLiteral.toShorterString: ansistring;
 FUNCTION T_listLiteral.toShorterString: ansistring;
   VAR i: longint;
   begin
-    if length(element) = 0 then result:='[]'
-    else if length(element)<5 then begin
-      result:='['+element [0]^.toShorterString;
-      for i:=1 to length(element)-1 do result:=result+','+element [i]^.toShorterString;
+    if datFill = 0 then result:='[]'
+    else if datFill<5 then begin
+      result:='['+dat[0]^.toShorterString;
+      for i:=1 to datFill-1 do result:=result+','+dat[i]^.toShorterString;
       result:=result+']';
-    end else result:='['+element [                0]^.toShorterString+','+
-                           element [                1]^.toShorterString+',...,'+
-                           element [length(element)-2]^.toShorterString+','+
-                           element [length(element)-1]^.toShorterString+']';
+    end else result:='['+dat[        0]^.toShorterString+','+
+                         dat[        1]^.toShorterString+',...,'+
+                         dat[datFill-2]^.toShorterString+','+
+                         dat[datFill-1]^.toShorterString+']';
   end;
 //============================================================:?.toShorterString
 //?.stringForm:=================================================================
@@ -929,8 +934,8 @@ FUNCTION T_listLiteral.isInRelationTo(CONST relation: T_tokenType; CONST other: 
     if not(other^.literalType in C_validListTypes) then exit(false);
     if (relation=tt_operatorIn) and (P_listLiteral(other)^.contains(@self)) then exit(true);
     if not(relation in [tt_comparatorListEq,tt_comparatorNeq]) then exit(false);
-    result:=length(element)=length(P_listLiteral(other)^.element);
-    for i:=0 to length(element)-1 do result:=result and element[i]^.isInRelationTo(tt_comparatorListEq,P_listLiteral(other)^.element[i]);
+    result:=datFill=P_listLiteral(other)^.datFill;
+    for i:=0 to datFill-1 do result:=result and dat[i]^.isInRelationTo(tt_comparatorListEq,P_listLiteral(other)^.dat[i]);
     if relation=tt_comparatorNeq then result:=not(result);
   end;
 //=============================================================:?.isInRelationTo
@@ -952,7 +957,7 @@ FUNCTION T_listLiteral.negate(CONST minusLocation: T_tokenLocation; VAR adapters
       i: longint;
   begin
     res:=newListLiteral;
-    for i:=0 to length(element)-1 do res^.append(element [i]^.negate(minusLocation,adapters), false);
+    for i:=0 to datFill-1 do res^.append(dat[i]^.negate(minusLocation,adapters), false);
     result:=res;
   end;
 //=====================================================================:?.negate
@@ -968,15 +973,15 @@ FUNCTION T_expressionLiteral.typeString: string;
 
 FUNCTION T_listLiteral.typeString:string;
   begin
-    result:=C_typeString[literalType]+'('+intToStr(length(element))+')';
+    result:=C_typeString[literalType]+'('+intToStr(datFill)+')';
   end;
 
 FUNCTION T_listLiteral.parameterListTypeString:string;
   VAR i:longint;
   begin
-    if length(element)<=0 then exit('()');
-    result:='('+element[0]^.typeString;
-    for i:=1 to length(element)-1 do result:=result+', '+element[i]^.typeString;
+    if datFill<=0 then exit('()');
+    result:='('+dat[0]^.typeString;
+    for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
     result:=result+')';
   end;
 //?.operate:====================================================================
@@ -1370,8 +1375,8 @@ FUNCTION T_listLiteral.hash: T_hashInt;
   begin
     if cachedHash<>0 then exit(cachedHash);
     {$Q-}{$R-}
-    result:=T_hashInt(lt_list)+T_hashInt(length(element));
-    for i:=0 to length(element)-1 do result:=result*31+element [i]^.hash;
+    result:=T_hashInt(lt_list)+T_hashInt(datFill);
+    for i:=0 to datFill-1 do result:=result*31+dat[i]^.hash;
     cachedHash:=0;
     {$Q+}{$R+}
   end;
@@ -1405,7 +1410,7 @@ FUNCTION T_listLiteral.equals(CONST other: P_literal): boolean;
   begin
     if (@self = other) then exit(true);
     if (other^.literalType<>literalType) or (P_listLiteral(other)^.size<>size) then exit(false);
-    for i:=0 to length(element)-1 do if not (element [i]^.equals(P_listLiteral(other)^.element [i])) then exit(false);
+    for i:=0 to datFill-1 do if not (dat[i]^.equals(P_listLiteral(other)^.dat[i])) then exit(false);
     result:=true;
   end;
 
@@ -1426,7 +1431,7 @@ FUNCTION T_listLiteral.contains(CONST other: P_literal): boolean;
   begin
     with indexBacking do if setBack<>nil then exit(setBack^.get(other,-1)>=0);
     result:=false;
-    for i:=0 to length(element)-1 do if element[i]^.equals(other) then exit(true);
+    for i:=0 to datFill-1 do if dat[i]^.equals(other) then exit(true);
   end;
 
 FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters): P_literal;
@@ -1444,30 +1449,30 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
     result:=nil;
     case other^.literalType of
       lt_int: begin
-        i1:=length(element);
+        i1:=datFill;
         i:=P_intLiteral(other)^.val;
         if (i>=0) and (i<i1) then begin
-          result:=element [i];
+          result:=dat[i];
           result^.rereference;
           checkedExit;
         end else exit(newVoidLiteral);
       end;
       lt_intList: begin
         result:=newListLiteral;
-        i1:=length(element);
-        for j:=0 to length(P_listLiteral(other)^.element)-1 do begin
-          i:=P_intLiteral(P_listLiteral(other)^.element [j])^.val;
-          if (i>=0) and (i<i1) then P_listLiteral(result)^.append(element [i], true);
+        i1:=datFill;
+        for j:=0 to P_listLiteral(other)^.datFill-1 do begin
+          i:=P_intLiteral(P_listLiteral(other)^.dat[j])^.val;
+          if (i>=0) and (i<i1) then P_listLiteral(result)^.append(dat[i], true);
         end;
         checkedExit;
       end;
       lt_booleanList: begin
         result:=newListLiteral;
-        i1:=length(element);
-        if i1 = length(P_listLiteral(other)^.element) then
-        for i:=0 to length(P_listLiteral(other)^.element)-1 do
-        if P_boolLiteral(P_listLiteral(other)^.element [i])^.val then
-          P_listLiteral(result)^.append(element [i], true);
+        i1:=datFill;
+        if i1 = P_listLiteral(other)^.datFill then
+        for i:=0 to P_listLiteral(other)^.datFill-1 do
+        if P_boolLiteral(P_listLiteral(other)^.dat[i])^.val then
+          P_listLiteral(result)^.append(dat[i], true);
         checkedExit;
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
@@ -1478,9 +1483,9 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
           exit(result);
         end else begin
           key:=P_stringLiteral(other)^.val;
-          for i:=0 to length(element)-1 do
-          if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.val = key then begin
-            result:=P_listLiteral(element [i])^.element [1];
+          for i:=0 to datFill-1 do
+          if P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.val = key then begin
+            result:=P_listLiteral(dat[i])^.dat[1];
             result^.rereference;
             checkedExit;
           end;
@@ -1494,7 +1499,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         result:=newListLiteral;
         if indexBacking.mapBack<>nil then begin
           for j:=0 to P_listLiteral(other)^.size-1 do begin
-            L:=indexBacking.mapBack^.get(P_listLiteral(other)^.element[j],nil);
+            L:=indexBacking.mapBack^.get(P_listLiteral(other)^.dat[j],nil);
             if L<>nil then begin
               P_listLiteral(result)^.append(L,true);
               break;
@@ -1502,11 +1507,11 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
           end;
         end else begin
           for j:=0 to P_listLiteral(other)^.size-1 do begin
-            key:=P_stringLiteral(P_listLiteral(other)^.element [j])^.value;
-            i:=0; while i<length(element) do
-            if P_stringLiteral(P_listLiteral(element [i])^.element [0])^.value = key then begin
-              P_listLiteral(result)^.append(P_listLiteral(element [i])^.element [1], true);
-              i:=length(element);
+            key:=P_stringLiteral(P_listLiteral(other)^.dat[j])^.value;
+            i:=0; while i<datFill do
+            if P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.value = key then begin
+              P_listLiteral(result)^.append(P_listLiteral(dat[i])^.dat[1], true);
+              i:=datFill;
             end else inc(i);
           end;
         end;
@@ -1524,9 +1529,9 @@ FUNCTION T_listLiteral.getInner(CONST other: P_literal; CONST tokenLocation: T_t
   VAR i:longint;
   begin
     result:=newListLiteral;
-    for i:=0 to length(element)-1 do
-    if element[i]^.literalType in C_validListTypes
-    then P_listLiteral(result)^.append(P_listLiteral(element[i])^.get(other,tokenLocation,adapters),false)
+    for i:=0 to datFill-1 do
+    if dat[i]^.literalType in C_validListTypes
+    then P_listLiteral(result)^.append(P_listLiteral(dat[i])^.get(other,tokenLocation,adapters),false)
     else begin
       disposeLiteral(result);
       exit(newErrorLiteral);
@@ -1575,18 +1580,14 @@ FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
 FUNCTION T_listLiteral.leqForSorting(CONST other: P_literal): boolean;
   VAR i: longint;
   begin
-    if (other^.literalType in C_validListTypes) then
-      begin
-      if length(element)<length(P_listLiteral(other)^.element) then exit(true)
-      else if length(element)>length(P_listLiteral(other)^.element) then exit(false)
-      else for i:=0 to length(element)-1 do if element [i]^.leqForSorting(P_listLiteral(other)^.element [i]) then
-            begin
-            if not(P_listLiteral(other)^.element [i]^.leqForSorting(element [i])) then exit(true);
-            end
-          else exit(false);
+    if (other^.literalType in C_validListTypes) then begin
+      if datFill<P_listLiteral(other)^.datFill then exit(true)
+      else if datFill>P_listLiteral(other)^.datFill then exit(false)
+      else for i:=0 to datFill-1 do if dat[i]^.leqForSorting(P_listLiteral(other)^.dat[i]) then begin
+        if not(P_listLiteral(other)^.dat[i]^.leqForSorting(dat[i])) then exit(true);
+      end else exit(false);
       exit(true);
-      end
-    else result:=literalType<=other^.literalType;
+    end else result:=literalType<=other^.literalType;
   end;
 
 //?.leqForSorting:==============================================================
@@ -1692,8 +1693,9 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_lis
     end;
     if L^.literalType=lt_void then exit;
     cachedHash:=0;
-    setLength(element, length(element)+1);
-    element[length(element)-1]:=L;
+    if length(dat)>=datFill then setLength(dat,datFill+16);
+    dat[datFill]:=L;
+    inc(datFill);
     if incRefs then L^.rereference;
     case strictType of
       lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
@@ -1772,7 +1774,7 @@ FUNCTION T_listLiteral.appendReal(CONST r: T_myFloat): P_listLiteral;
 FUNCTION T_listLiteral.appendAll(CONST L: P_listLiteral): P_listLiteral;
   VAR i: longint;
   begin
-    for i:=0 to length(L^.element)-1 do append(L^.element [i], true);
+    for i:=0 to L^.datFill-1 do append(L^.dat[i], true);
     result:=@self;
   end;
 
@@ -1788,12 +1790,12 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
     end;
     nextAppendIsRange:=false;
 
-    if length(element) = 0 then begin
+    if datFill = 0 then begin
       strictType:=lt_listWithError;
       adapters.raiseError('Cannot append range to empty list', tokenLocation);
       exit;
     end;
-    last:=element [length(element)-1];
+    last:=dat[datFill-1];
     if (last^.literalType = lt_int) and (L^.literalType = lt_int) then
       begin
       i0:=P_intLiteral(last)^.val;
@@ -1853,41 +1855,41 @@ PROCEDURE T_listLiteral.sort;
       scale: longint;
       i, j0, j1, k: longint;
   begin
-    if (length(element)<=1) then exit;
+    if (datFill<=1) then exit;
     cachedHash:=0;
     scale:=1;
-    setLength(temp, length(element));
-    while scale<length(element) do begin
+    setLength(temp, datFill);
+    while scale<datFill do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while i<length(element) do begin
+      while i<datFill do begin
         j0:=i; j1:=i+scale; k:=i;
-        while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-          if element [j0]^.leqForSorting(element [j1])  then begin temp[k]:=element [j0]; inc(k); inc(j0); end
-                                                        else begin temp[k]:=element [j1]; inc(k); inc(j1); end;
-        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; inc(k); inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+          if dat[j0]^.leqForSorting(dat[j1])    then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
+                                                else begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<datFill) do begin temp[k]:=dat[j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<datFill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<length(element)) then begin
+      if (scale<datFill) then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while i<length(element) do begin
+        while i<datFill do begin
           j0:=i; j1:=i+scale; k:=i;
-          while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-            if temp [j0]^.leqForSorting(temp [j1])        then begin element[k]:=temp [j0]; inc(k); inc(j0); end
-                                                          else begin element[k]:=temp [j1]; inc(k); inc(j1); end;
-          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; inc(k); inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+            if temp [j0]^.leqForSorting(temp [j1]) then begin dat[k]:=temp [j0]; inc(k); inc(j0); end
+                                                   else begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<datFill)       do  begin dat[k]:=temp [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<datFill) do  begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
           inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
         inc(scale, scale);
-      end else for k:=0 to length(element)-1 do element[k]:=temp [k];
+      end else for k:=0 to datFill-1 do dat[k]:=temp[k];
     end;
     setLength(temp, 0);
     dropIndexes;
@@ -1900,42 +1902,42 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; VAR
   FUNCTION isLeq(a,b:P_literal):boolean; inline; begin result:=evaluateCompatorCallback(leqExpression,a,b,adapters); end;
 
   begin
-    if length(element)<=1 then exit;
+    if datFill<=1 then exit;
     cachedHash:=0;
     scale:=1;
-    setLength(temp, length(element));
-    while (scale<length(element)) and adapters.noErrors do begin
+    setLength(temp, datFill);
+    while (scale<datFill) and adapters.noErrors do begin
       //merge lists of size [scale] to lists of size [scale+scale]:---------------
       i:=0;
-      while (i<length(element)) and adapters.noErrors do begin
+      while (i<datFill) and adapters.noErrors do begin
         j0:=i; j1:=i+scale; k:=i;
-        while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-          if isLeq(element [j0],element [j1])           then begin temp[k]:=element [j0]; inc(k); inc(j0); end
-                                                        else begin temp[k]:=element [j1]; inc(k); inc(j1); end;
-        while (j0<i+scale)       and (j0<length(element)) do begin temp[k]:=element [j0]; inc(k); inc(j0); end;
-        while (j1<i+scale+scale) and (j1<length(element)) do begin temp[k]:=element [j1]; inc(k); inc(j1); end;
+        while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+          if isLeq(dat[j0],dat[j1]     )        then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
+                                                else begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<datFill) do begin temp[k]:=dat[j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<datFill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
         inc(i, scale+scale);
       end;
       if not(adapters.noErrors) then exit;
       //---------------:merge lists of size [scale] to lists of size [scale+scale]
       inc(scale, scale);
-      if (scale<length(element)) and adapters.noErrors then begin
+      if (scale<datFill) and adapters.noErrors then begin
         //The following is equivalent to the above with swapped roles of "list" and "temp".
         //while making the code a little more complicated it avoids unnecessary copys.
         //merge lists of size [scale] to lists of size [scale+scale]:---------------
         i:=0;
-        while (i<length(element)) and adapters.noErrors do begin
+        while (i<datFill) and adapters.noErrors do begin
           j0:=i; j1:=i+scale; k:=i;
-          while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(element)) do
-            if isLeq(temp [j0],temp [j1])                 then begin element[k]:=temp [j0]; inc(k); inc(j0); end
-                                                          else begin element[k]:=temp [j1]; inc(k); inc(j1); end;
-          while (j0<i+scale) and (j0<length(element))       do begin element[k]:=temp [j0]; inc(k); inc(j0); end;
-          while (j1<i+scale+scale) and (j1<length(element)) do begin element[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+            if isLeq(temp [j0],temp [j1])         then begin dat[k]:=temp [j0]; inc(k); inc(j0); end
+                                                  else begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<datFill)       do begin dat[k]:=temp [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<datFill) do begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
           inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
         inc(scale, scale);
-      end else for k:=0 to length(element)-1 do element[k]:=temp [k];
+      end else for k:=0 to datFill-1 do dat[k]:=temp [k];
     end;
     setLength(temp, 0);
     dropIndexes;
@@ -1950,12 +1952,12 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
     i, j0, j1, k: longint;
 
   begin
-    if length(element) = 0 then exit(newListLiteral);
+    if datFill = 0 then exit(newListLiteral);
 
-    setLength(temp1, length(element));
-    setLength(temp2, length(element));
-    for i:=0 to length(element)-1 do with temp1 [i] do begin
-      v:=P_scalarLiteral(element [i]);
+    setLength(temp1, datFill);
+    setLength(temp2, datFill);
+    for i:=0 to datFill-1 do with temp1 [i] do begin
+      v:=P_scalarLiteral(dat[i]);
       index:=i;
     end;
     scale:=1;
@@ -2006,14 +2008,15 @@ PROCEDURE T_listLiteral.unique;
       sort;
       j:=0;
       new(setBack,create);
-      for i:=0 to length(element)-1 do
-      if setBack^.get(element[i],-1)=-1
+      for i:=0 to datFill-1 do
+      if setBack^.get(dat[i],-1)=-1
       then begin
-        setBack^.put(element[i],i);
-        element[j]:=element[i];
+        setBack^.put(dat[i],i);
+        dat[j]:=dat[i];
         inc(j);
-      end else disposeLiteral(element[i]);
-      setLength(element,j);
+      end else disposeLiteral(dat[i]);
+      setLength(dat,j);
+      datFill:=j;
     end;
   end;
 
@@ -2029,33 +2032,35 @@ PROCEDURE T_listLiteral.toKeyValueList;
       end;
       j:=0;
       new(mapBack,create());
-      for i:=0 to length(element)-1 do begin
-        key:=P_listLiteral(element[i])^.element[0];
-        val:=P_listLiteral(element[i])^.element[1];
+      for i:=0 to datFill-1 do begin
+        key:=P_listLiteral(dat[i])^.dat[0];
+        val:=P_listLiteral(dat[i])^.dat[1];
         if mapBack^.get(key,nil)=nil then begin
           mapBack^.put(key,val);
-          element[j]:=element[i];
+          dat[j]:=dat[i];
           inc(j);
-        end else disposeLiteral(element[i]);
+        end else disposeLiteral(dat[i]);
       end;
-      setLength(element,j);
+      setLength(dat,j);
+      datFill:=j;
     end;
   end;
 
 FUNCTION T_listLiteral.isKeyValuePair: boolean;
   begin
-    result:=(length(element)=2)
-        and (element[0]^.literalType=lt_string);
+    result:=(datFill=2)
+        and (dat[0]^.literalType=lt_string);
   end;
 
 FUNCTION T_listLiteral.clone: P_listLiteral;
   VAR i:longint;
   begin
     result:=newListLiteral;
-    setLength(result^.element,length(element));
-    for i:=0 to length(element)-1 do begin
-      result^.element[i]:=element[i];
-      element[i]^.rereference;
+    setLength(result^.dat,datFill);
+    result^.datFill:=datFill;
+    for i:=0 to datFill-1 do begin
+      result^.dat[i]:=dat[i];
+      dat[i]^.rereference;
     end;
     result^.strictType:=strictType;
     result^.nextAppendIsRange:=nextAppendIsRange;
@@ -2078,13 +2083,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
           then exit(P_scalarLiteral(LHS)^.isInRelationTo(tt_comparatorEq,P_scalarLiteral(RHS)))
           else exit(false);
         lt_list..lt_flatList:
-          if (RHS^.literalType in C_validListTypes) and (length(P_listLiteral(LHS)^.element) =length(P_listLiteral(RHS)^.element))
+          if (RHS^.literalType in C_validListTypes) and (P_listLiteral(LHS)^.datFill = P_listLiteral(RHS)^.datFill)
           then begin
             result:=true;
             i:=0;
-            while result and (i<length(P_listLiteral(LHS)^.element)) do begin
-              result:=result and equals(P_listLiteral(LHS)^.element [i],
-                P_listLiteral(RHS)^.element [i]);
+            while result and (i<P_listLiteral(LHS)^.datFill) do begin
+              result:=result and equals(P_listLiteral(LHS)^.dat[i],
+                P_listLiteral(RHS)^.dat[i]);
               inc(i);
             end;
           end else exit(false);
@@ -2213,9 +2218,9 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_list,lt_keyValueList: begin
               //scalar X nested list
               result:=newListLiteral;
-              for i:=0 to length(P_listLiteral(RHS)^.element)-1 do
+              for i:=0 to P_listLiteral(RHS)^.datFill-1 do
                 P_listLiteral(result)^.append(
-                  resolveOperator(LHS, op, P_listLiteral(RHS)^.element[i],
+                  resolveOperator(LHS, op, P_listLiteral(RHS)^.dat[i],
                   tokenLocation,adapters),
                   false);
               checkedExit;
@@ -2224,23 +2229,23 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               //scalar X flat list
               result:=newListLiteral;
               case op of
-                tt_comparatorEq:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (LHS,P_listLiteral(RHS)^.element[i]));
-                tt_comparatorNeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (LHS,P_listLiteral(RHS)^.element[i]));
-                tt_comparatorLeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (LHS,P_listLiteral(RHS)^.element[i]));
-                tt_comparatorGeq:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (LHS,P_listLiteral(RHS)^.element[i]));
-                tt_comparatorLss:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (LHS,P_listLiteral(RHS)^.element[i]));
-                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(LHS,P_listLiteral(RHS)^.element[i]));
-                tt_operatorAnd:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorOr:         for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorXor:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorPlus:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorMinus:      for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorMult:       for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorMod:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorPot:        for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(RHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                tt_comparatorEq:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_comparatorNeq:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_comparatorLeq:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_comparatorGeq:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_comparatorLss:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLesser (LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_comparatorGrt:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGreater(LHS,P_listLiteral(RHS)^.dat[i]));
+                tt_operatorAnd:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorOr:         for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorXor:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorPlus:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorMinus:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorMult:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorDivReal:    for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorDivInt:     for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorMod:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorPot:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorStrConcat:  for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
               end;
               checkedExit;
             end;
@@ -2249,23 +2254,23 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_boolean, lt_int, lt_real, lt_string: begin
               //nested list X scalar
               result:=newListLiteral;
-              for i:=0 to length(P_listLiteral(LHS)^.element)-1 do
+              for i:=0 to P_listLiteral(LHS)^.datFill-1 do
                 P_listLiteral(result)^.append(
-                  resolveOperator(P_listLiteral(LHS)^.element [i], op,
+                  resolveOperator(P_listLiteral(LHS)^.dat[i], op,
                   RHS, tokenLocation,adapters),
                   false);
               checkedExit;
             end;
             lt_list..lt_flatList: begin
               //nested list X flat/nested list
-              i :=length(P_listLiteral(LHS)^.element);
-              i1:=length(P_listLiteral(RHS)^.element);
+              i :=P_listLiteral(LHS)^.datFill;
+              i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
                 for i:=0 to i1-1 do
                   P_listLiteral(result)^.append(resolveOperator(
-                    P_listLiteral(LHS)^.element [i], op,
-                    P_listLiteral(RHS)^.element [i], tokenLocation,adapters),
+                    P_listLiteral(LHS)^.dat[i], op,
+                    P_listLiteral(RHS)^.dat[i], tokenLocation,adapters),
                     false);
                 checkedExit;
               end else invalidLengthExit;
@@ -2276,64 +2281,64 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               //flat list X scalar
               result:=newListLiteral;
               case op of
-                tt_comparatorEq:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.element [i],RHS));
-                tt_comparatorNeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.element [i],RHS));
-                tt_comparatorLeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.element [i],RHS));
-                tt_comparatorGeq:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element [i],RHS));
-                tt_comparatorLss:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element [i],RHS));
-                tt_comparatorGrt:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element [i],RHS));
-                tt_operatorAnd:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorOr:         for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorXor:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorPlus:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMinus:      for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMult:       for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorDivReal:    for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorDivInt:     for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMod:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorPot:        for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorStrConcat:  for i:=0 to length(P_listLiteral(LHS)^.element)-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_comparatorEq:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.dat[i],RHS));
+                tt_comparatorNeq:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.dat[i],RHS));
+                tt_comparatorLeq:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.dat[i],RHS));
+                tt_comparatorGeq:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.dat[i],RHS));
+                tt_comparatorLss:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.dat[i],RHS));
+                tt_comparatorGrt:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.dat[i],RHS));
+                tt_operatorAnd:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorOr:         for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorXor:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorPlus:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMinus:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMult:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorDivReal:    for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorDivInt:     for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorMod:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorPot:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorStrConcat:  for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters),false);
               end;
               checkedExit;
             end;
             lt_list,lt_keyValueList: begin
               //flat list X nested list
-              i:=length(P_listLiteral(LHS)^.element);
-              i1:=length(P_listLiteral(RHS)^.element);
+              i :=P_listLiteral(LHS)^.datFill;
+              i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
                 for i:=0 to i1-1 do
                   P_listLiteral(result)^.append(resolveOperator(
-                    P_listLiteral(LHS)^.element [i], op,
-                    P_listLiteral(RHS)^.element [i], tokenLocation,adapters),
+                    P_listLiteral(LHS)^.dat[i], op,
+                    P_listLiteral(RHS)^.dat[i], tokenLocation,adapters),
                     false);
                 checkedExit;
               end else invalidLengthExit;
             end;
             lt_booleanList..lt_emptyList,lt_flatList: begin
               //flat list X flat list
-              i:=length(P_listLiteral(LHS)^.element);
-              i1:=length(P_listLiteral(RHS)^.element);
+              i :=P_listLiteral(LHS)^.datFill;
+              i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
                 case op of
-                  tt_comparatorEq:       for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_comparatorNeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_comparatorLeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_comparatorGeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_comparatorLss:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.element[i],P_listLiteral(RHS)^.element[i]));
-                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
-                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.element [i])^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.element [i]),tokenLocation,adapters),false);
+                  tt_comparatorEq:       for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_comparatorNeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_comparatorLeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLeq    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_comparatorGeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_comparatorLss:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
+                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
                 end;
                 checkedExit;
               end else invalidLengthExit;
@@ -2455,20 +2460,20 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (length(params^.element)=3) and
-       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.element[1]^.literalType=lt_string) then begin
-      map:=P_listLiteral(params^.element[0]);
+    if (params<>nil) and (params^.datFill=3) and
+       (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.dat[1]^.literalType=lt_string) then begin
+      map:=P_listLiteral(params^.dat[0]);
       if map^.numberOfReferences=1
       then map^.rereference
       else map:=map^.clone;
-      key:=P_stringLiteral(params^.element[1]);
-      value:=params^.element[2];
-      for i:=0 to length(map^.element)-1 do begin
-        keyValuePair:=P_listLiteral(map^.element[i]);
-        if keyValuePair^.element[0]^.equals(key) then begin
-          disposeLiteral(keyValuePair^.element[1]);
-          keyValuePair^.element[1]:=value;
+      key:=P_stringLiteral(params^.dat[1]);
+      value:=params^.dat[2];
+      for i:=0 to map^.datFill-1 do begin
+        keyValuePair:=P_listLiteral(map^.dat[i]);
+        if keyValuePair^.dat[0]^.equals(key) then begin
+          disposeLiteral(keyValuePair^.dat[1]);
+          keyValuePair^.dat[1]:=value;
           value^.rereference;
           exit(map);
         end;
@@ -2490,30 +2495,30 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
       tempBack:boolean=false;
   begin
     result:=nil;
-    if (params<>nil) and ((length(params^.element)=2) or (length(params^.element)=3)) and
-       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.element[1]^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
-      map:=P_listLiteral(params^.element[0]);
-      if length(params^.element)=3 then fallback:=params^.element[2]
-                                   else fallback:=nil;
-      if params^.element[1]^.literalType in [lt_stringList,lt_emptyList] then begin
-        keyList:=P_listLiteral(params^.element[1]);
+    if (params<>nil) and ((params^.datFill=2) or (params^.datFill=3)) and
+       (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.dat[1]^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      map:=P_listLiteral(params^.dat[0]);
+      if params^.datFill=3 then fallback:=params^.dat[2]
+                           else fallback:=nil;
+      if params^.dat[1]^.literalType in [lt_stringList,lt_emptyList] then begin
+        keyList:=P_listLiteral(params^.dat[1]);
         back:=map^.indexBacking.mapBack;
         if back=nil then begin
           tempBack:=true;
           new(back,create);
-          for i:=0 to map^.size-1 do begin
-            keyValuePair:=P_listLiteral(map^.element[i]);
-            back^.put(keyValuePair^.element[0],keyValuePair^.element[1]);
+          for i:=0 to map^.datFill-1 do begin
+            keyValuePair:=P_listLiteral(map^.dat[i]);
+            back^.put(keyValuePair^.dat[0],keyValuePair^.dat[1]);
           end;
         end;
         resultList:=newListLiteral;
         if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
           fallbackList:=P_listLiteral(fallback);
-          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.element[i],fallbackList^.element[i]),true);
+          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.dat[i],fallbackList^.dat[i]),true);
         end else begin
           for i:=0 to keyList^.size-1 do begin
-            result:=back^.get(keyList^.element[i],fallback);
+            result:=back^.get(keyList^.dat[i],fallback);
             if result<>nil then resultList^.append(result,true);
           end;
         end;
@@ -2521,12 +2526,12 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
         result:=resultList;
       end else begin
         back:=map^.indexBacking.mapBack;
-        key:=P_stringLiteral(params^.element[1]);
+        key:=P_stringLiteral(params^.dat[1]);
         if back=nil then begin
-          for i:=0 to length(map^.element)-1 do begin
-            keyValuePair:=P_listLiteral(map^.element[i]);
-            if keyValuePair^.element[0]^.equals(key) then begin
-              result:=keyValuePair^.element[1];
+          for i:=0 to map^.datFill-1 do begin
+            keyValuePair:=P_listLiteral(map^.dat[i]);
+            if keyValuePair^.dat[0]^.equals(key) then begin
+              result:=keyValuePair^.dat[1];
               result^.rereference;
               exit(result);
             end;
@@ -2551,15 +2556,15 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
       i:longint;
   begin
     result:=nil;
-    if (params<>nil) and (length(params^.element)=2) and
-       (params^.element[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
-       (params^.element[1]^.literalType=lt_string) then begin
-      map:=P_listLiteral(params^.element[0]);
+    if (params<>nil) and (params^.datFill=2) and
+       (params^.dat[0]^.literalType in [lt_keyValueList,lt_emptyList]) and
+       (params^.dat[1]^.literalType=lt_string) then begin
+      map:=P_listLiteral(params^.dat[0]);
       result:=newListLiteral;
-      key:=P_stringLiteral(params^.element[1]);
-      for i:=0 to length(map^.element)-1 do begin
-        keyValuePair:=P_listLiteral(map^.element[i]);
-        if not(keyValuePair^.element[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
+      key:=P_stringLiteral(params^.dat[1]);
+      for i:=0 to map^.datFill-1 do begin
+        keyValuePair:=P_listLiteral(map^.dat[i]);
+        if not(keyValuePair^.dat[0]^.equals(key)) then P_listLiteral(result)^.append(keyValuePair,true);
       end;
     end;
   end;
