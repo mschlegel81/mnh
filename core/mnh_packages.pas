@@ -230,9 +230,11 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
   begin
     id:=packId;
     path:=locateSource(extractFilePath(root),id);
-    if (path='')
-    then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation)
-    else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
+    if adapters<>nil then begin
+      if (path='')
+      then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package for id "'+id+'"',tokenLocation)
+      else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
+    end;
     pack:=nil;
   end;
 
