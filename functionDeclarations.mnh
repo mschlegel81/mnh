@@ -1,0 +1,18 @@
+firstString(c:string)->begin
+  local indexes:=indexOf(c.chars="'")+1;
+  indexes.size<2
+  ? ''
+  : c.copy(indexes[0],indexes[1]-indexes[0]-1);
+end;
+
+allFolders('.')
+  .each(f,files(f&['/*.pas','/*.inc']),|)
+  .each(file,
+    file
+    .fileLines
+    .each(line,line.matches('registerRule')
+               ? print(file,' ',index,' ',line.firstString)
+               : void));
+
+
+
