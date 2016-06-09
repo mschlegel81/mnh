@@ -168,7 +168,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       adapters.raiseCustomMessage(mt_el4_parsingError,message,lineLocation);
     end;
 
-  FUNCTION leadingId(CONST allowQualified:boolean):ansistring;
+  FUNCTION leadingId:ansistring;
     VAR i:longint;
     begin
       i:=lineLocation.column;
@@ -178,7 +178,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
             parsedLength:=i-lineLocation.column;
             exit(copy(line,lineLocation.column,parsedLength));
-          end else if not(allowQualified) then begin
+          end else begin
             parsedLength:=i-lineLocation.column;
             exit(copy(line,lineLocation.column,parsedLength));
           end;
@@ -256,12 +256,12 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         end;
       end;
       '$': begin
-        result.txt:=leadingId(false);
+        result.txt:=leadingId;
         parsedLength:=length(result.txt);
         result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
-        id:=leadingId(false);
+        id:=leadingId;
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
         if id=C_tokenString[tt] then begin
@@ -325,7 +325,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         parsedLength:=length(C_tokenString[tt_separatorCnt]);
         result.tokType:=tt_separatorCnt;
       end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
-        id:=copy(leadingId(false),2,length(line));
+        id:=copy(leadingId,2,length(line));
         parsedLength:=1+length(id);
         result.txt:=id;
         result.tokType:=tt_identifier_pon;
@@ -335,7 +335,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         parsedLength:=2;
         result.tokType:=tt_assign;
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
-        id:=leadingId(false);
+        id:=leadingId;
         parsedLength:=length(id);
         if      id=C_tokenString[tt_typeCheckBoolList  ] then result.tokType:=tt_typeCheckBoolList
         else if id=C_tokenString[tt_typeCheckBoolean   ] then result.tokType:=tt_typeCheckBoolean
