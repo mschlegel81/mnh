@@ -35,8 +35,9 @@ private ensurePackages->fileExists('ensurePackages.mnh') ? void : begin
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
-private
-currentCodeHash->begin
+private mutable currentCodeHash:=void;
+private synchronized updateCurrentCodeHash->
+currentCodeHash:=begin
   ensureDemos;
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
@@ -96,10 +97,8 @@ exeHasWrongVersion(FI) ? begin
   ? void
   : execPipeless('..\upx.exe',['-9',binName(FI)]);
   delp;
-  not(exeHasWrongVersion(FI));  
+  not(exeHasWrongVersion(FI));
 end : true;
-
-
 
 private call7z(fileList,suffix)->begin
   local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList;
@@ -117,7 +116,8 @@ private verboseMove(src,dest)->begin
 end;
                     
 //*Make distro 7z - including build if needed
-main('distro')->
+main('distro')->begin
+  updateCurrentCodeHash;
   [0..3].each(i,
     begin
       local buildOk:=build(i);
@@ -143,9 +143,13 @@ main('distro')->
       end
     : void;
   end : void;
+end;
 
 //*Build - ignoring potentially existing executables
-main('build')->[0..7].each(i,build(i),AND);
+main('build')->begin
+  updateCurrentCodeHash;
+  [0..7].each(i,build(i),AND);
+end;
 
 //*Build - ignoring potentially existing executables
 main->main('build');
@@ -159,8 +163,7 @@ main('clean')->begin
            deleteDir(f);
          end
        : void);
-  (files(allFolders('.')&'/*.exe')|
-   files(allFolders('.')&'/*.png')|
+  (files(allFolders('.')&'/*.png')|
    files(allFolders('.')&'/*.bak')|
    files('doc/package_doc/*.html')|
    files('doc/*.html')|
@@ -180,15 +183,18 @@ main('clean')->begin
 end;
      
 //*Tests all files
-main('test')->[0..3].each(i,
+main('test')->begin
+  updateCurrentCodeHash;
+  [0..3].each(i,
   build(i), 
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
   ? void
   : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]));
+end;
 
 //*Only prepare code hash
-main('prepare')->currentCodeHash;
+main('prepare')->updateCurrentCodeHash;
   
 //*Several steps in succession
 main(...)->... .each(p,
