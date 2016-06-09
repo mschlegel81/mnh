@@ -259,7 +259,7 @@ FUNCTION T_token.hash:T_hashInt;
   begin
     result:=0;
     pt:=@self;
-    {$Q-}
+    {$Q-}{$R-}
     while pt<>nil do begin
       with pt^ do begin
         case tokType of
@@ -276,7 +276,7 @@ FUNCTION T_token.hash:T_hashInt;
       end;
       pt:=pt^.next;
     end;
-    {$Q+}
+    {$Q+}{$R+}
   end;
 
 end.
