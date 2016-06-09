@@ -1074,10 +1074,9 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
     autosizeToggleBox.Checked:=false;
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
-  sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
-  Shift: TShiftState);
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   begin
+    value:=copy(sourceValue,1,LastDelimiter('.',sourceValue)-1)+value;
     wordsInEditor.clear;
   end;
 
@@ -1114,9 +1113,10 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
     ensureWordsInEditorForCompletion;
     SynCompletion.ItemList.clear;
     s:=SynCompletion.CurrentString;
-    if (length(s)>1) and (s[length(s)]=C_ID_QUALIFY_CHARACTER) then begin
-      s                          :=C_ID_QUALIFY_CHARACTER;
-      SynCompletion.CurrentString:=C_ID_QUALIFY_CHARACTER;
+    i:=LastDelimiter('.',s);
+    if i>1 then begin
+      s:=copy(s,i,length(s));
+      SynCompletion.CurrentString:=s;
     end;
     for i:=0 to wordsInEditor.size-1 do
       if pos(s,wordsInEditor[i])=1 then SynCompletion.ItemList.add(wordsInEditor[i]);
@@ -1229,19 +1229,39 @@ PROCEDURE TMnhForm.miFindClick(Sender: TObject);
   begin
     if OutputEdit.Focused then begin
       OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      wordUnderCursor:=OutputEdit.TextBetweenPoints[OutputEdit.BlockBegin,OutputEdit.BlockEnd];
+      if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
       outputFocusedOnFind:=true;
     end else begin
-      with editorMeta[PageControl.ActivePageIndex] do wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
-      if wordUnderCursor<>'' then FindDialog.FindText:=wordUnderCursor;
+      with editorMeta[PageControl.ActivePageIndex] do begin
+        wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+        if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
+      end;
       outputFocusedOnFind:=false;
     end;
+    if wordUnderCursor<>'' then FindDialog.FindText:=wordUnderCursor;
     FindDialog.execute;
+    ReplaceDialog.FindText:=FindDialog.FindText;
   end;
 
 PROCEDURE TMnhForm.miReplaceClick(Sender: TObject);
+  VAR wordUnderCursor:string;
   begin
-    outputFocusedOnFind:=OutputEdit.Focused;
+    if OutputEdit.Focused then begin
+      OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      wordUnderCursor:=OutputEdit.TextBetweenPoints[OutputEdit.BlockBegin,OutputEdit.BlockEnd];
+      if wordUnderCursor='' then wordUnderCursor:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      outputFocusedOnFind:=true;
+    end else begin
+      with editorMeta[PageControl.ActivePageIndex] do begin
+        wordUnderCursor:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+        if wordUnderCursor='' then wordUnderCursor:=editor.GetWordAtRowCol(editor.CaretXY);
+      end;
+      outputFocusedOnFind:=false;
+    end;
+    if wordUnderCursor<>'' then ReplaceDialog.FindText:=wordUnderCursor;
     ReplaceDialog.execute;
+    FindDialog.FindText:=ReplaceDialog.FindText;
   end;
 
 FUNCTION FindOptionsToSearchOptions (CONST FindOptions: TFindOptions): TSynSearchOptions;
