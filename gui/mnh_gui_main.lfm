@@ -1135,7 +1135,7 @@ object MnhForm: TMnhForm
           'Value'
         )
       end
-      object GroupBox1: TGroupBox
+      object currentExpressionGroupBox: TGroupBox
         Left = 0
         Height = 57
         Top = 0

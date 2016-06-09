@@ -121,7 +121,7 @@ TYPE
     outputTabSheet: TTabSheet;
     variablesTabSheet: TTabSheet;
     variablesStringGrid: TStringGrid;
-    GroupBox1: TGroupBox;
+    currentExpressionGroupBox: TGroupBox;
     currentExpressionMemo: TSynMemo;
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -282,11 +282,13 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
     if autosizeToggleBox.Checked and (PageControl.ActivePageIndex>=0) then with editorMeta[PageControl.ActivePageIndex] do begin
       scrollbarHeight     :=editor.height-editor.ClientHeight;
       idealInputHeight    :=scrollbarHeight+ editor    .Font.GetTextHeight(SAMPLE_TEXT)*(editor    .lines.count+1);
-      idealOutputHeight   :=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
+      if outputPageControl.ActivePage=variablesTabSheet
+      then idealOutputHeight:=currentExpressionGroupBox.Height+variablesStringGrid.RowCount*variablesStringGrid.DefaultRowHeight
+      else idealOutputHeight:=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
       //Are both editors large enough? Then return right now.
       if (editor.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
 
-      availableTotalHeight:=editor.height+OutputEdit.height;
+      availableTotalHeight:=editor.height+outputPageControl.ActivePage.Height;
       inputFocus:=not(forceOutputFocus or OutputEdit.Focused);
       if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
         //There is enough space for both -> priorize input before output
