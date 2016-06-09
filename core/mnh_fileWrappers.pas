@@ -91,7 +91,9 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     end;
 
   begin
+    if id='' then exit('');
     {$ifdef DEBUGMODE}
+    writeln('id to look for is: "',id,'"');
     writeln('Root path is "',rootPath,'"');
     writeln('Search folders: ',rootPath);
     writeln('                ',configDir);
@@ -212,7 +214,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   VAR stream:TFileStream;
       i:longint;
   begin
-    stream:=TFileStream.create(name,fmOpenWrite);
+    stream:=TFileStream.create(name,fmCreate);
     try
       stream.Seek(0,soFromBeginning);
       for i:=1 to length(textToWrite) do stream.writeByte(ord(textToWrite[i]));
