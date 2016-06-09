@@ -1,13 +1,13 @@
 startOfEvaluation:=time;
 
 private memoized canPlot(exe)->exe.exec(['-cmd','-echo','-time','-el5',"print('plot.plot' in listBuiltin)"])==['true'];
-private canPlot:='plot.plot' in listBuiltin;
+canPlot:='plot.plot' in listBuiltin;
 
 private codeHash(exe)->exec(exe,['-codeHash']).head;
 private codeHash:=executor.codeHash;
 
 private memoized flavourString(exe)->exe.exec(['-version']).head.split(' ').trailing(2).reverseList.join('_')&(canPlot(exe) ? '' : '_light');
-private flavourString:=executor.flavourString;
+flavourString:=executor.flavourString;
 
 private memoized logName(exe)->myPath.replace('.mnh','.'&flavourString(exe)&'.txt');
 private logName:=executor.logName;
