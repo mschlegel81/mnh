@@ -25,7 +25,8 @@ PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$IFDEF UNIX} cthreads, cmem, {$ENDIF}
+USES {$IFDEF UNIX} cthreads, cmem,{$ENDIF}
+  {$ifdef DEBUGMODE}heaptrc,{$endif}
   Interfaces, // this includes the LCL widgetset
   Forms, mnh_gui_settings, mnh_gui_main, closeDialog, askDialog,
   mnh_cmdLineInterpretation, mnh_funcs, mnh_funcs_list,

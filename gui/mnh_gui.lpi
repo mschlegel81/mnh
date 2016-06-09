@@ -334,11 +334,6 @@
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
     </CodeGeneration>
-    <Linking>
-      <Debugging>
-        <UseHeaptrc Value="True"/>
-      </Debugging>
-    </Linking>
     <Other>
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
