@@ -530,7 +530,7 @@ PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST lo
 CONSTRUCTOR G_literalKeyMap.create();
   VAR i:longint;
   begin
-    setLength(dat,16);
+    setLength(dat,256);
     for i:=0 to length(dat)-1 do setLength(dat[i],0);
     fill:=0;
   end;

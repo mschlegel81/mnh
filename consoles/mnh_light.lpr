@@ -24,7 +24,7 @@
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cmem, cthreads,{$endif}
      {$ifdef DEBUGMODE}heaptrc,{$endif}
-     mnh_constants,myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,mnh_out_adapters, mnh_fileWrappers;
+     mnh_constants,myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,mnh_out_adapters;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
