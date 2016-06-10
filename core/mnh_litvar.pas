@@ -174,15 +174,16 @@ TYPE
   end;
 
   GENERIC G_literalKeyMap<VALUE_TYPE>=object
-    CONST CACHE_MOD=2047;
     TYPE CACHE_ENTRY=record
            key:P_literal;
            value:VALUE_TYPE;
          end;
          KEY_VALUE_LIST=array of CACHE_ENTRY;
-    VAR dat:array[0..CACHE_MOD] of KEY_VALUE_LIST;
+    VAR dat:array of KEY_VALUE_LIST;
+        fill:longint;
     CONSTRUCTOR create();
     DESTRUCTOR destroy;
+    PROCEDURE rehashGrowing;
     FUNCTION put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
     FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
     FUNCTION keyValueList:KEY_VALUE_LIST;
@@ -232,6 +233,7 @@ TYPE
 
     FUNCTION value(index: longint): P_literal;
     PROCEDURE sort;
+    PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
     PROCEDURE customSort(CONST leqExpression:P_expressionLiteral; VAR adapters:T_adapters);
     FUNCTION sortPerm: P_listLiteral;
     PROCEDURE unique;
@@ -528,35 +530,67 @@ PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST lo
 CONSTRUCTOR G_literalKeyMap.create();
   VAR i:longint;
   begin
-    for i:=0 to CACHE_MOD do setLength(dat[i],0);
+    setLength(dat,16);
+    for i:=0 to length(dat)-1 do setLength(dat[i],0);
+    fill:=0;
   end;
 
 DESTRUCTOR G_literalKeyMap.destroy;
   VAR i:longint;
   begin
-    for i:=0 to CACHE_MOD do setLength(dat[i],0);
+    for i:=0 to length(dat)-1 do setLength(dat[i],0);
   end;
+
+PROCEDURE G_literalKeyMap.rehashGrowing;
+    VAR oldLen:longint;
+        temp:KEY_VALUE_LIST;
+        c0,c1,i,j,k:longint;
+    begin
+      oldLen:=length(dat);
+      setLength(dat,oldLen*2);
+      for i:=0 to oldLen-1 do begin
+        temp:=dat[i];
+        setLength(dat[i+oldLen],length(dat[i]));
+        c0:=0;
+        c1:=0;
+        for j:=0 to length(temp)-1 do begin
+          k:=temp[j].key^.hash and (length(dat)-1);
+          if k=i then begin
+            dat[i][c0]:=temp[j];
+            inc(c0);
+          end else begin
+            dat[k][c1]:=temp[j];
+            inc(c1);
+          end;
+        end;
+        setLength(dat[i       ],c0);
+        setLength(dat[i+oldLen],c1);
+        setLength(temp,0);
+      end;
+    end;
 
 FUNCTION G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
   VAR binIdx:longint;
       j:longint;
   begin
-    binIdx:=key^.hash and CACHE_MOD;
+    binIdx:=key^.hash and (length(dat)-1);
     j:=0;
     while (j<length(dat[binIdx])) and not(dat[binIdx,j].key^.equals(key)) do inc(j);
     if j>=length(dat[binIdx]) then begin
       setLength(dat[binIdx],j+1);
       result:=true;
       dat[binIdx,j].key:=key;
+      inc(fill);
     end else result:=false;
     dat[binIdx,j].value:=value;
+    if fill>length(dat)*4 then rehashGrowing;
   end;
 
 FUNCTION G_literalKeyMap.get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
   VAR binIdx:longint;
       j:longint;
   begin
-    binIdx:=key^.hash and CACHE_MOD;
+    binIdx:=key^.hash and (length(dat)-1);
     result:=fallbackIfNotFound;
     for j:=0 to length(dat[binIdx])-1 do if dat[binIdx,j].key^.equals(key) then exit(dat[binIdx,j].value);
   end;
@@ -566,7 +600,7 @@ FUNCTION G_literalKeyMap.keyValueList:KEY_VALUE_LIST;
   begin
     setLength(result,0);
     k:=0;
-    for i:=0 to CACHE_MOD do for j:=0 to length(dat[i])-1 do begin
+    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
       setLength(result,k+1);
       result[k]:=dat[i,j];
       inc(k);
@@ -578,7 +612,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   begin
     setLength(result,0);
     k:=0;
-    for i:=0 to CACHE_MOD do for j:=0 to length(dat[i])-1 do begin
+    for i:=0 to length(dat)-1 do for j:=0 to length(dat[i])-1 do begin
       setLength(result,k+1);
       result[k]:=dat[i,j].key;
       inc(k);
@@ -1467,6 +1501,63 @@ PROCEDURE T_listLiteral.sort;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]
         inc(scale, scale);
       end else for k:=0 to datFill-1 do dat[k]:=temp[k];
+    end;
+    setLength(temp, 0);
+    dropIndexes;
+  end;
+
+PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; VAR adapters: T_adapters);
+  VAR temp: array of P_literal;
+      scale: longint;
+      i, j0, j1, k: longint;
+  FUNCTION isLeq(a,b:P_literal):boolean; inline;
+    begin
+      if (a^.literalType in C_validListTypes) and (P_listLiteral(a)^.datFill>innerIndex) and
+         (b^.literalType in C_validListTypes) and (P_listLiteral(b)^.datFill>innerIndex)
+      then result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
+      else begin
+        result:=false;
+        adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString+' and '+b^.toString,location);
+      end;
+    end;
+
+  begin
+    if datFill<=1 then exit;
+    cachedHash:=0;
+    scale:=1;
+    setLength(temp, datFill);
+    while (scale<datFill) and adapters.noErrors do begin
+      //merge lists of size [scale] to lists of size [scale+scale]:---------------
+      i:=0;
+      while (i<datFill) and adapters.noErrors do begin
+        j0:=i; j1:=i+scale; k:=i;
+        while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+          if isLeq(dat[j0],dat[j1]     )        then begin temp[k]:=dat[j0]; inc(k); inc(j0); end
+                                                else begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<datFill) do begin temp[k]:=dat[j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<datFill) do begin temp[k]:=dat[j1]; inc(k); inc(j1); end;
+        inc(i, scale+scale);
+      end;
+      if not(adapters.noErrors) then exit;
+      //---------------:merge lists of size [scale] to lists of size [scale+scale]
+      inc(scale, scale);
+      if (scale<datFill) and adapters.noErrors then begin
+        //The following is equivalent to the above with swapped roles of "list" and "temp".
+        //while making the code a little more complicated it avoids unnecessary copys.
+        //merge lists of size [scale] to lists of size [scale+scale]:---------------
+        i:=0;
+        while (i<datFill) and adapters.noErrors do begin
+          j0:=i; j1:=i+scale; k:=i;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
+            if isLeq(temp [j0],temp [j1])         then begin dat[k]:=temp [j0]; inc(k); inc(j0); end
+                                                  else begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<datFill)       do begin dat[k]:=temp [j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<datFill) do begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
+          inc(i, scale+scale);
+        end;
+        //---------------:merge lists of size [scale] to lists of size [scale+scale]
+        inc(scale, scale);
+      end else for k:=0 to datFill-1 do dat[k]:=temp [k];
     end;
     setLength(temp, 0);
     dropIndexes;

@@ -91,7 +91,15 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         result^.rereference;
       end else result:=list0^.clone;
       P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),context.adapters^);
-    end;
+    end else if (params<>nil) and (params^.size=2)
+            and (arg0^.literalType in C_validListTypes)
+            and (arg1^.literalType=lt_int) then begin
+      if (arg0^.getReferenceCount=1) then begin
+        result:=arg0;
+        result^.rereference;
+      end else result:=list0^.clone;
+      P_listLiteral(result)^.sortBySubIndex(P_intLiteral(arg1)^.value,tokenLocation,context.adapters^);
+    end
   end;
 
 FUNCTION sortPerm_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -144,6 +152,7 @@ FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_to
     freqList:=freqMap.keyValueList;
     result:=newListLiteral;
     for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false);
+    P_listLiteral(result)^.sortBySubIndex(1,tokenLocation,context.adapters^);
     freqMap.destroy;
   end;
 
@@ -168,6 +177,7 @@ FUNCTION setUnion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     result:=newListLiteral;
     resultList:=resultSet.keyValueList;
     for i:=0 to length(resultList)-1 do P_listLiteral(result)^.append(resultList[i].key,true);
+    P_listLiteral(result)^.unique;
     setLength(resultList,0);
     resultSet.destroy;
   end;
@@ -195,6 +205,7 @@ FUNCTION setIntersect(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     result:=newListLiteral;
     for j:=0 to length(resultList)-1 do if resultList[j].value=i then
       P_listLiteral(result)^.append(resultList[j].key,true);
+    P_listLiteral(result)^.unique;
     setLength(resultList,0);
     resultSet.destroy;
   end;
@@ -218,6 +229,7 @@ FUNCTION setMinus(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     for i:=0 to LHS^.size-1 do
       if not(rhsSet.get(LHS^.value(i),false))
       then P_listLiteral(result)^.append(LHS^.value(i),true);
+    P_listLiteral(result)^.unique;
     rhsSet.destroy;
   end;
 
@@ -360,7 +372,9 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'tail',@tail_imp,'tail(L);#Returns list L without the first element#tail(L,k);#Returns L without the first k elements');
   registerRule(LIST_NAMESPACE,'leading',@leading_imp,'leading(L);#Returns L without the last element or [] if L is empty#leading(L,k);#Returns L without the last k elements or [] if L is empty');
   registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,'trailing(L);#Returns the last element of L#trailing(L,k);#Returns the last k elements of L');
-  registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"');
+  registerRule(LIST_NAMESPACE,'sort',@sort_imp,'sort(L);#Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
+                                               'sort(L,leqExpression:expression);#Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
+                                               'sort(L,innerIndex:int);#Returns L sorted by given inner index');
   registerRule(LIST_NAMESPACE,'sortPerm',@sortPerm_imp,'sortPerm(L);#Returns indexes I so that L%I==sort(L)');
   registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L:list);#Returns list L without duplicates and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);#Returns key L without duplicate keys and enhanced for faster lookup');
