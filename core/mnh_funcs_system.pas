@@ -251,7 +251,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       tempProcess.free;
       memStream.SetSize(BytesRead);
       output := TStringList.create;
-      output.LoadFromStream(memStream);
+      output.loadFromStream(memStream);
       memStream.free;
     end;
 

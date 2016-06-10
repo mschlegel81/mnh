@@ -240,10 +240,10 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
 
 CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST adapters:P_adapters);
   begin
-    path:=ExtractFilePath(tokenLocation.package^.getPath)+path_;
+    path:=extractFilePath(tokenLocation.package^.getPath)+path_;
     id:=filenameToPackageId(path_);
-    if not(FileExists(path)) and FileExists(path_) then path:=path_;
-    if not(FileExists(path))
+    if not(fileExists(path)) and fileExists(path_) then path:=path_;
+    if not(fileExists(path))
     then adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot locate package "'+path+'"',tokenLocation)
     else adapters^.raiseNote('Importing "'+path+'" as '+id,tokenLocation);
     pack:=nil;
@@ -318,12 +318,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           first:=context.disposeToken(first);
         end;
         for i:=1 to length(packageUses)-1 do for j:=0 to i-1 do
-          if (ExpandFileName(packageUses[i].path)=ExpandFileName(packageUses[j].path))
+          if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
           or (packageUses[i].id=packageUses[j].id) then context.adapters^.raiseError('Duplicate import: '+packageUses[i].id,locationForErrorFeedback);
         if not(context.adapters^.noErrors) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,locationForErrorFeedback);
           for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
-          SetLength(packageUses,0);
+          setLength(packageUses,0);
         end;
         if usecase<>lu_forDocGeneration then reloadAllPackages(locationForErrorFeedback);
       end;

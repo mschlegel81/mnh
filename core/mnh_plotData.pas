@@ -1294,7 +1294,7 @@ FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ans
     Rect.Bottom:=height;
     storeImage.Canvas.CopyRect(Rect, plotImage.Canvas, Rect);
     memStream := TMemoryStream.create;
-    storeImage.Picture.PNG.SaveToStream(memStream);
+    storeImage.Picture.PNG.saveToStream(memStream);
     resultSize:=memStream.position;
     memStream.position:=0;
     result:='';

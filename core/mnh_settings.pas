@@ -39,8 +39,8 @@ T_formPosition=object(T_serializable)
   isFullscreen: boolean;
   CONSTRUCTOR create;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
 end;
 
 T_editorState=object(T_serializable)
@@ -55,8 +55,8 @@ T_editorState=object(T_serializable)
   DESTRUCTOR destroy;
   PROCEDURE getLines(CONST dat: TStrings);
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
 end;
 
 P_Settings=^T_settings;
@@ -81,8 +81,8 @@ T_settings=object(T_serializable)
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
   FUNCTION getSerialVersion:dword; virtual;
-  FUNCTION LoadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
-  PROCEDURE SaveToStream(VAR stream:T_streamWrapper); virtual;
+  FUNCTION loadFromStream(VAR stream:T_streamWrapper):boolean; virtual;
+  PROCEDURE saveToStream(VAR stream:T_streamWrapper); virtual;
   PROCEDURE initDefaults;
 
   FUNCTION savingRequested:boolean;
@@ -132,10 +132,10 @@ FUNCTION workerThreadCount:longint;
   end;
 
 FUNCTION T_settings.getSerialVersion:dword; begin result:=1644235074; end;
-FUNCTION T_settings.LoadFromStream(VAR stream:T_streamWrapper): boolean;
+FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
   VAR i:longint;
   begin
-    if not inherited LoadFromStream(stream) then exit(false);
+    if not inherited loadFromStream(stream) then exit(false);
 
     cpuCount:=stream.readLongint;
     if cpuCount<=0 then begin
@@ -145,7 +145,7 @@ FUNCTION T_settings.LoadFromStream(VAR stream:T_streamWrapper): boolean;
     fontSize:=stream.readLongint;
     editorFontname := stream.readAnsiString;
     antialiasedFonts:=stream.readBoolean;
-    mainForm.LoadFromStream(stream);
+    mainForm.loadFromStream(stream);
     with outputBehaviour do begin
       doEchoInput := stream.readBoolean;
       doEchoDeclaration := stream.readBoolean;
@@ -161,7 +161,7 @@ FUNCTION T_settings.LoadFromStream(VAR stream:T_streamWrapper): boolean;
     setLength(editorState,i);
     for i:=0 to length(editorState)-1 do begin
       editorState[i].create;
-      editorState[i].LoadFromStream(stream);
+      editorState[i].loadFromStream(stream);
     end;
     activePage:=stream.readLongint;
     saveIntervalIdx:=stream.readByte;
@@ -177,16 +177,16 @@ FUNCTION T_settings.LoadFromStream(VAR stream:T_streamWrapper): boolean;
     wasLoaded:=result;
   end;
 
-PROCEDURE T_settings.SaveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
   VAR i:longint;
       visibleEditorCount:longint=0;
   begin
-    inherited SaveToStream(stream);
+    inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
     stream.writeLongint(fontSize);
     stream.writeAnsiString(editorFontname);
     stream.writeBoolean(antialiasedFonts);
-    mainForm.SaveToStream(stream);
+    mainForm.saveToStream(stream);
     with outputBehaviour do begin
       stream.writeBoolean(doEchoInput);
       stream.writeBoolean(doEchoDeclaration);
@@ -199,7 +199,7 @@ PROCEDURE T_settings.SaveToStream(VAR stream:T_streamWrapper);
     for i:=0 to length(fileHistory)-1 do stream.writeAnsiString(fileHistory [i]);
     for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
     stream.writeLongint(visibleEditorCount);
-    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].SaveToStream(stream);
+    for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream);
     stream.writeLongint(activePage);
     stream.writeByte(saveIntervalIdx);
     stream.writeAnsiString(textLogName);
@@ -299,9 +299,9 @@ CONSTRUCTOR T_formPosition.create;
   end;
 
 FUNCTION T_formPosition.getSerialVersion:dword; begin result:=1529642236; end;
-FUNCTION T_formPosition.LoadFromStream(VAR stream:T_streamWrapper):boolean;
+FUNCTION T_formPosition.loadFromStream(VAR stream:T_streamWrapper):boolean;
   begin
-    if not inherited LoadFromStream(stream) then exit(false);
+    if not inherited loadFromStream(stream) then exit(false);
     top   :=stream.readLongint;
     Left  :=stream.readLongint;
     width :=stream.readLongint;
@@ -310,9 +310,9 @@ FUNCTION T_formPosition.LoadFromStream(VAR stream:T_streamWrapper):boolean;
     result:=true;
   end;
 
-PROCEDURE T_formPosition.SaveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_formPosition.saveToStream(VAR stream:T_streamWrapper);
   begin
-    inherited SaveToStream(stream);
+    inherited saveToStream(stream);
     stream.writeLongint(top);
     stream.writeLongint(Left);
     stream.writeLongint(width);
@@ -348,10 +348,10 @@ PROCEDURE T_editorState.getLines(CONST dat: TStrings);
 
 FUNCTION T_editorState.getSerialVersion:dword; begin result:=1417366165; end;
 
-FUNCTION T_editorState.LoadFromStream(VAR stream:T_streamWrapper):boolean;
+FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
   VAR i:longint;
   begin
-    if not inherited LoadFromStream(stream) then exit(false);
+    if not inherited loadFromStream(stream) then exit(false);
     visible:=true;
     filePath:=stream.readAnsiString;
     changed:=stream.readBoolean;
@@ -376,10 +376,10 @@ FUNCTION T_editorState.LoadFromStream(VAR stream:T_streamWrapper):boolean;
     end else result:=false;
   end;
 
-PROCEDURE T_editorState.SaveToStream(VAR stream:T_streamWrapper);
+PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
   VAR i:longint;
   begin
-    inherited SaveToStream(stream);
+    inherited saveToStream(stream);
     if filePath<>'' then filePath:=expandFileName(filePath);
     stream.writeAnsiString(filePath);
     stream.writeBoolean(changed);

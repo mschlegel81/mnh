@@ -718,9 +718,9 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
         if (packageUses[i].id=id) or (packageUses[i].path=id)
         then exit(packageUses[i].pack^.inspect);
 
-      if not(FileExists(id)) then id:=locateSource(ExtractFilePath(tokenLocation.package^.getPath),id);
+      if not(fileExists(id)) then id:=locateSource(extractFilePath(tokenLocation.package^.getPath),id);
 
-      if (id<>'') and FileExists(id) then begin
+      if (id<>'') and fileExists(id) then begin
         tempPackage.create(nil);
         tempPackage.setSourcePath(id);
         tempPackage.loadForDocumentation;
