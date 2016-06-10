@@ -42,7 +42,6 @@ TYPE
 
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -147,7 +146,6 @@ TYPE
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
-    FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -246,7 +244,6 @@ TYPE
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION listConstructorToString:ansistring;
-    FUNCTION toShorterString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -770,29 +767,6 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     if isFinalized then result:='('+result+')'
     else result:='('+result+',';
   end;
-//?.toShorterString:============================================================
-FUNCTION T_literal.toShorterString: ansistring; begin result:=toString; end;
-
-FUNCTION T_stringLiteral.toShorterString: ansistring;
-  begin
-    if length(val)>13 then result:=escapeString(copy(val, 1, 5)+'...'+copy(val, length(val)-5, 5))
-    else result:=toString;
-  end;
-
-FUNCTION T_listLiteral.toShorterString: ansistring;
-  VAR i: longint;
-  begin
-    if datFill = 0 then result:='[]'
-    else if datFill<5 then begin
-      result:='['+dat[0]^.toShorterString;
-      for i:=1 to datFill-1 do result:=result+','+dat[i]^.toShorterString;
-      result:=result+']';
-    end else result:='['+dat[        0]^.toShorterString+','+
-                         dat[        1]^.toShorterString+',...,'+
-                         dat[datFill-2]^.toShorterString+','+
-                         dat[datFill-1]^.toShorterString+']';
-  end;
-//============================================================:?.toShorterString
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
