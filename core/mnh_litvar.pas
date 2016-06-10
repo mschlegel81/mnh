@@ -25,7 +25,7 @@ UNIT mnh_litVar;
 {$WARN 3018 OFF}{$WARN 3019 OFF}{$WARN 5024 OFF}
 {$endif}
 INTERFACE
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil;
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -54,18 +54,6 @@ TYPE
   P_scalarLiteral = ^T_scalarLiteral;
   T_scalarLiteral = object(T_literal)
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMinus    (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMult     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivReal  (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPot      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivInt   (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMod      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
   end;
 
@@ -88,10 +76,6 @@ TYPE
     FUNCTION value: boolean;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -110,17 +94,6 @@ TYPE
     FUNCTION value: int64;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMinus    (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMult     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivReal  (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPot      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivInt   (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMod      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -140,12 +113,6 @@ TYPE
     FUNCTION value: T_myFloat;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMinus    (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMult     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivReal  (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPot      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -177,8 +144,6 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -202,17 +167,6 @@ TYPE
     FUNCTION arity:longint;
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
-    FUNCTION opAnd      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opOr       (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opXor      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPlus     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMinus    (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMult     (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivReal  (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opPot      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opDivInt   (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opMod      (CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
-    FUNCTION opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; virtual;
     //from T_literal:
     FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
@@ -984,357 +938,6 @@ FUNCTION T_listLiteral.parameterListTypeString:string;
     for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
     result:=result+')';
   end;
-//?.operate:====================================================================
-FUNCTION T_scalarLiteral.opAnd      (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorAnd      ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opOr       (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorOr       ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opXor      (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorXor      ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opPlus     (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorPlus     ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opMinus    (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorMinus    ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opMult     (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorMult     ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opDivReal  (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorDivReal  ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opPot      (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorPot      ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opDivInt   (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorDivInt   ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opMod      (CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorMod      ,tokenLocation); end;
-FUNCTION T_scalarLiteral.opStrConcat(CONST other:P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral; begin result:=newErrorLiteral; end; //Raising(literalType,other^.literalType,tt_operatorStrConcat,tokenLocation); end;
-
-FUNCTION T_boolLiteral.opAnd(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorAnd, other, tokenLocation));
-      lt_boolean   : result:=newBoolLiteral(val and P_boolLiteral(other)^.val);
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorAnd, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_boolLiteral.opOr(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorOr, other, tokenLocation));
-      lt_boolean   : result:=newBoolLiteral(val or P_boolLiteral(other)^.val);
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorOr, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_boolLiteral.opXor(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorXor, other, tokenLocation));
-      lt_boolean   : result:=newBoolLiteral(val xor P_boolLiteral(other)^.val);
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorXor, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_boolLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorStrConcat, other, tokenLocation));
-      else           result:=newStringLiteral(stringForm+other^.stringForm);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opAnd(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int       : result:=newIntLiteral(val and P_intLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorAnd, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorAnd, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opOr(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int       : result:=newIntLiteral(val or P_intLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorOr, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorOr, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opXor(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int       : result:=newIntLiteral(val xor P_intLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorXor, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorXor, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opPlus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newIntLiteral(val+P_intLiteral(other)^.val);
-      lt_real:       result:=newRealLiteral(val+P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPlus , other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPlus, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opMinus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newIntLiteral(val-P_intLiteral(other)^.val);
-      lt_real:       result:=newRealLiteral(val-P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMinus, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMinus, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opMult(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newIntLiteral(val*P_intLiteral(other)^.val);
-      lt_real:       result:=newRealLiteral(val*P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMult, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMult, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opDivReal(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(val/P_intLiteral(other)^.val);
-      lt_real:       result:=newRealLiteral(val/P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivReal, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorDivReal, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opPot(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  FUNCTION pot_int_int(x, y: int64): P_scalarLiteral;
-    VAR temp: int64;
-        tx, rx: T_myFloat;
-    begin
-      if y>=0 then begin
-        {$Q-}
-        temp:=1;
-        while y>0 do begin
-          if odd(y) then temp:=temp*x;
-          x:=int64(x)*int64(x);
-          y:=y shr 1;
-        end;
-        {$Q+}
-        result:=newIntLiteral(temp);
-      end else begin
-        rx:=1/x;
-        tx:=1;
-        y:=-y;
-        while y>0 do begin
-          if odd(y) then tx:=tx*rx;
-          rx:=rx*rx;
-          y:=y shr 1;
-        end;
-        result:=newRealLiteral(tx);
-      end;
-    end;
-
-  begin
-    case other^.literalType of
-      lt_int:        result:=pot_int_int(val, P_intLiteral(other)^.val);
-      lt_real:       result:=newRealLiteral(exp(ln(val)*P_realLiteral(other)^.val));
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPot, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPot, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opDivInt(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        try
-                       result:=newIntLiteral(val div P_intLiteral(other)^.val);
-                     except
-                       result:=newRealLiteral(Nan);
-                     end;
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivInt, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorDivInt, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opMod(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        try
-                       result:=newIntLiteral(val mod P_intLiteral(other)^.val)
-                     except
-                       result:=newRealLiteral(Nan);
-                     end;
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMod, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMod, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_intLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorStrConcat, other, tokenLocation));
-      else           result:=newStringLiteral(stringForm+other^.stringForm);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opPlus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(val+P_intLiteral (other)^.val);
-      lt_real:       result:=newRealLiteral(val+P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPlus, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPlus, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opMinus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(val-P_intLiteral (other)^.val);
-      lt_real:       result:=newRealLiteral(val-P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMinus, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMinus, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opMult(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(val*P_intLiteral (other)^.val);
-      lt_real:       result:=newRealLiteral(val*P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMult, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMult, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opDivReal(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(val/P_intLiteral (other)^.val);
-      lt_real:       result:=newRealLiteral(val/P_realLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivReal, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorDivReal, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opPot(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  FUNCTION pot_real_int(x: T_myFloat; y: longint): T_myFloat;
-    begin
-      if y<0 then begin
-        y:=-y;
-        x:=1/x;
-      end;
-      result:=1;
-      while y>0 do begin
-        if odd(y) then result:=result*x;
-        x:=x*x;
-        y:=y shr 1;
-      end;
-    end;
-
-  begin
-    case other^.literalType of
-      lt_int:        result:=newRealLiteral(pot_real_int(val, P_intLiteral(other)^.val));
-      lt_real:       result:=newRealLiteral(exp(ln(val)*P_realLiteral(other)^.val));
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPot, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPot, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_realLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorStrConcat, other, tokenLocation));
-      else           result:=newStringLiteral(stringForm+other^.stringForm);
-    end;
-  end;
-
-FUNCTION T_stringLiteral.opPlus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_string:     result:=newStringLiteral(val+P_stringLiteral(other)^.val);
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPlus, other, tokenLocation));
-      else           result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPlus, tokenLocation,adapters);
-    end;
-  end;
-
-FUNCTION T_stringLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    case other^.literalType of
-      lt_expression: result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorStrConcat, other, tokenLocation));
-      else           result:=newStringLiteral(stringForm+other^.stringForm);
-    end;
-  end;
-
-FUNCTION T_expressionLiteral.opAnd(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_boolean,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorAnd, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorAnd, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opOr(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_boolean,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorOr, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorOr, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opXor(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_boolean,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorXor, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorXor, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opPlus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_real,lt_int,lt_string,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPlus, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPlus, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opMinus(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_real,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMinus, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMinus, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opMult(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_real,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMult, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMult, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opDivReal(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_real,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivReal, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorDivReal, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opPot(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_real,lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorPot, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorPot, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opDivInt(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorDivInt, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorDivInt, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opMod(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    if other^.literalType in [lt_int,lt_expression]
-    then result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorMod, other, tokenLocation))
-    else result:=newErrorLiteralRaising(literalType, other^.literalType, tt_operatorMod, tokenLocation,adapters);
-  end;
-
-FUNCTION T_expressionLiteral.opStrConcat(CONST other: P_scalarLiteral; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
-  begin
-    result:=newExpressionLiteral(subruleApplyOpCallback(@self, tt_operatorStrConcat, other, tokenLocation));
-  end;
-
-//====================================================================:?.operate
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=$ffffffff; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
@@ -2175,6 +1778,265 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       end;
     end;
 
+  FUNCTION opAnd(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_boolean:
+          case RHS^.literalType of
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorAnd, RHS, tokenLocation)));
+            lt_boolean   : exit(newBoolLiteral(P_boolLiteral(LHS)^.val and P_boolLiteral(RHS)^.val));
+          end;
+        lt_int:
+          case RHS^.literalType of
+            lt_int       : exit(newIntLiteral(P_intLiteral(LHS)^.val and P_intLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorAnd, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_boolean,lt_int,lt_expression] then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorAnd, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorAnd, tokenLocation,adapters);
+    end;
+
+  FUNCTION opOr(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_boolean:
+          case RHS^.literalType of
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorOr, RHS, tokenLocation)));
+            lt_boolean   : exit(newBoolLiteral(P_boolLiteral(LHS)^.val or P_boolLiteral(RHS)^.val));
+          end;
+        lt_int:
+          case RHS^.literalType of
+            lt_int       : exit(newIntLiteral(P_intLiteral(LHS)^.val or P_intLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorOr, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_boolean,lt_int,lt_expression] then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorOr, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorOr, tokenLocation,adapters);
+    end;
+
+  FUNCTION opXor(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_boolean:
+          case RHS^.literalType of
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorXor, RHS, tokenLocation)));
+            lt_boolean   : exit(newBoolLiteral(P_boolLiteral(LHS)^.val xor P_boolLiteral(RHS)^.val));
+          end;
+        lt_int:
+          case RHS^.literalType of
+            lt_int       : exit(newIntLiteral(P_intLiteral(LHS)^.val xor P_intLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorXor, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_boolean,lt_int,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorXor, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorXor, tokenLocation,adapters);
+    end;
+
+  FUNCTION opPlus(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val+P_intLiteral(RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPlus , RHS, tokenLocation)));
+          end;
+        lt_real:
+          case RHS^.literalType of
+            lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val+P_intLiteral (RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_realLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPlus, RHS, tokenLocation)));
+          end;
+        lt_string:
+          case RHS^.literalType of
+            lt_string:     exit(newStringLiteral(P_stringLiteral(LHS)^.val+P_stringLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPlus, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_real,lt_string,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPlus, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorPlus, tokenLocation,adapters);
+    end;
+
+  FUNCTION opMinus    (CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val-P_intLiteral(RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMinus, RHS, tokenLocation)));
+          end;
+        lt_real:
+          case RHS^.literalType of
+            lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val-P_intLiteral (RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_realLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMinus, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_real,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMinus, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorMinus, tokenLocation,adapters);
+    end;
+
+  FUNCTION opMult     (CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val*P_intLiteral(RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMult, RHS, tokenLocation)));
+          end;
+        lt_real:
+          case RHS^.literalType of
+            lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val*P_intLiteral (RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_realLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMult, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_real,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMult, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorMult, tokenLocation,adapters);
+    end;
+
+  FUNCTION opDivReal  (CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        exit(newRealLiteral(P_intLiteral(LHS)^.val/P_intLiteral (RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val/P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivReal, RHS, tokenLocation)));
+          end;
+        lt_real:
+          case RHS^.literalType of
+            lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val/P_intLiteral (RHS)^.val));
+            lt_real:       exit(newRealLiteral(P_realLiteral(LHS)^.val/P_realLiteral(RHS)^.val));
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivReal, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_real,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivReal, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorDivReal, tokenLocation,adapters);
+    end;
+
+  FUNCTION opDivInt(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        try
+                             exit(newIntLiteral(P_intLiteral(LHS)^.val div P_intLiteral(RHS)^.val));
+                           except
+                             exit(newRealLiteral(Nan));
+                           end;
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivInt, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivInt, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorDivInt, tokenLocation,adapters);
+    end;
+
+  FUNCTION opMod(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      case LHS^.literalType of
+        lt_int:
+          case RHS^.literalType of
+            lt_int:        try
+                             exit(newIntLiteral(P_intLiteral(LHS)^.val mod P_intLiteral(RHS)^.val))
+                           except
+                             exit(newRealLiteral(Nan));
+                           end;
+            lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMod, RHS, tokenLocation)));
+          end;
+        lt_expression:
+          if RHS^.literalType in [lt_int,lt_expression]
+          then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMod, RHS, tokenLocation)));
+      end;
+      result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorMod, tokenLocation,adapters);
+    end;
+
+  FUNCTION opPot(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    FUNCTION pot_int_int(x, y: int64): P_scalarLiteral;
+      VAR temp: int64;
+          tx, rx: T_myFloat;
+      begin
+        if y>=0 then begin
+          {$Q-}
+          temp:=1;
+          while y>0 do begin
+            if odd(y) then temp:=temp*x;
+            x:=int64(x)*int64(x);
+            y:=y shr 1;
+          end;
+          {$Q+}
+          result:=newIntLiteral(temp);
+        end else begin
+          rx:=1/x;
+          tx:=1;
+          y:=-y;
+          while y>0 do begin
+            if odd(y) then tx:=tx*rx;
+            rx:=rx*rx;
+            y:=y shr 1;
+          end;
+          result:=newRealLiteral(tx);
+        end;
+      end;
+
+    FUNCTION pot_real_int(x: T_myFloat; y: longint): T_myFloat;
+      begin
+        if y<0 then begin
+          y:=-y;
+          x:=1/x;
+        end;
+        result:=1;
+        while y>0 do begin
+          if odd(y) then result:=result*x;
+          x:=x*x;
+          y:=y shr 1;
+        end;
+      end;
+
+  begin
+    case LHS^.literalType of
+      lt_int:
+        case RHS^.literalType of
+          lt_int:        exit(pot_int_int(P_intLiteral(LHS)^.val, P_intLiteral(RHS)^.val));
+          lt_real:       exit(newRealLiteral(exp(ln(P_intLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
+          lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPot, RHS, tokenLocation)));
+        end;
+      lt_real:
+        case RHS^.literalType of
+          lt_int:        exit(newRealLiteral(pot_real_int(P_realLiteral(LHS)^.val, P_intLiteral(RHS)^.val)));
+          lt_real:       exit(newRealLiteral(exp(ln(P_realLiteral(LHS)^.val)*P_realLiteral(RHS)^.val)));
+          lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPot, RHS, tokenLocation)));
+        end;
+      lt_expression:
+        if RHS^.literalType in [lt_int,lt_real,lt_expression]
+        then exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPot, RHS, tokenLocation)));
+    end;
+    result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, tt_operatorPot, tokenLocation,adapters);
+  end;
+
+  FUNCTION opStrConcat(CONST LHS,RHS:P_literal):P_scalarLiteral;
+    begin
+      if (LHS^.literalType=lt_expression) or (RHS^.literalType=lt_expression)
+      then result:=newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorStrConcat, RHS, tokenLocation))
+      else result:=newStringLiteral(P_scalarLiteral(LHS)^.stringForm+P_scalarLiteral(RHS)^.stringForm);
+    end;
+
   {$define checkedExit:=
     if result^.literalType = lt_listWithError then begin
       disposeLiteral(result);
@@ -2202,17 +2064,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_comparatorGeq:     exit(newBoolLiteral(areInRelGeq    (LHS,RHS)));
                 tt_comparatorLss:     exit(newBoolLiteral(areInRelLesser (LHS,RHS)));
                 tt_comparatorGrt:     exit(newBoolLiteral(areInRelGreater(LHS,RHS)));
-                tt_operatorAnd:       exit(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorOr:        exit(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorXor:       exit(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorPlus:      exit(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorMinus:     exit(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorMult:      exit(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorDivReal:   exit(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorDivInt:    exit(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorMod:       exit(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorPot:       exit(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters));
-                tt_operatorStrConcat: exit(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters));
+                tt_operatorAnd:       exit(opAnd      (LHS,RHS));
+                tt_operatorOr:        exit(opOr       (LHS,RHS));
+                tt_operatorXor:       exit(opXor      (LHS,RHS));
+                tt_operatorPlus:      exit(opPlus     (LHS,RHS));
+                tt_operatorMinus:     exit(opMinus    (LHS,RHS));
+                tt_operatorMult:      exit(opMult     (LHS,RHS));
+                tt_operatorDivReal:   exit(opDivReal  (LHS,RHS));
+                tt_operatorDivInt:    exit(opDivInt   (LHS,RHS));
+                tt_operatorMod:       exit(opMod      (LHS,RHS));
+                tt_operatorPot:       exit(opPot      (LHS,RHS));
+                tt_operatorStrConcat: exit(opStrConcat(LHS,RHS));
               end;
             //scalar X scalar
             lt_list,lt_keyValueList: begin
@@ -2235,17 +2097,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_comparatorGeq:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (LHS,P_listLiteral(RHS)^.dat[i]));
                 tt_comparatorLss:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLesser (LHS,P_listLiteral(RHS)^.dat[i]));
                 tt_comparatorGrt:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGreater(LHS,P_listLiteral(RHS)^.dat[i]));
-                tt_operatorAnd:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorOr:         for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorXor:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorPlus:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorMinus:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorMult:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorDivReal:    for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorDivInt:     for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorMod:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorPot:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                tt_operatorStrConcat:  for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(LHS)^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                tt_operatorAnd:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opAnd      (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorOr:         for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opOr       (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorXor:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opXor      (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorPlus:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opPlus     (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorMinus:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opMinus    (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorMult:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opMult     (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorDivReal:    for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opDivReal  (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorDivInt:     for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opDivInt   (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorMod:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opMod      (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorPot:        for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opPot      (LHS,P_listLiteral(RHS)^.dat[i]),false);
+                tt_operatorStrConcat:  for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.append(opStrConcat(LHS,P_listLiteral(RHS)^.dat[i]),false);
               end;
               checkedExit;
             end;
@@ -2287,17 +2149,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                 tt_comparatorGeq:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.dat[i],RHS));
                 tt_comparatorLss:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.dat[i],RHS));
                 tt_comparatorGrt:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.dat[i],RHS));
-                tt_operatorAnd:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opAnd      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorOr:         for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opOr       (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorXor:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opXor      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorPlus:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPlus     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMinus:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMinus    (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMult:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMult     (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorDivReal:    for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivReal  (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorDivInt:     for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivInt   (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorMod:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMod      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorPot:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPot      (P_scalarLiteral(RHS),tokenLocation,adapters),false);
-                tt_operatorStrConcat:  for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opStrConcat(P_scalarLiteral(RHS),tokenLocation,adapters),false);
+                tt_operatorAnd:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opAnd      (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorOr:         for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opOr       (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorXor:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opXor      (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorPlus:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opPlus     (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorMinus:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opMinus    (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorMult:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opMult     (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorDivReal:    for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opDivReal  (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorDivInt:     for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opDivInt   (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorMod:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opMod      (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorPot:        for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opPot      (P_listLiteral(LHS)^.dat[i],RHS),false);
+                tt_operatorStrConcat:  for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.append(opStrConcat(P_listLiteral(LHS)^.dat[i],RHS),false);
               end;
               checkedExit;
             end;
@@ -2328,17 +2190,17 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
                   tt_comparatorGeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGeq    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
                   tt_comparatorLss:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelLesser (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
                   tt_comparatorGrt:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelGreater(P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
-                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opAnd      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opOr       (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opXor      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPlus     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMinus    (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMult     (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivReal  (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opDivInt   (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opMod      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opPot      (P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
-                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(P_scalarLiteral(P_listLiteral(LHS)^.dat[i])^.opStrConcat(P_scalarLiteral(P_listLiteral(RHS)^.dat[i]),tokenLocation,adapters),false);
+                  tt_operatorAnd:        for i:=0 to i1-1 do P_listLiteral(result)^.append(opAnd      (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorOr:         for i:=0 to i1-1 do P_listLiteral(result)^.append(opOr       (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorXor:        for i:=0 to i1-1 do P_listLiteral(result)^.append(opXor      (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorPlus:       for i:=0 to i1-1 do P_listLiteral(result)^.append(opPlus     (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorMinus:      for i:=0 to i1-1 do P_listLiteral(result)^.append(opMinus    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorMult:       for i:=0 to i1-1 do P_listLiteral(result)^.append(opMult     (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorDivReal:    for i:=0 to i1-1 do P_listLiteral(result)^.append(opDivReal  (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorDivInt:     for i:=0 to i1-1 do P_listLiteral(result)^.append(opDivInt   (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorMod:        for i:=0 to i1-1 do P_listLiteral(result)^.append(opMod      (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorPot:        for i:=0 to i1-1 do P_listLiteral(result)^.append(opPot      (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
+                  tt_operatorStrConcat:  for i:=0 to i1-1 do P_listLiteral(result)^.append(opStrConcat(P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]),false);
                 end;
                 checkedExit;
               end else invalidLengthExit;
@@ -2648,6 +2510,77 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
 
 DESTRUCTOR T_format.destroy;
   begin
+  end;
+
+FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+  VAR literalType:T_literalType;
+      listSize:longint;
+      i:longint;
+  begin
+    literalType:=T_literalType(stream.readByte);
+    case literalType of
+      lt_error:result:=newErrorLiteral;
+      lt_boolean:result:=newBoolLiteral(stream.readBoolean);
+      lt_int:result:=newIntLiteral(stream.readInt64);
+      lt_real:result:=newRealLiteral(stream.readDouble);
+      lt_string:result:=newStringLiteral(stream.readAnsiString);
+      lt_list,
+      lt_booleanList,
+      lt_intList,
+      lt_realList,
+      lt_numList,
+      lt_stringList,
+      lt_emptyList,
+      lt_keyValueList,
+      lt_flatList,
+      lt_listWithError:begin
+        listSize:=stream.readLongint;
+        if listSize<0 then begin
+          if adapters<>nil then adapters^.raiseError('Read negative list size! Abort.',location);
+          stream.logWrongTypeError;
+          exit(newErrorLiteral);
+        end;
+        result:=newListLiteral;
+        setLength(P_listLiteral(result)^.dat,listSize);
+        for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(newLiteralFromStream(stream,location,adapters),false);
+        if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
+      end;
+      lt_void:result:=newVoidLiteral;
+      else begin
+        if adapters<>nil then adapters^.raiseError('Read invalid literal type! Abort.',location);
+        stream.logWrongTypeError;
+        exit(newErrorLiteral);
+      end;
+    end;
+  end;
+
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+  VAR i:longint;
+  begin
+    if (L^.literalType=lt_expression) then begin
+      if adapters<>nil then adapters^.raiseError('Cannot represent expression literal in binary form!',location);
+      exit;
+    end;
+    stream.writeByte(byte(L^.literalType));
+    case L^.literalType of
+      lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
+      lt_int:stream.writeInt64(P_intLiteral(L)^.val);
+      lt_real:stream.writeDouble(P_realLiteral(L)^.val);
+      lt_string:stream.writeAnsiString(P_stringLiteral(L)^.val);
+      lt_list,
+      lt_booleanList,
+      lt_intList,
+      lt_realList,
+      lt_numList,
+      lt_stringList,
+      lt_emptyList,
+      lt_keyValueList,
+      lt_flatList,
+      lt_listWithError:begin
+        stream.writeLongint(P_listLiteral(L)^.size);
+        for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteralToStream(P_listLiteral(L)^.value(i),stream,location,adapters);
+      end;
+    end;
   end;
 
 VAR
