@@ -148,13 +148,10 @@ FUNCTION docMain(p:pointer):ptrint;
         preEval;
         package.load(lu_forDocGeneration,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         firstErrorLocation.column:=-1;
-        firstErrorLocation.line:=-1;
+        firstErrorLocation.line:=maxLongint;
         for i:=length(P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages)-1 downto 0 do
         with P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages[i] do
-        if (location.fileName=package.getPath) and (C_errorLevelForMessageType[messageType]>=2) then begin
-          firstErrorLocation:=location;
-        end;
-        writeln('First error ',ansistring(firstErrorLocation));
+        if (location.fileName=package.getPath) and (C_errorLevelForMessageType[messageType]>=2) then firstErrorLocation:=location;
         postEval;
       end;
       ThreadSwitch;

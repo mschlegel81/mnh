@@ -400,6 +400,11 @@ PROCEDURE TSynMnhSyn.next;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then begin
       fTokenId:=tkHighlightedItem;
     end;
+    if (flavour=msf_input) and (fTokenId<>tkNull) and
+       ((fLineNumber>=docEvaluator.getFirstErrorLocation.line) or
+        (fLineNumber=docEvaluator.getFirstErrorLocation.line-1) and (fTokenPos>=docEvaluator.getFirstErrorLocation.column)) then begin
+      fTokenId:=tkComment;
+    end;
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
