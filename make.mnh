@@ -72,7 +72,7 @@ private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
   fileExists(exeName) ? begin
     local fullCodeHash:=split(head(exec(exeName,["-codeHash"])),':');
-    size(fullCodeHash)!=2 OR (fullCodeHash[1] != currentCodeHash);
+    size(fullCodeHash)!=2 OR (fullCodeHash[1] != (currentCodeHash orElse updateCurrentCodeHash));
   end : true;
 end;
 
@@ -197,7 +197,9 @@ end;
 main('prepare')->updateCurrentCodeHash;
   
 //*Several steps in succession
-main(...)->... .each(p,
+main(...)->begin
+  updateCurrentCodeHash;
+  ... .each(p,
   [0..7].each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
@@ -206,3 +208,4 @@ main(...)->... .each(p,
   : p in ['distro','build','clean','test']
     ? main(p)
     : void);
+end;
