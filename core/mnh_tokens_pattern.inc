@@ -127,17 +127,17 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_typeCheckNumeric   ,
       tt_typeCheckNumList   ,
       tt_typeCheckExpression  ,
-      tt_typeCheckKeyValueList: result:=trimLeadingEquals(id+C_tokenString[restrictionType]);
+      tt_typeCheckKeyValueList: result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId);
       tt_comparatorEq,
       tt_comparatorNeq,
       tt_comparatorLeq,
       tt_comparatorGeq,
       tt_comparatorLss,
       tt_comparatorGrt,
-      tt_comparatorListEq: if restrictionId='' then result:=trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionValue^.toString)
-                                               else result:=trimLeadingEquals(id+C_tokenString[restrictionType]+restrictionId);
-      tt_operatorIn: if restrictionId='' then result:=trimLeadingEquals(id+' '+C_tokenString[restrictionType]+' '+restrictionValue^.toString)
-                                         else result:=trimLeadingEquals(id+' '+C_tokenString[restrictionType]+' '+restrictionId);
+      tt_comparatorListEq: if restrictionId='' then result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId+restrictionValue^.toString)
+                                               else result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
+      tt_operatorIn: if restrictionId='' then result:=trimLeadingEquals(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
+                                         else result:=trimLeadingEquals(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
       else result:=result+id;
     end;
   end;

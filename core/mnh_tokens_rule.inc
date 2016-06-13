@@ -319,16 +319,16 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):
   VAR code:ansistring;
   begin
     if (adapters.noErrors) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
-      if ruleType=rt_persistent_private then code:=C_tokenString[tt_modifier_private]+' '
+      if ruleType=rt_persistent_private then code:=C_tokenInfo[tt_modifier_private].defaultId+' '
                                         else code:='';
       code:=code+
-            C_tokenString[tt_modifier_persistent]+' '+
+            C_tokenInfo[tt_modifier_persistent].defaultId+' '+
             id;
       adapters.raiseNote('Writing back: '+code,declarationStart);
       code:=code+
-            C_tokenString[tt_assign]+
+            C_tokenInfo[tt_assign].defaultId+
             namedValue.getValue^.toString+
-            C_tokenString[tt_semicolon];
+            C_tokenInfo[tt_semicolon].defaultId;
       provider.replaceCode(
         declarationStart.line-1,
         declarationStart.column,

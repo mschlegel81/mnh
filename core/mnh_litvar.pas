@@ -444,7 +444,7 @@ FUNCTION newErrorLiteralRaising(CONST x, y: T_literalType; CONST op: T_tokenType
   begin
     result:=@errLit;
     errLit.rereference;
-    adapters.raiseError('Operator '+C_tokenString [op]+ ' is not supported for types '+C_typeString [x]+' and '+ C_typeString [y], tokenLocation);
+    adapters.raiseError('Operator '+C_tokenInfo[op].defaultId+ ' is not supported for types '+C_typeString [x]+' and '+ C_typeString [y], tokenLocation);
   end;
 
 FUNCTION newVoidLiteral: P_voidLiteral; inline;
@@ -2108,7 +2108,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType,op, tokenLocation,adapters);
     end;
     exit(result)}
-  {$define invalidLengthExit:=exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenString [op], tokenLocation,adapters))}
+  {$define invalidLengthExit:=exit(newErrorLiteralRaising('Invalid list lengths '+intToStr(i)+' and '+intToStr(i1)+' given for operator '+C_tokenInfo[op].defaultId, tokenLocation,adapters))}
 
   VAR i, i1: longint;
   begin

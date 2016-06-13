@@ -90,8 +90,8 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
   {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
-    if (tokenText='') and (C_tokenString[tokenType]<>'')
-      then txt:=C_tokenString[tokenType]
+    if (tokenText='') and (C_tokenInfo[tokenType].defaultId<>'')
+      then txt:=C_tokenInfo[tokenType].defaultId
       else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
@@ -141,9 +141,9 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
     idLike:=false;
     case tokType of
       tt_each, tt_parallelEach, tt_forcedParallelEach: begin
-        result:=C_tokenString[tokType];
+        result:=C_tokenInfo[tokType].defaultId;
         if txt<>'' then result:=result+'('+txt+','
-                   else result:=C_tokenString[tt_agg]+'(';
+                   else result:=C_tokenInfo[tt_agg].defaultId+'(';
         if data<>nil then result:=result+P_literal(data)^.toString+',';
       end;
       tt_aggregatorExpressionLiteral,
@@ -151,8 +151,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
-      tt_assignNewBlockLocal: result:=C_tokenString[tt_modifier_local]+' '+txt+C_tokenString[tokType];
-      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenString[tokType];
+      tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
+      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
       tt_identifier_pon,
       tt_localUserRule_pon,
       tt_importedUserRule_pon,
@@ -165,7 +165,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
       tt_parameterIdentifier,
       tt_blockLocalVariable,
       tt_blank: result:=txt;
-      else result:=C_tokenString[tokType];
+      else result:=C_tokenInfo[tokType].defaultId;
     end;
     if length(result)<1 then begin
       idLike:=false; exit(result);
@@ -199,7 +199,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
         exit(false);
       end;
       if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; open matches with "'+C_tokenString[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]]+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; open matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
         adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; close',token                               ^.location);
         exit(false);
       end;

@@ -226,8 +226,8 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
       editor.lines.loadFromFile(filePath);
       fileAge(filePath,fileAccessAge);
       changed:=false;
-    end else if sheet.TabVisible and (fileName=pseudoName) and (guiPackage.getCodeProvider^.getPath=pseudoName) then begin
-      guiPackage.getCodeProvider^.getLinesUTF8(editor.lines);
+    end else if sheet.TabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
+      runEvaluator.getCodeProvider^.getLinesUTF8(editor.lines);
       fileAge(filePath,fileAccessAge);
       editor.Modified:=changed;
     end;

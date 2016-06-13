@@ -345,21 +345,17 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring;
-  CONST updateMarker: boolean);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker: boolean);
   VAR i:longint;
   begin
-    if not(isIdentifier(wordText,true)) then begin
-      if miHelp.Checked then positionHelpNotifier;
-      exit;
-    end;
     if updateMarker then begin
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setMarkedWord(wordText);
     end;
     if miHelp.Checked then begin
-      ad_explainIdentifier(wordText,underCursor);
-      helpPopupMemo.text:=underCursor.tokenExplanation;
+      i:=PageControl.ActivePageIndex;
+      docEvaluator.explainIdentifier(editorMeta[i].editor.lines[editorMeta[i].editor.CaretY-1],editorMeta[i].editor.CaretY,editorMeta[i].editor.CaretX,underCursor);
+      helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
     end;
   end;
@@ -428,7 +424,6 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,
       wordUnderCursor:=editor.GetWordAtRowCol(caret);
       setUnderCursor(wordUnderCursor,updateMarker);
       if not(doJump) then exit;
-      if not(miHelp.Checked) then ad_explainIdentifier(wordUnderCursor,underCursor);
       if (underCursor.tokenText<>wordUnderCursor) or
          (underCursor.location.column<=0) then exit;
       if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
@@ -467,7 +462,6 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
   end;
 
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
-  CONST msg='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
   VAR i:longint;
   begin
     wordsInEditor.create;
@@ -488,7 +482,6 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     OutputEdit.ClearAll;
     debugHighlighter:=TSynMnhSyn.create(nil,msf_input);
     currentExpressionMemo.highlighter:=debugHighlighter;
-    endOfEvaluationText.value:=msg;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     guiAdapters.addConsoleOutAdapter;
@@ -521,7 +514,7 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
       if i=mrOk then uninstall;
     end;
 
-    if ad_evaluationRunning then ad_haltEvaluation;
+    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     stepper.doStop;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
   end;
@@ -533,7 +526,6 @@ PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
     outputHighlighter.destroy;
     debugHighlighter.destroy;
     helpHighlighter.destroy;
-    ad_killEvaluationLoopSoftly;
     wordsInEditor.destroy;
   end;
 
@@ -579,7 +571,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       showConsole;
       {$ifndef debugMode}guiAdapters.addConsoleOutAdapter;{$endif}
       doStartEvaluation(true,true);
-      ad_reEvaluateWithGUI;
+      runEvaluator.reEvaluateWithGUI;
       plotForm.Caption:=plotForm.Caption+' - close to quit';
       sleep(UpdateTimeTimer.interval);
     end;
@@ -595,9 +587,10 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
       if now>evaluation.deferredUntil then begin
         doStartEvaluation(false,false);
         lastStart.mainCall:=false;
-        with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
+        with editorMeta[PageControl.ActivePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
       end else evaluation.required:=true;
     end;
+    with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
     editorMeta[PageControl.ActivePageIndex].changed:=editorMeta[PageControl.ActivePageIndex].editor.Modified;
     Caption:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
   end;
@@ -608,7 +601,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,false,false);
-    if currentlyDebugging and ad_evaluationRunning then begin
+    if currentlyDebugging and runEvaluator.evaluationRunning then begin
       if (key=116) and tbRun    .Enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn .Enabled then tbStepInClick(Sender);
       if (key=118) and tbStep   .Enabled then tbStepClick(Sender);
@@ -648,7 +641,7 @@ PROCEDURE TMnhForm.InputEditProcessUserCommand(Sender: TObject;
       editorMeta[PageControl.ActivePageIndex].toggleBreakpoint;
       stepper.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setStepperBreakpoints;
-      if ad_evaluationRunning and not(miDebug.Checked) then ad_haltEvaluation;
+      if runEvaluator.evaluationRunning and not(miDebug.Checked) then runEvaluator.haltEvaluation;
       miDebug.Checked:=true;
       updateDebugParts;
     end;
@@ -662,7 +655,7 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
       doStartEvaluation(true,false);
       lastStart.mainCall:=true;
       lastStart.parameters:=askForm.getLastAnswerReleasing(nil);
-      with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,lastStart.parameters);
+      with editorMeta[PageControl.ActivePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
@@ -696,13 +689,13 @@ PROCEDURE TMnhForm.miCloseClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miDebugCancelClick(Sender: TObject);
   begin
-    ad_haltEvaluation;
+    runEvaluator.haltEvaluation;
     stepper.doStop;
   end;
 
 PROCEDURE TMnhForm.miDebugClick(Sender: TObject);
   begin
-    if ad_evaluationRunning then ad_haltEvaluation;
+    if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     miDebug.Checked:=not(miDebug.Checked);
     updateDebugParts;
   end;
@@ -735,7 +728,7 @@ PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
 PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
   begin
     if miEvalModeDirectOnKeypress.Checked then exit;
-    if ad_evaluationRunning and (miDebug.Checked) then ad_haltEvaluation;
+    if runEvaluator.evaluationRunning and (miDebug.Checked) then runEvaluator.haltEvaluation;
     miDebug.Checked:=false;
     updateDebugParts;
     miEvalModeDirect.Checked:=false;
@@ -748,7 +741,7 @@ PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
     if now>evaluation.deferredUntil then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,false);
+      with editorMeta[PageControl.ActivePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,false);
     end else evaluation.required:=true;
   end;
 
@@ -783,7 +776,7 @@ PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
-    ad_haltEvaluation;
+    runEvaluator.haltEvaluation;
   end;
 
 PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
@@ -875,11 +868,11 @@ PROCEDURE TMnhForm.updateDebugParts;
       DebugToolbar.Enabled:=true;
       DebugToolbar.top:=0;
       outputPageControl.ShowTabs:=true;
-      handleButton(tbStop,ad_evaluationRunning,2);
-      handleButton(tbRun,not(ad_evaluationRunning) or stepper.haltet,0);
-      handleButton(tbStep,ad_evaluationRunning and stepper.haltet,4);
-      handleButton(tbStepIn,ad_evaluationRunning and stepper.haltet,6);
-      handleButton(tbStepOut,ad_evaluationRunning and stepper.haltet,8);
+      handleButton(tbStop,runEvaluator.evaluationRunning,2);
+      handleButton(tbRun,not(runEvaluator.evaluationRunning) or stepper.haltet,0);
+      handleButton(tbStep,runEvaluator.evaluationRunning and stepper.haltet,4);
+      handleButton(tbStepIn,runEvaluator.evaluationRunning and stepper.haltet,6);
+      handleButton(tbStepOut,runEvaluator.evaluationRunning and stepper.haltet,8);
     end else begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.ShowTabs:=false;
@@ -920,7 +913,7 @@ PROCEDURE TMnhForm.handleBreak;
 
     context:=P_evaluationContext(stepper.context);
     report.create;
-    guiPackage.reportVariables(report);
+    runEvaluator.reportVariables(report);
     if context<>nil then context^.reportVariables(report);
 
     variablesStringGrid.RowCount:=length(report.dat)+1;
@@ -1058,6 +1051,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     if PageControl.ActivePageIndex>=0 then begin
       SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
       settings.value^.activePage:=PageControl.ActivePageIndex;
+      with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
     end;
   end;
 
@@ -1133,7 +1127,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       i,modalRes:longint;
       currentFileAge:double;
   begin
-    isEvaluationRunning:=ad_evaluationRunning;
+    isEvaluationRunning:=runEvaluator.evaluationRunning;
     //fast ones:================================================================
     //Show ask form?
     if askForm.displayPending then askForm.Show;
@@ -1155,7 +1149,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
           if breakPointHandlingPending then handleBreak;
         end else StatusBar.SimpleText:='Debugging...'+aid;
       end else StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid;
-    end else StatusBar.SimpleText:=endOfEvaluationText.value+aid;
+    end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
     //------------------------------------------------------------:progress time
     //Halt/Run enabled states:--------------------------------------------------
     if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
@@ -1171,13 +1165,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     autosizingDone:=autosizeBlocks(isEvaluationRunning);
 
     if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
-       not(ad_evaluationRunning) then plotForm.doPlot();
+       not(runEvaluator.evaluationRunning) then plotForm.doPlot();
 
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
-    if evaluation.required and not(ad_evaluationRunning) and (now>evaluation.deferredUntil) then begin
+    if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation(false,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
+      with editorMeta[PageControl.ActivePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
@@ -1306,12 +1300,12 @@ PROCEDURE TMnhForm.miFindPreviousClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
   begin
-    if not(ad_evaluationRunning) then begin
+    if not(runEvaluator.evaluationRunning) then begin
       doStartEvaluation(true,false);
       if lastStart.mainCall then begin
-        with editorMeta[PageControl.ActivePageIndex] do ad_callMain(pseudoName,editor.lines,lastStart.parameters);
+        with editorMeta[PageControl.ActivePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters);
       end else begin
-        with editorMeta[PageControl.ActivePageIndex] do ad_evaluate(pseudoName,editor.lines,true);
+        with editorMeta[PageControl.ActivePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
       end;
     end else stepper.doStart(true);
     updateDebugParts;
@@ -1341,13 +1335,13 @@ PROCEDURE TMnhForm.tbStepOutClick(Sender: TObject);
 
 PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
   begin
-    ad_haltEvaluation;
+    runEvaluator.haltEvaluation;
     stepper.doStop;
   end;
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=currentlyDebugging and ad_evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=currentlyDebugging and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
@@ -1396,6 +1390,8 @@ PROCEDURE TMnhForm.processSettings;
         editorMeta[i].create(i,settings.value^.editorState[i]);
         editorMeta[i].setStepperBreakpoints;
       end;
+
+      if not(reEvaluationWithGUIrequired) then with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
@@ -1456,11 +1452,10 @@ PROCEDURE lateInitialization;
       if consoleAdapters.getAdapter(i)^.adapterType in [at_textFile,at_htmlFile] then
         guiAdapters.addOutAdapter(consoleAdapters.getAdapter(i),false);
 
-    mnh_evalThread.guiOutAdapters:=@guiAdapters;
     mnh_plotForm.formCycleCallback:=@formCycle;
     mnh_tables.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    mnh_evalThread.initUnit;
+    mnh_evalThread.initUnit(@guiAdapters);
   end;
 
 INITIALIZATION

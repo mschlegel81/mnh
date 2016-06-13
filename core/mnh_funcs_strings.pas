@@ -562,11 +562,11 @@ FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
           //symbols, etc.
           t:=tt_literal;
           i1:=i0;
-          for t:=tt_literal to tt_EOL do begin
-            if (C_tokenString[t]<>'') and
-               (copy(stringToSplit,i0,length(C_tokenString[t]))=C_tokenString[t]) and
-               (i0+length(C_tokenString[t])>i1)
-            then i1:=i0+length(C_tokenString[t]);
+          for t:=low(T_tokenType) to high(T_tokenType) do begin
+            if (C_tokenInfo[t].defaultId<>'') and
+               (copy(stringToSplit,i0,length(C_tokenInfo[t].defaultId))=C_tokenInfo[t].defaultId) and
+               (i0+length(C_tokenInfo[t].defaultId)>i1)
+            then i1:=i0+length(C_tokenInfo[t].defaultId);
           end;
           if i1=i0 then i1:=i0+1;
         end;

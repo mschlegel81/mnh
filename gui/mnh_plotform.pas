@@ -142,7 +142,7 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);
   begin
-    if ad_evaluationRunning
+    if runEvaluator.evaluationRunning
     then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
     else doPlot();
   end;
@@ -171,7 +171,7 @@ PROCEDURE TplotForm.miDecFontSizeClick(Sender: TObject);
     o:=guiAdapters^.plot.options;
     o.relativeFontSize:=o.relativeFontSize/1.1;
     guiAdapters^.plot.options:=o;
-    if ad_evaluationRunning
+    if runEvaluator.evaluationRunning
     then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
     else doPlot();
   end;
@@ -182,7 +182,7 @@ PROCEDURE TplotForm.miIncFontSizeClick(Sender: TObject);
     o:=guiAdapters^.plot.options;
     o.relativeFontSize:=o.relativeFontSize*1.1;
     guiAdapters^.plot.options:=o;
-    if ad_evaluationRunning
+    if runEvaluator.evaluationRunning
     then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
     else doPlot();
   end;
@@ -319,9 +319,9 @@ PROCEDURE TplotForm.pushSettingsToPlotContainer;
     o.autoscale['y']:=miAutoscaleY.Checked;
     guiAdapters^.plot.options:=o;
     pullPlotSettingsToGui();
-    if ad_evaluationRunning
-       then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
-       else doPlot();
+    if runEvaluator.evaluationRunning
+    then guiAdapters^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=true
+    else doPlot();
   end;
 
 VAR broughtToFront:double;

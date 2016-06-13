@@ -549,7 +549,7 @@ FUNCTION T_subrule.toString(CONST includePattern:boolean=true):ansistring;
     if not(includePattern) then exit(result);
     if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
     else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
-    else result:=pattern.toString+C_tokenString[tt_declare]+result;
+    else result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer):string;

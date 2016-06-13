@@ -39,6 +39,7 @@ T_tokenArray=object
     FUNCTION current:T_token;
     PROCEDURE mutateCurrentTokType(CONST newTokType:T_tokenType);
     FUNCTION atEnd:boolean;
+    FUNCTION lastToken:T_token;
     FUNCTION getRawTokensUndefining:T_rawTokenArray;
     PROCEDURE tokenizeAll(CONST inputString:ansistring; CONST location:T_tokenLocation; CONST inPackage:P_package; VAR adapters:T_adapters; CONST retainBlanks:boolean);
     PROCEDURE tokenizeAll(VAR provider:T_codeProvider; CONST inPackage:P_package; VAR adapters:T_adapters);
@@ -135,6 +136,15 @@ PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType: T_tokenType);
 FUNCTION T_tokenArray.atEnd: boolean;
   begin
     result:=i>=length(t);
+  end;
+
+FUNCTION T_tokenArray.lastToken:T_token;
+  begin
+    if length(t)>0 then exit(t[length(t)-1]);
+    result.create;
+    result.tokType:=tt_EOL;
+    result.txt:='';
+    result.data:=nil;
   end;
 
 FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
@@ -264,7 +274,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         id:=leadingId;
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
-        if id=C_tokenString[tt] then begin
+        if id=C_tokenInfo[tt].defaultId then begin
           result.tokType:=tt;
           result.txt:='';
         end;
@@ -299,30 +309,30 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
             end else blob.closer:='''';
           end;
         end;
-      end else if startsWith(C_tokenString[tt_cso_assignDiv]) then begin
+      end else if startsWith(C_tokenInfo[tt_cso_assignDiv].defaultId) then begin
         parsedLength:=2;
         result.tokType:=tt_cso_assignDiv;
       end else begin
         parsedLength:=1;
         result.tokType:=tt_operatorDivReal;
       end;
-      '.': if startsWith(C_tokenString[tt_each]) then begin
-        parsedLength:=length(C_tokenString[tt_each]);
+      '.': if startsWith(C_tokenInfo[tt_each].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_each].defaultId);
         result.tokType:=tt_each;
-      end else if startsWith(C_tokenString[tt_parallelEach]) then begin
-        parsedLength:=length(C_tokenString[tt_parallelEach]);
+      end else if startsWith(C_tokenInfo[tt_parallelEach].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_parallelEach].defaultId);
         result.tokType:=tt_parallelEach;
-      end else if startsWith(C_tokenString[tt_forcedParallelEach]) then begin
-        parsedLength:=length(C_tokenString[tt_forcedParallelEach]);
+      end else if startsWith(C_tokenInfo[tt_forcedParallelEach].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_forcedParallelEach].defaultId);
         result.tokType:=tt_forcedParallelEach;
-      end else if startsWith(C_tokenString[tt_agg]) then begin
-        parsedLength:=length(C_tokenString[tt_agg]);
+      end else if startsWith(C_tokenInfo[tt_agg].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_agg].defaultId);
         result.tokType:=tt_agg;
-      end else if startsWith(C_tokenString[tt_optionalParameters]) then begin
-        parsedLength:=length(C_tokenString[tt_optionalParameters]);
+      end else if startsWith(C_tokenInfo[tt_optionalParameters].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_optionalParameters].defaultId);
         result.tokType:=tt_optionalParameters;
-      end else if startsWith(C_tokenString[tt_separatorCnt]) then begin
-        parsedLength:=length(C_tokenString[tt_separatorCnt]);
+      end else if startsWith(C_tokenInfo[tt_separatorCnt].defaultId) then begin
+        parsedLength:=length(C_tokenInfo[tt_separatorCnt].defaultId);
         result.tokType:=tt_separatorCnt;
       end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
         id:=copy(leadingId,2,length(line));
@@ -337,20 +347,20 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
         id:=leadingId;
         parsedLength:=length(id);
-        if      id=C_tokenString[tt_typeCheckBoolList  ] then result.tokType:=tt_typeCheckBoolList
-        else if id=C_tokenString[tt_typeCheckBoolean   ] then result.tokType:=tt_typeCheckBoolean
-        else if id=C_tokenString[tt_typeCheckExpression] then result.tokType:=tt_typeCheckExpression
-        else if id=C_tokenString[tt_typeCheckIntList   ] then result.tokType:=tt_typeCheckIntList
-        else if id=C_tokenString[tt_typeCheckInt       ] then result.tokType:=tt_typeCheckInt
-        else if id=C_tokenString[tt_typeCheckList      ] then result.tokType:=tt_typeCheckList
-        else if id=C_tokenString[tt_typeCheckNumList   ] then result.tokType:=tt_typeCheckNumList
-        else if id=C_tokenString[tt_typeCheckNumeric   ] then result.tokType:=tt_typeCheckNumeric
-        else if id=C_tokenString[tt_typeCheckStringList] then result.tokType:=tt_typeCheckStringList
-        else if id=C_tokenString[tt_typeCheckScalar    ] then result.tokType:=tt_typeCheckScalar
-        else if id=C_tokenString[tt_typeCheckString    ] then result.tokType:=tt_typeCheckString
-        else if id=C_tokenString[tt_typeCheckRealList  ] then result.tokType:=tt_typeCheckRealList
-        else if id=C_tokenString[tt_typeCheckReal      ] then result.tokType:=tt_typeCheckReal
-        else if id=C_tokenString[tt_typeCheckKeyValueList] then result.tokType:=tt_typeCheckKeyValueList
+        if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
+        else if id=C_tokenInfo[tt_typeCheckBoolean   ].defaultId then result.tokType:=tt_typeCheckBoolean
+        else if id=C_tokenInfo[tt_typeCheckExpression].defaultId then result.tokType:=tt_typeCheckExpression
+        else if id=C_tokenInfo[tt_typeCheckIntList   ].defaultId then result.tokType:=tt_typeCheckIntList
+        else if id=C_tokenInfo[tt_typeCheckInt       ].defaultId then result.tokType:=tt_typeCheckInt
+        else if id=C_tokenInfo[tt_typeCheckList      ].defaultId then result.tokType:=tt_typeCheckList
+        else if id=C_tokenInfo[tt_typeCheckNumList   ].defaultId then result.tokType:=tt_typeCheckNumList
+        else if id=C_tokenInfo[tt_typeCheckNumeric   ].defaultId then result.tokType:=tt_typeCheckNumeric
+        else if id=C_tokenInfo[tt_typeCheckStringList].defaultId then result.tokType:=tt_typeCheckStringList
+        else if id=C_tokenInfo[tt_typeCheckScalar    ].defaultId then result.tokType:=tt_typeCheckScalar
+        else if id=C_tokenInfo[tt_typeCheckString    ].defaultId then result.tokType:=tt_typeCheckString
+        else if id=C_tokenInfo[tt_typeCheckRealList  ].defaultId then result.tokType:=tt_typeCheckRealList
+        else if id=C_tokenInfo[tt_typeCheckReal      ].defaultId then result.tokType:=tt_typeCheckReal
+        else if id=C_tokenInfo[tt_typeCheckKeyValueList].defaultId then result.tokType:=tt_typeCheckKeyValueList
         else begin
           parsedLength:=1;
           result.tokType:=tt_iifElse;
@@ -370,22 +380,22 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       '@':                                                        begin parsedLength:=1; result.tokType:=tt_listToParameterList;   end;
       ')':                                                        begin parsedLength:=1; result.tokType:=tt_braceClose;            end;
       '(':                                                        begin parsedLength:=1; result.tokType:=tt_braceOpen;             end;
-      '|': if startsWith(C_tokenString[tt_cso_assignAppend])      then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend;      end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorConcat;        end;
-      '+': if startsWith(C_tokenString[tt_cso_assignPlus])        then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus;        end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorPlus;          end;
-      '&': if startsWith(C_tokenString[tt_cso_assignStrConcat])   then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat;   end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat;     end;
-      '-': if startsWith(C_tokenString[tt_declare])               then begin parsedLength:=2; result.tokType:=tt_declare;               end else
-           if startsWith(C_tokenString[tt_cso_assignMinus])       then begin parsedLength:=2; result.tokType:=tt_cso_assignMinus;       end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorMinus;         end;
-      '*': if startsWith('**')                                    then begin parsedLength:=2; result.tokType:=tt_operatorPot;           end else
-           if startsWith(C_tokenString[tt_cso_assignMult])        then begin parsedLength:=2; result.tokType:=tt_cso_assignMult;        end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
-      '>': if startsWith(C_tokenString[tt_comparatorGeq])         then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
-      '=': if startsWith(C_tokenString[tt_comparatorListEq])      then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
-                                                                  else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
+      '|': if startsWith(C_tokenInfo[tt_cso_assignAppend].defaultId)    then begin parsedLength:=2; result.tokType:=tt_cso_assignAppend;      end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorConcat;        end;
+      '+': if startsWith(C_tokenInfo[tt_cso_assignPlus].defaultId)      then begin parsedLength:=2; result.tokType:=tt_cso_assignPlus;        end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorPlus;          end;
+      '&': if startsWith(C_tokenInfo[tt_cso_assignStrConcat].defaultId) then begin parsedLength:=2; result.tokType:=tt_cso_assignStrConcat;   end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorStrConcat;     end;
+      '-': if startsWith(C_tokenInfo[tt_declare].defaultId)             then begin parsedLength:=2; result.tokType:=tt_declare;               end else
+           if startsWith(C_tokenInfo[tt_cso_assignMinus].defaultId)     then begin parsedLength:=2; result.tokType:=tt_cso_assignMinus;       end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorMinus;         end;
+      '*': if startsWith('**')                                          then begin parsedLength:=2; result.tokType:=tt_operatorPot;           end else
+           if startsWith(C_tokenInfo[tt_cso_assignMult].defaultId)      then begin parsedLength:=2; result.tokType:=tt_cso_assignMult;        end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_operatorMult;          end;
+      '>': if startsWith(C_tokenInfo[tt_comparatorGeq].defaultId)       then begin parsedLength:=2; result.tokType:=tt_comparatorGeq;         end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_comparatorGrt;         end;
+      '=': if startsWith(C_tokenInfo[tt_comparatorListEq].defaultId)    then begin parsedLength:=2; result.tokType:=tt_comparatorListEq;      end
+                                                                        else begin parsedLength:=1; result.tokType:=tt_comparatorEq;          end;
       '<': if startsWith('<>')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorNeq;         end else
            if startsWith('<=')                                    then begin parsedLength:=2; result.tokType:=tt_comparatorLeq;         end
                                                                   else begin parsedLength:=1; result.tokType:=tt_comparatorLss;         end;
@@ -780,7 +790,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
                 if newLit<>nil then begin
                   disposeLiteral(resultLiteral);
                   resultLiteral:=newLit;
-                end else context.adapters^.raiseError('Error performing aggregation in each-construct with aggregator ('+C_tokenString[aggregatorToken]+')',eachLocation);
+                end else context.adapters^.raiseError('Error performing aggregation in each-construct with aggregator ('+C_tokenInfo[aggregatorToken].defaultId+')',eachLocation);
               end;
             end;
           end;
