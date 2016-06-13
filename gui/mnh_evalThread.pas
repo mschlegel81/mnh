@@ -49,6 +49,7 @@ TYPE
       endOfEvaluationText:ansistring;
       mainParameters:T_arrayOfString;
       startOfEvaluation:double;
+      firstErrorLocation:T_searchTokenLocation;
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
       PROCEDURE threadStopped;
@@ -69,6 +70,7 @@ TYPE
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       PROCEDURE reportVariables(VAR report:T_variableReport);
       FUNCTION getEndOfEvaluationText:ansistring;
+      FUNCTION getFirstErrorLocation:T_searchTokenLocation;
   end;
 
 VAR userRules,
@@ -135,6 +137,7 @@ FUNCTION main(p:pointer):ptrint;
 FUNCTION docMain(p:pointer):ptrint;
   CONST MAX_SLEEP_TIME=250;
   VAR mainEvaluationContext:T_evaluationContext;
+      i:longint;
 
   begin with P_evaluator(p)^ do begin
     mainEvaluationContext.createNormalContext(adapter);
@@ -144,6 +147,14 @@ FUNCTION docMain(p:pointer):ptrint;
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
         package.load(lu_forDocGeneration,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
+        firstErrorLocation.column:=-1;
+        firstErrorLocation.line:=-1;
+        for i:=length(P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages)-1 downto 0 do
+        with P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages[i] do
+        if (location.fileName=package.getPath) and (C_errorLevelForMessageType[messageType]>=2) then begin
+          firstErrorLocation:=location;
+        end;
+        writeln('First error ',ansistring(firstErrorLocation));
         postEval;
       end;
       ThreadSwitch;
@@ -193,6 +204,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
     package.create(nil);
     adapter:=adapters;
+    firstErrorLocation.line:=-1;
   end;
 
 DESTRUCTOR T_evaluator.destroy;
@@ -309,7 +321,7 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine:ansistring; CONST CaretY,
 
   VAR tokens:T_tokenArray;
       tokenToExplain:T_token;
-      loc, location:T_tokenLocation;
+      loc:T_tokenLocation;
       i:longint;
       lastComment:ansistring='';
   begin
@@ -319,6 +331,7 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine:ansistring; CONST CaretY,
     loc.line:=1;
     loc.column:=1;
     loc.package:=@package;
+    adapter^.ClearAll;
     tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
     tokens.step(@package,lastComment,adapter^);
 
@@ -377,6 +390,11 @@ FUNCTION T_evaluator.getEndOfEvaluationText: ansistring;
     enterCriticalSection(cs);
     result:=endOfEvaluationText;
     leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_evaluator.getFirstErrorLocation:T_searchTokenLocation;
+  begin
+    result:=firstErrorLocation;
   end;
 
 FUNCTION T_evaluator.pendingRequest: T_evalRequest;
@@ -445,9 +463,13 @@ FUNCTION T_evaluator.parametersForMainCall: T_arrayOfString;
   end;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+  VAR collector:P_collectingOutAdapter;
   begin
     runEvaluator.create(guiAdapters,@main);
     new(silentAdapters,create);
+    new(collector,create(at_unknown));
+    silentAdapters^.minErrorLevel:=2;
+    silentAdapters^.addOutAdapter(collector,true);
     docEvaluator.create(silentAdapters,@docMain);
     initIntrinsicRuleList;
     userRules.create;
