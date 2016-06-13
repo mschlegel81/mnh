@@ -32,7 +32,7 @@ CONST
    (text:'10 minutes'; interval:10/(24*60)),
    (text:'30 minutes'; interval:30/(24*60)),
    (text:'1 hour';     interval:1/24));
-
+  FILE_HISTORY_MAX_SIZE=20;
 TYPE
 T_formPosition=object(T_serializable)
   top, Left, width, height: longint;
@@ -68,7 +68,7 @@ T_settings=object(T_serializable)
   mainForm:T_formPosition;
   instantEvaluation: boolean;
   doResetPlotOnEvaluation: boolean;
-  fileHistory: array[0..19] of ansistring;
+  fileHistory: T_listOfString;
   editorState: array of T_editorState;
   activePage:longint;
   outputBehaviour: T_outputBehaviour;
@@ -112,6 +112,7 @@ CONSTRUCTOR T_settings.create;
     cpuCount:=0;
     mainForm.create;
     setLength(editorState,0);
+    fileHistory.create;
     wasLoaded:=false;
   end;
 
@@ -155,7 +156,9 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     end;
     instantEvaluation := stream.readBoolean;
     doResetPlotOnEvaluation := stream.readBoolean;
-    for i := 0 to length(fileHistory)-1 do fileHistory[i] := stream.readAnsiString;
+    fileHistory.clear;
+    for i:=0 to FILE_HISTORY_MAX_SIZE-1 do fileHistory.add(stream.readAnsiString);
+    polishHistory;
     i:=stream.readLongint;
     if (i<0) or not(stream.allOkay) then exit(false);
     setLength(editorState,i);
@@ -196,7 +199,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     end;
     stream.writeBoolean(instantEvaluation);
     stream.writeBoolean(doResetPlotOnEvaluation);
-    for i:=0 to length(fileHistory)-1 do stream.writeAnsiString(fileHistory [i]);
+    for i:=0 to FILE_HISTORY_MAX_SIZE-1 do stream.writeAnsiString(historyItem(i));
     for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
     stream.writeLongint(visibleEditorCount);
     for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream);
@@ -249,35 +252,30 @@ FUNCTION T_settings.polishHistory: boolean;
   VAR i, j: longint;
   begin
     result := false;
-    for i:=0 to length(fileHistory)-1 do
+    for i:=0 to fileHistory.size-1 do
       if not(fileExists(fileHistory[i])) then begin
         fileHistory[i]:='';
         result:=true;
       end;
-    for i:=1 to length(fileHistory)-1 do
+    i:=0;
+    for i:=1 to fileHistory.size-1 do
       if (fileHistory[i]<>'') then for j:=0 to i-1 do
         if (expandFileName(fileHistory[i])=expandFileName(fileHistory[j])) then begin
-          fileHistory[i]:='';
+          fileHistory[j]:='';
           result:=true;
         end;
-    for i := 0 to length(fileHistory)-1 do if (fileHistory [i]='') then begin
-      for j := i to length(fileHistory)-2 do fileHistory[j] := fileHistory [j+1];
-      fileHistory[length(fileHistory)-1] := '';
-      result := true;
-    end;
+    fileHistory.remValue('');
   end;
 
 PROCEDURE T_settings.fileClosed(CONST fileName: ansistring);
-  VAR i:longint;
   begin
-    for i:=0 to length(fileHistory)-2 do fileHistory[i]:=fileHistory[i+1];
-    fileHistory[length(fileHistory)-1]:=fileName;
+    fileHistory.add(fileName,0);
     polishHistory;
   end;
 
 FUNCTION T_settings.historyItem(CONST index: longint): ansistring;
   begin
-    if (index>=0) and (index<length(fileHistory))
+    if (index>=0) and (index<fileHistory.size)
     then result:=fileHistory[index]
     else result:='';
   end;
