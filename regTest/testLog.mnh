@@ -48,6 +48,3 @@ validateCollectedOutput->begin
   printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
   logName.writeFileLines(printOut | head(logName.fileLines,20));
 end;
-
-
-testAlreadyPassed('..\mnh_light.exe');
