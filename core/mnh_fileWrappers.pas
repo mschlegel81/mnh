@@ -22,7 +22,7 @@
 
 UNIT mnh_fileWrappers;
 INTERFACE
-USES FileUtil,sysutils,Classes,Process,myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
+USES FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object
@@ -214,6 +214,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   VAR stream:TFileStream;
       i:longint;
   begin
+    ensurePath(name);
     stream:=TFileStream.create(name,fmCreate);
     try
       stream.Seek(0,soFromBeginning);
@@ -301,12 +302,12 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
   end;
 
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean): boolean;
-  VAR tempProcess: TProcess;
+  VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
     result := true;
     try
-      tempProcess := TProcess.create(nil);
+      tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
       if not asynch then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
@@ -337,7 +338,7 @@ PROCEDURE T_codeProvider.getLinesUTF8(CONST value: TStrings);
   VAR i:longint;
   begin
     value.clear;
-    for i:=0 to length(lineData)-1 do value.append(lineData[i]);
+    for i:=0 to length(lineData)-1 do value.append(SysToUTF8(lineData[i]));
   end;
 
 PROCEDURE T_codeProvider.setLines(CONST value: T_arrayOfString);
@@ -363,7 +364,7 @@ PROCEDURE T_codeProvider.setLinesUTF8(CONST value: TStrings);
     end;
     for i := 0 to cleanCount-1 do begin
       outOfSync := outOfSync or (trim(lineData[i])<>trim(value[i]));
-      lineData[i] := value[i];
+      lineData[i] := ensureSysEncoding(value[i]);
     end;
     fileContentsEnforced:=true;
   end;

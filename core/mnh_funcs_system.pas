@@ -24,7 +24,7 @@ UNIT mnh_funcs_system;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
-     sysutils, Classes,Process,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
+     sysutils, Classes,Process,UTF8Process,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
      LazFileUtils,LazUTF8;
 IMPLEMENTATION
 {$MACRO ON}
@@ -181,7 +181,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string)
                                           and (arg1^.literalType=lt_string) then begin
-      ok:=mnh_fileWrappers.writeFile(UTF8ToWinCP(str0^.value),
+      ok:=mnh_fileWrappers.writeFile(ensureSysEncoding(str0^.value),
                                      str1^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
@@ -203,7 +203,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
                         else sep:='';
       setLength(L,list1^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value(i))^.value;
-      ok:=writeFileLines(UTF8ToWinCP(str0^.value),L,sep);
+      ok:=writeFileLines(ensureSysEncoding(str0^.value),L,sep);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
@@ -216,17 +216,16 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       READ_BYTES = 2048;
     VAR
       memStream: TMemoryStream;
-      tempProcess: TProcess;
+      tempProcess: TProcessUTF8;
       n: longint;
       BytesRead: longint;
       sleepTime: longint = 1;
     begin
       memStream := TMemoryStream.create;
       BytesRead := 0;
-      tempProcess := TProcess.create(nil);
-      tempProcess.executable := UTF8ToWinCP(executable);
-      for n := 0 to length(parameters)-1 do
-        tempProcess.parameters.add(UTF8ToWinCP(parameters[n]));
+      tempProcess := TProcessUTF8.create(nil);
+      tempProcess.executable := executable;
+      for n := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[n]);
       tempProcess.options := [poUsePipes, poStderrToOutPut];
       tempProcess.ShowWindow := swoHIDE;
       try
@@ -275,7 +274,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
                  cmdLinePar,
                  output);
       result:=newListLiteral;
-      for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(ConsoleToUTF8(output[i]));
+      for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(output[i]);
       output.free;
     end;
   end;
@@ -289,11 +288,11 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=UTF8ToWinCP(str0^.value);
+      executable:=ensureSysEncoding(str0^.value);
       if params^.size=2 then begin
         setLength(cmdLinePar,list1^.size);
         for i:=0 to list1^.size-1 do
-          cmdLinePar[i]:=UTF8ToWinCP(P_scalarLiteral(list1^.value(i))^.stringForm);
+          cmdLinePar[i]:=ensureSysEncoding(P_scalarLiteral(list1^.value(i))^.stringForm);
       end;
       showConsole;
       runCommandAsyncOrPipeless(executable,
@@ -333,7 +332,7 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteDirectory(str0^.value,false));
+      result:=newBoolLiteral(DeleteDirectory(ensureSysEncoding(str0^.value),false));
     end;
   end;
 
@@ -343,7 +342,7 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
       ensurePath(str1^.value);
       result:=newBoolLiteral(
-      FileUtil.CopyFile(str0^.value,str1^.value,true));
+      FileUtil.CopyFile(ensureSysEncoding(str0^.value),ensureSysEncoding(str1^.value),true));
     end;
   end;
 
@@ -353,7 +352,7 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
       ensurePath(str1^.value);
       result:=newBoolLiteral(
-      RenameFile(str0^.value,str1^.value));
+      RenameFile(ensureSysEncoding(str0^.value),ensureSysEncoding(str1^.value)));
     end;
   end;
 
@@ -383,7 +382,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      getFileInfo(str0^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      getFileInfo(ensureSysEncoding(str0^.value),time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
       if isExistent then begin
