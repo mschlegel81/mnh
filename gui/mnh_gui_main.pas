@@ -1134,8 +1134,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     tableForm.conditionalDoShow;
     //Form caption:-------------------------------------------------------------
     if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta))
-    then aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption
-    else aid:='MNH5';
+    then begin
+      aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
+      editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(docEvaluator.getStateCounter);
+    end else aid:='MNH5';
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
     //progress time:------------------------------------------------------------

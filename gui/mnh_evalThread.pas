@@ -50,6 +50,7 @@ TYPE
       mainParameters:T_arrayOfString;
       startOfEvaluation:double;
       firstErrorLocation:T_searchTokenLocation;
+      stateCounter:longint;
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
       PROCEDURE threadStopped;
@@ -71,6 +72,7 @@ TYPE
       PROCEDURE reportVariables(VAR report:T_variableReport);
       FUNCTION getEndOfEvaluationText:ansistring;
       FUNCTION getFirstErrorLocation:T_searchTokenLocation;
+      FUNCTION getStateCounter:longint;
   end;
 
 VAR userRules,
@@ -146,7 +148,7 @@ FUNCTION docMain(p:pointer):ptrint;
     repeat
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
-        package.load(lu_forDocGeneration,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
+        package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         firstErrorLocation.column:=-1;
         firstErrorLocation.line:=maxLongint;
         for i:=length(P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages)-1 downto 0 do
@@ -201,6 +203,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
     package.create(nil);
     adapter:=adapters;
+    stateCounter:=0;
     firstErrorLocation.line:=-1;
   end;
 
@@ -439,6 +442,7 @@ PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
 
   begin
     enterCriticalSection(cs);
+    inc(stateCounter);
     if includeLists then begin
       package.updateLists(userRules);
       updateCompletionList;
@@ -456,6 +460,13 @@ FUNCTION T_evaluator.parametersForMainCall: T_arrayOfString;
   begin
     enterCriticalSection(cs);
     result:=mainParameters;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_evaluator.getStateCounter:longint;
+  begin
+    enterCriticalSection(cs);
+    result:=stateCounter;
     leaveCriticalSection(cs);
   end;
 

@@ -26,6 +26,7 @@ T_editorMeta=object
   filePath:ansistring;
   fileAccessAge:double;
   changed:boolean;
+  paintedWithState:longint;
 
   sheet       : TTabSheet;
   editor      : TSynEdit;
@@ -51,6 +52,7 @@ T_editorMeta=object
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
+  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -65,6 +67,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     end;
 
   begin
+    paintedWithState:=-1;
     index:=idx;
     sheet:=TTabSheet.create(MnhForm.PageControl);
     sheet.PageControl:=MnhForm.PageControl;
@@ -336,6 +339,14 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     if changed then result:=result+' *';
     sheet.Caption:=result;
     result:='MNH5 '+result;
+  end;
+
+PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint);
+  begin
+    if (stateCounter<>paintedWithState) then begin
+      paintedWithState:=stateCounter;
+      editor.Repaint;
+    end;
   end;
 
 {$endif}

@@ -42,7 +42,7 @@ TYPE
   {$include mnh_tokens_futureTask.inc}
   {$include mnh_tokens_procBlock.inc}
   {$include mnh_tokens_fmtStmt.inc}
-  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_interactiveMode);
+  T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
 
   T_packageReference=object
     id,path:ansistring;
@@ -492,7 +492,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-        if (usecase=lu_forDocGeneration) then begin
+        if (usecase in [lu_forDocGeneration,lu_forCodeAssistance]) then begin
           context.cascadeDisposeToken(ruleBody);
           ruleBody:=context.newToken(ruleDeclarationStart,'',tt_literal,newVoidLiteral);
         end else begin
@@ -754,7 +754,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if (context.adapters^.noErrors)
     then begin if first<>nil then interpret(first,first^.location); end
     else context.cascadeDisposeToken(first);
-    ready:=usecase<>lu_forDocGeneration;
+    ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
 
     if usecase=lu_forCallingMain then executeMain;
     if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
