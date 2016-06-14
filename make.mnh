@@ -205,7 +205,7 @@ main(...)->begin
     ? build(i) OR true
     :             false,or)
   ? void
-  : p in ['distro','build','clean','test']
+  : p in ['distro','build','clean','test','prepare']
     ? main(p)
     : void);
 end;

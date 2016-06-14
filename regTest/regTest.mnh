@@ -82,9 +82,7 @@ private testRegular->begin
   toId('24.main')('demo');
   toId('99bottles.main');
   anagram.main;
-  flavourString.matches('Linux')
-  ? void
-  : ackermann.main;
+  ackermann.main;
   asciiCalendar.main;
   benford.main;
   stringFib.main;
