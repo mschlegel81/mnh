@@ -30,7 +30,7 @@ TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
-  T_literal = object
+  T_literal = packed object
   private
     numberOfReferences: longint;
     CONSTRUCTOR init;
@@ -51,13 +51,13 @@ TYPE
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
-  T_scalarLiteral = object(T_literal)
+  T_scalarLiteral = packed object(T_literal)
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION literalType: T_literalType; virtual;
   end;
 
   P_voidLiteral = ^T_voidLiteral;
-  T_voidLiteral = object(T_scalarLiteral)
+  T_voidLiteral = packed object(T_scalarLiteral)
     private
       CONSTRUCTOR create();
     public
@@ -67,7 +67,7 @@ TYPE
   end;
 
   P_boolLiteral = ^T_boolLiteral;
-  T_boolLiteral = object(T_scalarLiteral)
+  T_boolLiteral = packed object(T_scalarLiteral)
   private
     val: boolean;
     CONSTRUCTOR create(CONST value: boolean);
@@ -85,7 +85,7 @@ TYPE
 
   P_intLiteral = ^T_intLiteral;
 
-  T_intLiteral = object(T_scalarLiteral)
+  T_intLiteral = packed object(T_scalarLiteral)
   private
     val: int64;
     CONSTRUCTOR create(CONST value: int64);
@@ -104,7 +104,7 @@ TYPE
 
   P_realLiteral = ^T_realLiteral;
 
-  T_realLiteral = object(T_scalarLiteral)
+  T_realLiteral = packed object(T_scalarLiteral)
   private
     val: T_myFloat;
     CONSTRUCTOR create(CONST value: T_myFloat);
@@ -123,7 +123,7 @@ TYPE
 
   P_stringLiteral = ^T_stringLiteral;
 
-  T_stringLiteral = object(T_scalarLiteral)
+  T_stringLiteral = packed object(T_scalarLiteral)
   private
     cachedHash:T_hashInt;
     val: ansistring;
@@ -154,7 +154,7 @@ TYPE
 
   P_listLiteral = ^T_listLiteral;
   P_expressionLiteral = ^T_expressionLiteral;
-  T_expressionLiteral = object(T_scalarLiteral)
+  T_expressionLiteral = packed object(T_scalarLiteral)
   private
     val: pointer;
     CONSTRUCTOR create(CONST value: pointer);
@@ -173,7 +173,7 @@ TYPE
     FUNCTION typeString:string; virtual;
   end;
 
-  GENERIC G_literalKeyMap<VALUE_TYPE>=object
+  GENERIC G_literalKeyMap<VALUE_TYPE>=packed object
     TYPE CACHE_ENTRY=record
            key:P_literal;
            value:VALUE_TYPE;
@@ -195,7 +195,7 @@ TYPE
   P_literalKeyLiteralValueMap=^T_literalKeyLiteralValueMap;
   T_literalKeyLiteralValueMap=specialize G_literalKeyMap<P_literal>;
 
-  T_listLiteral = object(T_literal)
+  T_listLiteral = packed object(T_literal)
   private
     dat: array of P_literal;
     datFill:longint;
@@ -292,7 +292,7 @@ TYPE
   T_evaluateCompatorCallback = FUNCTION (CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
   T_evaluateSubruleCallback = FUNCTION(CONST subruleLiteral:P_expressionLiteral;  CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
 
-  T_format=object
+  T_format=packed object
     category:(fmtCat_decimal,
               fmtCat_scientific,
               fmtCat_fixedPoint,
