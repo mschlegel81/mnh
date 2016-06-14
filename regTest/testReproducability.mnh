@@ -1,7 +1,8 @@
-USE testLog,
-    '../demos/24.mnh',
-    '../demos/100doors.mnh',
+cmd(filename)->['-cmd','-echo','-time', format('"USE ''%s''; resetRandom; toId(''%s''); "',filename,filename.splitFileName['filename'].replace('.mnh','')&'.main')];
+
+   ['../demos/100doors.mnh',
     '../demos/12_statements.mnh',
+//    '../demos/24.mnh',
     '../demos/99bottles.mnh',
     '../demos/ackermann.mnh',
     '../demos/aks.mnh',
@@ -9,15 +10,18 @@ USE testLog,
     '../demos/anagram.mnh',
     '../demos/asciiCalendar.mnh',
     '../demos/balancedBrackets.mnh',
+    '../demos/barnsleyFern.mnh',
     '../demos/benford.mnh',
     '../demos/bestShuffle.mnh',
     '../demos/concatInts.mnh',
+    '../demos/continuedFractions.mnh',
     '../demos/countTheCoins.mnh',
     '../demos/dice7fromDice5.mnh',
     '../demos/digitSquareSum.mnh',
     '../demos/ethiopian.mnh',
     '../demos/fibonacci.mnh',
     '../demos/fibonacciWord.mnh',
+    '../demos/fractalPlant.mnh',
     '../demos/fractran.mnh',
     '../demos/gol.mnh',
     '../demos/hailstone.mnh',
@@ -30,6 +34,7 @@ USE testLog,
     '../demos/hofstadter_sequences.mnh',
     '../demos/huffmann.mnh',
     '../demos/josephus.mnh',
+    '../demos/kochCurve.mnh',
     '../demos/lastSundays.mnh',
     '../demos/lindenmayer.mnh',
     '../demos/ludic.mnh',
@@ -39,19 +44,25 @@ USE testLog,
     '../demos/opTest.mnh',
     '../demos/pascal.mnh',
     '../demos/pernicousNumbers.mnh',
+    '../demos/piPlots.mnh',
     '../demos/pythagoras.mnh',
     '../demos/quine.mnh',
     '../demos/range_extract_expand.mnh',
+    '../demos/rk4.mnh',
     '../demos/roman.mnh',
+    '../demos/root.mnh',
     '../demos/selfRefSeq.mnh',
     '../demos/semordnilap.mnh',
     '../demos/setConsolidation.mnh',
     '../demos/shannonEntropy.mnh',
     '../demos/sierpinskiCarpet.mnh',
+    '../demos/sierpinskiCurve.mnh',
     '../demos/sierpinskiTriangle.mnh',
     '../demos/stringFib.mnh',
     '../demos/subGen.mnh',
     '../demos/sudoku.mnh',
+    '../demos/travellingSalesmanProblem.mnh',
+    '../demos/turtleGfx.mnh',
     '../demos/ulam.mnh',
     '../demos/unbiasedRandom.mnh',
     '../demos/vampire.mnh',
@@ -59,57 +70,7 @@ USE testLog,
     '../demos/weasel.mnh',
     '../demos/wordCount.mnh',
     '../demos/y.mnh',
-    //The following tests are flavor dependent
-    '../demos/zeckendorf.mnh',
-    '../demos/continuedFractions.mnh',
-    '../demos/piPlots.mnh',
-    '../demos/rk4.mnh',
-    '../demos/root.mnh',
-    //The last 6 imports are plotting
-    '../demos/barnsleyFern.mnh',
-    '../demos/fractalPlant.mnh',
-    '../demos/kochCurve.mnh',
-    '../demos/sierpinskiCurve.mnh',
-    '../demos/travellingSalesmanProblem.mnh',
-    '../demos/turtleGfx.mnh';
+    '../demos/zeckendorf.mnh']
+.each(file,print(executor.exec(cmd(file))=='bin32\mnh_light.exe'.exec(cmd(file)),' ',file));
 
-private testPlotting(call:expression(0), file:string)->begin
-  local filePath:=(myPath.splitFileName.directory)&'/'&file;
-  deleteFile(filePath);
-  call();
-  printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
-end;
 
-private printExecute([])->void;
-private printExecute(code:stringList)->begin
-  local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
-  printf("%s\t%s",out.getInner(0),out.getInner(2));
-end;
-
-private executeExamples(examplesFile:string)->begin
-  local codeToExecute:=[];
-  print('Examples file has ',fileLines(examplesFile).size,' lines');
-  fileLines(examplesFile).each(line,
-    line=='' ? begin
-      printExecute(codeToExecute);
-      codeToExecute:=[];
-    end : codeToExecute|=line);
-  printExecute(codeToExecute);
-end;;
-
-main(examplesFile:string)->testAlreadyPassed ? void :
-begin
-  resetRandom;
-  collectOutput;
-  toId('24.main')('demo');
-  inspect.uses.getInner(0).leading(6).tail(2).each(import,toId(import&'.main'));
-  canPlot
-  ? inspect.uses.getInner(0).trailing(6).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
-  : void;
-  examplesFile==''
-  ? void
-  : executeExamples(examplesFile);
-  validateCollectedOutput;
-end;
-
-main->main('');
