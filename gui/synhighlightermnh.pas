@@ -401,8 +401,8 @@ PROCEDURE TSynMnhSyn.next;
       fTokenId:=tkHighlightedItem;
     end;
     if (flavour=msf_input) and (fTokenId<>tkNull) and
-       ((fLineNumber>=docEvaluator.getFirstErrorLocation.line) or
-        (fLineNumber=docEvaluator.getFirstErrorLocation.line-1) and (fTokenPos>=docEvaluator.getFirstErrorLocation.column)) then begin
+       ((fLineNumber>=docEvaluator.getFirstError.location.line) or
+        (fLineNumber=docEvaluator.getFirstError.location.line-1) and (fTokenPos>=docEvaluator.getFirstError.location.column)) then begin
       fTokenId:=tkComment;
     end;
   end;

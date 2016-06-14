@@ -49,7 +49,7 @@ TYPE
       endOfEvaluationText:ansistring;
       mainParameters:T_arrayOfString;
       startOfEvaluation:double;
-      firstErrorLocation:T_searchTokenLocation;
+      firstError:T_storedMessage;
       stateCounter:longint;
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
@@ -71,7 +71,7 @@ TYPE
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       PROCEDURE reportVariables(VAR report:T_variableReport);
       FUNCTION getEndOfEvaluationText:ansistring;
-      FUNCTION getFirstErrorLocation:T_searchTokenLocation;
+      FUNCTION getFirstError:T_storedMessage;
       FUNCTION getStateCounter:longint;
   end;
 
@@ -149,11 +149,11 @@ FUNCTION docMain(p:pointer):ptrint;
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
         package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-        firstErrorLocation.column:=-1;
-        firstErrorLocation.line:=maxLongint;
+        firstError.location.column:=-1;
+        firstError.location.line:=maxLongint;
         for i:=length(P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages)-1 downto 0 do
-        with P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages[i] do
-        if (location.fileName=package.getPath) and (C_errorLevelForMessageType[messageType]>=2) then firstErrorLocation:=location;
+        with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
+        if (storedMessages[i].location.fileName=package.getPath) and (C_errorLevelForMessageType[storedMessages[i].messageType]>=2) then firstError:=storedMessages[i];
         postEval;
       end;
       ThreadSwitch;
@@ -204,7 +204,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     package.create(nil);
     adapter:=adapters;
     stateCounter:=0;
-    firstErrorLocation.line:=-1;
+    firstError.location.line:=maxLongint;
   end;
 
 DESTRUCTOR T_evaluator.destroy;
@@ -392,9 +392,9 @@ FUNCTION T_evaluator.getEndOfEvaluationText: ansistring;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.getFirstErrorLocation:T_searchTokenLocation;
+FUNCTION T_evaluator.getFirstError:T_storedMessage;
   begin
-    result:=firstErrorLocation;
+    result:=firstError;
   end;
 
 FUNCTION T_evaluator.pendingRequest: T_evalRequest;
