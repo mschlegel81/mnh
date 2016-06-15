@@ -433,6 +433,7 @@ TYPE
     mt_echo_input,
     mt_echo_declaration,
     mt_echo_output,
+    mt_echo_continued,
     mt_el1_note,
     mt_el2_warning,
     mt_el3_evalError,
@@ -468,7 +469,7 @@ CONST
    -2,//mt_printline,
    -1,//mt_echo_input,
    -1,//mt_echo_declaration,
-   -1,//mt_echo_output,
+   -1,-1,//mt_echo_output,.. continued
     1,//mt_el1_note,
     2,//mt_el2_warning,
     3,//mt_el3_evalError,
@@ -498,6 +499,7 @@ CONST
     ' in>',//echo input
     ' in>',//echo declaration
     'out>',//echo output
+    '...>',//echo output continued
     'Note ',
     'Warning ',
     'Error ',

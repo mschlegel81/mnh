@@ -49,6 +49,7 @@ TYPE
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
     MenuItem3: TMenuItem;
+    miWrapEcho: TMenuItem;
     mi_insertFilename: TMenuItem;
     miClose: TMenuItem;
     miMinErrorlevel5: TMenuItem;
@@ -170,6 +171,7 @@ TYPE
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
+    PROCEDURE miWrapEchoClick(Sender: TObject);
     PROCEDURE mi_insertFilenameClick(Sender: TObject);
     PROCEDURE mi_settingsClick(Sender: TObject);
     PROCEDURE OutputEditKeyDown(Sender: TObject; VAR key: word;
@@ -1011,6 +1013,12 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
     end;
   end;
 
+PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
+  begin
+    settings.value^.wordWrapEcho:=not(settings.value^.wordWrapEcho);
+    miWrapEcho.Checked:=settings.value^.wordWrapEcho;
+  end;
+
 PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
     if OpenDialog.execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.fileName));
@@ -1370,6 +1378,7 @@ PROCEDURE TMnhForm.processSettings;
         miDeclarationEcho.Checked:=doEchoDeclaration;
         miExpressionEcho.Checked:=doEchoInput;
         miExpressionResult.Checked:=doShowExpressionOut;
+        miWrapEcho.Checked:=settings.value^.wordWrapEcho;
         miTimingInfo.Checked:=doShowTimingInfo;
         miMinErrorlevel1.Checked:=minErrorLevel<=1;
         miMinErrorlevel2.Checked:=minErrorLevel=2;

@@ -474,104 +474,23 @@ FUNCTION clean_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
   end;
 
 FUNCTION tokenSplit_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR stringToSplit:ansistring;
-      i0,i1:longint;
-
-  PROCEDURE stepToken;
-    begin
-      P_listLiteral(result)^.appendString(copy(stringToSplit,i0,i1-i0));
-      i0:=i1;
-    end;
-
-  VAR doubleQuoteString:boolean=false;
-      singleQuoteString:boolean=false;
-      escapeStringDelimiter:boolean=false;
-      curlyBracketsDelimitOneToken:boolean=false;
-      cStyleComments:boolean=false;
-      dollarVariables:boolean=false;
-      t:T_tokenType;
-
-  PROCEDURE setLanguage(name:string);
-    begin
-      if trim(uppercase(name))='MNH' then begin
-        doubleQuoteString:=true;
-        singleQuoteString:=true;
-        escapeStringDelimiter:=true;
-        curlyBracketsDelimitOneToken:=true;
-        cStyleComments:=true;
-        dollarVariables:=true;
-      end else if trim(uppercase(name))='JAVA' then begin
-        doubleQuoteString:=true;
-        singleQuoteString:=true;
-        escapeStringDelimiter:=true;
-        curlyBracketsDelimitOneToken:=false;
-        cStyleComments:=true;
-      end else if trim(uppercase(name))='PASCAL' then begin
-        doubleQuoteString:=false;
-        singleQuoteString:=true;
-        escapeStringDelimiter:=false;
-        curlyBracketsDelimitOneToken:=true;
-        cStyleComments:=true;
-      end;
-    end;
-
+  VAR language:string='MNH';
+      stringToSplit:ansistring;
+      tokens:T_arrayOfString;
+      i:longint;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) then begin
       if (arg1^.literalType=lt_string)
-      then setLanguage(str1^.value)
+      then language:=str1^.value
       else exit(nil);
     end;
-
     if (params<>nil) and (params^.size>=1) and
        (arg0^.literalType=lt_string) then begin
       stringToSplit:=str0^.value;
-
+      tokens:=tokenSplit(stringToSplit,language);
       result:=newListLiteral;
-      i0:=1;
-      while i0<=length(stringToSplit) do begin
-        if stringToSplit[i0] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar] then begin //whitespace
-          i1:=i0;
-          while (i1<=length(stringToSplit)) and (stringToSplit[i1] in [' ',C_lineBreakChar,C_carriageReturnChar,C_tabChar]) do inc(i1);
-        end else if (stringToSplit[i0]='''') and singleQuoteString or
-                    (stringToSplit[i0]='"') and doubleQuoteString then begin
-          if escapeStringDelimiter then begin
-            unescapeString(copy(stringToSplit,i0,length(stringToSplit)-i0+1),1,i1);
-            if i1<=0 then i1:=i0+1
-                     else i1:=i0+i1;
-          end else begin
-            i1:=i0+1;
-            while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>stringToSplit[i0]) do inc(i1);
-            inc(i1);
-          end;
-        end else if (stringToSplit[i0]='{') and curlyBracketsDelimitOneToken then begin
-          i1:=i0+1;
-          while (i1<=length(stringToSplit)) and (stringToSplit[i1]<>'}') do inc(i1);
-          inc(i1);
-        end else if (copy(stringToSplit,i0,2)='//') and cStyleComments then begin
-          i1:=i0+1;
-          while (i1<=length(stringToSplit)) and not(stringToSplit[i1] in [C_lineBreakChar,C_carriageReturnChar]) do inc(i1);
-        end else if (stringToSplit[i0] in ['a'..'z','A'..'Z']) or (stringToSplit[i0]='$') and dollarVariables then begin
-          i1:=i0+1;
-          while (i1<=length(stringToSplit)) and (stringToSplit[i1] in ['a'..'z','A'..'Z','_','0'..'9']) do inc(i1);
-        end else if stringToSplit[i0] in ['0'..'9'] then begin //numbers
-          parseNumber(copy(stringToSplit,i0,length(stringToSplit)-i0+1),1,false,i1);
-          if i1<=0 then i1:=i0
-                   else i1:=i0+i1;
-        end else begin
-          //symbols, etc.
-          t:=tt_literal;
-          i1:=i0;
-          for t:=low(T_tokenType) to high(T_tokenType) do begin
-            if (C_tokenInfo[t].defaultId<>'') and
-               (copy(stringToSplit,i0,length(C_tokenInfo[t].defaultId))=C_tokenInfo[t].defaultId) and
-               (i0+length(C_tokenInfo[t].defaultId)>i1)
-            then i1:=i0+length(C_tokenInfo[t].defaultId);
-          end;
-          if i1=i0 then i1:=i0+1;
-        end;
-        stepToken;
-      end;
+      for i:=0 to length(tokens)-1 do result:=P_listLiteral(result)^.appendString(tokens[i]);
     end;
   end;
 

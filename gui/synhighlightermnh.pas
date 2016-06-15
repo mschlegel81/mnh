@@ -59,6 +59,7 @@ CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
 {mt_echo_input,                        } tkDefault,
 {mt_echo_declaration,                  } tkDefault,
 {mt_echo_output,                       } tkDefault,
+{mt_echo_continued,                    } tkDefault,
 {mt_el1_note,                          } tkNote,
 {mt_el2_warning,                       } tkWarning,
 {mt_el3_evalError,                     } tkError,
@@ -84,7 +85,7 @@ TYPE
   private
     blobEnder:char;
 
-    isMarked:boolean;
+    isMarked,isUnderlined:boolean;
     flavour :T_mnhSynFlavour;
 
     fLine: PChar;
@@ -262,7 +263,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
       if i>=0 then run:=i+1;
       fTokenId:=tokenKindForMt[specialLineCase];
-      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input]) then while (fLine[run]<>#0) do inc(run);
+      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_echo_continued]) then while (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
     if blobEnder<>#0 then begin
@@ -397,14 +398,10 @@ PROCEDURE TSynMnhSyn.next;
         inc(run);
       end;
     end;
-    if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then begin
-      fTokenId:=tkHighlightedItem;
-    end;
-    if (flavour=msf_input) and (fTokenId<>tkNull) and
+    if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
+    isUnderlined:=(flavour=msf_input) and (fTokenId<>tkNull) and
        ((fLineNumber>=docEvaluator.getFirstError.location.line) or
-        (fLineNumber=docEvaluator.getFirstError.location.line-1) and (fTokenPos>=docEvaluator.getFirstError.location.column)) then begin
-      fTokenId:=tkComment;
-    end;
+        (fLineNumber=docEvaluator.getFirstError.location.line-1) and (fTokenPos>=docEvaluator.getFirstError.location.column));
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
@@ -435,6 +432,8 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer)
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
+    if isUnderlined then result.style:=result.style+[fsStrikeOut]
+                    else result.style:=result.style-[fsStrikeOut];
     if isMarked then result.FrameColor:=$000000ff
                 else begin
                   result.FrameColor:=clNone;

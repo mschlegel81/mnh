@@ -44,6 +44,32 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
       instantPlotRequested:boolean=false;
+  PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
+    VAR txt:string;
+        tokens:T_arrayOfString;
+        k:longint=0;
+        first:boolean=true;
+        firstInLine:boolean=true;
+    begin
+      txt:=message;
+      if settings.value^.wordWrapEcho and (syn.CharsInWindow-5<length(txt)) then begin
+        tokens:=tokenSplit(txt);
+        while k<length(tokens) do begin
+          txt:='';
+          firstInLine:=true;
+          while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.CharsInWindow-5)) do begin
+            txt:=txt+tokens[k];
+            inc(k);
+            firstInLine:=false;
+          end;
+          if first
+          then syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]      +' '+txt)
+          else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[mt_echo_continued]+' '+txt);
+          first:=false;
+        end;
+      end else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+message);
+    end;
+
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
@@ -81,7 +107,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_reloadRequired:  for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].reloadFile(simpleMessage);
         mt_echo_input,
         mt_echo_declaration,
-        mt_echo_output,
+        mt_echo_output: writeWrapped(messageType,simpleMessage);
         mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
         else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
         end;

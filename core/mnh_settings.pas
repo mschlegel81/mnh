@@ -77,6 +77,7 @@ T_settings=object(T_serializable)
   logPerRun:boolean;
   wasLoaded:boolean;
   savedAt:double;
+  wordWrapEcho:boolean;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -170,7 +171,7 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     saveIntervalIdx:=stream.readByte;
     textLogName:=stream.readAnsiString;
     logPerRun:=stream.readBoolean;
-
+    wordWrapEcho:=stream.readBoolean;
     if stream.allOkay then result:=true
     else begin
       initDefaults;
@@ -207,12 +208,14 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     stream.writeByte(saveIntervalIdx);
     stream.writeAnsiString(textLogName);
     stream.writeBoolean(logPerRun);
+    stream.writeBoolean(wordWrapEcho);
     savedAt:=now;
   end;
 
 PROCEDURE T_settings.initDefaults;
   VAR i:longint;
   begin
+    wordWrapEcho:=false;
     cpuCount:=getNumberOfCPUs;
     editorFontname:='';
     fontSize:=0;

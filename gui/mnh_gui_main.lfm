@@ -1796,6 +1796,10 @@ object MnhForm: TMnhForm
         Checked = True
         OnClick = miDeclarationEchoClick
       end
+      object miWrapEcho: TMenuItem
+        Caption = 'Wrap echo'
+        OnClick = miWrapEchoClick
+      end
       object miTimingInfo: TMenuItem
         Caption = 'Show timing info'
         OnClick = miTimingInfoClick
