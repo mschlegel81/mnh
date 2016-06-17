@@ -670,6 +670,18 @@ FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
+FUNCTION base95encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base95Encode(str0^.value));
+  end;
+
+FUNCTION base95decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base95Decode(str0^.value));
+  end;
+
 
 INITIALIZATION
   //Functions on Strings:
@@ -700,4 +712,6 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise');
   registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#As above but with a specified algorithm:#  1: deflate#  2: huffman with default model#  3: huffman with another model#  other: try out algorithms and return the shortest representation#  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
+  registerRule(STRINGS_NAMESPACE,'base95encode',@base95encode_impl,'base95encode(S:string);#Returns a base95 encoded string');
+  registerRule(STRINGS_NAMESPACE,'base95decode',@base95decode_impl,'base95decode(S:string);#Returns a string, decoded from a base95 encoded string');
 end.
