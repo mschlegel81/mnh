@@ -69,7 +69,7 @@ FUNCTION intRandom_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
      if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then exit(newIntLiteral(random(int0^.value)))
      else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_int) and (arg1^.literalType=lt_int) then begin
       count:=int1^.value;
-      if count>0 then begin
+      if count>=0 then begin
         result:=newListLiteral;
         for i:=1 to count do P_listLiteral(result)^.appendInt(random(int0^.value));
         exit(result);
