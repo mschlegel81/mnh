@@ -364,7 +364,7 @@ PROCEDURE T_codeProvider.setLinesUTF8(CONST value: TStrings);
     end;
     for i := 0 to cleanCount-1 do begin
       outOfSync := outOfSync or (trim(lineData[i])<>trim(value[i]));
-      lineData[i] := ensureSysEncoding(value[i]);
+      lineData[i] := value[i];
     end;
     fileContentsEnforced:=true;
   end;

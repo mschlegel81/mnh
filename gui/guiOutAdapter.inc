@@ -51,9 +51,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         first:boolean=true;
         firstInLine:boolean=true;
     begin
-      txt:=message;
       if settings.value^.wordWrapEcho and (syn.CharsInWindow-5<length(txt)) then begin
-        tokens:=tokenSplit(txt);
+        tokens:=tokenSplit(message);
         while k<length(tokens) do begin
           txt:='';
           firstInLine:=true;
@@ -97,8 +96,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           begin
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
               syn.lines.clear;
-              for j:=1 to length(multiMessage)-1 do  syn.lines.append(SysToUTF8(multiMessage[j]));
-            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(SysToUTF8(multiMessage[j]));
+              for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
+            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
           end;
         mt_endOfEvaluation: begin
           for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].doneDebugging;
@@ -108,8 +107,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);
-        mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+SysToUTF8(simpleMessage));
-        else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+SysToUTF8(simpleMessage));
+        mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+(simpleMessage));
+        else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage));
         end;
       end;
     end;

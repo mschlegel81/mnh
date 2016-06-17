@@ -181,7 +181,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string)
                                           and (arg1^.literalType=lt_string) then begin
-      ok:=mnh_fileWrappers.writeFile(ensureSysEncoding(str0^.value),
+      ok:=mnh_fileWrappers.writeFile(str0^.value,
                                      str1^.value);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
@@ -203,7 +203,7 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
                         else sep:='';
       setLength(L,list1^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value(i))^.value;
-      ok:=writeFileLines(ensureSysEncoding(str0^.value),L,sep);
+      ok:=writeFileLines(str0^.value,L,sep);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
@@ -288,11 +288,11 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean)
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
       and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
       setLength(cmdLinePar,0);
-      executable:=ensureSysEncoding(str0^.value);
+      executable:=str0^.value;
       if params^.size=2 then begin
         setLength(cmdLinePar,list1^.size);
         for i:=0 to list1^.size-1 do
-          cmdLinePar[i]:=ensureSysEncoding(P_scalarLiteral(list1^.value(i))^.stringForm);
+          cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
       end;
       showConsole;
       runCommandAsyncOrPipeless(executable,
@@ -332,7 +332,7 @@ FUNCTION deleteDir_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=newBoolLiteral(DeleteDirectory(ensureSysEncoding(str0^.value),false));
+      result:=newBoolLiteral(DeleteDirectory(str0^.value,false));
     end;
   end;
 
@@ -342,7 +342,7 @@ FUNCTION copyFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
       ensurePath(str1^.value);
       result:=newBoolLiteral(
-      FileUtil.CopyFile(ensureSysEncoding(str0^.value),ensureSysEncoding(str1^.value),true));
+      FileUtil.CopyFile(str0^.value,str1^.value,true));
     end;
   end;
 
@@ -352,7 +352,7 @@ FUNCTION moveFile_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)  then begin
       ensurePath(str1^.value);
       result:=newBoolLiteral(
-      RenameFile(ensureSysEncoding(str0^.value),ensureSysEncoding(str1^.value)));
+      RenameFile(str0^.value,str1^.value));
     end;
   end;
 
@@ -382,7 +382,7 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      getFileInfo(ensureSysEncoding(str0^.value),time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      getFileInfo(str0^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
       if isExistent then begin

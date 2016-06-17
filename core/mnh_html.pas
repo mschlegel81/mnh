@@ -23,7 +23,7 @@
 UNIT mnh_html;
 INTERFACE
 USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens;
-CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head> <meta http-equiv="refresh" content="%"/> '+
+CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
   '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
   'lar, sans-serif } code { font-family: Courier-New, Courier; white-space: pre } table { display: inline-t'+
@@ -150,7 +150,6 @@ DESTRUCTOR T_htmlOutAdapter.destroy;
 PROCEDURE T_htmlOutAdapter.append(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited append(message);
-    with storedMessages[length(storedMessages)-1] do if messageType in [mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
     if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
   end;
 

@@ -78,6 +78,7 @@ PROCEDURE T_tokenArray.append(CONST newTok: T_token);
   end;
 
 PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistring; VAR adapters: T_adapters);
+  VAR fullText:ansistring;
   begin
     repeat
       inc(i);
@@ -86,6 +87,20 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
            if lastComment=''
            then lastComment:=t[i].txt
            else lastComment:=lastComment+C_lineBreakChar+t[i].txt;
+        end;
+        tt_literal: if (P_literal(t[i].data)^.literalType=lt_string) and (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string) then begin
+          fullText:=P_stringLiteral(t[i].data)^.value;
+          disposeLiteral(t[i].data);
+          t[i].tokType:=tt_EOL;
+          while (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)  do begin
+            inc(i);
+            fullText:=fullText+P_stringLiteral(t[i].data)^.value;
+            writeln('Token #',i,'; Elongating full text to: ',fullText);
+            disposeLiteral(t[i].data);
+            t[i].tokType:=tt_EOL;
+          end;
+          t[i].data:=newStringLiteral(fullText);
+          t[i].tokType:=tt_literal;
         end;
         tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
@@ -198,6 +213,22 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       result:=copy(line,lineLocation.column,parsedLength);
     end;
 
+  FUNCTION parseCharCode:ansistring;
+    VAR i:longint;
+        charCode:longint;
+    begin
+      i:=lineLocation.column+1;
+      while (i<length(line)) and (line[i+1] in ['0'..'9']) do inc(i);
+      result:=copy(line,lineLocation.column+1,i-lineLocation.column);
+      charCode:=strToIntDef(result,256);
+      if (charCode<0) or (charCode>255)
+      then fail('Invalid char code #'+result)
+      else begin
+        result:=chr(charCode);
+        parsedLength:=i-lineLocation.column+1;
+      end;
+    end;
+
   FUNCTION startsWith(CONST c:char):boolean;
     begin result:=line[lineLocation.column]=c; end;
   FUNCTION startsWith(CONST prefix:string):boolean;
@@ -264,6 +295,10 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           result.tokType:=tt_literal;
           result.data:=newStringLiteral(id);
         end;
+      end;
+      '#': begin
+        result.tokType:=tt_literal;
+        result.data:=newStringLiteral(parseCharCode);
       end;
       '$': begin
         result.txt:=leadingId;
@@ -1467,10 +1502,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     end;
 
   PROCEDURE currentStateMessage();
-    VAR i,i0:longint;
-        prevWasIdLike:boolean=false;
-        p:P_token;
-        stepMessage:T_storedMessage;
+    VAR stepMessage:T_storedMessage;
     begin
       with stepMessage do begin
         messageType:=mt_el3_stackTrace;
