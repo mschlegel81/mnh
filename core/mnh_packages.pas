@@ -903,21 +903,10 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ru
   end;
 
 PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
-  VAR i,j:longint;
-      ids:T_arrayOfString;
-      packageId:ansistring;
   begin
     userDefinedRules.clear;
     userDefinedRules.addAll(packageRules.keySet);
-    for i:=0 to length(packageUses)-1 do if (packageUses[i].pack<>nil) and packageUses[i].pack^.ready then begin
-      packageId:=packageUses[i].id;
-      ids:=packageUses[i].pack^.packageRules.keySet;
-      for j:=0 to length(ids)-1 do begin
-        userDefinedRules.add(ids[j]);
-        userDefinedRules.add(C_ID_QUALIFY_CHARACTER+ids[j]);
-        userDefinedRules.add(packageId+C_ID_QUALIFY_CHARACTER+ids[j]);
-      end;
-    end;
+    userDefinedRules.addAll(importedRules.keySet);
     userDefinedRules.unique;
   end;
 
