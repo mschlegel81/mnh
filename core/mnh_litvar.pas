@@ -33,14 +33,14 @@ TYPE
   T_literal = packed object
   private
     numberOfReferences: longint;
-    CONSTRUCTOR init;
+    CONSTRUCTOR init(CONST lt:T_literalType);
     DESTRUCTOR destroy; virtual;
   public
+    literalType:T_literalType;
     PROCEDURE rereference;
     FUNCTION unreference: longint;
     FUNCTION getReferenceCount: longint;
 
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -53,7 +53,6 @@ TYPE
   P_scalarLiteral = ^T_scalarLiteral;
   T_scalarLiteral = packed object(T_literal)
     FUNCTION stringForm: ansistring; virtual;
-    FUNCTION literalType: T_literalType; virtual;
   end;
 
   P_voidLiteral = ^T_voidLiteral;
@@ -62,7 +61,6 @@ TYPE
       CONSTRUCTOR create();
     public
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
   end;
 
@@ -76,7 +74,6 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -94,7 +91,6 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -113,7 +109,6 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -144,7 +139,6 @@ TYPE
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -166,7 +160,6 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
@@ -200,7 +193,6 @@ TYPE
     dat: array of P_literal;
     datFill:longint;
     cachedHash: T_hashInt;
-    strictType: T_literalType;
     nextAppendIsRange: boolean;
 
     indexBacking:record
@@ -243,7 +235,6 @@ TYPE
     FUNCTION clone:P_listLiteral;
     //from T_literal:
     DESTRUCTOR destroy; virtual;
-    FUNCTION literalType: T_literalType; virtual;
     FUNCTION toString: ansistring; virtual;
     FUNCTION listConstructorToString:ansistring;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
@@ -620,7 +611,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   end;
 
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init; begin numberOfReferences:=1; end;
+CONSTRUCTOR T_literal.init(CONST lt:T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 
 PROCEDURE T_literal.rereference;
   begin
@@ -639,19 +630,18 @@ FUNCTION T_literal.getReferenceCount: longint;
   end;
 
 //CONSTRUCTORS:=================================================================
-CONSTRUCTOR T_voidLiteral.create();                              begin inherited init; end;
-CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init; val:=value; end;
-CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init; val:=value; end;
-CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init; val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init; val:=value; cachedHash:=0; end;
-CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);    begin inherited init; val:=value; end;
+CONSTRUCTOR T_voidLiteral.create();                              begin inherited init(lt_void); end;
+CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean); val:=value; end;
+CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int); val:=value; end;
+CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real); val:=value; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string); val:=value; cachedHash:=0; end;
+CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);    begin inherited init(lt_expression); val:=value; end;
 CONSTRUCTOR T_listLiteral.create;
   begin
-    inherited init;
+    inherited init(lt_emptyList);
     cachedHash:=0;
     setLength(dat, 0);
     datFill:=0;
-    strictType:=lt_emptyList;
     nextAppendIsRange:=false;
     with indexBacking do begin
       setBack:=nil;
@@ -673,24 +663,8 @@ DESTRUCTOR T_listLiteral.destroy;
   VAR i: longint;
   begin
     for i:=0 to datFill-1 do if dat[i]<>nil then disposeLiteral(dat[i]);
-    setLength(dat, 0);
-    datFill:=0;
-    strictType:=lt_emptyList;
-    nextAppendIsRange:=false;
-    dropIndexes;
   end;
 //==================================================================:DESTRUCTORS
-//?.literalType:================================================================
-FUNCTION T_literal.literalType: T_literalType; begin result:=lt_error;      end;
-FUNCTION T_scalarLiteral    .literalType: T_literalType; begin result:=lt_error;      end;
-FUNCTION T_voidLiteral      .literalType: T_literalType; begin result:=lt_void;       end;
-FUNCTION T_boolLiteral      .literalType: T_literalType; begin result:=lt_boolean;    end;
-FUNCTION T_intLiteral       .literalType: T_literalType; begin result:=lt_int;        end;
-FUNCTION T_realLiteral      .literalType: T_literalType; begin result:=lt_real;       end;
-FUNCTION T_stringLiteral    .literalType: T_literalType; begin result:=lt_string;     end;
-FUNCTION T_expressionLiteral.literalType: T_literalType; begin result:=lt_expression; end;
-FUNCTION T_listLiteral      .literalType: T_literalType; begin result:=strictType; end;
-//================================================================:?.literalType
 //?.value:======================================================================
 FUNCTION T_intLiteral       .value: int64;      begin result:=val; end;
 FUNCTION T_realLiteral      .value: T_myFloat;  begin result:=val; end;
@@ -801,6 +775,7 @@ FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean): ansist
     if isFinalized then result:='('+result+')'
     else result:='('+result+',';
   end;
+
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
 FUNCTION T_stringLiteral.stringForm: ansistring; begin result:=val;      end;
@@ -1308,55 +1283,55 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_lis
     dat[datFill]:=L;
     inc(datFill);
     if incRefs then L^.rereference;
-    case strictType of
-      lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then strictType:=lt_listWithError;
+    case literalType of
+      lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then literalType:=lt_listWithError;
       lt_booleanList  : case L^.literalType of
   	                  lt_boolean: begin end;
-  			  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
-  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
-  	                  else                                strictType:=lt_flatList;
+  			  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
+  	                  else                                literalType:=lt_flatList;
                         end;
       lt_intList      : case L^.literalType of
                           lt_int: begin end;
-  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
-  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
-                          lt_real:                            strictType:=lt_numList;
-  			  else                                strictType:=lt_flatList;
+  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
+                          lt_real:                            literalType:=lt_numList;
+  			  else                                literalType:=lt_flatList;
   	                end;
       lt_realList     : case L^.literalType of
   	                  lt_real: begin end;
-  			  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
-  			  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
-  	                  lt_int:                             strictType:=lt_numList;
-  			  else                                strictType:=lt_flatList;
+  			  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
+  	                  lt_int:                             literalType:=lt_numList;
+  			  else                                literalType:=lt_flatList;
                         end;
       lt_numList      : case L^.literalType of
                           lt_int,lt_real: begin end;
-  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
-  	                  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
-  	                  else                                strictType:=lt_flatList;
+  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  	                  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
+  	                  else                                literalType:=lt_flatList;
   	                end;
       lt_stringList   : case L^.literalType of
 	                  lt_string: begin end;
-  	                  lt_error,lt_listWithError,lt_void : strictType:=lt_listWithError;
-  	                  lt_list..lt_flatList,lt_expression: strictType:=lt_list;
-  	                  else                                strictType:=lt_flatList;
+  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  	                  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
+  	                  else                                literalType:=lt_flatList;
   	                end;
       lt_emptyList    : case L^.literalType of
-  	                  lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-                          lt_boolean:                        strictType:=lt_booleanList;
-                          lt_int:                            strictType:=lt_intList;
-                          lt_real:                           strictType:=lt_realList;
-                          lt_string:                         strictType:=lt_stringList;
-                          lt_expression:                     strictType:=lt_list;
+  	                  lt_error,lt_listWithError,lt_void: literalType:=lt_listWithError;
+                          lt_boolean:                        literalType:=lt_booleanList;
+                          lt_int:                            literalType:=lt_intList;
+                          lt_real:                           literalType:=lt_realList;
+                          lt_string:                         literalType:=lt_stringList;
+                          lt_expression:                     literalType:=lt_list;
                           lt_list..lt_flatList: if P_listLiteral(L)^.isKeyValuePair
-                                                then strictType:=lt_keyValueList
-                                                else strictType:=lt_list;
+                                                then literalType:=lt_keyValueList
+                                                else literalType:=lt_list;
                         end;
-      lt_keyValueList: if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then strictType:=lt_list;
+      lt_keyValueList: if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then literalType:=lt_list;
       lt_flatList:     case L^.literalType of
-  	                 lt_error,lt_listWithError,lt_void: strictType:=lt_listWithError;
-  	                 lt_list..lt_flatList:              strictType:=lt_list;
+  	                 lt_error,lt_listWithError,lt_void: literalType:=lt_listWithError;
+  	                 lt_list..lt_flatList:              literalType:=lt_list;
                        end;
     end;
     dropIndexes;
@@ -1402,7 +1377,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
     nextAppendIsRange:=false;
 
     if datFill = 0 then begin
-      strictType:=lt_listWithError;
+      literalType:=lt_listWithError;
       adapters.raiseError('Cannot append range to empty list', tokenLocation);
       exit;
     end;
@@ -1440,7 +1415,7 @@ PROCEDURE T_listLiteral.appendConstructing(CONST L: P_literal; CONST tokenLocati
         end;
       end
     else begin
-      strictType:=lt_listWithError;
+      literalType:=lt_listWithError;
       adapters.raiseError('Invalid range expression '+
         last^.toString+'..'+L^.toString, tokenLocation);
     end;
@@ -1693,7 +1668,7 @@ PROCEDURE T_listLiteral.toKeyValueList;
       key,val:P_literal;
   begin
     with indexBacking do begin
-      if (strictType<>lt_keyValueList) or (mapBack<>nil) then exit;
+      if (literalType<>lt_keyValueList) or (mapBack<>nil) then exit;
       if setBack<>nil then begin
         dispose(setBack,destroy);
         setBack:=nil;
@@ -1730,7 +1705,7 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
       result^.dat[i]:=dat[i];
       dat[i]^.rereference;
     end;
-    result^.strictType:=strictType;
+    result^.literalType:=literalType;
     result^.nextAppendIsRange:=nextAppendIsRange;
     result^.cachedHash:=cachedHash;
     with indexBacking do begin
@@ -2654,7 +2629,7 @@ VAR
 INITIALIZATION
   boolLit[false].create(false);
   boolLit[true].create(true);
-  errLit.init;
+  errLit.init(lt_error);
   voidLit.create();
   for i:=-127 to 128 do intLit[i].create(i);
   DefaultFormatSettings.DecimalSeparator:='.';
