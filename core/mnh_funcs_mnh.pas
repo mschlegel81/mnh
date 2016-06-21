@@ -222,6 +222,37 @@ FUNCTION listBuiltin_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
+FUNCTION listKeywords_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+      tt:T_tokenType;
+      subList:array[T_reservedWordClass] of P_listLiteral;
+      rc:T_reservedWordClass;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      for rc:=low(T_reservedWordClass) to high(T_reservedWordClass) do subList[rc]:=newListLiteral;
+      for tt:=low(T_tokenType) to high(T_tokenType) do
+      if isIdentifier(C_tokenInfo[tt].defaultId,false) or
+         ((copy(C_tokenInfo[tt].defaultId,1,1)='.') or (copy(C_tokenInfo[tt].defaultId,1,1)=':')) and
+         isIdentifier(copy(C_tokenInfo[tt].defaultId,2,length(C_tokenInfo[tt].defaultId)-1),false)
+      then subList[C_tokenInfo[tt].reservedWordClass]^.appendString(C_tokenInfo[tt].defaultId);
+      for i:=0 to length(C_specialWordInfo)-1 do subList[C_specialWordInfo[i].reservedWordClass]^.appendString(C_specialWordInfo[i].txt);
+      disposeLiteral(subList[rwc_not_reserved]);
+      result:=newListLiteral^
+        .append(newListLiteral^.appendString('specialLiterals')^
+                .append(subList[rwc_specialLiteral],false),false)^
+        .append(newListLiteral^.appendString('specialConstructs')^
+                .append(subList[rwc_specialConstruct],false),false)^
+        .append(newListLiteral^.appendString('operators')^
+                .append(subList[rwc_operator],false),false)^
+        .append(newListLiteral^.appendString('typeChecks')^
+                .append(subList[rwc_typeCheck],false),false)^
+        .append(newListLiteral^.appendString('modifiers')^
+                .append(subList[rwc_modifier],false),false);
+    end;
+  end;
+
+
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
@@ -268,6 +299,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,'listKeywords;#Returns a list of all keywords by category');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
 

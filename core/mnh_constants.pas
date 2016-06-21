@@ -1,6 +1,6 @@
 UNIT mnh_constants;
 INTERFACE
-USES myGenerics,myStringUtil,sysutils;
+USES sysutils;
 TYPE
   T_hashInt=dword;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
@@ -201,57 +201,6 @@ CONST
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
-
-  //C_tokenString: array[T_tokenType] of ansistring = ('','',
-  //  //identifier and resolved identifiers
-  //  '', '', '', '', '','', '', '','',
-  //  '', '', 'aggregator',
-  //  //special operators
-  //  '.each', '.pEach', '.PEach', '.agg', 'when','while','begin','end','try', 'toId',
-  //  //lists and list constructors
-  //  '(', ')', '', '',
-  //  '[', ']', '',
-  //  '{', '}',
-  //  //separators
-  //  ',', '..',
-  //  //comparators
-  //  '=', '<>', '<=', '>=', '<', '>', '==',
-  //  //logical operators
-  //  'and', 'or', 'xor',
-  //  'AND', 'OR',
-  //  //arthmetical operators
-  //  '+', '-', '*', '/', 'div', 'mod', '^',
-  //  //partially evaluated operators
-  //  '+', '-',
-  //  //special: string concatenation
-  //  '&', 'orElse',
-  //  //list operators:
-  //  '|', 'in',
-  //  //inline if: (<condition>?<then>:<else>)
-  //  '?', ':',
-  //  '@',
-  //  //assignment operators:
-  //  '->', ':=', ':=', ':=', ':=',
-  //  '+=', '-=', '*=', '/=', '&=', '|=',
-  //  //type checks:
-  //  ':scalar', ':list',
-  //  ':boolean', ':booleanList',
-  //  ':int', ':intList',
-  //  ':real', ':realList',
-  //  ':string', ':stringList',
-  //  ':numeric', ':numericList',
-  //  ':expression',
-  //  ':keyValueList',
-  //  ';',
-  //  '...',
-  //  'private',
-  //  'memoized',
-  //  'mutable',
-  //  'persistent',
-  //  'synchronized',
-  //  'local',
-  //  '', //special: [E]nd [O]f [L]ine
-  //  '');
 
   C_tokenInfo:array[T_tokenType] of record
     defaultId:string;
@@ -524,49 +473,6 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
     for tt:=low(T_tokenType) to high(T_tokenType) do if C_tokenInfo[tt].defaultId=wordText then exit(C_tokenInfo[tt].reservedWordClass);
     result:=rwc_not_reserved;
   end;
-
-//FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
-//  VAR tt:T_tokenType;
-//      rwc:T_reservedWordClass;
-//  begin
-//    for tt:=low(T_tokenType) to high(T_tokenType) do if clazz=rwc_not_reserved;
-//
-//    result.create;
-//    case clazz of
-//      rwc_specialLiteral: begin
-//        result.add(C_voidText);
-//        result.add(C_nanText);
-//        result.add(C_infText);
-//        result.add(C_boolText[true]);
-//        result.add(C_boolText[false]);
-//      end;
-//      rwc_specialConstruct: begin
-//        result.add(C_tokenString[tt_each]);
-//        result.add(C_tokenString[tt_parallelEach]);
-//        result.add(C_tokenString[tt_forcedParallelEach]);
-//        result.add(C_tokenString[tt_agg]);
-//        result.add(replaceOne(C_tokenString[tt_each]        ,C_ID_QUALIFY_CHARACTER,''));
-//        result.add(replaceOne(C_tokenString[tt_parallelEach],C_ID_QUALIFY_CHARACTER,''));
-//        result.add(replaceOne(C_tokenString[tt_forcedParallelEach],C_ID_QUALIFY_CHARACTER,''));
-//        result.add(replaceOne(C_tokenString[tt_agg]         ,C_ID_QUALIFY_CHARACTER,''));
-//        result.add(C_tokenString[tt_when]);
-//        result.add(C_tokenString[tt_aggregatorConstructor]);
-//        result.add(C_tokenString[tt_while]);
-//        result.add(C_tokenString[tt_begin]);
-//        result.add(C_tokenString[tt_try]);
-//        result.add(C_tokenString[tt_toId]);
-//        result.add(C_tokenString[tt_end]);
-//      end;
-//      rwc_operator: for tt:=tt_comparatorEq to tt_listToParameterList do if isIdentifier(C_tokenString[tt],false) then result.add(C_tokenString[tt]);
-//      rwc_modifier: for tt:=tt_modifier_private to tt_modifier_local do result.add(C_tokenString[tt]);
-//      else for rwc:=rwc_specialLiteral to rwc_modifier do begin
-//        subList:=reservedWordsByClass(rwc);
-//        result.addAll(subList.elementArray);
-//        subList.destroy;
-//      end;
-//    end;
-//    result.unique;
-//  end;
 
 FUNCTION getAppName: string;
   begin

@@ -13,6 +13,11 @@ IMPLEMENTATION
 {$define str0:=P_stringLiteral(params^.value(0))}
 {$define list0:=P_listLiteral(params^.value(0))}
 
+FUNCTION pi_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then result:=newRealLiteral(pi) else result:=nil;
+  end;
+
 FUNCTION max_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR x:P_literal;
       i:longint;
@@ -245,6 +250,7 @@ FUNCTION primes_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   end;
 
 INITIALIZATION
+  registerRule(MATH_NAMESPACE,'pi',@pi_imp,'pi;#Returns pi');
   registerRule(MATH_NAMESPACE,'max',@max_imp,'max(L);#Returns the greatest element out of list L#max(x,y,...);#Returns the greatest element out of the given parameters');
   registerRule(MATH_NAMESPACE,'argMax',@argMax_imp,'argMax(L);#Returns the index of the greatest element out of list L (or the first index if ambiguous)');
   registerRule(MATH_NAMESPACE,'min',@min_imp,'min(L);#Returns the smallest element out of list L#min(x,y,...);#Returns the smallest element out of the given parameters');

@@ -3011,10 +3011,11 @@ out> {tan(1+$x)}
 out> -3.68934881474191E19
  in> arctan(-0.92);
 out> -0.74375558429886
- in>  pi :=4*arctan(1);
-Note  Creating new rule: pi
- in>  pi;
-out>  3.14159265358979
+ in>     pi :=4*arctan(1);
+Note     Creating new rule: pi
+Warning  Hiding builtin rule "pi"!
+ in>     pi;
+out>     3.14159265358979
  in> arctan({$x});
 out> {arctan($x)}
  in> argMax(sin([0..10]));
@@ -3142,7 +3143,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.executor','mnh.parameterNames','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
+out> ['mnh.executor','mnh.parameterNames','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
