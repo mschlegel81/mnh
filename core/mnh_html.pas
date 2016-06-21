@@ -24,7 +24,7 @@ UNIT mnh_html;
 INTERFACE
 USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens;
 CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
-  '<meta charset="ANSI"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
+  '<meta charset="UTF8"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
   'lar, sans-serif } code { font-family: Courier-New, Courier; white-space: pre } table { display: inline-t'+
   'able} .oben    { vertical-align:top} .red {color:#FF0000} .ruleHead  { vertical-align:top; background-co'+
@@ -131,6 +131,7 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
+    writeln('Creating html log: ',filename);
     inherited create(at_htmlFile);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;
@@ -159,13 +160,13 @@ PROCEDURE T_htmlOutAdapter.flush;
   begin
     if length(storedMessages)=0 then exit;
     try
-    assign(handle,outputFileName);
-    if fileExists(outputFileName) then begin
-      system.append(handle);
-    end else begin
-      rewrite(handle);
-      writeln(handle,replaceOne(HTML_FILE_START,'%','10'),'<table>');
-    end;
+      assign(handle,outputFileName);
+      if fileExists(outputFileName) then begin
+        system.append(handle);
+      end else begin
+        rewrite(handle);
+        writeln(handle,replaceOne(HTML_FILE_START,'%','10'),'<table>');
+      end;
       for i:=0 to length(storedMessages)-1 do begin
         with storedMessages[i] do case messageType of
           mt_clearConsole: begin end;
