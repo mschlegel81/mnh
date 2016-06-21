@@ -21,9 +21,6 @@
 // SOFTWARE.
 
 UNIT SynHighlighterMnh;
-
-{I SynEdit.inc}
-
 INTERFACE
 
 USES
@@ -85,7 +82,7 @@ TYPE
   private
     blobEnder:char;
 
-    isMarked,isUnderlined:boolean;
+    isMarked:boolean;
     flavour :T_mnhSynFlavour;
 
     fLine: PChar;
@@ -319,8 +316,12 @@ PROCEDURE TSynMnhSyn.next;
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
       end;
-      '|', '^', '?', '+', '&', '%', '*', '=', '<', '>' ,'-', '@', '.': begin
+      '|', '^', '?', '+', '&', '*', '@', '.': begin
         inc(run);
+        fTokenId := tkOperator;
+      end;
+      '=','<','>','-': begin
+        while fLine [run] in ['=', '<', '>' ,'-'] do inc(run);
         fTokenId := tkOperator;
       end;
       '/': begin
@@ -399,9 +400,11 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
-    isUnderlined:=(flavour=msf_input) and (fTokenId<>tkNull) and
-       ((fLineNumber>=docEvaluator.getFirstError.location.line) or
-        (fLineNumber=docEvaluator.getFirstError.location.line-1) and (fTokenPos>=docEvaluator.getFirstError.location.column));
+    if (flavour=msf_input) and (fTokenId<>tkNull) and
+       (fLineNumber=docEvaluator.getFirstError.location.line-1) and
+       (fTokenPos<=docEvaluator.getFirstError.location.column-1) and
+       (run>docEvaluator.getFirstError.location.column-1)
+    then fTokenId:=tkError;
   end;
 
 FUNCTION TSynMnhSyn.GetEol: boolean;
@@ -432,8 +435,6 @@ PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer)
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;
   begin
     result := styleTable [fTokenId];
-    if isUnderlined then result.style:=result.style+[fsStrikeOut]
-                    else result.style:=result.style-[fsStrikeOut];
     if isMarked then result.FrameColor:=$000000ff
                 else begin
                   result.FrameColor:=clNone;
