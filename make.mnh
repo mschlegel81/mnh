@@ -189,8 +189,8 @@ main('test')->begin
   build(i), 
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
-  ? void
-  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]));
+  ? true
+  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]) and testAlreadyPassed(binName(i)),AND);
 end;
 
 //*Only prepare code hash
