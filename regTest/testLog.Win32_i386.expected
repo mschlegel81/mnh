@@ -3321,6 +3321,6 @@ out> 'Test'
  in> compress('Test').decompress;
 out> 'Test'
  in> compress('Testtext');
-out> '¼¿¥ïR'
+out> '%¿¥ïR'
  in> compress('Testtext').decompress;
 out> 'Testtext'
