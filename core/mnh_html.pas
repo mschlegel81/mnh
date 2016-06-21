@@ -48,17 +48,18 @@ TYPE
 
 VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
-FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring):P_abstractOutAdapter;
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
-FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring):P_abstractOutAdapter;
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
   VAR htmlOutAdapter:P_htmlOutAdapter;
       fileOutAdapter:P_textFileOutAdapter;
   begin
+    if not(appendMode) then try DeleteFile(fileName); except end;
     if uppercase(extractFileExt(fileName))='.HTML'
     then begin
       new(htmlOutAdapter,create(fileName));
@@ -131,7 +132,6 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
-    writeln('Creating html log: ',filename);
     inherited create(at_htmlFile);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;

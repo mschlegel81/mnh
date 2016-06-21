@@ -25,7 +25,7 @@ INTERFACE
 {$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,myGenerics,mnh_fileWrappers,
      sysutils, Classes,Process,UTF8Process,fphttpclient,FileUtil,{$ifdef Windows}windows,{$endif}mySys,myStringUtil,mnh_contexts,lclintf,
-     LazFileUtils,LazUTF8;
+     LazFileUtils,LazUTF8,mnh_html;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -208,7 +208,6 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
-
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
@@ -578,6 +577,15 @@ FUNCTION collectedOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_
     else result:=nil;
   end;
 
+FUNCTION logTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_boolean)  then begin
+      addOutfile(context.adapters^,str0^.value,P_boolLiteral(arg1)^.value);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 INITIALIZATION
   collector.create(@newCollectingOutAdapter,nil);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl,'resetRandom(seed:int);#Resets internal PRNG with the given seed');
@@ -614,6 +622,7 @@ INITIALIZATION
 
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput',@collectOutput_impl,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,'collectedOutput;#Returns messages collected since the last call of collectOutput.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo',@logTo_impl,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
 
 FINALIZATION
   collector.destroy;
