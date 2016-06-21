@@ -710,7 +710,17 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'sysToUtf8',@sysToUtf8_impl,'sysToUtf8(S);#Converts a string or a string list from the system encoding to UTF-8');
   registerRule(STRINGS_NAMESPACE,'isUtf8',@isUtf8_impl,'isUtf8(S:string);#Returns true if S is UTF8 encoded and false otherwise');
   registerRule(STRINGS_NAMESPACE,'isAscii',@isAscii_impl,'isAscii(S:string);#Returns true if S is ASCII encoded and false otherwise');
-  registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#As above but with a specified algorithm:#  1: deflate#  2: huffman with default model#  3: huffman with another model#  other: try out algorithms and return the shortest representation#  The first character of the result indicates the algorithm used');
+  registerRule(STRINGS_NAMESPACE,'compress',@compress_impl,'compress(S:string);#Returns a compressed version of S#compress(S:string,k:int);#'+
+                                                           'As above but with a specified algorithm:#'+
+                                                           '  1: deflate#'+
+                                                           '  2: huffman with default model#'+
+                                                           '  3: huffman with another model#'+
+                                                           '  4: try out with base95 encoding#'+
+                                                           '  5: deflate + base95Encode#'+
+                                                           '  6: huffman with default model + base95Encode#'+
+                                                           '  7: huffman with another model + base95Encode#'+
+                                                           '  other: try out algorithms and return the shortest representation#'+
+                                                           '  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
   registerRule(STRINGS_NAMESPACE,'base95encode',@base95encode_impl,'base95encode(S:string);#Returns a base95 encoded string');
   registerRule(STRINGS_NAMESPACE,'base95decode',@base95decode_impl,'base95decode(S:string);#Returns a string, decoded from a base95 encoded string');
