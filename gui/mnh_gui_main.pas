@@ -395,7 +395,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
         UpdateTimeTimerTimer(self);
         doConditionalPlotReset;
       end;
-      logName:=settings.value^.textLogName;
+      logName:=settings.value^.getLogName;
       if logName<>'' then begin
         if tempAdapter=nil
         then tempAdapter:=addOutfile(guiAdapters,logName)
