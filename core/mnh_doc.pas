@@ -378,11 +378,13 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSou
   begin
     for i:=0 to length(exampleSource)-1 do if not(isRelevant) and (copy(trim(exampleSource[i]),1,2)<>'//') then begin
       words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
+      append(words,split(join(words,'.'),'.'));
       for j:=0 to length(words)-1 do isRelevant:=isRelevant or
         (words[j]=id) or
         (unqualifiedAccess) and ((words[j]=unqualifiedId) or (words[j]='.'+unqualifiedId));
       setLength(words,0);
     end;
+
     if isRelevant then append(example,exampleHtml);
   end;
 

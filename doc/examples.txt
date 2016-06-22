@@ -341,8 +341,6 @@ union(1/[1..5],2/[2..6]);
 
 deleteFile('plotDemo1.png');
 
-driveInfo.C;
-
 drop([['A',1],['B',2],['C',0]],'B');
 
 //See <a href="types.html#lists">List types</a> for further information
@@ -392,3 +390,67 @@ compress('Test').decompress;
 
 compress('Testtext');
 compress('Testtext').decompress;
+
+listKeywords.each(category,print(category[0],': ',category[1].head(3).join(', '),', ...'));
+
+relativeFilename('~/folder/','~/other/example.txt');
+
+primes(20);
+
+subSets([1,2,1]);
+
+diff('encode','decode');
+
+diffStats('encode','decode');
+
+format('%s is a string, %3.3d is a number','X',7);
+
+formatTime('mm.dd.yyyy',43210);
+
+isAscii('xyz');
+
+isAscii('xyz'&chars[180]);
+
+isAscii('Läuft');
+
+isUtf8('xyz');
+
+isUtf8('xyz'&chars[180]);
+
+isUtf8('Schräg');
+
+parseTime('yyyy-mm-dd hh:nn','2000-01-01 03:43');
+
+reverseString('Test');
+
+regex.matches('This is a test','[T|t]est');
+
+regex.matchComposite('This is a test','[T|t]est');
+
+regex.replace('A Test is a test','[T|t]est','rose');
+
+regex.split('A Test is a test','[e| ]');
+
+toBoolean(0);
+
+toBoolean(1.0);
+
+toBoolean('true');
+
+toBoolean(3);
+
+toInt('32');
+
+toInt(3.0);
+
+toInt(3.1);
+
+toInt(false);
+
+toReal('3.212');
+
+toReal(true);
+
+toReal(3);
+
+getOptions;

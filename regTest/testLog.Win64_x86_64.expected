@@ -2930,7 +2930,7 @@ Path length after construction is 1534.011
 Path length after polishing is    1501.698
 Hash of regTest/../demos/travellingSalesmanProblem.png is DEE2A0BB
 Hash of regTest/../demos/turtleGfx.png is 427DABDB
-Examples file has 394 lines
+Examples file has 456 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3275,8 +3275,6 @@ out> [0,1,64,729,4096,15625,46656,117649,262144,531441,1000000]
 out> [0.2,0.25,0.333333333333333,0.4,0.5,0.666666666666667,1.0]
  in> deleteFile('plotDemo1.png');
 out> true
- in> driveInfo.C;
-out> [['type','fixed'],['serial',1779773958],['label','']]
  in> drop([['A', 1],['B', 2],['C', 0]],'B');
 out> [['A',1],['C',0]]
  in> get(['a'..'f'], 3);
@@ -3325,3 +3323,76 @@ out> 'Test'
 out> '%Ž¿¥ïR'
  in> compress('Testtext').decompress;
 out> 'Testtext'
+ in>      listKeywords.each(category,print(category[0],': ', category[1].head(3).join(', '),', ...'));
+printline specialLiterals: void, Nan, Inf, ...
+printline specialConstructs: aggregator, .each, .pEach, ...
+printline operators: and, or, xor, ...
+printline typeChecks: :scalar, :list, :boolean, ...
+printline modifiers: private, memoized, mutable, ...
+out>      []
+ in> relativeFilename('~/folder/','~/other/example.txt');
+out> '../other/example.txt'
+ in> primes(20);
+out> [2,3,5,7,11,13,17,19]
+ in> subSets([1, 2, 1]);
+out> [[],[1,2],[1,1],[2],[1],[1,1,2]]
+ in> diff('encode','decode');
+out> [['adds',1],['deletes',1],['matches',5],['modifies',0],['edit',[['+',-1,0],['.',0,1],['-',1,1],['.',2,2],['.',3,3],['.',4,4],['.',5,5]]]]
+ in> diffStats('encode','decode');
+out> [['adds',1],['deletes',1],['matches',5],['modifies',0]]
+ in> format('%s is a string, %3.3d is a number','X', 7);
+out> 'X is a string, 007 is a number'
+ in> formatTime('mm.dd.yyyy', 43210);
+out> '04.20.2018'
+ in> isAscii('xyz');
+out> true
+ in> isAscii('xyz'&chars[180]);
+out> false
+ in> isAscii('Läuft');
+out> false
+ in> isUtf8('xyz');
+out> true
+ in> isUtf8('xyz'&chars[180]);
+out> false
+ in> isUtf8('Schräg');
+out> false
+ in> parseTime('yyyy-mm-dd hh:nn','2000-01-01 03:43');
+out> 36526.1548611111
+ in> reverseString('Test');
+out> 'tseT'
+ in> regex.matches('This is a test','[T|t]est');
+out> true
+ in> regex.matchComposite('This is a test','[T|t]est');
+out> [['test',11,4]]
+ in> regex.replace('A Test is a test','[T|t]est','rose');
+out> 'A rose is a rose'
+ in> regex.split('A Test is a test','[e| ]');
+out> ['A','T','st','is','a','t','st']
+ in> toBoolean(0);
+out> false
+ in> toBoolean(1.0);
+out> true
+ in> toBoolean('true');
+out> true
+ in>                toBoolean(3);
+Error               Cannot apply intrinsic rule toBoolean to parameter list (int):  (3)
+Error [stack trace]  # toBoolean(3)
+out>                toBoolean(3)
+ in> toInt('32');
+out> 32
+ in> toInt(3.0);
+out> 3
+ in>                toInt(3.1);
+Error               Cannot apply intrinsic rule toInt to parameter list (real):  (3.1)
+Error [stack trace]  # toInt(3.1)
+out>                toInt(3.1)
+ in> toInt(false);
+out> 0
+ in> toReal('3.212');
+out> 3.212
+ in> toReal(true);
+out> 1
+ in> toReal(3);
+out> 3.0
+ in> getOptions;
+out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
