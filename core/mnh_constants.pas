@@ -61,6 +61,7 @@ TYPE
     tt_localUserRule_pon,
     tt_importedUserRule_pon, tt_intrinsicRule_pon,
     tt_blockLocalVariable,
+    tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
     tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_when, tt_while, tt_begin, tt_end, tt_try, tt_toId,
@@ -220,6 +221,7 @@ CONST
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule in pseudo-object notation'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule in pseudo-object notation'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A block-local variable'),
+      (defaultId:'.'; reservedWordClass:rwc_not_reserved; helpText:'A pseudo-object-notation flipper'),
       (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
     //special operators
       (defaultId:'.each'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.'),

@@ -73,7 +73,6 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           while (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)  do begin
             inc(i);
             fullText:=fullText+P_stringLiteral(t[i].data)^.value;
-            writeln('Token #',i,'; Elongating full text to: ',fullText);
             disposeLiteral(t[i].data);
             t[i].tokType:=tt_EOL;
           end;
@@ -293,7 +292,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         if id=C_tokenInfo[tt].defaultId then begin
           result.tokType:=tt;
           result.txt:='';
-          id:='';
         end;
         if result.tokType=tt_identifier then begin
           if      id=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
@@ -359,7 +357,10 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         result.tokType:=tt_identifier_pon;
         result.data:=inPackage;
         id:='';
-      end else fail('Cannot parse: '+line);
+      end else begin
+        result.tokType:=tt_ponFlipper;
+        parsedLength:=1;
+      end;
       ':': if startsWith(':=') then begin
         parsedLength:=2;
         result.tokType:=tt_assign;
@@ -1343,7 +1344,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
 
       with newFunctionToken^ do begin
-        tokType:=C_ponToFunc[tokType];
+        if tokType<>tt_literal then tokType:=C_ponToFunc[tokType];
         if tokType=tt_identifier then begin
           if data=nil then data:=newFunctionToken^.location.package;
           if fallbackIsPossible
@@ -1368,7 +1369,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false)^.appendString(key));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
-        first^.next^.data:=nil;
         oldSecond:=context.disposeToken(context.disposeToken(first));
 
         first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
@@ -1504,6 +1504,11 @@ tt_listBraceOpen: begin
   stack.push(first);
   didSubstitution:=true;
 end;
+tt_ponFlipper: if (cTokType[2]=tt_expBraceOpen) then begin
+  stack.push(first);
+  stack.push(first);
+  didSubstitution:=true;
+end;
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
@@ -1547,6 +1552,15 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+          tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
+            and (stack.topIndex>0) and (stack.dat[stack.topIndex-1]^.tokType=tt_literal) then begin
+            // <Lit> . # {$x}
+            stack.popDestroy(context);
+            stack.popLink(first);
+            // -> # <Lit> {$x}
+            initTokTypes;
+            pon_flip;
+          end;
           tt_listToParameterList: if P_literal(first^.data)^.literalType in C_validListTypes then begin
             stack.popDestroy(context);
             first^.tokType:=tt_parList;
