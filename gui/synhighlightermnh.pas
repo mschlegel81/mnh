@@ -101,7 +101,8 @@ TYPE
 
 PROCEDURE initLists;
 IMPLEMENTATION
-VAR modifierStrings:T_listOfString;
+VAR listsAreInitialized:boolean=false;
+    modifierStrings:T_listOfString;
     intrinsicRules:T_listOfString;
     operatorStrings:T_listOfString;
     specialLiteralStrings:T_listOfString;
@@ -487,12 +488,15 @@ PROCEDURE initLists;
     specialConstructStrings.unique;
     specialLiteralStrings.unique;
     intrinsicRules.unique;
+    listsAreInitialized:=true;
   end;
 
 FINALIZATION
-  operatorStrings.destroy;
-  modifierStrings.destroy;
-  specialConstructStrings.destroy;
-  specialLiteralStrings.destroy;
-  intrinsicRules.destroy;
+  if listsAreInitialized then begin
+    operatorStrings.destroy;
+    modifierStrings.destroy;
+    specialConstructStrings.destroy;
+    specialLiteralStrings.destroy;
+    intrinsicRules.destroy;
+  end;
 end.
