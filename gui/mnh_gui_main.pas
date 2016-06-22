@@ -1444,6 +1444,7 @@ PROCEDURE lateInitialization;
     mnh_plotForm.formCycleCallback:=@formCycle;
     mnh_tables.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
+    initLists;
     mnh_evalThread.initUnit(@guiAdapters);
   end;
 

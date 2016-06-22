@@ -99,6 +99,7 @@ TYPE
     PROCEDURE setMarkedToken(CONST line,column:longint);
   end;
 
+PROCEDURE initLists;
 IMPLEMENTATION
 VAR modifierStrings:T_listOfString;
     intrinsicRules:T_listOfString;
@@ -488,8 +489,6 @@ PROCEDURE initLists;
     intrinsicRules.unique;
   end;
 
-INITIALIZATION
-  initLists;
 FINALIZATION
   operatorStrings.destroy;
   modifierStrings.destroy;

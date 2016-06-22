@@ -171,7 +171,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       adapters.raiseCustomMessage(mt_el4_parsingError,message,lineLocation);
     end;
 
-  FUNCTION leadingId:ansistring;
+  PROCEDURE leadingId(OUT txt:ansistring; CONST offset:longint=0);
     VAR i:longint;
     begin
       i:=lineLocation.column;
@@ -180,15 +180,17 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         if line[i]=C_ID_QUALIFY_CHARACTER then begin
           if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
             parsedLength:=i-lineLocation.column;
-            exit(copy(line,lineLocation.column,parsedLength));
+            txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
+            exit;
           end else begin
             parsedLength:=i-lineLocation.column;
-            exit(copy(line,lineLocation.column,parsedLength));
+            txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
+            exit;
           end;
         end;
       end;
       parsedLength:=i-lineLocation.column+1;
-      result:=copy(line,lineLocation.column,parsedLength);
+      txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
     end;
 
   FUNCTION parseCharCode:ansistring;
@@ -273,23 +275,25 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
           result.tokType:=tt_literal;
           result.data:=newStringLiteral(id);
         end;
+        id:='';
       end;
       '#': begin
         result.tokType:=tt_literal;
         result.data:=newStringLiteral(parseCharCode);
       end;
       '$': begin
-        result.txt:=leadingId;
+        leadingId(result.txt);
         parsedLength:=length(result.txt);
         result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
-        id:=leadingId;
+        leadingId(id);
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
         if id=C_tokenInfo[tt].defaultId then begin
           result.tokType:=tt;
           result.txt:='';
+          id:='';
         end;
         if result.tokType=tt_identifier then begin
           if      id=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
@@ -302,6 +306,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
             result.data:=inPackage;
           end;
         end;
+        id:='';
       end;
       '/': if startsWith('//') then begin //comments
         parsedLength:=2;
@@ -348,17 +353,18 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         parsedLength:=length(C_tokenInfo[tt_separatorCnt].defaultId);
         result.tokType:=tt_separatorCnt;
       end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
-        id:=copy(leadingId,2,length(line));
+        leadingId(id,1);
         parsedLength:=1+length(id);
         result.txt:=id;
         result.tokType:=tt_identifier_pon;
         result.data:=inPackage;
+        id:='';
       end else fail('Cannot parse: '+line);
       ':': if startsWith(':=') then begin
         parsedLength:=2;
         result.tokType:=tt_assign;
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
-        id:=leadingId;
+        leadingId(id);
         parsedLength:=length(id);
         if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
         else if id=C_tokenInfo[tt_typeCheckBoolean   ].defaultId then result.tokType:=tt_typeCheckBoolean
@@ -471,7 +477,7 @@ PROCEDURE T_tokenArray.tokenizeAll(VAR provider: T_codeProvider; CONST inPackage
       location.column:=1;
       while (location.column<=length(lines[lineIndex])) and (adapters.noErrors) do begin
         next:=getToken(lines[lineIndex],location,inPackage,adapters);
-        if (next.tokType<>tt_EOL) or (next.txt<>'') then append(next);
+        if (next.tokType<>tt_EOL) or (next.txt<>'') then append(next) else next.destroy;
       end;
     end;
     //Handle unfinished blobs

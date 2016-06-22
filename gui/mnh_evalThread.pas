@@ -58,7 +58,6 @@ VAR userRules,
     runEvaluator,
     docEvaluator:T_evaluator;
 
-PROCEDURE initIntrinsicRuleList;
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 
 IMPLEMENTATION
@@ -140,32 +139,6 @@ FUNCTION docMain(p:pointer):ptrint;
     mainEvaluationContext.destroy;
     threadStopped;
   end; end;
-
-PROCEDURE initIntrinsicRuleList;
-  VAR ids:T_arrayOfString;
-      i:longint;
-      tt:T_tokenType;
-  begin
-    ids:=mnh_funcs.intrinsicRuleMap.keySet;
-    intrinsicRulesForCompletion.create;
-    for i:=0 to length(ids)-1 do begin
-      if pos(C_ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
-        intrinsicRulesForCompletion.add(ids[i]);
-        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+ids[i]);
-      end else begin
-        intrinsicRulesForCompletion.add(ids[i]);
-        intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
-        intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
-        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
-        intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
-      end;
-    end;
-    for tt:=low(T_tokenType) to high(T_tokenType) do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
-      intrinsicRulesForCompletion.add(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
-    for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
-      intrinsicRulesForCompletion.add(C_specialWordInfo[i].txt);
-    intrinsicRulesForCompletion.unique;
-  end;
 
 PROCEDURE T_evaluator.ensureThread;
   begin
@@ -449,6 +422,32 @@ FUNCTION T_evaluator.getStateCounter:longint;
   end;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
+  PROCEDURE initIntrinsicRuleList;
+    VAR ids:T_arrayOfString;
+        i:longint;
+        tt:T_tokenType;
+    begin
+      ids:=mnh_funcs.intrinsicRuleMap.keySet;
+      intrinsicRulesForCompletion.create;
+      for i:=0 to length(ids)-1 do begin
+        if pos(C_ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
+          intrinsicRulesForCompletion.add(ids[i]);
+          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+ids[i]);
+        end else begin
+          intrinsicRulesForCompletion.add(ids[i]);
+          intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
+          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
+        end;
+      end;
+      for tt:=low(T_tokenType) to high(T_tokenType) do if isIdentifier(C_tokenInfo[tt].defaultId,true) then
+        intrinsicRulesForCompletion.add(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
+      for i:=low(C_specialWordInfo) to high(C_specialWordInfo) do
+        intrinsicRulesForCompletion.add(C_specialWordInfo[i].txt);
+      intrinsicRulesForCompletion.unique;
+    end;
+
   VAR collector:P_collectingOutAdapter;
   begin
     runEvaluator.create(guiAdapters,@main);
