@@ -29,7 +29,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         first:boolean=true;
         firstInLine:boolean=true;
     begin
-      if settings.value^.wordWrapEcho and (syn.CharsInWindow-5<length(txt)) then begin
+      if settings.value^.wordWrapEcho and (syn.CharsInWindow-5<length(message)) then begin
         tokens:=tokenSplit(message);
         while k<length(tokens) do begin
           txt:='';
