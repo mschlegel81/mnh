@@ -623,6 +623,67 @@ up         , pu         , (0)
 a          , a          , (1)
 998764543431
 6054854654
+--------------------------------------------------------------------------------
+ in> f->{$y^3};
+
+ in> f;
+out> {($y^3)}
+ in> f();
+out> {($y^3)}
+ in> f(3);
+out> 27
+ in> 3.f;
+out> 27
+ in> [3,-2].f;
+out> [27,-8]
+ in> f(3, 4);
+Error  Cannot evaluate inline function {($y^3)} with the given number of parameters; Got 2, expected 1
+out> {($y^3)}(3,4)
+--------------------------------------------------------------------------------
+ in> f()->{$y^3};
+
+ in> f;
+out> {($y^3)}
+ in> f();
+out> {($y^3)}
+ in> f(3);
+out> 27
+ in> 3.f;
+out> 27
+ in> [3,-2].f;
+out> [27,-8]
+ in> f(3, 4);
+Error  Cannot evaluate inline function {($y^3)} with the given number of parameters; Got 2, expected 1
+out> {($y^3)}(3,4)
+--------------------------------------------------------------------------------
+ in> f(...)->{$y^3};
+
+ in> f;
+out> {($y^3)}
+ in> f();
+out> {($y^3)}
+ in> f(3);
+out> {($y^3)}
+ in> 3.f;
+out> {($y^3)}
+ in> [3,-2].f;
+out> {($y^3)}
+ in> f(3, 4);
+out> {($y^3)}
+--------------------------------------------------------------------------------
+ in> f(x)->{$y^3+x};
+
+ in> f(3);
+out> {($y^3+3)}
+ in> 3.f;
+out> {($y^3+3)}
+ in> [3,-2].f;
+out> {($y^3+[3,-2])}
+ in> f(3, 4);
+out> 67
+ in> f;
+Error  Cannot apply user defined rule f to empty parameter list
+out> f
 There are 293 ways to make a dollar from coins
   and 4563 ways to make a euro from coins.
 Distribution of seven sided dice (100000 samples): 
