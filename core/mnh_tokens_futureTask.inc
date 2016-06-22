@@ -79,7 +79,7 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; C
     eachIndex:=idx;
     param.create;
     param.append(x,true);
-    if expr^.replaces(@param,nil,task,dummy,context^)
+    if expr^.replaces(@param,nil,task,dummy,context^,false)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;

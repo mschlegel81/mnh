@@ -1205,7 +1205,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context)) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,false)) and
+           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,true)) then exit;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;

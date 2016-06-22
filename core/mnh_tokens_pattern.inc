@@ -40,6 +40,7 @@
     FUNCTION idForIndexInline(CONST index:longint):ansistring;
     PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext; CONST package:P_package);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
+    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -73,7 +74,8 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
       and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
     result:=true;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
-      if restrictionIdx>=0 then result:=L^.isInRelationTo(restrictionType, parameterList.value(restrictionIdx))
+      if restrictionIdx>=0 then result:=(parameterList.size>restrictionIdx) and
+                                        L^.isInRelationTo(restrictionType, parameterList.value(restrictionIdx))
                            else result:=L^.isInRelationTo(restrictionType, restrictionValue                   );
     end;
   end;
@@ -293,9 +295,14 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
   end;
 
 FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST selfPointerProvided: boolean): boolean;
+  begin
+    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,selfPointerProvided);
+  end;
+
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
   VAR i:longint;
   begin
-    if (par.size<length(sig)) or ((par.size>length(sig)) and not(hasOptionals)) then exit(false);
+    if (par.size<length(sig)) then exit(false);
     result:=true;
     for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i)) then exit(false);
     result:=selfPointerProvided or not(containsSelfPointer);

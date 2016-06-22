@@ -32,7 +32,7 @@
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
+      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
       FUNCTION toString(CONST includePattern:boolean=true):ansistring;
       FUNCTION directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
@@ -290,7 +290,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
   VAR t:P_token;
       i:longint;
       remaining:P_listLiteral=nil;
@@ -355,9 +355,22 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     end;
   {$endif}
 
-  begin
-    if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
+  FUNCTION fallbackFeasible:boolean;
+    begin
+      result:=useUncurryingFallback and
+              //The given parameters must match
+             (param<>nil) and pattern.matchesForFallback(param^,selfLiteral<>nil) and
+              //The function result must (likely) be an expression
+         (    (preparedBody[0].token.tokType=tt_literal)
+          and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
+           or (length(preparedBody)>=2)
+          and (preparedBody[0].token.tokType=tt_expBraceOpen)
+          and (preparedBody[length(preparedBody)-1].token.tokType=tt_expBraceClose));
+    end;
+
+  PROCEDURE prepareResult;
+    VAR i:longint;
+    begin
       called:=true;
       with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
@@ -367,17 +380,22 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       end;
       lastRep:=t;
       result:=true;
-    end else if (param<>nil)
-            and (length(preparedBody)=1)
-            and (preparedBody[0].token.tokType=tt_literal)
-            and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
-            and (P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.pattern.matches(param^,true))
-    then begin
-      result:=P_subrule(P_expressionLiteral(preparedBody[0].token.data)^.value)^.replaces(param,P_expressionLiteral(preparedBody[0].token.data),firstRep,lastRep,context);
-      called:=called or result;
+    end;
+
+  VAR tempInnerParam:P_listLiteral;
+  begin
+    if (param= nil) and pattern.matchesNilPattern or
+       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
+      prepareResult;
+    end else if fallbackFeasible then begin
+      prepareResult;
+      tempInnerParam:=newListLiteral;
+      for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
+      lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
+      lastRep:=lastRep^.next;
     end else begin
       result:=false;
-      case typ of
+      if useUncurryingFallback then case typ of
         srt_inline_for_each: begin
           if param=nil then context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got none, expected '+intToStr(length(pattern.sig)),declaredAt)
                        else context.adapters^.raiseError('Cannot evaluate each body with the given number of parameters; Got '+intToStr(param^.size)+', expected '+intToStr(length(pattern.sig)),declaredAt);
@@ -544,7 +562,7 @@ FUNCTION subruleToArityImpl(CONST p:pointer):longint;
 FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(params,selfLiteral,firstRep,lastRep,context) then begin
+    if replaces(params,selfLiteral,firstRep,lastRep,context,false) then begin
       reduceExpression(firstRep,callDepth+1,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin

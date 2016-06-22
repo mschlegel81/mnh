@@ -97,7 +97,7 @@ exit}
   VAR i:longint;
       lit:P_literal;
       useParam:P_listLiteral;
-
+      useUncurryingFallback:boolean;
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
@@ -117,7 +117,7 @@ exit}
                      else useParam:=param;
         if system.TryEnterCriticalsection(rule_cs)=0 then begin
           result:=false;
-          for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context));
+          for useUncurryingFallback:=false to true do for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback));
           if result then begin
             used:=true;
             wrapResultInPutCacheRule;
@@ -132,7 +132,8 @@ exit}
           firstRep:=context.newToken(declarationStart,'',tt_literal,lit);
           lastRep:=firstRep;
           CLEAN_EXIT(true);
-        end else for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context) then begin
+        end else for useUncurryingFallback:=false to true do
+                 for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
@@ -152,7 +153,8 @@ exit}
         CLEAN_EXIT(false);
       end;
       rt_synchronized: begin
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context) then begin
+        for useUncurryingFallback:=false to true do
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
           if callDepth>=STACK_DEPTH_LIMIT then context.adapters^.raiseCustomMessage(mt_el5_systemError,'Stack depth limit exceeded calling '+id+'.',declarationStart)
           else begin
             system.enterCriticalSection(rule_cs);
@@ -176,7 +178,8 @@ exit}
         end;
       end;
       rt_normal: begin
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context) then begin
+        for useUncurryingFallback:=false to true do
+        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
           used:=true;
           exit(true);
         end;
