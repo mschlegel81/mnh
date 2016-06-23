@@ -35,3 +35,4 @@ mnh
 mnh_light
 libimpmySys.a
 regTest/testLog.*.txt
+pullFromNAndMake.bat
