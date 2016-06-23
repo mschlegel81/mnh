@@ -312,9 +312,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     PROCEDURE parseRule;
       CONST C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER:set of T_tokenType=[tt_typeCheckExpression,tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList];
 
+      VAR partText:string;
+          partLocation:T_tokenLocation;
+
       PROCEDURE fail(VAR firstOfPart:P_token);
         begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(firstOfPart,10) ,firstOfPart^.location);
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+partText,partLocation);
           context.cascadeDisposeToken(firstOfPart);
         end;
 
@@ -394,6 +397,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end else begin
             parts:=getBodyParts(first,0,context,closingBracket);
             for i:=0 to length(parts)-1 do begin
+              partText:=tokensToString(parts[i].first,10);
+              partLocation:=parts[i].first^.location;
               if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
                 if i<>length(parts)-1 then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,parts[i].first^.location);
                 //Optionals: f(...)->
@@ -415,6 +420,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                     if rulePatternElement.restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq, tt_operatorIn]
                     then begin
                       //Identified, restricted parameter: f(x>?)->
+                      if (parts[i].first=nil) then fail(parts[i].first) else
                       if parts[i].first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
                         rulePatternElement.restrictionId:=parts[i].first^.txt;
                         parts[i].first:=context.disposeToken(parts[i].first);

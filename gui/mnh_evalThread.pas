@@ -199,7 +199,7 @@ PROCEDURE T_evaluator.haltEvaluation;
 PROCEDURE T_evaluator.reEvaluateWithGUI;
   begin
     enterCriticalSection(cs);
-    if state=es_running then begin
+    if (state=es_running) or (request<>er_none) then begin
       leaveCriticalSection(cs);
       exit;
     end;
@@ -213,7 +213,7 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
   begin
     enterCriticalSection(cs);
     ensureThread;
-    if state=es_running then begin
+    if (state=es_running) or (request<>er_none) then begin
       leaveCriticalSection(cs);
       exit;
     end;
@@ -230,7 +230,7 @@ PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings;
   VAR sp:longint;
   begin
     enterCriticalSection(cs);
-    if state=es_running then begin
+    if (state=es_running) or (request<>er_none) then begin
       leaveCriticalSection(cs);
       exit;
     end;
