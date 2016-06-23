@@ -48,9 +48,7 @@ currentCodeHash:=begin
   templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');  
   templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');  
   templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');    
-  local relevantFiles:=flatten(files(allFolders('.')&'/*.lpr'),
-                               files(allFolders('.')&'/*.pas'),
-                               files(allFolders('.')&'/*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f));
+  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f);
   executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;

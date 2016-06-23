@@ -92,6 +92,46 @@ FUNCTION files_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     then result:=filesOrDirs_impl(arg0,true,false);
   end;
 
+FUNCTION allFiles_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR pattern:string='';
+      recurse:boolean=true;
+      i:longint;
+
+  PROCEDURE searchInRoot(CONST root:string);
+    VAR list:TStringList;
+        k:longint;
+    begin
+      list:=FindAllFiles(root,pattern,recurse);
+      for k:=0 to list.count-1 do P_listLiteral(result)^.appendString(replaceAll(list[k],'\','/'));
+      list.destroy;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType in [lt_stringList,lt_string,lt_emptyList]) then begin
+      if arg0^.literalType=lt_emptyList then begin arg0^.rereference; exit(arg0); end;
+      if (params^.size>=2) then begin
+        case arg1^.literalType of
+          lt_emptyList: begin end;
+          lt_string: pattern:=str1^.value;
+          lt_stringList: begin
+            pattern:=P_stringLiteral(list1^.value(0))^.value;
+            for i:=1 to list1^.size-1 do pattern:=pattern+';'+P_stringLiteral(list1^.value(i))^.value;
+          end;
+          else exit(nil);
+        end;
+      end;
+      if (params^.size>=3) then begin
+        if arg2^.literalType<>lt_boolean then exit(nil);
+        recurse:=P_boolLiteral(arg2)^.value;
+      end;
+      result:=newListLiteral;
+      if arg0^.literalType=lt_string
+      then searchInRoot(str0^.value)
+      else for i:=0 to list0^.size-1 do searchInRoot(P_stringLiteral(list0^.value(i))^.value);
+    end;
+  end;
+
 FUNCTION folders_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -570,8 +610,11 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'random',@random_imp,'random;#Returns a random value in range [0,1]#random(n);Returns a list of n random values in range [0,1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom',@intRandom_imp,'intRandom(k);#Returns an integer random value in range [0,k-1]#random(k,n);Returns a list of n integer random values in range [0,k-1]');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFiles',@allFiles_impl,'allFiles(root);#Returns a list of all files below root (string or stringList)#'+
+                                                                  'allFiles(root,pattern);#Returns a list of all files matching pattern(s) (string or stringList)#'+
+                                                                  'allFiles(root,pattern,recurse=false);#As above but without recursing subfolders');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folders',@folders_impl,'folders(searchPattern:string);#Returns a list of folders matching the given search pattern');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(searchPattern:string);#Returns a list of all folders below and including a given root directory');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'allFolders',@allFolders_impl,'allFolders(rootFolder:string);#Returns a list of all folders below and including a given root directory');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileExists',@fileExists_impl,'fileExists(filename:string);#Returns true if the specified file exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'folderExists',@folderExists_impl,'folderExists(foldername:string);#Returns true if the specified folder exists and false otherwise');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'fileContents',@fileContents_impl,'fileContents(filename:string);#Returns the contents of the specified file as one string');
@@ -597,7 +640,6 @@ INITIALIZATION
   {$endif}
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv',@getEnv_impl,'getEnv;#Returns the current environment variables as a nested list.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiActive',@isGuiActive_impl,'isGuiActive;#Returns true if GUI is showing and false otherwise.');
-
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput',@collectOutput_impl,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,'collectedOutput;#Returns messages collected since the last call of collectOutput.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo',@logTo_impl,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
