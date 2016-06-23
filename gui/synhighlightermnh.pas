@@ -380,10 +380,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
-    if (flavour=msf_input) and (fTokenId<>tkNull) and
-       (fLineNumber=docEvaluator.getFirstError.location.line-1) and
-       (fTokenPos<=docEvaluator.getFirstError.location.column-1) and
-       (run>docEvaluator.getFirstError.location.column-1)
+    if (flavour=msf_input) and (fTokenId<>tkNull) and docEvaluator.isErrorLocation(fLineNumber,fTokenPos,run)
     then fTokenId:=tkError;
   end;
 

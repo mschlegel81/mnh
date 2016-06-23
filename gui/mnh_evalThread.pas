@@ -27,7 +27,7 @@ TYPE
       endOfEvaluationText:ansistring;
       mainParameters:T_arrayOfString;
       startOfEvaluation:double;
-      firstError:T_storedMessage;
+      errors:T_storedMessages;
       stateCounter:longint;
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
@@ -49,7 +49,8 @@ TYPE
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       PROCEDURE reportVariables(VAR report:T_variableReport);
       FUNCTION getEndOfEvaluationText:ansistring;
-      FUNCTION getFirstError:T_storedMessage;
+      FUNCTION isErrorLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
+      FUNCTION getErrorHint:string;
       FUNCTION getStateCounter:longint;
   end;
 
@@ -126,11 +127,16 @@ FUNCTION docMain(p:pointer):ptrint;
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
         package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-        firstError.location.column:=-1;
-        firstError.location.line:=maxLongint;
-        for i:=length(P_collectingOutAdapter(adapter^.getAdapter(0))^.storedMessages)-1 downto 0 do
+        enterCriticalSection(cs);
+        setLength(errors,0);
         with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
-        if (storedMessages[i].location.fileName=package.getPath) and (C_errorLevelForMessageType[storedMessages[i].messageType]>=2) then firstError:=storedMessages[i];
+        for i:=0 to length(storedMessages)-1 do
+        if (storedMessages[i].location.fileName=package.getPath) and
+           (C_errorLevelForMessageType[storedMessages[i].messageType]>=2) then begin
+          setLength(errors,length(errors)+1);
+          errors[length(errors)-1]:=storedMessages[i];
+        end;
+        leaveCriticalSection(cs);
         postEval;
       end;
       ThreadSwitch;
@@ -145,7 +151,8 @@ PROCEDURE T_evaluator.ensureThread;
     if state=es_dead then beginThread(thread,@self);
   end;
 
-CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
+CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
+  threadFunc: TThreadFunc);
   begin
     system.initCriticalSection(cs);
     request:=er_none;
@@ -155,7 +162,7 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFu
     package.create(nil);
     adapter:=adapters;
     stateCounter:=0;
-    firstError.location.line:=maxLongint;
+    setLength(errors,0);
   end;
 
 DESTRUCTOR T_evaluator.destroy;
@@ -201,7 +208,8 @@ PROCEDURE T_evaluator.reEvaluateWithGUI;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CONST interactive: boolean);
+PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
+  CONST interactive: boolean);
   begin
     enterCriticalSection(cs);
     ensureThread;
@@ -217,7 +225,8 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings; CONST 
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring);
+PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings;
+  params: ansistring);
   VAR sp:longint;
   begin
     enterCriticalSection(cs);
@@ -258,7 +267,8 @@ FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info: T_tokenInfo);
+PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
+  CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
   PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
@@ -343,10 +353,25 @@ FUNCTION T_evaluator.getEndOfEvaluationText: ansistring;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.getFirstError:T_storedMessage;
+FUNCTION T_evaluator.isErrorLocation(CONST lineIndex, TokenStart, tokenEnd: longint): boolean;
+  VAR i:longint;
   begin
-    result:=firstError;
+    enterCriticalSection(cs);
+    result:=false;
+    for i:=0 to length(errors)-1 do with errors[i].location do
+      result:=result or (lineIndex=line-1) and (TokenStart<=column-1) and (tokenEnd>column-1);
+    leaveCriticalSection(cs);
   end;
+
+FUNCTION T_evaluator.getErrorHint: string;
+  VAR i:longint;
+  begin
+    enterCriticalSection(cs);
+    result:='';
+    for i:=0 to length(errors)-1 do result:=result+errors[i].simpleMessage+C_lineBreakChar;
+    leaveCriticalSection(cs);
+  end;
+
 
 FUNCTION T_evaluator.pendingRequest: T_evalRequest;
   begin
@@ -414,7 +439,7 @@ FUNCTION T_evaluator.parametersForMainCall: T_arrayOfString;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.getStateCounter:longint;
+FUNCTION T_evaluator.getStateCounter: longint;
   begin
     enterCriticalSection(cs);
     result:=stateCounter;

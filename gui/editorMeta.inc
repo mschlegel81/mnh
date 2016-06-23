@@ -30,7 +30,7 @@ T_editorMeta=object
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
-  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST err:T_storedMessage);
+  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -319,16 +319,16 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:='MNH5 '+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST err:T_storedMessage);
+PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);
   begin
     if (stateCounter<>paintedWithState) then begin
       paintedWithState:=stateCounter;
       editor.Repaint;
     end;
-    if err.location.line=maxLongint then editor.ShowHint:=false
+    if isBlank(errorHint) then editor.ShowHint:=false
     else begin
       editor.ShowHint:=true;
-      editor.Hint:=err.simpleMessage+join(err.multiMessage,C_lineBreakChar);
+      editor.Hint:=errorHint;
     end;
   end;
 
