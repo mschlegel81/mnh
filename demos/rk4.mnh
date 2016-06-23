@@ -1,5 +1,8 @@
-//*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(dt)
-RK4(F:expression,y0,dt>0.0)->begin
+private absNorm(v:numeric)->abs(v);
+private absNorm(v:numericList)->abs(v).agg(+);
+private absNorm(L:list)->L.each(v,v.absNorm,+);
+
+RK4(y0,F:expression(1),dt>0.0)->begin
   local F1:=dt*F(y0       );
   local F2:=dt*F(y0+0.5*F1);
   local F3:=dt*F(y0+0.5*F2);
@@ -7,19 +10,48 @@ RK4(F:expression,y0,dt>0.0)->begin
   y0+(1/6)*(F1+2*F2+2*F3+F4);
 end;
 
+RK4(y0,F:expression(1),dt>0.0,tolerance>0.0)->begin
+  local F1:=dt*F(y0       );
+  local F2:=dt*F(y0+0.5*F1);
+  local F3:=dt*F(y0+0.5*F2);
+  local F4:=dt*F(y0    +F3);
+  local result:=y0+(1/6)*(F1+2*F2+2*F3+F4);
+  local subSteps:=sqrt(absNorm(y0+F4-result)/tolerance).ceil;
+  subSteps<=1
+  ? result
+  : begin
+      local dtSub:=dt/subSteps;
+      local y:=y0;
+      [1..subSteps].each(step,y:=y.RK4(F,dtSub));
+      y;
+    end;
+end;
+
 //*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(tEnd)
-rk4evolve(F,y0,dt,tEnd>0.0)->(y0:scalar ? y0 : [y0]) |rk4evolve(F,RK4(F,y0,dt),dt,round(tEnd-dt,3));
-rk4evolve(F,y0,dt,tEnd    )->(y0:scalar ? y0 : [y0]);
+//*Dynamic sub step selection based on tolerance is employed
+rk4evolve(y0,F,dt,stepCount>0,tolerance>0.0)-> begin
+  local y:=y0;
+  [y0]|([1..stepCount].each(step,y:=y.RK4(F,dt,tolerance)));
+end;
+
+//*Solves the autonomous Differential equation y(0)=y0; dy/dt=F; returns y(tEnd)
+rk4evolve(y0,F,dt,stepCount>0)-> begin
+  local y:=y0;
+  [y0]|([1..stepCount].each(step,y:=y.RK4(F,dt)));
+end;
 
 private df     :={[1,$x.get(0)*sqrt($x.get(1))]};
 private initial:=[0,1];
 private exact  :={1/16*($t^2+4)^2};
 
+
 //*Solves the Runge-Kutta task from <fga href="http://rosettacode.org/wiki/Runge-Kutta_method">Rosetta Code</a>
 main->begin
-  local steps:=rk4evolve(df,initial,0.1,10).each(p,[p.get(0),p.get(1),abs(p.get(1)-exact(p.get(0)))]);
-  printf("%4.1f\t%g\t%e",
+  local tolSteps:=initial.rk4evolve(df,0.1,100,1E-3);
+  local steps:=initial.rk4evolve(df,0.1,100).each(p,[p[0],p[1],abs(p[1]-exact(p[0])),abs(tolSteps[index,1]-exact(p[0]))]);
+  printf("%4.1f\t%g\t%e\t%e",
          'time'|steps.getInner(0),
          'approximation'|steps.getInner(1),
-         'error'|steps.getInner(2));
-end;  
+         'error'|steps.getInner(2),
+         'error with step size control'|steps.getInner(3));
+end;
