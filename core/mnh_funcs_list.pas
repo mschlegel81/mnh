@@ -296,6 +296,7 @@ FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
             .append(params^.value(1),true);
       result:=get_imp(@tmpPar,tokenLocation,context);
       tmpPar.destroy;
+      if result^.literalType=lt_void then exit(result);
       if result<>nil then begin
         tmpPar.create;
         tmpPar.append(result,false);
