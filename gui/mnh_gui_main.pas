@@ -1189,7 +1189,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     if reEvaluationWithGUIrequired then begin
       Hide;
-      if not(isEvaluationRunning) and not(plotForm.showing) and not(tableForm.showing) then close;
+      if not(isEvaluationRunning) and not(plotForm.showing) and not(tableForm.showing) then begin
+        guiAdapters.setExitCode;
+        close;
+      end;
     end;
   end;
 

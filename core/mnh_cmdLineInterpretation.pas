@@ -96,7 +96,8 @@ PROCEDURE parseCmdLine;
       package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
       dispose(package,destroy);
       context.destroy;
-      halt;
+      consoleAdapters.setExitCode;
+      halt(ExitCode);
     end;
 
   PROCEDURE fileMode;
@@ -123,7 +124,8 @@ PROCEDURE parseCmdLine;
       end;
       {$endif}
       context.destroy;
-      halt;
+      consoleAdapters.setExitCode;
+      halt(ExitCode);
     end;
 
   PROCEDURE addParameter(VAR list:T_arrayOfString; CONST index:longint);

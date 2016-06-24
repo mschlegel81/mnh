@@ -126,6 +126,8 @@ TYPE
 
       FUNCTION collectingClone:P_adapters;
       FUNCTION copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean):T_storedMessages;
+
+      PROCEDURE setExitCode;
   end;
 
   {$ifdef fullVersion}
@@ -578,16 +580,26 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
       mt_el5_haltMessageReceived,
       mt_endOfEvaluation,
-      mt_reloadRequired: begin appendToResult; raiseCustomMessage(collector^.storedMessages[i]); writeln('Raising custom message: ',collector^.storedMessages[i].simpleMessage); end;
+      mt_reloadRequired: begin appendToResult; raiseCustomMessage(collector^.storedMessages[i]); end;
       else begin
              if errorCase then appendToResult else begin
-               writeln('Raising custom message: ',collector^.storedMessages[i].simpleMessage);
                raiseCustomMessage(collector^.storedMessages[i]);
              end;
 
       end;
     end;
     dispose(clone,destroy);
+  end;
+
+PROCEDURE T_adapters.setExitCode;
+  CONST MAX_IGNORED_LEVEL=2;
+  VAR mt:T_messageType;
+      code:longint;
+  begin
+    code:=MAX_IGNORED_LEVEL;
+    for mt:=low(T_messageType) to high(T_messageType) do
+    if hasMessageOfType[mt] and (C_errorLevelForMessageType[mt]>code) then code:=C_errorLevelForMessageType[mt];
+    if code>MAX_IGNORED_LEVEL then ExitCode:=code;
   end;
 
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
@@ -774,7 +786,6 @@ PROCEDURE T_stepper.steppingIn;
   begin
     system.enterCriticalSection(cs);
     inc(currentLevel);
-    writeln('Stepping into level ',currentLevel,'; stepInPending=',stepInPending);
     if stepInPending then begin
       stepPending:=true;
       stepLevel:=currentLevel;
@@ -792,7 +803,6 @@ PROCEDURE T_stepper.steppingIn;
 PROCEDURE T_stepper.steppingOut;
   begin
     system.enterCriticalSection(cs);
-    writeln('Stepping out of level ',currentLevel);
     dec(currentLevel);
     if stepOutPending then begin
       breakSoonest:=true;
