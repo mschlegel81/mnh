@@ -1341,13 +1341,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType3<>tt_braceOpen);
 
       with newFunctionToken^ do begin
-        if tokType=tt_identifier then begin
-          if data=nil then data:=newFunctionToken^.location.package;
-          P_package(data)^.resolveRuleId(newFunctionToken^,nil);
-          if fallbackIsPossible
-          then P_package(data)^.resolveRuleId(newFunctionToken^,nil) //Do not pass adapters, because we try to handle complaints separately
-          else P_package(data)^.resolveRuleId(newFunctionToken^,context.adapters);
-        end else if tokType=tt_blockLocalVariable then begin
+        ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
+        if tokType=tt_blockLocalVariable then begin
           expression:=context.getVariableValue(newFunctionToken^.txt);
           if (expression<>nil) then begin
             if expression^.literalType<>lt_expression then expression^.unreference
@@ -1358,7 +1353,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             end;
           end;
         end;
-        ruleIdResolved:=tokType<>tt_identifier;
       end;
       if not(ruleIdResolved) and fallbackIsPossible then begin
         key:=newFunctionToken^.txt;
@@ -1764,26 +1758,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           didSubstitution:=true;
         end;
         tt_list_constructor: begin stack.push(first); didSubstitution:=true; end;
-        tt_identifier: begin
-          newLit:=context.getVariableValue(first^.txt);
-          if newLit<>nil then begin
-            first^.data:=newLit;
-            first^.tokType:=tt_literal;
-            didSubstitution:=true;
-          end else begin
-            if first^.data=nil then first^.data:=first^.location.package;
-            P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-            didSubstitution:=first^.tokType<>tt_identifier;
-          end;
-        end;
+        tt_identifier: context.adapters^.raiseError('Unresolved identifier "'+first^.txt+'"',first^.location);
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
-            if cTokType[2]=tt_identifier then begin
-              if first^.next^.next^.data=nil then first^.next^.next^.data:=first^.next^.next^.location.package;
-              P_package(first^.next^.next^.data)^.resolveRuleId(first^.next^.next^,context.adapters);
-              cTokType[2]:=first^.next^.next^.tokType;
-            end;
+
             if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRule)) and
                (first^.next^.next^.next<>nil) and
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
@@ -1806,6 +1785,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^.value(0)^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^.value(0))^.value;
+              P_package(first^.location.package)^.resolveRuleId(first^,context.adapters);
               first^.next:=context.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);

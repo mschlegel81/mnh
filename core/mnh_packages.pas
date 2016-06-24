@@ -743,10 +743,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if (context.adapters^.noErrors)
     then begin if first<>nil then interpret(first,first^.location); end
     else context.cascadeDisposeToken(first);
-    if usecase=lu_forCodeAssistance then resolveRuleIds(context.adapters);
-    ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
 
-    if usecase=lu_forCallingMain then executeMain;
+    ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
+    case usecase of
+      lu_forDocGeneration: resolveRuleIds(context.adapters);
+      lu_forImport:        resolveRuleIds(nil);
+      lu_forCallingMain:   executeMain;
+    end;
     if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
     then complainAboutUncalled(true,context.adapters^);
     if (usecase in [lu_forDirectExecution,lu_forCallingMain])

@@ -3238,7 +3238,7 @@ out> ['TEXT','ABC']
  in>                t :=[0..1000]*0.006283;
 Note                Creating new rule: t
  in>                plot(t, sin(t));
-Parsing Error       Cannot resolve ID "plot"
+Error               Unresolved identifier "plot"
 Error [stack trace]  # plot(t, sin(t))
 out>                plot(t, sin(t))
  in> abs(3);
@@ -3445,6 +3445,6 @@ out> 1
  in> toReal(3);
 out> 3.0
  in>                getOptions;
-Parsing Error       Cannot resolve ID "getOptions"
+Error               Unresolved identifier "getOptions"
 Error [stack trace]  # getOptions
 out>                getOptions
