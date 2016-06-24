@@ -41,6 +41,7 @@ TYPE
       ready:boolean;
       codeProvider:T_codeProvider;
       statementHashes:array of T_hashInt;
+      PROCEDURE resolveRuleIds(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST mainPackage_:P_package);
       FUNCTION needReload:boolean;
@@ -476,12 +477,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration.',ruleDeclarationStart);
           exit;
         end;
-        if (usecase in [lu_forDocGeneration,lu_forCodeAssistance]) then begin
+        if (usecase=lu_forDocGeneration) then begin
           context.cascadeDisposeToken(ruleBody);
           ruleBody:=context.newToken(ruleDeclarationStart,'',tt_literal,newVoidLiteral);
         end else begin
           rulePattern.toParameterIds(ruleBody);
-          if evaluateBody and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
+          if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
         end;
 
         if context.adapters^.noErrors then begin
@@ -552,6 +553,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
+          resolveRuleIds(nil);
           reduceExpression(first,0,context);
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first,maxLongint),first^.location);
@@ -569,6 +571,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         t:P_token;
         i:longint;
     begin
+      resolveRuleIds(nil);
       if not(ready) or not(context.adapters^.noErrors) then begin
         context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',packageTokenLocation(@self));
         exit;
@@ -738,6 +741,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if (context.adapters^.noErrors)
     then begin if first<>nil then interpret(first,first^.location); end
     else context.cascadeDisposeToken(first);
+    if usecase=lu_forCodeAssistance then resolveRuleIds(context.adapters);
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
 
     if usecase=lu_forCallingMain then executeMain;
@@ -901,6 +905,15 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
         packageUses[i].pack^.complainAboutUncalled(false,adapters);
       end;
     end;
+    setLength(ruleList,0);
+  end;
+
+PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
+  VAR ruleList:array of P_rule;
+      i:longint;
+  begin
+    ruleList:=packageRules.valueSet;
+    for i:=0 to length(ruleList)-1 do ruleList[i]^.resolveIds(adapters);
     setLength(ruleList,0);
   end;
 

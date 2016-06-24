@@ -37,6 +37,7 @@
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_listLiteral;
+      PROCEDURE resolveIds(CONST adapters:P_adapters);
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -378,6 +379,12 @@ FUNCTION T_rule.inspect:P_listLiteral;
       .append(newListLiteral^.appendString('type')^.appendString(ruleTypeString),false)^
       .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
       .append(newListLiteral^.appendString('subrules')^.append(subrulesList,false),false),false);
+  end;
+
+PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
+  VAR i:longint;
+  begin
+    for i:=0 to length(subrules)-1 do subrules[i]^.resolveIds(adapters);
   end;
 
 {$endif}

@@ -32,6 +32,8 @@ T_TokenStack=object
   PROCEDURE popDestroy(VAR context:T_evaluationContext);
   PROCEDURE popLink(VAR first:P_token);
   PROCEDURE push(VAR first:P_token);
+  PROCEDURE quietPush(CONST first:P_token);
+  PROCEDURE quietPop;
   FUNCTION toString(CONST first:P_token; CONST tokenLimit:longint=maxLongint):ansistring;
 end;
 
@@ -1891,6 +1893,18 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
     if topIndex>=length(dat) then setLength(dat,length(dat)+10);
     dat[topIndex]:=first;
     first:=first^.next;
+  end;
+
+PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
+  begin
+    inc(topIndex);
+    if topIndex>=length(dat) then setLength(dat,length(dat)+10);
+    dat[topIndex]:=first;
+  end;
+
+PROCEDURE T_TokenStack.quietPop;
+  begin
+    dec(topIndex);
   end;
 
 FUNCTION T_TokenStack.toString(CONST first: P_token; CONST tokenLimit: longint): ansistring;

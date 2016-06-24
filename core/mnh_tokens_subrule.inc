@@ -46,6 +46,7 @@
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
+      PROCEDURE resolveIds(CONST adapters:P_adapters);
   end;
 
 {$endif}
@@ -69,11 +70,11 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
             if parIdx>=REMAINING_PARAMETERS_IDX
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
-          end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
-          else if (token.tokType=tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,nil);
+          end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable;
         end else parIdx:=-1;
       end;
     end;
+    resolveIds(nil);
   end;
 
 CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
@@ -685,6 +686,31 @@ FUNCTION T_subrule.inspect:P_listLiteral;
       .append(newListLiteral^.appendString('type')^.appendString(typeString),false)^
       .append(newListLiteral^.appendString('comment')^.appendString(comment),false)^
       .append(newListLiteral^.appendString('body')^.appendString(toString(false)),false);
+  end;
+
+PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
+  VAR i:longint;
+      bracketStack:T_TokenStack;
+  FUNCTION isEachIdentifier(CONST id:string):boolean;
+    VAR k:longint;
+    begin
+      result:=false;
+      for k:=0 to bracketStack.topIndex do
+      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach,tt_forcedParallelEach]) and
+         (bracketStack.dat[k]^.txt=id) then exit(true);
+    end;
+
+  begin
+    bracketStack.create;
+    for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
+      case token.tokType of
+        tt_each,tt_parallelEach,tt_forcedParallelEach,tt_braceOpen: bracketStack.quietPush(@token);
+        tt_braceClose:bracketStack.quietPop;
+      end;
+      if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then
+      P_package(token.location.package)^.resolveRuleId(token,adapters);
+    end;
+    bracketStack.destroy;
   end;
 
 {$endif}
