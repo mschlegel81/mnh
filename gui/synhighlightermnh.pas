@@ -204,6 +204,7 @@ PROCEDURE TSynMnhSyn.setMarkedToken(CONST line,column:longint);
   end;
 
 PROCEDURE TSynMnhSyn.next;
+  CONST RUN_LIMIT=10000;
   VAR localId: shortString;
       i: longint;
       lc:T_messageType;
@@ -225,6 +226,10 @@ PROCEDURE TSynMnhSyn.next;
     isMarked:=false;
     fTokenId := tkDefault;
     fTokenPos := run;
+    if run>=RUN_LIMIT then begin
+      fTokenId:=tkNull;
+      exit;
+    end;
     if (run = 0) and (flavour in [msf_output,msf_guessing]) then begin
       specialLineCase:=mt_clearConsole;
       i:=-1;
@@ -240,7 +245,7 @@ PROCEDURE TSynMnhSyn.next;
       end;
       if i>=0 then run:=i+1;
       fTokenId:=tokenKindForMt[specialLineCase];
-      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_echo_continued]) then while (fLine[run]<>#0) do inc(run);
+      if not(specialLineCase in [mt_echo_output,mt_echo_declaration,mt_echo_input,mt_echo_continued]) then while (run<RUN_LIMIT) and (fLine[run]<>#0) do inc(run);
       if run>0 then exit;
     end;
     if blobEnder<>#0 then begin
