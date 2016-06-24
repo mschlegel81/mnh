@@ -282,7 +282,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       end;
       '$': begin
         leadingId(result.txt);
-        parsedLength:=length(result.txt);
         result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
@@ -352,7 +351,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         result.tokType:=tt_separatorCnt;
       end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
         leadingId(id,1);
-        parsedLength:=1+length(id);
         result.txt:=id;
         result.tokType:=tt_identifier_pon;
         result.data:=inPackage;
@@ -366,7 +364,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         result.tokType:=tt_assign;
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
         leadingId(id);
-        parsedLength:=length(id);
         if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
         else if id=C_tokenInfo[tt_typeCheckBoolean   ].defaultId then result.tokType:=tt_typeCheckBoolean
         else if id=C_tokenInfo[tt_typeCheckExpression].defaultId then result.tokType:=tt_typeCheckExpression
@@ -1342,7 +1339,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       //  <Lit>.func(... -> func(<Lit>,...
       newFunctionToken:=context.newToken(first^.next);
       fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType[2]<>tt_braceOpen);
-
 
       with newFunctionToken^ do begin
         if tokType<>tt_literal then tokType:=C_ponToFunc[tokType];
