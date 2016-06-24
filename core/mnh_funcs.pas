@@ -85,12 +85,36 @@ FUNCTION mnhParameters_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end else result:=nil;
   end;
 
+FUNCTION serialize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=2) and (params^.value(1)^.literalType=lt_int)
+    then result:=newStringLiteral(serialize(params^.value(0),tokenLocation,context.adapters,P_intLiteral(params^.value(1))^.value,false))
+    else result:=nil;
+  end;
+
+FUNCTION deserialize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
+    then result:=deserialize(P_stringLiteral(params^.value(0))^.value,tokenLocation,context.adapters,2)
+    else result:=nil;
+  end;
+
+FUNCTION deserialize95_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
+    then result:=deserialize(P_stringLiteral(params^.value(0))^.value,tokenLocation,context.adapters,1)
+    else result:=nil;
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'type',@type_imp,'type(x);#Prints out the type of x');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x,level in [0..2]);#Returns a string representing x');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,DESERIALIZE_BASE95_ID,@deserialize95_impl,DESERIALIZE_BASE95_ID+'(s:string);#Returns the literal represented by s which was created using serialize(x,1)');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,DESERIALIZE_BIN_ID,@deserialize_impl,DESERIALIZE_BIN_ID+'(s:string);#Returns the literal represented by s which was created using serialize(x,2)');
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);

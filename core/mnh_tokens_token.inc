@@ -1827,6 +1827,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
+      {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef debugMode}
     except
@@ -1848,7 +1849,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-      if (first<>nil) then currentStateMessage();
+      currentStateMessage();
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}

@@ -26,6 +26,9 @@ TYPE
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
     FUNCTION hash:T_hashInt;
+    {$ifdef DEBUGMODE}
+    PROCEDURE validate(CONST recurse:boolean=false);
+    {$endif}
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
@@ -74,6 +77,7 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
     tokType:=tokenType;
     data:=ptr;
     {$ifdef DEBUGMODE}
+    if (ptr=nil) and (tokenType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
@@ -91,6 +95,7 @@ PROCEDURE T_token.define(CONST original: T_token);
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
     {$ifdef DEBUGMODE}
+    if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     if location.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
@@ -255,6 +260,17 @@ FUNCTION T_token.hash:T_hashInt;
       pt:=pt^.next;
     end;
     {$Q+}{$R+}
+    {$ifdef DEBUGMODE}
+    validate;
+    {$endif}
   end;
+
+{$ifdef DEBUGMODE}
+PROCEDURE T_token.validate(CONST recurse:boolean=false);
+  begin
+    if (data=nil) and (tokType=tt_literal) then raise Exception.create('Encountered literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column));
+    if recurse and (next<>nil) then next^.validate(recurse);
+  end;
+{$endif}
 
 end.

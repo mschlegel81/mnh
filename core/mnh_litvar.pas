@@ -2,8 +2,11 @@ UNIT mnh_litVar;
 {$ifdef fullVersion}
 {$WARN 3018 OFF}{$WARN 3019 OFF}{$WARN 5024 OFF}
 {$endif}
+{$Q-}
 INTERFACE
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
+CONST DESERIALIZE_BASE95_ID='deserialize95';
+      DESERIALIZE_BIN_ID='deserialize';
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -307,6 +310,9 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
 FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
+
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte; CONST createMnhExpression:boolean):ansistring;
+FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
 IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
@@ -362,8 +368,8 @@ FUNCTION newBoolLiteral(CONST value: boolean): P_boolLiteral;
 
 FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
   begin
-    if (value>=-127) and (value<=128) then begin
-      result:=@intLit [value];
+    if (value>=low(intLit)) and (value<=high(intLit)) then begin
+      result:=@intLit[value];
       result^.rereference;
     end else begin
       new(result, create(value));
@@ -641,6 +647,7 @@ DESTRUCTOR T_listLiteral.destroy;
   VAR i: longint;
   begin
     for i:=0 to datFill-1 do if dat[i]<>nil then disposeLiteral(dat[i]);
+    setLength(dat,0);
   end;
 //==================================================================:DESTRUCTORS
 //?.value:======================================================================
@@ -2541,7 +2548,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       lt_boolean:result:=newBoolLiteral(stream.readBoolean);
       lt_int:result:=newIntLiteral(stream.readInt64);
       lt_real:result:=newRealLiteral(stream.readDouble);
-      lt_string:result:=newStringLiteral(stream.readAnsiString);
+      lt_string:result:=newStringLiteral(decompressString(stream.readAnsiString));
       lt_list,
       lt_booleanList,
       lt_intList,
@@ -2584,7 +2591,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
       lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
       lt_int:stream.writeInt64(P_intLiteral(L)^.val);
       lt_real:stream.writeDouble(P_realLiteral(L)^.val);
-      lt_string:stream.writeAnsiString(P_stringLiteral(L)^.val);
+      lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,0));
       lt_list,
       lt_booleanList,
       lt_intList,
@@ -2601,6 +2608,87 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
     end;
   end;
 
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
+  FUNCTION representReal(CONST realValue:T_myFloat):ansistring;
+    CONST p52:int64=1 shl 52;
+    VAR r:double;
+        bits:bitpacked array[0..sizeOf(double)*8-1] of boolean;
+        isNegative:boolean;
+        significand,exponent:int64;
+    begin
+      //ensure representation as IEEE745 double
+      result:=myFloatToStr(realValue);
+      if (isNan(realValue) or isInfinite(realValue) or (realValue=strToFloatDef(result,Nan))) then exit(result);
+
+      r:=realValue;
+      move(r,bits,sizeOf(double));
+      isNegative:=bits[length(bits)-1];
+      bits[length(bits)-1]:=false;
+      move(bits,significand,min(sizeOf(double),sizeOf(int64)));
+      exponent:=significand;
+      significand:=p52+(significand and (p52-1));
+      exponent:=(exponent shr 52)-1023-52;
+
+      if isNegative then result:='-' else result:='';
+      result:=result+intToStr(significand);
+      if exponent<0 then result:=result+'*2^'  +intToStr(exponent)
+                    else result:=result+'*2.0^'+intToStr(exponent);
+    end;
+
+  VAR i:longint;
+  begin
+    case L^.literalType of
+      lt_int, lt_boolean, lt_string, lt_expression: result:=L^.toString;
+      lt_real: result:=representReal(P_realLiteral(L)^.val);
+      lt_list..lt_flatList: begin
+        result:='[';
+        if (P_listLiteral(L)^.datFill>0)      then result:=result+    serialize(P_listLiteral(L)^.dat[0],location,adapters);
+        for i:=1 to P_listLiteral(L)^.datFill-1 do result:=result+','+serialize(P_listLiteral(L)^.dat[i],location,adapters);
+        result:=result+']';
+      end;
+      else begin
+        adapters^.raiseError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
+        exit('');
+      end;
+    end;
+  end;
+
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte; CONST createMnhExpression:boolean):ansistring;
+  VAR wrapper:T_streamWrapper;
+      stream:TStringStream;
+  begin
+    if level=0 then exit(serialize(L,location,adapters));
+    stream:= TStringStream.create('');
+    wrapper.create(stream);
+    writeLiteralToStream(L,wrapper,location,adapters);
+    stream.position:=0;
+    result:=stream.DataString;
+    wrapper.destroy; //implicitly destroys stream
+    if level=1 then result:=base95Encode(result)
+               else result:=result;
+    if createMnhExpression then begin
+      if level=1 then result:=DESERIALIZE_BASE95_ID+'('+escapeString(result)+')'
+                 else result:=DESERIALIZE_BIN_ID   +'('+escapeString(result)+')';
+    end;
+  end;
+
+FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
+  VAR wrapper:T_streamWrapper;
+      stream:TStringStream;
+  begin
+    if level=0 then begin
+      adapters^.raiseError('Cannot deserialize a stream created with level 0. Use default parsing instead.',location);
+      exit(newErrorLiteral);
+    end;
+    if level=1 then stream:=TStringStream.create(base95Decode(Source))
+               else stream:=TStringStream.create(Source);
+    wrapper.create(stream);
+    stream.position:=0;
+    result:=newLiteralFromStream(wrapper,location,adapters);
+    wrapper.destroy; //implicitly destroys stream
+  end;
+
+
 VAR
   i: longint;
 
@@ -2609,7 +2697,7 @@ INITIALIZATION
   boolLit[true].create(true);
   errLit.init(lt_error);
   voidLit.create();
-  for i:=-127 to 128 do intLit[i].create(i);
+  for i:=low(intLit) to high(intLit) do intLit[i].create(i);
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
@@ -2619,5 +2707,5 @@ FINALIZATION
   boolLit[true].destroy;
   errLit.destroy;
   voidLit.destroy;
-  for i:=-127 to 128 do intLit[i].destroy;
+  for i:=low(intLit) to high(intLit) do intLit[i].destroy;
 end.
