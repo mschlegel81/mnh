@@ -52,7 +52,6 @@
 {$ifdef include_implementation}
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
   VAR t:P_token;
-      inlineLiteral:P_literal;
   begin
     setLength(preparedBody,0);
     t:=rep;
@@ -71,19 +70,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
           end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
-          else begin
-            if (token.tokType in [tt_identifier,tt_identifier_pon]) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,nil);
-            if (token.tokType in [tt_localUserRule,tt_importedUserRule]) and
-               ((t=nil) or not(t^.tokType in [tt_braceOpen,tt_parList_constructor,tt_parList,tt_listToParameterList])) //rule must not be followed by an opening bracket, indicating a call with parameters
-            then begin
-              inlineLiteral:=P_rule(token.data)^.getInlineValue;
-              if inlineLiteral<>nil then begin
-                token.data:=inlineLiteral;
-                token.txt:='';
-                token.tokType:=tt_literal;
-              end;
-            end;
-          end;
+          else if (token.tokType=tt_identifier) and (token.data<>nil) then P_package(token.data)^.resolveRuleId(token,nil);
         end else parIdx:=-1;
       end;
     end;

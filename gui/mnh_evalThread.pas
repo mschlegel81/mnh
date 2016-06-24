@@ -312,7 +312,7 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
     tokens.getRawTokensUndefining;
     tokens.destroy;
 
-    if tokenToExplain.tokType in [tt_identifier,tt_identifier_pon] then package.resolveRuleId(tokenToExplain,nil);
+    if tokenToExplain.tokType=tt_identifier then package.resolveRuleId(tokenToExplain,nil);
 
     info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain.tokType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
@@ -320,17 +320,17 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
       info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
     case tokenToExplain.tokType of
-      tt_intrinsicRule,tt_intrinsicRule_pon: begin
+      tt_intrinsicRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         appendBuiltinRuleInfo;
       end;
-      tt_importedUserRule,tt_importedUserRule_pon: begin
+      tt_importedUserRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
-      tt_localUserRule,tt_localUserRule_pon: begin
+      tt_localUserRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
         info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;

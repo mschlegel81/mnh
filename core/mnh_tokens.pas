@@ -136,10 +136,6 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
-      tt_identifier_pon,
-      tt_localUserRule_pon,
-      tt_importedUserRule_pon,
-      tt_intrinsicRule_pon: result:=C_ID_QUALIFY_CHARACTER+txt;
       tt_identifier,
       tt_localUserRule,
       tt_importedUserRule,
@@ -246,7 +242,6 @@ FUNCTION T_token.hash:T_hashInt;
     while pt<>nil do begin
       with pt^ do begin
         case tokType of
-          tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon: result:=result*31+longint(tt_identifier_pon);
           tt_identifier,    tt_localUserRule    ,tt_importedUserRule    ,tt_intrinsicRule    : result:=result*31+longint(tt_identifier);
           else result:=result*31+longint(tokType);
         end;

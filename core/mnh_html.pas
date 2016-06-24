@@ -69,13 +69,10 @@ FUNCTION toHtmlCode(line:ansistring):ansistring;
     for i:=0 to length(raw)-1 do with raw[i] do begin
       case tokType of
         tt_literal, tt_aggregatorExpressionLiteral: result:=result+span('literal',txt);
-        tt_intrinsicRule,tt_intrinsicRule_pon,
+        tt_intrinsicRule,
         tt_aggregatorConstructor, tt_each, tt_parallelEach, tt_forcedParallelEach, tt_when, tt_while, tt_try, tt_begin,  tt_end: result:=result+span('builtin',txt);
         tt_identifier, tt_parameterIdentifier, tt_localUserRule,
         tt_importedUserRule, tt_rulePutCacheValue,
-        tt_identifier_pon,
-        tt_localUserRule_pon,
-        tt_importedUserRule_pon,
         tt_blockLocalVariable: result:=result+span('identifier',txt);
         tt_typeCheckScalar..tt_typeCheckKeyValueList: result:=result+span('builtin',txt);
         tt_modifier_private..tt_modifier_local: result:=result+span('modifier',txt);

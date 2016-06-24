@@ -835,25 +835,19 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
-      if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_localUserRule_pon
-      else token.tokType:=tt_localUserRule;
+      token.tokType:=tt_localUserRule;
       token.data:=userRule;
       userRule^.used:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
-      if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_importedUserRule_pon
-      else token.tokType:=tt_importedUserRule;
+      token.tokType:=tt_importedUserRule;
       token.data:=userRule;
       userRule^.used:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
-      if token.tokType=tt_identifier_pon
-      then token.tokType:=tt_intrinsicRule_pon
-      else token.tokType:=tt_intrinsicRule;
+      token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
       exit;
     end;

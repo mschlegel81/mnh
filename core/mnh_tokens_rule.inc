@@ -308,7 +308,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):
       adapters.raiseNote('Writing back: '+code,declarationStart);
       code:=code+
             C_tokenInfo[tt_assign].defaultId+
-            namedValue.getValue^.toString+
+            serialize(namedValue.getValue,declarationStart,@adapters,0,true)+
             C_tokenInfo[tt_semicolon].defaultId;
       provider.replaceCode(
         declarationStart.line-1,

@@ -79,10 +79,10 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           t[i].data:=newStringLiteral(fullText);
           t[i].tokType:=tt_literal;
         end;
-        tt_identifier: if (i<length(t)-1) and (t[i+1].tokType=tt_identifier_pon) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
-          //resolve ambiguous notation "x.y" to qualified identifier "x.y" or "x .y" (pseudo-object-notation)
-          inc(i);
-          t[i].txt:=t[i-1].txt+C_ID_QUALIFY_CHARACTER+t[i].txt;
+        tt_identifier: if (i<length(t)-2) and (t[i+1].tokType=tt_ponFlipper) and (t[i+2].tokType=tt_identifier) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
+          //resolve ambiguous notation "x.y" to qualified identifier "x.y" if applicable
+          inc(i,2);
+          t[i].txt:=t[i-2].txt+C_ID_QUALIFY_CHARACTER+t[i].txt;
           t[i].tokType:=tt_identifier;
           package^.resolveRuleId(t[i],nil);
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
@@ -150,13 +150,8 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
       if not(atEnd) then begin
         setLength(result,length(result)+1);
         result[length(result)-1]:=current.getRawToken;
-        with result[length(result)-1] do if tokType in [tt_identifier,tt_identifier_pon] then begin
-          if intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then begin
-            if tokType=tt_identifier_pon
-            then tokType:=tt_intrinsicRule_pon
-            else tokType:=tt_intrinsicRule;
-          end;
-        end;
+        with result[length(result)-1] do if (tokType=tt_identifier)
+        and intrinsicRuleMap.containsKey(txt,intrinsicFuncPtr) then tokType:=tt_intrinsicRule;
       end;
     until atEnd;
     for k:=0 to length(t)-1 do t[k].undefine;
@@ -349,12 +344,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       end else if startsWith(C_tokenInfo[tt_separatorCnt].defaultId) then begin
         parsedLength:=length(C_tokenInfo[tt_separatorCnt].defaultId);
         result.tokType:=tt_separatorCnt;
-      end else if (length(line)>=lineLocation.column+1) and (line[lineLocation.column+1] in ['a'..'z','A'..'Z']) then begin
-        leadingId(id,1);
-        result.txt:=id;
-        result.tokType:=tt_identifier_pon;
-        result.data:=inPackage;
-        id:='';
       end else begin
         result.tokType:=tt_ponFlipper;
         parsedLength:=1;
@@ -1326,27 +1315,46 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR newFunctionToken:P_token;
         newParameterListToken:P_token;
         oldSecond:P_token;
+        expression:P_literal;
         fallbackIsPossible:boolean=false;
         ruleIdResolved:boolean=false;
         key:string='';
+        cTokType3:T_tokenType;
     begin
       //Assuming:
       //cTokType[0]=tt_literal
-      //cTokType[1]=tt_???_pon
-      //cTokType[2]=may be (
+      //cTokType[1]=tt_ponFlipper
+      //cTokType[2] is a resolved or unresolved identifier or a blocklocal variable;
       //Transforms:
-      //  <Lit>.func     -> func(<Lit>)
-      //  <Lit>.func(... -> func(<Lit>,...
-      newFunctionToken:=context.newToken(first^.next);
-      fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType[2]<>tt_braceOpen);
+      //  <Lit> . func     -> func(<Lit>)
+      //  <Lit> . func(... -> func(<Lit>,...
+      newFunctionToken:=context.newToken(first^.next^.next);
+
+      if cTokType[2]=tt_EOL then cTokType3:=tt_EOL else begin
+        oldSecond:=first^.next^.next^.next;
+        if oldSecond=nil then cTokType3:=tt_EOL
+        else cTokType3:=oldSecond^.tokType;
+      end;
+
+      fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType3<>tt_braceOpen);
 
       with newFunctionToken^ do begin
-        if tokType<>tt_literal then tokType:=C_ponToFunc[tokType];
         if tokType=tt_identifier then begin
           if data=nil then data:=newFunctionToken^.location.package;
+          P_package(data)^.resolveRuleId(newFunctionToken^,nil);
           if fallbackIsPossible
           then P_package(data)^.resolveRuleId(newFunctionToken^,nil) //Do not pass adapters, because we try to handle complaints separately
           else P_package(data)^.resolveRuleId(newFunctionToken^,context.adapters);
+        end else if tokType=tt_blockLocalVariable then begin
+          expression:=context.getVariableValue(newFunctionToken^.txt);
+          if (expression<>nil) then begin
+            if expression^.literalType<>lt_expression then expression^.unreference
+            else begin
+              newFunctionToken^.data:=expression;
+              newFunctionToken^.tokType:=tt_literal;
+              ruleIdResolved:=true;
+            end;
+          end;
         end;
         ruleIdResolved:=tokType<>tt_identifier;
       end;
@@ -1359,18 +1367,21 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
 
       if ruleIdResolved then begin
-        //resolved rule ID mutate x.y -> y(x)
-        //if key is defined:      x.y -> get(x,"y")
+        //resolved rule ID mutate x . y -> y(x)
+        //if key is defined:      x . y -> get(x,"y")
         if key=''
-        then newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false))
-        else newParameterListToken:=context.newToken(first^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false)^.appendString(key));
+        then newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false))
+        else newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false)^.appendString(key));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
-        oldSecond:=context.disposeToken(context.disposeToken(first));
+                               //Disposing from:   <Lit> . func ...
+        oldSecond:=context.disposeToken(         //|   | | ^^^^
+                   context.disposeToken(         //|   | ^
+                   context.disposeToken(first)));//^^^^^
 
         first:=newFunctionToken; newFunctionToken^.next:=newParameterListToken; newParameterListToken^.next:=oldSecond;
 
-        if cTokType[2]=tt_braceOpen then begin
+        if cTokType3=tt_braceOpen then begin
           newParameterListToken^.next:=context.disposeToken(oldSecond);
           newParameterListToken^.tokType:=tt_parList_constructor;
         end;
@@ -1397,7 +1408,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
-      else if cTokType[1] in [tt_identifier_pon,tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon] then pon_flip
+      else if cTokType[1]=tt_ponFlipper then pon_flip
       else if cTokType[1] in [tt_each,tt_forcedParallelEach,tt_parallelEach] then resolveEach(cTokType[1])
       else if cTokType[1]= tt_listBraceOpen then begin stack.push(first); didSubstitution:=true; end
       else begin
@@ -1505,12 +1516,11 @@ tt_ponFlipper: if (cTokType[2]=tt_expBraceOpen) then begin
   stack.push(first);
   stack.push(first);
   didSubstitution:=true;
-end;
+end else pon_flip;
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
 tt_parList:  applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
-tt_identifier_pon,tt_importedUserRule_pon,tt_localUserRule_pon,tt_intrinsicRule_pon: pon_flip;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
 tt_each,tt_parallelEach,tt_forcedParallelEach: resolveEach(cTokType[1])}
 
@@ -1552,7 +1562,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)
             and (stack.topIndex>0) and (stack.dat[stack.topIndex-1]^.tokType=tt_literal) then begin
             // <Lit> . # {$x}
-            stack.popDestroy(context);
+            stack.popLink(first);
             stack.popLink(first);
             // -> # <Lit> {$x}
             initTokTypes;
@@ -1759,13 +1769,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end else begin
             if first^.data=nil then first^.data:=first^.location.package;
             P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-            didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
+            didSubstitution:=first^.tokType<>tt_identifier;
           end;
-        end;
-        tt_identifier_pon: begin
-          if first^.data=nil then first^.data:=first^.location.package;
-          P_package(first^.data)^.resolveRuleId(first^,context.adapters);
-          didSubstitution:=not(first^.tokType in [tt_identifier,tt_identifier_pon]);
         end;
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
         tt_aggregatorConstructor: case cTokType[1] of
@@ -1802,7 +1807,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
           end;
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_localUserRule_pon,tt_importedUserRule_pon,tt_intrinsicRule_pon,tt_identifier_pon,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
+          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_ponFlipper, tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);

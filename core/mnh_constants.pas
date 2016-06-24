@@ -57,9 +57,6 @@ TYPE
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRule,
     tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
-    tt_identifier_pon,
-    tt_localUserRule_pon,
-    tt_importedUserRule_pon, tt_intrinsicRule_pon,
     tt_blockLocalVariable,
     tt_ponFlipper,
     tt_aggregatorConstructor,
@@ -150,11 +147,6 @@ CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
-  C_ponToFunc:array[tt_identifier_pon..tt_intrinsicRule_pon] of T_tokenType=(
-    tt_identifier,
-    tt_localUserRule,
-    tt_importedUserRule,
-    tt_intrinsicRule);
   C_openingBrackets:T_tokenTypeSet=[tt_begin,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
   C_closingBrackets:T_tokenTypeSet=[tt_end,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
@@ -216,10 +208,10 @@ CONST
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A put-cache-value call'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An identifier in pseudo-object notation (unresolved)'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A local user rule in pseudo-object notation'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule in pseudo-object notation'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule in pseudo-object notation'),
+      //(defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An identifier in pseudo-object notation (unresolved)'),
+      //(defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A local user rule in pseudo-object notation'),
+      //(defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule in pseudo-object notation'),
+      //(defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule in pseudo-object notation'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A block-local variable'),
       (defaultId:'.'; reservedWordClass:rwc_not_reserved; helpText:'A pseudo-object-notation flipper'),
       (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
