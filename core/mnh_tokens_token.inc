@@ -1392,7 +1392,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-  PROCEDURE process_op_lit; inline;
+  PROCEDURE process_op_lit; {$ifndef DEBUGMODE} inline;{$endif}
     begin
       if (cTokType[1] in [tt_comparatorEq..tt_operatorIn]) and (C_opPrecedence[cTokType[1]]>=C_opPrecedence[cTokType[-1]]) or
          (cTokType[1] in [tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse])
@@ -1404,6 +1404,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
                                 context.adapters^);
         disposeLiteral(first^.data);
         first^.data:=newLit; //store new literal in head
+        first^.location:=stack.dat[stack.topIndex]^.location;
         stack.popDestroy(context); //pop operator from stack
         stack.popDestroy(context); //pop LHS-Literal from stack
         didSubstitution:=true;
@@ -1595,6 +1596,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               //LHS literal is now result of first comparison (still a literal)
               disposeLiteral(stack.dat[stack.topIndex-1]^.data);
               stack.dat[stack.topIndex-1]^.data:=newLit;
+              stack.dat[stack.topIndex-1]^.location:=stack.dat[stack.topIndex]^.location;
               //applied comparator is replaced by operator 'and'
               stack.dat[stack.topIndex]^.tokType:=tt_operatorAnd;
               didSubstitution:=true;

@@ -77,6 +77,7 @@ TYPE
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     SynCompletion: TSynCompletion;
+    tbMicroStep: TToolButton;
     UpdateTimeTimer: TTimer;
     helpPopupMemo: TSynMemo;
     miOpenDemo: TMenuItem;
@@ -166,6 +167,7 @@ TYPE
       KeyChar: TUTF8Char; Shift: TShiftState);
     PROCEDURE SynCompletionExecute(Sender: TObject);
     PROCEDURE SynCompletionSearchPosition(VAR APosition: integer);
+    PROCEDURE tbMicroStepClick(Sender: TObject);
     PROCEDURE UpdateTimeTimerTimer(Sender: TObject);
     PROCEDURE miOpenDemoClick(Sender: TObject);
     PROCEDURE miNewCentralPackageClick(Sender: TObject);
@@ -582,10 +584,11 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     then inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.ActivePageIndex].editor.CaretXY,false,false);
     if currentlyDebugging and runEvaluator.evaluationRunning then begin
-      if (key=116) and tbRun    .Enabled then tbRunClick(Sender);
-      if (key=117) and tbStepIn .Enabled then tbStepInClick(Sender);
-      if (key=118) and tbStep   .Enabled then tbStepClick(Sender);
-      if (key=119) and tbStepOut.Enabled then tbStepOutClick(Sender);
+      if (key=116) and tbRun      .Enabled then tbRunClick(Sender);
+      if (key=117) and tbStepIn   .Enabled then tbStepInClick(Sender);
+      if (key=118) and tbStep     .Enabled then tbStepClick(Sender);
+      if (key=119) and tbStepOut  .Enabled then tbStepOutClick(Sender);
+      if (key=122) and tbMicroStep.Enabled then tbMicroStepClick(Sender);
     end;
   end;
 
@@ -853,6 +856,7 @@ PROCEDURE TMnhForm.updateDebugParts;
       handleButton(tbStep,runEvaluator.evaluationRunning and stepper.haltet,4);
       handleButton(tbStepIn,runEvaluator.evaluationRunning and stepper.haltet,6);
       handleButton(tbStepOut,runEvaluator.evaluationRunning and stepper.haltet,8);
+      handleButton(tbMicroStep,runEvaluator.evaluationRunning and stepper.haltet,10);
     end else begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.ShowTabs:=false;
@@ -1101,6 +1105,13 @@ PROCEDURE TMnhForm.SynCompletionSearchPosition(VAR APosition: integer);
     for i:=0 to wordsInEditor.size-1 do
       if pos(s,wordsInEditor[i])=1 then SynCompletion.ItemList.add(wordsInEditor[i]);
     if SynCompletion.ItemList.count>0 then APosition:=0 else APosition:=-1;
+  end;
+
+PROCEDURE TMnhForm.tbMicroStepClick(Sender: TObject);
+  begin
+    stepper.doMicrostep;
+    updateDebugParts;
+    breakPointHandlingPending:=true;
   end;
 
 PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
