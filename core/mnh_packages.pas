@@ -482,6 +482,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleBody:=context.newToken(ruleDeclarationStart,'',tt_literal,newVoidLiteral);
         end else begin
           rulePattern.toParameterIds(ruleBody);
+          //[marker 1]
           if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
         end;
 
@@ -490,7 +491,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if context.adapters^.noErrors then begin
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,context));
             subRule^.comment:=lastComment; lastComment:='';
-            if ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]
+            //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
+            if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) and (usecase<>lu_forCodeAssistance)
             then begin
               ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context);
               dispose(subRule,destroy);
