@@ -492,9 +492,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,context));
             subRule^.comment:=lastComment; lastComment:='';
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
-            if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) and (usecase<>lu_forCodeAssistance)
+            if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private])
             then begin
-              ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context);
+              if (usecase<>lu_forCodeAssistance)
+              then ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context)
+              else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;

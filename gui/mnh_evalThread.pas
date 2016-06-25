@@ -368,7 +368,7 @@ FUNCTION T_evaluator.getErrorHint: string;
   begin
     enterCriticalSection(cs);
     result:='';
-    for i:=0 to length(errors)-1 do result:=result+errors[i].simpleMessage+C_lineBreakChar;
+    for i:=0 to length(errors)-1 do result:=result+intToStr(errors[i].location.line)+','+intToStr(errors[i].location.column)+': '+errors[i].simpleMessage+C_lineBreakChar;
     leaveCriticalSection(cs);
   end;
 
@@ -408,11 +408,13 @@ PROCEDURE T_evaluator.preEval;
 
 PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
   PROCEDURE updateCompletionList;
+    VAR i:longint;
     begin
       completionList.clear;
       completionList.addAll(intrinsicRulesForCompletion.elementArray);
       package.updateLists(userRules);
       completionList.addAll(userRules.elementArray);
+      for i:=0 to userRules.size-1 do if pos(C_ID_QUALIFY_CHARACTER,userRules[i])<=0 then completionList.add(C_ID_QUALIFY_CHARACTER+userRules[i]);
       completionList.unique;
     end;
 
