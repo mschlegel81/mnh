@@ -502,7 +502,7 @@ FUNCTION reverseString_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
       end;
     end;
   end;
-
+{$R-}
 {$define diffStatOrDiff_impl:=
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
