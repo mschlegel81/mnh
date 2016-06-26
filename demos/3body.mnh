@@ -42,7 +42,7 @@ main->begin
   local state:=initialState;
   state.plotState;
   while(true,
-    plotState(state:=RK4(F,RK4(F,state,timeStepSize),timeStepSize))
+    plotState(state:=state.RK4(F,timeStepSize,1E-2))
   );
 end;
 
