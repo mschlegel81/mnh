@@ -848,13 +848,11 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if packageRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRule;
       token.data:=userRule;
-      userRule^.used:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_importedUserRule;
       token.data:=userRule;
-      userRule^.used:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -906,7 +904,7 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage,adapters) then anyCalled:=true;
-    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused package '+codeProvider.id,packageTokenLocation(@self));
+    if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+codeProvider.id,packageTokenLocation(@self));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
         packageUses[i].pack^.complainAboutUncalled(false,adapters);

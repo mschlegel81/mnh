@@ -244,23 +244,32 @@ FUNCTION T_rule.hasPublicSubrule: boolean;
 
 FUNCTION T_rule.getInlineValue:P_literal;
   begin
-    if length(subrules)=1 then begin
-      result:=subrules[0]^.getInlineValue;
-      used:=true;
-    end else result:=nil;
+    if length(subrules)=1 then result:=subrules[0]^.getInlineValue
+                          else result:=nil;
+    used:=used or (result<>nil);
   end;
 
 FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
-  VAR i:longint;
+  CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
+  VAR i,j:longint;
+      sameSignatureFound:boolean;
+      mitigation:string;
   begin
     //If a rule is public, it may be used by importing packages -> no complaint
-    if not(used) and not(hasPublicSubrule) then begin
-      if inMainPackage then adapters.raiseWarning('Unused rule '+id,declarationStart);
+    if not(used) then begin
+      if inMainPackage then adapters.raiseWarning('Uncalled rule '+id,declarationStart);
       exit(false);
     end;
     //If a rule is used and has only one subrule, this one is also used per definition -> no complaint
     if used and inMainPackage and (length(subrules)>1) then
-      for i:=0 to length(subrules)-1 do subrules[i]^.complainAboutUncalled(id,inMainPackage,adapters);
+      for i:=0 to length(subrules)-1 do begin
+        if subrules[i]^.called then continue;
+        //Might be part of a case distinction; Check for other rules with equal signature (ignoring value restrictions)
+        sameSignatureFound:=false;
+        for j:=0 to length(subrules)-1 do sameSignatureFound:=sameSignatureFound or (j<>i) and subrules[i]^.pattern.isEquivalentIgnoringRestrictions(subrules[j]^.pattern);
+        if subrules[i]^.typ=srt_normal_public then mitigation:=PUBLIC_MITIGATION else mitigation:='';
+        if not(sameSignatureFound) then adapters.raiseWarning('Uncalled subrule '+id+subrules[i]^.pattern.toString+mitigation,subrules[i]^.declaredAt);
+      end;
     result:=true;
   end;
 

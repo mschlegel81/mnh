@@ -40,7 +40,6 @@
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION getInlineValue:P_literal;
-      FUNCTION complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
       FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
       FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
       FUNCTION arity:longint;
@@ -630,12 +629,6 @@ FUNCTION T_subrule.getInlineValue:P_literal;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
-  end;
-
-FUNCTION T_subrule.complainAboutUncalled(CONST ruleId:ansistring; CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
-  begin
-    result:=not(called) and (typ=srt_normal_private);
-    if inMainPackage and result then adapters.raiseWarning('Unused private subrule '+ruleId+pattern.toString,declaredAt);
   end;
 
 FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
