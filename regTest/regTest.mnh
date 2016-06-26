@@ -1,5 +1,6 @@
 USE testLog,
     '../demos/24.mnh',
+    '../demos/diff.mnh',
     '../demos/100doors.mnh',
     '../demos/12_statements.mnh',
     '../demos/99bottles.mnh',
@@ -103,7 +104,8 @@ begin
   resetRandom;
   collectOutput;
   toId('24.main')('demo');
-  inspect.uses.getInner(0).leading(6).tail(2).each(import,toId(import&'.main'));
+  diff.main('test');
+  inspect.uses.getInner(0).leading(6).tail(3).each(import,toId(import&'.main'));
   canPlot
   ? inspect.uses.getInner(0).trailing(6).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
   : void;

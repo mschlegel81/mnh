@@ -1,0 +1,55 @@
+//This demo shows how the edit script returned by strings.diff is interpreted
+//and how expressions can be used as local methods with side effects
+showDiff(A:stringList,B:stringList)->begin
+  local naiveEdit:=
+  diff(A,B)['edit']
+  //skip matches
+  .each(entry,entry[0]='.' ? void : entry)
+  //fix indexes: for + only the first index is relevant, for - only the second one
+  .each(entry,entry[0]='+' ? ['+',entry[2],entry[2]] :
+              entry[0]='-' ? ['-',entry[1],entry[1]] : entry)
+  //enhance entries with corresponding text
+  .each(entry,entry[0]='.' ? void : entry|[A[entry[1]],B[entry[2]]]);
+
+  //A join with the next entry is needed, if the next entry has the same edit kind [0] and the line indexes [1,2] differ by 1 each
+  //The last entry has no next entry to be joined with;
+  local needJoin:= ((naiveEdit.getInner([1,2]).tail-
+                     naiveEdit.getInner([1,2]).leading).each(p,p==[1,1]) and
+                    (naiveEdit.getInner(0).tail=
+                     naiveEdit.getInner(0).leading))|false;
+  local aLines:=[];
+  local bLines:=[];
+  local first:=true;
+  local out:=[];
+  local doOutput:={begin
+    out|=out==[] ? void : '';
+    out|=aLines;
+    out|=bLines;
+    aLines:=[];
+    bLines:=[];
+    first:=true;
+  end};
+  local appendToCurrent:={
+    first ? begin
+              aLines:=$0[0] in ['M','-'] ? ["@\v"&$0[1]+1&"\v< "&$0[3]] : [];
+              bLines:=$0[0] in ['M','+'] ? ["@\v"&$0[2]+1&"\v> "&$0[4]] : [];
+              first:=false;
+            end
+          : begin
+              aLines|=$0[0] in ['M','-'] ? ["\v\v< "&$0[3]] : [];
+              bLines|=$0[0] in ['M','+'] ? ["\v\v> "&$0[4]] : [];
+            end};
+  naiveEdit.each(e,begin
+    appendToCurrent(e);
+    needJoin[index]
+    ? void
+    : doOutput();
+  end);
+  printf("%s",out);
+end;
+
+//*Shows the diff of two files
+main(file1:string,file2:string)->showDiff(file1.fileLines,file2.fileLines);
+
+//*For regression test
+main('test')->showDiff(myPath.fileLines,'//*Modified file contents follow:'|myPath.fileLines.head(48).each(line,index=24 ? line&" //comment added" : line));
