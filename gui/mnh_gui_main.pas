@@ -971,6 +971,8 @@ PROCEDURE TMnhForm.miMinErrorlevel5Click(Sender: TObject); begin _setErrorlevel_
 
 PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
   begin
+    OpenDialog.FilterIndex:=1;
+    OpenDialog.options:=OpenDialog.options+[ofPathMustExist,ofFileMustExist];
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
     then PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
@@ -1003,6 +1005,8 @@ PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
 
 PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
+    OpenDialog.FilterIndex:=2;
+    OpenDialog.options:=OpenDialog.options-[ofPathMustExist,ofFileMustExist];
     if OpenDialog.execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.fileName));
   end;
 
