@@ -101,6 +101,8 @@ TYPE
       cs: TRTLCriticalSection;
       screenWidth, screenHeight: longint;
       xOffset, yOffset: longint;
+      scaledXOffset,scaledYOffset:double;
+
       tic: array['x'..'y'] of array of T_ticInfo;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
@@ -757,9 +759,9 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double
     system.enterCriticalSection(cs);
     autoscale['x']:=false;
     autoscale['y']:=false;
-    holdX:=(pixelX-xOffset)/(screenWidth-xOffset)*
+    holdX:=(pixelX-scaledXOffset)/(screenWidth-scaledXOffset)*
       (range['x', 1]-range['x', 0])+range['x', 0];
-    holdY:=(pixelY-yOffset)/(-yOffset)*
+    holdY:=(pixelY-scaledYOffset)/(-scaledYOffset)*
       (range['y', 1]-range['y', 0])+range['y', 0];
     range['x', 0]:=(range['x', 0]-holdX)*factor+holdX;
     range['x', 1]:=(range['x', 1]-holdX)*factor+holdX;
@@ -784,10 +786,11 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
   VAR worldDX, worldDY: double;
       rectA, rectB: TRect;
   begin with scalingOptions do begin
+    system.enterCriticalSection(cs);
     autoscale['x']:=false;
     autoscale['y']:=false;
-    worldDX:=pixelDX/(screenWidth-xOffset)*(range['x', 1]-range['x', 0]);
-    worldDY:=pixelDY/(-yOffset)*(range['y', 1]-range['y', 0]);
+    worldDX:=pixelDX/(screenWidth-scaledXOffset)*(range['x', 1]-range['x', 0]);
+    worldDY:=pixelDY/(-scaledYOffset)*(range['y', 1]-range['y', 0]);
     range['x', 0]:=range['x', 0]+worldDX;
     range['x', 1]:=range['x', 1]+worldDX;
     range['y', 0]:=range['y', 0]+worldDY;
@@ -803,6 +806,7 @@ PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TIm
     rectB.Bottom:=plotImage.height+pixelDY;
 
     plotImage.Canvas.CopyRect(rectA, plotImage.Canvas, rectB);
+    system.leaveCriticalSection(cs);
   end; end;
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
@@ -1222,12 +1226,16 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
   begin
     if supersampling<=1 then begin
       renderPlot(plotImage);
+      scaledXOffset:=xOffset;
+      scaledYOffset:=yOffset;
       exit;
     end;
     renderImage:=TImage.create(nil);
     renderImage.SetInitialBounds(0,0,plotImage.width*supersampling,plotImage.height*supersampling);
     renderPlot(renderImage);
     scale(renderImage,plotImage,1/supersampling);
+    scaledXOffset:=xOffset/supersampling;
+    scaledYOffset:=yOffset/supersampling;
     renderImage.destroy;
     //set screen size to fix GUI interaction (panning, zooming, etc.)
     setScreenSize(plotImage.width,plotImage.height,true);
