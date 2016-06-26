@@ -53,8 +53,10 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
+      {$ifdef fullVersion}
       PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
-      {$ifdef fullVersion}FUNCTION getDoc:P_userPackageDocumentation; {$endif}
+      FUNCTION getDoc:P_userPackageDocumentation;
+      {$endif}
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean;
       FUNCTION getPackageReferenceForId(CONST id:string; CONST adapters:P_adapters):T_packageReference;
@@ -752,8 +754,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       lu_forImport:        resolveRuleIds(nil);
       lu_forCallingMain:   executeMain;
     end;
-    if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and context.adapters^.noErrors
+    {$ifdef fullVersion}
+    if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and gui_started and context.adapters^.noErrors
     then complainAboutUncalled(true,context.adapters^);
+    {$endif}
     if (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
       finalize(context.adapters^);
@@ -897,6 +901,16 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
     userDefinedRules.unique;
   end;
 
+PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
+  VAR ruleList:array of P_rule;
+      i:longint;
+  begin
+    ruleList:=packageRules.valueSet;
+    for i:=0 to length(ruleList)-1 do ruleList[i]^.resolveIds(adapters);
+    setLength(ruleList,0);
+  end;
+
+{$ifdef fullVersion}
 PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;
@@ -913,16 +927,6 @@ PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapt
     setLength(ruleList,0);
   end;
 
-PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
-  VAR ruleList:array of P_rule;
-      i:longint;
-  begin
-    ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do ruleList[i]^.resolveIds(adapters);
-    setLength(ruleList,0);
-  end;
-
-{$ifdef fullVersion}
 FUNCTION T_package.getDoc:P_userPackageDocumentation;
   VAR ruleList:array of P_rule;
       i:longint;

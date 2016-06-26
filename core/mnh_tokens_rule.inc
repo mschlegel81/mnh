@@ -31,7 +31,9 @@
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
+      {$ifdef fullVersion}
       FUNCTION complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
+      {$endif}
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
       FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
@@ -249,6 +251,7 @@ FUNCTION T_rule.getInlineValue:P_literal;
     used:=used or (result<>nil);
   end;
 
+{$ifdef fullVersion}
 FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
   CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
   VAR i,j:longint;
@@ -272,6 +275,7 @@ FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:
       end;
     result:=true;
   end;
+{$endif}
 
 CONST C_ruleTypeText:array[T_ruleType] of string=(
     '','memoized ',
