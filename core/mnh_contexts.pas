@@ -1,6 +1,6 @@
 UNIT mnh_contexts;
 INTERFACE
-USES mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
+USES sysutils,mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
 TYPE
   T_valueStoreMarker=(vsm_none,vsm_void,vsm_first);
 
@@ -123,14 +123,16 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
 
 PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
+      up:longint=0;
   begin
     system.enterCriticalSection(cs);
-    i:=length(data)-1;
-    while (i>=0) and (data[i].marker=vsm_none) do dec(i);
-    if i<0 then i:=0;
-    while (i<length(data)) do begin
-      with data[i] do if v<>nil then variableReport.addVariable(v,'local');
-      inc(i);
+    for i:=0 to length(data)-1 do if data[i].marker<>vsm_none then inc(up);
+    for i:=0 to length(data)-1 do begin
+      if data[i].marker<>vsm_none then dec(up);
+      with data[i] do if v<>nil then begin
+        if up=0 then variableReport.addVariable(v,'local')
+                else variableReport.addVariable(v,'local (+'+intToStr(up)+')');
+      end;
     end;
     system.leaveCriticalSection(cs);
   end;
