@@ -574,25 +574,6 @@ PROCEDURE makeHtmlFromTemplate();
     with outFile do if isOpen then close(handle);
   end;
 
-PROCEDURE disposeFunctionDocMap;
-  VAR keys:T_arrayOfString;
-      doc:P_intrinsicFunctionDocumentation;
-      i:longint;
-  begin
-    keys:=functionDocMap.keySet;
-    for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
-      doc:=functionDocMap.get(keys[i]);
-      dispose(doc,destroy);
-    end;
-    functionDocMap.destroy;
-  end;
-
-PROCEDURE disposeIntrinsicFunctionDocumentation(VAR p:P_intrinsicFunctionDocumentation);
-  begin
-    dispose(p,destroy);
-    p:=nil;
-  end;
-
 PROCEDURE finalizeFunctionDocMap;
   VAR entries:functionDocMap.KEY_VALUE_LIST;
       values:specialize G_list<P_intrinsicFunctionDocumentation>;

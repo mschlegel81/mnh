@@ -332,26 +332,6 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
     exTokens.destroy;
   end;
 
-FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
-  VAR token:P_token;
-  begin
-    token:=stringToTokens(s,location,package,context);
-    if token=nil then exit(nil);
-    if (token^.next=nil) then begin
-      if (token^.tokType=tt_literal) then begin
-        result:=token^.data;
-        result^.rereference;
-      end else result:=nil;
-    end else if context.adapters^.noErrors then begin
-      reduceExpression(token,0,context);
-      if (context.adapters^.noErrors) and (token<>nil) and (token^.tokType=tt_literal) and (token^.next=nil) then begin
-        result:=token^.data;
-        result^.rereference;
-      end else result:=nil;
-    end;
-    context.cascadeDisposeToken(token);
-  end;
-
 FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_scalarLiteral;
   VAR first,temp:P_token;
       package:P_package;

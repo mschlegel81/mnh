@@ -187,7 +187,6 @@ VAR
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
-PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
 IMPLEMENTATION
 FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
   begin
@@ -203,14 +202,6 @@ FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ans
       mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
            result:=C_errorLevelTxt[messageType]+ansistring(location)+' '+message;
       else result:=C_errorLevelTxt[messageType]+' '+message;
-    end;
-  end;
-
-PROCEDURE appendToMultiMessage(VAR message:T_storedMessage; CONST s:ansistring);
-  begin
-    with message do begin
-      setLength(multiMessage,length(multiMessage)+1);
-      multiMessage[length(multiMessage)-1]:=s;
     end;
   end;
 

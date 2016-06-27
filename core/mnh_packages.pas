@@ -88,8 +88,6 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
 
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_preparedFormatStatement;
-FUNCTION stringToLiteral(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_literal;
-
 {$ifdef fullVersion}
 VAR killServersCallback:PROCEDURE;
 {$endif}
