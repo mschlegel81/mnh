@@ -156,7 +156,9 @@ Additionally, comments of the main rule are shown as help on the package on the 
   <li><h3><a href="types.html">Types</a></h4></li>
   <li><h3><a href="operators.html">Operators</a></h4></li>
 <ul>
-<li><h4><a href="#scalarOps"> Scalar operators</a></h4></li>
+<li>
+<h4><a href="#overview"> Overview</a></h4></li>
+<h4><a href="#scalarOps"> Scalar operators</a></h4></li>
 <ul>
   <li><h5><a href="#arithOps"> Arithmetic operators</a></h5></li>
   <li><h5><a href="#compOps"> Comparators </a></h5></li>
@@ -178,6 +180,40 @@ Additionally, comments of the main rule are shown as help on the package on the 
 </ul>
 </div>
 <div class="docContent">
+<h3><a name="overview"> Overview<a></h3>
+<table>
+  <tr><td>Op.</td><td>Precedence</td><td>Name</td></tr>
+<tr><td><code>|</code></td><td>1</td><td> list concatenation</td></tr>
+<tr><td><code>^</code></td><td>2</td><td> potentiation</td></tr>
+<tr><td><code>**</code></td><td>2</td><td> potentiation</td></tr>
+<tr><td><code>*</code></td><td>3</td><td> multiplication</td></tr>
+<tr><td><code>/</code></td><td>3</td><td> division</td></tr>
+<tr><td><code>div</code></td><td>3</td><td> integer division</td></tr>
+<tr><td><code>mod</code></td><td>3</td><td> modulo</td></tr>
+<tr><td><code>+</code></td><td>4</td><td> plus</td></tr>
+<tr><td><code>-</code></td><td>4</td><td> minus</td></tr>
+<tr><td><code>&</code></td><td>5</td><td> string concatenation</td></tr>
+<tr><td><code>=</code></td><td>6</td><td> equals</td></tr>
+<tr><td><code><></code></td><td>6</td><td> not equals</td></tr>
+<tr><td><code>!=</code></td><td>6</td><td> not equals</td></tr>
+<tr><td><code><=</code></td><td>6</td><td> lesser/equals</td></tr>
+<tr><td><code>>=</code></td><td>6</td><td> greater/equals</td></tr>
+<tr><td><code><</code></td><td>6</td><td> lesser</td></tr>
+<tr><td><code>></code></td><td>6</td><td> greater</td></tr>
+<tr><td><code>==</code></td><td>6</td><td> list equals</td></tr>
+<tr><td><code>in</code></td><td>7</td><td> in</td></tr>
+<tr><td><code>+</code></td><td>8</td><td> unary plus</td></tr>
+<tr><td><code>-</code></td><td>8</td><td> unary minus</td></tr>
+<tr><td><code>and</code></td><td>8</td><td> bitwise and</td></tr>
+<tr><td><code>AND</code></td><td>8</td><td> lazy and</td></tr>
+<tr><td><code>orElse </code></td><td>9</td><td> orElse</td></tr>
+<tr><td><code>or</code></td><td>9</td><td> bitwise or</td></tr>
+<tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td></tr>
+<tr><td><code>OR</code></td><td>9</td><td> lazy or</td></tr>
+<tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td></tr>
+<tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr> 
+</table>
+
 <h3><a name="scalarOps"> Scalar operators<a></h3>
 Scalar operators are those operators which take the form: <code>scalar o scalar -> scalar</code><br>
 All of those operators apart from <code>==</code>, <code>AND</code>, <code>OR</code> and <code>orElse</code> are overloaded for lists according to the following prototype (all occuring variables are scalars and none is an expression-literal):<code>
@@ -260,9 +296,26 @@ out> 0.25 //The result is a real number
 </td></tr>
 <tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td>
 Inspired by Pascal.
+Examples: <code>
+<!--mnh-->
+ in> 30 div 12;
+out> 2
+ in> -15 div 12;
+out> -1   
+<!--end-->
+</code>
 </td></tr>
 <tr><td><code>mod</code></td><td><h5>Integer modulo</h5></td></tr><tr><td></td><td>
-Inspired by Pascal.
+Inspired by Pascal.<br>
+This is the "symmetric" modulo operator, i.e. <code><span class="identifier">x</span> <span class="operator">mod</span> <span class="identifier">y</span> = <span class="operator">-</span>(<span class="operator">-</span><span class="identifier">x</span> <span class="operator">mod</span> <span class="identifier">y</span>) = <span class="operator">-</span><span class="identifier">x</span> <span class="operator">mod</span> <span class="operator">-</span><span class="identifier">y</span></code>
+<br>Examples: <code>
+<!--mnh-->
+ in> 30 mod 12;
+out> 6
+ in> -15 mod 12;
+out> -3 
+<!--end-->
+</code>
 </td></tr>
 </table>
 
