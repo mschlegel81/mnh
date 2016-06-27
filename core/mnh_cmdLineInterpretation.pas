@@ -41,7 +41,8 @@ PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
   begin
     {$ifdef fullVersion}
     prepareDocumentation(includePackageDoc);
-    OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'\index.html'),'\','/'));
+    if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
+                         else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
     {$else}
     writeln('Generation of the documentation is only implemented in the full (i.e. non-light) version.');
     {$endif}

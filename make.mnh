@@ -154,18 +154,15 @@ main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->begin
-  allFolders('.').each(f,
-       splitFileName(f).filename in ["nppBackup","backup"]
-       ? begin
+  allFolders('.')
+  .each(f,splitFileName(f).filename in ["nppBackup","backup"] ? f : void)
+  .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
+  .each(f,begin
            print('Deleting ',f);
            deleteDir(f);
-         end
-       : void);
+          end);
   (files(allFolders('.')&'/*.png')|
    files(allFolders('.')&'/*.bak')|
-   files('doc/package_doc/*.html')|
-   files('doc/*.html')|
-   files('doc/*.css')|
    files('install.mnh')|
    files('ensureDemos.mnh')|
    files('ensurePackages.mnh')|
@@ -176,7 +173,13 @@ main('clean')->begin
    files('core/res_ensureNppHighlighting.inc')|
    files('core/res_ensureDemos.inc')|
    files('core/res_ensurePackages.inc')|
-   files('make*.log.txt')).each(file, print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+   allFiles('versions','*.exe')|
+   allFiles('gui','*.exe')|
+   allFiles('consoles','*.exe')|
+   allFiles('.','*debug*.exe')|
+   files('make*.log.txt'))
+  .unique
+  .each(file,print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;   
 end;
      
@@ -207,3 +210,5 @@ main(...)->begin
     ? main(p)
     : void);
 end;
+
+
