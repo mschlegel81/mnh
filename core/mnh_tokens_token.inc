@@ -824,10 +824,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           resultLiteral:=newBoolLiteral(booleanResult);
         end;
         if resultLiteral=nil then begin
-          if aggregatorPresent<>no then begin
-            first^.data:=newErrorLiteral;
-            context.adapters^.raiseError('Error performing finalizing aggregation each-construct - NIL literal encountered',eachLocation);
-          end else first^.data:=newListLiteral;
+          if aggregatorPresent<>no
+          then first^.data:=newVoidLiteral
+          else first^.data:=newListLiteral;
         end else begin
           if resultLiteral^.literalType=lt_listWithError then begin
             disposeLiteral(resultLiteral);
