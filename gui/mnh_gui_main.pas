@@ -27,6 +27,7 @@ TYPE
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
     MenuItem3: TMenuItem;
+    miOpenDocumentationPack: TMenuItem;
     miWrapEcho: TMenuItem;
     mi_insertFilename: TMenuItem;
     miClose: TMenuItem;
@@ -147,6 +148,7 @@ TYPE
     PROCEDURE miMinErrorlevel4Click(Sender: TObject);
     PROCEDURE miMinErrorlevel5Click(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
+    PROCEDURE miOpenDocumentationPackClick(Sender: TObject);
     PROCEDURE miSaveAsClick(Sender: TObject);
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miTimingInfoClick(Sender: TObject);
@@ -774,7 +776,7 @@ PROCEDURE TMnhForm.miHelpClick(Sender: TObject);
 
 PROCEDURE TMnhForm.miHelpExternallyClick(Sender: TObject);
   begin
-    makeAndShowDoc;
+    makeAndShowDoc(false);
   end;
 
 PROCEDURE TMnhForm.miIncFontSizeClick(Sender: TObject);
@@ -976,6 +978,11 @@ PROCEDURE TMnhForm.miOpenClick(Sender: TObject);
     OpenDialog.title:='Open file';
     if OpenDialog.execute and fileExists(OpenDialog.fileName)
     then PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(OpenDialog.fileName);
+  end;
+
+PROCEDURE TMnhForm.miOpenDocumentationPackClick(Sender: TObject);
+  begin
+    makeAndShowDoc(true);
   end;
 
 PROCEDURE TMnhForm.miSaveAsClick(Sender: TObject);

@@ -77,7 +77,7 @@ TYPE
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
 {$ifdef fullVersion}
-PROCEDURE findAndDocumentAllPackages;
+PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
 {$endif}
 PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:T_evaluationContext);
 
@@ -1062,26 +1062,28 @@ FUNCTION T_package.inspect:P_listLiteral;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE findAndDocumentAllPackages;
+PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
   VAR sourceNames:T_arrayOfString;
       i:longint;
       p:T_package;
       context:T_evaluationContext;
   begin
-    ensureDemos;
-    context.createSanboxContext(P_adapters(@nullAdapter));
-    sourceNames:=locateSources;
-    for i:=0 to length(sourceNames)-1 do begin
-      p.create(nil);
-      p.setSourcePath(sourceNames[i]);
+    if includePackageDoc then begin
+      ensureDemos;
+      context.createSanboxContext(P_adapters(@nullAdapter));
+      sourceNames:=locateSources;
+      for i:=0 to length(sourceNames)-1 do begin
+        p.create(nil);
+        p.setSourcePath(sourceNames[i]);
+        nullAdapter.clearErrors;
+        p.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
+        addPackageDoc(p.getDoc);
+        p.destroy;
+      end;
+      context.destroy;
       nullAdapter.clearErrors;
-      p.load(lu_forDocGeneration,context,C_EMPTY_STRING_ARRAY);
-      addPackageDoc(p.getDoc);
-      p.destroy;
     end;
-    makeHtmlFromTemplate;
-    context.destroy;
-    nullAdapter.clearErrors;
+    makeHtmlFromTemplate(includePackageDoc);
   end;
 {$endif}
 

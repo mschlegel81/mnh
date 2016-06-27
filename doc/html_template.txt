@@ -144,7 +144,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <code>  mnh -h </code><i>packageName</i><code>.mnh</code><br>
 
 <h3><a name="defined">Currently defined packages</a></h3>
-<div class="red">Open the documentation from the GUI via Help -> "Open Documentation" to make sure these are up to date.</div>
+<div class="red">Open the documentation from the GUI via Help -> "Open Documentation with packages" to make sure these are up to date.</div>
 <!--USERPKG-->
 </div>
 <!--commonFoot-->

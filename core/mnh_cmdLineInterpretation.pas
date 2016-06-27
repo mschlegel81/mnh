@@ -4,7 +4,7 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mnh_html;
 PROCEDURE parseCmdLine;
-PROCEDURE makeAndShowDoc;
+PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
 
@@ -37,10 +37,10 @@ FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
     result:=fileOrCommandToInterpret;
   end;
 
-PROCEDURE makeAndShowDoc;
+PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
   begin
     {$ifdef fullVersion}
-    findAndDocumentAllPackages;
+    prepareDocumentation(includePackageDoc);
     OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'\index.html'),'\','/'));
     {$else}
     writeln('Generation of the documentation is only implemented in the full (i.e. non-light) version.');
@@ -156,7 +156,7 @@ PROCEDURE parseCmdLine;
                                                                      {$ifdef debugMode}  'D'{$else}'O'{$endif},
                                                                      {$I %FPCTargetOS%}); {$include code_hash.inc} quitImmediate:=true; end
         {$ifdef fullVersion}
-        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc; quitImmediate:=true; end
+        else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc(false); quitImmediate:=true; end
         {$endif}
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);

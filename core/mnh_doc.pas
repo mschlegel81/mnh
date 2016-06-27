@@ -39,7 +39,7 @@ TYPE
   end;
 
 PROCEDURE addPackageDoc(CONST doc:P_userPackageDocumentation);
-PROCEDURE makeHtmlFromTemplate;
+PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
 PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
 PROCEDURE ensureBuiltinDocExamples;
 FUNCTION getHtmlRoot:ansistring;
@@ -387,7 +387,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSou
     if isRelevant then append(example,exampleHtml);
   end;
 
-PROCEDURE makeHtmlFromTemplate();
+PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
@@ -536,7 +536,7 @@ PROCEDURE makeHtmlFromTemplate();
         exit(true);
       end;
       if cmd=PACKAGE_DOC_CMD then begin
-        if outFile.isOpen then writeUserPackageDocumentations(outFile.handle);
+        if outFile.isOpen and includeUserPackages then writeUserPackageDocumentations(outFile.handle);
         exit(true);
       end;
       if cmd=START_BEAUTIFY_CMD then begin
