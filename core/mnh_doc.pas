@@ -360,7 +360,6 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
       for i:=0 to length(example)-1 do result:=result+LineEnding+example[i];
       result:=result+'</code>';
     end;
-    for i:=0 to length(example)-1 do writeln(StripHTML(example[i]));
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string):ansistring;
