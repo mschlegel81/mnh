@@ -1,0 +1,16 @@
+mutable fibMCallCount:=0;
+memoized fibM(i:int)->begin
+  fibMCallCount+=1;
+  i<=1 ? 1 : fibM(i-1)+fibM(i-2);
+end;
+
+mutable fibCallCount:=0;
+fib(i:int)->begin
+  fibCallCount+=1;
+  i<=1 ? 1 : fib(i-1)+fib(i-2);
+end;
+
+//*Memoization demo
+main->print("The memoized function retuns\t",fibM(26),"\tand has been called\t",fibMCallCount,"\ttimes\n"&
+            "The normal function retuns\t",fib(26) ,"\tand has been called\t",fibCallCount ,"\ttimes");
+

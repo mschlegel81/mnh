@@ -1409,6 +1409,8 @@ The magic number is 4641
 +   +   +---+   +   +---+---+   +---+---+   +   +   +---+---+   +---+   +   +---+
 |       |       |               |       |   |   |   |           |       |       |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+The memoized function retuns 196418 and has been called     27 times
+The normal function retuns   196418 and has been called 392835 times
 See http://rosettacode.org/wiki/Monte_Carlo_methods
 n=     10 pi approximated as 2.8      
 n=    100 pi approximated as 3.24     
