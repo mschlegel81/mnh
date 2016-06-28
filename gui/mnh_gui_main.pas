@@ -904,10 +904,10 @@ PROCEDURE TMnhForm.handleBreak;
 
     variablesStringGrid.RowCount:=length(report.dat)+1;
     for i:=0 to length(report.dat)-1 do begin
-      variablesStringGrid.Cells[0,i+1]:=report.dat[i].location;
-      variablesStringGrid.Cells[1,i+1]:=report.dat[i].id;
-      variablesStringGrid.Cells[2,i+1]:=report.dat[i].value^.typeString;
-      variablesStringGrid.Cells[3,i+1]:=report.dat[i].value^.toString;
+      variablesStringGrid.Cells[0,length(report.dat)-i]:=report.dat[i].location;
+      variablesStringGrid.Cells[1,length(report.dat)-i]:=report.dat[i].id;
+      variablesStringGrid.Cells[2,length(report.dat)-i]:=report.dat[i].value^.typeString;
+      variablesStringGrid.Cells[3,length(report.dat)-i]:=report.dat[i].value^.toString;
     end;
 
     first:=stepper.token;
