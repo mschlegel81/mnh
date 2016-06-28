@@ -93,7 +93,7 @@ VAR killServersCallback:PROCEDURE;
 {$endif}
 {$undef include_interface}
 IMPLEMENTATION
-CONST STACK_DEPTH_LIMIT={$ifdef WINDOWS}60000{$else}6000{$endif};
+CONST STACK_DEPTH_LIMIT={$ifdef WINDOWS}60000{$else}3000{$endif};
 VAR pendingTasks     :T_taskQueue;
     timer: specialize G_lazyVar<TEpikTimer>;
 
@@ -1004,18 +1004,10 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
       value:P_literal;
   begin
     r:=importedRules.valueSet;
-    for i:=0 to length(r)-1 do begin
-      if r[i]^.isReportable(value) then begin
-        variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
-      end;
-    end;
+    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
     setLength(r,0);
     r:=packageRules.valueSet;
-    for i:=0 to length(r)-1 do begin
-      if r[i]^.isReportable(value) then begin
-        variableReport.addVariable(r[i]^.id, value, r[i]^.declarationStart);
-      end;
-    end;
+    for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
     setLength(r,0);
   end;
 

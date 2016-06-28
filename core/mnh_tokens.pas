@@ -262,9 +262,14 @@ FUNCTION T_token.hash:T_hashInt;
 
 {$ifdef DEBUGMODE}
 PROCEDURE T_token.validate(CONST recurse:boolean=false);
+  VAR p:P_token;
   begin
     if (data=nil) and (tokType=tt_literal) then raise Exception.create('Encountered literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column));
-    if recurse and (next<>nil) then next^.validate(recurse);
+    p:=next;
+    while recurse and (p<>nil) do begin
+      p^.validate;
+      p:=p^.next;
+    end;
   end;
 {$endif}
 
