@@ -88,6 +88,7 @@ TYPE
     autoscale, logscale: array['x'..'y'] of boolean;
     preserveAspect: boolean;
     relativeFontSize: double;
+    autoscaleFactor: double;
   end;
 
   P_plot =^T_plot;
@@ -415,6 +416,7 @@ PROCEDURE T_plot.setDefaults;
       end;
       preserveAspect:=true;
       relativeFontSize:=10;
+      autoscaleFactor:=1;
     end;
     clear;
     system.leaveCriticalSection(cs);
@@ -478,6 +480,26 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
         end;
       end;
 
+    PROCEDURE harmonizeScale(CONST xStretch,yStretch:double);
+      VAR center, extend: double;
+          xCorrection,yCorrection:double;
+      begin
+        if abs(xStretch/yStretch-1)>0.01 then begin
+          xCorrection:=sqrt(yStretch/xStretch);
+          yCorrection:=1/xCorrection;
+          with scalingOptions do begin
+            center:=(range['x',1]+range['x',0])*0.5;
+            extend:=(range['x',1]-range['x',0])*0.5;
+            range['x', 0]:=center-extend*xCorrection;
+            range['x', 1]:=center+extend*xCorrection;
+            center:=(range['y',1]+range['y',0])*0.5;
+            extend:=(range['y',1]-range['y',0])*0.5;
+            range['y', 0]:=center-extend*yCorrection;
+            range['y', 1]:=center+extend*yCorrection;
+          end;
+        end;
+      end;
+
     begin with scalingOptions do begin
       //Determine current bounding box:-----------------------------------------------------------
       for axis:='x' to 'y' do begin
@@ -490,17 +512,26 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
         else if logscale[axis]                                           then boundingBox[axis,i]:=ln(boundingBox[axis,i])/ln(10);
         range[axis,i]:=boundingBox[axis,i];
       end;
+      if autoscaleFactor<>1 then for axis:='x' to 'y' do if autoscale[axis] then begin
+        tmp:=(range[axis,1]-range[axis,0])*(1-autoscaleFactor);
+        range[axis,0]:=range[axis,0]-tmp;
+        range[axis,1]:=range[axis,1]+tmp;
+      end;
       //-----------------------------------------------------------:Determine current bounding box
       //Adapt bounding box to respect preservation of aspect ratio:-------------------------------
-      if preserveAspect and (autoscale['x'] or autoscale['y']) and (logscale['x'] = logscale['y']) then
-      if autoscale['x'] then begin
-        if autoscale['y'] then begin
-          if (range['x',1]-range['x',0])/(screenWidth-xOffset)>
-             (range['y',1]-range['y',0])/yOffset
-          then autoscaleByX
-          else autoscaleByY;
-        end else autoscaleByX;
-      end else if autoscale['y'] then autoscaleByY;
+      if preserveAspect and (logscale['x'] = logscale['y']) then begin
+        if (autoscale['x'] or autoscale['y']) then begin
+          if autoscale['x'] then begin
+            if autoscale['y'] then begin
+              if (range['x',1]-range['x',0])/(screenWidth-xOffset)>
+                 (range['y',1]-range['y',0])/yOffset
+              then autoscaleByX
+              else autoscaleByY;
+            end else autoscaleByX;
+          end else if autoscale['y'] then autoscaleByY;
+        end else harmonizeScale((range['x',1]-range['x',0])/(screenWidth-xOffset),
+                                (range['y',1]-range['y',0])/yOffset);
+      end;
       //-------------------------------:Adapt bounding box to respect preservation of aspect ratio
       for axis:='x' to 'y' do begin
         if range[axis,1]<range[axis,0] then begin
@@ -741,6 +772,7 @@ PROCEDURE T_plot.setScalingOptions(CONST value: T_scalingOptions);
       end;
       preserveAspect:=(logscale['x'] = logscale['y']) and value.preserveAspect;
       relativeFontSize:=value.relativeFontSize;
+      autoscaleFactor:=value.autoscaleFactor;
     end;
     system.leaveCriticalSection(cs);
   end;

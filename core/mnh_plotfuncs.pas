@@ -96,18 +96,19 @@ FUNCTION getOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
     if (params=nil) or (params^.size=0) then begin
       opt:=context.adapters^.plot.options;
       result:=newListLiteral^
-        .append(newListLiteral^.appendString('x0'            )^.appendReal(opt.range['x',0]),false)^
-        .append(newListLiteral^.appendString('x1'            )^.appendReal(opt.range['x',1]),false)^
-        .append(newListLiteral^.appendString('y0'            )^.appendReal(opt.range['y',0]),false)^
-        .append(newListLiteral^.appendString('y1'            )^.appendReal(opt.range['y',1]),false)^
-        .append(newListLiteral^.appendString('fontsize'      )^.appendReal(opt.relativeFontSize),false)^
-        .append(newListLiteral^.appendString('preserveAspect')^.appendBool(opt.preserveAspect),false)^
-        .append(newListLiteral^.appendString('autoscaleX'    )^.appendBool(opt.autoscale['x']),false)^
-        .append(newListLiteral^.appendString('autoscaleY'    )^.appendBool(opt.autoscale['y']),false)^
-        .append(newListLiteral^.appendString('logscaleX'     )^.appendBool(opt.logscale['x']),false)^
-        .append(newListLiteral^.appendString('logscaleY'     )^.appendBool(opt.logscale['y']),false)^
-        .append(newListLiteral^.appendString('axisStyleX'    )^.appendInt(opt.axisStyle['x']),false)^
-        .append(newListLiteral^.appendString('axisStyleY'    )^.appendInt(opt.axisStyle['y']),false);
+        .append(newListLiteral^.appendString('x0'             )^.appendReal(opt.range['x',0]),false)^
+        .append(newListLiteral^.appendString('x1'             )^.appendReal(opt.range['x',1]),false)^
+        .append(newListLiteral^.appendString('y0'             )^.appendReal(opt.range['y',0]),false)^
+        .append(newListLiteral^.appendString('y1'             )^.appendReal(opt.range['y',1]),false)^
+        .append(newListLiteral^.appendString('fontsize'       )^.appendReal(opt.relativeFontSize),false)^
+        .append(newListLiteral^.appendString('preserveAspect' )^.appendBool(opt.preserveAspect),false)^
+        .append(newListLiteral^.appendString('autoscaleX'     )^.appendBool(opt.autoscale['x']),false)^
+        .append(newListLiteral^.appendString('autoscaleY'     )^.appendBool(opt.autoscale['y']),false)^
+        .append(newListLiteral^.appendString('autoscaleFactor')^.appendReal(opt.autoscaleFactor),false)^
+        .append(newListLiteral^.appendString('logscaleX'      )^.appendBool(opt.logscale['x']),false)^
+        .append(newListLiteral^.appendString('logscaleY'      )^.appendBool(opt.logscale['y']),false)^
+        .append(newListLiteral^.appendString('axisStyleX'     )^.appendInt(opt.axisStyle['x']),false)^
+        .append(newListLiteral^.appendString('axisStyleY'     )^.appendInt(opt.axisStyle['y']),false);
     end;
   end;
 
@@ -137,6 +138,9 @@ FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
       end else
       if (key='fontsize'      ) and (value^.literalType in [lt_int,lt_real]) then begin
         f:=fReal(value); if isNan(f) then fail else opt.relativeFontSize:=f;
+      end else
+      if (key='autoscaleFactor') and (value^.literalType in [lt_int,lt_real]) then begin
+        f:=fReal(value); if isNan(f) or (f<1E-3) then fail else opt.autoscaleFactor:=f;
       end else
       if (key='preserveAspect') and (value^.literalType=lt_boolean) then begin
         opt.preserveAspect:=P_boolLiteral(value)^.value;
