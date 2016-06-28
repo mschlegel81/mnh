@@ -484,11 +484,10 @@ PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_lite
   begin
     j:=0;
     for i:=0 to length(dat)-1 do if dat[i].id<>id then begin
-      dat[i]:=dat[j];
+      dat[j]:=dat[i];
       inc(j);
     end;
     setLength(dat,j);
-
     setLength(dat,length(dat)+1);
     dat[length(dat)-1].id:=id;
     dat[length(dat)-1].value:=value;
