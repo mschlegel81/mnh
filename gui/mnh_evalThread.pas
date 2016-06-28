@@ -203,6 +203,7 @@ PROCEDURE T_evaluator.reEvaluateWithGUI;
       leaveCriticalSection(cs);
       exit;
     end;
+    mainParameters:=mnh_cmdLineInterpretation.mainParameters;
     request:=er_reEvaluateWithGUI;
     ensureThread;
     leaveCriticalSection(cs);
