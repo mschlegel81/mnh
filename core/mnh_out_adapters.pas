@@ -136,17 +136,19 @@ TYPE
       waitingForGUI:boolean;
 
       breakpoints:array of T_searchTokenLocation;
-      breakSoonest:boolean;
-      stepOutPending:boolean;
-      stepInPending:boolean;
-      stepPending:boolean;
+      state:(breakSoonest,
+             breakOnLineChange,
+             breakOnStepOut,
+             breakOnStepIn,
+             runUntilBreakpoint,
+             dontBreakAtAll);
       stepLevel:longint;
+      lineChanged:boolean;
 
       contextPointer:pointer;
       tokenPointer:pointer;
       stackPointer:pointer;
 
-      cancelling:boolean;
       currentLine:T_tokenLocation;
       currentLevel:longint;
       cs:TRTLCriticalSection;
@@ -727,11 +729,10 @@ CONSTRUCTOR T_stepper.create;
   begin
     system.initCriticalSection(cs);
     setLength(breakpoints,0);
-    stepOutPending:=false;
-    stepInPending:=false;
-    stepPending:=false;
+    state:=breakSoonest;
     contextPointer:=nil;
-    cancelling:=false;
+    tokenPointer:=nil;
+    stackPointer:=nil;
   end;
 
 DESTRUCTOR T_stepper.destroy;
@@ -740,7 +741,6 @@ DESTRUCTOR T_stepper.destroy;
   end;
 
 PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext, pointerToStack: pointer);
-  VAR lineChanged:boolean;
   FUNCTION breakpointEncountered:boolean;
     VAR i:longint;
     begin
@@ -752,34 +752,22 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
 
   begin
     system.enterCriticalSection(cs);
-    if cancelling then begin
+    if state=dontBreakAtAll then begin
       system.leaveCriticalSection(cs);
       exit;
     end;
-    lineChanged:=(currentLine.package<>location.package) or (currentLine.line<>location.line);
-    {$ifdef DEBUGMODE}
-    writeln('Step; breakSoonest  : ', breakSoonest);
-    writeln('      stepOutPending: ', stepOutPending);
-    writeln('      stepInPending : ', stepInPending );
-    writeln('      stepPending   : ', stepPending   );
-    writeln('      stepLevel     : ', stepLevel,'/',currentLevel );
-    writeln('      lineChanged   : ', lineChanged,' ',location.line);
-    writeln('      @breakpoint   : ', breakpointEncountered);
-    writeln('Entry condition: ',breakSoonest,' ',(stepPending and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and lineChanged)),' ',((lineChanged or (currentLevel<>stepLevel)) and breakpointEncountered));
-    {$endif}
-    if breakSoonest or
-      (stepPending and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and lineChanged)) or
+    lineChanged:=lineChanged or (currentLine.package<>location.package) or (currentLine.line<>location.line);
+    if (state=breakSoonest) or
+       (state=breakOnStepIn) and (currentLevel>stepLevel) or
+       (state=breakOnStepOut) and (currentLevel<stepLevel) or
+      ((state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and lineChanged)) or
       ((lineChanged or (currentLevel<>stepLevel)) and breakpointEncountered) then begin
+      lineChanged:=false;
       stepLevel:=currentLevel;
       currentLine:=location;
       contextPointer:=pointerToContext;
       tokenPointer:=pointerToFirst;
       stackPointer:=pointerToStack;
-
-      stepInPending:=false;
-      stepOutPending:=false;
-      stepPending:=false;
-      breakSoonest:=false;
       waitingForGUI:=true;
       repeat
         system.leaveCriticalSection(cs);
@@ -798,17 +786,6 @@ PROCEDURE T_stepper.steppingIn;
     writeln('Stepping into level: ',currentLevel);
     writeln('          steplevel: ',stepLevel);
     {$endif}
-    if stepInPending then begin
-      stepPending:=true;
-      stepLevel:=currentLevel;
-      breakSoonest:=true;
-      stepInPending:=false;
-    end else if stepPending and (stepLevel=currentLevel) then begin
-      breakSoonest:=true;
-      currentLine.package:=nil;
-      currentLine.column:=0;
-      currentLine.line:=0;
-    end;
     system.leaveCriticalSection(cs);
   end;
 
@@ -820,25 +797,13 @@ PROCEDURE T_stepper.steppingOut;
     writeln('Stepping out to level: ',currentLevel);
     writeln('            steplevel: ',stepLevel);
     {$endif}
-    if stepOutPending  and (stepLevel=currentLevel) then begin
-      breakSoonest:=true;
-      stepPending:=true;
-      stepLevel:=currentLevel;
-      stepOutPending:=false;
-    end;
-    if stepPending and (stepLevel=currentLevel) then begin
-      breakSoonest:=true;
-      currentLine.package:=nil;
-      currentLine.column:=0;
-      currentLine.line:=0;
-    end;
     system.leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_stepper.doStep;
   begin
     system.enterCriticalSection(cs);
-    stepPending:=true;
+    state:=breakOnLineChange;
     stepLevel:=currentLevel;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
@@ -847,8 +812,7 @@ PROCEDURE T_stepper.doStep;
 PROCEDURE T_stepper.doMicrostep;
   begin
     system.enterCriticalSection(cs);
-    stepPending:=true;
-    breakSoonest:=true;
+    state:=breakSoonest;
     stepLevel:=currentLevel;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
@@ -857,8 +821,7 @@ PROCEDURE T_stepper.doMicrostep;
 PROCEDURE T_stepper.doStop;
   begin
     system.enterCriticalSection(cs);
-    cancelling:=true;
-    breakSoonest:=false;
+    state:=dontBreakAtAll;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -867,17 +830,15 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
   begin
     system.enterCriticalSection(cs);
     if not(continue) then begin
-      stepPending:=(length(breakpoints)=0);
+      lineChanged:=true;
       stepLevel:=0;
-      cancelling:=false;
       currentLevel:=0;
       currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
-    end;
-    breakSoonest:=false;
-    stepInPending:=false;
-    stepOutPending:=false;
+      if (length(breakpoints)=0) then state:=breakOnLineChange
+                                 else state:=runUntilBreakpoint;
+    end else state:=runUntilBreakpoint;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -903,8 +864,7 @@ PROCEDURE T_stepper.addBreakpoint(CONST fileName:string; CONST line: longint);
 PROCEDURE T_stepper.doStepInto;
   begin
     system.enterCriticalSection(cs);
-    stepInPending:=true;
-    breakSoonest:=false;
+    state:=breakOnStepIn;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
@@ -912,8 +872,7 @@ PROCEDURE T_stepper.doStepInto;
 PROCEDURE T_stepper.doStepOut;
   begin
     system.enterCriticalSection(cs);
-    stepOutPending:=true;
-    breakSoonest:=false;
+    state:=breakOnStepOut;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
   end;
