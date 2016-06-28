@@ -68,13 +68,14 @@ USE testLog,
     '../demos/piPlots.mnh',
     '../demos/rk4.mnh',
     '../demos/root.mnh',
-    //The last 6 imports are plotting
+    //The last 7 imports are plotting
     '../demos/barnsleyFern.mnh',
     '../demos/fractalPlant.mnh',
     '../demos/kochCurve.mnh',
     '../demos/sierpinskiCurve.mnh',
     '../demos/travellingSalesmanProblem.mnh',
-    '../demos/turtleGfx.mnh';
+    '../demos/turtleGfx.mnh',
+    '../demos/heart.mnh';
 
 private testPlotting(call:expression(0), file:string)->begin
   local filePath:=(myPath.splitFileName.directory)&'/'&file;
@@ -106,9 +107,9 @@ begin
   collectOutput;
   toId('24.main')('demo');
   diff.main('test');
-  inspect.uses.getInner(0).leading(6).tail(3).each(import,toId(import&'.main'));
+  inspect.uses.getInner(0).leading(7).tail(3).each(import,toId(import&'.main'));
   canPlot
-  ? inspect.uses.getInner(0).trailing(6).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
+  ? inspect.uses.getInner(0).trailing(7).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
   : void;
   examplesFile==''
   ? void

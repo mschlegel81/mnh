@@ -3005,6 +3005,7 @@ Path length after construction is 1534.011
 Path length after polishing is    1501.698
 Hash of regTest/../demos/travellingSalesmanProblem.png is DEE2A0BB
 Hash of regTest/../demos/turtleGfx.png is 427DABDB
+Hash of regTest/../demos/heart.png is 9B4CB332
 Examples file has 456 lines
  in> arity({3});
 out> 0
@@ -3470,4 +3471,4 @@ out> 1
  in> toReal(3);
 out> 3.0
  in> getOptions;
-out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
+out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['autoscaleFactor',1.0],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
