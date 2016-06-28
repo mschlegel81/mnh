@@ -240,7 +240,7 @@ TYPE
 VAR MnhForm: TMnhForm;
 
 PROCEDURE lateInitialization;
-PROCEDURE formCycle(CONST ownId:longint);
+PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
@@ -522,7 +522,7 @@ PROCEDURE TMnhForm.FormDropFiles(Sender: TObject; CONST FileNames: array of stri
 
 PROCEDURE TMnhForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) then formCycle(0)
+    if (key=9) and (ssCtrl in Shift) then formCycle(0,ssShift in Shift)
     else if (key=87) and (Shift=[ssCtrl]) then miCloseClick(Sender);
   end;
 
@@ -1452,11 +1452,20 @@ PROCEDURE TMnhForm.processFileHistory;
     end;
   end;
 
-PROCEDURE formCycle(CONST ownId:longint);
+PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
+  VAR newId:byte;
+      form:TForm;
   begin
-    if      ownId=0 then begin plotForm.Show;  plotForm.BringToFront;  plotForm.SetFocus; end
-    else if ownId=1 then begin tableForm.Show; tableForm.BringToFront; tableForm.SetFocus; end
-                    else begin MnhForm.Show;   MnhForm.BringToFront;   MnhForm.SetFocus; end;
+    if next then newId:=(ownId and 255+1) mod 3
+            else newId:=(ownId and 255+2) mod 3;
+    case newId of
+      0: form:=MnhForm;
+      1: form:=plotForm;
+      2: form:=tableForm;
+    end;
+    form.Show;
+    form.BringToFront;
+    form.SetFocus;
   end;
 
 PROCEDURE lateInitialization;

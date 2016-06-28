@@ -78,7 +78,7 @@ TYPE
 VAR
   plotForm: TplotForm;
   guiAdapters:P_adapters;
-  formCycleCallback: PROCEDURE(CONST ownId:longint) = nil;
+  formCycleCallback: PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
 
 IMPLEMENTATION
 VAR plotSubsystem:record
@@ -102,7 +102,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1);
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1,ssShift in shift);
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);

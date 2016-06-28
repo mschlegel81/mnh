@@ -55,7 +55,7 @@ TYPE
 
 VAR
   tableForm: TtableForm;
-  formCycleCallback    : PROCEDURE(CONST ownId:longint) = nil;
+  formCycleCallback    : PROCEDURE(CONST ownId:longint; CONST next:boolean) = nil;
 
 IMPLEMENTATION
 {$R *.lfm}
@@ -99,7 +99,7 @@ end;
 
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2);
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2,ssShift in Shift);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
