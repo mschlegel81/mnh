@@ -69,6 +69,7 @@ TYPE
   T_sampleRow = object
     style: T_style;
     sample: T_dataRow;
+    myBox: array[false..true] of T_boundingBox;
     CONSTRUCTOR create(CONST index: byte; CONST row:T_dataRow);
     PROCEDURE getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
     DESTRUCTOR destroy;
@@ -147,26 +148,43 @@ VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 
 CONSTRUCTOR T_sampleRow.create(CONST index: byte; CONST row:T_dataRow);
   VAR i:longint;
+      x,y:double;
+      logscale:boolean;
+      axis:char;
   begin
     style.create(index);
     setLength(sample, length(row));
-    for i:=0 to length(sample)-1 do sample[i]:=row[i];
+    for logscale:=false to true do for axis:='x' to 'y' do begin
+      myBox[logscale,axis,0]:= infinity;
+      myBox[logscale,axis,1]:=-infinity;
+    end;
+    for i:=0 to length(sample)-1 do begin
+      sample[i]:=row[i];
+      x:=sample[i,0];
+      y:=sample[i,1];
+      for logscale:=false to true do begin
+        if isNan(x) or isNan(y) then begin
+          x:=Nan;
+          y:=Nan;
+        end;
+        if not(isNan(x)) and not(isInfinite(x)) and (x<myBox[logscale,'x',0]) then myBox[logscale,'x',0]:=x;
+        if not(isNan(x)) and not(isInfinite(x)) and (x>myBox[logscale,'x',1]) then myBox[logscale,'x',1]:=x;
+        if not(isNan(y)) and not(isInfinite(y)) and (y<myBox[logscale,'y',0]) then myBox[logscale,'y',0]:=y;
+        if not(isNan(y)) and not(isInfinite(y)) and (y>myBox[logscale,'y',1]) then myBox[logscale,'y',1]:=y;
+        if (x<=1E-100) then x:=Nan;
+        if (y<=1E-100) then y:=Nan;
+      end;
+    end;
+    for logscale:=false to true do for axis:='x' to 'y' do for i:=0 to 1 do
+      if isInfinite(myBox[logscale,axis,i]) then myBox[logscale,axis,i]:=Nan;
   end;
 
 PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
-  VAR i: longint;
-      x, y: double;
   begin
-    for i:=0 to length(sample)-1 do begin
-      x:=sample[i, 0];
-      if logX and (x<=1E-100) then x:=Nan;
-      y:=sample[i, 1];
-      if logY and (y<=1E-100) then y:=Nan;
-      if not(isNan(x)) and not(isInfinite(x)) and (x<box['x',0]) then box['x',0]:=x;
-      if not(isNan(x)) and not(isInfinite(x)) and (x>box['x',1]) then box['x',1]:=x;
-      if not(isNan(y)) and not(isInfinite(y)) and (y<box['y',0]) then box['y',0]:=y;
-      if not(isNan(y)) and not(isInfinite(y)) and (y>box['y',1]) then box['y',1]:=y;
-    end;
+    if not(isNan(myBox[logX,'x',0])) and (myBox[logX,'x',0]<box['x',0]) then box['x',0]:=myBox[logX,'x',0];
+    if not(isNan(myBox[logX,'x',1])) and (myBox[logX,'x',1]>box['x',1]) then box['x',1]:=myBox[logX,'x',1];
+    if not(isNan(myBox[logY,'y',0])) and (myBox[logY,'y',0]<box['y',0]) then box['y',0]:=myBox[logY,'y',0];
+    if not(isNan(myBox[logY,'y',1])) and (myBox[logY,'y',1]>box['y',1]) then box['y',1]:=myBox[logY,'y',1];
   end;
 
 DESTRUCTOR T_sampleRow.destroy;
@@ -654,7 +672,7 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
         then logRange:=0.5*(log10(range['x',1]-range['x',0])
                            +log10(range['y',1]-range['y',0]))
         else logRange:=log10(range[axis,1]-range[axis,0]);
-        i:=round(logRange-1.8);
+         i:=round(logRange-1.8);
         initLinearTics(i,10,1);
       end;
     end; end;
