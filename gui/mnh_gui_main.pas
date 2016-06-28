@@ -245,6 +245,7 @@ IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
     guiAdapters: T_adapters;
     tempAdapter: P_abstractOutAdapter;
+    closeGuiFlag:boolean=false;
 {$R *.lfm}
 {$define includeImplementation}
 {$include editorMeta.inc}
@@ -1211,7 +1212,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
     if reEvaluationWithGUIrequired then begin
       Hide;
-      if not(isEvaluationRunning) and not(plotForm.showing) and not(tableForm.showing) then begin
+      if not(isEvaluationRunning) and (not(plotForm.showing) and not(tableForm.showing) or closeGuiFlag) then begin
         guiAdapters.setExitCode;
         close;
       end;
@@ -1473,7 +1474,14 @@ PROCEDURE lateInitialization;
     mnh_evalThread.initUnit(@guiAdapters);
   end;
 
+FUNCTION closeGUI_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=newVoidLiteral;
+    closeGuiFlag:=true;
+  end;
+
 INITIALIZATION
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'closeGui',@closeGUI_impl,'closeGui;#Closes the GUI even if plot window or table is showing#Returns void');
   guiOutAdapter.create;
   guiAdapters.create;
   mnh_plotForm.guiAdapters:=@guiAdapters;
