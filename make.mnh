@@ -91,10 +91,6 @@ exeHasWrongVersion(FI) ? begin
   printf('Compiling %-25s logging to %s',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
   moveFile(outName,exeName);
-  full OR debug
-  ? void
-  : execPipeless('..\upx.exe',['-9',binName(FI)]);
-  delp;
   not(exeHasWrongVersion(FI));
 end : true;
 
@@ -125,9 +121,11 @@ main('distro')->begin
       buildOk and testOk;
     end,
     AND) ? begin
+    execPipeless('..\upx.exe',['-9','mnh_light.exe']);    
     call7z(['mnh.exe','mnh_light.exe'],'64bit');
     movePairs.each(pair,verboseMove@pair,AND)
     ? begin
+        execPipeless('..\upx.exe',['-9','mnh_light.exe']);    
         call7z(['mnh.exe','mnh_light.exe'],'32bit');
         movePairs.get([3..0]).each(pair,verboseMove@(pair.get([1,0])));
       end
