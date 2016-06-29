@@ -229,8 +229,11 @@ DESTRUCTOR T_textFileOutAdapter.destroy;
 PROCEDURE T_textFileOutAdapter.append(CONST message: T_storedMessage);
   begin
     if (message.messageType<>mt_clearConsole) then inherited append(message);
-    with storedMessages[length(storedMessages)-1] do if messageType in [mt_el3_stackTrace] then simpleMessage:=replaceAll(simpleMessage,#28,' ');
-    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then flush;
+    {$ifndef DEBUGMODE}
+    //Debugmode: flush immediately
+    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then
+    {$endif}
+    flush;
   end;
 
 PROCEDURE T_textFileOutAdapter.flush;
