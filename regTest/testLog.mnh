@@ -1,6 +1,6 @@
 startOfEvaluation:=time;
 
-private memoized canPlot(exe)->exe.exec(['-cmd','-echo','-time','-el5',"print('plot.plot' in listBuiltin)"])==['true'];
+private memoized canPlot(exe)->exe.exec(['-cmd','-echo','-time','-el5',"print('plot.plot' in listBuiltin)"]).head=='true';
 canPlot:='plot.plot' in listBuiltin;
 
 private codeHash(exe)->exec(exe,['-codeHash']).head;
