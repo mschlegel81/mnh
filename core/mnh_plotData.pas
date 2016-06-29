@@ -69,9 +69,8 @@ TYPE
   T_sampleRow = object
     style: T_style;
     sample: T_dataRow;
-    myBox: array[false..true] of T_boundingBox;
     CONSTRUCTOR create(CONST index: byte; CONST row:T_dataRow);
-    PROCEDURE getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
+    PROCEDURE getBoundingBox(CONST logX, logY, autoscaleX, autoscaleY: boolean; VAR box: T_boundingBox);
     DESTRUCTOR destroy;
   end;
 
@@ -151,43 +150,26 @@ VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
 
 CONSTRUCTOR T_sampleRow.create(CONST index: byte; CONST row:T_dataRow);
   VAR i:longint;
-      x,y:double;
-      logscale:boolean;
-      axis:char;
   begin
     style.create(index);
     setLength(sample, length(row));
-    for logscale:=false to true do for axis:='x' to 'y' do begin
-      myBox[logscale,axis,0]:= infinity;
-      myBox[logscale,axis,1]:=-infinity;
-    end;
-    for i:=0 to length(sample)-1 do begin
-      sample[i]:=row[i];
-      x:=sample[i,0];
-      y:=sample[i,1];
-      for logscale:=false to true do begin
-        if isNan(x) or isNan(y) then begin
-          x:=Nan;
-          y:=Nan;
-        end;
-        if not(isNan(x)) and not(isInfinite(x)) and (x<myBox[logscale,'x',0]) then myBox[logscale,'x',0]:=x;
-        if not(isNan(x)) and not(isInfinite(x)) and (x>myBox[logscale,'x',1]) then myBox[logscale,'x',1]:=x;
-        if not(isNan(y)) and not(isInfinite(y)) and (y<myBox[logscale,'y',0]) then myBox[logscale,'y',0]:=y;
-        if not(isNan(y)) and not(isInfinite(y)) and (y>myBox[logscale,'y',1]) then myBox[logscale,'y',1]:=y;
-        if (x<=1E-100) then x:=Nan;
-        if (y<=1E-100) then y:=Nan;
-      end;
-    end;
-    for logscale:=false to true do for axis:='x' to 'y' do for i:=0 to 1 do
-      if isInfinite(myBox[logscale,axis,i]) then myBox[logscale,axis,i]:=Nan;
+    for i:=0 to length(row)-1 do sample[i]:=row[i];
   end;
 
-PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY: boolean; VAR box: T_boundingBox);
+PROCEDURE T_sampleRow.getBoundingBox(CONST logX, logY, autoscaleX, autoscaleY: boolean; VAR box: T_boundingBox);
+  VAR i:longint;
+      x,y:double;
   begin
-    if not(isNan(myBox[logX,'x',0])) and (myBox[logX,'x',0]<box['x',0]) then box['x',0]:=myBox[logX,'x',0];
-    if not(isNan(myBox[logX,'x',1])) and (myBox[logX,'x',1]>box['x',1]) then box['x',1]:=myBox[logX,'x',1];
-    if not(isNan(myBox[logY,'y',0])) and (myBox[logY,'y',0]<box['y',0]) then box['y',0]:=myBox[logY,'y',0];
-    if not(isNan(myBox[logY,'y',1])) and (myBox[logY,'y',1]>box['y',1]) then box['y',1]:=myBox[logY,'y',1];
+    for i:=0 to length(sample)-1 do begin
+      x:=sample[i,0]; if (x<=1E-100) and logX then x:=Nan;
+      y:=sample[i,1]; if (y<=1E-100) and logY then y:=Nan;
+      if isNan(x) or (isInfinite(x)) or not(autoscaleX) and ((x<box['x',0]) or (x>box['x',1])) or
+         isNan(y) or (isInfinite(y)) or not(autoscaleY) and ((y<box['y',0]) or (y>box['y',1])) then continue;
+      if (x<box['x',0]) then box['x',0]:=x;
+      if (x>box['x',1]) then box['x',1]:=x;
+      if (y<box['y',0]) then box['y',0]:=y;
+      if (y>box['y',1]) then box['y',1]:=y;
+    end;
   end;
 
 DESTRUCTOR T_sampleRow.destroy;
@@ -527,11 +509,15 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
 
     begin with scalingOptions do begin
       //Determine current bounding box:-----------------------------------------------------------
-      for axis:='x' to 'y' do begin
+      for axis:='x' to 'y' do
+      if autoscale[axis] then begin
         boundingBox[axis,0]:= infinity;
         boundingBox[axis,1]:=-infinity;
+      end else begin
+        boundingBox[axis,0]:=oex(range[axis,0]);
+        boundingBox[axis,1]:=oex(range[axis,1]);
       end;
-      for i:=0 to length(row)-1 do row[i].getBoundingBox(logscale['x'], logscale['y'], boundingBox);
+      for i:=0 to length(row)-1 do row[i].getBoundingBox(logscale['x'], logscale['y'],autoscale['x'],autoscale['y'],boundingBox);
       for axis:='x' to 'y' do if autoscale[axis] then for i:=0 to 1 do begin
         if isNan(boundingBox[axis,i]) or isInfinite(boundingBox[axis,i]) then boundingBox[axis,i]:=         range[axis,i]
         else if logscale[axis]                                           then boundingBox[axis,i]:=ln(boundingBox[axis,i])/ln(10);
@@ -731,8 +717,8 @@ FUNCTION T_plot.realToScreen(CONST x, y: double): T_point;
 
 FUNCTION T_plot.screenToReal(CONST x, y: longint): T_point;
   begin with scalingOptions do begin
-    result[0]:=oex((x-xOffset)/(screenWidth-xOffset)*(range['x',1]-range['x',0])+range['x',0]);
-    result[1]:=oey((y-yOffset)/(-yOffset)           *(range['y',1]-range['y',0])+range['y',0]);
+    result[0]:=oex((x-scaledXOffset)/(screenWidth-scaledXOffset)*(range['x',1]-range['x',0])+range['x',0]);
+    result[1]:=oey((y-scaledYOffset)/(-scaledYOffset)           *(range['y',1]-range['y',0])+range['y',0]);
   end; end;
 
 FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
@@ -1301,10 +1287,12 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
     end;
     renderInternally(plotImage.width*supersampling,plotImage.height*supersampling);
     scale(renderImage,plotImage,1/supersampling);
+
+    //set screen size to fix GUI interaction (panning, zooming, etc.)
     scaledXOffset:=xOffset/supersampling;
     scaledYOffset:=yOffset/supersampling;
-    //set screen size to fix GUI interaction (panning, zooming, etc.)
-    setScreenSize(plotImage.width,plotImage.height,true);
+    screenHeight:=screenHeight div supersampling;
+    screenWidth:=screenWidth div supersampling;
   end;
 
 PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
