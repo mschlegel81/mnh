@@ -2448,7 +2448,7 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
             exit(result);
           end;
         end;
-        if fallback=nil then exit(newListLiteral);
+        if fallback=nil then exit(newVoidLiteral);
         result:=fallback;
         fallback^.rereference;
       end;
