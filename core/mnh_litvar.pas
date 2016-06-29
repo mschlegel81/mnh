@@ -4,7 +4,7 @@ UNIT mnh_litVar;
 {$endif}
 {$Q-}
 INTERFACE
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes{$ifdef DEBUGMODE}, EpikTimer{$endif};
 CONST DESERIALIZE_BASE95_ID='deserialize95';
       DESERIALIZE_BIN_ID='deserialize';
 TYPE
@@ -315,8 +315,11 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
 IMPLEMENTATION
 VAR
+  {$ifdef DEBUGMODE}
+  literalAllocCount:array[T_literalType] of longint=(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+  {$endif}
   boolLit: array[false..true] of T_boolLiteral;
-  intLit: array[-127..128] of T_intLiteral;
+  intLit: array[-100..4000] of T_intLiteral;
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
 
@@ -372,27 +375,43 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
       result:=@intLit[value];
       result^.rereference;
     end else begin
+      {$ifdef DEBUGMODE}
+      InterLockedIncrement(literalAllocCount[lt_int]);
+      {$endif}
       new(result, create(value));
     end;
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
+  VAR i:longint;
   begin
     new(result, create(value));
+    {$ifdef DEBUGMODE}
+    InterLockedIncrement(literalAllocCount[lt_real]);
+    {$endif}
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
+    {$ifdef DEBUGMODE}
+    InterLockedIncrement(literalAllocCount[lt_string]);
+    {$endif}
     new(result, create(value));
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
   begin
+    {$ifdef DEBUGMODE}
+    InterLockedIncrement(literalAllocCount[lt_expression]);
+    {$endif}
     new(result, create(value));
   end;
 
 FUNCTION newListLiteral: P_listLiteral;
   begin
+    {$ifdef DEBUGMODE}
+    InterLockedIncrement(literalAllocCount[lt_list]);
+    {$endif}
     new(result, create);
   end;
 
@@ -516,32 +535,32 @@ DESTRUCTOR G_literalKeyMap.destroy;
   end;
 
 PROCEDURE G_literalKeyMap.rehashGrowing;
-    VAR oldLen:longint;
-        temp:KEY_VALUE_LIST;
-        c0,c1,i,j,k:longint;
-    begin
-      oldLen:=length(dat);
-      setLength(dat,oldLen*2);
-      for i:=0 to oldLen-1 do begin
-        temp:=dat[i];
-        setLength(dat[i+oldLen],length(dat[i]));
-        c0:=0;
-        c1:=0;
-        for j:=0 to length(temp)-1 do begin
-          k:=temp[j].key^.hash and (length(dat)-1);
-          if k=i then begin
-            dat[i][c0]:=temp[j];
-            inc(c0);
-          end else begin
-            dat[k][c1]:=temp[j];
-            inc(c1);
-          end;
+  VAR oldLen:longint;
+      temp:KEY_VALUE_LIST;
+      c0,c1,i,j,k:longint;
+  begin
+    oldLen:=length(dat);
+    setLength(dat,oldLen*2);
+    for i:=0 to oldLen-1 do begin
+      temp:=dat[i];
+      setLength(dat[i+oldLen],length(dat[i]));
+      c0:=0;
+      c1:=0;
+      for j:=0 to length(temp)-1 do begin
+        k:=temp[j].key^.hash and (length(dat)-1);
+        if k=i then begin
+          dat[i][c0]:=temp[j];
+          inc(c0);
+        end else begin
+          dat[k][c1]:=temp[j];
+          inc(c1);
         end;
-        setLength(dat[i       ],c0);
-        setLength(dat[i+oldLen],c1);
-        setLength(temp,0);
       end;
+      setLength(dat[i       ],c0);
+      setLength(dat[i+oldLen],c1);
+      setLength(temp,0);
     end;
+  end;
 
 FUNCTION G_literalKeyMap.put(CONST key:P_literal; CONST value:VALUE_TYPE):boolean;
   VAR binIdx:longint;
@@ -2687,9 +2706,7 @@ FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CO
     wrapper.destroy; //implicitly destroys stream
   end;
 
-
-VAR
-  i: longint;
+VAR i: longint;
 
 INITIALIZATION
   boolLit[false].create(false);
@@ -2707,4 +2724,13 @@ FINALIZATION
   errLit.destroy;
   voidLit.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
+  {$ifdef DEBUGMODE}
+  writeln('Total allocated literals:');
+  writeln('   int       : ',literalAllocCount[lt_int       ]);
+  writeln('   real      : ',literalAllocCount[lt_real      ]);
+  writeln('   string    : ',literalAllocCount[lt_string    ]);
+  writeln('   expression: ',literalAllocCount[lt_expression]);
+  writeln('   list      : ',literalAllocCount[lt_list      ]);
+  {$endif}
+
 end.

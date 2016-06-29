@@ -127,9 +127,21 @@ FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_to
 
     freqMap.create;
     for i:=0 to list^.size-1 do freqMap.put(list^.value(i),freqMap.get(list^.value(i),0)+1);
+
+    if not(context.adapters^.noErrors) then begin
+      freqMap.destroy;
+      exit(newErrorLiteral);
+    end;
+
     freqList:=freqMap.keyValueList;
     result:=newListLiteral;
     for i:=0 to length(freqList)-1 do P_listLiteral(result)^.append(pair(freqList[i].value,freqList[i].key),false);
+
+    if not(context.adapters^.noErrors) then begin
+      freqMap.destroy;
+      exit(result);
+    end;
+
     P_listLiteral(result)^.sortBySubIndex(1,tokenLocation,context.adapters^);
     freqMap.destroy;
   end;

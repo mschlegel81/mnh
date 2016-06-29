@@ -108,6 +108,8 @@ TYPE
       tic: array['x'..'y'] of array of T_ticInfo;
       scalingOptions:T_scalingOptions;
       row: array of T_sampleRow;
+      renderImage:TImage;
+
       FUNCTION olx(CONST x: double): double;
       FUNCTION oex(CONST x: double): double;
       FUNCTION oly(CONST y: double): double;
@@ -134,6 +136,7 @@ TYPE
       PROCEDURE zoomOnPoint(CONST pixelX, pixelY: longint; CONST factor: double; VAR plotImage: TImage);
       PROCEDURE panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
 
+      PROCEDURE renderInternally(CONST width,height:longint);
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height,supersampling:longint);
@@ -413,6 +416,7 @@ FUNCTION T_style.wantImpulses: boolean;
 CONSTRUCTOR T_plot.createWithDefaults;
   begin
     system.initCriticalSection(cs);
+    renderImage:=nil;
     setDefaults;
   end;
 
@@ -442,7 +446,10 @@ PROCEDURE T_plot.setDefaults;
 
 DESTRUCTOR T_plot.destroy;
   begin
+    system.enterCriticalSection(cs);
     clear;
+    if renderImage<>nil then renderImage.destroy;
+    system.leaveCriticalSection(cs);
     doneCriticalSection(cs);
   end;
 
@@ -1260,19 +1267,31 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
-  PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
-    VAR ARect: TRect;
-        X, Y: integer;
-    begin
-      X:=round(Source.width*factor);
-      Y:=round(Source.height*factor);
-      ARect:=Rect(0, 0, X, Y);
-      dest.Canvas.AntialiasingMode:=amOn;
-      dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
+PROCEDURE T_plot.renderInternally(CONST width,height:longint);
+  begin
+    if renderImage=nil then begin
+      renderImage:=TImage.create(nil);
+      renderImage.SetInitialBounds(0,0,width,height);
+    end else if (renderImage.width<>width) or (renderImage.height<>height) then begin
+      renderImage.destroy;
+      renderImage:=TImage.create(nil);
+      renderImage.SetInitialBounds(0,0,width,height);
     end;
+    renderPlot(renderImage);
+  end;
 
-  VAR renderImage: TImage;
+PROCEDURE scale(Source: TImage; VAR dest: TImage; CONST factor: double);
+  VAR ARect: TRect;
+      X, Y: integer;
+  begin
+    X:=round(Source.width*factor);
+    Y:=round(Source.height*factor);
+    ARect:=Rect(0, 0, X, Y);
+    dest.Canvas.AntialiasingMode:=amOn;
+    dest.Canvas.StretchDraw(ARect, Source.Picture.Bitmap);
+  end;
+
+PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
   begin
     if supersampling<=1 then begin
       renderPlot(plotImage);
@@ -1280,64 +1299,42 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage; CONST supersampling:longint);
       scaledYOffset:=yOffset;
       exit;
     end;
-    renderImage:=TImage.create(nil);
-    renderImage.SetInitialBounds(0,0,plotImage.width*supersampling,plotImage.height*supersampling);
-    renderPlot(renderImage);
+    renderInternally(plotImage.width*supersampling,plotImage.height*supersampling);
     scale(renderImage,plotImage,1/supersampling);
     scaledXOffset:=xOffset/supersampling;
     scaledYOffset:=yOffset/supersampling;
-    renderImage.destroy;
     //set screen size to fix GUI interaction (panning, zooming, etc.)
     setScreenSize(plotImage.width,plotImage.height,true);
   end;
 
 PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, supersampling: longint);
-  VAR plotImage, storeImage: TImage;
-      Rect: TRect;
+  VAR storeImage: TImage;
   begin
     system.enterCriticalSection(cs);
-    plotImage:=TImage.create(nil);
-    plotImage.SetInitialBounds(0, 0, width, height);
-    renderPlot(plotImage,supersampling);
-    storeImage:=TImage.create(plotImage);
+    renderInternally(width*supersampling,height*supersampling);
+    storeImage:=TImage.create(nil);
     storeImage.SetInitialBounds(0, 0, width, height);
-    Rect.top:=0;
-    Rect.Left:=0;
-    Rect.Right:=width;
-    Rect.Bottom:=height;
-    storeImage.Canvas.CopyRect(Rect, plotImage.Canvas, Rect);
+    scale(renderImage,storeImage,1/supersampling);
     storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     storeImage.free;
-    plotImage.free;
     system.leaveCriticalSection(cs);
   end;
 
 FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
-  VAR plotImage, storeImage: TImage;
-      memStream:TMemoryStream;
-      resultSize,i:longint;
-      Rect: TRect;
+  VAR storeImage: TImage;
+      memStream: TStringStream;
   begin
     system.enterCriticalSection(cs);
-    plotImage:=TImage.create(nil);
-    plotImage.SetInitialBounds(0, 0, width, height);
-    renderPlot(plotImage,supersampling);
-    storeImage:=TImage.create(plotImage);
+    renderInternally(width*supersampling,height*supersampling);
+    storeImage:=TImage.create(nil);
     storeImage.SetInitialBounds(0, 0, width, height);
-    Rect.top:=0;
-    Rect.Left:=0;
-    Rect.Right:=width;
-    Rect.Bottom:=height;
-    storeImage.Canvas.CopyRect(Rect, plotImage.Canvas, Rect);
-    memStream := TMemoryStream.create;
+    scale(renderImage,storeImage,1/supersampling);
+    memStream := TStringStream.create('');
     storeImage.Picture.PNG.saveToStream(memStream);
-    resultSize:=memStream.position;
     memStream.position:=0;
-    result:='';
-    for i:=0 to resultSize-1 do result:=result+chr(memStream.readByte);
+    result:=memStream.DataString;
     memStream.free;
     storeImage.free;
-    plotImage.free;
     system.leaveCriticalSection(cs);
   end;
 

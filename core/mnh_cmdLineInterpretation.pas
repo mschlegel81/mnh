@@ -86,6 +86,7 @@ PROCEDURE parseCmdLine;
       {$endif}
       consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
+      consoleAdapters.printOut('  -quiet            disable console output');
     end;
 
   PROCEDURE doDirect;
@@ -137,6 +138,7 @@ PROCEDURE parseCmdLine;
 
   VAR i:longint;
       quitImmediate:boolean=false;
+      wantConsoleAdapter:boolean=true;
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
@@ -151,6 +153,7 @@ PROCEDURE parseCmdLine;
           addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5));
           addParameter(mnhParameters,i);
         end
+        else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
@@ -183,6 +186,7 @@ PROCEDURE parseCmdLine;
     if quitImmediate then halt;;
     setMnhParameters(mnhParameters);
     //-----------------------------------------------------
+    if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     setupOutputBehaviour(consoleAdapters);
 
     if fileOrCommandToInterpret<>'' then begin
@@ -197,7 +201,7 @@ PROCEDURE parseCmdLine;
 
 INITIALIZATION
   consoleAdapters.create;
-  consoleAdapters.addConsoleOutAdapter;
+
 FINALIZATION
   consoleAdapters.destroy;
 
