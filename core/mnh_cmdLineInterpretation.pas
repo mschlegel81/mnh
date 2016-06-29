@@ -11,7 +11,7 @@ PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
 VAR consoleAdapters:T_adapters;
     reEvaluationWithGUIrequired:boolean=false;
     mainParameters:T_arrayOfString;
-
+    wantConsoleAdapter:boolean=true;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
@@ -138,7 +138,6 @@ PROCEDURE parseCmdLine;
 
   VAR i:longint;
       quitImmediate:boolean=false;
-      wantConsoleAdapter:boolean=true;
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);

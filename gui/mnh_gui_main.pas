@@ -469,7 +469,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     currentExpressionMemo.highlighter:=debugHighlighter;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
-    guiAdapters.addConsoleOutAdapter;
+    if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter;
     {$endif}
     mnh_out_adapters.gui_started:=true;
     updateDebugParts;
