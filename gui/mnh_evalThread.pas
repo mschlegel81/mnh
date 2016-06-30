@@ -136,8 +136,8 @@ FUNCTION docMain(p:pointer):ptrint;
           setLength(errors,length(errors)+1);
           errors[length(errors)-1]:=storedMessages[i];
         end;
-        leaveCriticalSection(cs);
         postEval;
+        leaveCriticalSection(cs);
       end;
       ThreadSwitch;
       sleep(MAX_SLEEP_TIME);
@@ -214,11 +214,10 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
   begin
     enterCriticalSection(cs);
     ensureThread;
-    if (state=es_running) or (request<>er_none) then begin
+    if (state=es_running) then begin
       leaveCriticalSection(cs);
       exit;
     end;
-
     package.setSourceUTF8AndPath(L,path);
     if interactive
     then request:=er_evaluateInteractive
@@ -421,7 +420,6 @@ PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
 
   begin
     enterCriticalSection(cs);
-    inc(stateCounter);
     if includeLists then begin
       package.updateLists(userRules);
       updateCompletionList;
@@ -432,6 +430,7 @@ PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
     else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
     while not(adapter^.hasMessageOfType[mt_endOfEvaluation])
     do adapter^.logEndOfEvaluation;
+    inc(stateCounter);
     leaveCriticalSection(cs);
   end;
 

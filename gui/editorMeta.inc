@@ -325,8 +325,11 @@ PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST
       paintedWithState:=stateCounter;
       editor.Repaint;
     end;
-    if isBlank(errorHint) then editor.ShowHint:=false
-    else begin
+    if isBlank(errorHint) then begin
+      editor.ShowHint:=false;
+      editor.Gutter.color:=clSilver;
+    end else begin
+      editor.Gutter.color:=clRed;
       editor.ShowHint:=true;
       editor.Hint:=errorHint;
     end;

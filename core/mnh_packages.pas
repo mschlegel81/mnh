@@ -748,6 +748,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
     case usecase of
+      lu_forCodeAssistance,
       lu_forDocGeneration: resolveRuleIds(context.adapters);
       lu_forImport:        resolveRuleIds(nil);
       lu_forCallingMain:   executeMain;

@@ -78,7 +78,7 @@ USE testLog,
     '../demos/heart.mnh';
 
 private testPlotting(call:expression(0), file:string)->begin
-  local filePath:=(myPath.splitFileName.directory)&'/'&file;
+  local filePath:=(myPath.splitFileName['directory'])&'/'&file;
   deleteFile(filePath);
   call();
   printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
@@ -107,9 +107,9 @@ begin
   collectOutput;
   toId('24.main')('demo');
   diff.main('test');
-  inspect.uses.getInner(0).leading(7).tail(3).each(import,toId(import&'.main'));
+  inspect['uses'].getInner(0).leading(7).tail(3).each(import,toId(import&'.main'));
   canPlot
-  ? inspect.uses.getInner(0).trailing(7).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
+  ? inspect['uses'].getInner(0).trailing(7).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
   : void;
   examplesFile==''
   ? void

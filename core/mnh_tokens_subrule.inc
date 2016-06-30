@@ -680,7 +680,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
       result:=false;
       for k:=0 to bracketStack.topIndex do
       if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach,tt_forcedParallelEach]) and
-         (bracketStack.dat[k]^.txt=id) then exit(true);
+         (bracketStack.dat[k]^.txt=id) or (id=C_eachIndexIdentifier) then exit(true);
     end;
 
   begin

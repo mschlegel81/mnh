@@ -1317,9 +1317,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         newParameterListToken:P_token;
         oldSecond:P_token;
         expression:P_literal;
-        fallbackIsPossible:boolean=false;
         ruleIdResolved:boolean=false;
-        key:string='';
         cTokType3:T_tokenType;
     begin
       //Assuming:
@@ -1337,8 +1335,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         else cTokType3:=oldSecond^.tokType;
       end;
 
-      fallbackIsPossible:=(P_literal(first^.data)^.literalType in [lt_keyValueList,lt_emptyList]) and (cTokType3<>tt_braceOpen);
-
       with newFunctionToken^ do begin
         ruleIdResolved:=not(tokType in [tt_identifier,tt_blockLocalVariable]);
         if tokType=tt_blockLocalVariable then begin
@@ -1353,20 +1349,9 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           end;
         end;
       end;
-      if not(ruleIdResolved) and fallbackIsPossible then begin
-        key:=newFunctionToken^.txt;
-        newFunctionToken^.tokType:=tt_intrinsicRule;
-        newFunctionToken^.data:=@get_imp;
-        newFunctionToken^.txt:='get';
-        ruleIdResolved:=true;
-      end;
-
       if ruleIdResolved then begin
         //resolved rule ID mutate x . y -> y(x)
-        //if key is defined:      x . y -> get(x,"y")
-        if key=''
-        then newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false))
-        else newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false)^.appendString(key));
+        newParameterListToken:=context.newToken(first^.next^.next^.location,'',tt_parList,newOneElementListLiteral(first^.data,false));
 
         first^.data:=nil; first^.tokType:=tt_identifier;
                                //Disposing from:   <Lit> . func ...
@@ -1381,6 +1366,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           newParameterListToken^.tokType:=tt_parList_constructor;
         end;
         didSubstitution:=true;
+        exit;
+      end else begin
+        context.adapters^.raiseError('Unresolved identifier: '+newFunctionToken^.txt,newFunctionToken^.location);
+        context.disposeToken(newFunctionToken);
         exit;
       end;
     end;

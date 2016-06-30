@@ -21,18 +21,18 @@ private templateToInc(inFile,outFile<>inFile)->begin
   : writeFile(outFile,outText);
 end;
 
-private tryPack(filename)->'['&escape(filename)&','&escape(fileContents(filename))&']';
+private nameAndContents(filename)->'['&escape(filename)&','&escape(fileContents(filename))&']';
 
 private ensureDemos->fileExists('ensureDemos.mnh') ? void : begin
   writeFileLines('ensureDemos.mnh','{'|
     (files('demos/*.mnh')|'demos/inputs/inputs.mnh')
-    .each(file,(index=0 ? '[' : ',') & tryPack(file))|
+    .each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
 private ensurePackages->fileExists('ensurePackages.mnh') ? void : begin
   writeFileLines('ensurePackages.mnh','{'|
-    files('packages/*.mnh').each(file,(index=0 ? '[' : ',') & tryPack(file))|
+    files('packages/*.mnh').each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
@@ -49,7 +49,7 @@ currentCodeHash:=begin
   templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');  
   templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');  
   templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');    
-  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f);
+  local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
@@ -156,7 +156,7 @@ main->main('build');
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') : begin
   allFolders('.')
-  .each(f,splitFileName(f).filename in ["nppBackup","backup"] ? f : void)
+  .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
   .each(f,begin
            print('Deleting ',f);
@@ -192,7 +192,7 @@ main('test')->begin
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
   ? print('Test has already been passed.') orElse true
-  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]) and testAlreadyPassed(binName(i)),AND);
+  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]) and testAlreadyPassed(binName(i)),AND);
 end;
 
 //*Only prepare code hash
