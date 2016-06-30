@@ -642,7 +642,13 @@ a          , a          , (1)
 out> {($y^3)}
  in> f();
 out> {($y^3)}
+ in> f(void);
+out> {($y^3)}
  in> f(3);
+out> 27
+ in> f(3, void);
+out> 27
+ in> f(void, 3);
 out> 27
  in> 3.f;
 out> 27
