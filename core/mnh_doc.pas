@@ -15,7 +15,7 @@ TYPE
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
     FUNCTION getPlainText(CONST lineSplitter:string):ansistring;
-    PROCEDURE addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
+    PROCEDURE addExample(CONST exampleHtml:T_arrayOfString; CONST skipFirstLine:boolean=false);
   end;
 
   P_userPackageDocumentation = ^T_userPackageDocumentation;
@@ -89,8 +89,9 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
-        httpServerExample:array[0..17] of string=
-(' in> startHttpServer(''127.0.0.1:60000'',',
+        httpServerExample:array[0..18] of string=
+('//#startHttpServer',
+' in> startHttpServer(''127.0.0.1:60000'',',
 '       {begin',
 '         //Special variables available in serving expression: fullRequest, path, rawParameters and parameters',
 '         print("fullRequest=\t",fullRequest.escape,',
@@ -115,13 +116,45 @@ PROCEDURE ensureBuiltinDocExamples;
       allDocs:array of P_intrinsicFunctionDocumentation;
       examplesCache:text;
 
+  PROCEDURE addExample(CONST exampleSource,html:T_arrayOfString);
+    VAR ids:T_listOfString;
+        words:T_arrayOfString;
+        i:longint;
+        leadingIdLine:boolean=false;
+        doc:P_intrinsicFunctionDocumentation;
+        {$ifdef DEBUGMODE} first:boolean=true; j:longint; {$endif}
+    begin
+      ids.create;
+      if copy(exampleSource[0],1,3)='//#' then begin
+        ids.add(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)));
+        leadingIdLine:=true;
+      end else for i:=0 to length(exampleSource)-1 do if (copy(trim(exampleSource[i]),1,2)<>'//') then begin
+        words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
+        ids.addAll(words);
+        ids.addAll(split(join(words,'.'),'.'));
+      end;
+      ids.unique;
+      for i:=0 to ids.size-1 do if functionDocMap.containsKey(ids[i],doc) then begin
+        {$ifdef DEBUGMODE}
+        if first then first:=false else begin
+          write('The following example is not uniquely assignable. IDs: ');
+          for j:=0 to ids.size-1 do write(ids[j],' ');
+          writeln;
+          for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
+        end;
+        {$endif}
+        doc^.addExample(html,leadingIdLine);
+      end;
+      ids.destroy
+    end;
+
   PROCEDURE processExample;
     VAR html:T_arrayOfString;
         i:longint;
     begin
       if (length(code)<=0) then exit;
       html:=demoCodeToHtmlCallback(code);
-      for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
+      addExample(code,html);
       for i:=0 to length(html)-1 do writeln(examplesCache,html[i]);
       writeln(examplesCache,'');
       setLength(code,0);
@@ -131,7 +164,6 @@ PROCEDURE ensureBuiltinDocExamples;
   PROCEDURE restoreExample;
     VAR html:T_arrayOfString;
         htmlLine:ansistring;
-        i:longint;
     begin
       if (length(code)<=0) then exit;
       setLength(html,0);
@@ -139,7 +171,7 @@ PROCEDURE ensureBuiltinDocExamples;
         readln(examplesCache,htmlLine);
         if htmlLine<>'' then append(html,htmlLine);
       until (htmlLine='') or eof(examplesCache);
-      for i:=0 to length(allDocs)-1 do allDocs[i]^.addExampleIfRelevant(code,html);
+      addExample(code,html);
       setLength(code,0);
       setLength(html,0);
     end;
@@ -150,13 +182,13 @@ PROCEDURE ensureBuiltinDocExamples;
     setLength(allDocs,0);
 
     setLength(code,length(httpServerExample));
-    for i:=0 to length(code)-1 do if byte(i) in [11..15,17] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
+    for i:=0 to length(code)-1 do if byte(i) in [12..16,18] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
 
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
-      allDocs[length(allDocs)-1]^.addExampleIfRelevant(httpServerExample,code);
     end;
+    addExample(httpServerExample,code);
     if fileExists(htmlRoot+EXAMPLES_CACHE_FILE) then begin
       assign(examplesCache,htmlRoot+EXAMPLES_CACHE_FILE);
       reset(examplesCache);
@@ -370,21 +402,11 @@ FUNCTION T_intrinsicFunctionDocumentation.getPlainText(CONST lineSplitter:string
     for i:=0 to length(example)-1 do result:=result+lineSplitter+StripHTML(example[i]);
   end;
 
-PROCEDURE T_intrinsicFunctionDocumentation.addExampleIfRelevant(CONST exampleSource,exampleHtml:T_arrayOfString);
-  VAR isRelevant:boolean=false;
-      i,j:longint;
-      words:T_arrayOfString;
+PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST exampleHtml:T_arrayOfString; CONST skipFirstLine:boolean=false);
+  VAR i:longint;
   begin
-    for i:=0 to length(exampleSource)-1 do if not(isRelevant) and (copy(trim(exampleSource[i]),1,2)<>'//') then begin
-      words:=split(replaceAll(cleanString(exampleSource[i],IDENTIFIER_CHARS,'?'),'??','?'),'?');
-      append(words,split(join(words,'.'),'.'));
-      for j:=0 to length(words)-1 do isRelevant:=isRelevant or
-        (words[j]=id) or
-        (unqualifiedAccess) and ((words[j]=unqualifiedId) or (words[j]='.'+unqualifiedId));
-      setLength(words,0);
-    end;
-
-    if isRelevant then append(example,exampleHtml);
+    if skipFirstLine then for i:=1 to length(exampleHtml)-1 do append(example,exampleHtml[i])
+                     else append(example,exampleHtml);
   end;
 
 PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);

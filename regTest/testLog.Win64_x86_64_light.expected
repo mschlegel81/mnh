@@ -2997,7 +2997,7 @@ Analyzing {($x^3-3*$x^2+2*$x)}
 Root found at   2.91992796692177E-321
 Root found at   1.0
 Root found at   2.0
-Examples file has 456 lines
+Examples file has 484 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3024,8 +3024,6 @@ out> -8
 out> []
  in> parameterNames({sin($x)/$x});
 out> ['$x']
- in> parameterNames({sin($x)/$y});
-out> ['$x','$y']
  in> parameterNames({printf('%s%s',$a,...)});
 out> ['$a']
  in> ord(3);
@@ -3082,15 +3080,10 @@ out> -1.31326369932025
 out> -0.142546543074278
  in> tan({1+$x});
 out> {tan(1+$x)}
- in> tan(2*arctan(1));
+ in> tan(pi/2);
 out> 1.63317787283838E16
  in> arctan(-0.92);
 out> -0.74375558429886
- in>     pi :=4*arctan(1);
-Note     Creating new rule: pi
-Warning  Hiding builtin rule "pi"!
- in>     pi;
-out>     3.14159265358979
  in> arctan({$x});
 out> {arctan($x)}
  in> argMax(sin([0..10]));
@@ -3219,7 +3212,7 @@ out> 271003
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
 out> ['mnh.executor','mnh.parameterNames','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
- in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x.get(0)+$y.get(0),$x.get(1)]}));
+ in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
 out> 3
@@ -3249,7 +3242,7 @@ out> ['text','abc']
 out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
- in>                t :=[0..1000]*0.006283;
+ in>                t :=[0..1000]*2*pi/1000;
 Note                Creating new rule: t
  in>                plot(t, sin(t));
 Error               Unresolved identifier "plot"
@@ -3462,3 +3455,25 @@ out> 3.0
 Error               Unresolved identifier "getOptions"
 Error [stack trace]  # getOptions
 out>                getOptions
+ in> executor;
+out> 'D:\dev\mnh5\mnh_light.exe'
+ in>                                                               inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
+printline                                                          Package ID is: sudoku
+printline                                                          Path         : D:\dev\mnh5\demos\sudoku.mnh
+printline                                                          Uses         : []
+printline                                                          normal rule:   COMPONENTS      @D:\dev\mnh5\demos\sudoku.mnh:4,1
+memoized rule: connectedIdx    @D:\dev\mnh5\demos\sudoku.mnh:9,1
+memoized rule: components      @D:\dev\mnh5\demos\sudoku.mnh:10,1
+normal rule:   difficulty      @D:\dev\mnh5\demos\sudoku.mnh:18,1
+normal rule:   restrictRandom  @D:\dev\mnh5\demos\sudoku.mnh:87,1
+normal rule:   main            @D:\dev\mnh5\demos\sudoku.mnh:119,1
+normal rule:   initialBoard    @D:\dev\mnh5\demos\sudoku.mnh:20,1
+normal rule:   solve           @D:\dev\mnh5\demos\sudoku.mnh:35,1
+normal rule:   randomSolution  @D:\dev\mnh5\demos\sudoku.mnh:95,1
+normal rule:   drop            @D:\dev\mnh5\demos\sudoku.mnh:1,1
+normal rule:   isSolved        @D:\dev\mnh5\demos\sudoku.mnh:13,1
+normal rule:   isValid         @D:\dev\mnh5\demos\sudoku.mnh:15,1
+normal rule:   printBoard      @D:\dev\mnh5\demos\sudoku.mnh:27,1
+normal rule:   bruteForceSolve @D:\dev\mnh5\demos\sudoku.mnh:66,1
+normal rule:   randomRiddle    @D:\dev\mnh5\demos\sudoku.mnh:106,1
+out>                                                               []

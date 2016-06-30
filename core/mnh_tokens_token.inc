@@ -1616,7 +1616,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
                 if first^.next^.tokType=tt_separatorCnt then P_listLiteral(stack.dat[stack.topIndex]^.data)^.setRangeAppend;
                 first:=context.disposeToken(first);
                 first:=context.disposeToken(first);
-
               until (first=nil) or (first^.tokType<>tt_literal) or
                     (first^.next=nil) or not(first^.next^.tokType in [tt_separatorComma,tt_separatorCnt]);
               didSubstitution:=true;
