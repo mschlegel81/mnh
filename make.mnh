@@ -50,7 +50,7 @@ currentCodeHash:=begin
   templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');  
   templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');    
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f).filename='code_hash.inc' ? void : f);
-  executor.execPipeless(['../checkstyle.mnh','fix']);
+  isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
@@ -191,7 +191,7 @@ main('test')->begin
   build(i), 
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
-  ? true
+  ? print('Test has already been passed.') orElse true
   : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName.expanded]) and testAlreadyPassed(binName(i)),AND);
 end;
 

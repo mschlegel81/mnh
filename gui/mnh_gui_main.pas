@@ -27,6 +27,7 @@ TYPE
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
     MenuItem3: TMenuItem;
+    miAutosize: TMenuItem;
     miOpenDocumentationPack: TMenuItem;
     miWrapEcho: TMenuItem;
     mi_insertFilename: TMenuItem;
@@ -117,6 +118,7 @@ TYPE
     PROCEDURE InputEditProcessUserCommand(Sender: TObject;
       VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     PROCEDURE MenuItem4Click(Sender: TObject);
+    PROCEDURE miAutosizeClick(Sender: TObject);
     PROCEDURE miClearClick(Sender: TObject);
     PROCEDURE miCloseClick(Sender: TObject);
     PROCEDURE miDebugCancelClick(Sender: TObject);
@@ -645,6 +647,12 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
     end else askForm.getLastAnswerReleasing(nil);
   end;
 
+PROCEDURE TMnhForm.miAutosizeClick(Sender: TObject);
+  begin
+    autosizeToggleBox.Checked:=not(autosizeToggleBox.Checked);
+    miAutosize.Checked:=autosizeToggleBox.Checked;
+  end;
+
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
   begin
     PageControl.ActivePageIndex:=addEditorMetaForNewFile();
@@ -1068,6 +1076,7 @@ PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
     if helpPopupMemo.visible then positionHelpNotifier;
     autosizeToggleBox.top:=outputPageControl.top;
     autosizeToggleBox.Checked:=false;
+    miAutosize.Checked:=autosizeToggleBox.Checked;
   end;
 
 PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
