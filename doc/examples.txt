@@ -482,3 +482,25 @@ inspect('sudoku').{
   .each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location'])
   .join("\n")
   .print};
+
+//Print with line breaks but without pretty printing
+print("1\n2.0\n03.45");
+
+//Tab triggers pretty printing - numbers are aligned at decimal dot or comma
+print("1\n2.0\n03,45\t");
+
+//Non-numbers are left aligned
+print("1\tone\t|\n2.0\ttwo\t|\n03.45\tthree\t|");
+
+//Use \v instead of \t for a tab of zero width
+print("1\tone\v|\n2.0\ttwo\v|\n03.45\tthree\v|");
+
+//Simple format: the number of placeholders must match the number of arguments
+printf("%x is %d in hexadecimal form",123,123);
+
+//You can adress placeholders by their zero based index
+printf("%{$0}x is %{$0}d in hexadecimal form",123);
+
+//Placeholders can be complex expressions
+printf("sin(%{$0}s)=%{sin($0)}4.4g",1);
+

@@ -4,7 +4,7 @@ UNIT mnh_litVar;
 {$endif}
 {$Q-}
 INTERFACE
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes{$ifdef DEBUGMODE}, EpikTimer{$endif};
+USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
 CONST DESERIALIZE_BASE95_ID='deserialize95';
       DESERIALIZE_BIN_ID='deserialize';
 TYPE

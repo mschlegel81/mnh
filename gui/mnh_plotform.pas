@@ -102,7 +102,7 @@ PROCEDURE TplotForm.FormKeyPress(Sender: TObject; VAR key: char);
 
 PROCEDURE TplotForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
-    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1,ssShift in shift);
+    if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(1,ssShift in Shift);
   end;
 
 PROCEDURE TplotForm.FormResize(Sender: TObject);

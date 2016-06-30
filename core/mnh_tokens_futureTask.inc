@@ -140,7 +140,7 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
 
 PROCEDURE T_futureTask.free(VAR context: T_evaluationContext);
   begin
-    while state=fts_evaluating do begin threadSwitch; sleep(1); end;
+    while state=fts_evaluating do begin ThreadSwitch; sleep(1); end;
     context.cascadeDisposeToken(task);
   end;
 

@@ -1288,42 +1288,42 @@ See http://rosettacode.org/wiki/Huffman_coding
  1101011100011101 '2'
  1101011100011110 '3'
  1101011100011111 '4'
- 110101110000000  '5'
- 110101110000001  '6'
- 110101110000010  '7'
- 110101110000011  '8'
- 110101110001100  '9'
- 110101110001101  '1'
- 1101011100001    '&'
- 1101011100010    '.'
- 11010111001      "'"
- 1101011101       'q'
- 110101100        'j'
- 110101101        'z'
- 110101111        'x'
- 1101000          'v'
- 1101001          'k'
- 1101010          'w'
- 100100           'f'
- 100101           'y'
- 111100           'b'
- 111101           'g'
- 00110            'h'
- 00111            'p'
- 01000            'd'
- 01001            'm'
- 10011            'u'
- 11011            'c'
- 11111            'l'
- 0010             's'
- 0101             'n'
- 1000             'o'
- 1010             't'
- 1011             'r'
- 1100             'i'
- 1110             'a'
- 000              'e'
- 011              "\n"
+  110101110000000 '5'
+  110101110000001 '6'
+  110101110000010 '7'
+  110101110000011 '8'
+  110101110001100 '9'
+  110101110001101 '1'
+    1101011100001 '&'
+    1101011100010 '.'
+      11010111001 "'"
+       1101011101 'q'
+        110101100 'j'
+        110101101 'z'
+        110101111 'x'
+          1101000 'v'
+          1101001 'k'
+          1101010 'w'
+           100100 'f'
+           100101 'y'
+           111100 'b'
+           111101 'g'
+            00110 'h'
+            00111 'p'
+            01000 'd'
+            01001 'm'
+            10011 'u'
+            11011 'c'
+            11111 'l'
+             0010 's'
+             0101 'n'
+             1000 'o'
+             1010 't'
+             1011 'r'
+             1100 'i'
+             1110 'a'
+              000 'e'
+              011 "\n"
 Prisoners: 41
 Step size: 3
 Survivors: [30]
@@ -3003,7 +3003,7 @@ Analyzing {($x^3-3*$x^2+2*$x)}
 Root found at   5.0587872313446E-331
 Root found at   1.0
 Root found at   2.0
-Examples file has 484 lines
+Examples file has 506 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3483,3 +3483,32 @@ normal rule:   printBoard      @/media/dev/mnh5/demos/sudoku.mnh:27,1
 normal rule:   bruteForceSolve @/media/dev/mnh5/demos/sudoku.mnh:66,1
 normal rule:   randomRiddle    @/media/dev/mnh5/demos/sudoku.mnh:106,1
 out>                                                                   []
+ in>      print("1\n2.0\n03.45");
+printline 1
+ 2.0
+03.45
+out>      void
+ in>      print("1\n2.0\n03,45\t");
+printline  1
+ 2.0
+03,45
+out>      void
+ in>          print("1\tone\t|\n2.0\ttwo\t|\n03.45\tthree\t|");
+printline      1    one   |
+ 2.0  two   |
+03.45 three |
+out>          void
+ in>         print("1\tone\v|\n2.0\ttwo\v|\n03.45\tthree\v|");
+printline     1    one  |
+ 2.0  two  |
+03.45 three|
+out>         void
+ in>      printf('%x is %d in hexadecimal form', 123, 123);
+printline 7B is 123 in hexadecimal form
+out>      void
+ in>      printf('%{$0}x is %{$0}d in hexadecimal form', 123);
+printline 7B is 123 in hexadecimal form
+out>      void
+ in>      printf('sin(%{$0}s)=%{sin($0)}4.4g', 1);
+printline sin(1)=0.8415
+out>      void
