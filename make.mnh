@@ -1,4 +1,5 @@
 USE hash,testLog;
+private isLinux:=executor.exec(['-codeHash']).head.matches('[L|l]inux');
 private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(
        ['gui\lib\i386-win32',
         'gui\lib\x86_64-linux',
@@ -61,10 +62,11 @@ currentCodeHash:=begin
   result;
 end;
 
-private binName(FI:int)->format('%smnh%s%s.exe',
-                                (FI and 1)>0 ? '.\' : 'bin32\',
-                                (FI and 2)>0 ? ''   : '_light',
-                                (FI and 4)>0 ? '_debug' : '');
+private binName(FI:int)->format('%smnh%s%s%s',
+                                (FI and 1)>0 OR isLinux ? './' : 'bin32/',
+                                (FI and 2)>0 ? '' : '_light',
+                                (FI and 4)>0 ? '_debug' : '',
+                                isLinux ? '' : '.exe');
 
 private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
@@ -79,11 +81,12 @@ exeHasWrongVersion(FI) ? begin
   local bin64:=(FI and 1)>0;
   local full :=(FI and 2)>0;
   local debug:=(FI and 4)>0;
-  local compiler:=bin64 ? '..\lazarus64\lazbuild.exe'
-                        : '..\lazarus32\lazbuild.exe';
+  local compiler:=isLinux ? 'lazbuild'
+                          : bin64 ? '..\lazarus64\lazbuild.exe'
+                                  : '..\lazarus32\lazbuild.exe';
   local exeName:=binName(FI);
-  local outName:=(full ? 'gui\mnh' : 'consoles\mnh_light') & (debug ? '_debug' : '') & '.exe';
-  local parameters:=['-B','--bm='&(debug ? 'Default' : 'deployment'),full ? 'gui\mnh_gui.lpi' : 'consoles\mnh_light.lpi'];
+  local outName:=(full ? 'gui/mnh' : 'consoles/mnh_light') & (debug ? '_debug' : '') & (isLinux ? '' : '.exe');
+  local parameters:=['-B','--bm='&(debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
   deleteFile(exeName);
   deleteFile(outName);
@@ -94,7 +97,7 @@ exeHasWrongVersion(FI) ? begin
   not(exeHasWrongVersion(FI));
 end : true;
 
-private call7z(fileList,suffix)->begin
+private call7z(fileList,suffix)->isLinux ? void : begin
   local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList;
   execPipeless("c:/Program Files/7-Zip/7z.exe",zipParams);
   execPipeless("c:/Program Files (x86)/7-Zip/7z.exe",zipParams);
@@ -110,7 +113,7 @@ private verboseMove(src,dest)->begin
 end;
                     
 //*Make distro 7z - including build if needed
-main('distro')->begin
+main('distro')->isLinux ? fail('Distro building is currently not supported under Linux') : begin
   updateCurrentCodeHash;
   [0..3].each(i,
     begin
@@ -151,7 +154,7 @@ end;
 main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
-main('clean')->begin
+main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') : begin
   allFolders('.')
   .each(f,splitFileName(f).filename in ["nppBackup","backup"] ? f : void)
   .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
