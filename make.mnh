@@ -62,7 +62,7 @@ currentCodeHash:=begin
   result;
 end;
 
-private binName(FI:int)->format('%smnh%s%s%s',
+binName(FI:int)->format('%smnh%s%s%s',
                                 (FI and 1)>0 OR isLinux ? './' : 'bin32/',
                                 (FI and 2)>0 ? '' : '_light',
                                 (FI and 4)>0 ? '_debug' : '',

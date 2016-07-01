@@ -1,0 +1,15 @@
+USE testLog,make;
+
+currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').trim;
+
+main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)&
+"\n                     Binary | Exists | Version | Tested\n"&
+"----------------------------+--------+---------+---------\n"&
+([0..7].pEach(i,begin
+  local bin:=binName(i);
+  local ex:=bin.fileExists;
+  local hashOk:=(bin.exec(['-codeHash']).head.split(':')[1])==currentHash;
+  local tested:=ex AND testAlreadyPassed(bin);
+  format('%27s | %6s | %7s | %6s',bin,ex ? 'yes' : 'no',ex ? (hashOk ? 'o.k.' : 'N O K') : 'n/a' ,ex ? (tested ? 'passed' : '') : 'n/a' ).join("\t");
+end).join("\n")));
+
