@@ -1513,6 +1513,7 @@ tt_each,tt_parallelEach,tt_forcedParallelEach: resolveEach(cTokType[1])}
 tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
 tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in parameter lists and list constructors.',first^.next^.location)}
 
+{$WARN 2005 OFF}
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1]=tt_begin) then begin
   if (cTokType[2]=tt_end) then begin

@@ -1,4 +1,5 @@
 {$ifdef include_implementation}
+{$WARN 5024 OFF}
 {$MACRO ON}
 {$define UNARY_NUM_TO_REAL:=
 FUNCTION recurse(CONST x:P_literal):P_literal;

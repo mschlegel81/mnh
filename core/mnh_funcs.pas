@@ -1,6 +1,5 @@
 UNIT mnh_funcs;
 INTERFACE
-{$WARN 5024 OFF}
 USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mnh_contexts,
      myStringUtil,Classes{$ifdef fullVersion},mnh_doc{$endif};
 TYPE
@@ -40,7 +39,7 @@ PROCEDURE setMnhParameters(CONST p: T_arrayOfString);
   end;
 
 {$undef INNER_FORMATTING}
-
+{$WARN 5024 OFF}
 FUNCTION clearPrint_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);

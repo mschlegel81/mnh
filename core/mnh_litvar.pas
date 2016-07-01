@@ -1,9 +1,8 @@
 UNIT mnh_litVar;
-{$ifdef fullVersion}
-{$WARN 3018 OFF}{$WARN 3019 OFF}{$WARN 5024 OFF}
-{$endif}
+{$WARN 5024 OFF}
 {$Q-}
 INTERFACE
+{$WARN 3018 OFF}{$WARN 3019 OFF}
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
 CONST DESERIALIZE_BASE95_ID='deserialize95';
       DESERIALIZE_BIN_ID='deserialize';
@@ -383,7 +382,6 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
-  VAR i:longint;
   begin
     new(result, create(value));
     {$ifdef DEBUGMODE}
@@ -2639,10 +2637,12 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
       if (isNan(realValue) or isInfinite(realValue) or (realValue=strToFloatDef(result,Nan))) then exit(result);
 
       r:=realValue;
+      {$WARN 5057 OFF}
       move(r,bits,sizeOf(double));
       isNegative:=bits[length(bits)-1];
       bits[length(bits)-1]:=false;
       move(bits,significand,min(sizeOf(double),sizeOf(int64)));
+      {$WARN 5057 ON}
       exponent:=significand;
       significand:=p52+(significand and (p52-1));
       exponent:=(exponent shr 52)-1023-52;

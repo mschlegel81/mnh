@@ -74,7 +74,8 @@ FUNCTION pos_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 FUNCTION copy_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR anyList:boolean=false;
       allOkay:boolean=true;
-      i1,i:longint;
+      i1:longint=0;
+      i:longint;
 
   PROCEDURE checkLength(L:P_literal);
     VAR s:longint;
