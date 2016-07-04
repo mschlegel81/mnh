@@ -1081,53 +1081,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
-  PROCEDURE resolveWhen;
-    VAR bodyParts:T_bodyParts;
-        closingBracket:P_token;
-
-        conditionIdx,i:longint;
-        resultIndex:longint=-1;
-
-        locationForComplaint:T_tokenLocation;
-    begin
-      bodyParts:=getBodyParts(first,1,context,closingBracket);
-      if closingBracket=nil then exit;
-
-      conditionIdx:=0;
-      while (conditionIdx<length(bodyParts)-1) and context.adapters^.noErrors and (resultIndex<0) do begin
-        locationForComplaint:=bodyParts[conditionIdx].first^.location;
-        reduceExpression(bodyParts[conditionIdx].first,callDepth+1,context);
-
-        if context.adapters^.noErrors and
-          (bodyParts[conditionIdx].first<>nil) and
-          (bodyParts[conditionIdx].first^.next=nil) and
-          (bodyParts[conditionIdx].first^.tokType=tt_literal) and
-          (P_literal(bodyParts[conditionIdx].first^.data)^.literalType=lt_boolean) then begin
-          if P_boolLiteral(bodyParts[conditionIdx].first^.data)^.value then resultIndex:=conditionIdx+1;
-        end else context.adapters^.raiseError('Conditions in switch construct must return scalar booleans.',locationForComplaint);
-        inc(conditionIdx,2);
-      end;
-      //Fallback to default case
-      if (resultIndex<0) and //no result found and
-        odd(length(bodyParts)) //there is a default case
-      then resultIndex:=length(bodyParts)-1;
-
-      for i:=0 to length(bodyParts)-1 do if (i<>resultIndex) then context.cascadeDisposeToken(bodyParts[i].first);
-
-      if resultIndex<0 then begin
-        first^.tokType:=tt_literal; //mutate when-token to literal
-        first^.data:=newVoidLiteral;
-        first^.next:=closingBracket^.next;
-        context.disposeToken(closingBracket);
-      end else begin
-        first^.tokType:=tt_braceOpen; //mutate when-token to (
-        first^.next:=bodyParts[resultIndex].first;
-        bodyParts[resultIndex].last^.next:=closingBracket;
-      end;
-      setLength(bodyParts,0);
-      didSubstitution:=true;
-    end;
-
   PROCEDURE applyRule(CONST parameterListToken:P_token; CONST firstTokenAfterCall:P_token);
     VAR firstReplace,lastReplace:P_token;
         newLiteral:P_literal;
@@ -1560,7 +1513,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             stack.popLink(first);
             didSubstitution:=true;
           end;
-          tt_unaryOpPlus: begin stack.popDestroy(context); didSubstitution:=true; end;
+          tt_unaryOpPlus: begin
+            stack.popDestroy(context);
+            didSubstitution:=true;
+          end;
           tt_unaryOpMinus: begin
             newLit:=P_literal(first^.data)^.negate(stack.dat[stack.topIndex]^.location,context.adapters^);
             disposeLiteral(first^.data);
@@ -1708,7 +1664,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           stack.push(first);
           didSubstitution:=true;
         end;
-        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: begin stack.push(first); didSubstitution:=true; end;
+        tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: begin
+          stack.push(first);
+          didSubstitution:=true;
+        end;
         tt_blockLocalVariable: begin
           first^.data:=context.getVariableValue(first^.txt);
           if first^.data<>nil then begin
@@ -1716,9 +1675,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             didSubstitution:=true;
           end else context.adapters^.raiseError('Cannot find value for local id "'+first^.txt+'"',first^.location);
         end;
-        tt_operatorPlus: begin first^.tokType:=tt_unaryOpPlus; stack.push(first); didSubstitution:=true; end;
-        tt_operatorMinus: begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
-        tt_unaryOpPlus, tt_unaryOpMinus: begin stack.push(first); didSubstitution:=true; end;
+        tt_operatorPlus:                 begin first^.tokType:=tt_unaryOpPlus;  stack.push(first); didSubstitution:=true; end;
+        tt_operatorMinus:                begin first^.tokType:=tt_unaryOpMinus; stack.push(first); didSubstitution:=true; end;
+        tt_unaryOpPlus, tt_unaryOpMinus: begin                                  stack.push(first); didSubstitution:=true; end;
         tt_comparatorEq..tt_operatorXor,tt_operatorMult..tt_operatorPot,tt_operatorStrConcat..tt_operatorIn:
           context.adapters^.raiseError('Undefined prefix operator '+first^.singleTokenToString,first^.location);
         tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
@@ -1750,7 +1709,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         tt_mutate: begin stack.push(first); didSubstitution:=true; end;
         tt_aggregatorConstructor: case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: begin
-
             if ((cTokType[2] in C_operatorsForAggregators) or (cTokType[2]=tt_intrinsicRule)) and
                (first^.next^.next^.next<>nil) and
                (first^.next^.next^.next^.tokType=tt_braceClose) then begin
@@ -1785,15 +1743,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           first^.next:=context.disposeToken(first^.next);
           resolveWhile;
         end;
-        tt_when: if (cTokType[1]=tt_braceOpen) then begin
-          first^.next:=context.disposeToken(first^.next);
-          resolveWhen;
-        end;
         tt_try: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
           resolveTry;
         end;
-
         tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.dat[stack.topIndex]^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)

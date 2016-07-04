@@ -1126,7 +1126,6 @@ out> [2,5,8]
 </ul>
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
-<li><h4><a href="#when">when</a></h4></li>
 <li><h4><a href="#try">try</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
@@ -1300,38 +1299,6 @@ Where <code>condition</code> is an expression returning a boolean value and body
        end;
  in> greatestCommonDivisor(12,102);
 out> 6
-<!--end-->
-</code> 
-
-<h3><a name="when">when</a></h3>
-The <code>when</code> construct is an alternative to using cascaded if-then-else statements.<br>
-With an odd number of arguments, the last arument will be interpreted as fallback statement if none of the condition statements returns true:
-<code>
-<!--mnh-->
-  when(condition1,statement1,
-       condition2,statement2,
-                  elseStatement);
-<!--end-->
-</code> 
-is equivalent to:
-<code>
-<!--mnh-->
-  condition1 ? statement1 :
-  condition2 ? statement2 : elseStatement;
-<!--end-->
-</code> 
-With an even number of arguments, <code>void</code> will be returned if none of the condition statements returns true:
-<code>
-<!--mnh-->
-  when(condition1,statement1,
-       condition2,statement2);
-<!--end-->
-</code> 
-is equivalent to:
-<code>
-<!--mnh-->
-  condition1 ? statement1 :
-  condition2 ? statement2 : void;
 <!--end-->
 </code> 
 

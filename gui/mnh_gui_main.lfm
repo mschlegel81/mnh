@@ -1,7 +1,7 @@
 object MnhForm: TMnhForm
-  Left = 507
+  Left = 362
   Height = 484
-  Top = 145
+  Top = 104
   Width = 665
   AllowDropFiles = True
   Caption = 'MNH5'
@@ -1098,7 +1098,7 @@ object MnhForm: TMnhForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
-    TabOrder = 3
+    TabOrder = 2
     TabStop = False
     Visible = False
     Gutter.Visible = False
@@ -1594,7 +1594,7 @@ object MnhForm: TMnhForm
     ParentColor = False
     ParentShowHint = False
     ShowHint = True
-    TabOrder = 4
+    TabOrder = 3
     Visible = False
     object tbRun: TToolButton
       Left = 1
@@ -1655,7 +1655,7 @@ object MnhForm: TMnhForm
     Font.Height = 27
     ParentFont = False
     State = cbChecked
-    TabOrder = 2
+    TabOrder = 1
   end
   object MainMenu1: TMainMenu
     left = 272

@@ -256,5 +256,5 @@ system.initCriticalSection(cachedFormatCS);
 {$ifdef include_finalization}
 clearCachedFormats;
 cachedFormats.destroy;
-system.doneCriticalSection(cachedFormatCS)
+system.doneCriticalSection(cachedFormatCS);
 {$endif}

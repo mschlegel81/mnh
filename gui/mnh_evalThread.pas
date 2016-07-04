@@ -13,9 +13,6 @@ TYPE
   end;
 
   P_evaluator=^T_evaluator;
-
-  { T_evaluator }
-
   T_evaluator=object
     private
       cs:TRTLCriticalSection;
@@ -420,10 +417,7 @@ PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
 
   begin
     enterCriticalSection(cs);
-    if includeLists then begin
-      package.updateLists(userRules);
-      updateCompletionList;
-    end;
+    if includeLists then updateCompletionList;
     state:=es_idle;
     if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
     then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)

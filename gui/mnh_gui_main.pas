@@ -1086,15 +1086,9 @@ PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: s
   end;
 
 PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
-  VAR i:longint;
-      caret:TPoint;
   begin
     if wordsInEditor.size>0 then exit;
     if PageControl.ActivePageIndex>=0 then with editorMeta[PageControl.ActivePageIndex] do begin
-      caret:=editor.CaretXY;
-      for i:=0 to editor.lines.count-1 do
-        if i+1=caret.y then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
-                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
       wordsInEditor.addAll(completionList.elementArray);
       wordsInEditor.unique;
     end;
