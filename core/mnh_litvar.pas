@@ -314,9 +314,6 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
 IMPLEMENTATION
 VAR
-  {$ifdef DEBUGMODE}
-  literalAllocCount:array[T_literalType] of longint=(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
-  {$endif}
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-100..4000] of T_intLiteral;
   errLit: T_scalarLiteral;
@@ -373,43 +370,26 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral;
     if (value>=low(intLit)) and (value<=high(intLit)) then begin
       result:=@intLit[value];
       result^.rereference;
-    end else begin
-      {$ifdef DEBUGMODE}
-      InterLockedIncrement(literalAllocCount[lt_int]);
-      {$endif}
-      new(result, create(value));
-    end;
+    end else new(result, create(value));
   end;
 
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
   begin
     new(result, create(value));
-    {$ifdef DEBUGMODE}
-    InterLockedIncrement(literalAllocCount[lt_real]);
-    {$endif}
   end;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
-    {$ifdef DEBUGMODE}
-    InterLockedIncrement(literalAllocCount[lt_string]);
-    {$endif}
     new(result, create(value));
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
   begin
-    {$ifdef DEBUGMODE}
-    InterLockedIncrement(literalAllocCount[lt_expression]);
-    {$endif}
     new(result, create(value));
   end;
 
 FUNCTION newListLiteral: P_listLiteral;
   begin
-    {$ifdef DEBUGMODE}
-    InterLockedIncrement(literalAllocCount[lt_list]);
-    {$endif}
     new(result, create);
   end;
 
@@ -2724,13 +2704,5 @@ FINALIZATION
   errLit.destroy;
   voidLit.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
-  {$ifdef DEBUGMODE}
-  writeln('Total allocated literals:');
-  writeln('   int       : ',literalAllocCount[lt_int       ]);
-  writeln('   real      : ',literalAllocCount[lt_real      ]);
-  writeln('   string    : ',literalAllocCount[lt_string    ]);
-  writeln('   expression: ',literalAllocCount[lt_expression]);
-  writeln('   list      : ',literalAllocCount[lt_list      ]);
-  {$endif}
 
 end.
