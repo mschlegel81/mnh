@@ -15,6 +15,14 @@ private logName:=executor.logName;
 testAlreadyPassed(exe)->logName(exe).fileExists AND ((codeHash(exe)&' '&'o.k.') in logName(exe).fileLines);
 testAlreadyPassed:=executor.testAlreadyPassed;
 
+timeForTest(exe)->(logName(exe).fileExists ? begin
+  local lines:=logName(exe).fileLines;
+  local timeIdx:=indexOf(lines=(codeHash(exe)&' '&'o.k.'));
+  timeIdx==[]
+  ? void
+  : lines[timeIdx[0]+1].replace('Total time: ','');
+end : void);
+
 linuxTestsPassed->
   [[myPath.replace('.mnh','.Linux_x86_64.txt')      ,'FOLinux'],
    [myPath.replace('.mnh','.Linux_x86_64_light.txt'),'LOLinux']]
@@ -48,3 +56,4 @@ validateCollectedOutput->begin
   printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
   logName.writeFileLines(printOut | head(logName.fileLines,40));
 end;
+
