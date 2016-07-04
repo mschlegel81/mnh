@@ -194,6 +194,46 @@ FUNCTION subSets_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     end;
   end;
 
+FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR mustContain,mightContain:T_arrayOfLiteral;
+      i:longint;
+  PROCEDURE recurseBuildPermutations(CONST mustContain,mightContain:T_arrayOfLiteral);
+    VAR newMust,newMight:T_arrayOfLiteral;
+        newSet:P_listLiteral;
+        i,j,k:longint;
+    begin
+      if length(mightContain)>0 then begin
+        setLength(newMust ,length(mustContain )+1);
+        for k:=0 to length(mustContain)-1 do newMust[k]:=mustContain[k];
+        setLength(newMight,length(mightContain)-1);
+        for i:=0 to length(mightContain)-1 do begin
+          newMust[length(newMust)-1]:=mightContain[i];
+          k:=0;
+          for j:=0 to length(mightContain)-1 do if i<>j then begin
+            newMight[k]:=mightContain[j]; inc(k);
+          end;
+          recurseBuildPermutations(newMust,newMight);
+        end;
+        setLength(newMust,0);
+        setLength(newMight,0);
+      end else begin
+        newSet:=newListLiteral;
+        for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
+        P_listLiteral(result)^.append(newSet,true);
+      end;
+    end;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes) then begin
+      setLength(mustContain,0);
+      setLength(mightContain,list0^.size);
+      for i:=0 to length(mightContain)-1 do mightContain[i]:=list0^.value(i);
+      result:=newListLiteral;
+      recurseBuildPermutations(mustContain,mightContain);
+    end;
+  end;
+
 FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR n,d:int64;
   begin
@@ -258,6 +298,7 @@ INITIALIZATION
   registerRule(MATH_NAMESPACE,'isNan',@isNan_impl,'isNan(n);#Returns true if n is a number representing the value Not-A-Number');
   registerRule(MATH_NAMESPACE,'isInfinite',@isInfinite_impl,'isInfinite(n);#Returns true if n is a number representing an infinite value');
   registerRule(MATH_NAMESPACE,'subSets',@subSets_impl,'subSets(S);#Returns all distinct subsets of S');
+  registerRule(MATH_NAMESPACE,'permutations',@permutations_impl,'permutations(L:list);#Returns a list of all permutations of S');
   registerRule(MATH_NAMESPACE,'factorize',@factorize_impl,'factorize(i:int);#Returns a list of all prime factors of i');
   registerRule(MATH_NAMESPACE,'primes',@primes_impl,'primes(pMax:int);#Returns prime numbers up to pMax');
   BUILTIN_MIN:=@min_imp;

@@ -2,12 +2,9 @@ randomSet->1+intRandom(9,4);
 OPLIST:=['+','-','*','/'];
 
 private drop(L<>[],i:int)->L[[0..size(L)-1]<>i];
-permutations(L:list)->permutations([],L).unique;
-private permutations(Head:list,[])->[Head];
-private permutations(Head:list,L)->[0..size(L)-1].each(i,permutations(Head|L[i],drop(L,i)),|);
 
 private
-canSolve(set)->permutations(set).each(x,
+canSolve(set)->permutations(set).unique.each(x,
                [x[0]+x[1],x[0]-x[1],x[0]*x[1],x[0]/x[1]].each(y,
                [y   +x[2],y   -x[2],y   *x[2],y   /x[2]].each(z,
               ([z   +x[3],z   -x[3],z   *x[3],z   /x[3]]=24).agg(OR),OR),OR),OR);
@@ -24,16 +21,16 @@ private getRiddle(set,false)->getRiddle(randomSet);
 private getRiddle(set,true )->set;
 
 private isCorrectSolution(set,text)->
-    not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
+  not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
   ? print('The input contains an invalid character.') and false
   : '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
     '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
-  ? print('The input contains an invalid character sequence.') and false
-  : not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
-  ? print('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void)) and false
-  : not(toExpression(text)()=24)
-  ? print('The input does not evaluate to 24 but to ',toExpression(text)(),'.') and false
-  : print('The solution is valid.') and true;
+    ? print('The input contains an invalid character sequence.') and false
+    : not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
+      ? print('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void)) and false
+      : not(toExpression(text)()=24)
+        ? print('The input does not evaluate to 24 but to ',toExpression(text)(),'.') and false
+        : print('The solution is valid.') and true;
 
 private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
 private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&toString(set)&'.'));
@@ -47,6 +44,7 @@ private demo(set)->print(' ?> Find an expression to calculate 24 from the number
                    print(" ?> Another round?\n !> no");
 
 //*Demo - mainly for reg-testing
-main('demo')->print('This is a demo - start with any argument to play.',resetRandom)|demo(getRiddle);
+main('demo')->print('This is a demo - start without argument to play.',resetRandom)|demo(getRiddle);
 
 main->playARound;
+
