@@ -104,6 +104,8 @@ DESTRUCTOR T_settings.destroy;
 
 FUNCTION workerThreadCount:longint;
   begin
+    //No parallelization in debug mode!
+    {$ifdef DEBUGMODE} exit(0); {$endif}
     result:=settings.value^.cpuCount-1;
     if result>=0 then exit(result);
     result:=getNumberOfCPUs-1;

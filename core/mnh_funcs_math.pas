@@ -219,7 +219,7 @@ FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
       end else begin
         newSet:=newListLiteral;
         for i:=0 to length(mustContain)-1 do newSet^.append(mustContain[i],true);
-        P_listLiteral(result)^.append(newSet,true);
+        P_listLiteral(result)^.append(newSet,false);
       end;
     end;
 

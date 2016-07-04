@@ -155,6 +155,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
   VAR i:longint;
   begin
     if formatSubrule<>nil then disposeLiteral(formatSubrule);
+    for i:=0 to length(parts)-1 do parts[i]:='';
     setLength(parts,0);
     for i:=0 to length(formats)-1 do formats[i].destroy;
     setLength(formats,0);

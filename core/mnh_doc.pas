@@ -601,11 +601,11 @@ PROCEDURE finalizeFunctionDocMap;
       i:longint;
   begin
     entries:=functionDocMap.entrySet;
-    functionDocMap.destroy;
     values.create;
     for i:=0 to length(entries)-1 do values.add(entries[i].value);
     values.unique;
     for i:=0 to values.size-1 do dispose(values[i],destroy);
+    functionDocMap.destroy;
   end;
 
 INITIALIZATION

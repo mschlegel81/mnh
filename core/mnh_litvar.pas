@@ -648,6 +648,7 @@ DESTRUCTOR T_expressionLiteral.destroy;
 DESTRUCTOR T_listLiteral.destroy;
   VAR i: longint;
   begin
+    dropIndexes;
     for i:=0 to datFill-1 do if dat[i]<>nil then disposeLiteral(dat[i]);
     setLength(dat,0);
   end;
@@ -2537,6 +2538,9 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal);
 
 DESTRUCTOR T_format.destroy;
   begin
+    intFmt:='';
+    realFmt:='';
+    strFmt:='';
   end;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;

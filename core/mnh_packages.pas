@@ -313,7 +313,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     PROCEDURE parseRule;
       CONST C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER:set of T_tokenType=[tt_typeCheckExpression,tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList];
 
-      VAR partText:string;
+      VAR partText:ansistring;
           partLocation:T_tokenLocation;
 
       PROCEDURE fail(VAR firstOfPart:P_token);
@@ -336,7 +336,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           ruleIsPersistent:boolean=false;
           ruleIsSynchronized:boolean=false;
           //rule meta data
-          ruleId:string;
+          ruleId:string='';
           evaluateBody:boolean;
           rulePattern:T_pattern;
           rulePatternElement:T_patternElement;
@@ -466,6 +466,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                 end else fail(parts[i].first);
               end;
             end;
+            partText:='';
+            parts:=nil;
           end;
           rulePattern.finalizeRefs(ruleDeclarationStart,context,@self);
           context.disposeToken(first);
@@ -550,7 +552,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first,maxLongint)+';',first^.location);
+
         parseRule;
+
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
@@ -779,6 +783,7 @@ PROCEDURE T_package.loadForDocumentation;
     silentContext.createSanboxContext(P_adapters(@nullAdapter));
     nullAdapter.clearErrors;
     load(lu_forDocGeneration,silentContext,C_EMPTY_STRING_ARRAY);
+    nullAdapter.clearErrors;
     silentContext.destroy;
   end;
 

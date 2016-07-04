@@ -162,31 +162,18 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
 FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_tokenLocation; CONST inPackage: P_package; VAR adapters: T_adapters; CONST retainBlanks: boolean): T_token;
   VAR parsedLength:longint=0;
 
-  PROCEDURE fail(CONST message:ansistring);
+  PROCEDURE fail(message:ansistring);
     begin
       adapters.raiseCustomMessage(mt_el4_parsingError,message,lineLocation);
     end;
 
-  PROCEDURE leadingId(OUT txt:ansistring; CONST offset:longint=0);
+  FUNCTION leadingId:ansistring;
     VAR i:longint;
     begin
       i:=lineLocation.column;
-      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_',C_ID_QUALIFY_CHARACTER]) do begin
-        inc(i);
-        if line[i]=C_ID_QUALIFY_CHARACTER then begin
-          if (i<length(line)) and (line[i+1]=C_ID_QUALIFY_CHARACTER) then begin
-            parsedLength:=i-lineLocation.column;
-            txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
-            exit;
-          end else begin
-            parsedLength:=i-lineLocation.column;
-            txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
-            exit;
-          end;
-        end;
-      end;
+      while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_']) do inc(i);
       parsedLength:=i-lineLocation.column+1;
-      txt:=copy(line,lineLocation.column+offset,parsedLength-offset);
+      result:=copy(line,lineLocation.column,parsedLength);
     end;
 
   FUNCTION parseCharCode:ansistring;
@@ -210,7 +197,8 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
   FUNCTION startsWith(CONST prefix:string):boolean;
     begin result:=copy(line,lineLocation.column,length(prefix))=prefix; end;
 
-  VAR id:ansistring;
+  VAR id:ansistring='';
+      stringValue:ansistring='';
       tt:T_tokenType;
   begin
     result.location:=lineLocation;
@@ -265,42 +253,40 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
                            else result.tokType:=tt_literal;
       end;
       '"','''': begin
-        id:=unescapeString(line,lineLocation.column,parsedLength);
+        stringValue:=unescapeString(line,lineLocation.column,parsedLength);
         if parsedLength=0 then fail('Cannot parse string literal '+line)
         else begin
+          UniqueString(stringValue);
           result.tokType:=tt_literal;
-          result.data:=newStringLiteral(id);
+          result.data:=newStringLiteral(stringValue);
         end;
-        id:='';
+        stringValue:='';
       end;
       '#': begin
         result.tokType:=tt_literal;
         result.data:=newStringLiteral(parseCharCode);
       end;
       '$': begin
-        leadingId(result.txt);
+        result.txt:=leadingId;
         result.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z': begin
-        leadingId(id);
+        result.txt:=leadingId;
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
-        if id=C_tokenInfo[tt].defaultId then begin
+        if result.txt=C_tokenInfo[tt].defaultId then begin
           result.tokType:=tt;
-          result.txt:='';
         end;
         if result.tokType=tt_identifier then begin
-          if      id=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
-          else if id=C_boolText[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end
-          else if id=C_nanText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Nan); end
-          else if id=C_infText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(infinity); end
-          else if id=C_voidText        then begin result.tokType:=tt_literal; result.data:=newVoidLiteral; end
+          if      result.txt=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
+          else if result.txt=C_boolText[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end
+          else if result.txt=C_nanText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Nan); end
+          else if result.txt=C_infText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(infinity); end
+          else if result.txt=C_voidText        then begin result.tokType:=tt_literal; result.data:=newVoidLiteral; end
           else begin
-            result.txt:=id;
             result.data:=inPackage;
           end;
         end;
-        id:='';
       end;
       '/': if startsWith('//') then begin //comments
         parsedLength:=2;
@@ -354,7 +340,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         parsedLength:=2;
         result.tokType:=tt_assign;
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
-        leadingId(id);
+        id:=leadingId;
         if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
         else if id=C_tokenInfo[tt_typeCheckBoolean   ].defaultId then result.tokType:=tt_typeCheckBoolean
         else if id=C_tokenInfo[tt_typeCheckExpression].defaultId then result.tokType:=tt_typeCheckExpression
