@@ -316,6 +316,8 @@ IMPLEMENTATION
 VAR
   boolLit: array[false..true] of T_boolLiteral;
   intLit: array[-100..4000] of T_intLiteral;
+  emptyStringLit: T_stringLiteral;
+  charLit: array[#0..#255] of T_stringLiteral;
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
 
@@ -380,7 +382,11 @@ FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral;
 
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral;
   begin
-    new(result, create(value));
+    if length(value)<=1 then begin
+      if length(value)=1 then result:=@charLit[value[1]]
+                         else result:=@emptyStringLit;
+      result^.rereference;
+    end else new(result, create(value));
   end;
 
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
@@ -2693,7 +2699,9 @@ INITIALIZATION
   boolLit[true].create(true);
   errLit.init(lt_error);
   voidLit.create();
+  emptyStringLit.create('');
   for i:=low(intLit) to high(intLit) do intLit[i].create(i);
+  for i:=0 to 255 do charLit[chr(i)].create(chr(i));
   DefaultFormatSettings.DecimalSeparator:='.';
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   randomize;
@@ -2703,6 +2711,8 @@ FINALIZATION
   boolLit[true].destroy;
   errLit.destroy;
   voidLit.destroy;
+  emptyStringLit.destroy;
   for i:=low(intLit) to high(intLit) do intLit[i].destroy;
+  for i:=0 to 255 do charLit[chr(i)].destroy;
 
 end.
