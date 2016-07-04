@@ -3012,7 +3012,7 @@ Path length after polishing is    1501.698
 Hash of regTest/../demos/travellingSalesmanProblem.png is C6052EF2
 Hash of regTest/../demos/turtleGfx.png is FB769509
 Hash of regTest/../demos/heart.png is 88B30F70
-Examples file has 506 lines
+Examples file has 509 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3522,3 +3522,7 @@ out>      void
  in>      printf('sin(%{$0}s)=%{sin($0)}4.4g', 1);
 printline sin(1)=0.8415
 out>      void
+ in> permutations([1, 1, 2]);
+out> [[1,1,2],[1,2,1],[1,1,2],[1,2,1],[2,1,1],[2,1,1]]
+ in> permutations([1..3]);
+out> [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]

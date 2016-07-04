@@ -504,3 +504,6 @@ printf("%{$0}x is %{$0}d in hexadecimal form",123);
 //Placeholders can be complex expressions
 printf("sin(%{$0}s)=%{sin($0)}4.4g",1);
 
+permutations([1,1,2]);
+
+permutations([1..3]);
