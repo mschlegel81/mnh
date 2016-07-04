@@ -628,7 +628,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         aggregatorLocation:T_tokenLocation;
         aggregatorToken:T_tokenType;
         aggregatorExpression:P_expressionLiteral;
-        aggregatorPresent:(no,yes_as_operator,yes_as_expression)=no;
+        aggregatorPresent:(no,yes_as_operator,yes_as_expression,yes_as_head)=no;
         maxFutureForwardInitialization:longint=16;
         eachToken:P_token;
 
@@ -686,13 +686,14 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
             end else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
-            tt_intrinsicRule: if isPureAggregator then begin
+            tt_intrinsicRule: if (T_intFuncCallback(t^.data)=BUILTIN_MIN) or
+                                 (T_intFuncCallback(t^.data)=BUILTIN_MAX) then begin
               aggregatorExpression:=createPrimitiveAggregatorLiteral(t,context);
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
-            end;
-            else if isPureAggregator then begin
-              context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
+            end else if (T_intFuncCallback(t^.data)=BUILTIN_HEAD) then begin
+              aggregatorPresent:=yes_as_head;
+              aggregatorLocation:=t^.location
             end;
           end;
         end else if isPureAggregator then begin
@@ -751,6 +752,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           no: begin
             if resultLiteral=nil then resultLiteral:=newListLiteral;
             P_listLiteral(resultLiteral)^.append(L,true);
+          end;
+          yes_as_head: begin
+            if (L^.literalType<>lt_void) and (resultLiteral=nil) then begin
+              resultLiteral:=L;
+              L^.rereference;
+              lazyAbort:=true;
+            end;
           end;
           yes_as_operator: case aggregatorToken of
             tt_operatorConcat: begin

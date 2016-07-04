@@ -520,6 +520,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       ((params^.value(1)^.literalType in C_validListTypes) and (P_listLiteral(params^.value(1))^.size=P_listLiteral(params^.value(0))^.size) or (params^.value(1)^.literalType=lt_int)) and
       ((params^.size=2) or (params^.value(2)^.literalType=lt_expression))
     then begin
+      setLength(keyList,0);
       listToGroup:=P_listLiteral(params^.value(0));
 
       if params^.value(1)^.literalType=lt_int
@@ -574,7 +575,7 @@ FUNCTION printf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 FUNCTION formatTime_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR L:P_listLiteral;
       i:longint;
-      fmt:ansistring;
+      fmt:ansistring='';
   FUNCTION fmtIt(CONST t:double):P_stringLiteral; inline;
     begin
       result:=newStringLiteral(FormatDateTime(fmt,t));
