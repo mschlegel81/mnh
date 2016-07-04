@@ -1,7 +1,4 @@
-randomSet->1+intRandom(9,4);
-OPLIST:=['+','-','*','/'];
-
-private drop(L<>[],i:int)->L[[0..size(L)-1]<>i];
+private OPLIST:=['+','-','*','/'];
 
 private
 canSolve(set)->permutations(set).unique.each(x,
@@ -15,10 +12,11 @@ findSolution(set)->head(flatten(permutations(set).each(x,
                    OPLIST.each(op1,OPLIST.each(op2,OPLIST.each(op3,
                    testSolution('(('&x[0]&op1&x[1]&')'&op2&x[2]&')'&op3&x[3])))))));
 
-private getRiddle->getRiddle(randomSet);
-private getRiddle(set)->getRiddle(set,canSolve(set));
-private getRiddle(set,false)->getRiddle(randomSet);
-private getRiddle(set,true )->set;
+private getRiddle->begin
+  local numbers:=1+intRandom(9,4);
+  while(not(canSolve(numbers)),numbers:=1+intRandom(9,4));
+  numbers;
+end;
 
 private isCorrectSolution(set,text)->
   not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
