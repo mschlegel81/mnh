@@ -1,6 +1,6 @@
-This is a demo - start with any argument to play.
+This is a demo - start without argument to play.
  ?> Find an expression to calculate 24 from the numbers [1,1,6,4].
- !> ((1-1)+4)*6
+ !> ((1-1)+6)*4
 The solution is valid.
  ?> Another round?
  !> no
