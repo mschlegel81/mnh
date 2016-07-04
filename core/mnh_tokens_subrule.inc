@@ -69,7 +69,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
             then token.tokType:=tt_parameterIdentifier
             else token.tokType:=tt_identifier;
           end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
-          else token.tokType:=tt_identifier;
+          else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
         end else parIdx:=-1;
       end;
     end;
