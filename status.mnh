@@ -5,7 +5,7 @@ currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').tr
 main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)&
 "\n                     Binary | Exists | Version | Tested\n"&
 "----------------------------+--------+---------+---------\n"&
-([0..7].pEach(i,begin
+([0..8].pEach(i,begin
   local bin:=binName(i);
   local ex:=bin.fileExists;
   local hashOk:=(bin.exec(['-codeHash']).head.split(':')[1])==currentHash;
