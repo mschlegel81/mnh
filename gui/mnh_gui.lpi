@@ -22,41 +22,7 @@
     </VersionInfo>
     <BuildModes Count="3">
       <Item1 Name="Default" Default="True"/>
-      <Item2 Name="light">
-        <CompilerOptions>
-          <Version Value="11"/>
-          <PathDelim Value="\"/>
-          <Target>
-            <Filename Value="mnh"/>
-          </Target>
-          <SearchPaths>
-            <IncludeFiles Value="$(ProjOutDir);..\core"/>
-            <OtherUnitFiles Value="..\core;..\..\common"/>
-            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
-          </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <CStyleOperator Value="False"/>
-              <AllowLabel Value="False"/>
-              <CPPInline Value="False"/>
-            </SyntaxOptions>
-          </Parsing>
-          <CodeGeneration>
-            <RelocatableUnit Value="True"/>
-            <Checks>
-              <IOChecks Value="True"/>
-              <StackChecks Value="True"/>
-            </Checks>
-          </CodeGeneration>
-          <Other>
-            <Verbosity>
-              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
-            </Verbosity>
-            <CustomOptions Value="-ddebugMode"/>
-          </Other>
-        </CompilerOptions>
-      </Item2>
-      <Item3 Name="deployment">
+      <Item2 Name="deployment">
         <CompilerOptions>
           <Version Value="11"/>
           <PathDelim Value="\"/>
@@ -93,6 +59,45 @@
               <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
             </Verbosity>
             <CustomOptions Value="-dfullVersion"/>
+          </Other>
+        </CompilerOptions>
+      </Item2>
+      <Item3 Name="imig">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <PathDelim Value="\"/>
+          <Target>
+            <Filename Value="mnh_imig"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir);..\core;..\..\art.source\igSrc"/>
+            <OtherUnitFiles Value="..\core;..\..\common;..\..\common\synapse;..\..\art.source\igSrc"/>
+            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <CStyleOperator Value="False"/>
+              <AllowLabel Value="False"/>
+              <CPPInline Value="False"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+            <Optimizations>
+              <OptimizationLevel Value="3"/>
+            </Optimizations>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <GenerateDebugInfo Value="False"/>
+            </Debugging>
+          </Linking>
+          <Other>
+            <Verbosity>
+              <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
+            </Verbosity>
+            <CustomOptions Value="-dfullVersion
+-dimig"/>
           </Other>
         </CompilerOptions>
       </Item3>
@@ -335,11 +340,6 @@
         <OptimizationLevel Value="0"/>
       </Optimizations>
     </CodeGeneration>
-    <Linking>
-      <Debugging>
-        <TrashVariables Value="True"/>
-      </Debugging>
-    </Linking>
     <Other>
       <Verbosity>
         <ShowHintsForUnusedUnitsInMainSrc Value="True"/>
