@@ -56,6 +56,7 @@ T_settings=object(T_serializable)
   wasLoaded:boolean;
   savedAt:double;
   wordWrapEcho:boolean;
+  memoryLimit:int64;
 
   CONSTRUCTOR create;
   DESTRUCTOR destroy;
@@ -152,6 +153,7 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     textLogName:=stream.readAnsiString;
     logPerRun:=stream.readBoolean;
     wordWrapEcho:=stream.readBoolean;
+    memoryLimit:=stream.readInt64;
     if stream.allOkay then result:=true
     else begin
       initDefaults;
@@ -189,6 +191,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     stream.writeAnsiString(textLogName);
     stream.writeBoolean(logPerRun);
     stream.writeBoolean(wordWrapEcho);
+    stream.writeInt64(memoryLimit);
     savedAt:=now;
   end;
 
@@ -224,6 +227,15 @@ PROCEDURE T_settings.initDefaults;
     editorState[0].create;
     textLogName:='';
     logPerRun:=false;
+    memoryLimit:={$ifdef WINDOWS}
+                   {$ifdef CPU32}
+                   1000000000;
+                   {$else}
+                   int64(maxLongint)*2;
+                   {$endif}
+                 {$else}
+                 1000000000;
+                 {$endif}
   end;
 
 FUNCTION T_settings.savingRequested: boolean;

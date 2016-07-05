@@ -2,19 +2,10 @@ UNIT mnh_caches;
 
 INTERFACE
 
-USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys;
+USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
 CONST MAX_ACCEPTED_COLLISIONS=10;
       MIN_BIN_COUNT=128;
       POLISH_FREQUENCY=64;
-      MEM_LIMIT:int64={$ifdef WINDOWS}
-                        {$ifdef CPU32}
-                        1000000000;
-                        {$else}
-                        int64(maxLongint)*2;
-                        {$endif}
-                      {$else}
-                      1000000000;
-                      {$endif}
 
 TYPE
   T_cacheEntry = record
@@ -41,8 +32,11 @@ TYPE
   end;
 
 IMPLEMENTATION
+VAR globalMemoryLimit:int64=-1;
+
 CONSTRUCTOR T_cache.create();
   begin
+    globalMemoryLimit:=settings.value^.memoryLimit;
     fill := 0;
     setLength(cached,MIN_BIN_COUNT);
   end;
@@ -136,7 +130,7 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       data[i].useCount:= 0;
     end;
     inc(putCounter);
-    if (putCounter>POLISH_FREQUENCY*length(cached)) or (MemoryUsed>MEM_LIMIT) then polish
+    if (putCounter>POLISH_FREQUENCY*length(cached)) or (MemoryUsed>globalMemoryLimit) then polish
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 
