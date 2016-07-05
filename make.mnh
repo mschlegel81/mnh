@@ -205,7 +205,7 @@ main('prepare')->updateCurrentCodeHash;
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  [0..7].each(i,
+  [0..8].each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
     :             false,or)
@@ -214,5 +214,3 @@ main(...)->begin
     ? main(p)
     : void);
 end;
-
-
