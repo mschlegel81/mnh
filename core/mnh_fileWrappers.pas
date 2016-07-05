@@ -1,6 +1,6 @@
 UNIT mnh_fileWrappers;
 INTERFACE
-USES FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
+USES mySys,FileUtil,sysutils,Classes,Process,UTF8Process, myGenerics,mnh_constants,myStringUtil,LazUTF8,LazFileUtils;
 TYPE
   P_codeProvider = ^T_codeProvider;
   T_codeProvider = object
@@ -287,8 +287,8 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
     try
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
-      if asynch then tempProcess.options:=tempProcess.options +[poNewConsole]
-                else tempProcess.options:=tempProcess.options +[poWaitOnExit];
+      if asynch or not(isConsoleShowing) then tempProcess.options:=tempProcess.options +[poNewConsole];
+      if not(asynch)                     then tempProcess.options:=tempProcess.options +[poWaitOnExit];
       for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
       tempProcess.execute;
       tempProcess.free;

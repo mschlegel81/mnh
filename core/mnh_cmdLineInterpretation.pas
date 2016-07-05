@@ -182,7 +182,8 @@ PROCEDURE parseCmdLine;
         end;
       end else addParameter(mainParameters,i);
     end;
-    if quitImmediate then halt;;
+    quitImmediate:=quitImmediate and (fileOrCommandToInterpret='');
+    if quitImmediate then halt;
     setMnhParameters(mnhParameters);
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
