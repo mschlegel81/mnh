@@ -91,7 +91,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         context.adapters^.raiseError('No output file given',tokenLocation);
         isValid:=false;
       end;
-      EnterCriticalsection(imigCS);
+      enterCriticalSection(imigCS);
       workflow:=createWorkflow(P_listLiteral(params^.value(0)),false,isValid,tokenLocation,context);
       if isValid then begin
         if Source<>'' then workflow.executeForTarget(Source,sizeLimit,dest)
@@ -106,18 +106,18 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         progressQueue.cancelCalculation(true);
       end;
       workflow.destroy;
-      LeaveCriticalsection(imigCS);
+      leaveCriticalSection(imigCS);
       if isValid then exit(newVoidLiteral) else exit(nil);
     end else result:=nil;
   end;
 
 INITIALIZATION
-  InitCriticalSection(imigCS);
+  initCriticalSection(imigCS);
   registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,'validateWorkflow(wf:list);Validates the workflow returning a boolean flag indicating validity');
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options.');
-finalization
-  DoneCriticalsection(imigCS);
+FINALIZATION
+  doneCriticalSection(imigCS);
 end.
