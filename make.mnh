@@ -115,39 +115,41 @@ end;
 //*Make distro 7z - including build if needed
 main('distro')->isLinux ? fail('Distro building is currently not supported under Linux') : begin
   updateCurrentCodeHash;
-  [0..3].each(i,
-    begin
-      local buildOk:=build(i);
-      local testOk:=testAlreadyPassed(binName(i));
-      buildOk ? void : print('Building of ',binName(i),' failed');
-      testOk ? void : print(binName(i),' has not been tested successfully');
-      buildOk and testOk;
-    end,
-    AND) ? begin
-    execPipeless('..\upx.exe',['-9','mnh_light.exe']);    
-    call7z(['mnh.exe','mnh_light.exe'],'64bit');
-    movePairs.each(pair,verboseMove@pair,AND)
-    ? begin
-        execPipeless('..\upx.exe',['-9','mnh_light.exe']);    
-        call7z(['mnh.exe','mnh_light.exe'],'32bit');
-        movePairs.get([3..0]).each(pair,verboseMove@(pair.get([1,0])));
-      end
-    : print('Error moving files! 32bit distro has not been created!');
-    //Linux executables exist and are less than one hour old
-    ['mnh','mnh_light'].each(file,fileExists(file) AND systime-file.fileInfo["time"]<1/24,AND)
-    AND linuxTestsPassed
-    ? begin
-        execPipeless('..\upx.exe',['-9','mnh_light']);
-        call7z(['mnh','mnh_light'],'64bit_Linux');
-      end
-    : void;
-  end : void;
+  [0..3].scramble.each(i,
+  begin
+    local buildOk:=build(i);
+    local testOk:=testAlreadyPassed(binName(i));
+    buildOk ? void : print('Building of ',binName(i),' failed');
+    testOk ? void : print(binName(i),' has not been tested successfully');
+    buildOk and testOk;
+  end,
+  AND)
+  ? begin
+      execPipeless('..\upx.exe',['-9','mnh_light.exe']);
+      call7z(['mnh.exe','mnh_light.exe'],'64bit');
+      movePairs.each(pair,verboseMove@pair,AND)
+      ? begin
+          execPipeless('..\upx.exe',['-9','mnh_light.exe']);
+          call7z(['mnh.exe','mnh_light.exe'],'32bit');
+          movePairs.get([3..0]).each(pair,verboseMove@(pair.get([1,0])));
+        end
+      : print('Error moving files! 32bit distro has not been created!');
+      //Linux executables exist and are less than one hour old
+      ['mnh','mnh_light'].each(file,fileExists(file) AND systime-file.fileInfo["time"]<1/24,AND)
+      AND linuxTestsPassed
+      ? begin
+          execPipeless('..\upx.exe',['-9','mnh_light']);
+          call7z(['mnh','mnh_light'],'64bit_Linux');
+        end
+      : void;
+    end
+  : void;
 end;
 
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  [0..7].each(i,build(i),AND);
+  [0..7].scramble.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -155,7 +157,7 @@ main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
 main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') : begin
-  allFolders('.')
+  allFolders('..')
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
   .each(f,begin
@@ -163,7 +165,7 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
            deleteDir(f);
           end);
   (files(allFolders('.')&'/*.png')|
-   files(allFolders('.')&'/*.bak')|
+   files(allFolders('..')&'/*.bak')|
    files('install.mnh')|
    files('ensureDemos.mnh')|
    files('ensurePackages.mnh')|
@@ -183,11 +185,15 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
   .each(file,print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;   
 end;
+
+private scramble(L:list)->L[L.size.random.sortPerm];
      
 //*Tests all files
 main('test')->begin
   updateCurrentCodeHash;
-  [0..3].each(i,
+  [0..3]
+  .scramble
+  .each(i,
   build(i), 
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
@@ -211,5 +217,3 @@ main(...)->begin
     ? main(p)
     : void);
 end;
-
-
