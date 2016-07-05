@@ -17,9 +17,9 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet_display
+    ActivePage = TabSheet_global
     Align = alClient
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
@@ -104,7 +104,7 @@ object SettingsForm: TSettingsForm
       object Label4: TLabel
         Left = 8
         Height = 15
-        Top = 32
+        Top = 56
         Width = 52
         Caption = 'Autosave:'
         ParentColor = False
@@ -112,46 +112,46 @@ object SettingsForm: TSettingsForm
       object autosaveComboBox: TComboBox
         Left = 72
         Height = 23
-        Top = 32
+        Top = 56
         Width = 232
         ItemHeight = 15
         OnChange = autosaveComboBoxChange
         Style = csDropDownList
-        TabOrder = 1
+        TabOrder = 2
       end
       object rbLogOff: TRadioButton
         Left = 8
         Height = 19
-        Top = 64
+        Top = 104
         Width = 110
         Caption = 'no additional log'
         Checked = True
         OnChange = rbLogOffChange
-        TabOrder = 5
+        TabOrder = 3
         TabStop = True
       end
       object rbLogPerProgramStart: TRadioButton
         Left = 8
         Height = 19
-        Top = 80
+        Top = 120
         Width = 155
         Caption = 'one log per program start'
         OnChange = rbLogOffChange
-        TabOrder = 2
+        TabOrder = 4
       end
       object rbLogPerRun: TRadioButton
         Left = 8
         Height = 19
-        Top = 96
+        Top = 136
         Width = 134
         Caption = 'one log per execution'
         OnChange = rbLogOffChange
-        TabOrder = 3
+        TabOrder = 5
       end
       object Label5: TLabel
         Left = 8
         Height = 15
-        Top = 120
+        Top = 160
         Width = 250
         Caption = 'Log name (use ? as placeholder for timestamp):'
         ParentColor = False
@@ -159,11 +159,29 @@ object SettingsForm: TSettingsForm
       object logNameEdit: TEdit
         Left = 72
         Height = 23
-        Top = 136
+        Top = 176
         Width = 232
         OnChange = logNameEditChange
-        TabOrder = 4
+        TabOrder = 6
         Text = 'logNameEdit'
+      end
+      object Label6: TLabel
+        Left = 8
+        Height = 15
+        Top = 32
+        Width = 95
+        Caption = 'Cache Limit (MB):'
+        ParentColor = False
+      end
+      object memLimitEdit: TEdit
+        Left = 112
+        Height = 23
+        Top = 32
+        Width = 192
+        NumbersOnly = True
+        OnEditingDone = memLimitEditEditingDone
+        TabOrder = 1
+        Text = 'memLimitEdit'
       end
     end
     object TabSheet_install: TTabSheet

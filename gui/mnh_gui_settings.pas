@@ -14,6 +14,8 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    memLimitEdit: TEdit;
+    Label6: TLabel;
     logNameEdit: TEdit;
     FontButton: TButton;
     AntialiasCheckbox: TCheckBox;
@@ -43,6 +45,7 @@ TYPE
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE logNameEditChange(Sender: TObject);
+    PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE rbLogOffChange(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
@@ -86,6 +89,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     setFontSize(settings.value^.fontSize);
     if not(settings.value^.wasLoaded) then settings.value^.activePage:=0;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
+    memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
     FontButton.Caption := settings.value^.editorFontname;
     with settings.value^.mainForm do begin
@@ -161,6 +165,12 @@ PROCEDURE TSettingsForm.logNameEditChange(Sender: TObject);
     if settings.value^.getLogName='' then rbLogOff.Checked:=true
     else if settings.value^.logPerRun then rbLogPerRun.Checked:=true
                                       else rbLogPerProgramStart.Checked:=true;
+  end;
+
+PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
+  begin
+    settings.value^.memoryLimit:=StrToInt64Def(trim(memLimitEdit.text),1) shl 20;
+    memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
   end;
 
 PROCEDURE TSettingsForm.rbLogOffChange(Sender: TObject);
