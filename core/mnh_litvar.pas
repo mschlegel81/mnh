@@ -100,7 +100,6 @@ TYPE
 
   T_stringLiteral = packed object(T_scalarLiteral)
   private
-    cachedHash:T_hashInt;
     val: ansistring;
     CONSTRUCTOR create(CONST value: ansistring);
     DESTRUCTOR destroy; virtual;
@@ -172,7 +171,6 @@ TYPE
   private
     dat: array of P_literal;
     datFill:longint;
-    cachedHash: T_hashInt;
     nextAppendIsRange: boolean;
 
     indexBacking:record
@@ -620,12 +618,11 @@ CONSTRUCTOR T_voidLiteral.create();                              begin inherited
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin inherited init(lt_boolean); val:=value; end;
 CONSTRUCTOR T_intLiteral       .create(CONST value: int64);      begin inherited init(lt_int); val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin inherited init(lt_real); val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string); val:=value; cachedHash:=0; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin inherited init(lt_string); val:=value; end;
 CONSTRUCTOR T_expressionLiteral.create(CONST value: pointer);    begin inherited init(lt_expression); val:=value; end;
 CONSTRUCTOR T_listLiteral.create;
   begin
     inherited init(lt_emptyList);
-    cachedHash:=0;
     setLength(dat, 0);
     datFill:=0;
     nextAppendIsRange:=false;
@@ -925,11 +922,9 @@ FUNCTION T_realLiteral.hash: T_hashInt;
 FUNCTION T_stringLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
-    if cachedHash<>0 then exit(cachedHash);
     {$Q-}{$R-}
     result:=T_hashInt(lt_string)+T_hashInt(length(val));
     for i:=1 to length(val) do result:=result*31+ord(val[i]);
-    cachedHash:=result;
     {$Q+}{$R+}
   end;
 
@@ -947,11 +942,9 @@ FUNCTION T_expressionLiteral.hash: T_hashInt;
 FUNCTION T_listLiteral.hash: T_hashInt;
   VAR i: longint;
   begin
-    if cachedHash<>0 then exit(cachedHash);
     {$Q-}{$R-}
     result:=T_hashInt(lt_list)+T_hashInt(datFill);
     for i:=0 to datFill-1 do result:=result*31+dat[i]^.hash;
-    cachedHash:=0;
     {$Q+}{$R+}
   end;
 //=======================================================================:?.hash
@@ -1266,7 +1259,6 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_lis
       exit;
     end;
     if L^.literalType=lt_void then exit;
-    cachedHash:=0;
     if length(dat)>=datFill then setLength(dat,datFill+16);
     dat[datFill]:=L;
     inc(datFill);
@@ -1430,7 +1422,6 @@ PROCEDURE T_listLiteral.sort;
       i, j0, j1, k: longint;
   begin
     if (datFill<=1) then exit;
-    cachedHash:=0;
     scale:=1;
     setLength(temp, datFill);
     while scale<datFill do begin
@@ -1486,7 +1477,6 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
 
   begin
     if datFill<=1 then exit;
-    cachedHash:=0;
     scale:=1;
     setLength(temp, datFill);
     while (scale<datFill) and adapters.noErrors do begin
@@ -1534,7 +1524,6 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; VAR
 
   begin
     if datFill<=1 then exit;
-    cachedHash:=0;
     scale:=1;
     setLength(temp, datFill);
     while (scale<datFill) and adapters.noErrors do begin
@@ -1695,7 +1684,6 @@ FUNCTION T_listLiteral.clone: P_listLiteral;
     end;
     result^.literalType:=literalType;
     result^.nextAppendIsRange:=nextAppendIsRange;
-    result^.cachedHash:=cachedHash;
     with indexBacking do begin
       if mapBack<>nil then result^.unique;
       if setBack<>nil then result^.toKeyValueList;

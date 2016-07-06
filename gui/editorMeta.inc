@@ -66,7 +66,6 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.OnSpecialLineMarkup:=@MnhForm.InputEditSpecialLineMarkup;
     editor.Gutter.width:=34;
     editor.RightEdge:=-1;
-
     editor.Keystrokes.clear;
     addKeystroke(ecUp,38);
     addKeystroke(ecSelUp,8230);
@@ -313,10 +312,10 @@ PROCEDURE T_editorMeta._add_breakpoint_(CONST lineIndex: longint);
 
 FUNCTION T_editorMeta.updateSheetCaption: ansistring;
   begin
-    result:=pseudoName(true);
-    if changed then result:=result+' *';
-    sheet.Caption:=result;
-    result:='MNH5 '+result;
+    if changed then result:=' *'
+               else result:='';
+    sheet.Caption:=pseudoName(true)+result;
+    result:='MNH5 '+pseudoName(false)+result;
   end;
 
 PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);
