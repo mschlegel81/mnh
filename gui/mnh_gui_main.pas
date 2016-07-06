@@ -213,6 +213,7 @@ TYPE
       editor:TSynEdit;
       line:longint;
     end;
+    lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
 
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
@@ -451,6 +452,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
+    lastWordsCaret:=maxlongint;
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     settingsReady:=false;
@@ -1086,8 +1088,18 @@ PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: s
   end;
 
 PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
+  VAR caret:TPoint;
+      i:longint;
   begin
-    if wordsInEditor.size>0 then exit;
+    with editorMeta[PageControl.ActivePageIndex] do caret:=editor.CaretXY;
+    if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
+    wordsInEditor.clear;
+    with editorMeta[PageControl.ActivePageIndex] do begin
+      for i:=0 to caret.y-1 do
+        if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
+                       else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
+    end;
+    wordsInEditor.addAll(completionList.elementArray);
     if PageControl.ActivePageIndex>=0 then with editorMeta[PageControl.ActivePageIndex] do begin
       wordsInEditor.addAll(completionList.elementArray);
       wordsInEditor.unique;
