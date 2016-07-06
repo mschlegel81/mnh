@@ -452,7 +452,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
-    lastWordsCaret:=maxlongint;
+    lastWordsCaret:=maxLongint;
     wordsInEditor.create;
     forceInputEditFocusOnOutputEditMouseUp:=false;
     settingsReady:=false;
