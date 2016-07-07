@@ -4,7 +4,8 @@ currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').tr
 
 main('history')->begin
   local history:=testHistory;
-  local codeHashes:=history.getInner(0).unique;
+  local codeHashes:=history.getInner(0).reverseList;
+  codeHashes:=codeHashes.each(h,h=currentHash OR h in codeHashes.head(index) ? void : h);
   local flavours  :=history.getInner(1).unique;
   codeHashes.each(codeHash,
     print("\nPrevious code hash: ",codeHash) orElse

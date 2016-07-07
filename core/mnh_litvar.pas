@@ -680,6 +680,7 @@ FUNCTION T_listLiteral.head(CONST headSize: longint): P_listLiteral;
   begin
     imax:=headSize;
     if imax>datFill then imax:=datFill;
+    if imax<0 then imax:=0;
     result:=newListLiteral;
     setLength(result^.dat,imax);
     for i:=0 to imax-1 do result^.append(dat[i],true);
