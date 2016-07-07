@@ -190,30 +190,28 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
 end;
 
 private scramble(L:list)->L[L.size.random.sortPerm];
-     
-//*Tests all files
-main('test')->begin
+
+private testMnh(...)->begin
   updateCurrentCodeHash;
   [0..3,isLinux ? void : 8]
   .scramble
   .each(i,
-  build(i), 
-  print('Testing ',binName(i)),
-  testAlreadyPassed(binName(i))
-  ? print('Test has already been passed.') orElse true
-  : binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]) and testAlreadyPassed(binName(i)),AND);
+  i in [0..3,8]
+  ? build(i)
+  : void,
+  exeHasWrongVersion(i)
+  ? void
+  : print('Testing ',binName(i)) orElse
+    binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i)),
+  AND);
 end;
 
+
+//*Tests all files
+main('test')->testMnh;
+
 //*Retests all files
-main('retest')->begin
-  updateCurrentCodeHash;
-  [0..3,isLinux ? void : 8]
-  .scramble
-  .each(i,
-  build(i),
-  print('Testing ',binName(i)),
-  binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded'],'retest']) and testAlreadyPassed(binName(i)),AND);
-end;
+main('retest')->testMnh('retest');
 
 //*Only prepare code hash
 main('prepare')->updateCurrentCodeHash;

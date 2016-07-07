@@ -6,7 +6,9 @@ canPlot:='plot.plot' in listBuiltin;
 private codeHash(exe)->exec(exe,['-codeHash']).head;
 private codeHash:=executor.codeHash;
 
-private memoized flavourString(exe)->exe.exec(['-version']).head.split(' ').trailing(2).reverseList.join('_')&(canPlot(exe) ? '' : '_light');
+private memoized isDebug(exe)->exe.exec(['-version']).head.matches('debug');
+
+private memoized flavourString(exe)->exe.exec(['-version']).head.split(' ').trailing(2).reverseList.join('_')&(canPlot(exe) ? '' : '_light')&(isDebug(exe) ? '_debug' : '');
 flavourString:=executor.flavourString;
 
 private memoized logName(exe)->myPath.replace('.mnh','.'&flavourString(exe)&'.txt');
@@ -51,7 +53,7 @@ validateCollectedOutput->begin
       stateMessage:='first';
       expectedResultName.writeFileLines(printOut);
     end;
-  printf('%s',exec(executor,['-version'])| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
+  printf('%s',exec(executor,['-version'])[0]| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
   print('');
   printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
   logName.writeFileLines(printOut | head(logName.fileLines,80));
