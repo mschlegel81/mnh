@@ -152,7 +152,7 @@ end;
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  [0..7].scramble.each(i,build(i),AND);
+  [0..isLinux ? 7 : 8].scramble.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -222,7 +222,7 @@ main('prepare')->updateCurrentCodeHash;
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  [0..8].each(i,
+  [0..isLinux ? 7 : 8].each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
     :             false,or)
