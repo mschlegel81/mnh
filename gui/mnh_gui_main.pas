@@ -26,7 +26,17 @@ TYPE
   TMnhForm = class(TForm)
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
+    miFileHistory14: TMenuItem;
+    miFileHistory15: TMenuItem;
+    miFileHistory16: TMenuItem;
+    miFileHistory17: TMenuItem;
+    miFileHistory18: TMenuItem;
+    miFileHistory19: TMenuItem;
     MenuItem3: TMenuItem;
+    miFileHistory10: TMenuItem;
+    miFileHistory11: TMenuItem;
+    miFileHistory12: TMenuItem;
+    miFileHistory13: TMenuItem;
     miAutosize: TMenuItem;
     miOpenDocumentationPack: TMenuItem;
     miWrapEcho: TMenuItem;
@@ -131,6 +141,16 @@ TYPE
     PROCEDURE miExpressionEchoClick(Sender: TObject);
     PROCEDURE miExpressionResultClick(Sender: TObject);
     PROCEDURE miFileHistory0Click(Sender: TObject);
+    PROCEDURE miFileHistory10Click(Sender: TObject);
+    PROCEDURE miFileHistory11Click(Sender: TObject);
+    PROCEDURE miFileHistory12Click(Sender: TObject);
+    PROCEDURE miFileHistory13Click(Sender: TObject);
+    PROCEDURE miFileHistory14Click(Sender: TObject);
+    PROCEDURE miFileHistory15Click(Sender: TObject);
+    PROCEDURE miFileHistory16Click(Sender: TObject);
+    PROCEDURE miFileHistory17Click(Sender: TObject);
+    PROCEDURE miFileHistory18Click(Sender: TObject);
+    PROCEDURE miFileHistory19Click(Sender: TObject);
     PROCEDURE miFileHistory1Click(Sender: TObject);
     PROCEDURE miFileHistory2Click(Sender: TObject);
     PROCEDURE miFileHistory3Click(Sender: TObject);
@@ -769,6 +789,16 @@ PROCEDURE TMnhForm.miFileHistory6Click(Sender: TObject); begin openFromHistory(6
 PROCEDURE TMnhForm.miFileHistory7Click(Sender: TObject); begin openFromHistory(7); end;
 PROCEDURE TMnhForm.miFileHistory8Click(Sender: TObject); begin openFromHistory(8); end;
 PROCEDURE TMnhForm.miFileHistory9Click(Sender: TObject); begin openFromHistory(9); end;
+PROCEDURE TMnhForm.miFileHistory10Click(Sender: TObject); begin openFromHistory(10); end;
+PROCEDURE TMnhForm.miFileHistory11Click(Sender: TObject); begin openFromHistory(11); end;
+PROCEDURE TMnhForm.miFileHistory12Click(Sender: TObject); begin openFromHistory(12); end;
+PROCEDURE TMnhForm.miFileHistory13Click(Sender: TObject); begin openFromHistory(13); end;
+PROCEDURE TMnhForm.miFileHistory14Click(Sender: TObject); begin openFromHistory(14); end;
+PROCEDURE TMnhForm.miFileHistory15Click(Sender: TObject); begin openFromHistory(15); end;
+PROCEDURE TMnhForm.miFileHistory16Click(Sender: TObject); begin openFromHistory(16); end;
+PROCEDURE TMnhForm.miFileHistory17Click(Sender: TObject); begin openFromHistory(17); end;
+PROCEDURE TMnhForm.miFileHistory18Click(Sender: TObject); begin openFromHistory(18); end;
+PROCEDURE TMnhForm.miFileHistory19Click(Sender: TObject); begin openFromHistory(19); end;
 
 PROCEDURE TMnhForm.miHaltEvalutaionClick(Sender: TObject);
   begin
@@ -1452,12 +1482,22 @@ PROCEDURE TMnhForm.processFileHistory;
         7: result:=miFileHistory7;
         8: result:=miFileHistory8;
         9: result:=miFileHistory9;
+        10: result:=miFileHistory10;
+        11: result:=miFileHistory11;
+        12: result:=miFileHistory12;
+        13: result:=miFileHistory13;
+        14: result:=miFileHistory14;
+        15: result:=miFileHistory15;
+        16: result:=miFileHistory16;
+        17: result:=miFileHistory17;
+        18: result:=miFileHistory18;
+        19: result:=miFileHistory19;
       else result:=nil;
       end;
     end;
   VAR i:longint;
   begin
-    for i:=0 to 9 do if settings.value^.historyItem(i)='' then begin
+    for i:=0 to 19 do if settings.value^.historyItem(i)='' then begin
       historyMenuItem(i).Enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
