@@ -201,7 +201,18 @@ main('test')->begin
   print('Testing ',binName(i)),
   testAlreadyPassed(binName(i))
   ? print('Test has already been passed.') orElse true
-  : binName(i).execPipeless(['-el5','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]) and testAlreadyPassed(binName(i)),AND);
+  : binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]) and testAlreadyPassed(binName(i)),AND);
+end;
+
+//*Retests all files
+main('retest')->begin
+  updateCurrentCodeHash;
+  [0..3,isLinux ? void : 8]
+  .scramble
+  .each(i,
+  build(i),
+  print('Testing ',binName(i)),
+  binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded'],'retest']) and testAlreadyPassed(binName(i)),AND);
 end;
 
 //*Only prepare code hash

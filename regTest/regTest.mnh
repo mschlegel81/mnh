@@ -101,7 +101,16 @@ private executeExamples(examplesFile:string)->begin
   printExecute(codeToExecute);
 end;;
 
-main(examplesFile:string)->testAlreadyPassed ? void :
+//*Test without examples file
+main->main('',false);
+//*Retest without examples file
+main('retest')->main('',true);
+//*Test with examples file
+main(examplesFile:string)->main(examplesFile,false);
+//*Retest with examples file
+main(examplesFile:string,'retest')->main(examplesFile,true);
+
+main(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? void :
 begin
   resetRandom;
   collectOutput;
@@ -117,4 +126,4 @@ begin
   validateCollectedOutput;
 end;
 
-main->main('');
+
