@@ -1735,6 +1735,46 @@ object MnhForm: TMnhForm
         Caption = 'New Item39'
         OnClick = miFileHistory9Click
       end
+      object miFileHistory10: TMenuItem
+        Caption = 'New Item54'
+        OnClick = miFileHistory10Click
+      end
+      object miFileHistory11: TMenuItem
+        Caption = 'New Item55'
+        OnClick = miFileHistory11Click
+      end
+      object miFileHistory12: TMenuItem
+        Caption = 'New Item56'
+        OnClick = miFileHistory12Click
+      end
+      object miFileHistory13: TMenuItem
+        Caption = 'New Item57'
+        OnClick = miFileHistory13Click
+      end
+      object miFileHistory14: TMenuItem
+        Caption = 'New Item58'
+        OnClick = miFileHistory14Click
+      end
+      object miFileHistory15: TMenuItem
+        Caption = 'New Item59'
+        OnClick = miFileHistory15Click
+      end
+      object miFileHistory16: TMenuItem
+        Caption = 'New Item60'
+        OnClick = miFileHistory16Click
+      end
+      object miFileHistory17: TMenuItem
+        Caption = 'New Item61'
+        OnClick = miFileHistory17Click
+      end
+      object miFileHistory18: TMenuItem
+        Caption = 'New Item62'
+        OnClick = miFileHistory18Click
+      end
+      object miFileHistory19: TMenuItem
+        Caption = 'New Item63'
+        OnClick = miFileHistory19Click
+      end
     end
     object MenuItem5: TMenuItem
       Caption = '&Search'
