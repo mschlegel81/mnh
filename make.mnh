@@ -193,7 +193,7 @@ private scramble(L:list)->L[L.size.random.sortPerm];
 
 private testMnh(...)->begin
   updateCurrentCodeHash;
-  [0..3,isLinux ? void : 8]
+  [0..isLinux ? 7 : 8]
   .scramble
   .each(i,
   i in [0..3,8]
@@ -229,3 +229,4 @@ main(...)->begin
     ? main(p)
     : void);
 end;
+
