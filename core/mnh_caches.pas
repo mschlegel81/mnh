@@ -2,10 +2,10 @@ UNIT mnh_caches;
 
 INTERFACE
 
-USES mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
+USES myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
 CONST MAX_ACCEPTED_COLLISIONS=10;
-      MIN_BIN_COUNT=128;
-      POLISH_FREQUENCY=64;
+      MIN_BIN_COUNT=16;
+      POLISH_FREQUENCY=32;
 
 TYPE
   T_cacheEntry = record
@@ -18,13 +18,16 @@ TYPE
 
   T_cache = object
   private
+    criticalSection:TRTLCriticalSection;
     fill: longint;
     putCounter:longint;
     cached: array of record
       data:array of T_cacheEntry;
     end;
+    PROCEDURE resortBin(CONST binIdx:longint);
+    PROCEDURE polish;
   public
-    CONSTRUCTOR create();
+    CONSTRUCTOR create(ruleCS:TRTLCriticalSection);
     DESTRUCTOR destroy;
     PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal);
     FUNCTION get(CONST key: P_listLiteral): P_literal;
@@ -33,55 +36,68 @@ TYPE
 
 IMPLEMENTATION
 VAR globalMemoryLimit:int64=-1;
+    allCaches:specialize G_list<P_cache>;
 
-CONSTRUCTOR T_cache.create();
+PROCEDURE polishAllCaches;
+  VAR i:longint;
   begin
+    for i:=0 to allCaches.size-1 do with allCaches[i]^ do if system.TryEnterCriticalsection(criticalSection)<>0 then begin
+      polish;
+      system.leaveCriticalSection(criticalSection);
+    end;
+  end;
+
+CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
+  begin
+    criticalSection:=ruleCS;
     globalMemoryLimit:=settings.value^.memoryLimit;
     fill := 0;
     setLength(cached,MIN_BIN_COUNT);
+    allCaches.add(@self);
   end;
 
 DESTRUCTOR T_cache.destroy;
   begin
+    allCaches.remValue(@self);
     clear;
   end;
 
+PROCEDURE T_cache.resortBin(CONST binIdx:longint);
+  VAR i,j:longint;
+      swapTmp:T_cacheEntry;
+  begin
+    with cached[binIdx] do
+    for i:=1 to length(data)-1 do for j:=0 to i-1 do
+    if data[i].useCount>data[j].useCount then begin
+      swapTmp:=data[i];
+      data[i]:=data[j];
+      data[j]:=swapTmp;
+    end;
+  end;
+
+PROCEDURE T_cache.polish;
+  VAR binIdx,i,j: longint;
+  begin
+    for binIdx:=0 to length(cached)-1 do
+    with cached[binIdx] do begin
+      j:=0;
+      for i := 0 to length(data)-1 do
+      if (data[i].useCount>0) then begin
+        data[j] := data[i];
+        data[j].useCount := data[j].useCount shr 1;
+        inc(j);
+      end else begin
+        disposeLiteral(data[i].key);
+        disposeLiteral(data[i].value);
+        dec(fill);
+      end;
+      setLength(data, j);
+      resortBin(binIdx);
+    end;
+    putCounter:=0;
+  end;
+
 PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
-  PROCEDURE resortBin(CONST binIdx:longint);
-    VAR i,j:longint;
-        swapTmp:T_cacheEntry;
-    begin
-      with cached[binIdx] do
-      for i:=1 to length(data)-1 do for j:=0 to i-1 do
-      if data[i].useCount>data[j].useCount then begin
-        swapTmp:=data[i];
-        data[i]:=data[j];
-        data[j]:=swapTmp;
-      end;
-    end;
-
-  PROCEDURE polish;
-    VAR binIdx,i,j: longint;
-    begin
-      for binIdx:=0 to length(cached)-1 do
-      with cached[binIdx] do begin
-        j:=0;
-        for i := 0 to length(data)-1 do
-        if (data[i].useCount>0) then begin
-          data[j] := data[i];
-          data[j].useCount := data[j].useCount shr 1;
-          inc(j);
-        end else begin
-          disposeLiteral(data[i].key);
-          disposeLiteral(data[i].value);
-          dec(fill);
-        end;
-        setLength(data, j);
-        resortBin(binIdx);
-      end;
-      putCounter:=0;
-    end;
-
   PROCEDURE grow;
     VAR redistribute:array of T_cacheEntry;
         i,j,k:longint;
@@ -130,7 +146,8 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
       data[i].useCount:= 0;
     end;
     inc(putCounter);
-    if (putCounter>POLISH_FREQUENCY*length(cached)) or (MemoryUsed>globalMemoryLimit) then polish
+    if (MemoryUsed>globalMemoryLimit) then polishAllCaches
+    else if (putCounter>POLISH_FREQUENCY*length(cached)) then polish
     else if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
   end;
 
@@ -165,5 +182,10 @@ PROCEDURE T_cache.clear;
     fill := 0;
     putCounter:=0;
   end;
+
+INITIALIZATION
+  allCaches.create;
+FINALIZATION
+  allCaches.destroy;
 
 end.
