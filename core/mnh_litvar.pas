@@ -1857,11 +1857,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     begin
       case LHS^.literalType of
         lt_int:
+          {$O-}{$Q-}
           case RHS^.literalType of
             lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val+P_intLiteral(RHS)^.val));
             lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val+P_realLiteral(RHS)^.val));
             lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorPlus , RHS, tokenLocation)));
           end;
+          {$O+}{$Q+}
         lt_real:
           case RHS^.literalType of
             lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val+P_intLiteral (RHS)^.val));
@@ -1883,12 +1885,14 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
   FUNCTION opMinus    (CONST LHS,RHS:P_literal):P_scalarLiteral;
     begin
       case LHS^.literalType of
+        {$O-}{$Q-}
         lt_int:
           case RHS^.literalType of
             lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val-P_intLiteral(RHS)^.val));
             lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val-P_realLiteral(RHS)^.val));
             lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMinus, RHS, tokenLocation)));
           end;
+        {$O+}{$Q+}
         lt_real:
           case RHS^.literalType of
             lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val-P_intLiteral (RHS)^.val));
@@ -1906,11 +1910,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     begin
       case LHS^.literalType of
         lt_int:
+          {$O-}{$Q-}
           case RHS^.literalType of
             lt_int:        exit(newIntLiteral(P_intLiteral(LHS)^.val*P_intLiteral(RHS)^.val));
             lt_real:       exit(newRealLiteral(P_intLiteral(LHS)^.val*P_realLiteral(RHS)^.val));
             lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMult, RHS, tokenLocation)));
           end;
+          {$O+}{$Q+}
         lt_real:
           case RHS^.literalType of
             lt_int:        exit(newRealLiteral(P_realLiteral(LHS)^.val*P_intLiteral (RHS)^.val));
