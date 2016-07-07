@@ -2,6 +2,23 @@ USE testLog,make;
 
 currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').trim;
 
+main('history')->begin
+  local history:=testHistory;
+  local codeHashes:=history.getInner(0).unique;
+  local flavours  :=history.getInner(1).unique;
+  codeHashes.each(codeHash,
+    print("\nPrevious code hash: ",codeHash) orElse
+    ("Flavour\tTime\tTest result\n"&(
+    flavours.each(flavour,
+      history[codeHash=history.getInner(0) and flavour=history.getInner(1)].each(entry,
+        flavour&"\t"&entry[2]&"\t"&(entry[3] ? 'o.k.' : 'failed')
+      ).join("\n")
+    ).{$x[$x<>'']}.join("\n"))).print
+  );
+  print;
+  main;
+end;
+
 main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)&
 "\n                     Binary | Exists | Version | Tested\n"&
 "----------------------------+--------+---------+---------\n"&

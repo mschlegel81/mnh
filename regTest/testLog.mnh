@@ -54,6 +54,14 @@ validateCollectedOutput->begin
   printf('%s',exec(executor,['-version'])| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
   print('');
   printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
-  logName.writeFileLines(printOut | head(logName.fileLines,40));
+  logName.writeFileLines(printOut | head(logName.fileLines,80));
 end;
+
+testHistory->regex.replace(myPath,'\.mnh$','.*.txt').files.each(file,begin
+  local lines:=file.fileLines;
+  indexOf(lines.matches('^Total time: ')).each(i,
+      lines[i-1].split(' ')[0].split(':').reverseList|
+     [lines[i].replace('Total time: ',''),
+     (lines[i-1].split(' ')[1] orElse '')=='o.k.']);
+end,|);
 
