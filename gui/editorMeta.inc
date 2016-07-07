@@ -205,6 +205,7 @@ PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
     if sheet.TabVisible and (filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
       editor.lines.loadFromFile(filePath);
       fileAge(filePath,fileAccessAge);
+      editor.Modified:=false;
       changed:=false;
     end else if sheet.TabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
       runEvaluator.getCodeProvider^.getLinesUTF8(editor.lines);
