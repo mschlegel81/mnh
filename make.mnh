@@ -222,7 +222,7 @@ main(...)->begin
     ? build(i) OR true
     :             false,or)
   ? void
-  : p in ['distro','build','clean','test','prepare','retest']
+  : p in inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p)
     ? main(p)
     : void);
 end;
