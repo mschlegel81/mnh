@@ -101,7 +101,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
           if currentProgress<>lastProgress then context.adapters^.raiseNote(currentProgress,tokenLocation);
           lastProgress:=currentProgress;
           ThreadSwitch;
-          sleep(100);
+          sleep(1000);
         end;
         progressQueue.cancelCalculation(true);
       end;
