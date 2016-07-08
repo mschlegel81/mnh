@@ -222,7 +222,7 @@ main(...)->begin
     ? build(i) OR true
     :             false,or)
   ? void
-  : p in ['distro','build','clean','test','prepare']
+  : p in ['distro','build','clean','test','prepare','retest']
     ? main(p)
     : void);
 end;
