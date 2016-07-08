@@ -31,10 +31,10 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
     else tmpSteps:=P_listLiteral(flatten_imp(steps,tokenLocation,context));
     isValid:=(tmpSteps^.literalType=lt_stringList) and (tmpSteps^.size>=1);
     if isValid then begin
-      for i:=0 to steps^.size-1 do begin
-        cmd:=P_stringLiteral(steps^.value(i))^.value;
+      for i:=0 to tmpSteps^.size-1 do begin
+        cmd:=P_stringLiteral(tmpSteps^.value(i))^.value;
         if not(result.addStep(cmd))
-        then warn('Invalid workflow step: '+cmd);
+        then warn('Invalid workflow step: '+tmpSteps^.value(i)^.toString);
       end;
     end;
     if steps<>tmpSteps then disposeLiteral(tmpSteps);
