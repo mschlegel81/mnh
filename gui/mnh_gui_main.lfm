@@ -45,6 +45,7 @@ object MnhForm: TMnhForm
         Font.Quality = fqNonAntialiased
         ParentColor = False
         ParentFont = False
+        PopupMenu = EditorPopupMenu
         TabOrder = 0
         OnKeyUp = OutputEditKeyDown
         OnMouseDown = OutputEditMouseDown
@@ -531,6 +532,7 @@ object MnhForm: TMnhForm
         FixedCols = 0
         Flat = True
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
+        PopupMenu = EditorPopupMenu
         RowCount = 4
         TabOrder = 0
         ColWidths = (
@@ -3374,5 +3376,18 @@ object MnhForm: TMnhForm
       F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0F000F0F0
       F000F0F0F000F0F0F000F0F0F000F0F0F000
     }
+  end
+  object EditorPopupMenu: TPopupMenu
+    OnPopup = EditorPopupMenuPopup
+    left = 272
+    top = 272
+    object pmiOpenFile1: TMenuItem
+      Caption = 'New Item1'
+      OnClick = pmiOpenFile1Click
+    end
+    object pmiOpenFile2: TMenuItem
+      Caption = 'New Item2'
+      OnClick = pmiOpenFile2Click
+    end
   end
 end
