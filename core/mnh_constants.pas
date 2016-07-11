@@ -29,8 +29,8 @@ TYPE
 
 CONST
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
-  C_appName='MNH';
-  C_appTitle='MNH5';
+  C_appName='MNH'{$ifdef IMIG}+'_IMIG'{$endif};
+  C_appTitle='MNH5'{$ifdef IMIG}+'+IMIG'{$endif};
   C_voidText= 'void';
   C_nanText = 'Nan';
   C_infText = 'Inf';

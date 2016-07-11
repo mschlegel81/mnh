@@ -1053,7 +1053,7 @@ PROCEDURE TMnhForm.miWrapEchoClick(Sender: TObject);
 
 PROCEDURE TMnhForm.mi_insertFilenameClick(Sender: TObject);
   begin
-    OpenDialog.FilterIndex:=2;
+    OpenDialog.FilterIndex:=3;
     OpenDialog.options:=OpenDialog.options-[ofPathMustExist,ofFileMustExist];
     if OpenDialog.execute then editorMeta[PageControl.ActivePageIndex].insertText(escapeString(OpenDialog.fileName));
   end;
