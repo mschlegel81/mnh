@@ -2,9 +2,7 @@ begin
   writeFileLines('getadmin.vbs',['Set UAC = CreateObject("Shell.Application")','UAC.ShellExecute "'&splitFileName('install.bat').get('expanded')&'", "", "", "runas", 1']);
   writeFile('install.bat',replace(
 //!~@assoc .mnh=mnh.script
-@assoc .mnhwf=mnhwf.script
 @ftype mnh.script="#" %%1 %%*
-@ftype mnhwf.script="#" %%1 %%*
 @if "%errorlevel%" NEQ "0" getadmin.vbs~,'#',executor));
   execPipeless('cmd',['/c','getadmin.vbs']);
   deleteFile('install.bat');

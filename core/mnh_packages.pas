@@ -732,28 +732,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       else context.cascadeDisposeToken(first);
     end;
 
-    {$ifdef imig}
-    PROCEDURE addDefaultMainRule;
-      CONST C_defMain='main("wf")->workflow.flatten.join("\n").print; '+
-                      'main(...)->workflow.executeWorkflow@softCast(...);';
-      VAR lastComment:ansistring;
-          tokenLocation:T_tokenLocation;
-      begin
-        if not(packageRules.containsKey('main')) and (packageRules.containsKey('workflow')) then begin
-          tokenLocation.package:=@self;
-          tokenLocation.line:=codeProvider.numberOfLines+1;
-          tokenLocation.column:=1;
-          context.adapters^.raiseNote('Adding default main rule: '+C_defMain,fileTokenLocation(@codeProvider));
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-          fileTokens.create;
-          fileTokens.tokenizeAll(C_defMain,tokenLocation,@self,context.adapters^,false);
-          fileTokens.step(@self,lastComment,context.adapters^);
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-          processTokens(fileTokens);
-        end;
-      end;
-    {$endif}
-
   begin
     if isMain then context.adapters^.clearErrors;
     if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
@@ -774,10 +752,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.step(@self,lastComment,context.adapters^);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
     processTokens(fileTokens);
-
-    {$ifdef imig}
-    if context.adapters^.noErrors then addDefaultMainRule;
-    {$endif}
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
     case usecase of

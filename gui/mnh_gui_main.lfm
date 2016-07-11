@@ -1941,14 +1941,14 @@ object MnhForm: TMnhForm
   end
   object OpenDialog: TOpenDialog
     Title = 'Open file...'
-    Filter = 'MNH Package|*.mnh|MNH-IMIG Workflow|*.mnhwf|All Files|*.*'
+    Filter = 'MNH Package|*.mnh|All Files|*.*'
     Options = [ofPathMustExist, ofFileMustExist, ofEnableSizing]
     left = 400
     top = 136
   end
   object SaveDialog: TSaveDialog
     Title = 'Save as'
-    Filter = 'MNH Package|*.mnh|MNH-IMIG Workflow|*.mnhwf'
+    Filter = 'MNH Package|*.mnh'
     Options = [ofExtensionDifferent, ofEnableSizing, ofViewDetail]
     left = 272
     top = 136
