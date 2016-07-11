@@ -21,7 +21,7 @@ VAR fileOrCommandToInterpret:ansistring='';
 
     echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
     time:(t_forcedOn,t_default,t_forcedOff)=t_default;
-    minEL:longint=2;
+    minEL:longint={$ifdef IMIG}0{$else}2{$endif};
 //---------------:by command line parameters
 PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
   begin
@@ -52,11 +52,12 @@ PROCEDURE parseCmdLine;
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
+                  {$ifdef imig}',IMIG'{$else}''{$endif},
                   {$ifdef debugMode}',debug)'{$else}')'{$endif},
                   {$I %DATE%},
                   ' ',{$I %TIME%},
                   ' FPC',{$I %FPCVERSION%},
-                  ' for ',{$I %FPCTARGET%},' ',{$I %FPCTargetOS%});
+                  ' for ',{$I %FPCTARGET%},{$ifdef imig}'+IMIG '{$else}' '{$endif},{$I %FPCTargetOS%});
     end;
 
   PROCEDURE displayHelp;
@@ -156,7 +157,8 @@ PROCEDURE parseCmdLine;
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
-                                                                     {$ifdef debugMode}  'D'{$else}'O'{$endif},
+                                                                     {$ifdef IMIG}'I'{$else}''{$endif},
+                                                                     {$ifdef debugMode}'D'{$else}'O'{$endif},
                                                                      {$I %FPCTargetOS%}); {$include code_hash.inc} quitImmediate:=true; end
         {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc(false); quitImmediate:=true; end

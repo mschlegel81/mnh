@@ -6,7 +6,8 @@ private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(
         'gui\lib\x86_64-win64',
    'consoles\lib\i386-win32',
    'consoles\lib\x86_64-linux',
-   'consoles\lib\x86_64-win64']);
+   'consoles\lib\x86_64-win64',
+   '..\art.source\igSrc']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;
@@ -62,6 +63,7 @@ currentCodeHash:=begin
   result;
 end;
 
+binName(8)->'mnh_imig' & (isLinux ? '' : '.exe');
 binName(FI:int)->format('%smnh%s%s%s',
                                 (FI and 1)>0 OR isLinux ? './' : 'bin32/',
                                 (FI and 2)>0 ? '' : '_light',
@@ -78,15 +80,16 @@ end;
 
 private build(FI:int)->
 exeHasWrongVersion(FI) ? begin
-  local bin64:=(FI and 1)>0;
-  local full :=(FI and 2)>0;
-  local debug:=(FI and 4)>0;
+  local imig :=FI=8;
+  local bin64:=imig or (FI and 1)>0;
+  local full :=imig or (FI and 2)>0;
+  local debug:=not(imig) and (FI and 4)>0;
   local compiler:=isLinux ? 'lazbuild'
                           : bin64 ? '..\lazarus64\lazbuild.exe'
                                   : '..\lazarus32\lazbuild.exe';
   local exeName:=binName(FI);
-  local outName:=(full ? 'gui/mnh' : 'consoles/mnh_light') & (debug ? '_debug' : '') & (isLinux ? '' : '.exe');
-  local parameters:=['-B','--bm='&(debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
+  local outName:=(imig ? 'gui/mnh_imig' : full ? 'gui/mnh' : 'consoles/mnh_light') & (debug ? '_debug' : '') & (isLinux ? '' : '.exe');
+  local parameters:=['-B','--bm='&(imig ? 'imig' : debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
   deleteFile(exeName);
   deleteFile(outName);
@@ -149,7 +152,7 @@ end;
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  [0..7].scramble.each(i,build(i),AND);
+  [0..isLinux ? 7 : 8].scramble.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -190,10 +193,10 @@ private scramble(L:list)->L[L.size.random.sortPerm];
 
 private testMnh(...)->begin
   updateCurrentCodeHash;
-  [0..7]
+  [0..isLinux ? 7 : 8]
   .scramble
   .each(i,
-  i in [0..3]
+  i in [0..3,8]
   ? build(i)
   : void,
   exeHasWrongVersion(i)
@@ -217,7 +220,7 @@ main('prepare')->updateCurrentCodeHash;
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  [0..7].each(i,
+  [0..isLinux ? 7 : 8].each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
     :             false,or)
@@ -226,3 +229,4 @@ main(...)->begin
     ? main(p)
     : void);
 end;
+

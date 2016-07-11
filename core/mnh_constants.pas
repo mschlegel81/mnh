@@ -12,6 +12,9 @@ TYPE
                TYPECAST_NAMESPACE
                {$ifdef fullVersion},
                PLOT_NAMESPACE
+               {$endif}
+               {$ifdef IMIG},
+               IMIG_NAMESPACE
                {$endif});
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
@@ -26,8 +29,8 @@ TYPE
 
 CONST
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
-  C_appName='MNH';
-  C_appTitle='MNH5';
+  C_appName='MNH'{$ifdef IMIG}+'_IMIG'{$endif};
+  C_appTitle='MNH5'{$ifdef IMIG}+'+IMIG'{$endif};
   C_voidText= 'void';
   C_nanText = 'Nan';
   C_infText = 'Inf';
@@ -36,7 +39,7 @@ CONST
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.mnh';
-  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','typecast'{$ifdef fullVersion},'plot'{$endif});
+  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','typecast'{$ifdef fullVersion},'plot'{$endif}{$ifdef IMIG},'imig'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
 
   C_eachIndexIdentifier='index';
