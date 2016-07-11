@@ -507,11 +507,14 @@ PROCEDURE T_adapters.raiseSystemError(CONST errorMessage: ansistring);
   end;
 
 PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
+  VAR oldBehavior:T_outputBehaviour;
   begin
+    oldBehavior:=outputBehaviour;
     setLength(adapter,length(adapter)+1);
     adapter[length(adapter)-1].ad:=p;
     inc(nextAdapterId);
     adapter[length(adapter)-1].doDestroy:=destroyIt;
+    outputBehaviour:=outputBehaviour;
   end;
 
 PROCEDURE T_adapters.addConsoleOutAdapter;
