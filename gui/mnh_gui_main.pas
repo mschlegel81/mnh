@@ -26,6 +26,8 @@ TYPE
   TMnhForm = class(TForm)
     autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
+    pmiOpenFile2: TMenuItem;
+    pmiOpenFile1: TMenuItem;
     miFileHistory14: TMenuItem;
     miFileHistory15: TMenuItem;
     miFileHistory16: TMenuItem;
@@ -77,6 +79,7 @@ TYPE
     OpenDialog: TOpenDialog;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
+    EditorPopupMenu: TPopupMenu;
     Splitter1: TSplitter;
     submenuEditorAppearance: TMenuItem;
     miExpressionEcho: TMenuItem;
@@ -115,6 +118,7 @@ TYPE
     variablesStringGrid: TStringGrid;
     currentExpressionGroupBox: TGroupBox;
     currentExpressionMemo: TSynMemo;
+    PROCEDURE EditorPopupMenuPopup(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -184,6 +188,8 @@ TYPE
     PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
     PROCEDURE PageControlChange(Sender: TObject);
+    PROCEDURE pmiOpenFile1Click(Sender: TObject);
+    PROCEDURE pmiOpenFile2Click(Sender: TObject);
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE Splitter1Moved(Sender: TObject);
     PROCEDURE SynCompletionCodeCompletion(VAR value: string;
@@ -222,6 +228,7 @@ TYPE
       mainCall:boolean;
       parameters:string;
     end;
+    popupFile:array[1..2] of string;
 
     outputFocusedOnFind:boolean;
     forceInputEditFocusOnOutputEditMouseUp:boolean;
@@ -526,6 +533,21 @@ PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     stepper.doStop;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+  end;
+
+PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
+  begin
+    if OutputEdit.Focused then begin
+      popupFile[1]:=OutputEdit.GetWordAtRowCol(OutputEdit.CaretXY);
+      popupFile[2]:=OutputEdit.TextBetweenPoints[OutputEdit.BlockBegin,OutputEdit.BlockEnd];
+    end else begin
+      with editorMeta[PageControl.ActivePageIndex] do begin
+        popupFile[1]:=editor.GetWordAtRowCol(editor.CaretXY);
+        popupFile[2]:=editor.TextBetweenPoints[editor.BlockBegin,editor.BlockEnd];
+      end;
+    end;
+    pmiOpenFile1.Caption:='Open: "'+popupFile[1]+'"';
+    pmiOpenFile2.Caption:='Open: "'+popupFile[2]+'"';
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -1094,6 +1116,24 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
       SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
       settings.value^.activePage:=PageControl.ActivePageIndex;
       with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
+    end;
+  end;
+
+PROCEDURE TMnhForm.pmiOpenFile1Click(Sender: TObject);
+  begin
+    with settings.value^ do begin
+      if fileExists(popupFile[1])
+      then PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(popupFile[1])
+      else if polishHistory then processFileHistory;
+    end;
+  end;
+
+PROCEDURE TMnhForm.pmiOpenFile2Click(Sender: TObject);
+  begin
+    with settings.value^ do begin
+      if fileExists(popupFile[2])
+      then PageControl.ActivePageIndex:=addOrGetEditorMetaForFile(popupFile[2])
+      else if polishHistory then processFileHistory;
     end;
   end;
 

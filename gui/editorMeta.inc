@@ -139,7 +139,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
 
     highlighter:=TSynMnhSyn.create(MnhForm,msf_input);
     editor.highlighter:=highlighter;
-
+    editor.PopupMenu:=MnhForm.EditorPopupMenu;
     initForNewFile;
   end;
 
