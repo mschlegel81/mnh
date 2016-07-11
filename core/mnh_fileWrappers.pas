@@ -22,6 +22,7 @@ TYPE
     PROCEDURE appendLine(CONST value: ansistring);
     PROCEDURE replaceCode(CONST line0, col0:longint; line1:longint; CONST col1: longint; CONST newText: ansistring);
     PROCEDURE setPath(CONST path: ansistring);
+    FUNCTION numberOfLines:longint;
     FUNCTION getPath: ansistring;
     PROCEDURE load;
     PROCEDURE save;
@@ -402,6 +403,11 @@ CONSTRUCTOR T_codeProvider.create(CONST path: ansistring);
 DESTRUCTOR T_codeProvider.destroy;
   begin
     setLength(lineData, 0);
+  end;
+
+FUNCTION T_codeProvider.numberOfLines:longint;
+  begin
+    result:=length(lineData);
   end;
 
 PROCEDURE T_codeProvider.setPath(CONST path: ansistring);

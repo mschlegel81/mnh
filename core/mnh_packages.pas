@@ -6,7 +6,7 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,Classes,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
-     mnh_funcs_regex;
+     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif};
 
 {$define include_interface}
 TYPE
@@ -671,8 +671,67 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     fileTokens.step(@self,lastComment,context.adapters^);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing}
 
-  VAR localIdStack:T_idStack;
-      first,last:P_token;
+  PROCEDURE processTokens(VAR fileTokens:T_tokenArray);
+    VAR first:P_token=nil;
+        last:P_token=nil;
+        localIdStack:T_idStack;
+    begin
+      localIdStack.create;
+      while not(fileTokens.atEnd) do begin
+        if fileTokens.current.tokType=tt_begin then begin
+          if first=nil then begin
+            first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last :=first;
+          end else begin
+            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last      :=last^.next;
+          end;
+             localIdStack.clear;
+          localIdStack.scopePush;
+          stepToken;
+          while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
+            case fileTokens.current.tokType of
+              tt_begin: localIdStack.scopePush;
+              tt_end  : localIdStack.scopePop;
+              tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule: if (last^.tokType=tt_modifier_local) then begin
+                fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
+                localIdStack.addId(fileTokens.current.txt);
+              end else if (localIdStack.hasId(fileTokens.current.txt)) then
+                fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
+            end;
+            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last      :=last^.next;
+            stepToken;
+          end;
+        end else if (fileTokens.current.tokType=tt_semicolon) then begin
+          if (first<>nil) and (first^.areBracketsPlausible(context.adapters^))
+          then interpret(first,fileTokens.current.location)
+          else context.cascadeDisposeToken(first);
+          last:=nil;
+          first:=nil;
+          stepToken;
+        end else begin
+          if first=nil then begin
+            first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last :=first
+          end else begin
+            last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
+            last      :=last^.next;
+          end;
+          last^.next:=nil;
+          stepToken;
+        end;
+      end;
+      with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+      fileTokens.destroy;
+      localIdStack.destroy;
+      with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+
+      if (context.adapters^.noErrors)
+      then begin if first<>nil then interpret(first,first^.location); end
+      else context.cascadeDisposeToken(first);
+    end;
+
   begin
     if isMain then context.adapters^.clearErrors;
     if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
@@ -690,65 +749,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     with profiler do if active then tokenizing:=timer.value.Elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
-    //First step
     fileTokens.step(@self,lastComment,context.adapters^);
     with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
-    first:=nil;
-    last :=nil;
-    localIdStack.create;
-    while not(fileTokens.atEnd) do begin
-      if fileTokens.current.tokType=tt_begin then begin
-        if first=nil then begin
-          first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
-          last :=first;
-        end else begin
-          last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
-          last      :=last^.next;
-        end;
-
-        localIdStack.clear;
-        localIdStack.scopePush;
-        stepToken;
-
-        while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
-          case fileTokens.current.tokType of
-            tt_begin: localIdStack.scopePush;
-            tt_end  : localIdStack.scopePop;
-            tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule: if (last^.tokType=tt_modifier_local) then begin
-              fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
-              localIdStack.addId(fileTokens.current.txt);
-            end else if (localIdStack.hasId(fileTokens.current.txt)) then
-              fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
-          end;
-          last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
-          last      :=last^.next;
-          stepToken;
-        end;
-
-      end else if (fileTokens.current.tokType=tt_semicolon) then begin
-        if (first<>nil) and (first^.areBracketsPlausible(context.adapters^))
-        then interpret(first,fileTokens.current.location)
-        else context.cascadeDisposeToken(first);
-        last:=nil;
-        first:=nil;
-        stepToken;
-      end else begin
-        if first=nil then begin
-          first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
-          last :=first
-        end else begin
-          last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
-          last      :=last^.next;
-        end;
-        last^.next:=nil;
-        stepToken;
-      end;
-    end;
-    fileTokens.destroy;
-    localIdStack.destroy;
-    if (context.adapters^.noErrors)
-    then begin if first<>nil then interpret(first,first^.location); end
-    else context.cascadeDisposeToken(first);
+    processTokens(fileTokens);
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
     case usecase of
