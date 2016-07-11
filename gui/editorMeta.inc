@@ -316,7 +316,7 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     if changed then result:=' *'
                else result:='';
     sheet.Caption:=pseudoName(true)+result;
-    result:='MNH5 '+pseudoName(false)+result;
+    result:=C_appTitle+' '+pseudoName(false)+result;
   end;
 
 PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);

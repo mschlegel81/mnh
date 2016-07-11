@@ -1270,7 +1270,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       //Assuming:
       //cTokType[0]=tt_literal
       //cTokType[1]=tt_ponFlipper
-      //cTokType[2] is a resolved or unresolved identifier or a blocklocal variable;
+      //cTokType[2] is a resolved identifier or a blocklocal variable;
       //Transforms:
       //  <Lit> . func     -> func(<Lit>)
       //  <Lit> . func(... -> func(<Lit>,...
@@ -1337,7 +1337,15 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         stack.popDestroy(context); //pop operator from stack
         stack.popDestroy(context); //pop LHS-Literal from stack
         didSubstitution:=true;
-      end else if cTokType[1]=tt_parList                                                  then applyRule(first^.next,first^.next^.next)
+      end
+      else if (cTokType[1]=tt_parList) then begin
+        if cTokType[2]=tt_listToParameterList then begin
+          stack.push(first);
+          stack.push(first);
+          stack.push(first);
+          didSubstitution:=true;
+        end else applyRule(first^.next,first^.next^.next)
+      end
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1]=tt_ponFlipper then pon_flip
@@ -1450,7 +1458,12 @@ tt_ponFlipper: if (cTokType[2]=tt_expBraceOpen) then begin
   didSubstitution:=true;
 end else pon_flip;
 tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-tt_parList:  applyRule(first^.next,first^.next^.next);
+tt_parList:  if (cTokType[2]=tt_listToParameterList) then begin
+               stack.push(first);
+               stack.push(first);
+               stack.push(first);
+               didSubstitution:=true;
+             end else applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
 tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
@@ -1505,6 +1518,11 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             stack.popDestroy(context);
             first^.tokType:=tt_parList;
             stack.popLink(first);
+            while first^.tokType=tt_parList do begin
+              P_listLiteral(first^.data)^.appendAll(P_listLiteral(first^.next^.data));
+              first^.next:=context.disposeToken(first^.next);
+              stack.popLink(first);
+            end;
             didSubstitution:=true;
           end;
           tt_unaryOpPlus: begin
@@ -1715,13 +1733,17 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               didSubstitution:=true;
             end else startOrPushParameterList;
           end;
-          tt_parList: applyRule(first^.next,first^.next^.next);
+          tt_parList: if (cTokType[2]=tt_listToParameterList) then begin
+            stack.push(first);
+            stack.push(first);
+            stack.push(first);
+            didSubstitution:=true;
+          end else applyRule(first^.next,first^.next^.next);
         end;
 
         tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
-          tt_parList: if cTokType[0]<>tt_toId then applyRule(first^.next,first^.next^.next)
-          else begin
+          tt_parList: if cTokType[0]=tt_toId then begin
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^.value(0)^.literalType=lt_string) then begin
               first^.tokType:=tt_identifier;
               first^.txt:=P_stringLiteral(P_listLiteral(first^.next^.data)^.value(0))^.value;
@@ -1729,7 +1751,12 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
               first^.next:=context.disposeToken(first^.next);
               didSubstitution:=true;
             end else context.adapters^.raiseError('Special function toId cannot be applied to parameter list '+safeTokenToString(first^.next),first^.location);
-          end;
+          end else if (cTokType[2]=tt_listToParameterList) then begin
+            stack.push(first);
+            stack.push(first);
+            stack.push(first);
+            didSubstitution:=true;
+          end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
           tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_ponFlipper, tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;

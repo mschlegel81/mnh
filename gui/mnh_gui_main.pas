@@ -1191,7 +1191,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     then begin
       aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
       editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(docEvaluator.getStateCounter,docEvaluator.getErrorHint);
-    end else aid:='MNH5';
+    end else aid:=C_appTitle;
     if aid<>Caption then Caption:=aid;
     //-------------------------------------------------------------:Form caption
     //progress time:------------------------------------------------------------

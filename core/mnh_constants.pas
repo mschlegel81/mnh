@@ -29,6 +29,8 @@ TYPE
 
 CONST
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
+  C_appName='MNH';
+  C_appTitle='MNH5';
   C_voidText= 'void';
   C_nanText = 'Nan';
   C_infText = 'Inf';
@@ -468,7 +470,7 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
 
 FUNCTION getAppName: string;
   begin
-    result:='MNH';
+    result:=C_appName;
   end;
 
 FUNCTION configDir:string;
