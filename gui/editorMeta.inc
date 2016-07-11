@@ -327,7 +327,7 @@ PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST
     end;
     if isBlank(errorHint) then begin
       editor.ShowHint:=false;
-      editor.Gutter.color:=clSilver;
+      editor.Gutter.color:=clBtnFace;
     end else begin
       editor.Gutter.color:=clRed;
       editor.ShowHint:=true;
