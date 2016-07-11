@@ -706,11 +706,6 @@ PROCEDURE T_collectingOutAdapter.printOut(CONST s: T_arrayOfString);
 PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR msg:T_storedMessage;
   begin
-    if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
-    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
-    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
-    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
-    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     msg.messageType:=messageType;
     msg.simpleMessage:=errorMessage;
     msg.location:=errorLocation;
@@ -719,6 +714,11 @@ PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CO
 
 PROCEDURE T_collectingOutAdapter.append(CONST message: T_storedMessage);
   begin
+    with message do if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
+    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
+    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
+    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
+    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
     system.enterCriticalSection(cs);
     setLength(storedMessages,length(storedMessages)+1);
     storedMessages[length(storedMessages)-1]:=message;
