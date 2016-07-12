@@ -18,7 +18,7 @@ USES {$IFDEF UNIX} cthreads, cmem,{$ENDIF}
 
 begin
   parseCmdLine;
-  {$ifndef imig}hideConsole;{$endif}
+  hideConsole;
 
   mnh_gui_main.lateInitialization;
   Application.title:='MNH5 - GUI';
