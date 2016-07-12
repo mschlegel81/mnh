@@ -1,6 +1,7 @@
 USE testLog,make;
 
 currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').trim;
+private isLinux:=executor.exec(['-codeHash']).head.matches('[L|l]inux');
 
 main('history')->begin
   local history:=testHistory;
@@ -30,7 +31,7 @@ end;
 main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)&
 "\n                     Binary | Exists | Version |\v Test time\n"&
 "----------------------------+--------+---------+\v-------------------\n"&
-([0..8].pEach(i,begin
+((isLinux ? [0,2,4,6,8] : [0..8]).pEach(i,begin
   local bin:=binName(i);
   local ex:=bin.fileExists;
   local hashOk:=(bin.exec(['-codeHash']).head.split(':')[1])==currentHash;

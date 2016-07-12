@@ -152,7 +152,7 @@ end;
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  [0..isLinux ? 7 : 8].scramble.each(i,build(i),AND);
+  (isLinux ? [0,2,4,6,8] : [0..8]).scramble.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -193,7 +193,7 @@ private scramble(L:list)->L[L.size.random.sortPerm];
 
 private testMnh(...)->begin
   updateCurrentCodeHash;
-  [0..isLinux ? 7 : 8]
+  (isLinux ? [0,2,4,6,8] : [0..8])
   .scramble
   .each(i,
   i in [0..3,8]
@@ -220,7 +220,7 @@ main('prepare')->updateCurrentCodeHash;
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  [0..isLinux ? 7 : 8].each(i,
+  (isLinux ? [0,2,4,6,8] : [0..8]).each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
     :             false,or)
