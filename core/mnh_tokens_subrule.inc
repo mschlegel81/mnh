@@ -200,6 +200,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token:=t^;
+        if token.tokType=tt_return then context.adapters^.raiseError('return is not allowed in inline-expressions',token.location);
         t^.tokType:=tt_EOL;
         t:=context.disposeToken(t);
         token.next:=nil;
@@ -208,7 +209,6 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
     end;
     if needEmbrace then embrace;
     updatePatternForInline;
-    modifyBeginEnd;
   end;
 
 CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
