@@ -437,13 +437,9 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,
     with editorMeta[PageControl.ActivePageIndex] do begin
       wordUnderCursor:=editor.GetWordAtRowCol(caret);
       setUnderCursor(wordUnderCursor,updateMarker,doJump);
-      writeln('inputEditReposition; word="',wordUnderCursor,'"; doJump=',doJump);
       if not(doJump) then exit;
       if (underCursor.tokenText<>wordUnderCursor) or
-         (underCursor.location.column<=0) then begin
-        writeln('Exit because tokenText is "',underCursor.tokenText,'" @',underCursor.location.column);
-        exit;
-      end;
+         (underCursor.location.column<=0) then exit;
       if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
       pageIdx:=addOrGetEditorMetaForFile(underCursor.location.fileName);
       if pageIdx>=0 then begin
