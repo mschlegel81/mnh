@@ -248,7 +248,7 @@ TYPE
     PROCEDURE processFileHistory;
     FUNCTION autosizeBlocks(CONST forceOutputFocus:boolean):boolean;
     PROCEDURE positionHelpNotifier;
-    PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker:boolean);
+    PROCEDURE setUnderCursor(CONST wordText:ansistring; CONST updateMarker,forJump:boolean);
     PROCEDURE ensureWordsInEditorForCompletion;
 
     PROCEDURE doConditionalPlotReset;
@@ -360,16 +360,15 @@ PROCEDURE TMnhForm.positionHelpNotifier;
     if helpPopupMemo.Left<0 then helpPopupMemo.Left:=0;
   end;
 
-PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker: boolean);
+PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker,forJump: boolean);
   VAR i:longint;
   begin
     if updateMarker then begin
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setMarkedWord(wordText);
     end;
+    if miHelp.Checked or forJump then with editorMeta[PageControl.ActivePageIndex].editor do docEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
-      i:=PageControl.ActivePageIndex;
-      docEvaluator.explainIdentifier(editorMeta[i].editor.lines[editorMeta[i].editor.CaretY-1],editorMeta[i].editor.CaretY,editorMeta[i].editor.CaretX,underCursor);
       helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
     end;
@@ -437,10 +436,14 @@ PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,
   begin
     with editorMeta[PageControl.ActivePageIndex] do begin
       wordUnderCursor:=editor.GetWordAtRowCol(caret);
-      setUnderCursor(wordUnderCursor,updateMarker);
+      setUnderCursor(wordUnderCursor,updateMarker,doJump);
+      writeln('inputEditReposition; word="',wordUnderCursor,'"; doJump=',doJump);
       if not(doJump) then exit;
       if (underCursor.tokenText<>wordUnderCursor) or
-         (underCursor.location.column<=0) then exit;
+         (underCursor.location.column<=0) then begin
+        writeln('Exit because tokenText is "',underCursor.tokenText,'" @',underCursor.location.column);
+        exit;
+      end;
       if (underCursor.location.fileName='') or (underCursor.location.fileName='?') then exit;
       pageIdx:=addOrGetEditorMetaForFile(underCursor.location.fileName);
       if pageIdx>=0 then begin
@@ -459,7 +462,7 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
       pageIdx:longint;
   begin
     forceInputEditFocusOnOutputEditMouseUp:=false;
-    setUnderCursor(OutputEdit.GetWordAtRowCol(caret),true);
+    setUnderCursor(OutputEdit.GetWordAtRowCol(caret),true,doJump);
     loc:=guessLocationFromString(OutputEdit.lines[caret.y-1],false);
     if not(doJump) then exit;
     if (loc.fileName='') or (loc.fileName='?') then exit;
