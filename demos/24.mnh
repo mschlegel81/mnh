@@ -18,17 +18,28 @@ private getRiddle->begin
   numbers;
 end;
 
-private isCorrectSolution(set,text)->
+private errPrint(...)->print@(...) orElse false;
+
+private isCorrectSolution(set,text)->begin
   not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
-  ? print('The input contains an invalid character.') and false
-  : '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
-    '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
-    ? print('The input contains an invalid character sequence.') and false
-    : not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
-      ? print('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void)) and false
-      : not(toExpression(text)()=24)
-        ? print('The input does not evaluate to 24 but to ',toExpression(text)(),'.') and false
-        : print('The solution is valid.') and true;
+  ? return errPrint('The input contains an invalid character.')
+  : void;
+
+  '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
+  '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
+  ? return errPrint('The input contains an invalid character sequence.')
+  : void;
+
+  not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
+  ? return errPrint('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void))
+  : void;
+
+  local expressionResult:=toExpression(text)();
+  not(expressionResult=24)
+  ? errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
+  : print('The solution is valid.')
+    orElse true;
+end;
 
 private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);
 private playARound(set)->playARound(set,ask('Find an expression to calculate 24 from the numbers '&toString(set)&'.'));

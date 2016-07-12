@@ -2,8 +2,10 @@ UNIT mnh_contexts;
 INTERFACE
 USES sysutils,mnh_constants,mnh_tokens,mnh_tokLoc, mnh_out_adapters,mnh_litVar;
 TYPE
-  T_valueStoreMarker=(vsm_none,vsm_void,vsm_first);
-
+  T_valueStoreMarker=(vsm_none,vsm_nonBlockingVoid,vsm_blockingVoid,vsm_nonBlockingFirst,vsm_blockingFirst);
+CONST
+  C_voidOfBlocking:array[false..true] of T_valueStoreMarker=(vsm_nonBlockingVoid,vsm_blockingVoid);
+  C_firstOfVoid   :array[vsm_nonBlockingVoid..vsm_blockingVoid] of T_valueStoreMarker=(vsm_nonBlockingFirst,vsm_blockingFirst);
 TYPE
   T_valueStore=object
     cs:TRTLCriticalSection;
@@ -14,7 +16,7 @@ TYPE
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE scopePush;
+    PROCEDURE scopePush(CONST blocking:boolean);
     PROCEDURE scopePop;
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal; CONST readonly:boolean);
@@ -64,7 +66,7 @@ DESTRUCTOR T_valueStore.destroy;
     system.doneCriticalSection(cs);
   end;
 
-PROCEDURE T_valueStore.scopePush;
+PROCEDURE T_valueStore.scopePush(CONST blocking:boolean);
   VAR i:longint;
   begin
     system.enterCriticalSection(cs);
@@ -72,7 +74,7 @@ PROCEDURE T_valueStore.scopePush;
     setLength(data,i+1);
     with data[i] do begin
       v:=nil;
-      marker:=vsm_void;
+      marker:=C_voidOfBlocking[blocking];
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -95,9 +97,13 @@ FUNCTION T_valueStore.getVariable(CONST id:ansistring):P_namedVariable;
   begin
     system.enterCriticalSection(cs);
     result:=nil;
-    for i:=length(data)-1 downto 0 do with data[i] do if (v<>nil) and (v^.getId=id) then begin
+    for i:=length(data)-1 downto 0 do with data[i] do
+    if (v<>nil) and (v^.getId=id) then begin
       system.leaveCriticalSection(cs);
       exit(v);
+    end else if marker in [vsm_blockingFirst,vsm_blockingVoid] then begin
+      system.leaveCriticalSection(cs);
+      exit(nil);
     end;
     system.leaveCriticalSection(cs);
   end;
@@ -107,8 +113,8 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
   begin
     system.enterCriticalSection(cs);
     i:=length(data);
-    with data[i-1] do if marker=vsm_void then begin
-      marker:=vsm_first;
+    with data[i-1] do if marker in [vsm_blockingVoid,vsm_nonBlockingVoid] then begin
+      marker:=C_firstOfVoid[marker];
       new(v,create(id,value,readonly));
       system.leaveCriticalSection(cs);
       exit;
@@ -122,12 +128,16 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
   end;
 
 PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
-  VAR i:longint;
+  VAR i :longint;
+      i0:longint=0;
       up:longint=0;
   begin
     system.enterCriticalSection(cs);
-    for i:=0 to length(data)-1 do if data[i].marker<>vsm_none then inc(up);
-    for i:=0 to length(data)-1 do begin
+    for i:=0 to length(data)-1 do case data[i].marker of
+      vsm_nonBlockingVoid,vsm_nonBlockingFirst: inc(up);
+      vsm_blockingVoid,vsm_blockingFirst: begin up:=1; i0:=i; end;
+    end;
+    for i:=i0 to length(data)-1 do begin
       if data[i].marker<>vsm_none then dec(up);
       with data[i] do if v<>nil then begin
         if up=0 then variableReport.addVariable(v,'local')

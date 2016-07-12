@@ -193,7 +193,7 @@ PROCEDURE T_microserver.serve;
       end;
 
     begin
-      context.valueStore.scopePush;
+      context.valueStore.scopePush(false);
       context.valueStore.createVariable('fullRequest',newStringLiteral(request),true);
       parts:=split(request,'?');
       while (length(parts)<2) do append(parts,'');
