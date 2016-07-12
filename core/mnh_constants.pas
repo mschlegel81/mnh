@@ -63,7 +63,7 @@ TYPE
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_while, tt_begin, tt_end, tt_try, tt_toId,
+    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginFunc, tt_endBlock, tt_endFunc, tt_try, tt_toId, tt_return,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -149,18 +149,21 @@ CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat];
   C_operatorsAndComparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorIn];
   C_typeChecks: T_tokenTypeSet=[tt_typeCheckScalar..tt_typeCheckKeyValueList];
-  C_openingBrackets:T_tokenTypeSet=[tt_begin,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
-  C_closingBrackets:T_tokenTypeSet=[tt_end,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
+  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginFunc,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck];
+  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endFunc,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
     {tt_forcedParallelEach} tt_braceClose,
     {tt_agg}                tt_braceClose,
     {tt_when,tt_while}      tt_EOL,
-    {tt_begin}              tt_end,
-    {tt_end}                tt_EOL,
+    {tt_beginBlock}         tt_endBlock,
+    {tt_beginFunc}          tt_endFunc,
+    {tt_endBlock}           tt_EOL,
+    {tt_endFunc}            tt_EOL,
     {tt_try}                tt_EOL,
     {tt_toId}               tt_EOL,
+    {tt_return}             tt_EOL,
     {tt_braceOpen}          tt_braceClose,
     {tt_braceClose}         tt_EOL,
     {tt_parList_constructor}tt_braceClose,
@@ -196,7 +199,7 @@ CONST
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
-
+  C_compatibleEnd:array[tt_beginBlock..tt_beginFunc] of T_tokenType=(tt_endBlock,tt_endFunc);
   C_tokenInfo:array[T_tokenType] of record
     defaultId:string;
     reservedWordClass:T_reservedWordClass;
@@ -220,9 +223,12 @@ CONST
       (defaultId:'.agg'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: agg#Used for list aggregation'),
       (defaultId:'while'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: while#Used for loops'),
       (defaultId:'begin'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: begin#Opening delimiter for procedural blocks'),
+      (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
       (defaultId:'end'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: end#Closing delimiter for procedural blocks'),
+      (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
       (defaultId:'try'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling'),
       (defaultId:'toId'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
+      (defaultId:'return'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: return#Returns from the current function call'),
       //lists and list constructor
       (defaultId:'('; reservedWordClass:rwc_not_reserved; helpText:'Opening round bracket#Used as in default mathematical syntax.'),
       (defaultId:')'; reservedWordClass:rwc_not_reserved; helpText:'Closing round bracket#Used as in default mathematical syntax.'),

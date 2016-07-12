@@ -22,9 +22,10 @@
       PROCEDURE embrace;
       FUNCTION needEmbrace:boolean;
       FUNCTION canUnbrace(CONST outerPrecedence:longint):boolean;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
+      PROCEDURE modifyBeginEnd;
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -49,7 +50,7 @@
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEachBody:boolean);
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
   VAR t:P_token;
   begin
     setLength(preparedBody,0);
@@ -60,30 +61,46 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
         token:=t^;
         t^.tokType:=tt_EOL; t:=context.disposeToken(t);
         token.next:=nil;
-        if token.tokType=tt_optionalParameters then begin
-          parIdx:=REMAINING_PARAMETERS_IDX;
-        end else if token.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule] then begin
-          parIdx:=pattern.indexOfId(token.txt);
-          if parIdx>=0 then begin
-            if parIdx>=REMAINING_PARAMETERS_IDX
-            then token.tokType:=tt_parameterIdentifier
-            else token.tokType:=tt_identifier;
-          end else if forEachBody and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
-          else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
-        end else parIdx:=-1;
+        case token.tokType of
+          tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
+          tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
+            parIdx:=pattern.indexOfId(token.txt);
+            if parIdx>=0 then begin
+              if parIdx>=REMAINING_PARAMETERS_IDX
+              then token.tokType:=tt_parameterIdentifier
+              else token.tokType:=tt_identifier;
+            end else if (construct=tt_each) and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
+            else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
+          end;
+          tt_return: begin parIdx:=-1; if construct<>tt_EOL then context.adapters^.raiseError('return is not allowed in special constructs',token.location); end;
+          else parIdx:=-1;
+        end;
       end;
     end;
     resolveIds(nil);
+    if not(construct<>tt_EOL) then modifyBeginEnd;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate:boolean; VAR context:T_evaluationContext);
+PROCEDURE T_subrule.modifyBeginEnd;
+  VAR last:longint;
+  begin
+    last:=length(preparedBody)-1;
+    if (preparedBody[0   ].token.tokType=tt_beginBlock) and
+       (preparedBody[last].token.tokType=tt_endBlock) then begin
+      preparedBody  [0   ].token.tokType:=tt_beginFunc;
+      preparedBody  [last].token.tokType:=tt_endFunc;
+    end;
+  end;
+
+CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
+  CONST C_specialConstruct:array[false..true] of T_tokenType=(tt_EOL,tt_while);
   begin
     called:=false;
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
     pattern:=pat;
     declaredAt:=declAt;
-    constructExpression(rep,context,false);
+    constructExpression(rep,context,C_specialConstruct[forSpecialConstruct]);
     if needEmbrace then embrace;
   end;
 
@@ -94,7 +111,7 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
     pattern.create;
     pattern.appendFreeId(parameterId);
     declaredAt:=rep^.location;
-    constructExpression(rep,context,true);
+    constructExpression(rep,context,tt_each);
   end;
 
 
@@ -177,9 +194,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
     typ:=srt_inline_for_literal;
     declaredAt:=rep^.location;
     pattern.create;
-
     setLength(preparedBody,0);
-
     t:=rep;
     while (t<>nil) do begin
       setLength(preparedBody,length(preparedBody)+1);
@@ -193,6 +208,7 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
     end;
     if needEmbrace then embrace;
     updatePatternForInline;
+    modifyBeginEnd;
   end;
 
 CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
@@ -332,7 +348,12 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       //              local y:=y;
       //add after:  ; end
       //pattern.sig[0].id;
-      newFirst:=context.newToken(declaredAt,'',tt_begin);
+      if (firstRep^.tokType=tt_beginFunc) and
+         (lastRep ^.tokType=tt_endFunc) then begin
+        firstRep  ^.tokType:=tt_beginBlock;
+        lastRep   ^.tokType:=tt_endBlock;
+      end;
+      newFirst:=context.newToken(declaredAt,'',tt_beginFunc);
       tmp:=newFirst;
       if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
       for i:=0 to i1-1 do begin
@@ -344,7 +365,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       tmp^.next:=firstRep;
       firstRep:=newFirst;
       lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon); lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(declaredAt,'',tt_end); lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc); lastRep:=lastRep^.next;
       lastRep^.txt:='#';
       stepper.steppingIn();
     end;

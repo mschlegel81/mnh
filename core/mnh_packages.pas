@@ -491,7 +491,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         if context.adapters^.noErrors then begin
           ruleGroup:=ensureRuleId(ruleId,ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart,semicolonPosition,context.adapters^);
           if context.adapters^.noErrors then begin
-            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,context));
+            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,false,context));
             subRule^.comment:=lastComment; lastComment:='';
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private])
@@ -678,7 +678,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     begin
       localIdStack.create;
       while not(fileTokens.atEnd) do begin
-        if fileTokens.current.tokType=tt_begin then begin
+        if fileTokens.current.tokType=tt_beginBlock then begin
           if first=nil then begin
             first:=context.newToken(fileTokens.current); fileTokens.current.undefine;
             last :=first;
@@ -689,10 +689,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
              localIdStack.clear;
           localIdStack.scopePush;
           stepToken;
-          while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_end) and (localIdStack.oneAboveBottom)) do begin
+          while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
             case fileTokens.current.tokType of
-              tt_begin: localIdStack.scopePush;
-              tt_end  : localIdStack.scopePop;
+              tt_beginBlock: localIdStack.scopePush;
+              tt_endBlock  : localIdStack.scopePop;
               tt_identifier, tt_importedUserRule,tt_localUserRule,tt_intrinsicRule: if (last^.tokType=tt_modifier_local) then begin
                 fileTokens.mutateCurrentTokType(tt_blockLocalVariable);
                 localIdStack.addId(fileTokens.current.txt);

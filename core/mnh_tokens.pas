@@ -135,6 +135,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
+      tt_beginFunc:result:=C_tokenInfo[tt_beginBlock].defaultId;
+      tt_endFunc  :result:=C_tokenInfo[tt_endBlock  ].defaultId;
       tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
       tt_identifier,
       tt_localUserRule,

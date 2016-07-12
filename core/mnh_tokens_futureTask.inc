@@ -98,7 +98,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
   VAR idxLit:P_intLiteral;
   begin
     if (scope<>@context) then context.adopt(scope);
-    context.valueStore.scopePush;
+    context.valueStore.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
     context.valueStore.createVariable(C_eachIndexIdentifier,idxLit,true);
     idxLit^.unreference;
