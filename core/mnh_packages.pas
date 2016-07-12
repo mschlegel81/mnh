@@ -664,6 +664,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                                  context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),packageTokenLocation(@self));
                                  context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),packageTokenLocation(@self));
       end;
+      {$ifdef FULLVERSION}
+      if currentlyDebugging then stepper.showTimeInfo(context.adapters^);
+      {$endif}
     end;
 
   {$define stepToken:=

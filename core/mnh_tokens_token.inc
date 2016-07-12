@@ -1140,7 +1140,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
         if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,false)) and
-           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,true)) then exit;
+           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,true )) then exit;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
@@ -1477,8 +1477,8 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
+    {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
     stack.popDestroy(context);
-    {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut; {$endif}
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
     context.valueStore.scopePop;
@@ -1496,7 +1496,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
   begin
     stack.create;
     {$ifdef fullVersion}
-    if currentlyDebugging then stepper.steppingIn;
+    if currentlyDebugging then stepper.steppingIn('');
     {$endif}
     try
     repeat
@@ -1628,8 +1628,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
+              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
               stack.popDestroy(context);
-              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1649,7 +1649,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.disposeToken(first);
-              {$ifdef fullVersion}  if currentlyDebugging and (first^.next^.next^.txt='#') then stepper.steppingOut;{$endif}
+              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1783,6 +1783,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           while (stack.topIndex>=0) and (stack.dat[stack.topIndex]^.tokType<>tt_beginFunc) do stack.popDestroy(context);
           first:=context.disposeToken(first); //dispose tt_return
           while (first^.next<>nil) and (first^.next^.tokType<>tt_endFunc) do first^.next:=context.disposeToken(first^.next);
+          {$ifdef fullVersion}  if currentlyDebugging then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
           stack.popDestroy(context); //dispose tt_beginFunc
           first^.next:=context.disposeToken(first^.next); //dispose tt_endFunc
           didSubstitution:=true;
@@ -1815,7 +1816,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}
-    if currentlyDebugging then stepper.steppingOut;
+    if currentlyDebugging then stepper.steppingOut('');
     {$endif}
     stack.destroy;
   end;

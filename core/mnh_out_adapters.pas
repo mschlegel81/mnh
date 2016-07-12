@@ -1,7 +1,7 @@
 UNIT mnh_out_adapters;
 INTERFACE
 
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData{$endif};
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData,EpikTimer{$endif};
 
 TYPE
   T_storedMessage = record
@@ -131,8 +131,17 @@ TYPE
   end;
 
   {$ifdef fullVersion}
+  T_timerEntry=record
+    timer:TEpikTimer;
+    into:longint;
+  end;
+
+  T_TimerMap=specialize G_stringKeyMap<T_timerEntry>;
+
   T_stepper=object
     private
+      timerMap:T_TimerMap;
+
       waitingForGUI:boolean;
 
       breakpoints:array of T_searchTokenLocation;
@@ -156,11 +165,14 @@ TYPE
       {$WARN 3018 OFF}{$WARN 3019 OFF}
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
+      PROCEDURE clearTimers;
+      PROCEDURE stopAllTimers;
+      PROCEDURE resumeAllTimers;
     public
       //To be called by evaluation-loop
       PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToFirst,pointerToContext,pointerToStack:pointer);
-      PROCEDURE steppingIn ();
-      PROCEDURE steppingOut();
+      PROCEDURE steppingIn (CONST functionId:ansistring);
+      PROCEDURE steppingOut(CONST functionId:ansistring);
 
       //To be called by GUI
       PROCEDURE doStart(CONST continue:boolean);
@@ -176,6 +188,7 @@ TYPE
       FUNCTION token:pointer;
       FUNCTION stack:pointer;
       FUNCTION loc:T_tokenLocation;
+      PROCEDURE showTimeInfo(VAR adapters:T_adapters);
   end;
   {$endif}
 
@@ -733,6 +746,7 @@ PROCEDURE T_collectingOutAdapter.clearMessages;
 {$ifdef fullVersion}
 CONSTRUCTOR T_stepper.create;
   begin
+    timerMap.create();
     system.initCriticalSection(cs);
     setLength(breakpoints,0);
     state:=breakSoonest;
@@ -743,7 +757,34 @@ CONSTRUCTOR T_stepper.create;
 
 DESTRUCTOR T_stepper.destroy;
   begin
+    clearTimers;
+    timerMap.destroy;
     system.doneCriticalSection(cs);
+  end;
+
+PROCEDURE T_stepper.clearTimers;
+  VAR v:array of T_timerEntry;
+      i:longint;
+  begin
+    v:=timerMap.valueSet;
+    for i:=0 to length(v)-1 do with v[i] do timer.destroy;
+    timerMap.clear;
+  end;
+
+PROCEDURE T_stepper.stopAllTimers;
+  VAR v:array of T_timerEntry;
+      i:longint;
+  begin
+    v:=timerMap.valueSet;
+    for i:=0 to length(v)-1 do with v[i] do if into>0 then timer.stop;
+  end;
+
+PROCEDURE T_stepper.resumeAllTimers;
+  VAR v:array of T_timerEntry;
+      i:longint;
+  begin
+    v:=timerMap.valueSet;
+    for i:=0 to length(v)-1 do with v[i] do if into>0 then timer.start;
   end;
 
 PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext, pointerToStack: pointer);
@@ -774,35 +815,55 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
       contextPointer:=pointerToContext;
       tokenPointer:=pointerToFirst;
       stackPointer:=pointerToStack;
+      stopAllTimers;
       waitingForGUI:=true;
       repeat
         system.leaveCriticalSection(cs);
         sleep(10);
         system.enterCriticalSection(cs);
       until not(waitingForGUI);
+      resumeAllTimers;
     end;
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingIn;
+PROCEDURE T_stepper.steppingIn(CONST functionId:ansistring);
+  VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
+    if not(timerMap.containsKey(functionId,t)) then begin
+      t.timer:=TEpikTimer.create(nil);
+      t.into:=1;
+      t.timer.start;
+    end else begin
+      if t.into<=0 then t.timer.start;
+      inc(t.into);
+    end;
+    timerMap.put(functionId,t);
+
     inc(currentLevel);
     {$ifdef DEBUGMODE}
-    writeln('Stepping into level: ',currentLevel);
+    writeln('Stepping into level: ',currentLevel,' ',functionId);
     writeln('          steplevel: ',stepLevel);
     {$endif}
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingOut;
+PROCEDURE T_stepper.steppingOut(CONST functionId:ansistring);
+  VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
     dec(currentLevel);
     {$ifdef DEBUGMODE}
-    writeln('Stepping out to level: ',currentLevel);
+    writeln('Stepping out to level: ',currentLevel,' ',functionId);
     writeln('            steplevel: ',stepLevel);
     {$endif}
+    if timerMap.containsKey(functionId,t) then begin
+      dec(t.into);
+      if t.into<=0 then t.timer.stop;
+      timerMap.put(functionId,t);
+    end;
+
     system.leaveCriticalSection(cs);
   end;
 
@@ -836,6 +897,7 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
   begin
     system.enterCriticalSection(cs);
     if not(continue) then begin
+      clearTimers;
       lineChanged:=true;
       stepLevel:=0;
       currentLevel:=0;
@@ -908,6 +970,32 @@ FUNCTION T_stepper.stack:pointer;
 FUNCTION T_stepper.loc: T_tokenLocation;
   begin
     result:=currentLine;
+  end;
+
+PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
+  CONST unknownLocTxt='Unknown location';
+  VAR entrySet:T_TimerMap.KEY_VALUE_LIST;
+      i,j:longint;
+      swapTemp:T_timerMap.KEY_VALUE_PAIR;
+      keyWidth:longint=0;
+  begin
+    entrySet:=timerMap.entrySet;
+
+    for i:=0 to length(entrySet)-1 do begin
+      entrySet[i].value.timer.stop;
+      if entrySet[i].key='' then entrySet[i].key:=unknownLocTxt;
+      if length(entrySet[i].key)>keyWidth then keyWidth:=length(entrySet[i].key);
+    end;
+
+    for j:=1 to length(entrySet)-1 do for i:=0 to j-1 do if entrySet[i].value.timer.Elapsed<entrySet[j].value.timer.Elapsed then begin
+      swapTemp:=entrySet[i];
+      entrySet[i]:=entrySet[j];
+      entrySet[j]:=swapTemp;
+    end;
+
+    adapters.raiseCustomMessage(mt_timing_info,'',C_nilTokenLocation);
+    adapters.raiseCustomMessage(mt_timing_info,'Time spent by locations:',C_nilTokenLocation);
+    for i:=0 to length(entrySet)-1 do adapters.raiseCustomMessage(mt_timing_info,entrySet[i].key+StringOfChar(' ',keyWidth-length(entrySet[i].key))+' '+floatToStr(entrySet[i].value.timer.Elapsed),C_nilTokenLocation);
   end;
 
 {$endif}

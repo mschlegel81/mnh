@@ -341,6 +341,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
 
     VAR newFirst,tmp:P_token;
         i,i1:longint;
+        subruleId:ansistring;
     begin
       //Example: f(x,y)->...
       //add before: begin
@@ -348,12 +349,15 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       //              local y:=y;
       //add after:  ; end
       //pattern.sig[0].id;
+      subruleId:=ansistring(declaredAt);
       if (firstRep^.tokType=tt_beginFunc) and
          (lastRep ^.tokType=tt_endFunc) then begin
         firstRep  ^.tokType:=tt_beginBlock;
         lastRep   ^.tokType:=tt_endBlock;
       end;
-      newFirst:=context.newToken(declaredAt,'',tt_beginFunc);
+      if typ in [srt_normal_private,srt_normal_public]
+      then newFirst:=context.newToken(declaredAt,subruleId,tt_beginFunc)
+      else newFirst:=context.newToken(declaredAt,subruleId,tt_beginBlock);
       tmp:=newFirst;
       if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
       for i:=0 to i1-1 do begin
@@ -365,9 +369,13 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       tmp^.next:=firstRep;
       firstRep:=newFirst;
       lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon); lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc); lastRep:=lastRep^.next;
-      lastRep^.txt:='#';
-      stepper.steppingIn();
+
+      if typ in [srt_normal_private,srt_normal_public]
+      then lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc)
+      else lastRep^.next:=context.newToken(declaredAt,'',tt_endBlock);
+      lastRep:=lastRep^.next;
+      if typ in [srt_normal_private,srt_normal_public]
+      then stepper.steppingIn(subruleId);
     end;
   {$endif}
 
