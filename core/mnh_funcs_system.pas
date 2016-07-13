@@ -228,10 +228,11 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
   end;
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): boolean;
+  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): boolean;
     CONST
       READ_BYTES = 2048;
     VAR
+      stdErrDummy:array[0..READ_BYTES-1] of byte;
       memStream: TMemoryStream;
       tempProcess: TProcessUTF8;
       n: longint;
@@ -243,13 +244,15 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
       for n := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[n]);
-      tempProcess.options := [poUsePipes, poStderrToOutPut];
+      if includeStdErr then tempProcess.options := [poUsePipes, poStderrToOutPut]
+                       else tempProcess.options := [poUsePipes];
       tempProcess.ShowWindow := swoHIDE;
       try
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.adapters^.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
+          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
                  else begin inc(sleepTime); sleep(sleepTime); end;
@@ -257,6 +260,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
+          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
           n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
           if n>0 then inc(BytesRead, n);
         until n<=0;
@@ -275,21 +279,29 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       cmdLinePar:T_arrayOfString;
       output:TStringList;
       i:longint;
+      includeStdErr:boolean=true;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList])) then begin
+    if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
       setLength(cmdLinePar,0);
-      executable:=str0^.value;
-      if params^.size=2 then begin
-        setLength(cmdLinePar,list1^.size);
-        for i:=0 to list1^.size-1 do begin
-          cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
-        end;
+      if (params^.size>=2) then begin
+        if arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList,lt_flatList] then begin
+          setLength(cmdLinePar,list1^.size);
+          for i:=0 to list1^.size-1 do begin
+            cmdLinePar[i]:=P_scalarLiteral(list1^.value(i))^.stringForm;
+          end;
+        end else if (arg1^.literalType=lt_boolean) then includeStdErr:=P_boolLiteral(arg1)^.value
+        else exit(nil);
       end;
+      if (params^.size=3) then begin
+        if (arg2^.literalType=lt_boolean) then includeStdErr:=P_boolLiteral(arg2)^.value
+        else exit(nil);
+      end;
+      executable:=str0^.value;
       runCommand(executable,
                  cmdLinePar,
-                 output);
+                 output,
+                 includeStdErr);
       result:=newListLiteral;
       for i:=0 to output.count-1 do P_listLiteral(result)^.appendString(output[i]);
       output.free;
@@ -630,7 +642,10 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
                                                                               'writeFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string,parameters ...);#Executes the specified program and returns the text output');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string);#Executes the specified program and returns the text output including stdErr output#'+
+                                                              'exec(programPath:string,parameters:flatList);#Executes the specified program with given command line parameters and returns the text output including stdErr output#'+
+                                                              'exec(programPath:string,includeStdErr:boolean);#Executes the specified program and returns the text output optionally including stdErr output#'+
+                                                              'exec(programPath:string,parameters:flatList,parameters:flatList);#Executes the specified program with given command line parameters and returns the text output optionally including stdErr output');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execAsync',@execAsync_impl,'execAsync(programPath:string,parameters ...);#Starts the specified program and returns true');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'execPipeless',@execPipeless_impl,'execPipeless(programPath:string,parameters ...);#Executes the specified program, waiting for exit and returning true');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime',@systime_imp,'systime;#Returns the current time as a real number');
