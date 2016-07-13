@@ -12,6 +12,9 @@ VAR consoleAdapters:T_adapters;
     reEvaluationWithGUIrequired:boolean=false;
     mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
+    {$ifdef fullVersion}
+    fileToOpenInEditor:ansistring='';
+    {$endif}
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
@@ -83,8 +86,9 @@ PROCEDURE parseCmdLine;
       consoleAdapters.printOut('  -cmd              directly execute the following command');
       {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
+      consoleAdapters.printOut('  -edit <filename>  opens file in editor instead of interpreting it directly');
       {$endif}
-      consoleAdapters.printOut('  -out:<filename>   write output to the given file; if the extension is .html, ');
+      consoleAdapters.printOut('  -out <filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
       consoleAdapters.printOut('  -quiet            disable console output');
     end;
@@ -141,15 +145,24 @@ PROCEDURE parseCmdLine;
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
-    for i:=1 to paramCount do begin
+    i:=1;
+    while i<=paramCount do begin
       if (fileOrCommandToInterpret='') or directExecutionMode then begin
         if      paramStr(i)='+echo' then begin echo:=e_forcedOn;           addParameter(mnhParameters,i); end
         else if paramStr(i)='-echo' then begin echo:=e_forcedOff;          addParameter(mnhParameters,i); end
         else if paramStr(i)='+time' then begin time:=t_forcedOn;           addParameter(mnhParameters,i); end
         else if paramStr(i)='-time' then begin time:=t_forcedOff;          addParameter(mnhParameters,i); end
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
-        else if startsWith(paramStr(i),'-out:') then begin
-          addOutfile(consoleAdapters, copy(paramStr(i),6,length(paramStr(i))-5));
+        {$ifdef fullVersion}
+        else if (paramStr(i)='-edit') and (i<paramCount) then begin
+          inc(i);
+          fileToOpenInEditor:=paramStr(i);
+        end
+        {$endif}
+        else if (paramStr(i)='-out') and (i<paramCount) then begin
+          addParameter(mnhParameters,i);
+          inc(i);
+          addOutfile(consoleAdapters, paramStr(i));
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
@@ -181,9 +194,8 @@ PROCEDURE parseCmdLine;
           end;
         end;
       end else addParameter(mainParameters,i);
+      inc(i);
     end;
-    quitImmediate:=quitImmediate and (fileOrCommandToInterpret='');
-    if quitImmediate then halt;
     setMnhParameters(mnhParameters);
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
@@ -195,8 +207,10 @@ PROCEDURE parseCmdLine;
     end;
     if wantHelpDisplay then begin
       displayHelp;
-      halt;
+      quitImmediate:=true;
     end;
+    {$ifdef fullVersion}quitImmediate:=quitImmediate and (fileToOpenInEditor='');{$endif}
+    if quitImmediate then halt;
   end;
 
 INITIALIZATION

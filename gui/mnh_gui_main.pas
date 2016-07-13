@@ -594,6 +594,7 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       {$ifdef UNIX}
       miIncFontSize.ShortCut:=16605;
       {$endif}
+      if fileToOpenInEditor<>'' then FormDropFiles(Sender,fileToOpenInEditor);
     end;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
