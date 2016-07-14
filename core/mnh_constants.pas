@@ -1,6 +1,7 @@
 UNIT mnh_constants;
 INTERFACE
 USES sysutils;
+{$PACKENUM 1}
 TYPE
   T_hashInt=dword;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
@@ -115,6 +116,10 @@ TYPE
     tt_blank);
 
   T_tokenTypeSet=set of T_tokenType;
+  T_modifier=                         tt_modifier_private..tt_modifier_synchronized;
+CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized];
+TYPE
+  T_modifierSet=set of T_modifier;
 
   T_literalType = (
     lt_error,
@@ -353,6 +358,46 @@ CONST
     'built in function');
 
 TYPE
+  T_ruleType=(rt_normal,
+          rt_memoized,
+          rt_mutable_public,
+          rt_mutable_private,
+          rt_persistent_public,
+          rt_persistent_private,
+          rt_datastore_public,
+          rt_datastore_private,
+          rt_synchronized);
+CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
+      C_csProtectedRuleTypes:set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
+      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public];
+      C_ruleTypeText:array[T_ruleType] of string=(
+      '','memoized ',
+         'mutable ',
+         'private mutable ',
+         'persistent ',
+         'private persistent ',
+         'datastore ',
+         'private datastore ',
+         'synchronized ');
+      C_validModifierCombinations:array[0..13] of record
+        modifiers:T_modifierSet;
+        ruleType:T_ruleType;
+      end=((modifiers:[];ruleType:rt_normal),
+           (modifiers:[tt_modifier_private];ruleType:rt_normal),
+           (modifiers:[tt_modifier_memoized];ruleType:rt_memoized),
+           (modifiers:[tt_modifier_memoized,tt_modifier_private];ruleType:rt_memoized),
+           (modifiers:[tt_modifier_mutable];ruleType:rt_mutable_public),
+           (modifiers:[tt_modifier_mutable,tt_modifier_private];ruleType:rt_mutable_private),
+           (modifiers:[tt_modifier_persistent];ruleType:rt_persistent_public),
+           (modifiers:[tt_modifier_persistent,tt_modifier_private];ruleType:rt_persistent_private),
+           (modifiers:[tt_modifier_datastore];ruleType:rt_datastore_public),
+           (modifiers:[tt_modifier_datastore,tt_modifier_private];ruleType:rt_datastore_private),
+           (modifiers:[tt_modifier_memoized];ruleType:rt_memoized),
+           (modifiers:[tt_modifier_memoized,tt_modifier_private];ruleType:rt_memoized),
+           (modifiers:[tt_modifier_synchronized];ruleType:rt_synchronized),
+           (modifiers:[tt_modifier_synchronized,tt_modifier_private];ruleType:rt_synchronized));
+
+TYPE
   T_messageType = (
     mt_clearConsole,
     mt_printline,
@@ -480,6 +525,7 @@ FUNCTION getAppName: string;
 
 FUNCTION configDir:string;
   begin
+    OnGetApplicationName:=@getAppName;
     {$ifdef WINDOWS}
     result:=GetAppConfigDir(true);
     {$else}

@@ -51,7 +51,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized,ruleIsDatastore:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       {$ifdef fullVersion}
       PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -331,13 +331,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
       CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
       VAR p:P_token; //iterator
-          //modifier flags
-          ruleIsPrivate:boolean=false;
-          ruleIsMemoized:boolean=false;
-          ruleIsMutable:boolean=false;
-          ruleIsPersistent:boolean=false;
-          ruleIsSynchronized:boolean=false;
           //rule meta data
+          ruleModifiers:T_modifierSet=[];
           ruleId:string='';
           evaluateBody:boolean;
           rulePattern:T_pattern;
@@ -359,17 +354,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_persistent,tt_modifier_synchronized]) do begin
-          if first^.tokType=tt_modifier_private      then ruleIsPrivate :=true;
-          if first^.tokType=tt_modifier_memoized     then ruleIsMemoized:=true;
-          if first^.tokType=tt_modifier_synchronized then ruleIsSynchronized:=true;
-          if first^.tokType in [tt_modifier_mutable,tt_modifier_persistent]  then begin
-            ruleIsMutable   :=true;
-            ruleIsPersistent:=(first^.tokType=tt_modifier_persistent);
-            evaluateBody    :=true;
-          end;
+        while (first<>nil) and (first^.tokType in C_ruleModifiers) do begin
+          include(ruleModifiers,first^.tokType);
           first:=context.disposeToken(first);
         end;
+        evaluateBody:=evaluateBody
+                   or (tt_modifier_mutable    in ruleModifiers)
+                   or (tt_modifier_persistent in ruleModifiers);
+
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) then begin
           context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Declaration does not start with an identifier.',first^.location);
           context.cascadeDisposeToken(first);
@@ -491,11 +483,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
 
         if context.adapters^.noErrors then begin
-          ruleGroup:=ensureRuleId(ruleId,
-                                  ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,false,
-                                  ruleDeclarationStart,semicolonPosition,context.adapters^);
+          ruleGroup:=ensureRuleId(ruleId,ruleModifiers,ruleDeclarationStart,semicolonPosition,context.adapters^);
           if context.adapters^.noErrors then begin
-            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,false,context));
+            new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,tt_modifier_private in ruleModifiers,false,context));
             subRule^.comment:=lastComment; lastComment:='';
             //in usecase lu_forCodeAssistance, the body might not be a literal because reduceExpression is not called at [marker 1]
             if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private])
@@ -517,27 +507,26 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
 
     PROCEDURE parseDataStore;
-      VAR isPrivate:boolean=false;
+      VAR ruleModifiers:T_modifierSet=[];
       begin
         if (codeProvider.isPseudoFile) then begin
           context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
-        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_synchronized,tt_modifier_datastore]) do begin
-          if first^.tokType=tt_modifier_private then isPrivate:=true;
+        while (first<>nil) and (first^.tokType in C_ruleModifiers) do begin
+          include(ruleModifiers,first^.tokType);
           first:=context.disposeToken(first);
         end;
         if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
-           (first^.next=nil) or (first^.next^.tokType<>tt_semicolon) or
-           (first^.next^.next<>nil) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition.',first^.location);
+           (first^.next<>nil) then begin
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition: '+tokensToString(first),first^.location);
           context.cascadeDisposeToken(first);
           exit;
         end;
         ensureRuleId(first^.txt,
-                     isPrivate,false,false,false,false,true,
-                     first^.location,first^.next^.location,context.adapters^);
+                     ruleModifiers,
+                     first^.location,first^.location,context.adapters^);
       end;
 
     VAR statementHash:T_hashInt;
@@ -908,22 +897,24 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized,ruleIsDatastore:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
+      i:longint;
+  PROCEDURE raiseModifierComplaint;
+    VAR m:T_modifier;
+        s:string='';
+    begin
+      for m:=low(T_modifier) to high(T_modifier) do if m in modifiers then s:=s+C_tokenInfo[m].defaultId+' ';
+      adapters.raiseError('Invalid combination of modifiers: '+s,ruleDeclarationStart);
+    end;
+
   begin
-    if ruleIsSynchronized then ruleType:=rt_synchronized;
-    if ruleIsMemoized then ruleType:=rt_memoized;
-    if ruleIsMutable then begin
-      if ruleIsPrivate then ruleType:=rt_mutable_private
-                       else ruleType:=rt_mutable_public;
-    end;
-    if ruleIsPersistent then begin
-      if ruleIsPrivate then ruleType:=rt_persistent_private
-                       else ruleType:=rt_persistent_public;
-    end;
-    if ruleIsDatastore then begin
-      if ruleIsPrivate then ruleType:=rt_persistent_private
-                       else ruleType:=rt_persistent_public;
+    i:=0;
+    while (i<length(C_validModifierCombinations)) and (C_validModifierCombinations[i].modifiers<>modifiers) do inc(i);
+    if i<length(C_validModifierCombinations) then ruleType:=C_validModifierCombinations[i].ruleType
+    else begin
+      raiseModifierComplaint;
+      exit;
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
       new(result,create(ruleId,ruleType,@self,ruleDeclarationStart));
@@ -1120,7 +1111,7 @@ FUNCTION T_package.getDatastoreForId(CONST id:ansistring; CONST forReading:boole
       result.destroy;
     end;
     if forReading then begin
-      result.createToWriteToFile('');
+      result.createToReadFromFile('');
     end else begin
       i:=0;
       while fileExists(ChangeFileExt(getPath,'.datastore'+intToStr(i))) do inc(i);
