@@ -1107,7 +1107,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end;
         {$endif}
       end else if (first^.tokType=tt_rulePutCacheValue) then begin
-        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral,context);
+        newLiteral:=P_rule(first^.data)^.doPutCache(parameterListLiteral);
         firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokType=tt_aggregatorConstructor) then begin
@@ -1213,7 +1213,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      P_rule(first^.data)^.setMutableValue(newValue,false,context);
+      P_rule(first^.data)^.setMutableValue(newValue,false,context.adapters);
       first:=context.disposeToken(first);
     end;
 
@@ -1227,7 +1227,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           first:=context.disposeToken(first);
         end;
         tt_assignExistingBlockLocal: begin
-          context.getVariable(first^.txt)^.setValue(newValue,context.adapters^);
+          context.getVariable(first^.txt)^.setValue(newValue);
           first:=context.disposeToken(first);
         end;
         tt_cso_assignPlus..tt_cso_assignAppend: if first^.data=nil then begin

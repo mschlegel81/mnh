@@ -6,7 +6,7 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,Classes,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
-     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif};
+     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},serializationUtil;
 
 {$define include_interface}
 TYPE
@@ -51,7 +51,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized,ruleIsDatastore:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       {$ifdef fullVersion}
       PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -73,6 +73,8 @@ TYPE
       PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_listLiteral;
+
+      FUNCTION getDatastoreForId(CONST id:ansistring; CONST forReading:boolean):T_streamWrapper;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -489,7 +491,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
 
         if context.adapters^.noErrors then begin
-          ruleGroup:=ensureRuleId(ruleId,ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,ruleDeclarationStart,semicolonPosition,context.adapters^);
+          ruleGroup:=ensureRuleId(ruleId,
+                                  ruleIsPrivate, ruleIsMemoized,ruleIsMutable,ruleIsPersistent, ruleIsSynchronized,false,
+                                  ruleDeclarationStart,semicolonPosition,context.adapters^);
           if context.adapters^.noErrors then begin
             new(subRule,create(rulePattern,ruleBody,ruleDeclarationStart,ruleIsPrivate,false,context));
             subRule^.comment:=lastComment; lastComment:='';
@@ -497,8 +501,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             if (ruleGroup^.ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private])
             then begin
               if (usecase<>lu_forCodeAssistance)
-              then ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context)
-              else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context);
+              then ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context.adapters)
+              else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context.adapters);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;
@@ -510,6 +514,30 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           context.cascadeDisposeToken(first);
           context.cascadeDisposeToken(ruleBody);
         end;
+      end;
+
+    PROCEDURE parseDataStore;
+      VAR isPrivate:boolean=false;
+      begin
+        if (codeProvider.isPseudoFile) then begin
+          context.adapters^.raiseError('data stores require the package to be saved to a file.',first^.location);
+          context.cascadeDisposeToken(first);
+          exit;
+        end;
+        while (first<>nil) and (first^.tokType in [tt_modifier_private,tt_modifier_memoized,tt_modifier_mutable,tt_modifier_synchronized,tt_modifier_datastore]) do begin
+          if first^.tokType=tt_modifier_private then isPrivate:=true;
+          first:=context.disposeToken(first);
+        end;
+        if not(first^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_intrinsicRule]) or
+           (first^.next=nil) or (first^.next^.tokType<>tt_semicolon) or
+           (first^.next^.next<>nil) then begin
+          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid datastore definition.',first^.location);
+          context.cascadeDisposeToken(first);
+          exit;
+        end;
+        ensureRuleId(first^.txt,
+                     isPrivate,false,false,false,false,true,
+                     first^.location,first^.next^.location,context.adapters^);
       end;
 
     VAR statementHash:T_hashInt;
@@ -548,23 +576,26 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end;
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
-      if assignmentToken<>nil then begin
+      if (assignmentToken<>nil) then begin
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
         predigest(assignmentToken,@self,context);
-        if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first,maxLongint)+';',first^.location);
-
+        if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
-
+        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+      end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
+        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
+        parseDataStore;
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
           predigest(first,@self,context);
-          if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first,maxLongint)+';',first^.location);
+          if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           resolveRuleIds(nil);
           reduceExpression(first,0,context);
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
-          if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first,maxLongint),first^.location);
+          if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
       if first<>nil then context.cascadeDisposeToken(first);
@@ -831,7 +862,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   begin
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      if ruleList[i]^.writeBack(codeProvider,adapters) then wroteBack:=true;
+      if ruleList[i]^.writeBack(codeProvider,adapters,@self) then wroteBack:=true;
       if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
     end;
     setLength(ruleList,0);
@@ -877,7 +908,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ruleIsMemoized,ruleIsMutable,ruleIsPersistent,ruleIsSynchronized,ruleIsDatastore:boolean; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
   begin
     if ruleIsSynchronized then ruleType:=rt_synchronized;
@@ -890,14 +921,20 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST ruleIsPrivate,ru
       if ruleIsPrivate then ruleType:=rt_persistent_private
                        else ruleType:=rt_persistent_public;
     end;
+    if ruleIsDatastore then begin
+      if ruleIsPrivate then ruleType:=rt_persistent_private
+                       else ruleType:=rt_persistent_public;
+    end;
     if not(packageRules.containsKey(ruleId,result)) then begin
-      new(result,create(ruleId,ruleType,ruleDeclarationStart));
+      new(result,create(ruleId,ruleType,@self,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
     end else begin
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
+      else if (ruleType in [rt_persistent_private,rt_persistent_public,rt_datastore_private,rt_datastore_public,rt_mutable_private,rt_mutable_public])
+      then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+' rules must have exactly one subrule',ruleDeclarationStart)
       else adapters.raiseCustomMessage(mt_el1_note,'Extending rule: '+ruleId,ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;
@@ -1063,6 +1100,33 @@ FUNCTION T_package.inspect:P_listLiteral;
       .append(newListLiteral^
               .appendString('declares')^
               .append(rulesList,false),false);
+  end;
+
+FUNCTION T_package.getDatastoreForId(CONST id:ansistring; CONST forReading:boolean):T_streamWrapper;
+  VAR allStores:T_arrayOfString;
+      i:longint;
+  begin
+    allStores:=find(ChangeFileExt(getPath,'.datastore*'),true,false);
+    for i:=0 to length(allStores)-1 do begin
+      result.createToReadFromFile(allStores[i]);
+      if result.readAnsiString=id then begin
+        if not(forReading) then begin
+          result.destroy;
+          result.createToWriteToFile(allStores[i]);
+          result.writeAnsiString(id);
+        end;
+        exit(result);
+      end;
+      result.destroy;
+    end;
+    if forReading then begin
+      result.createToWriteToFile('');
+    end else begin
+      i:=0;
+      while fileExists(ChangeFileExt(getPath,'.datastore'+intToStr(i))) do inc(i);
+      result.createToWriteToFile(ChangeFileExt(getPath,'.datastore'+intToStr(i)));
+      result.writeAnsiString(id);
+    end;
   end;
 
 {$ifdef fullVersion}

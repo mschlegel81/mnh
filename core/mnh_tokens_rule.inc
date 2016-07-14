@@ -1,12 +1,14 @@
 {$ifdef include_interface}
   { T_rule }
   T_ruleType=(rt_normal,
-              rt_memoized,
-              rt_mutable_public,
-              rt_mutable_private,
-              rt_persistent_public,
-              rt_persistent_private,
-              rt_synchronized);
+          rt_memoized,
+          rt_mutable_public,
+          rt_mutable_private,
+          rt_persistent_public,
+          rt_persistent_private,
+          rt_datastore_public,
+          rt_datastore_private,
+          rt_synchronized);
 
   T_rule=object
     private
@@ -20,14 +22,14 @@
       id:ansistring;
       subrules:array of P_subrule;
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
-      FUNCTION doPutCache(CONST param:P_listLiteral; VAR context:T_evaluationContext):P_literal;
+      FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
-      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; VAR context:T_evaluationContext);
+      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; CONST adapters:P_adapters);
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
@@ -36,14 +38,20 @@
       {$endif}
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
-      FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
+      FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; CONST package:P_package):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_listLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
     end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
+      C_csProtectedRuleTypes:set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
+      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public];
+
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation);
+  VAR stream:T_streamWrapper;
+      L:P_literal;
   begin
     used:=false;
     valueChangedAfterDeclaration:=false;
@@ -52,17 +60,24 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
     ruleType:=ruleTyp;
     id:=ruleId;
     setLength(subrules,0);
-    case ruleTyp of
-      rt_memoized:begin
-        system.initCriticalSection(rule_cs);
-        new(cache,create(rule_cs));
+
+    if ruleType=rt_memoized
+    then new(cache,create(rule_cs));
+
+    if ruleType in C_csProtectedRuleTypes
+    then system.initCriticalSection(rule_cs);
+
+    if ruleType in C_mutableRuleTypes
+    then namedValue.create(id,newVoidLiteral,false);
+
+    if ruleType in [rt_datastore_private,rt_datastore_public] then begin
+      stream:=package^.getDatastoreForId(id,true);
+      if stream.allOkay then begin
+        L:=newLiteralFromStream(stream,startAt,nil);
+        if stream.allOkay then setMutableValue(L,true,nil);
+        disposeLiteral(L);
       end;
-      rt_mutable_public, rt_mutable_private, rt_persistent_public, rt_persistent_private: begin
-        namedValue.create(id,newVoidLiteral,false);
-        system.initCriticalSection(rule_cs);
-      end;
-      rt_synchronized:
-        system.initCriticalSection(rule_cs);
+      stream.destroy;
     end;
   end;
 
@@ -71,18 +86,21 @@ DESTRUCTOR T_rule.destroy;
   begin
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
-    if ruleType=rt_memoized then begin
-      dispose(cache,destroy);
-      system.doneCriticalSection(rule_cs);
-    end else if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized] then begin
-      system.doneCriticalSection(rule_cs);
-    end;
-    if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then namedValue.destroy;
+
+    if ruleType=rt_memoized
+    then dispose(cache,destroy);
+
+    if ruleType in C_csProtectedRuleTypes
+    then system.doneCriticalSection(rule_cs);
+
+    if ruleType in C_mutableRuleTypes
+    then namedValue.destroy;
+
     ruleType:=rt_normal;
     id:='';
   end;
 
-FUNCTION T_rule.doPutCache(CONST param:P_listLiteral; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
     enterCriticalSection(rule_cs);
     cache^.put(P_listLiteral(param^.value(0)),
@@ -170,8 +188,8 @@ exit}
         end;
         result:=false;
       end;
-      rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private: begin
-        result:=(includePrivateRules or (ruleType in [rt_mutable_public,rt_persistent_public])) and ((param=nil) or (param^.size=0));
+      rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
+        result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
           system.enterCriticalSection(rule_cs);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
@@ -199,7 +217,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evalua
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>0) and (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then context.adapters^.raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>0) and (ruleType in C_mutableRuleTypes) then context.adapters^.raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 
@@ -216,19 +234,19 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
       result:=result+'#'+id+subrules[i]^.pattern.toString;
   end;
 
-PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; VAR context:T_evaluationContext);
+PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; CONST adapters:P_adapters);
   begin
-    if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
+    if (ruleType in C_mutableRuleTypes) then begin
       system.enterCriticalSection(rule_cs);
-      namedValue.setValue(value,context.adapters^);
+      namedValue.setValue(value);
       if not(onDeclaration) then valueChangedAfterDeclaration:=true;
       system.leaveCriticalSection(rule_cs);
-    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',declarationStart);
+    end else if adapters<>nil then adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',declarationStart);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
-    if (ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private]) then begin
+    if (ruleType in C_mutableRuleTypes) then begin
       system.enterCriticalSection(rule_cs);
       result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
       valueChangedAfterDeclaration:=true;
@@ -239,7 +257,7 @@ FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CO
 FUNCTION T_rule.hasPublicSubrule: boolean;
   VAR i:longint;
   begin
-    if ruleType in [rt_mutable_public,rt_persistent_public] then exit(true);
+    if ruleType in C_publicRuleTypes then exit(true);
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then exit(true);
     result:=false;
   end;
@@ -283,6 +301,8 @@ CONST C_ruleTypeText:array[T_ruleType] of string=(
        'private mutable ',
        'persistent ',
        'private persistent ',
+       'datastore ',
+       'private datastore ',
        'synchronized ');
 
 FUNCTION T_rule.getDocTxt:ansistring;
@@ -290,8 +310,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
   begin
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
     for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
-    if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then
-      result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
+    if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
   end;
 
 FUNCTION T_rule.getDocHtml:ansistring;
@@ -310,27 +329,43 @@ FUNCTION T_rule.getDocHtml:ansistring;
     if not(anyPublic) then result:='';
   end;
 
-FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
+FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; CONST package:P_package):boolean;
   VAR code:ansistring;
+      stream:T_streamWrapper;
+      L:P_literal;
   begin
-    if (adapters.noErrors) and (ruleType in [rt_persistent_private,rt_persistent_public]) and valueChangedAfterDeclaration then begin
-      if ruleType=rt_persistent_private then code:=C_tokenInfo[tt_modifier_private].defaultId+' '
-                                        else code:='';
-      code:=code+
-            C_tokenInfo[tt_modifier_persistent].defaultId+' '+
-            id;
-      adapters.raiseNote('Writing back: '+code,declarationStart);
-      code:=code+
-            C_tokenInfo[tt_assign].defaultId+
-            serialize(namedValue.getValue,declarationStart,@adapters,0,true)+
-            C_tokenInfo[tt_semicolon].defaultId;
-      provider.replaceCode(
-        declarationStart.line-1,
-        declarationStart.column,
-        declarationEnd.line-1,
-        declarationEnd.column,
-        code);
-      result:=true;
+    if (adapters.noErrors) and valueChangedAfterDeclaration then begin
+      case ruleType of
+        rt_persistent_private,rt_persistent_public:
+        begin
+          if ruleType=rt_persistent_private then code:=C_tokenInfo[tt_modifier_private].defaultId+' '
+                                            else code:='';
+          code:=code+
+                C_tokenInfo[tt_modifier_persistent].defaultId+' '+
+                id;
+          adapters.raiseNote('Writing back: '+code,declarationStart);
+          code:=code+
+                C_tokenInfo[tt_assign].defaultId+
+                serialize(namedValue.getValue,declarationStart,@adapters,0,true)+
+                C_tokenInfo[tt_semicolon].defaultId;
+          provider.replaceCode(
+            declarationStart.line-1,
+            declarationStart.column,
+            declarationEnd.line-1,
+            declarationEnd.column,
+            code);
+          result:=true;
+        end;
+        rt_datastore_private,rt_datastore_public:
+        begin
+          stream:=package^.getDatastoreForId(id,false);
+          L:=namedValue.getValue;
+          writeLiteralToStream(L,stream,declarationStart,@adapters);
+          stream.destroy;
+          result:=true;
+        end;
+        else result:=false;
+      end;//case ruleType
     end else result:=false;
   end;
 
@@ -345,39 +380,20 @@ FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;
   end;
 
 FUNCTION T_rule.inspect:P_listLiteral;
-  FUNCTION ruleTypeString:ansistring;
+  FUNCTION privateOrPublic:string;
     begin
-      case ruleType of
-        rt_normal:result:='normal';
-        rt_memoized:result:='memoized';
-        rt_mutable_public,
-        rt_mutable_private:result:='mutable';
-        rt_persistent_public,
-        rt_persistent_private:result:='persistent';
-        rt_synchronized:result:='synchronized';
-        else result:='';
-      end;
-    end;
-
-  FUNCTION typeString:ansistring;
-    begin
-      case ruleType of
-        rt_mutable_public,
-        rt_persistent_public:result:='public';
-        rt_mutable_private,
-        rt_persistent_private:result:='private';
-        else result:='';
-      end;
+      if ruleType in C_publicRuleTypes then result:='public'
+                                       else result:=C_tokenInfo[tt_modifier_private].defaultId;
     end;
 
   FUNCTION subrulesList:P_listLiteral;
     VAR i:longint;
     begin
-      if ruleType in [rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private] then begin
+      if ruleType in C_mutableRuleTypes then begin
         result:=newListLiteral^.append(newListLiteral^
           .append(newListLiteral^.appendString('pattern')^.appendString('()'),false)^
           .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
-          .append(newListLiteral^.appendString('type')^.appendString(typeString),false)^
+          .append(newListLiteral^.appendString('type')^.appendString(privateOrPublic),false)^
           .append(newListLiteral^.appendString('comment')^.appendString(''),false)^
           .append(newListLiteral^.appendString('body')^.appendString(namedValue.getValue^.toString),false),false);
       end else begin
@@ -389,7 +405,7 @@ FUNCTION T_rule.inspect:P_listLiteral;
 
   begin
     result:=newListLiteral^.appendString(id)^.append(newListLiteral^
-      .append(newListLiteral^.appendString('type')^.appendString(ruleTypeString),false)^
+      .append(newListLiteral^.appendString('type')^.appendString(C_ruleTypeText[ruleType]),false)^
       .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
       .append(newListLiteral^.appendString('subrules')^.append(subrulesList,false),false),false);
   end;

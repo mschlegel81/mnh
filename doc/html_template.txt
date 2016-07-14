@@ -669,6 +669,7 @@ the latter 2 additionally allow for specific optimizations, making e.g. the oper
 <li><h5><a href="#synchronizedMod">synchronized</a></h5></li>
 <li><h5><a href="#mutableMod">mutable</a></h5></li>
 <li><h5><a href="#persistentMod">persistent</a></h5></li>
+<li><h5><a href="#datastoreMod">datastore</a></h5></li>
 <li><h5><a href="#localMod">local</a></h5></li></ul></li>
 </ul>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
@@ -841,7 +842,22 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 <!--end-->
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
 Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
-to <code>each</code>-statements.
+<br>
+You can use the <code><span class="builtin">return</span></code> statement to immediately return from the current function. Currently this works only
+for normal functions (i.e. not for inline-expressions) ans is not allowed in <code><span class="while">return</span></code> or <code><span class="each">return</span></code> statements. <br>
+An example:<code>
+<!--mnh-->
+  isNaturalNumber(x)->begin
+    x:int 
+    ? void
+    : return print(x," isn't an integer") orElse false;
+    //If x isn't an integer, the following check will never be executed
+    x>=0
+    ? true
+    : print(x,' is negative') orElse false;    
+  end;
+<!--end-->
+</code>
 
 <h3><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
@@ -868,13 +884,28 @@ The <i>mutable modifier</i> allows for a rule to be mutable. The following restr
 Functions modifying the value of a mutable value should be <a href="#synchronizedMod">synchronized</a>.
 
 <h4><a name="persistentMod">persistent</a></h4>
-The <i>persistent modifier</i> allows for a rule to be persistent, i.e. the currently assigned value will be written to the source file after evaluation. The following restrictions apply:<ul>
+The <i>persistent modifier</i> allows for a rule to be persistent, by writing the assigned value to the source file after successful evaluation. The following restrictions apply:<ul>
   <li> A persistent rule also is mutable per definition </li>
   <li> A persistent rule also is not memoized per definition </li>
   <li> A persistent rule must have exactly one subrule </li>
   <li> A persistent rule's subrule must be nullary </li>
 </ul>
 Functions modifying the value of a persistent value should be <a href="#synchronizedMod">synchronized</a>.
+
+<h4><a name="datastoreMod">datastore</a></h4>
+The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.<br>
+Datastore rules are defined differently from other rules: they have no bodies.<code>
+<!--mnh-->
+  private datastore x;  
+<!--end-->
+</code>
+If the corresponding file is not found, the variable will be initialized with <code><span class="literal">void</span></code>.<br>
+The following restrictions apply:<ul>
+  <li> A datastore rule also is mutable per definition </li>
+  <li> A datastore rule also is not memoized per definition </li>
+  <li> A datastore rule must have no body</li>  
+</ul>
+Functions modifying the value of a datastore value should be <a href="#synchronizedMod">synchronized</a>.
 
 <h4><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.

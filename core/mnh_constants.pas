@@ -107,6 +107,7 @@ TYPE
     tt_modifier_memoized,
     tt_modifier_mutable,
     tt_modifier_persistent,
+    tt_modifier_datastore,
     tt_modifier_synchronized,
     tt_modifier_local,
     //special: [E]nd [O]f [L]ine
@@ -310,6 +311,7 @@ CONST
       (defaultId:'memoized';reservedWordClass:rwc_modifier; helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
       (defaultId:'mutable';reservedWordClass:rwc_modifier; helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
       (defaultId:'persistent';reservedWordClass:rwc_modifier; helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),
+      (defaultId:'datastore';reservedWordClass:rwc_modifier; helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
       (defaultId:'synchronized';reservedWordClass:rwc_modifier; helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
       (defaultId:'local';reservedWordClass:rwc_modifier; helpText:'Modifier local#Used for declaring block-local variables'),
       (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'End-Of-Input#Helper token; May also indicate a comment'),

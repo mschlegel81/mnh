@@ -3463,26 +3463,26 @@ Error [stack trace]  # getOptions
 out>                getOptions
  in> executor;
 out> 'D:\dev\mnh5\bin32\mnh_light_debug.exe'
- in>                                                               inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
-printline                                                          Package ID is: sudoku
-printline                                                          Path         : D:\dev\mnh5\demos\sudoku.mnh
-printline                                                          Uses         : []
-printline                                                          normal rule:   COMPONENTS      @D:\dev\mnh5\demos\sudoku.mnh:4,1
-memoized rule: connectedIdx    @D:\dev\mnh5\demos\sudoku.mnh:9,1
-memoized rule: components      @D:\dev\mnh5\demos\sudoku.mnh:10,1
-normal rule:   difficulty      @D:\dev\mnh5\demos\sudoku.mnh:18,1
-normal rule:   restrictRandom  @D:\dev\mnh5\demos\sudoku.mnh:87,1
-normal rule:   main            @D:\dev\mnh5\demos\sudoku.mnh:119,1
-normal rule:   initialBoard    @D:\dev\mnh5\demos\sudoku.mnh:20,1
-normal rule:   solve           @D:\dev\mnh5\demos\sudoku.mnh:35,1
-normal rule:   randomSolution  @D:\dev\mnh5\demos\sudoku.mnh:95,1
-normal rule:   drop            @D:\dev\mnh5\demos\sudoku.mnh:1,1
-normal rule:   isSolved        @D:\dev\mnh5\demos\sudoku.mnh:13,1
-normal rule:   isValid         @D:\dev\mnh5\demos\sudoku.mnh:15,1
-normal rule:   printBoard      @D:\dev\mnh5\demos\sudoku.mnh:27,1
-normal rule:   bruteForceSolve @D:\dev\mnh5\demos\sudoku.mnh:66,1
-normal rule:   randomRiddle    @D:\dev\mnh5\demos\sudoku.mnh:106,1
-out>                                                               []
+ in>                                                                inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
+printline                                                           Package ID is: sudoku
+printline                                                           Path         : D:\dev\mnh5\demos\sudoku.mnh
+printline                                                           Uses         : []
+printline                                                            rule:          COMPONENTS      @D:\dev\mnh5\demos\sudoku.mnh:4,1
+memoized  rule: connectedIdx    @D:\dev\mnh5\demos\sudoku.mnh:9,1
+memoized  rule: components      @D:\dev\mnh5\demos\sudoku.mnh:10,1
+ rule:          difficulty      @D:\dev\mnh5\demos\sudoku.mnh:18,1
+ rule:          restrictRandom  @D:\dev\mnh5\demos\sudoku.mnh:87,1
+ rule:          main            @D:\dev\mnh5\demos\sudoku.mnh:119,1
+ rule:          initialBoard    @D:\dev\mnh5\demos\sudoku.mnh:20,1
+ rule:          solve           @D:\dev\mnh5\demos\sudoku.mnh:35,1
+ rule:          randomSolution  @D:\dev\mnh5\demos\sudoku.mnh:95,1
+ rule:          drop            @D:\dev\mnh5\demos\sudoku.mnh:1,1
+ rule:          isSolved        @D:\dev\mnh5\demos\sudoku.mnh:13,1
+ rule:          isValid         @D:\dev\mnh5\demos\sudoku.mnh:15,1
+ rule:          printBoard      @D:\dev\mnh5\demos\sudoku.mnh:27,1
+ rule:          bruteForceSolve @D:\dev\mnh5\demos\sudoku.mnh:66,1
+ rule:          randomRiddle    @D:\dev\mnh5\demos\sudoku.mnh:106,1
+out>                                                                []
  in>      print("1\n2.0\n03.45");
 printline 1
  2.0
