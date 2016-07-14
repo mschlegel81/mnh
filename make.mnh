@@ -91,12 +91,12 @@ exeHasWrongVersion(FI) ? begin
   local outName:=(imig ? 'gui/mnh_imig' : full ? 'gui/mnh' : 'consoles/mnh_light') & (debug ? '_debug' : '') & (isLinux ? '' : '.exe');
   local parameters:=['-B','--bm='&(imig ? 'imig' : debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
-  deleteFile(exeName);
+  not(fileExists(exeName)) OR deleteFile(exeName) ? void : print('Deleting ',exeName,' failed!');
   deleteFile(outName);
   local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
   printf('Compiling %-25s logging to %s',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
-  moveFile(outName,exeName);
+  moveFile(outName,exeName) ? void : print('File move ',outName,' -> ',exeName,' failed!');
   not(exeHasWrongVersion(FI));
 end : true;
 
