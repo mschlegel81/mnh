@@ -11,7 +11,7 @@
       id:ansistring;
       subrules:array of P_subrule;
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation);
+      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation; CONST suppressDatastoreRestore:boolean=false);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
@@ -35,7 +35,7 @@
     end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation);
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation; CONST suppressDatastoreRestore:boolean=false);
   VAR stream:T_streamWrapper;
       L:P_literal;
   begin
@@ -56,7 +56,7 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
     if ruleType in C_mutableRuleTypes
     then namedValue.create(id,newVoidLiteral,false);
 
-    if ruleType in [rt_datastore_private,rt_datastore_public] then begin
+    if (ruleType in [rt_datastore_private,rt_datastore_public]) and not(suppressDatastoreRestore) then begin
       stream:=package^.getDatastoreForId(id,true);
       if stream.allOkay then begin
         L:=newLiteralFromStream(stream,startAt,nil);

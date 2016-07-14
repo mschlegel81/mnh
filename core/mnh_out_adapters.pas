@@ -976,7 +976,7 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
   CONST unknownLocTxt='Unknown location';
   VAR entrySet:T_TimerMap.KEY_VALUE_LIST;
       i,j:longint;
-      swapTemp:T_timerMap.KEY_VALUE_PAIR;
+      swapTemp:T_TimerMap.KEY_VALUE_PAIR;
       keyWidth:longint=0;
   begin
     entrySet:=timerMap.entrySet;
