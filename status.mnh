@@ -14,7 +14,7 @@ main('history')->begin
     .sort(1) //sort by average index
     .getInner(0) //drop average indexes
     .reverseList; //reverse to obtain chronological order
-  local flavours  :=history.getInner(1).unique;
+  local flavours  :=history.getInner(1).unique.{$L[sortPerm(regex.replace($L,'^[F|L]I*',''))]}.reverseList;
   codeHashes.each(codeHash,
     print("\nPrevious code hash: ",codeHash) orElse
     ("Flavour\tTime\tTest result\n"&(

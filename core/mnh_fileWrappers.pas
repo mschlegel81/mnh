@@ -24,6 +24,7 @@ TYPE
     PROCEDURE setPath(CONST path: ansistring);
     FUNCTION numberOfLines:longint;
     FUNCTION getPath: ansistring;
+    FUNCTION isPseudoFile:boolean;
     PROCEDURE load;
     PROCEDURE save;
     FUNCTION fileName: ansistring;
@@ -418,6 +419,11 @@ PROCEDURE T_codeProvider.setPath(CONST path: ansistring);
 FUNCTION T_codeProvider.getPath: ansistring;
   begin
     result := filePath;
+  end;
+
+FUNCTION T_codeProvider.isPseudoFile:boolean;
+  begin
+    result:=not((pos('<',filePath)<=0) and (pos('>',filePath)<=0) and fileExists(filePath));
   end;
 
 PROCEDURE T_codeProvider.load;

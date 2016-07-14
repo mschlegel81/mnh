@@ -235,7 +235,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST initialId:ansistring; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
-      PROCEDURE setValue(CONST newValue:P_literal; VAR adapters:T_adapters);
+      PROCEDURE setValue(CONST newValue:P_literal);
       FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
       FUNCTION getId:ansistring;
       FUNCTION getValue:P_literal;
@@ -307,6 +307,9 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
 FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
+
+FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte; CONST createMnhExpression:boolean):ansistring;
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
@@ -2272,7 +2275,7 @@ DESTRUCTOR T_namedVariable.destroy;
     if value<>nil then disposeLiteral(value);
   end;
 
-PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal; VAR adapters:T_adapters);
+PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
   begin
     if readonly then raise Exception.create('Mutation of constant "'+id+'" is not allowed.');
     disposeLiteral(value);

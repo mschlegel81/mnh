@@ -3473,26 +3473,26 @@ out> 3.0
 out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['autoscaleFactor',1.0],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
  in> executor;
 out> '/media/dev/mnh5/mnh'
- in>                                                                   inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
-printline                                                              Package ID is: sudoku
-printline                                                              Path         : /media/dev/mnh5/demos/sudoku.mnh
-printline                                                              Uses         : []
-printline                                                              normal rule:   COMPONENTS      @/media/dev/mnh5/demos/sudoku.mnh:4,1
-memoized rule: connectedIdx    @/media/dev/mnh5/demos/sudoku.mnh:9,1
-memoized rule: components      @/media/dev/mnh5/demos/sudoku.mnh:10,1
-normal rule:   difficulty      @/media/dev/mnh5/demos/sudoku.mnh:18,1
-normal rule:   restrictRandom  @/media/dev/mnh5/demos/sudoku.mnh:87,1
-normal rule:   main            @/media/dev/mnh5/demos/sudoku.mnh:119,1
-normal rule:   initialBoard    @/media/dev/mnh5/demos/sudoku.mnh:20,1
-normal rule:   solve           @/media/dev/mnh5/demos/sudoku.mnh:35,1
-normal rule:   randomSolution  @/media/dev/mnh5/demos/sudoku.mnh:95,1
-normal rule:   drop            @/media/dev/mnh5/demos/sudoku.mnh:1,1
-normal rule:   isSolved        @/media/dev/mnh5/demos/sudoku.mnh:13,1
-normal rule:   isValid         @/media/dev/mnh5/demos/sudoku.mnh:15,1
-normal rule:   printBoard      @/media/dev/mnh5/demos/sudoku.mnh:27,1
-normal rule:   bruteForceSolve @/media/dev/mnh5/demos/sudoku.mnh:66,1
-normal rule:   randomRiddle    @/media/dev/mnh5/demos/sudoku.mnh:106,1
-out>                                                                   []
+ in>                                                                    inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
+printline                                                               Package ID is: sudoku
+printline                                                               Path         : /media/dev/mnh5/demos/sudoku.mnh
+printline                                                               Uses         : []
+printline                                                                rule:          COMPONENTS      @/media/dev/mnh5/demos/sudoku.mnh:4,1
+memoized  rule: connectedIdx    @/media/dev/mnh5/demos/sudoku.mnh:9,1
+memoized  rule: components      @/media/dev/mnh5/demos/sudoku.mnh:10,1
+ rule:          difficulty      @/media/dev/mnh5/demos/sudoku.mnh:18,1
+ rule:          restrictRandom  @/media/dev/mnh5/demos/sudoku.mnh:87,1
+ rule:          main            @/media/dev/mnh5/demos/sudoku.mnh:119,1
+ rule:          initialBoard    @/media/dev/mnh5/demos/sudoku.mnh:20,1
+ rule:          solve           @/media/dev/mnh5/demos/sudoku.mnh:35,1
+ rule:          randomSolution  @/media/dev/mnh5/demos/sudoku.mnh:95,1
+ rule:          drop            @/media/dev/mnh5/demos/sudoku.mnh:1,1
+ rule:          isSolved        @/media/dev/mnh5/demos/sudoku.mnh:13,1
+ rule:          isValid         @/media/dev/mnh5/demos/sudoku.mnh:15,1
+ rule:          printBoard      @/media/dev/mnh5/demos/sudoku.mnh:27,1
+ rule:          bruteForceSolve @/media/dev/mnh5/demos/sudoku.mnh:66,1
+ rule:          randomRiddle    @/media/dev/mnh5/demos/sudoku.mnh:106,1
+out>                                                                    []
  in>      print("1\n2.0\n03.45");
 printline 1
  2.0

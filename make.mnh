@@ -182,7 +182,6 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
    allFiles('versions','*.exe')|
    allFiles('gui','*.exe')|
    allFiles('consoles','*.exe')|
-   allFiles('.','*debug*.exe')|
    files('make*.log.txt'))
   .unique
   .each(file,print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
