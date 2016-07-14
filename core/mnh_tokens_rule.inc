@@ -1,15 +1,4 @@
 {$ifdef include_interface}
-  { T_rule }
-  T_ruleType=(rt_normal,
-          rt_memoized,
-          rt_mutable_public,
-          rt_mutable_private,
-          rt_persistent_public,
-          rt_persistent_private,
-          rt_datastore_public,
-          rt_datastore_private,
-          rt_synchronized);
-
   T_rule=object
     private
       used,valueChangedAfterDeclaration:boolean;
@@ -42,13 +31,10 @@
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_listLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
+      FUNCTION idForErrorFeedback:ansistring;
     end;
 {$endif}
 {$ifdef include_implementation}
-CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
-      C_csProtectedRuleTypes:set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
-      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public];
-
 CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation);
   VAR stream:T_streamWrapper;
       L:P_literal;
@@ -295,16 +281,6 @@ FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:
   end;
 {$endif}
 
-CONST C_ruleTypeText:array[T_ruleType] of string=(
-    '','memoized ',
-       'mutable ',
-       'private mutable ',
-       'persistent ',
-       'private persistent ',
-       'datastore ',
-       'private datastore ',
-       'synchronized ');
-
 FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
@@ -414,6 +390,11 @@ PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
   VAR i:longint;
   begin
     for i:=0 to length(subrules)-1 do subrules[i]^.resolveIds(adapters);
+  end;
+
+FUNCTION T_rule.idForErrorFeedback:ansistring;
+  begin
+    result:=P_package(declarationStart.package)^.codeProvider.id+'.'+id+' ('+ansistring(declarationStart)+')';
   end;
 
 {$endif}

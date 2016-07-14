@@ -519,14 +519,14 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
             if t^.tokType<>tt_identifier then begin
               if t^.tokType=tt_localUserRule then begin
                 rule:=t^.data;
-                if rule^.ruleType in [rt_mutable_private,rt_mutable_public,rt_persistent_private,rt_persistent_public] then begin
+                if rule^.ruleType in C_mutableRuleTypes then begin
                   t^.data:=rule;
                   t^.tokType:=t^.next^.tokType;
                   if t^.tokType=tt_assign then t^.tokType:=tt_mutate;
                   t^.txt:=t^.txt;
                   t^.next:=context.disposeToken(t^.next);
-                end else context.adapters^.raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is not mutable',t^.next^.location);
-              end else context.adapters^.raiseError('You can only mutate local mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
+                end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+rule^.idForErrorFeedback+' is not mutable',t^.next^.location);
+              end else context.adapters^.raiseError('You can only mutate mutable rules! Rule '+t^.txt+' is a '+C_ruleTypeString[t^.tokType],t^.next^.location);
             end else context.adapters^.raiseError('Cannot resolve identifier "'+t^.txt+'".',t^.location);
           end;
         end;
