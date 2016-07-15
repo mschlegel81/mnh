@@ -4,7 +4,6 @@ INTERFACE
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,mnh_out_adapters,mnh_contexts;
 VAR BUILTIN_HEAD:T_intFuncCallback;
 FUNCTION get_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-FUNCTION flatten_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 IMPLEMENTATION
 {$MACRO ON}
 {$define list0:=P_listLiteral(params^.value(0))}

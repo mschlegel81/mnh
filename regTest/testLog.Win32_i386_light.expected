@@ -3014,10 +3014,10 @@ out> 2
 out> 1
  in> toExpression('$x-$x^2+$x^3');
 out> {($x-$x^2+$x^3)}
- in>                toExpression('');
-Error               The parsed expression appears to be empty
+ in> toExpression('');
+Error  The parsed expression appears to be empty
 Error [stack trace]  # toExpression('')
-out>                toExpression('')
+out> toExpression('')
  in> not(true);
 out> false
  in> not([true, false, true]);
@@ -3042,10 +3042,10 @@ out> 0
 out> 65
  in> ord('abc');
 out> -1
- in>                ord(2.1);
-Error               ord can only be applied to booleans, ints and strings
+ in> ord(2.1);
+Error  ord can only be applied to booleans, ints and strings
 Error [stack trace]  # <ERR>
-out>                <ERR>
+out> <ERR>
  in> softCast('A');
 out> 'A'
  in> softCast('"B"');
@@ -3202,14 +3202,14 @@ out> "'a'"
 out> '"\t"'
  in> group([1..10],[1..10] mod 3=0);
 out> [[1,2,4,5,7,8,10],[3,6,9]]
- in>                fail;
-User-Error          Fail.
+ in> fail;
+User-Error  Fail.
 Error [stack trace]  # fail
-out>                fail
- in>                fail("Told you this wouldn't work!");
-User-Error          "Told you this wouldn't work!"
+out> fail
+ in> fail("Told you this wouldn't work!");
+User-Error  "Told you this wouldn't work!"
 Error [stack trace]  # fail("Told you this wouldn't work!")
-out>                fail("Told you this wouldn't work!")
+out> fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
  in> hash([1..3]);
@@ -3248,12 +3248,12 @@ out> ['text','abc']
 out> 'TEST'
  in> upper(['Text','AbC']);
 out> ['TEXT','ABC']
- in>                t :=[0..1000]*2*pi/1000;
-Note                Creating new rule: t
- in>                plot(t, sin(t));
-Error               Unresolved identifier "plot"
+ in> t :=[0..1000]*2*pi/1000;
+Note  Creating new rule: t
+ in> plot(t, sin(t));
+Error  Unresolved identifier "plot"
 Error [stack trace]  # plot(t, sin(t))
-out>                plot(t, sin(t))
+out> plot(t, sin(t))
  in> abs(3);
 out> 3
  in> abs(-5/7);
@@ -3386,13 +3386,13 @@ out> 'Test'
 out> '%О┐еяR'
  in> compress('Testtext').decompress;
 out> 'Testtext'
- in>      listKeywords.each(category,print(category[0],': ', category[1].head(3).join(', '),', ...'));
-printline specialLiterals: void, Nan, Inf, ...
-printline specialConstructs: aggregator, .each, .pEach, ...
-printline operators: and, or, xor, ...
-printline typeChecks: :scalar, :list, :boolean, ...
-printline modifiers: private, memoized, mutable, ...
-out>      []
+ in> listKeywords.each(category,print(category[0],': ', category[1].head(3).join(', '),', ...'));
+specialLiterals: void, Nan, Inf, ...
+specialConstructs: aggregator, .each, .pEach, ...
+operators: and, or, xor, ...
+typeChecks: :scalar, :list, :boolean, ...
+modifiers: private, memoized, mutable, ...
+out> []
  in> relativeFilename('~/folder/','~/other/example.txt');
 out> '../other/example.txt'
  in> primes(20);
@@ -3437,18 +3437,18 @@ out> false
 out> true
  in> toBoolean('true');
 out> true
- in>                toBoolean(3);
-Error               Cannot apply intrinsic rule toBoolean to parameter list (int):  (3)
+ in> toBoolean(3);
+Error  Cannot apply intrinsic rule toBoolean to parameter list (int):  (3)
 Error [stack trace]  # toBoolean(3)
-out>                toBoolean(3)
+out> toBoolean(3)
  in> toInt('32');
 out> 32
  in> toInt(3.0);
 out> 3
- in>                toInt(3.1);
-Error               Cannot apply intrinsic rule toInt to parameter list (real):  (3.1)
+ in> toInt(3.1);
+Error  Cannot apply intrinsic rule toInt to parameter list (real):  (3.1)
 Error [stack trace]  # toInt(3.1)
-out>                toInt(3.1)
+out> toInt(3.1)
  in> toInt(false);
 out> 0
  in> toReal('3.212');
@@ -3457,61 +3457,61 @@ out> 3.212
 out> 1
  in> toReal(3);
 out> 3.0
- in>                getOptions;
-Error               Unresolved identifier "getOptions"
+ in> getOptions;
+Error  Unresolved identifier "getOptions"
 Error [stack trace]  # getOptions
-out>                getOptions
+out> getOptions
  in> executor;
-out> 'D:\dev\mnh5\bin32\mnh_light.exe'
- in>                                                                inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
-printline                                                           Package ID is: sudoku
-printline                                                           Path         : D:\dev\mnh5\demos\sudoku.mnh
-printline                                                           Uses         : []
-printline                                                            rule:          COMPONENTS      @D:\dev\mnh5\demos\sudoku.mnh:4,1
-memoized  rule: connectedIdx    @D:\dev\mnh5\demos\sudoku.mnh:9,1
-memoized  rule: components      @D:\dev\mnh5\demos\sudoku.mnh:10,1
- rule:          difficulty      @D:\dev\mnh5\demos\sudoku.mnh:18,1
- rule:          restrictRandom  @D:\dev\mnh5\demos\sudoku.mnh:87,1
- rule:          main            @D:\dev\mnh5\demos\sudoku.mnh:119,1
- rule:          initialBoard    @D:\dev\mnh5\demos\sudoku.mnh:20,1
- rule:          solve           @D:\dev\mnh5\demos\sudoku.mnh:35,1
- rule:          randomSolution  @D:\dev\mnh5\demos\sudoku.mnh:95,1
- rule:          drop            @D:\dev\mnh5\demos\sudoku.mnh:1,1
- rule:          isSolved        @D:\dev\mnh5\demos\sudoku.mnh:13,1
- rule:          isValid         @D:\dev\mnh5\demos\sudoku.mnh:15,1
- rule:          printBoard      @D:\dev\mnh5\demos\sudoku.mnh:27,1
- rule:          bruteForceSolve @D:\dev\mnh5\demos\sudoku.mnh:66,1
- rule:          randomRiddle    @D:\dev\mnh5\demos\sudoku.mnh:106,1
-out>                                                                []
- in>      print("1\n2.0\n03.45");
-printline 1
- 2.0
+out> '\bin32\mnh_light.exe'
+ in> inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
+Package ID is: sudoku
+Path         : \demos\sudoku.mnh
+Uses         : []
+ rule:          COMPONENTS      @\demos\sudoku.mnh:4,1
+memoized  rule: connectedIdx    @\demos\sudoku.mnh:9,1
+memoized  rule: components      @\demos\sudoku.mnh:10,1
+ rule:          difficulty      @\demos\sudoku.mnh:18,1
+ rule:          restrictRandom  @\demos\sudoku.mnh:87,1
+ rule:          main            @\demos\sudoku.mnh:119,1
+ rule:          initialBoard    @\demos\sudoku.mnh:20,1
+ rule:          solve           @\demos\sudoku.mnh:35,1
+ rule:          randomSolution  @\demos\sudoku.mnh:95,1
+ rule:          drop            @\demos\sudoku.mnh:1,1
+ rule:          isSolved        @\demos\sudoku.mnh:13,1
+ rule:          isValid         @\demos\sudoku.mnh:15,1
+ rule:          printBoard      @\demos\sudoku.mnh:27,1
+ rule:          bruteForceSolve @\demos\sudoku.mnh:66,1
+ rule:          randomRiddle    @\demos\sudoku.mnh:106,1
+out> []
+ in> print("1\n2.0\n03.45");
+1
+2.0
 03.45
-out>      void
- in>      print("1\n2.0\n03,45\t");
-printline  1
+out> void
+ in> print("1\n2.0\n03,45\t");
+ 1
  2.0
 03,45
-out>      void
- in>          print("1\tone\t|\n2.0\ttwo\t|\n03.45\tthree\t|");
-printline      1    one   |
+out> void
+ in> print("1\tone\t|\n2.0\ttwo\t|\n03.45\tthree\t|");
+ 1    one   |
  2.0  two   |
 03.45 three |
-out>          void
- in>         print("1\tone\v|\n2.0\ttwo\v|\n03.45\tthree\v|");
-printline     1    one  |
+out> void
+ in> print("1\tone\v|\n2.0\ttwo\v|\n03.45\tthree\v|");
+ 1    one  |
  2.0  two  |
 03.45 three|
-out>         void
- in>      printf('%x is %d in hexadecimal form', 123, 123);
-printline 7B is 123 in hexadecimal form
-out>      void
- in>      printf('%{$0}x is %{$0}d in hexadecimal form', 123);
-printline 7B is 123 in hexadecimal form
-out>      void
- in>      printf('sin(%{$0}s)=%{sin($0)}4.4g', 1);
-printline sin(1)=0.8415
-out>      void
+out> void
+ in> printf('%x is %d in hexadecimal form', 123, 123);
+7B is 123 in hexadecimal form
+out> void
+ in> printf('%{$0}x is %{$0}d in hexadecimal form', 123);
+7B is 123 in hexadecimal form
+out> void
+ in> printf('sin(%{$0}s)=%{sin($0)}4.4g', 1);
+sin(1)=0.8415
+out> void
  in> permutations([1, 1, 2]);
 out> [[1,1,2],[1,2,1],[1,1,2],[1,2,1],[2,1,1],[2,1,1]]
  in> permutations([1..3]);

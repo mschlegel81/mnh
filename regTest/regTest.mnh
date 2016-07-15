@@ -87,7 +87,9 @@ end;
 private printExecute([])->void;
 private printExecute(code:stringList)->begin
   local out:=sandBoxExecute(code).each(message,message.get(0)=="timing_info" ? void : message);
-  printf("%s\t%s",out.getInner(0),out.getInner(2));
+  out.each(output,output[0]='printline' ? output[2] : format("%s %s",output[0],output[2]))
+     .join("\n")
+     .print;
 end;
 
 private executeExamples(examplesFile:string)->begin
@@ -125,5 +127,3 @@ begin
   : executeExamples(examplesFile);
   validateCollectedOutput;
 end;
-
-
