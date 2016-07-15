@@ -3,8 +3,6 @@ startOfEvaluation:=time;
 private memoized canPlot(exe)->exe.exec(['-cmd','-echo','-time','-el5',"print('plot.plot' in listBuiltin)"],false).head=='true';
 canPlot:='plot.plot' in listBuiltin;
 
-private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]};
-
 private codeHash(exe)->exec(exe,['-codeHash'],false).head;
 private codeHash:=executor.codeHash;
 
@@ -33,7 +31,7 @@ linuxTestsPassed->
   .each(log,log[0].fileExists AND (((log[1])&':'&(codeHash.split(':')[1]) &' '&'o.k.') in log[0].fileLines),AND);
 
 validateCollectedOutput->begin
-  local printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten.pEach(line,line.replace(mnhRoot,''));
+  local printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
   local expectedResultName:=myPath.replace('.mnh','.'&flavourString&'.expected');
   local lastResultName    :=myPath.replace('.mnh','.'&flavourString&'.last');
   local stateMessage:='';

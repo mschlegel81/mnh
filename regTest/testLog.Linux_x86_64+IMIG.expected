@@ -3472,7 +3472,7 @@ out> 3.0
  in> getOptions;
 out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['autoscaleFactor',1.0],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
  in> executor;
-out> '/media/dev/mnh5/mnh'
+out> '/media/dev/mnh5/mnh_imig'
  in>                                                                    inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
 printline                                                               Package ID is: sudoku
 printline                                                               Path         : /media/dev/mnh5/demos/sudoku.mnh
