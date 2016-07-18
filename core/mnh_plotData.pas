@@ -1299,13 +1299,16 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height, super
   VAR storeImage: TImage;
   begin
     system.enterCriticalSection(cs);
-    renderInternally(width*supersampling,height*supersampling);
-    storeImage:=TImage.create(nil);
-    storeImage.SetInitialBounds(0, 0, width, height);
-    scale(renderImage,storeImage,1/supersampling);
-    storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
-    storeImage.free;
-    system.leaveCriticalSection(cs);
+    try
+      renderInternally(width*supersampling,height*supersampling);
+      storeImage:=TImage.create(nil);
+      storeImage.SetInitialBounds(0, 0, width, height);
+      scale(renderImage,storeImage,1/supersampling);
+      storeImage.Picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
+      storeImage.free;
+    finally
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 FUNCTION T_plot.renderToString(CONST width, height, supersampling: longint): ansistring;
