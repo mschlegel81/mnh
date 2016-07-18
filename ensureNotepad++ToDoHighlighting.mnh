@@ -70,22 +70,22 @@ main->getEnv["APPDATA"]&["/Notepad++","/Roaming/Notepad++","/Local/Notepad++"].e
         local ignoreBlock:=false;
         local oldLines:=
         each(l,fileLines(folder&"/userDefineLang.xml"),begin
-          trim(l)=xmlOpeningTag or trim(l)=xmlClosingTag 
-          ? void 
-          : pos('<UserLang name="ToDo List"',l)>0 
-            ? begin 
-                ignoreBlock:=true; 
-                void; 
-              end 
-            : trim(l)='</UserLang>' 
-              ? (ignoreBlock 
-                 ? begin 
-                     ignoreBlock:=false; 
-                     void; 
-                   end 
-                 : l) 
-              : ignoreBlock 
-                ? void : 
+          trim(l)=xmlOpeningTag or trim(l)=xmlClosingTag
+          ? void
+          : pos('<UserLang name="ToDo List"',l)>0
+            ? begin
+                ignoreBlock:=true;
+                void;
+              end
+            : trim(l)='</UserLang>'
+              ? (ignoreBlock
+                 ? begin
+                     ignoreBlock:=false;
+                     void;
+                   end
+                 : l)
+              : ignoreBlock
+                ? void :
                 l;
         end);
         writeFileLines(folder&"/userDefineLang.xml",xmlOpeningTag|oldLines|xmlLines|xmlClosingTag);

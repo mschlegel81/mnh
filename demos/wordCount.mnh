@@ -13,7 +13,7 @@ private processLinesInChunks(lines:stringList,chunkSize)->
   .pEach(chunk,cleanSplitString(chunk))
   .flatten
   .elementFrequency;
-        
+
 private analyze(lines:stringList)->begin
   local wordCount:=processLinesInChunks(lines,100).sort({$x[0]>=$y[0]});
   print('Words total:    ',local total:=wordCount.getInner(0).agg(+));

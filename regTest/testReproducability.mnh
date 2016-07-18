@@ -72,5 +72,3 @@ cmd(filename)->['-cmd','-echo','-time', format('"USE ''%s''; resetRandom; toId('
     '../demos/y.mnh',
     '../demos/zeckendorf.mnh']
 .each(file,print(executor.exec(cmd(file))=='bin32\mnh_light.exe'.exec(cmd(file)),' ',file));
-
-

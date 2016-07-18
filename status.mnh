@@ -40,4 +40,3 @@ main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)
 end).join("\n")));
 
 //main('history');
-

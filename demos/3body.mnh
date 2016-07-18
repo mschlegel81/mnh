@@ -45,4 +45,3 @@ main->begin
     plotState(state:=state.RK4(F,timeStepSize,1E-2))
   );
 end;
-

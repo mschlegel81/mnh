@@ -21,6 +21,3 @@ end;
 main('animate')->([0..100]/100*2*pi).each(t,drawCube(t),display,sleep(0.05));
 //*Renders to a file (for regression test)
 main->drawCube(0.5) | renderToFile(myPath.replace('.mnh','.png'),768,768,4);
-
-
-

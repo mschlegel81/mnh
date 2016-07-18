@@ -9,7 +9,7 @@ private mutable beepOn:=true;
 beepUntilKeyIsPressed:={parallelize(
  {while(beepOn,begin [1..4].each(i,beep(1000,100)); sleep(1); end)},                //A1
  {begin ask('Press Enter to stop this annoying beeping...'); beepOn:=false; end})}; //A2
- 
+
 private lockScreen:={execPipeless('rundll32.exe',['user32.dll,LockWorkStation'])};
 
 //Just a conversion factor

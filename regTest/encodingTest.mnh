@@ -9,4 +9,3 @@ deleteFile('ö');
 fileInfo('ü');
 fileStats('ü');
 deleteFile('ü');
-

@@ -38,4 +38,3 @@ f;'];
 
 //**Demonstrates (some) declaration and calling conventions
 main->RUNS.each(run,print(repeat('-',80)) and run.sandBoxExecute.each(e,e[0] in ["Note ","Error [stack trace]"] ? void : e[[0,2]].join(" ") & (index=0 ? "\n" : "") ).join("\n").print);
-

@@ -68,4 +68,3 @@ testHistory->regex.replace(myPath,'\.mnh$','.*.txt').files.each(file,begin
      [lines[i].replace('Total time: ',''),
      (lines[i-1].split(' ')[1] orElse '')=='o.k.']);
 end,|);
-
