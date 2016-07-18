@@ -3010,12 +3010,13 @@ Root found at   2.0
 Hash of regTest/../demos/barnsleyFern.png is 520AC839
 Hash of regTest/../demos/fractalPlant.png is B99380A8
 Hash of regTest/../demos/kochCurve.png is 41731335
-Hash of regTest/../demos/sierpinskiCurve.png is 3AB24074
+Hash of regTest/../demos/rotatingCube.png is C8D2CADA
+Hash of regTest/../demos/sierpinskiCurve.png is 8BDF9BEC
 Path length after construction is 1534.011
 Path length after polishing is    1501.698
-Hash of regTest/../demos/travellingSalesmanProblem.png is C6052EF2
-Hash of regTest/../demos/turtleGfx.png is FB769509
-Hash of regTest/../demos/heart.png is 88B30F70
+Hash of regTest/../demos/travellingSalesmanProblem.png is FB63895F
+Hash of regTest/../demos/turtleGfx.png is D21F0FE8
+Hash of regTest/../demos/heart.png is BD693DBC
 Examples file has 509 lines
  in> arity({3});
 out> 0

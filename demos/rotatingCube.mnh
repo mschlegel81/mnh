@@ -1,0 +1,26 @@
+private project(x,y,z)->[x,y]/(z+2);
+
+private cubePoints(t:numeric)->
+  [0..7].each(i,begin
+    local x:=      (i and 1)   -0.5;
+    local y:=toInt((i and 2)=2)-0.5;
+    local z:=toInt((i and 4)=4)-0.5;
+    project(x*cos(t)+z*sin(t),y,-z*cos(t)+x*sin(t));
+  end);
+
+private LINES:=[[0,1,3,2,0,4,5,7,6,4],[1,5],[2,6],[3,7]];
+
+drawCube(t)->begin
+  setOptions([['x0',-0.6],['x1',0.6],['y0',-0.6],['y1',0.6],['preserveAspect',true],['autoscaleX',false],['autoscaleY',false],['logscaleX',false],['logscaleY',false],['axisStyleX',0],['axisStyleY',0]]);
+  local p:=cubePoints(t);
+  plot(p,'black .');
+  LINES.each(l,addPlot(p[l],'black'));
+end;
+
+//*This solves the "rotating cube" task: http://rosettacode.org/wiki/Draw_a_rotating_cube
+main('animate')->([0..100]/100*2*pi).each(t,drawCube(t),display,sleep(0.05));
+//*Renders to a file (for regression test)
+main->drawCube(0.5) | renderToFile(myPath.replace('.mnh','.png'),768,768,4);
+
+
+
