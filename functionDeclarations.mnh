@@ -13,6 +13,3 @@ allFolders('.')
     .each(line,line.matches('registerRule')
                ? print(file,' ',index,' ',line.firstString)
                : void));
-
-
-

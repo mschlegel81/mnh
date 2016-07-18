@@ -117,4 +117,3 @@ end;
 
 //*For regression test: create a random riddle and print it out
 main->randomRiddle.printBoard;
-

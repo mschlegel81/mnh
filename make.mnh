@@ -16,8 +16,8 @@ private templateToInc(inFile,outFile<>inFile)->begin
   'FUNCTION '&pasId&': T_arrayOfString;'&
   'CONST raw='& join('#'&strings.compress(inLines).chars.ord) &';'&
   'begin if length('&pasId&'cache)=0 then '&pasId&'cache:=split(decompressString(raw)); result:='&pasId&'cache; end;';
-  outFile.fileContents==outText 
-  ? void 
+  outFile.fileContents==outText
+  ? void
   : writeFile(outFile,outText);
 end;
 
@@ -45,16 +45,16 @@ currentCodeHash:=begin
   templateToInc('doc/examples.txt','core/res_examples.inc');
   templateToInc('doc/html_template.txt','core/res_html_template.inc');
   templateToInc('ensureMnhFileAssociations.mnh','core/res_ensureMnhFileAssociations.inc');
-  templateToInc('removeMnhFileAssociations.mnh','core/res_removeMnhFileAssociations.inc');  
-  templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');  
-  templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');  
-  templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');    
+  templateToInc('removeMnhFileAssociations.mnh','core/res_removeMnhFileAssociations.inc');
+  templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
+  templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');
+  templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
-  fileContents('core/code_hash.inc')=="writeln(':"&result&"');" 
-  ? void 
+  fileContents('core/code_hash.inc')=="writeln(':"&result&"');"
+  ? void
   : begin
       writeFile('core/code_hash.inc',"writeln(':"&result&"');");
       print('core/code_hash.inc updated with current hash ',result);
@@ -111,7 +111,7 @@ private verboseMove(src,dest)->begin
   printf('move %-19s -> %-19s',src,dest);
   moveFile(src,dest);
 end;
-                    
+
 //*Make distro 7z - including build if needed
 main('distro')->isLinux ? fail('Distro building is currently not supported under Linux') : begin
   updateCurrentCodeHash;
@@ -182,7 +182,7 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
    files('make*.log.txt'))
   .unique
   .each(file,print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
-  delp;   
+  delp;
 end;
 
 private scramble(L:list)->L[L.size.random.sortPerm];
@@ -211,13 +211,13 @@ main('retest')->testMnh('retest');
 
 //*Only prepare code hash
 main('prepare')->updateCurrentCodeHash;
-  
+
 //*Several steps in succession
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
   (isLinux ? [0,2,4,6] : [0..7]).each(i,
-    pos(upper(p),upper(binName(i)))>=0 
+    pos(upper(p),upper(binName(i)))>=0
     ? build(i) OR true
     :             false,or)
   ? void
@@ -225,4 +225,3 @@ main(...)->begin
     ? main(p)
     : void);
 end;
-

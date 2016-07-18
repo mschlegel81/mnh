@@ -26,7 +26,7 @@ main()->begin
 end;
 
 //*Resumes a task
-main('?')->size(allTasks)>0 
+main('?')->size(allTasks)>0
            ? main(ask('Task to resume',allTasks.getInner(0)))
            : print('There are no tasks to resume.');
 

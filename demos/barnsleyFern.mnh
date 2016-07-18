@@ -27,4 +27,3 @@ main(filename,xRes,yRes )->main_impl(filename,softCast(xRes)                   ,
 main(filename           )->main_impl(filename                        ,768,768);
 //*Plots a Barnsley Fern using the package path and a resolution of 768x768
 main                     ->main_impl(replace(myPath&"#","mnh#","png"),768,768);
-

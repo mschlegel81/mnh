@@ -15,7 +15,7 @@ private consolidate(ListOfSets,consolidationPoints)->
       local mask:=ListOfSets.each(set,consolidationPoints.head in set);
       consolidate([ListOfSets.get(mask).flatten.unique]|ListOfSets.get(not(mask)),consolidationPoints.tail);
     end;
-  
+
 private examples:=["[{A,B} {C,D}]","[{A,B} {B,C}]","[{A,B} {C,D} {D,B}]","[{h,i,k} {a,b} {c,d} {d,b} {f,g,h}]"];
 
 //*See <a href="http://rosettacode.org/wiki/Set_consolidation">http://rosettacode.org/wiki/Set_consolidation</a>

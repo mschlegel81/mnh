@@ -7,5 +7,3 @@ main->begin
   //wait until server has received at least one request
   while(counter=0,sleep(0.1));
 end;
-
-

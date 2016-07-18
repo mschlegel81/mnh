@@ -6,4 +6,3 @@ main->begin
   plot(([0..1000]/1000*2*pi).each(x,h(x)),'red i l 2');
   renderToFile(replace(myPath&"#","mnh#","png"),768,768,3);
 end;
-

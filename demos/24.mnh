@@ -56,4 +56,3 @@ private demo(set)->print(' ?> Find an expression to calculate 24 from the number
 main('demo')->print('This is a demo - start without argument to play.',resetRandom)|demo(getRiddle);
 
 main->playARound;
-

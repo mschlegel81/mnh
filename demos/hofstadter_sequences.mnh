@@ -30,4 +30,3 @@ main->begin
   print('(OEIS A005379) M: ',[1..20].each(n,M(n)).join(', '));
   print('(OEIS A005185) Q: ',[1..20].each(n,Q(n)).join(', '));
 end;
-
