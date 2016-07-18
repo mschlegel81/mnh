@@ -39,3 +39,5 @@ pullFromNAndMake.bat
 mnh_imig
 mnh_debug
 mnh_light_debug
+
+regTest/regTest.datastore0

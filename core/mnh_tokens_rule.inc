@@ -338,7 +338,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
           L:=namedValue.getValue;
           writeLiteralToStream(L,stream,declarationStart,@adapters);
           stream.destroy;
-          result:=true;
+          result:=false; //because the package file remains unchanged
         end;
         else result:=false;
       end;//case ruleType
