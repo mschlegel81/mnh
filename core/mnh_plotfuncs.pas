@@ -210,8 +210,15 @@ FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_to
           tokenLocation);
         exit(nil);
       end;
-      context.adapters^.plot.renderToFile(fileName,width,height,supersampling);
-      context.adapters^.raiseCustomMessage(mt_plotFileCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+      try
+        context.adapters^.plot.renderToFile(fileName,width,height,supersampling);
+        context.adapters^.raiseCustomMessage(mt_plotFileCreated,expandFileName( ChangeFileExt(fileName, '.png')),tokenLocation);
+      except
+        on e:Exception do begin
+          context.adapters^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
+          exit(nil);
+        end;
+      end;
       result:=newVoidLiteral;
     end;
   end;
