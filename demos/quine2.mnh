@@ -1,0 +1,2 @@
+//*Quine via inspection
+main->print(inspect['source']);

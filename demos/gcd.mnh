@@ -1,0 +1,8 @@
+gcd(a  ,0)->a;
+gcd(0  ,b)->b;
+gcd(a>b,b)->gcd(b, a mod b);
+gcd(a  ,b)->gcd(a, b mod a);
+
+//*For regression test
+main->main(1238124,1236);
+main(x,y)->printf('The greatest common divisor of %{$0}s and %{$1}s is %{gcd($0,$1)}s',softCast(x),softCast(y));
