@@ -78,6 +78,16 @@ private exeHasWrongVersion(FI:int)->begin
   end : true;
 end;
 
+private deleteStubbornly(file:string)->begin
+  local tries:=3;
+  while(fileExists(file) AND tries>0,
+    deleteFile(file) ? void : begin
+    print('Deleting ',file,' failed!');
+    tries-=1;
+    sleep(1);
+  end);
+end;
+
 private build(FI:int)->
 exeHasWrongVersion(FI) ? begin
   local imig :=FI=8;
@@ -91,8 +101,8 @@ exeHasWrongVersion(FI) ? begin
   local outName:=(imig ? 'gui/mnh_imig' : full ? 'gui/mnh' : 'consoles/mnh_light') & (debug ? '_debug' : '') & (isLinux ? '' : '.exe');
   local parameters:=['-B','--bm='&(imig ? 'imig' : debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
-  not(fileExists(exeName)) OR deleteFile(exeName) ? void : print('Deleting ',exeName,' failed!');
-  deleteFile(outName);
+  deleteStubbornly(exeName);
+  deleteStubbornly(outName);
   local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
   printf('Compiling %-25s logging to %s',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));

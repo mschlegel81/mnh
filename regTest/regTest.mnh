@@ -85,6 +85,7 @@ private plotDemoCount:=8;
 private testPlotting(call:expression(0), file:string)->begin
   local filePath:=(myPath.splitFileName['directory'])&'/'&file;
   deleteFile(filePath);
+  resetOptions;
   call();
   printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
 end;

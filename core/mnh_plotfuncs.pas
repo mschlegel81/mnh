@@ -188,6 +188,14 @@ FUNCTION setOptions(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLoca
     end;
   end;
 
+FUNCTION resetOptions_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then begin
+      context.adapters^.plot.setDefaults;
+      result:=newVoidLiteral;
+    end else result:=nil;
+  end;
+
 FUNCTION renderToFile_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR fileName: ansistring;
       width, height, supersampling: longint;
@@ -280,6 +288,8 @@ INITIALIZATION
   mnh_funcs.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions,
     'setOptions(set:keyValueList);#Sets options via a key value list of the same form as returned by plot.getOptions#'+
     'setOptions(key:string,value);#Sets a single plot option');
+  mnh_funcs.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl,
+    'resetOptions;#Sets the default plot options');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl,
     'renderToFile(filename,width,height,[supersampling]);#Renders the current plot to a file.');
   mnh_funcs.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl,

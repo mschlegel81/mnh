@@ -517,6 +517,7 @@ DESTRUCTOR G_literalKeyMap.destroy;
   VAR i:longint;
   begin
     for i:=0 to length(dat)-1 do setLength(dat[i],0);
+    setLength(dat,0);
   end;
 
 PROCEDURE G_literalKeyMap.rehashGrowing;
