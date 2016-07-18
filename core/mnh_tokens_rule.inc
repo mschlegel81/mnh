@@ -337,6 +337,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
           stream:=package^.getDatastoreForId(id,false);
           L:=namedValue.getValue;
           writeLiteralToStream(L,stream,declarationStart,@adapters);
+          disposeLiteral(L);
           stream.destroy;
           result:=false; //because the package file remains unchanged
         end;
