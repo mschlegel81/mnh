@@ -52,7 +52,7 @@ validateCollectedOutput->begin
     end
   : begin
       print('No expected result found. Writing ',expectedResultName);
-      stateMessage:='first';
+      stateMessage:='o.k.';
       expectedResultName.writeFileLines(printOut);
     end;
   printf('%s',exec(executor,['-version'],false)[0]| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));

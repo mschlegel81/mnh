@@ -216,7 +216,7 @@ main('prepare')->updateCurrentCodeHash;
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  (isLinux ? [0,2,4,6,8] : [0..8]).each(i,
+  (isLinux ? [0,2,4,6] : [0..7]).each(i,
     pos(upper(p),upper(binName(i)))>=0 
     ? build(i) OR true
     :             false,or)
