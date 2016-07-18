@@ -112,7 +112,7 @@ end;;
 private doAnalysis(rt:list)->
   [true,false].each(debugVersions,begin
     local filteredTests:=rt.each(t,t[1].matches('debug')=debugVersions ? t : void);
-    print("\n=====================================================================\n",
+    print("=====================================================================\n",
           " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
           "=====================================================================\n");
     local tests  :=filteredTests.getInner(0).unique;
@@ -125,12 +125,14 @@ private doAnalysis(rt:list)->
     end};
     local testsWithTime:=tests.each(t,[t,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).average,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).relativeSigma]).sort(1);
     local totalTime:=testsWithTime.getInner(1).agg(+);
-    print("Fast tests: ",testsWithTime.head(5)    .each(t,"\n\v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%",&));
-    print("Slow tests: ",testsWithTime.trailing(5).each(t,"\n\v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%",&));
+    print("Fast tests: ");print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
+    print("Slow tests: ");print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
     local testsWithTime:=testsWithTime.sort(2);
-    print("Tests with big variance: ",testsWithTime.trailing(5).each(t,"\n\v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&'s',&));
-
-    print('Average test time by flavour: ',flavors.each(f,"\n\v"&f&"\t"&((filteredTests.get(filteredTests.getInner(1)=f).getInner(2).average).{$0&"\t"&round(100*$0/totalTime,3)&"\v%"}),&));
+    print("Tests with big relative variance: ");print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    local testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
+    print("Tests with big absolute variance: ");print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    totalTime:=filteredTests.getInner(2).agg(+);
+    print('Total test time by flavour: ');print(flavors.each(f,"  \v"&f&"\t"&((filteredTests.get(filteredTests.getInner(1)=f).getInner(2).agg(+)).{$0&"\t"&round(100*$0/totalTime,3)&"\v%\n"}),&));
   end);
 
 //*Analyze stored run times
@@ -139,7 +141,7 @@ main('analyze')->doAnalysis(runTimes);
 main('analyze',inputFile)->doAnalysis(fileContents(inputFile).deserialize);
 
 //*Export datastore
-main('export',filename:string)->writeFile(filename,datastore.serialize(2));
+main('export',filename:string)->writeFile(filename,runTimes.serialize(2));
 
 //*Test without examples file
 main->main('',false);
