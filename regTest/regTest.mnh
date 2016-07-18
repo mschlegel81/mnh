@@ -82,11 +82,11 @@ USE testLog,
     '../demos/heart.mnh';
 private plotDemoCount:=8;
 
-private testPlotting(call:expression(0), file:string)->begin
+private testPlotting(import:string, file:string)->begin
   local filePath:=(myPath.splitFileName['directory'])&'/'&file;
   deleteFile(filePath);
   resetOptions;
-  call();
+  executeMainCall(import);
   printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
 end;
 
@@ -109,6 +109,33 @@ private executeExamples(examplesFile:string)->begin
   printExecute(codeToExecute);
 end;;
 
+private doAnalysis(rt:list)->begin
+  local tests  :=rt.getInner(0).unique;
+  local flavors:=rt.getInner(1).unique;
+  local average:={$X.agg(+)/$X.size};
+  local relativeSigma:={begin
+    local avg:=average($X);
+    local variance:=average(($X-avg)^2);
+    sqrt(variance)/avg;
+  end};
+  local testsWithTime:=tests.each(t,[t,rt.get(rt.getInner(0)=t).getInner(2).average,rt.get(rt.getInner(0)=t).getInner(2).relativeSigma]).sort(1);
+  local totalTime:=testsWithTime.getInner(1).agg(+);
+  print("Fast tests: ",testsWithTime.head(5)    .each(t,"\n\v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%",&));
+  print("Slow tests: ",testsWithTime.trailing(5).each(t,"\n\v"&t[0]&"\t"&t[1]&"\vsec\t"&round(100*t[1]/totalTime,3)&"\v%",&));
+  local testsWithTime:=testsWithTime.sort(2);
+  print("Tests with big variance: ",testsWithTime.trailing(5).each(t,"\n\v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&'s',&));
+
+  print('Average test time by flavour: ',flavors.each(f,"\n\v"&f&"\t"&((rt.get(rt.getInner(1)=f).getInner(2).average).{$0&"\t"&round(100*$0/totalTime,3)&"\v%"}),&));
+end;
+
+//*Analyze stored run times
+main('analyze')->doAnalysis(runTimes);
+//*Analyze stored run times
+main('analyze',inputFile)->doAnalysis(fileContents(inputFile).deserialize);
+
+//*Export datastore
+main('export',filename:string)->writeFile(filename,datastore.serialize(2));
+
 //*Test without examples file
 main->main('',false);
 //*Retest without examples file
@@ -118,15 +145,25 @@ main(examplesFile:string)->main(examplesFile,false);
 //*Retest with examples file
 main(examplesFile:string,'retest')->main(examplesFile,true);
 
-main(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? void :
+
+datastore runTimes;
+
+private executeMainCall(import:string,...)->begin
+  local t0:=time;
+  toId(import&'.main')@...;
+  local dt:=time-t0;
+  runTimes|=[[import,flavourString,dt]];
+end;
+
+main(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
 begin
   resetRandom;
   collectOutput;
-  toId('24.main')('demo');
-  diff.main('test');
-  inspect['uses'].getInner(0).leading(plotDemoCount).tail(3).each(import,toId(import&'.main'));
+  executeMainCall('24','demo');
+  executeMainCall('diff','test');
+  inspect['uses'].getInner(0).leading(plotDemoCount).tail(3).each(import,executeMainCall(import));
   canPlot
-  ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting({toId(import&'.main')},'../demos/'&import&'.png'))
+  ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,'../demos/'&import&'.png'))
   : void;
   examplesFile==''
   ? void
