@@ -1,2 +1,2 @@
-//See http://rosettacode.org/wiki/100_doors
+//*See http://rosettacode.org/wiki/100_doors
 main(...)->[1..100].get([1..100].pEach(pass,[1..100] mod pass=0,xor)).toString.unbrace.print;
