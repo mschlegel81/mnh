@@ -2543,74 +2543,118 @@ DESTRUCTOR T_format.destroy;
   end;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-  VAR literalType:T_literalType;
-      listSize:longint;
-      i:longint;
-  begin
-    literalType:=T_literalType(stream.readByte);
-    case literalType of
-      lt_error:result:=newErrorLiteral;
-      lt_boolean:result:=newBoolLiteral(stream.readBoolean);
-      lt_int:result:=newIntLiteral(stream.readInt64);
-      lt_real:result:=newRealLiteral(stream.readDouble);
-      lt_string:result:=newStringLiteral(decompressString(stream.readAnsiString));
-      lt_list,
-      lt_booleanList,
-      lt_intList,
-      lt_realList,
-      lt_numList,
-      lt_stringList,
-      lt_emptyList,
-      lt_keyValueList,
-      lt_flatList,
-      lt_listWithError:begin
-        listSize:=stream.readLongint;
-        if listSize<0 then begin
-          if adapters<>nil then adapters^.raiseError('Read negative list size! Abort.',location);
+  VAR reusableLiterals:array of P_literal;
+  FUNCTION literalFromStream:P_literal;
+    VAR literalType:T_literalType;
+        reusableIndex:word;
+        literalByte:byte;
+        listSize:longint;
+        i:longint;
+    begin
+      literalByte:=stream.readByte;
+      if literalByte=255 then begin
+        reusableIndex:=stream.readWord;
+        if (reusableIndex>=0) and (reusableIndex<length(reusableLiterals)) then begin
+          result:=reusableLiterals[reusableIndex];
+          result^.rereference;
+        end else begin
+          result:=newErrorLiteral;
+          stream.logWrongTypeError;
+          adapters^.raiseError('Read invalid reuse index! Abort.',location);
+        end;
+        exit(result);
+      end;
+      literalType:=T_literalType(literalByte);
+      case literalType of
+        lt_error:result:=newErrorLiteral;
+        lt_boolean:result:=newBoolLiteral(stream.readBoolean);
+        lt_int:result:=newIntLiteral(stream.readInt64);
+        lt_real:result:=newRealLiteral(stream.readDouble);
+        lt_string:result:=newStringLiteral(decompressString(stream.readAnsiString));
+        lt_list,
+        lt_booleanList,
+        lt_intList,
+        lt_realList,
+        lt_numList,
+        lt_stringList,
+        lt_emptyList,
+        lt_keyValueList,
+        lt_flatList,
+        lt_listWithError:begin
+          listSize:=stream.readLongint;
+          if listSize<0 then begin
+            if adapters<>nil then adapters^.raiseError('Read negative list size! Abort.',location);
+            stream.logWrongTypeError;
+            exit(newErrorLiteral);
+          end;
+          result:=newListLiteral;
+          setLength(P_listLiteral(result)^.dat,listSize);
+          for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream(),false);
+          if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
+        end;
+        lt_void:result:=newVoidLiteral;
+        else begin
+          if adapters<>nil then adapters^.raiseError('Read invalid literal type! Abort.',location);
           stream.logWrongTypeError;
           exit(newErrorLiteral);
         end;
-        result:=newListLiteral;
-        setLength(P_listLiteral(result)^.dat,listSize);
-        for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(newLiteralFromStream(stream,location,adapters),false);
-        if (result^.literalType<>literalType) and (adapters<>nil) then adapters^.raiseWarning('List has other type than expected.',location);
       end;
-      lt_void:result:=newVoidLiteral;
-      else begin
-        if adapters<>nil then adapters^.raiseError('Read invalid literal type! Abort.',location);
-        stream.logWrongTypeError;
-        exit(newErrorLiteral);
+      if not(literalType in [lt_boolean,lt_void,lt_error]) and (length(reusableLiterals)<65535) then begin
+        setLength(reusableLiterals,length(reusableLiterals)+1);
+        reusableLiterals[length(reusableLiterals)-1]:=result;
       end;
     end;
+
+  begin
+    setLength(reusableLiterals,0);
+    result:=literalFromStream;
+    setLength(reusableLiterals,0);
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
-  VAR i:longint;
-  begin
-    if (L^.literalType=lt_expression) then begin
-      if adapters<>nil then adapters^.raiseError('Cannot represent expression literal in binary form!',location);
-      exit;
-    end;
-    stream.writeByte(byte(L^.literalType));
-    case L^.literalType of
-      lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
-      lt_int:stream.writeInt64(P_intLiteral(L)^.val);
-      lt_real:stream.writeDouble(P_realLiteral(L)^.val);
-      lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,0));
-      lt_list,
-      lt_booleanList,
-      lt_intList,
-      lt_realList,
-      lt_numList,
-      lt_stringList,
-      lt_emptyList,
-      lt_keyValueList,
-      lt_flatList,
-      lt_listWithError:begin
-        stream.writeLongint(P_listLiteral(L)^.size);
-        for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteralToStream(P_listLiteral(L)^.value(i),stream,location,adapters);
+  VAR reusableMap:specialize G_literalKeyMap<word>;
+
+  PROCEDURE writeLiteral(CONST L:P_literal);
+    VAR i:longint;
+        reusableIndex:word;
+    begin
+      if (L^.literalType=lt_expression) then begin
+        if adapters<>nil then adapters^.raiseError('Cannot represent expression literal in binary form!',location);
+        exit;
+      end;
+      reusableIndex:=reusableMap.get(L,65535);
+      if reusableIndex<65535 then begin
+        stream.writeByte(255);
+        stream.writeWord(reusableIndex);
+        exit;
+      end else if (reusableMap.fill<65535) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then
+        reusableMap.put(L,reusableMap.fill);
+      stream.writeByte(byte(L^.literalType));
+      case L^.literalType of
+        lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
+        lt_int:stream.writeInt64(P_intLiteral(L)^.val);
+        lt_real:stream.writeDouble(P_realLiteral(L)^.val);
+        lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,0));
+        lt_list,
+        lt_booleanList,
+        lt_intList,
+        lt_realList,
+        lt_numList,
+        lt_stringList,
+        lt_emptyList,
+        lt_keyValueList,
+        lt_flatList,
+        lt_listWithError:begin
+          stream.writeLongint(P_listLiteral(L)^.size);
+          for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
+        end;
       end;
     end;
+
+  begin
+    reusableMap.create();
+    writeLiteral(L);
+    reusableMap.destroy;
   end;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters):ansistring;
