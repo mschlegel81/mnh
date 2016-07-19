@@ -158,7 +158,7 @@ main('analyze')->doAnalysis(runTimes);
 main('analyze',inputFile)->doAnalysis(fileContents(inputFile).deserialize);
 
 //*Export datastore
-main('export',filename:string)->writeFile(filename,datastore.serialize(2));
+main('export',filename:string)->writeFile(filename,runTimes.serialize(2));
 
 //*Test without examples file
 main->main('',false);
