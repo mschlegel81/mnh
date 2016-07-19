@@ -10,8 +10,9 @@
 
       id:ansistring;
       subrules:array of P_subrule;
+      PROCEDURE readDataStore(CONST package:P_package; CONST adapters:P_adapters);
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation; CONST suppressDatastoreRestore:boolean=false);
+      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
@@ -35,9 +36,20 @@
     end;
 {$endif}
 {$ifdef include_implementation}
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST package:P_package; CONST startAt:T_tokenLocation; CONST suppressDatastoreRestore:boolean=false);
+PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapters);
   VAR stream:T_streamWrapper;
-      L:P_literal;
+      lit:P_literal;
+  begin
+    stream:=package^.getDatastoreForId(id,true);
+    if stream.allOkay then begin
+      lit:=newLiteralFromStream(stream,declarationStart,adapters);
+      if stream.allOkay then setMutableValue(lit,true,adapters);
+      disposeLiteral(lit);
+    end;
+    stream.destroy;
+  end;
+
+CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
     used:=false;
     valueChangedAfterDeclaration:=false;
@@ -55,16 +67,6 @@ CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CO
 
     if ruleType in C_mutableRuleTypes
     then namedValue.create(id,newVoidLiteral,false);
-
-    if (ruleType in [rt_datastore_private,rt_datastore_public]) and not(suppressDatastoreRestore) then begin
-      stream:=package^.getDatastoreForId(id,true);
-      if stream.allOkay then begin
-        L:=newLiteralFromStream(stream,startAt,nil);
-        if stream.allOkay then setMutableValue(L,true,nil);
-        disposeLiteral(L);
-      end;
-      stream.destroy;
-    end;
   end;
 
 DESTRUCTOR T_rule.destroy;
@@ -105,6 +107,7 @@ exit}
       lit:P_literal;
       useParam:P_listLiteral;
       useUncurryingFallback:boolean;
+
   PROCEDURE wrapResultInPutCacheRule;
     VAR newFirst,t:P_token;
     begin
@@ -177,6 +180,7 @@ exit}
       rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
+          if not(used) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
           system.enterCriticalSection(rule_cs);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
@@ -222,22 +226,20 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
 
 PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; CONST adapters:P_adapters);
   begin
-    if (ruleType in C_mutableRuleTypes) then begin
-      system.enterCriticalSection(rule_cs);
-      namedValue.setValue(value);
-      if not(onDeclaration) then valueChangedAfterDeclaration:=true;
-      system.leaveCriticalSection(rule_cs);
-    end else if adapters<>nil then adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',declarationStart);
+    system.enterCriticalSection(rule_cs);
+    namedValue.setValue(value);
+    if not(onDeclaration) then valueChangedAfterDeclaration:=true;
+    system.leaveCriticalSection(rule_cs);
   end;
 
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
-    if (ruleType in C_mutableRuleTypes) then begin
-      system.enterCriticalSection(rule_cs);
-      result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
-      valueChangedAfterDeclaration:=true;
-      system.leaveCriticalSection(rule_cs);
-    end else context.adapters^.raiseCustomMessage(mt_el5_systemError,'This should not have happened: Trying to mutate an immutable rule!',location);
+    system.enterCriticalSection(rule_cs);
+    if not(used) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+    result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
+    valueChangedAfterDeclaration:=true;
+    used:=true;
+    system.leaveCriticalSection(rule_cs);
   end;
 
 FUNCTION T_rule.hasPublicSubrule: boolean;

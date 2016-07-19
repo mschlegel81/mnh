@@ -109,7 +109,23 @@ private executeExamples(examplesFile:string)->begin
   printExecute(codeToExecute);
 end;;
 
-private doAnalysis(rt:list)->
+private doAnalysis(rt:list)->begin
+  {isGuiActive ? showTable($L,'Test times') : $L.each(line,line.join("\t")).join("\n").print}(
+  [['Test','o.s.','opt.median','d.s.','deb.median','ratio']]|
+  rt.getInner(0).unique.each(testCase,
+    begin
+      local debugSamples:=rt[rt.getInner(0)=testCase];
+      local optSamples  :=debugSamples.each(sample,sample[1].matches('debug') ? void : sample[2]).sort;
+            debugSamples:=debugSamples.each(sample,sample[1].matches('debug') ? sample[2] : void).sort;
+      [testCase,
+       optSamples.size,
+       optSamples[optSamples.size div 2],
+       debugSamples.size,
+       debugSamples[debugSamples.size div 2],
+       round(debugSamples[debugSamples.size div 2]/optSamples[debugSamples.size div 2],2)];
+    end)
+  );
+
   [true,false].each(debugVersions,begin
     local filteredTests:=rt.each(t,t[1].matches('debug')=debugVersions ? t : void);
     print("=====================================================================\n",
@@ -134,6 +150,7 @@ private doAnalysis(rt:list)->
     totalTime:=filteredTests.getInner(2).agg(+);
     print('Total test time by flavour: ');print(flavors.each(f,"  \v"&f&"\t"&((filteredTests.get(filteredTests.getInner(1)=f).getInner(2).agg(+)).{$0&"\t"&round(100*$0/totalTime,3)&"\v%\n"}),&));
   end);
+end;
 
 //*Analyze stored run times
 main('analyze')->doAnalysis(runTimes);
@@ -141,7 +158,7 @@ main('analyze')->doAnalysis(runTimes);
 main('analyze',inputFile)->doAnalysis(fileContents(inputFile).deserialize);
 
 //*Export datastore
-main('export',filename:string)->writeFile(filename,runTimes.serialize(2));
+main('export',filename:string)->writeFile(filename,datastore.serialize(2));
 
 //*Test without examples file
 main->main('',false);
