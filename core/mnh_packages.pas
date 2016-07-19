@@ -920,7 +920,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST modifiers:T_modi
       exit;
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
-      new(result,create(ruleId,ruleType,@self,ruleDeclarationStart,suppressDatastoreRestore));
+      new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
       if intrinsicRuleMap.containsKey(ruleId) then adapters.raiseWarning('Hiding builtin rule "'+ruleId+'"!',ruleDeclarationStart);
