@@ -153,6 +153,7 @@ TYPE
              dontBreakAtAll);
       stepLevel:longint;
       lineChanged:boolean;
+      levelChanged:boolean;
 
       contextPointer:pointer;
       tokenPointer:pointer;
@@ -807,9 +808,10 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
     if (state=breakSoonest) or
        (state=breakOnStepIn) and (currentLevel>stepLevel) or
        (state=breakOnStepOut) and (currentLevel<stepLevel) or
-      ((state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and lineChanged)) or
-      ((lineChanged or (currentLevel<>stepLevel)) and breakpointEncountered) then begin
+      ((state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and (lineChanged and levelChanged))) or
+      ((lineChanged or levelChanged or (currentLevel<>stepLevel)) and breakpointEncountered) then begin
       lineChanged:=false;
+      levelChanged:=false;
       stepLevel:=currentLevel;
       currentLine:=location;
       contextPointer:=pointerToContext;
@@ -831,6 +833,7 @@ PROCEDURE T_stepper.steppingIn(CONST functionId:ansistring);
   VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
+    levelChanged:=true;
     if not(timerMap.containsKey(functionId,t)) then begin
       t.timer:=TEpikTimer.create(nil);
       t.into:=1;
@@ -853,6 +856,7 @@ PROCEDURE T_stepper.steppingOut(CONST functionId:ansistring);
   VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
+    levelChanged:=true;
     dec(currentLevel);
     {$ifdef DEBUGMODE}
     writeln('Stepping out to level: ',currentLevel,' ',functionId);
@@ -899,6 +903,7 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
     if not(continue) then begin
       clearTimers;
       lineChanged:=true;
+      levelChanged:=true;
       stepLevel:=0;
       currentLevel:=0;
       currentLine.package:=nil;
