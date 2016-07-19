@@ -1498,7 +1498,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$ifdef fullVersion}
     if currentlyDebugging then stepper.steppingIn('');
     {$endif}
-    try
+    {$ifndef DEBUGMODE}try{$endif}
     repeat
       didSubstitution:=false;
       initTokTypes;
@@ -1791,15 +1791,14 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       end;
       {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
+    {$ifndef DEBUGMODE}
     except
       on e:Exception do begin
         context.adapters^.raiseSystemError('An unhandled, exception was caught in reduceExpression on callDepth='+intToStr(callDepth));
         context.adapters^.raiseSystemError(e.message);
-        {$ifdef DEBUGMODE}
-        raise e;
-        {$endif}
       end;
     end;
+    {$endif}
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         if first=nil then while (stack.topIndex>=0) do stack.popLink(first);
