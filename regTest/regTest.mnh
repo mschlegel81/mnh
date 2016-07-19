@@ -122,10 +122,10 @@ private doAnalysis(rt:list)->begin
        optSamples[optSamples.size div 2],
        debugSamples.size,
        debugSamples[debugSamples.size div 2],
-       round(debugSamples[debugSamples.size div 2]/optSamples[debugSamples.size div 2],2)];       
+       round(debugSamples[debugSamples.size div 2]/optSamples[debugSamples.size div 2],2)];
     end)
   );
-  
+
   [true,false].each(debugVersions,begin
     local filteredTests:=rt.each(t,t[1].matches('debug')=debugVersions ? t : void);
     print("=====================================================================\n",
@@ -151,7 +151,7 @@ private doAnalysis(rt:list)->begin
     print('Total test time by flavour: ');print(flavors.each(f,"  \v"&f&"\t"&((filteredTests.get(filteredTests.getInner(1)=f).getInner(2).agg(+)).{$0&"\t"&round(100*$0/totalTime,3)&"\v%\n"}),&));
   end);
 end;
-  
+
 //*Analyze stored run times
 main('analyze')->doAnalysis(runTimes);
 //*Analyze stored run times
