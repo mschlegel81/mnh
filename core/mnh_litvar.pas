@@ -2554,13 +2554,14 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
       literalByte:=stream.readByte;
       if literalByte=255 then begin
         reusableIndex:=stream.readWord;
-        if (reusableIndex>=0) and (reusableIndex<length(reusableLiterals)) then begin
+        if (reusableIndex<length(reusableLiterals)) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
         end else begin
           result:=newErrorLiteral;
           stream.logWrongTypeError;
-          adapters^.raiseError('Read invalid reuse index! Abort.',location);
+          if adapters<>nil then adapters^.raiseError('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.',location)
+                           else raise Exception.create('Read invalid reuse index '+intToStr(reusableIndex)+'! Abort.');
         end;
         exit(result);
       end;
@@ -2627,8 +2628,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
         stream.writeByte(255);
         stream.writeWord(reusableIndex);
         exit;
-      end else if (reusableMap.fill<65535) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then
-        reusableMap.put(L,reusableMap.fill);
+      end;
       stream.writeByte(byte(L^.literalType));
       case L^.literalType of
         lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
@@ -2648,6 +2648,9 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
           stream.writeLongint(P_listLiteral(L)^.size);
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
         end;
+      end;
+      if (reusableMap.fill<65535) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then begin
+        reusableMap.put(L,reusableMap.fill);
       end;
     end;
 
