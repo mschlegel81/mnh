@@ -839,11 +839,14 @@ FUNCTION T_package.needReload: boolean;
   end;
 
 PROCEDURE T_package.clear;
+  VAR i:longint;
   begin
+    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
+    setLength(secondaryPackages,0);
+    for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
+    setLength(packageUses,0);
     packageRules.clear;
     importedRules.clear;
-    setLength(packageUses,0);
-    setLength(statementHashes,0);
     ready:=false;
   end;
 
@@ -866,14 +869,11 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
-  VAR i:longint;
   begin
     clear;
     codeProvider.destroy;
-    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
     packageRules.destroy;
     importedRules.destroy;
-    setLength(packageUses,0);
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);

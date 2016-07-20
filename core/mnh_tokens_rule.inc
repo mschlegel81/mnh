@@ -43,8 +43,8 @@ PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapter
     stream:=package^.getDatastoreForId(id,true);
     if stream.allOkay then begin
       lit:=newLiteralFromStream(stream,declarationStart,adapters);
-      if stream.allOkay then setMutableValue(lit,true,adapters);
-      disposeLiteral(lit);
+      if stream.allOkay then namedValue.setValue(lit);
+      lit^.unreference;
     end;
     stream.destroy;
   end;
@@ -322,10 +322,12 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
                 C_tokenInfo[tt_modifier_persistent].defaultId+' '+
                 id;
           adapters.raiseNote('Writing back: '+code,declarationStart);
+          L:=namedValue.getValue;
           code:=code+
                 C_tokenInfo[tt_assign].defaultId+
-                serialize(namedValue.getValue,declarationStart,@adapters,0,true)+
+                serialize(L,declarationStart,@adapters,0,true)+
                 C_tokenInfo[tt_semicolon].defaultId;
+          disposeLiteral(L);
           provider.replaceCode(
             declarationStart.line-1,
             declarationStart.column,
