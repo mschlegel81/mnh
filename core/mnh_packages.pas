@@ -351,6 +351,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           parts:T_bodyParts;
           closingBracket:P_token;
           i:longint;
+          inlineValue:P_literal;
       begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -501,7 +502,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             if (ruleGroup^.ruleType in C_mutableRuleTypes)
             then begin
               if (usecase<>lu_forCodeAssistance)
-              then ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context.adapters)
+              then begin
+                     inlineValue:=subRule^.getInlineValue;
+                     ruleGroup^.setMutableValue(inlineValue,true,context.adapters);
+                     inlineValue^.unreference;
+                   end
               else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context.adapters);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
