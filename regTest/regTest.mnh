@@ -122,7 +122,7 @@ private doAnalysis(rt:list)->begin
        optSamples[optSamples.size div 2],
        debugSamples.size,
        debugSamples[debugSamples.size div 2],
-       round(debugSamples[debugSamples.size div 2]/optSamples[debugSamples.size div 2],2)];
+       round(debugSamples[debugSamples.size div 2]/optSamples[optSamples.size div 2],2)];
     end)
   );
 
