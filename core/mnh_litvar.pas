@@ -1264,7 +1264,7 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_lis
       exit;
     end;
     if L^.literalType=lt_void then exit;
-    if length(dat)>=datFill then setLength(dat,datFill+16);
+    if length(dat)<=datFill then setLength(dat,datFill+16);
     dat[datFill]:=L;
     inc(datFill);
     if incRefs then L^.rereference;

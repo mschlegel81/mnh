@@ -1217,51 +1217,62 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
   VAR aid:ansistring;
       isEvaluationRunning:boolean;
       flushPerformed:boolean;
-      autosizingDone:boolean;
+      autosizingDone:boolean=false;
       i,modalRes:longint;
       currentFileAge:double;
   begin
     isEvaluationRunning:=runEvaluator.evaluationRunning;
-    //fast ones:================================================================
-    //Show ask form?
-    if askForm.displayPending then askForm.Show;
-    tableForm.conditionalDoShow;
-    //Form caption:-------------------------------------------------------------
-    if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta))
-    then begin
-      aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
-      editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(docEvaluator.getStateCounter,docEvaluator.getErrorHint);
-    end else aid:=C_appTitle;
-    if aid<>Caption then Caption:=aid;
-    //-------------------------------------------------------------:Form caption
-    //progress time:------------------------------------------------------------
-    if PageControl.ActivePageIndex>=0
-    then aid:=C_tabChar+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretX)
-    else aid:='';
     if isEvaluationRunning then begin
-      if currentlyDebugging then begin
-        if stepper.haltet then begin
-          StatusBar.SimpleText:='Debugging [HALTED]'+aid;
-          if breakPointHandlingPending then handleBreak;
-        end else StatusBar.SimpleText:='Debugging...'+aid;
-      end else StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid;
-    end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
-    //------------------------------------------------------------:progress time
-    //Halt/Run enabled states:--------------------------------------------------
-    if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
-    if not(isEvaluationRunning)<>miEvaluateNow.Enabled then begin
-      miEvaluateNow.Enabled:=not(isEvaluationRunning);
-      miCallMain.Enabled:=not(isEvaluationRunning);
+      if askForm.displayPending then askForm.Show;
+      tableForm.conditionalDoShow;
     end;
-    //--------------------------------------------------:Halt/Run enabled states
-    //================================================================:fast ones
-    //slow ones:================================================================
-    //if not(isEvaluationRunning) then for i:=0 to 9 do inputRec[i].editor.readonly:=false;
-    flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
-    autosizingDone:=autosizeBlocks(isEvaluationRunning);
+    if showing then begin
+      //Form caption:-------------------------------------------------------------
+      if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta))
+      then begin
+        aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
+        editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(docEvaluator.getStateCounter,docEvaluator.getErrorHint);
+      end else aid:=C_appTitle;
+      if aid<>Caption then Caption:=aid;
+      //-------------------------------------------------------------:Form caption
+      //progress time:------------------------------------------------------------
+      if PageControl.ActivePageIndex>=0
+      then aid:=C_tabChar+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.ActivePageIndex].editor.CaretX)
+      else aid:='';
+      if isEvaluationRunning then begin
+        if currentlyDebugging then begin
+          if stepper.haltet then begin
+            StatusBar.SimpleText:='Debugging [HALTED]'+aid;
+            if breakPointHandlingPending then handleBreak;
+          end else StatusBar.SimpleText:='Debugging...'+aid;
+        end else StatusBar.SimpleText:='Evaluating: '+myTimeToStr(now-evaluation.start)+aid;
+      end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
+      //------------------------------------------------------------:progress time
+      //Halt/Run enabled states:--------------------------------------------------
+      if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
+      if not(isEvaluationRunning)<>miEvaluateNow.Enabled then begin
+        miEvaluateNow.Enabled:=not(isEvaluationRunning);
+        miCallMain.Enabled:=not(isEvaluationRunning);
+      end;
+      //--------------------------------------------------:Halt/Run enabled states
+      autosizingDone:=autosizeBlocks(isEvaluationRunning);
 
-    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
-       not(runEvaluator.evaluationRunning) then plotForm.doPlot();
+      //File checks:------------------------------------------------------------
+      if (now>doNotCheckFileBefore) then begin
+        doNotCheckFileBefore:=now+1;
+        for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if sheet.TabVisible and (filePath<>'') and not(changed) then begin
+          fileAge(filePath,currentFileAge);
+          if currentFileAge<>fileAccessAge then begin
+            modalRes:=closeDialogForm.showOnOutOfSync(filePath);
+            if modalRes=mrOk then reloadFile(filePath);
+            if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
+            changed:=true;
+          end;
+        end;
+        doNotCheckFileBefore:=now+ONE_SECOND;
+      end;
+      //-----------------------------------------------------------.:File checks
+    end;
 
     if isEvaluationRunning then evaluation.deferredUntil:=now+0.1*ONE_SECOND else
     if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
@@ -1271,35 +1282,25 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
+    flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
+    if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
+       not(runEvaluator.evaluationRunning) then plotForm.doPlot();
+
     if not(flushPerformed) and not(autosizingDone) then begin
       UpdateTimeTimer.interval:=UpdateTimeTimer.interval+10;
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end else UpdateTimeTimer.interval:=MIN_INTERVALL;
-    //================================================================:slow ones
-    if settings.value^.savingRequested then begin
-      for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
-      saveSettings;
-    end;
-
-    if (now>doNotCheckFileBefore) then begin
-      doNotCheckFileBefore:=now+1;
-      for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if sheet.TabVisible and (filePath<>'') and not(changed) then begin
-        fileAge(filePath,currentFileAge);
-        if currentFileAge<>fileAccessAge then begin
-          modalRes:=closeDialogForm.showOnOutOfSync(filePath);
-          if modalRes=mrOk then reloadFile(filePath);
-          if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
-          changed:=true;
-        end;
-      end;
-      doNotCheckFileBefore:=now+ONE_SECOND;
-    end;
 
     if reEvaluationWithGUIrequired then begin
       Hide;
       if not(isEvaluationRunning) and (not(plotForm.showing) and not(tableForm.showing) or closeGuiFlag) then begin
         guiAdapters.setExitCode;
         close;
+      end;
+    end else begin
+      if settings.value^.savingRequested then begin
+        for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+        saveSettings;
       end;
     end;
   end;

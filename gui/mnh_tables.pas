@@ -100,6 +100,7 @@ end;
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     if (key=9) and (ssCtrl in Shift) and (formCycleCallback<>nil) then formCycleCallback(2,ssShift in Shift);
+    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=Rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
   end;
 
 PROCEDURE TtableForm.FormShow(Sender: TObject);
@@ -107,6 +108,7 @@ PROCEDURE TtableForm.FormShow(Sender: TObject);
     {$ifdef UNIX}
     miIncreaseFontSize.ShortCut:=16605;
     {$endif}
+    position:=poDefault;
   end;
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
@@ -163,7 +165,6 @@ PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
 PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     FormKeyUp(Sender,key,Shift);
-    if (key=65) and (ssCtrl in Shift) then StringGrid.selection:=Rect(0,1,StringGrid.ColCount-1,StringGrid.RowCount-1);
   end;
 
 PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;

@@ -118,6 +118,7 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
       sleepTime:longint=0;
   begin
     while state in [fts_pending,fts_evaluating] do begin
+      ThreadSwitch;
       sleep(sleepTime);
       if sleepTime<100 then inc(sleepTime);
     end;
@@ -133,9 +134,10 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
           loc.line:=0;
         end;
         context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
-        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,maxLongint),loc);
+        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task),loc);
       end;
     end else result:=newErrorLiteral;
+    context.cascadeDisposeToken(task);
   end;
 
 PROCEDURE T_futureTask.free(VAR context: T_evaluationContext);

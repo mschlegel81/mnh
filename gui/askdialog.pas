@@ -9,7 +9,23 @@ USES
   StdCtrls, mnh_funcs, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters,myGenerics,mnh_contexts;
 TYPE
   {$WARN 5024 OFF}
+
+  { TaskForm }
+
   TaskForm = class(TForm)
+    Button10: TButton;
+    Button11: TButton;
+    Button12: TButton;
+    Button13: TButton;
+    Button14: TButton;
+    Button15: TButton;
+    Button16: TButton;
+    Button4: TButton;
+    Button5: TButton;
+    Button6: TButton;
+    Button7: TButton;
+    Button8: TButton;
+    Button9: TButton;
     ComboBox1: TComboBox;
     Label1: TLabel;
     Button1: TButton;
@@ -18,9 +34,7 @@ TYPE
     PROCEDURE ComboBox1KeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
-    PROCEDURE Button1Click(Sender: TObject);
-    PROCEDURE Button2Click(Sender: TObject);
-    PROCEDURE Button3Click(Sender: TObject);
+    PROCEDURE ButtonClick(Sender: TObject);
   private
     rejectNonmatchingInput: boolean;
     previousAnswers:array[0..31] of ansistring;
@@ -34,7 +48,7 @@ TYPE
     PROCEDURE initWithQuestionAndOptions(CONST question: ansistring; CONST options: T_arrayOfString);
     PROCEDURE lock;
     FUNCTION getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
-    PROCEDURE setButtons(CONST enable:boolean; CONST count:byte);
+    PROCEDURE setButtons(CONST enable:boolean; CONST options: T_arrayOfString);
   end;
 
 VAR
@@ -67,25 +81,12 @@ PROCEDURE TaskForm.FormCreate(Sender: TObject);
 PROCEDURE TaskForm.FormShow(Sender: TObject);
   begin
     displayPending := false;
+    position:=poDefault;
   end;
 
-PROCEDURE TaskForm.Button1Click(Sender: TObject);
+PROCEDURE TaskForm.ButtonClick(Sender: TObject);
   begin
-    lastAnswer := Button1.Caption;
-    ModalResult := mrOk;
-    Hide;
-  end;
-
-PROCEDURE TaskForm.Button2Click(Sender: TObject);
-  begin
-    lastAnswer := Button2.Caption;
-    ModalResult := mrOk;
-    Hide;
-  end;
-
-PROCEDURE TaskForm.Button3Click(Sender: TObject);
-  begin
-    lastAnswer := Button3.Caption;
+    lastAnswer := TButton(Sender).Caption;
     ModalResult := mrOk;
     Hide;
   end;
@@ -94,7 +95,7 @@ PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
   VAR i:longint;
   begin
     lock;
-    setButtons(false,0);
+    setButtons(false,C_EMPTY_STRING_ARRAY);
     rejectNonmatchingInput := false;
     lastAnswer := '';
     ComboBox1.Items.clear;
@@ -110,7 +111,7 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
   VAR i: longint;
   begin
     lock;
-    setButtons(length(options)<=3,length(options));
+    setButtons(length(options)<=16,options);
     rejectNonmatchingInput := true;
     lastAnswer := '';
     ComboBox1.Items.clear;
@@ -149,20 +150,46 @@ FUNCTION TaskForm.getLastAnswerReleasing(CONST adapters:P_adapters): ansistring;
     ownerThread := 0;
   end;
 
-PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST count: byte);
+PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfString);
+  FUNCTION button(CONST index:byte):TButton;
+    begin
+      case index of
+        0: result:=Button1;
+        1: result:=Button2;
+        2: result:=Button3;
+        3: result:=Button4;
+        4: result:=Button5;
+        5: result:=Button6;
+        6: result:=Button7;
+        7: result:=Button8;
+        8: result:=Button9;
+        9: result:=Button10;
+       10: result:=Button11;
+       11: result:=Button12;
+       12: result:=Button13;
+       13: result:=Button14;
+       14: result:=Button15;
+       15: result:=Button16;
+      end;
+    end;
+
+  VAR i:longint;
   begin
     if enable then begin
-      Button1.Enabled:=count>=1; Button1.visible:=count>=1;
-      Button2.Enabled:=count>=2; Button2.visible:=count>=2;
-      Button3.Enabled:=count>=3; Button3.visible:=count>=3;
+      for i:=0 to 15 do begin
+        button(i).Enabled:=length(options)>i;
+        button(i).visible:=length(options)>i;
+        if length(options)>i then button(i).Caption:=options[i];
+      end;
       ComboBox1.Enabled:=false;
       ComboBox1.visible:=false;
     end else begin
       ComboBox1.Enabled:=true;
       ComboBox1.visible:=true;
-      Button1.Enabled:=false; Button1.visible:=false;
-      Button2.Enabled:=false; Button2.visible:=false;
-      Button3.Enabled:=false; Button3.visible:=false;
+      for i:=0 to 15 do begin
+        button(i).Enabled:=false;
+        button(i).visible:=false;
+      end;
     end;
   end;
 

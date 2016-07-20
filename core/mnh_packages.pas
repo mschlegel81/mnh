@@ -288,8 +288,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         while first<>nil do begin
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
-            setLength(packageUses,length(packageUses)+1);
-            packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+            {$ifdef FULLVERSION}
+            if (newId=C_forceGuiPseudoPackage) then begin
+              if not(gui_started) then context.adapters^.raiseCustomMessage(mt_guiPseudoPackageFound,'',locationForErrorFeedback);
+            end else
+            {$endif}
+            begin
+              setLength(packageUses,length(packageUses)+1);
+              packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+            end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
             newId:=P_stringLiteral(first^.data)^.value;
             setLength(packageUses,length(packageUses)+1);
@@ -344,6 +351,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           parts:T_bodyParts;
           closingBracket:P_token;
           i:longint;
+          inlineValue:P_literal;
       begin
         ruleDeclarationStart:=first^.location;
         evaluateBody:=(assignmentToken^.tokType=tt_assign);
@@ -494,7 +502,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             if (ruleGroup^.ruleType in C_mutableRuleTypes)
             then begin
               if (usecase<>lu_forCodeAssistance)
-              then ruleGroup^.setMutableValue(subRule^.getInlineValue,true,context.adapters)
+              then begin
+                     inlineValue:=subRule^.getInlineValue;
+                     ruleGroup^.setMutableValue(inlineValue,true,context.adapters);
+                     inlineValue^.unreference;
+                   end
               else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context.adapters);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
@@ -865,11 +877,14 @@ FUNCTION T_package.needReload: boolean;
   end;
 
 PROCEDURE T_package.clear;
+  VAR i:longint;
   begin
+    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
+    setLength(secondaryPackages,0);
+    for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
+    setLength(packageUses,0);
     packageRules.clear;
     importedRules.clear;
-    setLength(packageUses,0);
-    setLength(statementHashes,0);
     ready:=false;
   end;
 
@@ -892,14 +907,11 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
   end;
 
 DESTRUCTOR T_package.destroy;
-  VAR i:longint;
   begin
     clear;
     codeProvider.destroy;
-    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
     packageRules.destroy;
     importedRules.destroy;
-    setLength(packageUses,0);
   end;
 
 PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adapters);
