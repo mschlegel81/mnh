@@ -116,6 +116,7 @@ PROCEDURE TplotForm.FormShow(Sender: TObject);
     {$ifdef UNIX}
     miIncFontSize.ShortCut:=16605;
     {$endif}
+    position:=poDefault;
   end;
 
 PROCEDURE TplotForm.miAntiAliasing1Click(Sender: TObject);

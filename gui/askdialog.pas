@@ -67,6 +67,7 @@ PROCEDURE TaskForm.FormCreate(Sender: TObject);
 PROCEDURE TaskForm.FormShow(Sender: TObject);
   begin
     displayPending := false;
+    position:=poDefault;
   end;
 
 PROCEDURE TaskForm.Button1Click(Sender: TObject);

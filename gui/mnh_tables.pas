@@ -107,6 +107,7 @@ PROCEDURE TtableForm.FormShow(Sender: TObject);
     {$ifdef UNIX}
     miIncreaseFontSize.ShortCut:=16605;
     {$endif}
+    position:=poDefault;
   end;
 
 PROCEDURE TtableForm.miDecreaseFontSizeClick(Sender: TObject);
