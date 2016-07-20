@@ -52,7 +52,8 @@ CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
 {mt_plotCreatedWithInstantDisplay,     } tkNote,
 {mt_plotSettingsChanged,               } tkNote,
 {mt_evaluatedStatementInInteractiveMode} tkNote,
-{mt_displayTable                       } tkNote);
+{mt_displayTable                       } tkNote,
+{mt_guiPseudoPackageFound              } tkNote);
 
 TYPE
   { TSynMnhSyn }

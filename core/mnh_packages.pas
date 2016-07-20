@@ -288,8 +288,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         while first<>nil do begin
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
-            setLength(packageUses,length(packageUses)+1);
-            packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+            {$ifdef FULLVERSION}
+            if (newId=C_forceGuiPseudoPackage) then begin
+              if not(gui_started) then context.adapters^.raiseCustomMessage(mt_guiPseudoPackageFound,'',locationForErrorFeedback);
+            end else
+            {$endif}
+            begin
+              setLength(packageUses,length(packageUses)+1);
+              packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+            end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
             newId:=P_stringLiteral(first^.data)^.value;
             setLength(packageUses,length(packageUses)+1);

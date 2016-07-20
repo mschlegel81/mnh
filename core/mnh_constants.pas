@@ -33,7 +33,9 @@ CONST
   C_nanText = 'Nan';
   C_infText = 'Inf';
   C_boolText: array[false..true] of string = ('false', 'true');
-
+  {$ifdef fullVersion}
+  C_forceGuiPseudoPackage='GUI';
+  {$endif}
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.mnh';
@@ -423,14 +425,15 @@ TYPE
     mt_plotCreatedWithInstantDisplay,
     mt_plotSettingsChanged,
     mt_evaluatedStatementInInteractiveMode,
-    mt_displayTable
+    mt_displayTable,
+    mt_guiPseudoPackageFound
     {$endif});
 
   T_messageTypeSet=set of T_messageType;
 
 CONST
   {$ifdef fullVersion}
-  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..1] of T_messageType=(mt_plotCreatedWithInstantDisplay,mt_displayTable);
+  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..2] of T_messageType=(mt_plotCreatedWithInstantDisplay,mt_displayTable,mt_guiPseudoPackageFound);
   {$endif}
   C_MESSAGE_TYPES_IGNORED_BY_SANDBOX:T_messageTypeSet=[mt_endOfEvaluation,mt_reloadRequired,mt_timing_info
   {$ifdef fullVersion},mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged,mt_evaluatedStatementInInteractiveMode,mt_displayTable{$endif}];
@@ -456,7 +459,8 @@ CONST
    {$ifdef fullVersion},
    -1,-1,-1,-1, //mt_plot...
    -1, //mt_evaluatedStatementInInteractiveMode
-   -1  //mt_displayTable
+   -1, //mt_displayTable
+   -1  //mt_guiPseudoPackageFound
    {$endif});
 
   SELF_TOKEN_TEXT='$self';
@@ -489,6 +493,7 @@ CONST
     'Instant plot request',
     'Plot settings changed',
     'Statement No.',
+    '',
     ''
     {$endif});
 
