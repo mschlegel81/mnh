@@ -802,13 +802,18 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and gui_started and context.adapters^.noErrors
     then complainAboutUncalled(true,context.adapters^);
     {$endif}
-    if (usecase in [lu_forDirectExecution,lu_forCallingMain])
+    if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
-      finalize(context.adapters^);
-      clearCachedFormats;
+      context.adapters^.stopEvaluation;
+      while runningAsyncTasks>0 do begin
+        ThreadSwitch;
+        sleep(1);
+      end;
       {$ifdef fullVersion}
       killServersCallback;
       {$endif}
+      finalize(context.adapters^);
+      clearCachedFormats;
     end;
 
     with profiler do if active then begin

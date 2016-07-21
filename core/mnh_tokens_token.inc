@@ -1807,7 +1807,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
         context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
       end;
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
-                 context.adapters^.hasMessageOfType[mt_el5_systemError]) then begin
+                 context.adapters^.hasMessageOfType[mt_el5_systemError] or
+                 context.adapters^.hasMessageOfType[mt_el5_haltMessageQuiet]) then begin
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin

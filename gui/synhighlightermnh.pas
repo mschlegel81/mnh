@@ -44,6 +44,7 @@ CONST tokenKindForMt:array[T_messageType] of TtkTokenKind=(
 {mt_el4_parsingError,                  } tkError,
 {mt_el5_systemError,                   } tkError,
 {mt_el5_haltMessageReceived,           } tkError,
+{mt_el5_haltMessageQuiet,              } tkNote,
 {mt_endOfEvaluation,                   } tkDefault,
 {mt_reloadRequired,                    } tkNote,
 {mt_timing_info                        } tkTimingNote,
