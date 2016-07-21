@@ -39,6 +39,7 @@ end;
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
+  isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   ensureDemos;
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
@@ -50,7 +51,6 @@ currentCodeHash:=begin
   templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');
   templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
-  isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
   fileContents('core/code_hash.inc')=="writeln(':"&result&"');"
