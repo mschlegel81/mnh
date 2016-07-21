@@ -6,17 +6,18 @@ main->begin
   printTime(0.123);
 end;
 
+private mutable proceed:=true;
+
 main(...)->
 begin
-  local proceed:=true;
-  [{begin
-     ask('Press enter to quit.');
-     proceed:=false;
-   end},
-   {while(proceed,begin
-     clearPrint;
-     print('Press enter to quit.');
-     printTime(systime);
-     sleep(1);
-   end)}].PEach(task,task());
+  async({begin
+    ask('Press enter to quit.');
+    proceed:=false;
+  end});
+  while(proceed,begin
+    clearPrint;
+    print('Press enter to quit.');
+    printTime(systime);
+    sleep(1);
+  end);
 end;
