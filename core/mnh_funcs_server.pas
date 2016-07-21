@@ -82,7 +82,7 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     if (params<>nil) and (params^.size=3) and
        (arg0^.literalType=lt_string) and
        (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.arity<=1) and
+       (P_expressionLiteral(arg1)^.arity<=4) and
        (arg2^.literalType in [lt_int,lt_real]) then begin
       {$ifdef fullVersion}
       if currentlyDebugging then begin
@@ -93,10 +93,10 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       if arg2^.literalType=lt_int then timeout:=int2^.value/(24*60*60)
                                   else timeout:=real2^.value/(24*60*60);
       servingExpression:=P_expressionLiteral(arg1);
-      if servingExpression^.arity=0 then begin
+      if servingExpression^.arity<4 then begin
         new(servingSubrule,clone(servingExpression^.value));
         servingExpression:=newExpressionLiteral(servingSubrule);
-        servingSubrule^.increaseArity(1);
+        servingSubrule^.increaseArity(4);
       end else servingExpression^.rereference;
       new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,context));
       result:=newVoidLiteral;
@@ -160,7 +160,7 @@ PROCEDURE T_microserver.serve;
       socket:T_socketPair;
       context:T_evaluationContext;
 
-  PROCEDURE pushContextWithRequestData(CONST request:string);
+  PROCEDURE initRequestLiteral(CONST request:string);
     VAR parts:T_arrayOfString;
         parameters:P_listLiteral;
         i:longint;
@@ -193,19 +193,19 @@ PROCEDURE T_microserver.serve;
       end;
 
     begin
-      context.valueStore.scopePush(false);
-      context.valueStore.createVariable('fullRequest',newStringLiteral(request),true);
+      requestLiteral.create;
+      requestLiteral.appendString(request);
       parts:=split(request,'?');
       while (length(parts)<2) do append(parts,'');
-      context.valueStore.createVariable('path',newStringLiteral(parts[0]),true);
-      context.valueStore.createVariable('rawParameters',newStringLiteral(parts[1]),true);
+      requestLiteral.appendString(parts[0]);
+      requestLiteral.appendString(parts[1]);
       parameters:=newListLiteral;
       if length(parts[1])>0 then begin
         parts:=split(parts[1],'&');
         for i:=0 to length(parts)-1 do addParameterPair(parts[i]);
         parameters^.toKeyValueList;
       end;
-      context.valueStore.createVariable('parameters',parameters,true);
+      requestLiteral.append(parameters,false);
     end;
 
   begin
@@ -219,18 +219,18 @@ PROCEDURE T_microserver.serve;
       if request<>'' then begin
         sleepTime:=minSleepTime;
         lastActivity:=now;
-        requestLiteral.create;
-        requestLiteral.appendString(request);
-        pushContextWithRequestData(request);
+        initRequestLiteral(request);
         response:=servingExpression^.evaluate(@requestLiteral,@context);
-        context.valueStore.scopePop;
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
           then socket.SendString(P_scalarLiteral(response)^.stringForm)
           else socket.SendString(P_scalarLiteral(response)^.toString);
           disposeLiteral(response);
-        end else socket.SendString(HTTP_404_RESPONSE);
+        end else begin
+          context.adapters^.raiseWarning('Microserver response is nil!', feedbackLocation);
+          socket.SendString(HTTP_404_RESPONSE);
+        end;
       end else begin
         sleep(sleepTime);
         inc(sleepTime);

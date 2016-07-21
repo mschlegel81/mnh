@@ -238,7 +238,6 @@ FUNCTION sign_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     then result:=sign_rec(params^.value(0));
   end;
 
-
 FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR res:P_literal;
       t:double;
@@ -284,6 +283,48 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
                                      else disposeLiteral(res);
         appendPair(result,'time'  ,newRealLiteral(t));
       end;
+    end;
+  end;
+
+TYPE P_asyncTask=^T_asyncTask;
+     T_asyncTask=record
+       adapters:P_adapters;
+       task:P_token;
+     end;
+VAR runningAsyncTasks:longint=0;
+
+FUNCTION doAsync(p:pointer):ptrint;
+  VAR context:T_evaluationContext;
+  begin
+    result:=0;
+    with P_asyncTask(p)^ do begin
+      context.createNormalContext(adapters);
+      reduceExpression(task,0,context);
+      context.cascadeDisposeToken(task);
+      context.destroy;
+    end;
+    freeMem(p,sizeOf(T_asyncTask));
+    interlockedDecrement(runningAsyncTasks);
+  end;
+
+FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR p:P_asyncTask;
+  begin
+    result:=nil;
+    if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
+       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
+      getMem(p,sizeOf(T_asyncTask));
+      p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
+      params^.value(0)^.rereference;
+      if params^.size=2 then begin
+        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
+        params^.value(1)^.rereference;
+      end else
+        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
+      p^.adapters:=context.adapters;
+      InterLockedIncrement(runningAsyncTasks);
+      beginThread(@doAsync,p);
+      result:=newVoidLiteral;
     end;
   end;
 
@@ -720,6 +761,8 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,'time;#Returns an internal time for time difference measurement.#'+
                                                          'time(E:expression);#Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);Calls E asynchronously (without parameters) and returns void.#'+
+                                                           'async(E:expression,par:list);#Calls E@par and asynchronously and returns void.#Asynchronous tasks are killed at the end of (synchonous) evaluation.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');

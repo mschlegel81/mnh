@@ -599,12 +599,14 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
     if reEvaluationWithGUIrequired then begin
-      showConsole;
       {$ifndef debugMode}guiAdapters.addConsoleOutAdapter;{$endif}
       doStartEvaluation(true,true);
       runEvaluator.reEvaluateWithGUI;
       plotForm.Caption:=plotForm.Caption+' - close to quit';
       sleep(UpdateTimeTimer.interval);
+      askForm.ShowInTaskBar:=stAlways;
+      plotForm.ShowInTaskBar:=stAlways;
+      tableForm.ShowInTaskBar:=stAlways;
     end;
   end;
 

@@ -82,11 +82,15 @@ private deleteStubbornly(file:string)->begin
   local tries:=3;
   while(fileExists(file) AND tries>0,
     deleteFile(file) ? void : begin
-    print('Deleting ',file,' failed!');
     tries-=1;
-    sleep(1);
+    sleep(0.1);
   end);
 end;
+
+private myMove(source,dest:string)->fileExists(source) ? begin
+  deleteStubbornly(dest);
+  moveFile(source,dest) ? void : print('File move ',source,' -> ',dest,' failed!');
+end : print('File  ',source,' does not exist');
 
 private build(FI:int)->
 exeHasWrongVersion(FI) ? begin
@@ -102,11 +106,10 @@ exeHasWrongVersion(FI) ? begin
   local parameters:=['-B','--bm='&(imig ? 'imig' : debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
   deleteStubbornly(exeName);
-  deleteStubbornly(outName);
   local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
   printf('Compiling %-25s logging to %s',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
-  moveFile(outName,exeName) ? void : print('File move ',outName,' -> ',exeName,' failed!');
+  myMove(outName,exeName);
   not(exeHasWrongVersion(FI));
 end : true;
 

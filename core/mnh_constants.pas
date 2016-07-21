@@ -419,6 +419,7 @@ TYPE
     mt_el4_parsingError,
     mt_el5_systemError,
     mt_el5_haltMessageReceived,
+    mt_el5_haltMessageQuiet,
     mt_endOfEvaluation,
     mt_reloadRequired,
     mt_timing_info
@@ -456,6 +457,7 @@ CONST
     4,//mt_el4_parsingError,
     5,//mt_el5_systemError,
     5,//mt_el5_haltMessageReceived
+    5,//mt_el5_haltMessageQuiet
    -1,//mt_endOfEvaluation
    -1,//mt_reloadRequired
    -1//mt_timing_info
@@ -487,6 +489,7 @@ CONST
     'Parsing Error ',
     'Sys. Error ',
     'Evaluation haltet (most probably by user).',
+    '', //Halt message quiet
     '',
     '',
     UTF8_ZERO_WIDTH_SPACE

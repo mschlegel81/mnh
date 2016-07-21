@@ -111,6 +111,7 @@ TYPE
       PROCEDURE printOut(CONST s:T_arrayOfString);
       PROCEDURE clearPrint;
       PROCEDURE ClearAll;
+      PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
       {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
@@ -483,6 +484,12 @@ PROCEDURE T_adapters.ClearAll;
   begin
     clearPrint;
     clearErrors;
+  end;
+
+PROCEDURE T_adapters.stopEvaluation;
+  begin
+    hasMessageOfType[mt_el5_haltMessageQuiet]:=true;
+    maxErrorLevel:=5;
   end;
 
 FUNCTION T_adapters.noErrors: boolean;

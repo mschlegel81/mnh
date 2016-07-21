@@ -601,7 +601,10 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
         context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
       end;
       context.cascadeDisposeToken(firstRep);
-    end else result:=nil;
+    end else begin
+      context.adapters^.raiseError('Cannot apply function to parameters: '+params^.toParameterListString(true),declaredAt);
+      result:=nil;
+    end;
   end;
 
 FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
