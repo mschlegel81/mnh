@@ -64,7 +64,7 @@ pageSet(rawParameters,parameters)->begin
 end;
 
 main->begin
-  startHttpServer('localhost:43210',{pageSet(rawParameters,parameters)[path] orElse httpError},0);
+  startHttpServer('localhost:43210',{pageSet($0,$3)[$1] orElse httpError},0);
   openUrl('http://localhost:43210/page.html');
   ask('Press o.k. to shutdown server.',['o.k.']);
 end;

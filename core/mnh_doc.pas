@@ -89,25 +89,23 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
 PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
-        httpServerExample:array[0..18] of string=
+        httpServerExample:array[0..16] of string=
 ('//#startHttpServer',
 ' in> startHttpServer(''127.0.0.1:60000'',',
 '       {begin',
-'         //Special variables available in serving expression: fullRequest, path, rawParameters and parameters',
-'         print("fullRequest=\t",fullRequest.escape,',
-'               "\npath=\t",path.escape,',
-'               "\nrawParameters=\t",rawParameters.escape,',
-'               "\nparameters=\t",parameters);',
-'         wrapTextInHttp("Hello world");',
+'          print("Full Request:  ",$0);',
+'          print("Path:          ",$1);',
+'          print("Raw parameters:",$2);',
+'          print("Parameters    :",$3);',
+'          wrapTextInHttp("o.k.");',
 '       end},1);',
 ' in> httpGet(''http://127.0.0.1:60000/index.html?x=0&y=3%2Ax'');',
 'out> void',
 'Note  @D:\dev\mnh5\ignored\serverTest.mnh:1,1 Microserver started. 127.0.0.1:60000',
-'fullRequest=   ''/index.html?x=0&y=3%2Ax''',
-'path=          ''/index.html''',
-'rawParameters= ''x=0&y=3%2Ax''',
-'parameters=    [[''x'',0],[''y'',''3*x'']]',
-'out> ''Hello world''',
+'Full Request:  /index.html?x=0&y=3%2Ax',
+'Page:          /index.html',
+'Raw parameters:x=0&y=3%2Ax',
+'Parameters    :[[''x'',0],[''y'',''3*x'']]',
 'Note  @D:\dev\mnh5\ignored\serverTest.mnh:1,1 Microserver stopped. 127.0.0.1:60000');
 
   VAR code:T_arrayOfString;
@@ -182,7 +180,7 @@ PROCEDURE ensureBuiltinDocExamples;
     setLength(allDocs,0);
 
     setLength(code,length(httpServerExample));
-    for i:=0 to length(code)-1 do if byte(i) in [12..16,18] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
+    for i:=0 to length(code)-1 do if byte(i) in [11..17] then code[i]:=httpServerExample[i] else code[i]:=toHtmlCode(httpServerExample[i]);
 
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
