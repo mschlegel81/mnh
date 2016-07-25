@@ -46,7 +46,12 @@ CONSTRUCTOR T_tokenArray.create;
   end;
 
 DESTRUCTOR T_tokenArray.destroy;
+  VAR k:longint;
   begin
+    for k:=0 to length(t)-1 do begin
+      t[k].tokType:=tt_EOL;
+      t[k].destroy;
+    end;
     setLength(t,0);
     i:=-1;
   end;
@@ -96,6 +101,9 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           t[i+3].tokType:=t[i].tokType;
           t[i+3].txt:=t[i+2].txt;
           t[i+3].data:=nil;
+          t[i].destroy;
+          t[i+1].destroy;
+          t[i+2].destroy;
           inc(i,3); //skip tt_braceOpen, identifier and comma
         end else adapters.raiseCustomMessage(mt_el4_parsingError,'Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',t[i].location);
         tt_agg: if (i<length(t)-1) and
@@ -103,6 +111,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           t[i+1].tokType:=tt_each;
           t[i+1].txt:='';
           t[i+1].data:=nil;
+          t[i].destroy;
           inc(i);
         end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
@@ -208,10 +217,8 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       stringValue:ansistring='';
       tt:T_tokenType;
   begin
-    result.location:=lineLocation;
-    result.txt:='';
-    result.tokType:=tt_EOL;
-    result.data:=nil;
+    result.create;
+    result.define(lineLocation,'',tt_EOL,nil);
     result.next:=nil;
     with blob do if closer<>#0 then begin
       //id now is rest of line

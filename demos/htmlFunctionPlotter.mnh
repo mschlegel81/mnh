@@ -38,10 +38,10 @@ pageSet(rawParameters,parameters)->begin
   : validationMessages|=(escape(sp_)&' is not a valid value for samples.');
 
   local htmlCode:='<HTML><HEAD><TITLE>Simple HTML function plotter</TITLE></HEAD><BODY><FORM name="myForm"><table>'&
-    format(FIELD_FMT,'Function:','f',f_)&
-    format(FIELD_FMT,'x0:','x0',x0_)&
-    format(FIELD_FMT,'x1:','x1',x1_)&
-    format(FIELD_FMT,'samples:','samples',sp_)&
+    format(FIELD_FMT,'Function','f',f_)&
+    format(FIELD_FMT,'x0','x0',x0_)&
+    format(FIELD_FMT,'x1','x1',x1_)&
+    format(FIELD_FMT,'samples','samples',sp_)&
     '</table></FORM>';
 
   local imageCode:='';
@@ -64,7 +64,7 @@ pageSet(rawParameters,parameters)->begin
 end;
 
 main->begin
-  startHttpServer('localhost:43210',{pageSet($0,$3)[$1] orElse httpError},0);
+  startHttpServer('localhost:43210',{pageSet($2,$3)[$1] orElse httpError},0);
   openUrl('http://localhost:43210/page.html');
   ask('Press o.k. to shutdown server.',['o.k.']);
 end;

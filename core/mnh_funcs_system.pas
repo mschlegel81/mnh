@@ -232,10 +232,11 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     CONST
       READ_BYTES = 2048;
     VAR
-      stdErrDummy:array[0..READ_BYTES-1] of byte;
+      stdErrDummy:array[0..READ_BYTES-1] of char;
       memStream: TMemoryStream;
       tempProcess: TProcessUTF8;
-      n: longint;
+      nStdOut,i: longint;
+      nStdErr:longint=0;
       BytesRead: longint;
       sleepTime: longint = 1;
     begin
@@ -243,27 +244,27 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       BytesRead := 0;
       tempProcess := TProcessUTF8.create(nil);
       tempProcess.executable := executable;
-      for n := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[n]);
-      if includeStdErr then tempProcess.options := [poUsePipes, poStderrToOutPut]
-                       else tempProcess.options := [poUsePipes];
-      tempProcess.ShowWindow := swoHIDE;
+      for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
+      if includeStdErr then tempProcess.options := [poNoConsole, poUsePipes, poStderrToOutPut]
+                       else tempProcess.options := [poNoConsole, poUsePipes];
       try
         tempProcess.execute;
         tempProcess.CloseInput;
         while tempProcess.running and context.adapters^.noErrors do begin
           memStream.SetSize(BytesRead+READ_BYTES);
-          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
-          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
-          if n>0 then begin sleepTime:=1; inc(BytesRead, n); end
-                 else begin inc(sleepTime); sleep(sleepTime); end;
+          if not(includeStdErr) then nStdErr:=tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
+          nStdOut :=                          tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
+          if (nStdOut>0) then begin sleepTime:=1; inc(BytesRead, nStdOut); end
+                         else begin inc(sleepTime); sleep(sleepTime); end;
         end;
         if tempProcess.running then tempProcess.Terminate(999);
         repeat
           memStream.SetSize(BytesRead+READ_BYTES);
-          if not(includeStdErr) then tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
-          n := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
-          if n>0 then inc(BytesRead, n);
-        until n<=0;
+          if not(includeStdErr) then nStdErr:=tempProcess.stdErr.read(stdErrDummy,READ_BYTES);
+          nStdOut := tempProcess.output.read((memStream.memory+BytesRead)^, READ_BYTES);
+          if (nStdOut>0) then begin sleepTime:=1; inc(BytesRead, nStdOut); end
+                         else begin inc(sleepTime); sleep(sleepTime); end;
+        until (nStdErr<=0) and (nStdOut<=0);
         result := (tempProcess.exitStatus = 0);
       except
         result := false;
