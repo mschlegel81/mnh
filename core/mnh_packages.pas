@@ -898,6 +898,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
       wroteBack:boolean=false;
       i:longint;
   begin
+    adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       if ruleList[i]^.writeBack(codeProvider,adapters,@self) then wroteBack:=true;
