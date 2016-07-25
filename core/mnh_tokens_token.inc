@@ -169,10 +169,17 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
 
   FUNCTION leadingId:ansistring;
     VAR i:longint;
+        tt:T_tokenType;
+        match:boolean;
     begin
       i:=lineLocation.column;
       while (i<length(line)) and (line[i+1] in ['a'..'z','A'..'Z','0'..'9','_']) do inc(i);
       parsedLength:=i-lineLocation.column+1;
+      for tt:=low(T_tokenType) to high(T_tokenType) do if length(C_tokenInfo[tt].defaultId)=parsedLength then begin
+        match:=true;
+        for i:=0 to parsedLength-1 do match:=match and (line[lineLocation.column+i]=C_tokenInfo[tt].defaultId[i+1]);
+        if match then exit(C_tokenInfo[tt].defaultId);
+      end;
       result:=copy(line,lineLocation.column,parsedLength);
     end;
 
@@ -274,9 +281,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         result.txt:=leadingId;
         result.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do
-        if result.txt=C_tokenInfo[tt].defaultId then begin
-          result.tokType:=tt;
-        end;
+        if result.txt=C_tokenInfo[tt].defaultId then result.tokType:=tt;
         if result.tokType=tt_identifier then begin
           if      result.txt=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
           else if result.txt=C_boolText[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end

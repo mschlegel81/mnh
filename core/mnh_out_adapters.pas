@@ -113,6 +113,7 @@ TYPE
       PROCEDURE ClearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
+      PROCEDURE updateErrorlevel;
       {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
       PROCEDURE logEndOfEvaluation;
@@ -498,6 +499,16 @@ FUNCTION T_adapters.noErrors: boolean;
     {$ifdef fullVersion}
     and not(hasNeedGUIerror)
     {$endif};
+  end;
+
+PROCEDURE T_adapters.updateErrorlevel;
+  VAR mt:T_messageType;
+  begin
+    minErrorLevel:=0;
+    for mt:=low(T_messageType) to high(T_messageType) do
+    if (mt<>mt_el5_haltMessageQuiet) and
+       (hasMessageOfType[mt]) and
+       (C_errorLevelForMessageType[mt]>minErrorLevel) then minErrorLevel:=C_errorLevelForMessageType[mt];
   end;
 
 {$ifdef fullVersion}
