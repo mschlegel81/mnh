@@ -504,11 +504,11 @@ FUNCTION T_adapters.noErrors: boolean;
 PROCEDURE T_adapters.updateErrorlevel;
   VAR mt:T_messageType;
   begin
-    minErrorLevel:=0;
+    maxErrorLevel:=0;
     for mt:=low(T_messageType) to high(T_messageType) do
     if (mt<>mt_el5_haltMessageQuiet) and
        (hasMessageOfType[mt]) and
-       (C_errorLevelForMessageType[mt]>minErrorLevel) then minErrorLevel:=C_errorLevelForMessageType[mt];
+       (C_errorLevelForMessageType[mt]>maxErrorLevel) then maxErrorLevel:=C_errorLevelForMessageType[mt];
   end;
 
 {$ifdef fullVersion}
