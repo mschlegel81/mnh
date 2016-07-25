@@ -46,7 +46,12 @@ CONSTRUCTOR T_tokenArray.create;
   end;
 
 DESTRUCTOR T_tokenArray.destroy;
+  VAR k:longint;
   begin
+    for k:=0 to length(t)-1 do begin
+      t[k].tokType:=tt_EOL;
+      t[k].destroy;
+    end;
     setLength(t,0);
     i:=-1;
   end;
