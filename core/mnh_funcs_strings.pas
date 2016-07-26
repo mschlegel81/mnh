@@ -661,6 +661,18 @@ FUNCTION base95decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base95Decode(str0^.value));
   end;
 
+FUNCTION formatTabs_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR arr:T_arrayOfString;
+      i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      arr:=formatTabs(split(str0^.value));
+      result:=newListLiteral;
+      for i:=0 to length(arr)-1 do P_listLiteral(result)^.appendString(arr[i]);
+      setLength(arr,0);
+    end;
+  end;
 
 INITIALIZATION
   //Functions on Strings:
@@ -703,4 +715,5 @@ INITIALIZATION
   registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
   registerRule(STRINGS_NAMESPACE,'base95encode',@base95encode_impl,'base95encode(S:string);#Returns a base95 encoded string');
   registerRule(STRINGS_NAMESPACE,'base95decode',@base95decode_impl,'base95decode(S:string);#Returns a string, decoded from a base95 encoded string');
+  registerRule(STRINGS_NAMESPACE,'formatTabs',@formatTabs_impl,'formatTabs(S:string);#Applies tab formatting as on print');
 end.
