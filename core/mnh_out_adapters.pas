@@ -285,10 +285,10 @@ PROCEDURE T_textFileOutAdapter.flush;
         lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
       end;
       close(handle);
-    finally
-      clearMessages;
-      lastFileFlushTime:=now;
+    except
     end;
+    clearMessages;
+    lastFileFlushTime:=now;
   end;
 
 FUNCTION T_adapters.getEchoInput: boolean;
