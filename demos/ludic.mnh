@@ -25,7 +25,7 @@ end;
 
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->begin
-  local LUDICS:=ludics_by_size(2005).unique;
+  local LUDICS:=ludics_by_size(2005);
   local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6);
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',
