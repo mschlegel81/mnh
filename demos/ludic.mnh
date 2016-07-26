@@ -16,13 +16,6 @@ ludics_by_size(resultSize)->begin
   head(result,resultSize);
 end;
 
-ludics_by_max(maxValue)->begin
-  local genIndex:=1;
-  local result:=ludics_gen(genIndex);
-  while(result.max<maxValue,result:=ludics_gen(genIndex+=1));
-  result[result<=maxValue];
-end;
-
 //*See <a href="http://rosettacode.org/wiki/Ludic_numbers">http://rosettacode.org/wiki/Ludic_numbers</a>
 main->begin
   local LUDICS:=ludics_by_size(2005);
