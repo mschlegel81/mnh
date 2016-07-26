@@ -34,7 +34,7 @@ T_TokenStack=object
   PROCEDURE push(VAR first:P_token);
   PROCEDURE quietPush(CONST first:P_token);
   PROCEDURE quietPop;
-  FUNCTION toString(CONST first:P_token; CONST tokenLimit:longint=maxLongint):ansistring;
+  FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
 end;
 
 {$endif}
@@ -1438,17 +1438,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               getEnumName(TypeInfo(cTokType[ 2]),ord(cTokType[ 2]));
     end;
 
-  PROCEDURE currentStateMessage();
-    VAR stepMessage:T_storedMessage;
-    begin
-      with stepMessage do begin
-        messageType:=mt_el3_stackTrace;
-        simpleMessage:=stack.toString(first,16);
-        location:=first^.location;
-      end;
-      context.adapters^.raiseCustomMessage(stepMessage);
-    end;
-
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_listBraceOpen: begin
@@ -1507,7 +1496,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     repeat
       didSubstitution:=false;
       initTokTypes;
-      //writeln(tokensToString(first,10));      writeln(tokenContextString);
+      //writeln(tokensToString(first,50));      writeln(tokenContextString);
       {$ifdef fullVersion}
       if currentlyDebugging then stepper.stepping(first^.location,first,@context,@stack);
       {$endif}
@@ -1808,7 +1797,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
         if first=nil then while (stack.topIndex>=0) do stack.popLink(first);
         context.adapters^.raiseError('Cannot reduce expression.',first^.location);
-        context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,maxLongint),first^.location);
+        context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,50),first^.location);
         context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
       end;
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
@@ -1817,7 +1806,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-      currentStateMessage();
+      context.adapters^.raiseCustomMessage(mt_el3_stackTrace,stack.toString(first,50),first^.location);
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}
@@ -1872,26 +1861,23 @@ PROCEDURE T_TokenStack.quietPop;
     dec(topIndex);
   end;
 
-FUNCTION T_TokenStack.toString(CONST first: P_token; CONST tokenLimit: longint): ansistring;
+FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint): ansistring;
   VAR i0,i:longint;
       prevWasIdLike:boolean=false;
-      p:P_token;
   begin
     if topIndex>=0 then begin
-      i0:=topIndex-tokenLimit;
-      if i0<0 then i0:=0;
-      if i0>0 then result:='... ' else result:='';
+      i0:=topIndex;
+      result:='';
+      while (i0>0) and (length(result)<lengthLimit) do begin
+        result:=dat[i0]^.toString(prevWasIdLike,prevWasIdLike,lengthLimit-length(result))+result;
+        dec(i0);
+      end;
+      if i0>0 then result:='... '
+              else result:='';
+      prevWasIdLike:=false;
       for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
-    end;
-    result:=result+' # ';
-    prevWasIdLike:=false;
-    i:=0; p:=first;
-    while (p<>nil) and (i<tokenLimit) do begin
-      result:=result+p^.toString(prevWasIdLike,prevWasIdLike);
-      p:=p^.next;
-      inc(i);
-    end;
-    if (p<>nil) then result:=result+' ...';
+    end else result:='';
+    result:=result+' # '+tokensToString(first,lengthLimit);
   end;
 
 {$endif}

@@ -19,7 +19,7 @@ TYPE
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
-    FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean):ansistring;
+    FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
     FUNCTION singleTokenToString:ansistring;
     FUNCTION areBracketsPlausible(VAR adaptersForComplaints:T_adapters):boolean;
     FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
@@ -39,17 +39,19 @@ IMPLEMENTATION
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
   VAR p:P_token;
       idLike,prevIdLike:boolean;
-      count:longint=0;
+      remainingLength:longint;
   begin
     prevIdLike:=false;
     result:='';
+    remainingLength:=limit;
     p:=first;
-    while (p<>nil) and (count<limit) do begin
-      result:=result+p^.toString(prevIdLike,idLike);
+    while (p<>nil) and (remainingLength>0) do begin
+      result:=result+p^.toString(prevIdLike,idLike,remainingLength);
+      remainingLength:=limit-length(result);
       prevIdLike:=idLike;
       p:=p^.next;
     end;
-    if p<>nil then result:=result+' ...';
+    if (p<>nil) or (remainingLength<=0) then result:=result+' ...';
   end;
 
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
@@ -119,7 +121,7 @@ FUNCTION T_token.last: P_token;
     while result^.next<>nil do result:=result^.next;
   end;
 
-FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): ansistring;
+FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CONST limit:longint=maxLongint): ansistring;
   begin
     idLike:=false;
     case tokType of
@@ -127,13 +129,13 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean): an
         result:=C_tokenInfo[tokType].defaultId;
         if txt<>'' then result:=result+'('+txt+','
                    else result:=C_tokenInfo[tt_agg].defaultId+'(';
-        if data<>nil then result:=result+P_literal(data)^.toString+',';
+        if data<>nil then result:=result+P_literal(data)^.toString(limit-6)+',';
       end;
       tt_aggregatorExpressionLiteral,
-      tt_literal            : result:=P_literal(data)^.toString;
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false);
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true);
-      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString;
+      tt_literal            : result:=P_literal    (data)^.toString(limit);
+      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false,limit);
+      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true ,limit);
+      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginFunc:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endFunc  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';

@@ -134,7 +134,7 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
           loc.line:=0;
         end;
         context.adapters^.raiseError('Cannot evaluate future task. Make sure the function can be resolved without errors, returning only a literal.',loc);
-        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task),loc);
+        context.adapters^.raiseError('The resulting expression is: '+tokensToString(task,50),loc);
       end;
     end else result:=newErrorLiteral;
     context.cascadeDisposeToken(task);
