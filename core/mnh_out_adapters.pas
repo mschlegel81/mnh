@@ -625,13 +625,8 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
 
 PROCEDURE T_adapters.setExitCode;
   CONST MAX_IGNORED_LEVEL=2;
-  VAR mt:T_messageType;
-      code:longint;
   begin
-    code:=MAX_IGNORED_LEVEL;
-    for mt:=low(T_messageType) to high(T_messageType) do
-    if hasMessageOfType[mt] and (C_errorLevelForMessageType[mt]>code) then code:=C_errorLevelForMessageType[mt];
-    if code>MAX_IGNORED_LEVEL then ExitCode:=code;
+    if maxErrorLevel>MAX_IGNORED_LEVEL then ExitCode:=maxErrorLevel;
   end;
 
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ:T_adapterType);
