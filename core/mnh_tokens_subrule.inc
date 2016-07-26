@@ -34,7 +34,7 @@
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
       FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
-      FUNCTION toString(CONST includePattern:boolean=true):ansistring;
+      FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
@@ -556,14 +556,16 @@ FUNCTION subruleApplyFuncImpl(CONST original:P_expressionLiteral; CONST intrinsi
     result:=newExpressionLiteral(newRule);
   end;
 
-FUNCTION T_subrule.toString(CONST includePattern:boolean=true):ansistring;
-  VAR i:longint;
+FUNCTION T_subrule.toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
+  VAR i,remainingLength:longint;
       prevIdLike,idLike:boolean;
   begin
     prevIdLike:=false;
     result:='';
+    remainingLength:=lengthLimit;
     for i:=0 to length(preparedBody)-1 do begin
-      result:=result+preparedBody[i].token.toString(prevIdLike,idLike);
+      result:=result+preparedBody[i].token.toString(prevIdLike,idLike,remainingLength);
+      remainingLength:=lengthLimit-length(result);
       prevIdLike:=idLike;
     end;
     if not(includePattern) then exit(result);
@@ -572,9 +574,9 @@ FUNCTION T_subrule.toString(CONST includePattern:boolean=true):ansistring;
     else result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
-FUNCTION subruleToStringImpl(CONST p:pointer):string;
+FUNCTION subruleToStringImpl(CONST p:pointer; CONST lengthLimit:longint):string;
   begin
-    result:=P_subrule(p)^.toString;
+    result:=P_subrule(p)^.toString(true,lengthLimit);
   end;
 
 FUNCTION subruleToArityImpl(CONST p:pointer):longint;
@@ -598,7 +600,7 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
         then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt)
         else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
         context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
-        context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,maxLongint),declaredAt);
+        context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,50),declaredAt);
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin

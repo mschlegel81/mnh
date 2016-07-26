@@ -1,0 +1,41 @@
+private avg([])->Nan;
+private avg(L:numericList)->L.agg(+)/L.size;
+private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
+private median([])->Nan;
+private median(L:numericList)->L[L.size div 2];
+
+histogram(L:numericList)->begin
+  local x0:=L.min;
+  local x1:=L.max;
+  local binWidth:=(x1-x0)/20;
+  ([0..19]*binWidth+x0).each(bin,
+    [bin,L[bin<=L<bin+binWidth].size/L.size]);
+end;
+
+main(inputFile:string)->print('Testcases:') orElse printf('  %s',fileContents(inputFile).deserialize.getInner(0).unique);
+main(inputFile:string,testCase:string)->begin
+  local debugSamples:=[];
+  local optSamples:=[];
+  fileContents(inputFile).deserialize
+  .{$L[$L.getInner(0)=testCase]}
+  .each(sample,sample[1].matches('debug')
+               ? debugSamples|=[sample[[2,1]]]
+               : optSamples  |=[sample[[2,1]]]);
+  debugSamples:=debugSamples.sort;
+  optSamples:=optSamples.sort;
+
+  print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
+
+  print('Optimized sample details (ordered by time):');
+  optSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
+  print('Debug sample details (ordered by time):');
+  debugSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
+
+  print("\tmedian\taverage\tstandard deviation",
+        ([['optimized',optSamples.getInner(0)]]|
+         (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
+         [['debug',debugSamples.getInner(0)]]|
+         (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
+         .each(set,"\n"&set[0]&"\t"&set[1].median&"\t"&set[1].avg&"\t"&set[1].sigma,&));
+
+end;

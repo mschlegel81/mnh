@@ -100,6 +100,7 @@ private printExecute(code:stringList)->begin
 end;
 
 private executeExamples(examplesFile:string)->begin
+  print('***** examples from file *****');
   local codeToExecute:=[];
   print('Examples file has ',fileLines(examplesFile).size,' lines');
   fileLines(examplesFile).each(line,
@@ -186,6 +187,7 @@ main(examplesFile:string,'retest')->main(examplesFile,true);
 datastore runTimes;
 
 private executeMainCall(import:string,...)->begin
+  print('***** ',import,' *****');
   local t0:=time;
   toId(import&'.main')@...;
   local dt:=time-t0;
