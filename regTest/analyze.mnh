@@ -1,8 +1,8 @@
 private avg([])->Nan;
 private avg(L:numericList)->L.agg(+)/L.size;
 private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
-private median([])->Nan;
-private median(L:numericList)->L[L.size div 2];
+private quartiles([])->[Nan,Nan,Nan];
+private quartiles(L:numericList)->L[(L.size div 4)*[1..3]];
 
 histogram(L:numericList)->begin
   local x0:=L.min;
@@ -31,11 +31,11 @@ main(inputFile:string,testCase:string)->begin
   print('Debug sample details (ordered by time):');
   debugSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
 
-  print("\tmedian\taverage\tstandard deviation",
+  print("\t25%ile\t50%ile\t75%ile\taverage\tstd. dev",
         ([['optimized',optSamples.getInner(0)]]|
          (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
          [['debug',debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
-         .each(set,"\n"&set[0]&"\t"&set[1].median&"\t"&set[1].avg&"\t"&set[1].sigma,&));
+         .each(set,"\n"&set[0]&"\t"&set[1].quartiles.round(6).join("\t")&"\t"&set[1].avg.round(6)&"\t"&set[1].sigma.round(6),&));
 
 end;
