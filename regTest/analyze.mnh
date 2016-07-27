@@ -2,17 +2,75 @@ private avg([])->Nan;
 private avg(L:numericList)->L.agg(+)/L.size;
 private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
 private quartiles([])->[Nan,Nan,Nan];
-private quartiles(L:numericList)->L[(L.size div 4)*[1..3]];
+private quartiles(L:numericList)->L[(L.size*[1..3] div 4)];
 
-histogram(L:numericList)->begin
-  local x0:=L.min;
-  local x1:=L.max;
-  local binWidth:=(x1-x0)/20;
-  ([0..19]*binWidth+x0).each(bin,
-    [bin,L[bin<=L<bin+binWidth].size/L.size]);
+private doAnalysis(rt:list)->begin
+  {isGuiActive ? showTable($L,'Test times') : $L.each(line,line.join("\t")).join("\n").print}(
+  [['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios'],
+   ['','|','','','','','|','','','','','|']]|
+  rt.getInner(0).unique.each(testCase,
+    begin
+      local debugSamples:=rt[rt.getInner(0)=testCase];
+      local optSamples  :=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
+            debugSamples:=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? sample[2] : void).sort;
+      [testCase,'|',
+       optSamples.size,
+       optSamples[[1,2,3]*(optSamples.size div 4)].round(4),'|',
+       debugSamples.size,
+       debugSamples[[1,2,3]*(debugSamples.size div 4)].round(4),'|',
+       round(debugSamples[[1,2,3]*(debugSamples.size div 4)]/optSamples[[1,2,3]*(optSamples.size div 4)],2)].flatten;
+    end)
+  );
+
+  [true,false].each(debugVersions,begin
+    local filteredTests:=rt.each(t,t[1].matches('^[F|L]D')=debugVersions ? t : void);
+    print("=====================================================================\n",
+          " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
+          "=====================================================================\n");
+    local tests  :=filteredTests.getInner(0).unique;
+    local flavors:=filteredTests.getInner(1).unique;
+    local average:={$X.agg(+)/$X.size};
+    local relativeSigma:={begin
+      local avg:=average($X);
+      local variance:=average(($X-avg)^2);
+      sqrt(variance)/avg;
+    end};
+    local testsWithTime:=tests.each(t,[t,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).average,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).relativeSigma]).sort(1);
+    local totalTime:=testsWithTime.getInner(1).agg(+);
+    print("Fast tests: ");
+    print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
+    print("Slow tests: ");
+    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
+    local testsWithTime:=testsWithTime.sort(2);
+    print("Tests with big relative variance: ");
+    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    local testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
+    print("Tests with big absolute variance: ");
+    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    totalTime:=filteredTests.getInner(2).agg(+);
+
+    local medianTimes:=filteredTests
+                       .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
+                       .each(entry,entry[[0,1]]|(entry[2]:list ? entry[2].sort[entry[2].size div 2] : entry[2])) //median time per test case
+                       .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
+                       .getInner([1,2]); //drop case
+    totalTime:=medianTimes.getInner(1).agg(+);
+    print('Median test time by flavour: ');
+    print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\n",&));
+  end);
+
 end;
 
-main(inputFile:string)->print('Testcases:') orElse printf('  %s',fileContents(inputFile).deserialize.getInner(0).unique);
+main(inputFile:string)->doAnalysis(fileContents(inputFile).deserialize);
+bar(factor,q)->begin
+  local a:=round(factor*q[0]);
+  local b:=round(factor*q[1]);
+  local c:=round(factor*q[2]);
+  (a<b ? repeat('-',a-1)&'<' : '')&
+         repeat('-',b-a-1)&'|'&
+  (b<c ? repeat('-',c-b-1)&'>' : '');
+end;
+
 main(inputFile:string,testCase:string)->begin
   local debugSamples:=[];
   local optSamples:=[];
@@ -31,11 +89,14 @@ main(inputFile:string,testCase:string)->begin
   print('Debug sample details (ordered by time):');
   debugSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
 
-  print("\t25%ile\t50%ile\t75%ile\taverage\tstd. dev",
+  local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
         ([['optimized',optSamples.getInner(0)]]|
          (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
          [['debug',debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
-         .each(set,"\n"&set[0]&"\t"&set[1].quartiles.round(6).join("\t")&"\t"&set[1].avg.round(6)&"\t"&set[1].sigma.round(6),&));
-
+         .each(set,[set[0],set[1].quartiles.round(6),set[1].avg.round(6),set[1].sigma.round(6)].flatten);
+  isGuiActive ? table.showTable : void;
+  local star:=40/table.getInner(3).tail.max;
+  table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
+  table.each(line,line.join("\t")).join("\n").print;
 end;
