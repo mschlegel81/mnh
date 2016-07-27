@@ -1,4 +1,4 @@
-USE testLog,
+USE testLog,mnhInfo,
     '../demos/24.mnh',
     '../demos/diff.mnh',
     '../demos/100doors.mnh',
@@ -109,7 +109,7 @@ private executeExamples(examplesFile:string)->begin
       codeToExecute:=[];
     end : codeToExecute|=line);
   printExecute(codeToExecute);
-end;;
+end;
 
 private doAnalysis(rt:list)->begin
   {isGuiActive ? showTable($L,'Test times') : $L.each(line,line.join("\t")).join("\n").print}(
@@ -191,7 +191,8 @@ private executeMainCall(import:string,...)->begin
   local t0:=time;
   toId(import&'.main')@...;
   local dt:=time-t0;
-  runTimes|=[[import,flavourString,dt]];
+  runTimes|=[[import,flavour(executor),dt]];
+  void;
 end;
 
 main(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
@@ -200,7 +201,7 @@ begin
   collectOutput;
   executeMainCall('24','demo');
   executeMainCall('diff','test');
-  inspect['uses'].getInner(0).leading(plotDemoCount).tail(3).each(import,executeMainCall(import));
+  inspect['uses'].getInner(0).leading(plotDemoCount).tail(4).each(import,executeMainCall(import));
   canPlot
   ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,'../demos/'&import&'.png'))
   : void;

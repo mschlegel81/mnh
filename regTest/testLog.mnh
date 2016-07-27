@@ -1,19 +1,10 @@
-startOfEvaluation:=time;
+USE mnhInfo;
 
-private memoized canPlot(exe)->exe.exec(['-cmd','-echo','-time','-el5',"print('plot.plot' in listBuiltin)"],false).head=='true';
-canPlot:='plot.plot' in listBuiltin;
+startOfEvaluation:=time;
 
 private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]};
 
-private codeHash(exe)->exec(exe,['-codeHash'],false).head;
-private codeHash:=executor.codeHash;
-
-private memoized isDebug(exe)->exe.exec(['-version'],false).head.matches('debug');
-
-private memoized flavourString(exe)->exe.exec(['-version'],false).head.split(' ').trailing(2).reverseList.join('_')&(canPlot(exe) ? '' : '_light')&(isDebug(exe) ? '_debug' : '');
-flavourString:=executor.flavourString;
-
-private memoized logName(exe)->myPath.replace('.mnh','.'&flavourString(exe)&'.txt');
+private memoized logName(exe)->myPath.replace('.mnh','.'&flavour(exe)&'.txt');
 private logName:=executor.logName;
 
 testAlreadyPassed(exe)->logName(exe).fileExists AND ((codeHash(exe)&' '&'o.k.') in logName(exe).fileLines);
@@ -28,14 +19,14 @@ timeForTest(exe)->(logName(exe).fileExists ? begin
 end : void);
 
 linuxTestsPassed->
-  [[myPath.replace('.mnh','.Linux_x86_64.txt')      ,'FOLinux'],
-   [myPath.replace('.mnh','.Linux_x86_64_light.txt'),'LOLinux']]
-  .each(log,log[0].fileExists AND (((log[1])&':'&(codeHash.split(':')[1]) &' '&'o.k.') in log[0].fileLines),AND);
+  [[myPath.replace('.mnh','.FOLinux.txt'),'FOLinux'],
+   [myPath.replace('.mnh','.LOLinux.txt'),'LOLinux']]
+  .each(log,log[0].fileExists AND (((log[1])&':'&executor.codeVersion &' '&'o.k.') in log[0].fileLines),AND);
 
 validateCollectedOutput->begin
   local printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten.pEach(line,line.replace(mnhRoot,''));
-  local expectedResultName:=myPath.replace('.mnh','.'&flavourString&'.expected');
-  local lastResultName    :=myPath.replace('.mnh','.'&flavourString&'.last');
+  local expectedResultName:=myPath.replace('.mnh','.'&flavour&'.expected');
+  local lastResultName    :=myPath.replace('.mnh','.'&flavour&'.last');
   local stateMessage:='';
   clearPrint;
   collectOutput;
