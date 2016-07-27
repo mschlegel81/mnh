@@ -117,8 +117,8 @@ private doAnalysis(rt:list)->begin
   rt.getInner(0).unique.each(testCase,
     begin
       local debugSamples:=rt[rt.getInner(0)=testCase];
-      local optSamples  :=debugSamples.each(sample,sample[1].matches('debug') ? void : sample[2]).sort;
-            debugSamples:=debugSamples.each(sample,sample[1].matches('debug') ? sample[2] : void).sort;
+      local optSamples  :=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
+            debugSamples:=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? sample[2] : void).sort;
       [testCase,
        optSamples.size,
        optSamples[[1,2,3]*(optSamples.size div 4)].round(4),
@@ -129,7 +129,7 @@ private doAnalysis(rt:list)->begin
   );
 
   [true,false].each(debugVersions,begin
-    local filteredTests:=rt.each(t,t[1].matches('debug')=debugVersions ? t : void);
+    local filteredTests:=rt.each(t,t[1].matches('^[F|L]D')=debugVersions ? t : void);
     print("=====================================================================\n",
           " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
           "=====================================================================\n");

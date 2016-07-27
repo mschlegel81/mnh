@@ -18,7 +18,7 @@ main(inputFile:string,testCase:string)->begin
   local optSamples:=[];
   fileContents(inputFile).deserialize
   .{$L[$L.getInner(0)=testCase]}
-  .each(sample,sample[1].matches('debug')
+  .each(sample,sample[1].matches('^[F|L]D')
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
   debugSamples:=debugSamples.sort;
