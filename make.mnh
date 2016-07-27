@@ -1,5 +1,5 @@
-USE hash,testLog;
-private isLinux:=executor.exec(['-codeHash'],false).head.matches('[L|l]inux');
+USE hash,testLog,mnhInfo;
+
 private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(
        ['gui\lib\i386-win32',
         'gui\lib\x86_64-linux',
@@ -72,10 +72,9 @@ binName(FI:int)->format('%smnh%s%s%s',
 
 private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
-  fileExists(exeName) ? begin
-    local fullCodeHash:=split(head(exec(exeName,["-codeHash"],false)),':');
-    size(fullCodeHash)!=2 OR (fullCodeHash[1] != (currentCodeHash orElse updateCurrentCodeHash));
-  end : true;
+  fileExists(exeName)
+  ? exeName.codeVersion != (currentCodeHash orElse updateCurrentCodeHash)
+  : true;
 end;
 
 private deleteStubbornly(file:string)->begin
