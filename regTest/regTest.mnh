@@ -111,66 +111,6 @@ private executeExamples(examplesFile:string)->begin
   printExecute(codeToExecute);
 end;
 
-private doAnalysis(rt:list)->begin
-  {isGuiActive ? showTable($L,'Test times') : $L.each(line,line.join("\t")).join("\n").print}(
-  [['Test','o.s.','25%ile','opt.median','75%ile','d.s.','25%ile','deb.median','75%ile','ratio']]|
-  rt.getInner(0).unique.each(testCase,
-    begin
-      local debugSamples:=rt[rt.getInner(0)=testCase];
-      local optSamples  :=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? void : sample[2]).sort;
-            debugSamples:=debugSamples.each(sample,sample[1].matches('^[F|L]D') ? sample[2] : void).sort;
-      [testCase,
-       optSamples.size,
-       optSamples[[1,2,3]*(optSamples.size div 4)].round(4),
-       debugSamples.size,
-       debugSamples[[1,2,3]*(debugSamples.size div 4)].round(4),
-       round(debugSamples[debugSamples.size div 2]/optSamples[optSamples.size div 2],2)].flatten;
-    end)
-  );
-
-  [true,false].each(debugVersions,begin
-    local filteredTests:=rt.each(t,t[1].matches('^[F|L]D')=debugVersions ? t : void);
-    print("=====================================================================\n",
-          " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
-          "=====================================================================\n");
-    local tests  :=filteredTests.getInner(0).unique;
-    local flavors:=filteredTests.getInner(1).unique;
-    local average:={$X.agg(+)/$X.size};
-    local relativeSigma:={begin
-      local avg:=average($X);
-      local variance:=average(($X-avg)^2);
-      sqrt(variance)/avg;
-    end};
-    local testsWithTime:=tests.each(t,[t,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).average,filteredTests.get(filteredTests.getInner(0)=t).getInner(2).relativeSigma]).sort(1);
-    local totalTime:=testsWithTime.getInner(1).agg(+);
-    print("Fast tests: ");
-    print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
-    print("Slow tests: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
-    local testsWithTime:=testsWithTime.sort(2);
-    print("Tests with big relative variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
-    local testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
-    print("Tests with big absolute variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
-    totalTime:=filteredTests.getInner(2).agg(+);
-
-    local medianTimes:=filteredTests
-                       .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
-                       .each(entry,entry[[0,1]]|(entry[2]:list ? entry[2].sort[entry[2].size div 2] : entry[2])) //median time per test case
-                       .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
-                       .getInner([1,2]); //drop case
-    totalTime:=medianTimes.getInner(1).agg(+);
-    print('Median test time by flavour: ');
-    print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\n",&));
-  end);
-end;
-
-//*Analyze stored run times
-main('analyze')->doAnalysis(runTimes);
-//*Analyze stored run times
-main('analyze',inputFile)->doAnalysis(fileContents(inputFile).deserialize);
-
 //*Export datastore
 main('export',filename:string)->writeFile(filename,runTimes.serialize(2));
 

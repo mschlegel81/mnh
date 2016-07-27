@@ -13,7 +13,7 @@ VAR consoleAdapters:T_adapters;
     mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
-    fileToOpenInEditor:ansistring='';
+    filesToOpenInEditor:T_arrayOfString;
     {$endif}
 IMPLEMENTATION
 //by command line parameters:---------------
@@ -87,10 +87,11 @@ PROCEDURE parseCmdLine;
       consoleAdapters.printOut('  -cmd              directly execute the following command');
       {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
-      consoleAdapters.printOut('  -edit <filename>  opens file in editor instead of interpreting it directly');
+      consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
       consoleAdapters.printOut('  -out <filename>   write output to the given file; if the extension is .html, ');
       consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
+      consoleAdapters.printOut('  +out <filename>   As -out but appending to the file if existing.');
       consoleAdapters.printOut('  -quiet            disable console output');
     end;
 
@@ -155,12 +156,18 @@ PROCEDURE parseCmdLine;
         else if paramStr(i)='-time' then begin time:=t_forcedOff;          addParameter(mnhParameters,i); end
         else if paramStr(i)='-cmd'  then begin directExecutionMode:=true;  addParameter(mnhParameters,i); end
         {$ifdef fullVersion}
-        else if (paramStr(i)='-edit') and (i<paramCount) then begin
+        else if (paramStr(i)='-edit') then while i<paramCount do begin
           inc(i);
-          fileToOpenInEditor:=paramStr(i);
+          append(filesToOpenInEditor,paramStr(i));
         end
         {$endif}
         else if (paramStr(i)='-out') and (i<paramCount) then begin
+          addParameter(mnhParameters,i);
+          inc(i);
+          addOutfile(consoleAdapters, paramStr(i),false);
+          addParameter(mnhParameters,i);
+        end
+        else if (paramStr(i)='+out') and (i<paramCount) then begin
           addParameter(mnhParameters,i);
           inc(i);
           addOutfile(consoleAdapters, paramStr(i));
@@ -211,11 +218,12 @@ PROCEDURE parseCmdLine;
       displayHelp;
       quitImmediate:=true;
     end;
-    {$ifdef fullVersion}quitImmediate:=quitImmediate and (fileToOpenInEditor='');{$endif}
+    {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0);{$endif}
     if quitImmediate then halt;
   end;
 
 INITIALIZATION
+  {$ifdef fullVersion}filesToOpenInEditor:=C_EMPTY_STRING_ARRAY;{$endif}
   consoleAdapters.create;
 
 FINALIZATION
