@@ -369,14 +369,17 @@ FUNCTION T_rule.inspect:P_listLiteral;
 
   FUNCTION subrulesList:P_listLiteral;
     VAR i:longint;
+        value:P_literal;
     begin
       if ruleType in C_mutableRuleTypes then begin
+        value:=namedValue.getValue;
         result:=newListLiteral^.append(newListLiteral^
           .append(newListLiteral^.appendString('pattern')^.appendString('()'),false)^
           .append(newListLiteral^.appendString('location')^.appendString(declarationStart),false)^
           .append(newListLiteral^.appendString('type')^.appendString(privateOrPublic),false)^
           .append(newListLiteral^.appendString('comment')^.appendString(''),false)^
-          .append(newListLiteral^.appendString('body')^.appendString(namedValue.getValue^.toString),false),false);
+          .append(newListLiteral^.appendString('body')^.appendString(value^.toString),false),false);
+        value^.unreference;
       end else begin
         result:=newListLiteral;
         for i:=0 to length(subrules)-1 do
