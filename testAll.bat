@@ -158,10 +158,10 @@ echo. >> D:\heaptrace_per_demo.txt
 echo D:/dev/mnh5/demos/hofstadter_sequences.mnh >> D:\heaptrace_per_demo.txt
 echo. >> D:\heaptrace_per_demo.txt
 %1 -quiet D:/dev/mnh5/demos/hofstadter_sequences.mnh >> D:\heaptrace_per_demo.txt 2>&1
-echo. >> D:\heaptrace_per_demo.txt
-echo D:/dev/mnh5/demos/htmlFunctionPlotter.mnh >> D:\heaptrace_per_demo.txt
-echo. >> D:\heaptrace_per_demo.txt
-%1 D:/dev/mnh5/demos/htmlFunctionPlotter.mnh 2>> D:\heaptrace_per_demo.txt 
+@rem echo. >> D:\heaptrace_per_demo.txt
+@rem echo D:/dev/mnh5/demos/htmlFunctionPlotter.mnh >> D:\heaptrace_per_demo.txt
+@rem echo. >> D:\heaptrace_per_demo.txt
+@rem %1 D:/dev/mnh5/demos/htmlFunctionPlotter.mnh 2>> D:\heaptrace_per_demo.txt 
 echo. >> D:\heaptrace_per_demo.txt
 echo D:/dev/mnh5/demos/huffmann.mnh >> D:\heaptrace_per_demo.txt
 echo. >> D:\heaptrace_per_demo.txt
@@ -298,10 +298,10 @@ echo. >> D:\heaptrace_per_demo.txt
 echo D:/dev/mnh5/demos/task.mnh >> D:\heaptrace_per_demo.txt
 echo. >> D:\heaptrace_per_demo.txt
 %1 -quiet D:/dev/mnh5/demos/task.mnh >> D:\heaptrace_per_demo.txt 2>&1
-echo. >> D:\heaptrace_per_demo.txt
-echo D:/dev/mnh5/demos/timer.mnh >> D:\heaptrace_per_demo.txt
-echo. >> D:\heaptrace_per_demo.txt
-%1 D:/dev/mnh5/demos/timer.mnh 2>> D:\heaptrace_per_demo.txt 
+@rem echo. >> D:\heaptrace_per_demo.txt
+@rem echo D:/dev/mnh5/demos/timer.mnh >> D:\heaptrace_per_demo.txt
+@rem echo. >> D:\heaptrace_per_demo.txt
+@rem %1 D:/dev/mnh5/demos/timer.mnh 2>> D:\heaptrace_per_demo.txt 
 echo. >> D:\heaptrace_per_demo.txt
 echo D:/dev/mnh5/demos/travellingSalesmanProblem.mnh >> D:\heaptrace_per_demo.txt
 echo. >> D:\heaptrace_per_demo.txt
