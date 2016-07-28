@@ -9,7 +9,7 @@ TYPE
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
-    txt     :ansistring;
+    txt     :idString;
     tokType :T_tokenType;
     data    :pointer;
 
@@ -107,8 +107,8 @@ PROCEDURE T_token.undefine;
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
       tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then disposeLiteral(data);
-      else data:=nil;
     end;
+    data:=nil;
     tokType:=tt_EOL;
     location.package:=nil;
     location.column:=0;

@@ -8,11 +8,11 @@
       cache:P_cache;
       rule_cs:system.TRTLCriticalSection;
 
-      id:ansistring;
+      id:idString;
       subrules:array of P_subrule;
       PROCEDURE readDataStore(CONST package:P_package; CONST adapters:P_adapters);
     public
-      CONSTRUCTOR create(CONST ruleId:ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+      CONSTRUCTOR create(CONST ruleId:idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
@@ -49,7 +49,7 @@ PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapter
     stream.destroy;
   end;
 
-CONSTRUCTOR T_rule.create(CONST ruleId: ansistring; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
     used:=false;
     valueChangedAfterDeclaration:=false;

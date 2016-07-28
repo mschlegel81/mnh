@@ -229,15 +229,15 @@ TYPE
   P_namedVariable=^T_namedVariable;
   T_namedVariable=object
     private
-      id:ansistring;
+      id:idString;
       value:P_literal;
       readonly:boolean;
     public
-      CONSTRUCTOR create(CONST initialId:ansistring; CONST initialValue:P_literal; CONST isReadOnly:boolean);
+      CONSTRUCTOR create(CONST initialId:idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
       FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-      FUNCTION getId:ansistring;
+      FUNCTION getId:idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
   end;
@@ -2281,7 +2281,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation,adapters);
   end;
 
-CONSTRUCTOR T_namedVariable.create(CONST initialId:ansistring; CONST initialValue:P_literal; CONST isReadOnly:boolean);
+CONSTRUCTOR T_namedVariable.create(CONST initialId:idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
     id:=initialId;
     value:=initialValue;
@@ -2344,7 +2344,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal;
     end;
   end;
 
-FUNCTION T_namedVariable.getId:ansistring;
+FUNCTION T_namedVariable.getId:idString;
   begin
     result:=id;
   end;
