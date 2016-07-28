@@ -270,6 +270,7 @@ TYPE
 VAR MnhForm: TMnhForm;
 
 PROCEDURE lateInitialization;
+PROCEDURE doFinalization;
 PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
 IMPLEMENTATION
 VAR guiOutAdapter: T_guiOutAdapter;
@@ -1569,6 +1570,11 @@ PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
 PROCEDURE lateInitialization;
   VAR i:longint;
   begin
+    guiOutAdapter.create;
+    guiAdapters.create;
+    mnh_plotForm.guiAdapters:=@guiAdapters;
+    tempAdapter:=nil;
+
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     for i:=0 to consoleAdapters.adapterCount-1 do
       if consoleAdapters.getAdapter(i)^.adapterType in [at_textFile,at_htmlFile] then
@@ -1581,6 +1587,12 @@ PROCEDURE lateInitialization;
     mnh_evalThread.initUnit(@guiAdapters);
   end;
 
+PROCEDURE doFinalization;
+  begin
+    guiAdapters.destroy;
+    guiOutAdapter.destroy;
+  end;
+
 FUNCTION closeGUI_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=newVoidLiteral;
@@ -1589,14 +1601,7 @@ FUNCTION closeGUI_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenL
 
 INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'closeGui',@closeGUI_impl,'closeGui;#Closes the GUI even if plot window or table is showing#Returns void');
-  guiOutAdapter.create;
-  guiAdapters.create;
-  mnh_plotForm.guiAdapters:=@guiAdapters;
-  tempAdapter:=nil;
 
-FINALIZATION
-  guiAdapters.destroy;
-  guiOutAdapter.destroy;
 end.
 
 
