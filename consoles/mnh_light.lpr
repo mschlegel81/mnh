@@ -40,7 +40,6 @@ PROCEDURE interactiveMode;
   end;
 
 begin
-  parseCmdLine;
-  interactiveMode;
+  if wantMainLoopAfterParseCmdLine then interactiveMode;
 end.
 

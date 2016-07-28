@@ -3,7 +3,7 @@ INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_funcs_server{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mnh_html;
-PROCEDURE parseCmdLine;
+FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
@@ -51,7 +51,7 @@ PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
     {$endif}
   end;
 
-PROCEDURE parseCmdLine;
+FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
@@ -105,7 +105,6 @@ PROCEDURE parseCmdLine;
       dispose(package,destroy);
       context.destroy;
       consoleAdapters.setExitCode;
-      halt(ExitCode);
     end;
 
   PROCEDURE fileMode;
@@ -119,7 +118,7 @@ PROCEDURE parseCmdLine;
         package.loadForDocumentation;
         package.printHelpOnMain(consoleAdapters);
         package.destroy;
-        halt;
+        exit;
       end;
       context.createNormalContext(P_adapters(@consoleAdapters));
       package.load(lu_forCallingMain,context,mainParameters);
@@ -133,7 +132,6 @@ PROCEDURE parseCmdLine;
       {$endif}
       context.destroy;
       consoleAdapters.setExitCode;
-      halt(ExitCode);
     end;
 
   PROCEDURE addParameter(VAR list:T_arrayOfString; CONST index:longint);
@@ -190,7 +188,7 @@ PROCEDURE parseCmdLine;
             writeln('Invalid minimum error level given!');
             writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
             writeln('Allowed values: 0, 1, 2, 3, 4, 5');
-            halt;
+            exit(false);
           end;
         end else if directExecutionMode then begin
           fileOrCommandToInterpret:=fileOrCommandToInterpret+' '+paramStr(i);
@@ -199,7 +197,7 @@ PROCEDURE parseCmdLine;
             writeln('Invalid filename given!');
             writeln('Parameter: ',paramStr(i));
             writeln('File does not exist.');
-            halt;
+            exit(false);
           end;
         end;
       end else addParameter(mainParameters,i);
@@ -213,13 +211,14 @@ PROCEDURE parseCmdLine;
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect
                               else fileMode;
+       quitImmediate:=true;
     end;
     if wantHelpDisplay then begin
       displayHelp;
       quitImmediate:=true;
     end;
     {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0);{$endif}
-    if quitImmediate then halt;
+    result:=not(quitImmediate);
   end;
 
 INITIALIZATION

@@ -58,24 +58,12 @@ private doAnalysis(rt:list)->begin
     print('Median test time by flavour: ');
     print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\n",&));
   end);
-
 end;
 
-main(inputFile:string)->doAnalysis(fileContents(inputFile).deserialize);
-bar(factor,q)->begin
-  local a:=round(factor*q[0]);
-  local b:=round(factor*q[1]);
-  local c:=round(factor*q[2]);
-  (a<b ? repeat('-',a-1)&'<' : '')&
-         repeat('-',b-a-1)&'|'&
-  (b<c ? repeat('-',c-b-1)&'>' : '');
-end;
-
-main(inputFile:string,testCase:string)->begin
+private analyzeCase(data,testCase:string)->begin
   local debugSamples:=[];
   local optSamples:=[];
-  fileContents(inputFile).deserialize
-  .{$L[$L.getInner(0)=testCase]}
+  data[data.getInner(0)=testCase]
   .each(sample,sample[1].matches('^[F|L]D')
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
@@ -100,3 +88,48 @@ main(inputFile:string,testCase:string)->begin
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.join("\t")).join("\n").print;
 end;
+
+private analyzeFlavour(data,flavour:string)->begin
+  print('Analyzing flavour: ',flavour);
+  data[data.getInner(1)=flavour] //filter by flavour
+  .pEach(e,e[[0,2]]) //drop flavour info
+  .group(0,{[$x[0],$x[1]|$y[1]]}) //group by case
+  .sort
+  .pEach(case,[case[0],
+               case[1].size,
+               case[1].agg(+)/size(case[1]),
+               case[1].trailing,
+               (case[1].leading.agg(+) orElse 0)/max(1,size(case[1])-1)])
+  .{$L|['TOTAL'| $L.agg(+).tail]}
+  .pEach(case,begin
+    local lastGain:=round((case[3]/case[2]-1)*100,2);
+    lastGain:=lastGain<0 ? lastGain : '+'&lastGain;
+    format("\n%s\t%s\t%3.6d\t%3.6d\t%s\t%%",case[0],case[1],case[2],case[3],lastGain);
+   end,&)
+  .{print("\nCase\tsamples\taverage\tlast\ttrend\n",$L)};
+end;
+
+main(inputFile:string)->doAnalysis(fileContents(inputFile).deserialize);
+bar(factor,q)->begin
+  local a:=round(factor*q[0]);
+  local b:=round(factor*q[1]);
+  local c:=round(factor*q[2]);
+  (a<b ? repeat('-',a-1)&'<' : '')&
+         repeat('-',b-a-1)&'|'&
+  (b<c ? repeat('-',c-b-1)&'>' : '');
+end;
+
+main(inputFile:string,testCaseOrFlavour:string)->begin
+  local data:=fileContents(inputFile).deserialize;
+  testCaseOrFlavour in data.getInner(0)
+  ? analyzeCase(data,testCaseOrFlavour)
+  : testCaseOrFlavour in data.getInner(1)
+    ? analyzeFlavour(data,testCaseOrFlavour)
+    : begin
+        print('Input is neither test case nor flavor');
+        print('Flavours: ',data.getInner(1).join(' '));
+        print('Cases: ',data.getInner(0).join(' '));
+      end;
+end;
+
+analyzeFlavour('times'.fileContents.deserialize,'FOWin64');

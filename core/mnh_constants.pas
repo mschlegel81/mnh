@@ -4,6 +4,7 @@ USES sysutils;
 {$PACKENUM 1}
 TYPE
   T_hashInt=dword;
+  idString =ansistring;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
                STRINGS_NAMESPACE        ,

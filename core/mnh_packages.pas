@@ -51,7 +51,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:ansistring; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       {$ifdef fullVersion}
       PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
@@ -321,13 +321,13 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
     PROCEDURE parseRule;
       CONST C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER:set of T_tokenType=[tt_typeCheckExpression,tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList];
-
-      VAR partText:ansistring;
-          partLocation:T_tokenLocation;
+      VAR partLocation:T_tokenLocation;
 
       PROCEDURE fail(VAR firstOfPart:P_token);
         begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+partText,partLocation);
+          if firstOfPart=nil
+          then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element.',partLocation)
+          else context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Invalid declaration pattern element: '+tokensToString(firstOfPart,20),firstOfPart^.location);
           context.cascadeDisposeToken(firstOfPart);
         end;
 
@@ -341,7 +341,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           hasTrivialPattern:boolean=true;
           //rule meta data
           ruleModifiers:T_modifierSet=[];
-          ruleId:string='';
+          ruleId:idString='';
           evaluateBody:boolean;
           rulePattern:T_pattern;
           rulePatternElement:T_patternElement;
@@ -402,7 +402,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             hasTrivialPattern:=false;
             parts:=getBodyParts(first,0,context,closingBracket);
             for i:=0 to length(parts)-1 do begin
-              partText:=tokensToString(parts[i].first,10);
               partLocation:=parts[i].first^.location;
               if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
                 if i<>length(parts)-1 then context.adapters^.raiseCustomMessage(mt_el4_parsingError,MSG_INVALID_OPTIONAL,parts[i].first^.location);
@@ -470,7 +469,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                 end else fail(parts[i].first);
               end;
             end;
-            partText:='';
             parts:=nil;
           end;
           rulePattern.finalizeRefs(ruleDeclarationStart,context,@self);
@@ -944,7 +942,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: ansistring; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
   PROCEDURE raiseModifierComplaint;
