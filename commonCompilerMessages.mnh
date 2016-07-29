@@ -1,4 +1,4 @@
-ignore(s)->s.matches('^Info:|Parameter .* not used$|should be public|\\synapse\\|^\(3104\) Compiling ');
+ignore(s)->s.matches('^Info:|Parameter .* not used$|should be public|\\synapse\\|^\(3104\) Compiling|Virtual methods are used without a constructor|Comment level 2 found');
 filter(S:stringList)->S.pEach(s,ignore(s) ? void : s);
 
 

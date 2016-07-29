@@ -523,7 +523,7 @@ FUNCTION driveInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         DRIVE_RAMDISK:   infoPair^.appendString('RAM_disk' );
       end;
       infoMap^.append(infoPair,false);
-
+      {$WARN 5036 OFF}
       GetVolumeInformation(PChar(DriveLetter),
         Buf, sizeOf(VolumeInfo), @VolumeSerialNumber, NotUsed,
         VolumeFlags, nil, 0);
