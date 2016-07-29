@@ -43,10 +43,10 @@ private doAnalysis(rt:list)->begin
     print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
     local testsWithTime:=testsWithTime.sort(2);
     print("Tests with big relative variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(100*t[2],3)&"%\n",&));
     local testsWithTime:=testsWithTime[sortPerm(testsWithTime.getInner(1)*testsWithTime.getInner(2))];
     print("Tests with big absolute variance: ");
-    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&t[1]&"\v+/-\v"&t[1]*t[2]&"s\n",&));
+    print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
     totalTime:=filteredTests.getInner(2).agg(+);
 
     local medianTimes:=filteredTests
@@ -55,8 +55,9 @@ private doAnalysis(rt:list)->begin
                        .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
                        .getInner([1,2]); //drop case
     totalTime:=medianTimes.getInner(1).agg(+);
+    local star:=80/medianTimes.getInner(1).max;
     print('Median test time by flavour: ');
-    print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\n",&));
+    print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\t"&repeat('*',round(star*medianTimes[f]))&"\n",&));
   end);
 end;
 
@@ -72,21 +73,16 @@ private analyzeCase(data,testCase:string)->begin
 
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
-  print('Optimized sample details (ordered by time):');
-  optSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
-  print('Debug sample details (ordered by time):');
-  debugSamples.each(s,s[0]&"\t"&s[1]&"\n",&).print;
-
   local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
         ([['optimized',optSamples.getInner(0)]]|
          (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
          [['debug',debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
-         .each(set,[set[0],set[1].quartiles.round(6),set[1].avg.round(6),set[1].sigma.round(6)].flatten);
+         .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
   isGuiActive ? table.showTable : void;
-  local star:=40/table.getInner(3).tail.max;
+  local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
-  table.each(line,line.join("\t")).join("\n").print;
+  table.each(line,line.each(x,x:numeric ? round(x,4) : x).join("\t")).join("\n").print;
 end;
 
 private analyzeFlavour(data,flavour:string)->begin
@@ -115,8 +111,8 @@ bar(factor,q)->begin
   local b:=round(factor*q[1]);
   local c:=round(factor*q[2]);
   (a<b ? repeat('-',a-1)&'<' : '')&
-         repeat('-',b-a-1)&'|'&
-  (b<c ? repeat('-',c-b-1)&'>' : '');
+         repeat('=',b-a-1)&'|'&
+  (b<c ? repeat('=',c-b-1)&'>' : '');
 end;
 
 main(inputFile:string,testCaseOrFlavour:string)->begin

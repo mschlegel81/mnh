@@ -23,6 +23,7 @@ FUNCTION listSize(CONST xLit,yLit,zLit:P_literal):longint;
     end else if zLit^.literalType<>lt_string then exit(-1);
   end;
 
+{$WARN 5093 OFF}
 FUNCTION triplet(CONST xLit,yLit,zLit:P_literal; CONST index:longint):T_triplet;
   begin
     if xLit<>nil then begin

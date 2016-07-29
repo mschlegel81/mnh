@@ -335,14 +335,6 @@ FUNCTION T_userPackageDocumentation.getHref(CONST fromHtmlRoot:boolean): ansistr
     else result:='<a href="'+                          docFileName+'">'+id+'</a>';
   end;
 
-FUNCTION namespace(CONST id:ansistring):T_namespace;
-  VAR useId:ansistring;
-      n:T_namespace;
-  begin
-    if isQualified(id) then useId:=split(id,C_ID_QUALIFY_CHARACTER)[0] else useId:=id;
-    for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
-  end;
-
 FUNCTION shortName(CONST id:ansistring):ansistring;
   begin
     if isQualified(id) then result:=split(id,'.')[1] else result:=id;
@@ -363,16 +355,17 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
-  FUNCTION prettyHtml(s: ansistring): ansistring;
+  FUNCTION prettyHtml(CONST s: ansistring): ansistring;
     VAR lines: T_arrayOfString;
         i: longint;
     begin
+      result:=s;
       setLength(lines, 0);
-      while pos('#', s)>0 do begin
-        append(lines, copy(s, 1, pos('#', s)-1));
-        s:=copy(s, pos('#', s)+1, length(s));
+      while pos('#', result)>0 do begin
+        append(lines, copy(result, 1, pos('#', result)-1));
+        result:=copy(result, pos('#', result)+1, length(result));
       end;
-      append(lines,s);
+      append(lines,result);
 
       result:='';
       for i:=0 to length(lines)-1 do
@@ -411,6 +404,15 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
+    FUNCTION namespace(CONST id:ansistring):T_namespace;
+      VAR useId:ansistring;
+          n:T_namespace;
+      begin
+        if isQualified(id) then useId:=split(id,C_ID_QUALIFY_CHARACTER)[0] else useId:=id;
+        for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
+        result:=DEFAULT_BUILTIN_NAMESPACE;
+      end;
+
     VAR ids: T_arrayOfString;
         i,j: longint;
         n: T_namespace;
@@ -516,7 +518,7 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
       end else result:=false;
     end;
 
-  FUNCTION handleCommand(cmd:ansistring):boolean;
+  FUNCTION handleCommand(CONST cmd:ansistring):boolean;
     FUNCTION commandParameter(CONST txt:ansistring):ansistring;
       VAR i:longint;
       begin
@@ -537,12 +539,13 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
           PACKAGE_DOC_CMD     ='<!--USERPKG-->';
 
     VAR i,j:longint;
+        tCmd,
         cmdParam:ansistring;
     begin
-      cmd:=trim(cmd);
-      if not(startsWith(cmd,'<!--')) then exit(false);
-      cmdParam:=commandParameter(cmd);
-      if startsWith(cmd,FILE_SWITCH_PREFIX) then begin
+      tCmd:=trim(cmd);
+      if not(startsWith(tCmd,'<!--')) then exit(false);
+      cmdParam:=commandParameter(tCmd);
+      if startsWith(tCmd,FILE_SWITCH_PREFIX) then begin
         with outFile do begin
           if isOpen then close(handle);
           assign(handle,htmlRoot+DirectorySeparator+cmdParam);
@@ -551,25 +554,25 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
         end;
         exit(true);
       end;
-      if cmd=BUILTIN_DOC_CMD then begin
+      if tCmd=BUILTIN_DOC_CMD then begin
         if outFile.isOpen then documentBuiltIns(outFile.handle);
         exit(true);
       end;
-      if cmd=PACKAGE_DOC_CMD then begin
+      if tCmd=PACKAGE_DOC_CMD then begin
         if outFile.isOpen and includeUserPackages then writeUserPackageDocumentations(outFile.handle);
         exit(true);
       end;
-      if cmd=START_BEAUTIFY_CMD then begin
+      if tCmd=START_BEAUTIFY_CMD then begin
         context.mode:=beautifying;
         exit(true);
       end;
-      if startsWith(cmd,START_INCLUDE_PREFIX) then begin
+      if startsWith(tCmd,START_INCLUDE_PREFIX) then begin
         context.mode:=definingInclude;
         context.include.includeTag:='<!--'+cmdParam+'-->';
         setLength(context.include.content,0);
         exit(true);
       end;
-      for i:=0 to length(includes)-1 do if includes[i].includeTag=cmd then begin
+      for i:=0 to length(includes)-1 do if includes[i].includeTag=tCmd then begin
         with outFile do if isOpen then for j:=0 to length(includes[i].content)-1 do writeln(handle,includes[i].content[j]);
         exit(true);
       end;

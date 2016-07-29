@@ -546,7 +546,7 @@ PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyI
     adapter[length(adapter)-1].ad:=p;
     inc(nextAdapterId);
     adapter[length(adapter)-1].doDestroy:=destroyIt;
-    outputBehaviour:=outputBehaviour;
+    outputBehaviour:=oldBehavior;
   end;
 
 PROCEDURE T_adapters.addConsoleOutAdapter;
