@@ -3584,7 +3584,7 @@ out> void
 03.45 three |
 out> void
  in> print("1\tone\v|\n2.0\ttwo\v|\n03.45\tthree\v|");
- 1    one  |
+1     one  |
  2.0  two  |
 03.45 three|
 out> void
