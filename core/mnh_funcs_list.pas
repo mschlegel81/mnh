@@ -112,6 +112,13 @@ FUNCTION mapOf_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
+FUNCTION transpose_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_validListTypes)
+    then result:=list0^.transpose;
+  end;
+
 FUNCTION getElementFreqency(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION pair(CONST count:longint; CONST value:P_literal):P_listLiteral;
     begin result:=newListLiteral^.appendInt(count)^.append(value,true); end;
@@ -372,6 +379,7 @@ INITIALIZATION
   registerRule(LIST_NAMESPACE,'unique',@unique_imp,'unique(L:list);#Returns list L without duplicates and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'toMap',@mapOf_imp,'toMap(L:keyValueList);#Returns key L without duplicate keys and enhanced for faster lookup');
   registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,'elementFrequency(L);#Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies');
+  registerRule(LIST_NAMESPACE,'transpose',@transpose_imp,'transpose(L);#Returns list L transposed.');
   registerRule(LIST_NAMESPACE,'union',@setUnion,'union(A,...);#Returns a union of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'intersect',@setIntersect,'intersect(A,...);#Returns an intersection of all given parameters. All parameters must be lists.');
   registerRule(LIST_NAMESPACE,'minus',@setMinus,'minus(A,B);#Returns the asymmetric set difference of A and B. All parameters must be lists.');
