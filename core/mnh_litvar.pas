@@ -224,6 +224,7 @@ TYPE
     FUNCTION getInner(CONST other:P_literal; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
     FUNCTION typeString:string; virtual;
     FUNCTION parameterListTypeString:string;
+    FUNCTION transpose:P_listLiteral;
   end;
 
   P_namedVariable=^T_namedVariable;
@@ -929,6 +930,45 @@ FUNCTION T_listLiteral.parameterListTypeString:string;
     for i:=1 to datFill-1 do result:=result+', '+dat[i]^.typeString;
     result:=result+')';
   end;
+
+FUNCTION T_listLiteral.transpose:P_listLiteral;
+  VAR innerSize:longint=-1;
+      i,j:longint;
+      innerList:P_listLiteral;
+      innerValue:P_literal;
+  PROCEDURE removeTrailingVoids;
+    begin
+      while (innerList^.datFill>0) and (innerList^.dat[innerList^.datFill-1]^.literalType=lt_void) do begin
+        disposeLiteral(innerList^.dat[innerList^.datFill-1]);
+        dec(innerList^.datFill);
+      end;
+      setLength(innerList^.dat,innerList^.datFill);
+    end;
+
+  begin
+    if literalType=lt_emptyList then begin result:=@self; result^.rereference; end;
+    for i:=0 to datFill-1 do
+    if (dat[i]^.literalType in C_validListTypes)
+    then innerSize:=max(innerSize,P_listLiteral(dat[i])^.size)
+    else innerSize:=max(innerSize,1);
+
+    result:=newListLiteral;
+    for i:=0 to innerSize-1 do begin
+      innerList:=newListLiteral;
+      setLength(innerList^.dat,datFill);
+      innerList^.datFill:=datFill;
+      for j:=0 to datFill-1 do begin
+        if (dat[j]^.literalType in C_validListTypes) and (P_listLiteral(dat[j])^.datFill>i)
+        then begin                                                               innerValue:=P_listLiteral(dat[j])^.dat[i]; innerValue^.rereference; end
+        else if (dat[j]^.literalType in C_validScalarTypes) and (i=0) then begin innerValue:=dat[j];                        innerValue^.rereference; end
+        else innerValue:=newVoidLiteral;
+        innerList^.dat[j]:=innerValue;
+      end;
+      removeTrailingVoids;
+      result^.append(innerList,false);
+    end;
+  end;
+
 //?.hash:=======================================================================
 FUNCTION T_literal.hash: T_hashInt; begin result:=$ffffffff; end;
 FUNCTION T_boolLiteral.hash: T_hashInt; begin result:=longint(lt_boolean); if val then inc(result); end;
