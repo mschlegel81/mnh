@@ -24,6 +24,7 @@ object tableForm: TtableForm
     FixedCols = 0
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goDblClickAutoSize, goSmoothScroll]
     TabOrder = 0
+    OnHeaderClick = stringGridHeaderClick
     OnKeyUp = stringGridKeyUp
   end
   object tableMenu: TMainMenu

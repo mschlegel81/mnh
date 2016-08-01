@@ -38,6 +38,7 @@ TYPE
     PROCEDURE mi_exportCsvTabClick(Sender: TObject);
     PROCEDURE mi_exportTextClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
+    PROCEDURE stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
     PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   private
     { private declarations }
@@ -45,6 +46,10 @@ TYPE
     currentLiteral,requestedLiteral:P_listLiteral;
     requestedCaption:string;
     displayPending:boolean;
+    Sorted:record
+      ascending:boolean;
+      byColumn:longint;
+    end;
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string);
@@ -157,8 +162,42 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
   end;
 
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
+  VAR newLiteral:P_listLiteral;
   begin
     mi_transpose.Checked:=not(mi_transpose.Checked);
+    newLiteral:=currentLiteral^.transpose();
+    disposeLiteral(currentLiteral);
+    currentLiteral:=newLiteral;
+    fillTable;
+  end;
+
+PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
+  VAR dummyLocation:T_tokenLocation;
+      tempAdapters:T_adapters;
+      newLiteral:P_listLiteral;
+      i:longint;
+  begin
+    dummyLocation.package:=nil;
+    dummyLocation.column:=0;
+    dummyLocation.line:=0;
+    if not(IsColumn) then exit;
+    with Sorted do if byColumn=index then begin
+      byColumn:=index;
+      ascending:=not(ascending);
+
+      newLiteral:=newListLiteral;
+      for i:=currentLiteral^.size-1 downto 0 do
+      newLiteral^.append(currentLiteral^.value(i),true);
+      disposeLiteral(currentLiteral);
+      currentLiteral:=newLiteral;
+    end else begin
+      byColumn:=index;
+      ascending:=true;
+
+      tempAdapters.create;
+      currentLiteral^.sortBySubIndex(index,dummyLocation,tempAdapters);
+      tempAdapters.destroy;
+    end;
     fillTable;
   end;
 
@@ -167,10 +206,13 @@ PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShi
     FormKeyUp(Sender,key,Shift);
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
-  CONST newCaption: string);
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string);
   begin
     enterCriticalSection(cs);
+    with Sorted do begin
+      ascending:=false;
+      byColumn:=-1;
+    end;
     displayPending:=true;
     if requestedLiteral<>nil then disposeLiteral(requestedLiteral);
     requestedLiteral:=L;
@@ -222,6 +264,7 @@ PROCEDURE TtableForm.fillTable;
               lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
               lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
                                                                  else cellContents[i,j]:=           cellLit^.toString;
+              lt_void: cellContents[i,j]:='';
               else cellContents[i,j]:=cellLit^.toString;
             end;
           end;
@@ -232,6 +275,7 @@ PROCEDURE TtableForm.fillTable;
             lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
             lt_real,lt_realList,lt_numList:if mi_comma.Checked then cellContents[i,j]:=replaceAll(cellLit^.toString,'.',',')
                                                                else cellContents[i,j]:=           cellLit^.toString;
+            lt_void: cellContents[i,j]:='';
             else cellContents[i,j]:=cellLit^.toString;
           end;
         end;
@@ -239,18 +283,18 @@ PROCEDURE TtableForm.fillTable;
       end;
     end;
     StringGrid.clear;
-    if mi_transpose.Checked then begin
-      StringGrid.RowCount:=dataColumns+1;
-      StringGrid.ColCount:=dataRows;
-      for i:=0 to length(cellContents)-1 do
-      for j:=0 to length(cellContents[i])-1 do
-      StringGrid.Cells[i,j+1]:=cellContents[i,j];
-    end else begin
-      StringGrid.RowCount:=dataRows+1;
-      StringGrid.ColCount:=dataColumns;
-      for i:=0 to length(cellContents)-1 do
-      for j:=0 to length(cellContents[i])-1 do
-      StringGrid.Cells[j,i+1]:=cellContents[i,j];
+
+    StringGrid.RowCount:=dataRows+1;
+    StringGrid.ColCount:=dataColumns;
+    for i:=0 to length(cellContents)-1 do
+    for j:=0 to length(cellContents[i])-1 do
+    StringGrid.Cells[j,i+1]:=cellContents[i,j];
+
+    for i:=0 to StringGrid.ColCount-1 do begin
+      if (Sorted.byColumn=i) then begin
+        if Sorted.ascending then StringGrid.Cells[i,0]:='v'
+                            else StringGrid.Cells[i,0]:='^';
+      end else                   StringGrid.Cells[i,0]:='';
     end;
     StringGrid.FixedRows:=1;
   end;
