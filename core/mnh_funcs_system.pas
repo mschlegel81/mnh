@@ -412,19 +412,26 @@ FUNCTION fileInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       getFileInfo(str0^.value,time,size,isExistent,isArchive,isDirectory,isReadOnly,isSystem,isHidden);
+      if not(isExistent) then begin
+        size:=-1;
+        time:= 0;
+        isArchive:=false;
+        isDirectory:=false;
+        isReadOnly:=false;
+        isSystem:=false;
+        isHidden:=false;
+      end;
       resultAsList:=newListLiteral;
       appendKeyValuePair('exists',newBoolLiteral(isExistent));
-      if isExistent then begin
-        if size>=0 then appendKeyValuePair('size',newIntLiteral(size));
-        if time<>-1 then appendKeyValuePair('time',newRealLiteral(time));
-        attributeList:=newListLiteral;
-        if isArchive   then attributeList^.appendString('archive'  );
-        if isDirectory then attributeList^.appendString('directory');
-        if isReadOnly  then attributeList^.appendString('readonly' );
-        if isSystem    then attributeList^.appendString('system'   );
-        if isHidden    then attributeList^.appendString('hidden'   );
-        appendKeyValuePair('attributes',attributeList);
-      end;
+      appendKeyValuePair('size',newIntLiteral(size));
+      appendKeyValuePair('time',newRealLiteral(time));
+      attributeList:=newListLiteral;
+      if isArchive   then attributeList^.appendString('archive'  );
+      if isDirectory then attributeList^.appendString('directory');
+      if isReadOnly  then attributeList^.appendString('readonly' );
+      if isSystem    then attributeList^.appendString('system'   );
+      if isHidden    then attributeList^.appendString('hidden'   );
+      appendKeyValuePair('attributes',attributeList);
       result:=resultAsList;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
       result:=newListLiteral;
