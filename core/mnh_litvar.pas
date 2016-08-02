@@ -1187,7 +1187,7 @@ FUNCTION T_boolLiteral.leqForSorting(CONST other: P_literal): boolean;
 FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=val<=P_intLiteral(other)^.val;
+      lt_int:  result:=val<=P_intLiteral (other)^.val;
       lt_real: result:=val<=P_realLiteral(other)^.val;
     else result:=(literalType<=other^.literalType); end;
   end;
@@ -1195,7 +1195,7 @@ FUNCTION T_intLiteral.leqForSorting(CONST other: P_literal): boolean;
 FUNCTION T_realLiteral.leqForSorting(CONST other: P_literal): boolean;
   begin
     case other^.literalType of
-      lt_int:  result:=val<=P_intLiteral(other)^.val;
+      lt_int:  result:=val<=P_intLiteral (other)^.val;
       lt_real: result:=val<=P_realLiteral(other)^.val;
     else result:=(literalType<=other^.literalType);  end;
   end;
@@ -1534,7 +1534,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
       then result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
       else begin
         result:=false;
-        adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString+' and '+b^.toString,location);
+        adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(50)+' and '+b^.toString(50),location);
       end;
     end;
 
@@ -1565,10 +1565,10 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
         while (i<datFill) and adapters.noErrors do begin
           j0:=i; j1:=i+scale; k:=i;
           while (j0<i+scale) and (j1<i+scale+scale) and (j1<datFill) do
-            if isLeq(temp [j0],temp [j1])         then begin dat[k]:=temp [j0]; inc(k); inc(j0); end
-                                                  else begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
-          while (j0<i+scale) and (j0<datFill)       do begin dat[k]:=temp [j0]; inc(k); inc(j0); end;
-          while (j1<i+scale+scale) and (j1<datFill) do begin dat[k]:=temp [j1]; inc(k); inc(j1); end;
+            if isLeq(temp[j0],temp[j1])           then begin dat[k]:=temp[j0]; inc(k); inc(j0); end
+                                                  else begin dat[k]:=temp[j1]; inc(k); inc(j1); end;
+          while (j0<i+scale) and (j0<datFill)       do begin dat[k]:=temp[j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<datFill) do begin dat[k]:=temp[j1]; inc(k); inc(j1); end;
           inc(i, scale+scale);
         end;
         //---------------:merge lists of size [scale] to lists of size [scale+scale]

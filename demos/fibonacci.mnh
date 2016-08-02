@@ -9,5 +9,5 @@ main->print('See http://rosettacode.org/wiki/Fibonacci_n-step_number_sequences')
       print('---+-----------------------------------------------------------------------------------------------------') and
       printf("%s",[1..20].each(k,k&"\t| "&
                   [1..20].each(i,fibNStep(i+k-3,k)).join("\t"))) and
-      isGuiActive ? showTable([['n','values']]|([1..20].each(k,k| [1..20].each(i,fibNStep(i+k-3,k)))),'Fibonacci n-step sequence')
+      isGuiActive ? showTable([['n','values']]|([1..20].each(k,k| [1..20].each(i,fibNStep(i+k-3,k)))),'Fibonacci n-step sequence',true)
                   : void;

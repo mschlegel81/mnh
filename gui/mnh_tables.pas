@@ -258,7 +258,6 @@ PROCEDURE TtableForm.conditionalDoShow;
       requestedLiteral:=nil;
       Show;
       fillTable;
-      StringGrid.AutoSizeColumns;
     end;
     leaveCriticalSection(cs);
   end;
@@ -329,7 +328,6 @@ PROCEDURE TtableForm.fillTable;
       for j:=0 to length(cellContents[i])-1 do
       StringGrid.Cells[j+1,i+1]:=cellContents[i,j];
       for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=getHeaderCell(i-1);
-      StringGrid.AutoSizeColumn(0);
     end else begin
       StringGrid.RowCount:=dataRows+1;
       StringGrid.ColCount:=dataColumns;
@@ -340,6 +338,7 @@ PROCEDURE TtableForm.fillTable;
       StringGrid.Cells[j,i+1]:=cellContents[i,j];
       for i:=0 to StringGrid.ColCount-1 do StringGrid.Cells[i,0]:=getHeaderCell(i);
     end;
+    StringGrid.AutoSizeColumns;
   end;
 
 FUNCTION TtableForm.isDisplayPending: boolean;
