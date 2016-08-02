@@ -1,3 +1,5 @@
+USE GUI;
+
 private avg([])->Nan;
 private avg(L:numericList)->L.agg(+)/L.size;
 private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
@@ -5,7 +7,7 @@ private quartiles([])->[Nan,Nan,Nan];
 private quartiles(L:numericList)->L[(L.size*[1..3] div 4)];
 
 private doAnalysis(rt:list)->begin
-  {isGuiActive ? showTable($L,'Test times') : $L.each(line,line.join("\t")).join("\n").print}(
+  {isGuiActive ? showTable($L,'Test times',true) : $L.each(line,line.join("\t")).join("\n").print}(
   [['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios'],
    ['','|','','','','','|','','','','','|']]|
   rt.getInner(0).unique.each(testCase,
@@ -79,7 +81,7 @@ private analyzeCase(data,testCase:string)->begin
          [['debug',debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
          .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
-  isGuiActive ? table.showTable : void;
+  isGuiActive ? table.showTable(true) : void;
   local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.each(x,x:numeric ? round(x,4) : x).join("\t")).join("\n").print;
@@ -123,8 +125,8 @@ main(inputFile:string,testCaseOrFlavour:string)->begin
     ? analyzeFlavour(data,testCaseOrFlavour)
     : begin
         print('Input is neither test case nor flavor');
-        print('Flavours: ',data.getInner(1).join(' '));
-        print('Cases: ',data.getInner(0).join(' '));
+        print('Flavours: ',data.getInner(1).unique.join(' '));
+        print('Cases: ',data.getInner(0).unique.join(' '));
       end;
 end;
 

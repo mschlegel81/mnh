@@ -45,14 +45,16 @@ TYPE
     cs:TRTLCriticalSection;
     currentLiteral,requestedLiteral:P_listLiteral;
     requestedCaption:string;
+    headerData:T_arrayOfString;
     displayPending:boolean;
+    firstIsHeader:boolean;
     Sorted:record
       ascending:boolean;
       byColumn:longint;
     end;
   public
     { public declarations }
-    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string);
+    PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST firstIsHeader_:boolean);
     FUNCTION isDisplayPending:boolean;
     PROCEDURE conditionalDoShow;
     PROCEDURE fillTable;
@@ -67,15 +69,22 @@ IMPLEMENTATION
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
   VAR Caption:string='MNH table';
+      header:boolean=false;
+      i:longint;
   begin
     context.adapters^.raiseCustomMessage(mt_displayTable,'',tokenLocation);
     if not(gui_started) then exit(nil);
     if (params<>nil) and
        (params^.size>0) and
-       (params^.value(0)^.literalType in C_validListTypes) and
-       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType=lt_string)) then begin
-      if params^.size=2 then Caption:=P_stringLiteral(params^.value(1))^.value;
-      tableForm.initWithLiteral(P_listLiteral(params^.value(0)),Caption);
+       (params^.value(0)^.literalType in C_validListTypes) then begin
+      for i:=1 to 2 do  if params^.size>i then begin
+        case params^.value(i)^.literalType of
+          lt_string: Caption:=P_stringLiteral(params^.value(i))^.value;
+          lt_boolean: header:=P_boolLiteral(params^.value(i))^.value;
+          else exit(nil);
+        end;
+      end;
+      tableForm.initWithLiteral(P_listLiteral(params^.value(0)),Caption,header);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -180,7 +189,7 @@ PROCEDURE TtableForm.stringGridHeaderClick(Sender: TObject; IsColumn: boolean; i
     dummyLocation.package:=nil;
     dummyLocation.column:=0;
     dummyLocation.line:=0;
-    if not(IsColumn) then exit;
+    if not(IsColumn) or (firstIsHeader and mi_transpose.Checked) then exit;
     with Sorted do if byColumn=index then begin
       byColumn:=index;
       ascending:=not(ascending);
@@ -206,17 +215,34 @@ PROCEDURE TtableForm.stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShi
     FormKeyUp(Sender,key,Shift);
   end;
 
-PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string);
+PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: string; CONST firstIsHeader_:boolean);
+  VAR i:longint;
+      headerLiteral:P_listLiteral;
   begin
     enterCriticalSection(cs);
     with Sorted do begin
       ascending:=false;
       byColumn:=-1;
     end;
-    displayPending:=true;
+
     if requestedLiteral<>nil then disposeLiteral(requestedLiteral);
-    requestedLiteral:=L;
-    requestedLiteral^.rereference;
+
+    firstIsHeader:=firstIsHeader_;
+    if firstIsHeader and (L^.size>0) and (L^.value(0)^.literalType in C_validListTypes) then begin
+      headerLiteral:=P_listLiteral(L^.value(0));
+      setLength(headerData,headerLiteral^.size);
+      for i:=0 to headerLiteral^.size-1 do case headerLiteral^.value(i)^.literalType of
+        lt_string: headerData[i]:=P_stringLiteral(headerLiteral^.value(i))^.value
+        else headerData[i]:=headerLiteral^.value(i)^.toString;
+      end;
+      requestedLiteral:=L^.tail;
+    end else begin
+      setLength(headerData,0);
+      requestedLiteral:=L;
+      requestedLiteral^.rereference;
+    end;
+
+    displayPending:=true;
     requestedCaption:=newCaption;
     leaveCriticalSection(cs);
   end;
@@ -244,6 +270,16 @@ PROCEDURE TtableForm.fillTable;
       i,j:longint;
       rowLit:P_literal;
       cellLit:P_literal;
+
+  FUNCTION getHeaderCell(CONST i:longint):string;
+    begin
+      if (firstIsHeader) and (i>=0) and (i<length(headerData)) then result:=headerData[i] else result:='';
+      if not(mi_transpose.Checked) and (Sorted.byColumn=i) then begin
+        if Sorted.ascending then result:=result+' v'
+                            else result:=result+' ^';
+      end;
+    end;
+
   begin
     if currentLiteral=nil then exit;
     dataRows:=currentLiteral^.size;
@@ -284,19 +320,26 @@ PROCEDURE TtableForm.fillTable;
     end;
     StringGrid.clear;
 
-    StringGrid.RowCount:=dataRows+1;
-    StringGrid.ColCount:=dataColumns;
-    for i:=0 to length(cellContents)-1 do
-    for j:=0 to length(cellContents[i])-1 do
-    StringGrid.Cells[j,i+1]:=cellContents[i,j];
-
-    for i:=0 to StringGrid.ColCount-1 do begin
-      if (Sorted.byColumn=i) then begin
-        if Sorted.ascending then StringGrid.Cells[i,0]:='v'
-                            else StringGrid.Cells[i,0]:='^';
-      end else                   StringGrid.Cells[i,0]:='';
+    if firstIsHeader and mi_transpose.Checked then begin
+      StringGrid.RowCount:=dataRows+1;
+      StringGrid.ColCount:=dataColumns+1;
+      StringGrid.FixedCols:=1;
+      StringGrid.FixedRows:=1;
+      for i:=0 to length(cellContents)-1 do
+      for j:=0 to length(cellContents[i])-1 do
+      StringGrid.Cells[j+1,i+1]:=cellContents[i,j];
+      for i:=1 to StringGrid.RowCount-1 do StringGrid.Cells[0,i]:=getHeaderCell(i-1);
+      StringGrid.AutoSizeColumn(0);
+    end else begin
+      StringGrid.RowCount:=dataRows+1;
+      StringGrid.ColCount:=dataColumns;
+      StringGrid.FixedCols:=0;
+      StringGrid.FixedRows:=1;
+      for i:=0 to length(cellContents)-1 do
+      for j:=0 to length(cellContents[i])-1 do
+      StringGrid.Cells[j,i+1]:=cellContents[i,j];
+      for i:=0 to StringGrid.ColCount-1 do StringGrid.Cells[i,0]:=getHeaderCell(i);
     end;
-    StringGrid.FixedRows:=1;
   end;
 
 FUNCTION TtableForm.isDisplayPending: boolean;
@@ -307,7 +350,7 @@ FUNCTION TtableForm.isDisplayPending: boolean;
   end;
 
 INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'showTable',@showTable_impl,'showTable(L:list);#Shows L in a table.#showTable(L:list,caption:string);#Shows L in a table with given caption.#showTable(L:list,caption:string,firstRowIsHeader:boolean);#Shows L in a table with given caption.');
 
 end.
 
