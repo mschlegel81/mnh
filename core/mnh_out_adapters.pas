@@ -668,6 +668,7 @@ PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
   VAR i:longint;
       compound:ansistring;
   begin
+    if not(mySys.isConsoleShowing) then mySys.showConsole;
     if (length(s)>0) and (s[0]=C_formFeedChar) then begin
       mySys.clearConsole;
       if length(s)>1 then begin
