@@ -7,9 +7,7 @@ private quartiles([])->[Nan,Nan,Nan];
 private quartiles(L:numericList)->L[(L.size*[1..3] div 4)];
 
 private doAnalysis(rt:list)->begin
-  {isGuiActive ? showTable($L,'Test times',true) : $L.each(line,line.join("\t")).join("\n").print}(
-  [['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios'],
-   ['','|','','','','','|','','','','','|']]|
+  ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
   rt.getInner(0).unique.each(testCase,
     begin
       local debugSamples:=rt[rt.getInner(0)=testCase];
@@ -22,7 +20,7 @@ private doAnalysis(rt:list)->begin
        debugSamples[[1,2,3]*(debugSamples.size div 4)].round(4),'|',
        round(debugSamples[[1,2,3]*(debugSamples.size div 4)]/optSamples[[1,2,3]*(optSamples.size div 4)],2)].flatten;
     end)
-  );
+  ).showTable('Test times',true);
 
   [true,false].each(debugVersions,begin
     local filteredTests:=rt.each(t,t[1].matches('^[F|L]D')=debugVersions ? t : void);
