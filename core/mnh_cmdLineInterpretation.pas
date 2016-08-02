@@ -215,7 +215,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       displayHelp;
       quitImmediate:=true;
     end;
-    {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0);{$endif}
+    {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0) and not(reEvaluationWithGUIrequired);{$endif}
     result:=not(quitImmediate);
   end;
 
