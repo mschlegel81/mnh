@@ -706,10 +706,7 @@ INITIALIZATION
                                                            '  1: deflate#'+
                                                            '  2: huffman with default model#'+
                                                            '  3: huffman with another model#'+
-                                                           '  4: try out with base95 encoding#'+
-                                                           '  5: deflate + base95Encode#'+
-                                                           '  6: huffman with default model + base95Encode#'+
-                                                           '  7: huffman with another model + base95Encode#'+
+                                                           '255: don''''t compress'+
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');

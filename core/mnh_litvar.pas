@@ -4,8 +4,6 @@ UNIT mnh_litVar;
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
 USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
-CONST DESERIALIZE_BASE95_ID='deserialize95';
-      DESERIALIZE_BIN_ID='deserialize';
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -310,9 +308,9 @@ FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte; CONST createMnhExpression:boolean):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
 IMPLEMENTATION
 VAR
@@ -1089,6 +1087,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       end;
       lt_intList: begin
         result:=newListLiteral;
+        setLength(P_listLiteral(result)^.dat,P_listLiteral(other)^.datFill);
         i1:=datFill;
         for j:=0 to P_listLiteral(other)^.datFill-1 do begin
           i:=P_intLiteral(P_listLiteral(other)^.dat[j])^.val;
@@ -1099,6 +1098,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       lt_booleanList: begin
         result:=newListLiteral;
         i1:=datFill;
+        setLength(P_listLiteral(result)^.dat,i1);
         if i1 = P_listLiteral(other)^.datFill then
         for i:=0 to P_listLiteral(other)^.datFill-1 do
         if P_boolLiteral(P_listLiteral(other)^.dat[i])^.val then
@@ -1127,6 +1127,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       end;
       lt_stringList: if literalType in [lt_keyValueList,lt_emptyList] then begin
         result:=newListLiteral;
+        setLength(P_listLiteral(result)^.dat,P_listLiteral(other)^.size);
         if indexBacking.mapBack<>nil then begin
           for j:=0 to P_listLiteral(other)^.size-1 do begin
             L:=indexBacking.mapBack^.get(P_listLiteral(other)^.dat[j],nil);
@@ -1675,6 +1676,7 @@ FUNCTION T_listLiteral.sortPerm: P_listLiteral;
     end;
     setLength(temp2, 0);
     result:=newListLiteral;
+    setLength(result^.dat,length(temp1));
     for i:=0 to length(temp1)-1 do result^.appendInt(temp1 [i].index);
     setLength(temp1, 0);
   end;
@@ -2019,11 +2021,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       case LHS^.literalType of
         lt_int:
           case RHS^.literalType of
-            lt_int:        try
-                             exit(newIntLiteral(P_intLiteral(LHS)^.val div P_intLiteral(RHS)^.val));
-                           except
-                             exit(newRealLiteral(Nan));
-                           end;
+            lt_int: if P_intLiteral(RHS)^.val<>0 then exit(newIntLiteral(P_intLiteral(LHS)^.val div P_intLiteral(RHS)^.val))
+                                                 else exit(newRealLiteral(Nan));
+                           //try
+                           //  exit(newIntLiteral(P_intLiteral(LHS)^.val div P_intLiteral(RHS)^.val));
+                           //except
+                           //  exit(newRealLiteral(Nan));
+                           //end;
             lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorDivInt, RHS, tokenLocation)));
           end;
         lt_expression:
@@ -2038,11 +2042,13 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
       case LHS^.literalType of
         lt_int:
           case RHS^.literalType of
-            lt_int:        try
-                             exit(newIntLiteral(P_intLiteral(LHS)^.val mod P_intLiteral(RHS)^.val))
-                           except
-                             exit(newRealLiteral(Nan));
-                           end;
+            lt_int: if P_intLiteral(RHS)^.val<>0 then exit(newIntLiteral(P_intLiteral(LHS)^.val mod P_intLiteral(RHS)^.val))
+                                                 else exit(newRealLiteral(Nan));
+                           //try
+                           //  exit(newIntLiteral(P_intLiteral(LHS)^.val mod P_intLiteral(RHS)^.val))
+                           //except
+                           //  exit(newRealLiteral(Nan));
+                           //end;
             lt_expression: exit(newExpressionLiteral(subruleApplyOpCallback(LHS, tt_operatorMod, RHS, tokenLocation)));
           end;
         lt_expression:
@@ -2165,6 +2171,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_list,lt_keyValueList: begin
               //scalar X nested list
               result:=newListLiteral;
+              setLength(P_listLiteral(result)^.dat,P_listLiteral(RHS)^.datFill);
               for i:=0 to P_listLiteral(RHS)^.datFill-1 do
                 P_listLiteral(result)^.append(
                   resolveOperator(LHS, op, P_listLiteral(RHS)^.dat[i],
@@ -2175,6 +2182,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_booleanList..lt_emptyList,lt_flatList: begin
               //scalar X flat list
               result:=newListLiteral;
+              setLength(P_listLiteral(result)^.dat,P_listLiteral(RHS)^.datFill);
               case op of
                 tt_comparatorEq:       for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (LHS,P_listLiteral(RHS)^.dat[i]));
                 tt_comparatorNeq:      for i:=0 to P_listLiteral(RHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (LHS,P_listLiteral(RHS)^.dat[i]));
@@ -2201,6 +2209,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_boolean, lt_int, lt_real, lt_string: begin
               //nested list X scalar
               result:=newListLiteral;
+              setLength(P_listLiteral(result)^.dat,P_listLiteral(LHS)^.datFill);
               for i:=0 to P_listLiteral(LHS)^.datFill-1 do
                 P_listLiteral(result)^.append(
                   resolveOperator(P_listLiteral(LHS)^.dat[i], op,
@@ -2214,6 +2223,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
+                setLength(P_listLiteral(result)^.dat,i1);
                 for i:=0 to i1-1 do
                   P_listLiteral(result)^.append(resolveOperator(
                     P_listLiteral(LHS)^.dat[i], op,
@@ -2227,6 +2237,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
             lt_boolean, lt_int, lt_real, lt_string: begin
               //flat list X scalar
               result:=newListLiteral;
+              setLength(P_listLiteral(result)^.dat,P_listLiteral(LHS)^.datFill);
               case op of
                 tt_comparatorEq:       for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.dat[i],RHS));
                 tt_comparatorNeq:      for i:=0 to P_listLiteral(LHS)^.datFill-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.dat[i],RHS));
@@ -2254,6 +2265,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
+                setLength(P_listLiteral(result)^.dat,i1);
                 for i:=0 to i1-1 do
                   P_listLiteral(result)^.append(resolveOperator(
                     P_listLiteral(LHS)^.dat[i], op,
@@ -2268,6 +2280,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
               i1:=P_listLiteral(RHS)^.datFill;
               if i = i1 then begin
                 result:=newListLiteral;
+                setLength(P_listLiteral(result)^.dat,i1);
                 case op of
                   tt_comparatorEq:       for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelEqual  (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
                   tt_comparatorNeq:      for i:=0 to i1-1 do P_listLiteral(result)^.appendBool(areInRelNeq    (P_listLiteral(LHS)^.dat[i],P_listLiteral(RHS)^.dat[i]));
@@ -2670,9 +2683,9 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
     setLength(reusableLiterals,0);
   end;
 
-PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
   VAR reusableMap:specialize G_literalKeyMap<word>;
-
+      stringCompression:byte;
   PROCEDURE writeLiteral(CONST L:P_literal);
     VAR i:longint;
         reusableIndex:word;
@@ -2692,7 +2705,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
         lt_boolean:stream.writeBoolean(P_boolLiteral(L)^.val);
         lt_int:stream.writeInt64(P_intLiteral(L)^.val);
         lt_real:stream.writeDouble(P_realLiteral(L)^.val);
-        lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,0));
+        lt_string:stream.writeAnsiString(compressString(P_stringLiteral(L)^.val,stringCompression));
         lt_list,
         lt_booleanList,
         lt_intList,
@@ -2713,6 +2726,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
     end;
 
   begin
+    if tryCompressStrings then stringCompression:=0 else stringCompression:=255;
     reusableMap.create();
     writeLiteral(L);
     reusableMap.destroy;
@@ -2765,23 +2779,17 @@ FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adap
     end;
   end;
 
-FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte; CONST createMnhExpression:boolean):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST asExpression,tryCompressStrings:boolean):ansistring;
   VAR wrapper:T_streamWrapper;
       stream:TStringStream;
   begin
-    if level=0 then exit(serialize(L,location,adapters));
+    if asExpression then exit(serialize(L,location,adapters));
     stream:= TStringStream.create('');
     wrapper.create(stream);
-    writeLiteralToStream(L,wrapper,location,adapters);
+    writeLiteralToStream(L,wrapper,location,adapters,tryCompressStrings);
     stream.position:=0;
     result:=stream.DataString;
     wrapper.destroy; //implicitly destroys stream
-    if level=1 then result:=base95Encode(result)
-               else result:=result;
-    if createMnhExpression then begin
-      if level=1 then result:=DESERIALIZE_BASE95_ID+'('+escapeString(result)+')'
-                 else result:=DESERIALIZE_BIN_ID   +'('+escapeString(result)+')';
-    end;
   end;
 
 FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST level:byte):P_literal;
@@ -2792,8 +2800,7 @@ FUNCTION deserialize(CONST Source:ansistring; CONST location:T_tokenLocation; CO
       adapters^.raiseError('Cannot deserialize a stream created with level 0. Use default parsing instead.',location);
       exit(newErrorLiteral);
     end;
-    if level=1 then stream:=TStringStream.create(base95Decode(Source))
-               else stream:=TStringStream.create(Source);
+    stream:=TStringStream.create(Source);
     wrapper.create(stream);
     stream.position:=0;
     result:=newLiteralFromStream(wrapper,location,adapters);
