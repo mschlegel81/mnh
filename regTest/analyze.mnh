@@ -70,7 +70,8 @@ private analyzeCase(data,testCase:string)->begin
                : optSamples  |=[sample[[2,1]]]);
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
-
+  debugSamples.union(optSamples).showTable;
+  sleep(0.1);
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
   local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
@@ -79,7 +80,7 @@ private analyzeCase(data,testCase:string)->begin
          [['debug',debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
          .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
-  isGuiActive ? table.showTable(true) : void;
+//  table.showTable(true);
   local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.each(x,x:numeric ? round(x,4) : x).join("\t")).join("\n").print;
@@ -105,7 +106,9 @@ private analyzeFlavour(data,flavour:string)->begin
   .{print("\nCase\tsamples\taverage\tlast\ttrend\n",$L)};
 end;
 
-main(inputFile:string)->doAnalysis(fileContents(inputFile).deserialize);
+private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,i[2]<0 ? void : i);
+
+main(inputFile:string)->doAnalysis(inputFile.loadAndFilterUnplausible);
 bar(factor,q)->begin
   local a:=round(factor*q[0]);
   local b:=round(factor*q[1]);
@@ -116,7 +119,7 @@ bar(factor,q)->begin
 end;
 
 main(inputFile:string,testCaseOrFlavour:string)->begin
-  local data:=fileContents(inputFile).deserialize;
+  local data:=inputFile.loadAndFilterUnplausible;
   testCaseOrFlavour in data.getInner(0)
   ? analyzeCase(data,testCaseOrFlavour)
   : testCaseOrFlavour in data.getInner(1)
@@ -127,5 +130,3 @@ main(inputFile:string,testCaseOrFlavour:string)->begin
         print('Cases: ',data.getInner(0).unique.join(' '));
       end;
 end;
-
-analyzeFlavour('times'.fileContents.deserialize,'FOWin64');
