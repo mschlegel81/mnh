@@ -24,7 +24,7 @@ VAR fileOrCommandToInterpret:ansistring='';
 
     echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
     time:(t_forcedOn,t_default,t_forcedOff)=t_default;
-    minEL:longint=2;
+    minEL:longint=3;
 //---------------:by command line parameters
 PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
   begin
