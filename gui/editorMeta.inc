@@ -184,10 +184,17 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
     sheet.TabVisible:=true;
     filePath:=fileName;
-    editor.clear;
-    editor.lines.loadFromFile(filePath);
-    fileAge(filePath,fileAccessAge);
-    changed:=false;
+    editor.ClearAll;
+    try
+      editor.lines.loadFromFile(filePath);
+      fileAge(filePath,fileAccessAge);
+      changed:=false;
+    except
+      editor.lines.clear;
+      changed:=true;
+      fileAccessAge:=0;
+    end;
+    updateSheetCaption;
   end;
 
 PROCEDURE T_editorMeta.initForNewFile;
