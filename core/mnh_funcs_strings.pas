@@ -649,16 +649,16 @@ FUNCTION decompress_impl(CONST params:P_listLiteral; CONST tokenLocation:T_token
     end;
   end;
 
-FUNCTION base95encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION base92encode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base95Encode(str0^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base92Encode(str0^.value));
   end;
 
-FUNCTION base95decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION base92decode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base95Decode(str0^.value));
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then result:=newStringLiteral(base92Decode(str0^.value));
   end;
 
 FUNCTION formatTabs_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -713,7 +713,7 @@ INITIALIZATION
                                                            '  other: try out algorithms and return the shortest representation#'+
                                                            '  The first character of the result indicates the algorithm used');
   registerRule(STRINGS_NAMESPACE,'decompress',@decompress_impl,'decompress(S:string);#Returns an uncompressed version of S');
-  registerRule(STRINGS_NAMESPACE,'base95encode',@base95encode_impl,'base95encode(S:string);#Returns a base95 encoded string');
-  registerRule(STRINGS_NAMESPACE,'base95decode',@base95decode_impl,'base95decode(S:string);#Returns a string, decoded from a base95 encoded string');
+  registerRule(STRINGS_NAMESPACE,'base92encode',@base92encode_impl,'base92encode(S:string);#Returns a base92 encoded string');
+  registerRule(STRINGS_NAMESPACE,'base92decode',@base92decode_impl,'base92decode(S:string);#Returns a string, decoded from a base92 encoded string');
   registerRule(STRINGS_NAMESPACE,'formatTabs',@formatTabs_impl,'formatTabs(S:string);#Applies tab formatting as on print');
 end.
