@@ -1264,6 +1264,13 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if (now>doNotCheckFileBefore) then begin
         doNotCheckFileBefore:=now+1;
         for i:=0 to length(editorMeta)-1 do with editorMeta[i] do if sheet.TabVisible and (filePath<>'') and not(changed) then begin
+          if not(fileExists(filePath)) then begin
+            modalRes:=closeDialogForm.showOnDeleted(filePath);
+            if modalRes=mrOk then closeEditor;
+            if modalRes=mrClose then begin if not(_doSave_(i)) then changed:=true; end else
+            changed:=true;
+            continue;
+          end;
           fileAge(filePath,currentFileAge);
           if currentFileAge<>fileAccessAge then begin
             modalRes:=closeDialogForm.showOnOutOfSync(filePath);

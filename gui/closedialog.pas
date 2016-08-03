@@ -19,6 +19,7 @@ TYPE
     { public declarations }
     FUNCTION showOnQuit: integer;
     FUNCTION showOnLoad: integer;
+    FUNCTION showOnDeleted(CONST fileName:string): integer;
     FUNCTION showOnOutOfSync(CONST fileName:string): integer;
     FUNCTION showOnUninstall: integer;
   end;
@@ -58,6 +59,15 @@ FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName:string): integer;
   begin
     Caption:=fileName+' is out of sync';
     ButtonPanel1.OKButton.Caption := 'Reload';
+    ButtonPanel1.CancelButton.Caption := 'Ignore changes';
+    ButtonPanel1.CloseButton.Caption := 'Overwrite';
+    result:=ShowModal;
+  end;
+
+FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName:string): integer;
+  begin
+    Caption:=fileName+' is deleted';
+    ButtonPanel1.OKButton.Caption := 'Close';
     ButtonPanel1.CancelButton.Caption := 'Ignore changes';
     ButtonPanel1.CloseButton.Caption := 'Overwrite';
     result:=ShowModal;

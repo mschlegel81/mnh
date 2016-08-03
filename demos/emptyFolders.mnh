@@ -1,0 +1,11 @@
+emptyFolders(root)->begin
+  local subFolders:=folders(root&'/*');
+  local subFiles  :=files  (root&'/*');
+  local result:=subFolders.pEach(folder,folder.emptyFolders).flatten;
+  result|(subFiles==[] AND subFolders.minus(result)==[]
+          ? root
+          : void);
+end;
+
+main('delete',root)->emptyFolders(root).each(f,deleteDir(f));
+main(root)->printf('%s',emptyFolders(root));
