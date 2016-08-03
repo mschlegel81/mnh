@@ -92,7 +92,7 @@ FUNCTION T_rule.doPutCache(CONST param:P_listLiteral):P_literal;
   begin
     enterCriticalSection(rule_cs);
     cache^.put(P_listLiteral(param^.value(0)),
-               param^.value(1));
+                             param^.value(1) );
     leaveCriticalSection(rule_cs);
     result:=param^.value(1);
     result^.rereference;
@@ -125,17 +125,7 @@ exit}
       rt_memoized: begin
         if param=nil then useParam:=newListLiteral
                      else useParam:=param;
-        if system.TryEnterCriticalsection(rule_cs)=0 then begin
-          result:=false;
-          for useUncurryingFallback:=false to true do for i:=0 to length(subrules)-1 do result:=result or ((includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback));
-          if result then begin
-            used:=true;
-            wrapResultInPutCacheRule;
-          end;
-          if param=nil then disposeLiteral(useParam);
-          exit(result);
-        end;
-
+        enterCriticalSection(rule_cs);
         lit:=cache^.get(useParam);
         if lit<>nil then begin
           lit^.rereference;
@@ -325,7 +315,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
           L:=namedValue.getValue;
           code:=code+
                 C_tokenInfo[tt_assign].defaultId+
-                serialize(L,declarationStart,@adapters,0,true)+
+                serialize(L,declarationStart,@adapters,true,false)+
                 C_tokenInfo[tt_semicolon].defaultId;
           disposeLiteral(L);
           provider.replaceCode(
@@ -340,7 +330,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
         begin
           stream:=package^.getDatastoreForId(id,false);
           L:=namedValue.getValue;
-          writeLiteralToStream(L,stream,declarationStart,@adapters);
+          writeLiteralToStream(L,stream,declarationStart,@adapters,true);
           disposeLiteral(L);
           stream.destroy;
           result:=false; //because the package file remains unchanged

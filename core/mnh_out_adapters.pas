@@ -824,6 +824,13 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
        (state=breakOnStepOut) and (currentLevel<stepLevel) or
       ((state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and (lineChanged and levelChanged))) or
       ((lineChanged or levelChanged or (currentLevel<>stepLevel)) and breakpointEncountered) then begin
+      {$ifdef DEBUGMODE}
+      if (state=breakSoonest)                                 then writeln('Break condition met: breakSoonest');
+      if (state=breakOnStepIn) and (currentLevel>stepLevel) then writeln('Break condition met: breakOnStepIn');
+      if (state=breakOnStepOut) and (currentLevel<stepLevel)then writeln('Break condition met: breakOnStepOut');
+      if (state=breakOnLineChange) and ((currentLevel<stepLevel) or (currentLevel=stepLevel) and (lineChanged and levelChanged)) then writeln('Break condition met: breakOnLineChange');
+      if (lineChanged or levelChanged or (currentLevel<>stepLevel)) and breakpointEncountered then writeln('Break condition met: breakpointEncountered');
+      {$endif}
       lineChanged:=false;
       levelChanged:=false;
       stepLevel:=currentLevel;
@@ -859,10 +866,6 @@ PROCEDURE T_stepper.steppingIn(CONST functionId:ansistring);
     timerMap.put(functionId,t);
 
     inc(currentLevel);
-    {$ifdef DEBUGMODE}
-    writeln('Stepping into level: ',currentLevel,' ',functionId);
-    writeln('          steplevel: ',stepLevel);
-    {$endif}
     system.leaveCriticalSection(cs);
   end;
 
@@ -872,10 +875,6 @@ PROCEDURE T_stepper.steppingOut(CONST functionId:ansistring);
     system.enterCriticalSection(cs);
     levelChanged:=true;
     dec(currentLevel);
-    {$ifdef DEBUGMODE}
-    writeln('Stepping out to level: ',currentLevel,' ',functionId);
-    writeln('            steplevel: ',stepLevel);
-    {$endif}
     if timerMap.containsKey(functionId,t) then begin
       dec(t.into);
       if t.into<=0 then t.timer.stop;
@@ -923,8 +922,7 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
       currentLine.package:=nil;
       currentLine.column:=0;
       currentLine.line:=0;
-      if (length(breakpoints)=0) then state:=breakOnLineChange
-                                 else state:=runUntilBreakpoint;
+      state:=runUntilBreakpoint;
     end else state:=runUntilBreakpoint;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);

@@ -600,6 +600,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newLit:P_literal;
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
+      {$ifdef FULLVERSION}stepInLocation:T_tokenLocation;{$endif}
 
   PROCEDURE initTokTypes; inline;
     begin
@@ -1490,7 +1491,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
   begin
     stack.create;
     {$ifdef fullVersion}
-    if currentlyDebugging then stepper.steppingIn('');
+    stepInLocation:=first^.location;
+    if currentlyDebugging then stepper.steppingIn(first^.location);
     {$endif}
     {$ifndef DEBUGMODE}try{$endif}
     repeat
@@ -1810,7 +1812,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}
-    if currentlyDebugging then stepper.steppingOut('');
+    if currentlyDebugging then stepper.steppingOut(stepInLocation);
     {$endif}
     stack.destroy;
   end;

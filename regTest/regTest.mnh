@@ -112,7 +112,7 @@ private executeExamples(examplesFile:string)->begin
 end;
 
 //*Export datastore
-main('export',filename:string)->writeFile(filename,runTimes.serialize(2));
+main('export',filename:string)->writeFile(filename,runTimes.serialize);
 
 //*Test without examples file
 main->main('',false);
