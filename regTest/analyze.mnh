@@ -4,7 +4,8 @@ private avg([])->Nan;
 private avg(L:numericList)->L.agg(+)/L.size;
 private sigma(L:numericList)->sqrt(avg(sqr(L-L.avg)));
 private quartiles([])->[Nan,Nan,Nan];
-private quartiles(L:numericList)->L[(L.size*[1..3] div 4)];
+private quartiles(L:numericList)->L.sort[(L.size*[1..3] div 4)];
+private quartiles(x:numeric)->[x,x,x];
 
 private doAnalysis(rt:list)->begin
   ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
@@ -49,15 +50,18 @@ private doAnalysis(rt:list)->begin
     print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
     totalTime:=filteredTests.getInner(2).agg(+);
 
-    local medianTimes:=filteredTests
+    local quartileTimes:=filteredTests
                        .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
-                       .each(entry,entry[[0,1]]|(entry[2]:list ? entry[2].sort[entry[2].size div 2] : entry[2])) //median time per test case
+                       .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
                        .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
                        .getInner([1,2]); //drop case
-    totalTime:=medianTimes.getInner(1).agg(+);
-    local star:=80/medianTimes.getInner(1).max;
+    totalTime:=quartileTimes.getInner(1,1).agg(+);
+    local star:=80/quartileTimes.getInner(1,2).max;
     print('Median test time by flavour: ');
-    print(flavors.each(f,"  \v"&f&"\t"&round(medianTimes[f],3)&"\vs\t"&round(100*medianTimes[f]/totalTime,3)&"\v%\t"&repeat('*',round(star*medianTimes[f]))&"\n",&));
+    print("  \vFlavour\t25%ile\v\t50%ile\v\t75%ile\v\trel.\t\vvisual\n",
+          flavors.each(f,"\v"&f&"\t"&round(quartileTimes[f,0],3)&"\vs\t"
+                                    &round(quartileTimes[f,1],3)&"\vs\t"
+                                    &round(quartileTimes[f,2],3)&"\vs\t"&round(100*quartileTimes[f,1]/totalTime,3)&"\v%\t"&bar(star,quartileTimes[f]) &"\n",&));
   end);
 end;
 
@@ -77,10 +81,10 @@ private analyzeCase(data,testCase:string)->begin
   local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
         ([['optimized',optSamples.getInner(0)]]|
          (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
-         [['debug',debugSamples.getInner(0)]]|
+         [["\ndebug",debugSamples.getInner(0)]]|
          (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
          .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
-//  table.showTable(true);
+
   local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.each(x,x:numeric ? round(x,4) : x).join("\t")).join("\n").print;
@@ -113,7 +117,7 @@ bar(factor,q)->begin
   local a:=round(factor*q[0]);
   local b:=round(factor*q[1]);
   local c:=round(factor*q[2]);
-  (a<b ? repeat('-',a-1)&'<' : '')&
+  (a<b ? repeat('-',a-1)&'<' : repeat('-',a-1))&
          repeat('=',b-a-1)&'|'&
   (b<c ? repeat('=',c-b-1)&'>' : '');
 end;

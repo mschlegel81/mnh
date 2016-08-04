@@ -13,6 +13,7 @@
     private
       comment:ansistring;
       called:boolean;
+      parent:P_rule;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
       pattern:T_pattern;
@@ -25,7 +26,7 @@
       PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
       PROCEDURE modifyBeginEnd;
     public
-      CONSTRUCTOR create           (CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -40,8 +41,9 @@
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION getInlineValue:P_literal;
-      FUNCTION getDocTxt(CONST ruleId:ansistring):ansistring;
-      FUNCTION getDocHtml(CONST ruleId:ansistring):ansistring;
+      FUNCTION getDocTxt:ansistring;
+      FUNCTION getDocHtml:ansistring;
+      FUNCTION getSubruleId:ansistring;
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
@@ -92,9 +94,10 @@ PROCEDURE T_subrule.modifyBeginEnd;
     end;
   end;
 
-CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
+CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
   CONST C_specialConstruct:array[false..true] of T_tokenType=(tt_EOL,tt_while);
   begin
+    parent:=parent_;
     called:=false;
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
@@ -106,6 +109,7 @@ CONSTRUCTOR T_subrule.create(CONST pat:T_pattern; CONST rep:P_token; CONST declA
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
   begin
+    parent:=nil;
     called:=false;
     typ:=srt_inline_for_each;
     pattern.create;
@@ -177,6 +181,7 @@ FUNCTION T_subrule.canUnbrace(CONST outerPrecedence:longint):boolean;
 PROCEDURE T_subrule.updatePatternForInline;
   VAR i:longint;
   begin
+    parent:=nil;
     pattern.clear;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokType=tt_parameterIdentifier then begin
@@ -190,6 +195,7 @@ PROCEDURE T_subrule.updatePatternForInline;
 CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluationContext);
   VAR t:P_token;
   begin
+    parent:=nil;
     called:=false;
     typ:=srt_inline_for_literal;
     declaredAt:=rep^.location;
@@ -215,6 +221,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
   VAR dummyBool:boolean;
       funcPtr:T_intFuncCallback=nil;
   begin
+    parent:=nil;
     comment:='';
     called:=false;
     typ:=srt_inline_for_literal;
@@ -260,6 +267,7 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
 CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
   VAR i:longint;
   begin
+    parent:=nil;
     comment:=original^.comment;
     called:=false;
     typ:=original^.typ;
@@ -342,6 +350,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     VAR newFirst,tmp:P_token;
         i,i1:longint;
         subruleId:ansistring;
+        subruleLocation:ansistring;
     begin
       //Example: f(x,y)->...
       //add before: begin
@@ -349,7 +358,8 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       //              local y:=y;
       //add after:  ; end
       //pattern.sig[0].id;
-      subruleId:=ansistring(declaredAt);
+      subruleId:=getSubruleId;
+      subruleLocation:=ansistring(declaredAt);
       if (firstRep^.tokType=tt_beginFunc) and
          (lastRep ^.tokType=tt_endFunc) then begin
         firstRep  ^.tokType:=tt_beginBlock;
@@ -375,7 +385,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       else lastRep^.next:=context.newToken(declaredAt,'',tt_endBlock);
       lastRep:=lastRep^.next;
       if typ in [srt_normal_private,srt_normal_public]
-      then stepper.steppingIn(subruleId);
+      then stepper.steppingIn(subruleLocation,subruleId);
     end;
   {$endif}
 
@@ -431,7 +441,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       end;
     end;
     {$ifdef fullVersion}
-    if currentlyDebugging and result and (param<>nil) and (param^.size<>0) then wrapResult;
+    if currentlyDebugging and result and (typ<>srt_inline_for_each) and (param<>nil) and (param^.size<>0) then wrapResult;
     {$endif}
   end;
 
@@ -471,6 +481,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end;
 
   begin
+    parent:=nil;
     called:=false;
     declaredAt:=opLocation;
     //Pattern (including final parameter names)
@@ -535,6 +546,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     end;
 
   begin
+    parent:=nil;
     called:=false;
     origRule:=original^.value;
     declaredAt:=funcLocation;
@@ -664,15 +676,15 @@ FUNCTION T_subrule.getInlineValue:P_literal;
     end else result:=nil;
   end;
 
-FUNCTION T_subrule.getDocTxt(CONST ruleId:ansistring):ansistring;
+FUNCTION T_subrule.getDocTxt():ansistring;
   begin
     result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
-    result:=result+ruleId+pattern.toString+';';
+    result:=result+getSubruleId+';';
     if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
   end;
 
-FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
+FUNCTION T_subrule.getDocHtml():ansistring;
   CONST Shift='&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
   begin
     result:='<tr><td>@Line '+intToStr(declaredAt.line)+': ';
@@ -681,7 +693,20 @@ FUNCTION T_subrule.getDocHtml(CONST ruleId:ansistring):ansistring;
       then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
       else result:=result+'<i>'+comment+'</i><br>';
     end;
-    result:=result+'<code>'+toHtmlCode(ruleId+pattern.toString)+'</code></td></tr>';
+    result:=result+'<code>'+toHtmlCode(getSubruleId)+'</code></td></tr>';
+  end;
+
+FUNCTION T_subrule.getSubruleId:ansistring;
+  begin
+    case typ of
+      srt_inline_for_literal: result:='expression';
+      srt_inline_for_each   : result:='each body ';
+      else begin
+        if parent=nil then result:='?'
+                      else result:=parent^.id;
+        result:=result+pattern.toString;
+      end;
+    end;
   end;
 
 FUNCTION T_subrule.arity:longint;

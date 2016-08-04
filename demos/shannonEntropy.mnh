@@ -1,5 +1,7 @@
-shannonEntropy(s:string)->shannonEntropy(s.chars);
-shannonEntropy(C:stringList)->-1*(unique(C).each(c,trueCount(C=c))/size(C)).each(s,s*ln(s)/ln(2),+);
+shannonEntropy(s:string)->s.chars //split s in characters
+                           .elementFrequency //obtain element frequency
+                           .getInner(0) //retain only
+                           .{$L/($L.agg(+))}.{$L*ln($L)/ln(2)}.agg(+)*-1;
 
 //*See <a href="http://rosettacode.org/wiki/Entropy">Entropy task from RosettaCode</a>
 main->main("1223334444");

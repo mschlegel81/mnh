@@ -72,20 +72,10 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 
   begin
     if id='' then exit('');
-    {$ifdef DEBUGMODE}
-    writeln('id to look for is: "',id,'"');
-    writeln('Root path is "',rootPath,'"');
-    writeln('Search folders: ',rootPath);
-    writeln('                ',configDir);
-    writeln('                ',extractFilePath(paramStr(0)));
-    {$endIf}
     result := '';
     recursePath(rootPath);
     if result = '' then recursePath(configDir);
     if result = '' then recursePath(extractFilePath(paramStr(0)));
-    {$ifdef DEBUGMODE}
-    writeln('Found: ',result);
-    {$endif}
   end;
 
 FUNCTION locateSources: T_arrayOfString;
