@@ -136,6 +136,7 @@ TYPE
   T_timerEntry=record
     timer:TEpikTimer;
     into:longint;
+    functionId:string;
   end;
 
   T_TimerMap=specialize G_stringKeyMap<T_timerEntry>;
@@ -174,8 +175,8 @@ TYPE
     public
       //To be called by evaluation-loop
       PROCEDURE stepping   (CONST location:T_tokenLocation; CONST pointerToFirst,pointerToContext,pointerToStack:pointer);
-      PROCEDURE steppingIn (CONST functionId:ansistring);
-      PROCEDURE steppingOut(CONST functionId:ansistring);
+      PROCEDURE steppingIn (CONST location,functionId:ansistring);
+      PROCEDURE steppingOut(CONST location:ansistring);
 
       //To be called by GUI
       PROCEDURE doStart(CONST continue:boolean);
@@ -850,35 +851,37 @@ PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFir
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingIn(CONST functionId:ansistring);
+PROCEDURE T_stepper.steppingIn(CONST location,functionId:ansistring);
   VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
     levelChanged:=true;
-    if not(timerMap.containsKey(functionId,t)) then begin
+    if not(timerMap.containsKey(location,t)) then begin
       t.timer:=TEpikTimer.create(nil);
       t.into:=1;
       t.timer.start;
+      t.functionId:=functionId;
     end else begin
       if t.into<=0 then t.timer.start;
       inc(t.into);
+      if t.functionId='' then t.functionId:=functionId;;
     end;
-    timerMap.put(functionId,t);
+    timerMap.put(location,t);
 
     inc(currentLevel);
     system.leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_stepper.steppingOut(CONST functionId:ansistring);
+PROCEDURE T_stepper.steppingOut(CONST location:ansistring);
   VAR t:T_timerEntry;
   begin
     system.enterCriticalSection(cs);
     levelChanged:=true;
     dec(currentLevel);
-    if timerMap.containsKey(functionId,t) then begin
+    if timerMap.containsKey(location,t) then begin
       dec(t.into);
       if t.into<=0 then t.timer.stop;
-      timerMap.put(functionId,t);
+      timerMap.put(location,t);
     end;
 
     system.leaveCriticalSection(cs);
@@ -994,14 +997,16 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
   VAR entrySet:T_TimerMap.KEY_VALUE_LIST;
       i,j:longint;
       swapTemp:T_TimerMap.KEY_VALUE_PAIR;
-      keyWidth:longint=0;
+      locWidth:longint=0;
+      idWidth:longint=0;
   begin
     entrySet:=timerMap.entrySet;
 
     for i:=0 to length(entrySet)-1 do begin
       entrySet[i].value.timer.stop;
       if entrySet[i].key='' then entrySet[i].key:=unknownLocTxt;
-      if length(entrySet[i].key)>keyWidth then keyWidth:=length(entrySet[i].key);
+      if length(entrySet[i].key)>locWidth then locWidth:=length(entrySet[i].key);
+      if length(entrySet[i].value.functionId)>idWidth then idWidth:=length(entrySet[i].value.functionId);
     end;
 
     for j:=1 to length(entrySet)-1 do for i:=0 to j-1 do if entrySet[i].value.timer.Elapsed<entrySet[j].value.timer.Elapsed then begin
@@ -1012,7 +1017,10 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
 
     adapters.raiseCustomMessage(mt_timing_info,'',C_nilTokenLocation);
     adapters.raiseCustomMessage(mt_timing_info,'Time spent by locations:',C_nilTokenLocation);
-    for i:=0 to length(entrySet)-1 do adapters.raiseCustomMessage(mt_timing_info,entrySet[i].key+StringOfChar(' ',keyWidth-length(entrySet[i].key))+' '+floatToStr(entrySet[i].value.timer.Elapsed),C_nilTokenLocation);
+    for i:=0 to length(entrySet)-1 do adapters.raiseCustomMessage(mt_timing_info,
+      entrySet[i].key             +StringOfChar(' ',locWidth-length(entrySet[i].key             ))+' '+
+      entrySet[i].value.functionId+StringOfChar(' ',idWidth- length(entrySet[i].value.functionId))+' '+
+      floatToStr(entrySet[i].value.timer.Elapsed),C_nilTokenLocation);
   end;
 
 {$endif}

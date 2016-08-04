@@ -277,7 +277,7 @@ FUNCTION T_rule.getDocTxt:ansistring;
   VAR i:longint;
   begin
     result:=C_ruleTypeText[ruleType]+'rule '+id+C_lineBreakChar+'in '+declarationStart.package^.getPath;
-    for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt(id);
+    for i:=0 to length(subrules)-1 do result:=result+C_lineBreakChar+subrules[i]^.getDocTxt();
     if ruleType in C_mutableRuleTypes then result:=result+C_lineBreakChar+'declared '+ansistring(declarationStart);
   end;
 
@@ -291,7 +291,7 @@ FUNCTION T_rule.getDocHtml:ansistring;
     result:=result+'</td></tr>';
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin
       anyPublic:=true;
-      result:=result+subrules[i]^.getDocHtml(id);
+      result:=result+subrules[i]^.getDocHtml();
     end;
     result:=result+'</table>';
     if not(anyPublic) then result:='';
@@ -330,7 +330,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
         begin
           stream:=package^.getDatastoreForId(id,false);
           L:=namedValue.getValue;
-          writeLiteralToStream(L,stream,declarationStart,@adapters,true);
+          writeLiteralToStream(L,stream,declarationStart,@adapters,false);
           disposeLiteral(L);
           stream.destroy;
           result:=false; //because the package file remains unchanged

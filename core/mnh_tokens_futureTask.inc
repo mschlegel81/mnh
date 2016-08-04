@@ -12,8 +12,11 @@
     next:P_futureTask;
     scope:P_evaluationContext;
 
+    {$ifdef FULLVERSION}
+    bodyLocation,bodyId:ansistring;
+    {$endif}
+
     CONSTRUCTOR createTask(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
-    CONSTRUCTOR createPlainFuture(CONST expression:P_token; CONST context:P_evaluationContext);
     PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
     FUNCTION    getResultAsLiteral(VAR context:T_evaluationContext):P_literal;
     PROCEDURE   free(VAR context:T_evaluationContext);
@@ -83,15 +86,13 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; C
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
     param.destroy;
+    {$ifdef FULLVERSION}
+    if currentlyDebugging then begin
+      bodyLocation:=ansistring(task^.location);
+      bodyId:=expr^.getSubruleId;
+    end;
+    {$endif}
     next:=nil;
-  end;
-
-CONSTRUCTOR T_futureTask.createPlainFuture(CONST expression: P_token; CONST context: P_evaluationContext);
-  begin
-    scope:=context;
-    task:=expression;
-    eachIndex:=-1;
-    state:=fts_pending;
   end;
 
 PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext);
@@ -103,7 +104,13 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     context.valueStore.createVariable(C_eachIndexIdentifier,idxLit,true);
     idxLit^.unreference;
     if context.adapters^.noErrors then begin
+      {$ifdef FULLVERSION}
+      if currentlyDebugging then stepper.steppingIn(bodyLocation,bodyId);
+      {$endif}
       reduceExpression(task,callDepth,context);
+      {$ifdef FULLVERSION}
+      if currentlyDebugging then stepper.steppingOut(bodyLocation);
+      {$endif}
     end else begin
       context.cascadeDisposeToken(task);
       task:=nil;

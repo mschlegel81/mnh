@@ -978,8 +978,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
 
         //create head/body rules------------------------------------------------
         emptyPattern.create;
-        new(headRule,create(emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,true,context));
-        new(bodyRule,create(emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,true,context));
+        new(headRule,create(nil,emptyPattern,bodyParts[0].first,bodyParts[0].first^.location,true,true,context));
+        new(bodyRule,create(nil,emptyPattern,bodyParts[1].first,bodyParts[1].first^.location,true,true,context));
         emptyPattern.destroy;
         //------------------------------------------------create head/body rules
         result:=true;
@@ -1492,7 +1492,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     stack.create;
     {$ifdef fullVersion}
     stepInLocation:=first^.location;
-    if currentlyDebugging then stepper.steppingIn(first^.location);
+    if currentlyDebugging then stepper.steppingIn(first^.location,'');
     {$endif}
     {$ifndef DEBUGMODE}try{$endif}
     repeat
