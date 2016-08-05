@@ -1,0 +1,10 @@
+writeFileLines('install.vbs',
+['@assoc .mnh=mnh.script',
+ '@ftype mnh.script="#" %%1 %%*',
+ '@if "%errorlevel%" NEQ "0" getadmin.vbs %0'].replace('#',executor));
+writeFileLines('uninstall.vbs',
+['Set UAC = CreateObject("Shell.Application")',
+ 'UAC.ShellExecute "cmd", "/c ftype mnh.script=", "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c assoc .mnh=",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c rmdir /S /Q %ALLUSERSPROFILE%\MNH",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c del #",  "", "runas", 1'].replace('#',executor));

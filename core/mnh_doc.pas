@@ -192,9 +192,9 @@ PROCEDURE ensureBuiltinDocExamples;
       reset(examplesCache);
       //Read examples:---------------------------------------------------------------------
       setLength(code,0);
-      for i:=0 to length(doc_examples_txt)-1 do
-      if trim(doc_examples_txt[i])='' then restoreExample
-                                      else append(code,doc_examples_txt[i]);
+      for i:=0 to length(examples_txt)-1 do
+      if trim(examples_txt[i])='' then restoreExample
+                                      else append(code,examples_txt[i]);
       restoreExample;
       //---------------------------------------------------------------------:Read examples
       close(examplesCache);
@@ -203,9 +203,9 @@ PROCEDURE ensureBuiltinDocExamples;
       rewrite(examplesCache);
       //Read examples:---------------------------------------------------------------------
       setLength(code,0);
-      for i:=0 to length(doc_examples_txt)-1 do
-      if trim(doc_examples_txt[i])='' then processExample
-                                      else append(code,doc_examples_txt[i]);
+      for i:=0 to length(examples_txt)-1 do
+      if trim(examples_txt[i])='' then processExample
+                                      else append(code,examples_txt[i]);
       processExample;
       //---------------------------------------------------------------------:Read examples
       close(examplesCache);
@@ -586,11 +586,11 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
     setLength(includes,0);
     context.mode:=none;
 
-    for i:=0 to length(doc_html_template_txt)-1 do begin
+    for i:=0 to length(html_template_txt)-1 do begin
       case context.mode of
-        none:            if not(handleCommand(doc_html_template_txt[i])) and outFile.isOpen then writeln(outFile.handle,doc_html_template_txt[i]);
-        beautifying:     if not(contextEnds(doc_html_template_txt[i]))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(doc_html_template_txt[i]));
-        definingInclude: if not(contextEnds(doc_html_template_txt[i]))   then append(context.include.content,doc_html_template_txt[i]);
+        none:            if not(handleCommand(html_template_txt[i])) and outFile.isOpen then writeln(outFile.handle,html_template_txt[i]);
+        beautifying:     if not(contextEnds(html_template_txt[i]))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(html_template_txt[i]));
+        definingInclude: if not(contextEnds(html_template_txt[i]))   then append(context.include.content,html_template_txt[i]);
       end;
     end;
     with outFile do if isOpen then close(handle);
