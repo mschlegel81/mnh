@@ -856,7 +856,9 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     tempcontext.destroy;
     if dataReadyScalar or dataReadyVectorized then begin
       resultLiteral:=P_listLiteral(firstRep^.data);
-      result:=newDataRow(resultLiteral);
+      if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
+      then result:=newDataRow(resultLiteral,TList)
+      else result:=newDataRow(resultLiteral);
       context.cascadeDisposeToken(firstRep);
     end else begin
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
