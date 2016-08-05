@@ -82,43 +82,36 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
   end;
 
 FUNCTION T_patternElement.toString: ansistring;
-  FUNCTION trimLeadingEquals(CONST s:ansistring):ansistring;
-    begin
-      if (length(s)>1) and (s[1]='=') then begin
-        result:=copy(s,2,length(s)-1);
-        if (length(result)>1) and (result[1]='=')
-        then result:=copy(result,2,length(result)-1);
-      end else result:=s;
-    end;
-
   begin
     result:='';
     case restrictionType of
       tt_literal: result:=id;
       tt_typeCheckScalar    ,
-      tt_typeCheckList      ,
       tt_typeCheckBoolean   ,
-      tt_typeCheckBoolList  ,
       tt_typeCheckInt       ,
-      tt_typeCheckIntList   ,
       tt_typeCheckReal      ,
-      tt_typeCheckRealList  ,
       tt_typeCheckString    ,
+      tt_typeCheckNumeric   : result:=(id+C_tokenInfo[restrictionType].defaultId);
+      tt_typeCheckList      ,
+      tt_typeCheckBoolList  ,
+      tt_typeCheckIntList   ,
+      tt_typeCheckRealList  ,
       tt_typeCheckStringList,
-      tt_typeCheckNumeric   ,
       tt_typeCheckNumList   ,
-      tt_typeCheckExpression  ,
-      tt_typeCheckKeyValueList: result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId);
+      tt_typeCheckKeyValueList,
+      tt_typeCheckExpression  : if (restrictionIdx>=0) then result:=(id+C_tokenInfo[restrictionType].defaultId+'('+intToStr(restrictionIdx)+')')
+                                                       else result:=(id+C_tokenInfo[restrictionType].defaultId);
       tt_comparatorEq,
       tt_comparatorNeq,
       tt_comparatorLeq,
       tt_comparatorGeq,
       tt_comparatorLss,
-      tt_comparatorGrt,
-      tt_comparatorListEq: if restrictionId='' then result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId+restrictionValue^.toString)
-                                               else result:=trimLeadingEquals(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
-      tt_operatorIn: if restrictionId='' then result:=trimLeadingEquals(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
-                                         else result:=trimLeadingEquals(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
+      tt_comparatorGrt: if restrictionId='' then result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionValue^.toString)
+                                            else result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
+      tt_comparatorListEq: if restrictionId='' then result:=restrictionValue^.toString
+                                               else result:=(id+C_tokenInfo[restrictionType].defaultId+restrictionId);
+      tt_operatorIn: if restrictionId='' then result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
+                                         else result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
       else result:=result+id;
     end;
   end;
