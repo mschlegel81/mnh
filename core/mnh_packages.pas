@@ -4,7 +4,7 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
      mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
-     {$ifdef fullVersion}mnh_doc,Classes,{$endif}
+     {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
      mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},serializationUtil;
 
@@ -1220,6 +1220,7 @@ INITIALIZATION
   //callbacks in doc
   {$ifdef fullVersion}
   demoCodeToHtmlCallback:=@demoCallToHtml;
+  mnh_plotFuncs.generateRow:=@generateRow;
   {$endif}
   //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
