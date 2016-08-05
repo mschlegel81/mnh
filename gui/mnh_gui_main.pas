@@ -508,28 +508,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
 
 PROCEDURE TMnhForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR i:integer;
-  PROCEDURE uninstall;
-    {$i res_removeMnhFileAssociations.inc}
-    begin
-      runAlone(removeMnhFileAssociations_mnh);
-      runAlone('deleteDir('+escapeString(configDir)+')');
-      DeleteFile('mnh_light.exe');
-      {$ifdef Windows}
-      deleteMyselfOnExit;
-      {$endif}
-      halt;
-    end;
-
   begin
-    if SettingsForm.uninstallToggleBox.Checked then begin
-      i:=closeDialogForm.showOnUninstall;
-      if i=mrCancel then begin
-        CloseAction:=caNone;
-        exit;
-      end;
-      if i=mrOk then uninstall;
-    end;
-
     if runEvaluator.evaluationRunning then runEvaluator.haltEvaluation;
     stepper.doStop;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
@@ -1502,7 +1481,7 @@ PROCEDURE TMnhForm.processSettings;
         editorMeta[i].setStepperBreakpoints;
       end;
 
-      if not(reEvaluationWithGUIrequired) then with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
+      if not(reEvaluationWithGUIrequired) and (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta)) then with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;

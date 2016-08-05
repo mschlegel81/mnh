@@ -14,6 +14,7 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
+    Button2: TButton;
     memLimitEdit: TEdit;
     Label6: TLabel;
     logNameEdit: TEdit;
@@ -32,17 +33,15 @@ TYPE
     Label8: TLabel;
     TabSheet_install: TTabSheet;
     Button1: TButton;
-    Button2: TButton;
-    uninstallToggleBox: TToggleBox;
     TabSheet_global: TTabSheet;
     Label1: TLabel;
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
+    PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
-    PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE logNameEditChange(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
@@ -127,6 +126,12 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
     end;
   end;
 
+PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
+  {$i res_ensureInstallScripts.inc}
+  begin
+    runAlone(ensureInstallScripts_mnh);
+  end;
+
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
   begin
     if settings.value^.editorFontname<>'' then exit;
@@ -142,12 +147,6 @@ PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
   {$i res_ensureNppHighlighting.inc}
   begin
     runAlone(ensureNotepad__Highlighting_mnh);
-  end;
-
-PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
-  {$i res_ensureMnhFileAssociations.inc}
-  begin
-    runAlone(ensureMnhFileAssociations_mnh);
   end;
 
 PROCEDURE TSettingsForm.FormShow(Sender: TObject);

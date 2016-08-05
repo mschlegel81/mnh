@@ -10,7 +10,7 @@ private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(
 
 private templateToInc(inFile,outFile<>inFile)->begin
   local inLines:=inFile.fileContents;
-  local pasId:=clean(inFile,['a'..'z','A'..'Z'],'_');
+  local pasId:=clean(inFile.splitFileName['filename'],['a'..'z','A'..'Z'],'_');
   local outText:=
   'VAR '&pasId&'cache:T_arrayOfString;'&
   'FUNCTION '&pasId&': T_arrayOfString;'&
@@ -23,15 +23,15 @@ end;
 
 private nameAndContents(filename)->'['&escape(filename)&','&escape(fileContents(filename))&']';
 
-private ensureDemos->fileExists('ensureDemos.mnh') ? void : begin
-  writeFileLines('ensureDemos.mnh','{'|
+private ensureDemos->fileExists('resources/ensureDemos.mnh') ? void : begin
+  writeFileLines('resources/ensureDemos.mnh','{'|
     (files('demos/*.mnh')|'demos/inputs/inputs.mnh')
     .each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
 
-private ensurePackages->fileExists('ensurePackages.mnh') ? void : begin
-  writeFileLines('ensurePackages.mnh','{'|
+private ensurePackages->fileExists('resources/ensurePackages.mnh') ? void : begin
+  writeFileLines('resources/ensurePackages.mnh','{'|
     files('packages/*.mnh').each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}");
 end;
@@ -43,13 +43,12 @@ currentCodeHash:=begin
   ensureDemos;
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
-  templateToInc('doc/examples.txt','core/res_examples.inc');
-  templateToInc('doc/html_template.txt','core/res_html_template.inc');
-  templateToInc('ensureMnhFileAssociations.mnh','core/res_ensureMnhFileAssociations.inc');
-  templateToInc('removeMnhFileAssociations.mnh','core/res_removeMnhFileAssociations.inc');
-  templateToInc('ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
-  templateToInc('ensureDemos.mnh','core/res_ensureDemos.inc');
-  templateToInc('ensurePackages.mnh','core/res_ensurePackages.inc');
+  templateToInc('resources/examples.txt','core/res_examples.inc');
+  templateToInc('resources/html_template.txt','core/res_html_template.inc');
+  templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
+  templateToInc('resources/ensureDemos.mnh','core/res_ensureDemos.inc');
+  templateToInc('resources/ensureInstallScripts.mnh','core/res_ensureInstallScripts.inc');
+  templateToInc('resources/ensurePackages.mnh','core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   //update code hash
   local result:=fileStats(relevantFiles).getInner(3).agg(+).hex;
@@ -178,9 +177,8 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
           end);
   (files(allFolders('.')&'/*.png')|
    files(allFolders('..')&'/*.bak')|
-   files('install.mnh')|
-   files('ensureDemos.mnh')|
-   files('ensurePackages.mnh')|
+   files('resources/ensureDemos.mnh')|
+   files('resources/ensurePackages.mnh')|
    files('core/res_examples.inc')|
    files('core/res_html_template.inc')|
    files('core/res_ensureMnhFileAssociations.inc')|
@@ -210,7 +208,7 @@ private testMnh(...)->begin
   exeHasWrongVersion(i)
   ? void
   : print('Testing ',binName(i)) orElse
-    binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','doc/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i)),
+    binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i)),
   AND);
 end;
 
