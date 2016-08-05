@@ -764,4 +764,109 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     bracketStack.destroy;
   end;
 
+
+{$ifdef FULLVERSION}
+FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;
+  VAR subRule:P_subrule;
+
+      firstRep,lastRep:P_token;
+      TList:P_listLiteral;
+      params:T_listLiteral;
+      resultLiteral:P_listLiteral;
+
+      tempAdapters:T_adapters;
+      tempcontext:T_evaluationContext;
+
+      dataReadyVectorized:boolean=false;
+      dataReadyScalar    :boolean=false;
+
+  FUNCTION evaluateOk:boolean;
+    begin
+      reduceExpression(firstRep,0,tempcontext);
+      result:=tempAdapters.noErrors and
+              (firstRep<>nil) and
+              (firstRep^.next=nil) and
+              (firstRep^.tokType=tt_literal) and
+              (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
+              (P_listLiteral(firstRep^.data)^.size = TList^.size);
+      tempAdapters.clearErrors;
+      if not(result) then context.cascadeDisposeToken(firstRep);
+    end;
+
+  PROCEDURE constructPEachExpression;
+    begin
+      firstRep:=context.newToken(location,'',tt_literal,TList); TList^.rereference;
+      firstRep^.next:=context.newToken(location,'t',tt_parallelEach);
+      lastRep:=firstRep^.next;
+      lastRep^.next:=context.newToken(location,'t',tt_identifier);
+      lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(location,'',tt_ponFlipper);
+      lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(location,'',tt_literal,f); f^.rereference;
+      lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(location,'',tt_braceClose);
+    end;
+
+  PROCEDURE constructInitialTList;
+    VAR sampleIndex:longint;
+    begin
+      TList:=newListLiteral;
+      for sampleIndex:=0 to samples-1 do TList^.appendReal(t0+(t1-t0)/(samples-1)*sampleIndex);
+    end;
+
+  //PROCEDURE refineDataRow;
+  //  VAR distThreshold:double=0;
+  //      distThresholdSamples:longint=0;
+  //      i:longint;
+  //      newTimes:T_arrayOfDouble;
+  //  begin
+  //    setLength(newTimes,0);
+  //    for i:=1 to length(dataRow)-1 do
+  //    if not(IsNan(dataRow[i,0])) and not(IsNan(dataRow[i-1,0])) and
+  //       not(IsNan(dataRow[i,1])) and not(IsNan(dataRow[i-1,1])) then begin
+  //      distThreshold:=distThreshold+sqr(dataRow[i,0]-dataRow[i-1,0])
+  //                                  +sqr(dataRow[i,1]-dataRow[i-1,1]);
+  //      inc(distThresholdSamples);
+  //    end;
+  //    distThreshold:=distThreshold/distThresholdSamples;
+  //
+  //    for i:=0
+  //
+  //  end;
+
+  begin
+    subRule:=P_subrule(f^.value);
+
+    tempAdapters.create;
+    tempcontext.createNormalContext(@tempAdapters);
+
+    constructInitialTList;
+    params.create;
+    params.append(TList,true);
+    if (subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,false) or
+        subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,true)) and evaluateOk then dataReadyVectorized:=true;
+    params.destroy;
+
+    if not(dataReadyVectorized) then begin
+      constructPEachExpression;
+      if evaluateOk then dataReadyScalar:=true;
+    end;
+
+    tempAdapters.destroy;
+    tempcontext.destroy;
+    if dataReadyScalar or dataReadyVectorized then begin
+      resultLiteral:=P_listLiteral(firstRep^.data);
+      result:=newDataRow(resultLiteral);
+      context.cascadeDisposeToken(firstRep);
+    end else begin
+      context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
+      setLength(result,0);
+    end;
+
+    disposeLiteral(TList);
+  end;
 {$endif}
+
+
+{$endif}
+
