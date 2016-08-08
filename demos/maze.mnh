@@ -1,19 +1,17 @@
-private scramble(List<>[])->List.get(sortPerm(random(size(List))));
-private scramble([])->[];
-private neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
+private randomListElement(L:list)->L[intRandom(L.size)] orElse [];
+
+private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
 private neighbors(width,height,x,y)->
-  scramble([x>0        ? [x-1,y] : void,
-            y>0        ? [x,y-1] : void,
-            x<width-1  ? [x+1,y] : void,
-            y<height-1 ? [x,y+1] : void].each(p,p.get(0)+p.get(1)*width));
+  ([x>0        ? [x-1,y] : void,
+    y>0        ? [x,y-1] : void,
+    x<width-1  ? [x+1,y] : void,
+    y<height-1 ? [x,y+1] : void].each(p,p.get(0)+p.get(1)*width));
 
 private unvisitedNeighbor(width,height,currentIndex,visited)->
-  neighbors(width,height,currentIndex)
-  .each(next,next in visited ? void : next)
-  .head;
+  neighbors(width,height,currentIndex).minus(visited).randomListElement;
 
 private randomUnvisitedCell(width,height,visited)->
-  head(scramble([0..width*height-1].each(i,i in visited ? void : i)));
+  [0..width*height-1].minus(visited).randomListElement;
 
 private makeMaze(width,height)->
 begin
@@ -34,6 +32,7 @@ begin
   end);
 
   local visitPairs:=[0..size(visited)-2].each(i,sort(visited.get([i,i+1])));
+  print(visitPairs);
   [0..height-1].each(j,
        [0..width-1].each(i,[i+(j-1)*width,i+j*width] in visitPairs ? "+   " : "+---",&)&"+",   //wall [i,j]->[i,j-1];
        [0..width-1].each(i,[(i-1)+j*width,i+j*width] in visitPairs ? "    " : "|   ",&)&"|")  //wall [i,j]->[i-1,j]
