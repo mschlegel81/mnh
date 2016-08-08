@@ -770,8 +770,11 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
   VAR subRule:P_subrule;
 
       firstRep,lastRep:P_token;
+
+      tRow :T_arrayOfDouble;
       TList:P_listLiteral;
-      params:T_listLiteral;
+      dataRow:T_dataRow;
+
       resultLiteral:P_listLiteral;
 
       tempAdapters:T_adapters;
@@ -793,7 +796,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if not(result) then context.cascadeDisposeToken(firstRep);
     end;
 
-  PROCEDURE constructPEachExpression;
+  FUNCTION evaluatePEachExpressionOk:boolean;
     begin
       firstRep:=context.newToken(location,'',tt_literal,TList); TList^.rereference;
       firstRep^.next:=context.newToken(location,'t',tt_parallelEach);
@@ -805,34 +808,132 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       lastRep^.next:=context.newToken(location,'',tt_literal,f); f^.rereference;
       lastRep:=lastRep^.next;
       lastRep^.next:=context.newToken(location,'',tt_braceClose);
+      result:=evaluateOk;
+    end;
+
+  FUNCTION evaluateVectorExpressionOk:boolean;
+    VAR params:T_listLiteral;
+    begin
+      params.create;
+      params.append(TList,true);
+      result:=(subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,false) or
+               subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,true)) and evaluateOk;
+      params.destroy;
     end;
 
   PROCEDURE constructInitialTList;
     VAR sampleIndex:longint;
+        initialSampleCount:longint;
+        t:T_myFloat;
     begin
+      initialSampleCount:=(samples div 100)-1;
+      if initialSampleCount< 1 then
+         initialSampleCount:=1;
       TList:=newListLiteral;
-      for sampleIndex:=0 to samples-1 do TList^.appendReal(t0+(t1-t0)/(samples-1)*sampleIndex);
+      setLength(tRow,initialSampleCount+1);
+      for sampleIndex:=0 to initialSampleCount do begin
+        t:=t0+(t1-t0)*sampleIndex/initialSampleCount;
+        TList^.appendReal(t);
+        tRow[sampleIndex]:=t;
+      end;
     end;
 
-  //PROCEDURE refineDataRow;
-  //  VAR distThreshold:double=0;
-  //      distThresholdSamples:longint=0;
-  //      i:longint;
-  //      newTimes:T_arrayOfDouble;
-  //  begin
-  //    setLength(newTimes,0);
-  //    for i:=1 to length(dataRow)-1 do
-  //    if not(IsNan(dataRow[i,0])) and not(IsNan(dataRow[i-1,0])) and
-  //       not(IsNan(dataRow[i,1])) and not(IsNan(dataRow[i-1,1])) then begin
-  //      distThreshold:=distThreshold+sqr(dataRow[i,0]-dataRow[i-1,0])
-  //                                  +sqr(dataRow[i,1]-dataRow[i-1,1]);
-  //      inc(distThresholdSamples);
-  //    end;
-  //    distThreshold:=distThreshold/distThresholdSamples;
-  //
-  //    for i:=0
-  //
-  //  end;
+  PROCEDURE refineDataRow;
+    VAR distThreshold:double=0;
+        distThresholdSamples:longint=0;
+        i,j,k:longint;
+        oldTimes,newTimes:T_arrayOfDouble;
+        oldRow  ,newRow  :T_dataRow;
+
+        oLogRow:T_dataRow;
+        t:double;
+        stillOk:boolean=true;
+
+    begin
+      while stillOk and (length(dataRow)<samples) do begin
+        //Prepare threshold:----------------------------------------------------
+        oLogRow:=context.adapters^.plot.olxy(dataRow);
+        for i:=1 to length(dataRow)-1 do
+        if not(isNan(oLogRow[i,0])) and not(isNan(oLogRow[i-1,0])) and
+           not(isNan(oLogRow[i,1])) and not(isNan(oLogRow[i-1,1])) then begin
+          distThreshold:=distThreshold+sqr(oLogRow[i,0]-oLogRow[i-1,0])
+                                      +sqr(oLogRow[i,1]-oLogRow[i-1,1]);
+          inc(distThresholdSamples);
+        end;
+        distThreshold:=distThreshold/distThresholdSamples;
+        //----------------------------------------------------:Prepare threshold
+        //Prepare new time samples:---------------------------------------------
+        setLength(newTimes,0);
+        TList:=newListLiteral;
+        for i:=1 to length(dataRow)-1 do
+        if (isNan(oLogRow[i,0])) or (isNan(oLogRow[i-1,0])) or
+           (isNan(oLogRow[i,1])) or (isNan(oLogRow[i-1,1])) or
+          (sqr(oLogRow[i,0]-oLogRow[i-1,0])+sqr(oLogRow[i,1]-oLogRow[i-1,1])>=distThreshold) then begin
+          t:=tRow[i]*0.5+tRow[i-1]*0.5;
+          TList^.appendReal(t);
+          append(newTimes,t);
+        end;
+        //fallback: ensure that new samples are always added
+        if length(newTimes)=0 then begin
+          {$ifdef DEBUGMODE}writeln('Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
+          setLength(newTimes,length(tRow)-1);
+          for i:=1 to length(tRow)-1 do begin
+            t:=tRow[i]*0.5+tRow[i-1]*0.5;
+            TList^.appendReal(t);
+            newTimes[i-1]:=t;
+          end;
+        end;
+        //---------------------------------------------:Prepare new time samples
+        //Prepare new point samples:--------------------------------------------
+        stillOk:=dataReadyVectorized and evaluateVectorExpressionOk
+              or dataReadyScalar     and evaluatePEachExpressionOk;
+        if stillOk then begin
+          resultLiteral:=P_listLiteral(firstRep^.data);
+          if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
+          then newRow:=newDataRow(resultLiteral,TList)
+          else newRow:=newDataRow(resultLiteral);
+          //Merge samples:------------------------------------------------------
+          setLength(oldRow,length(dataRow));
+          for i:=0 to length(oldRow)-1 do oldRow[i]:=dataRow[i];
+          setLength(oldTimes,length(tRow));
+          for i:=0 to length(oldTimes)-1 do oldTimes[i]:=tRow[i];
+          setLength(dataRow,length(oldRow  )+length(newRow  ));
+          setLength(tRow   ,length(oldTimes)+length(newTimes));
+          {$ifdef DEBUGMODE}
+          writeln('Merging samples of size ',length(oldRow),'+',length(newRow),'->',length(dataRow));
+          writeln('                        ',length(oldTimes),'+',length(newTimes),'->',length(tRow));
+          {$endif}
+          i:=0;
+          j:=0;
+          k:=0;
+          while (i<length(oldTimes)) and (j<length(newTimes)) do begin
+            if oldTimes[i]<=newTimes[j] then begin
+              tRow   [k]:=oldTimes[i];
+              dataRow[k]:=oldRow[i];
+              inc(i); inc(k);
+            end else begin
+              tRow   [k]:=newTimes[j];
+              dataRow[k]:=newRow[j];
+              inc(j); inc(k);
+            end;
+          end;
+          while (i<length(oldTimes)) do begin
+            tRow   [k]:=oldTimes[i];
+            dataRow[k]:=oldRow[i];
+            inc(i); inc(k);
+          end;
+          while (j<length(newTimes)) do begin
+            tRow   [k]:=newTimes[j];
+            dataRow[k]:=newRow[j];
+            inc(j); inc(k);
+          end;
+          //------------------------------------------------------:Merge samples
+        end;
+        context.cascadeDisposeToken(firstRep);
+        disposeLiteral(TList);
+        //--------------------------------------------:Prepare new point samples
+      end;
+    end;
 
   begin
     subRule:=P_subrule(f^.value);
@@ -841,31 +942,26 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     tempcontext.createNormalContext(@tempAdapters);
 
     constructInitialTList;
-    params.create;
-    params.append(TList,true);
-    if (subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,false) or
-        subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,true)) and evaluateOk then dataReadyVectorized:=true;
-    params.destroy;
 
-    if not(dataReadyVectorized) then begin
-      constructPEachExpression;
-      if evaluateOk then dataReadyScalar:=true;
-    end;
+    dataReadyVectorized:=evaluateVectorExpressionOk;
+    if not(dataReadyVectorized) then dataReadyScalar:=evaluatePEachExpressionOk;
 
-    tempAdapters.destroy;
-    tempcontext.destroy;
     if dataReadyScalar or dataReadyVectorized then begin
       resultLiteral:=P_listLiteral(firstRep^.data);
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
-      then result:=newDataRow(resultLiteral,TList)
-      else result:=newDataRow(resultLiteral);
+      then dataRow:=newDataRow(resultLiteral,TList)
+      else dataRow:=newDataRow(resultLiteral);
       context.cascadeDisposeToken(firstRep);
+      disposeLiteral(TList);
+      refineDataRow;
     end else begin
       context.adapters^.raiseError('Cannot prepare sample row using function '+f^.toString(),location);
       setLength(result,0);
     end;
+    tempAdapters.destroy;
+    tempcontext.destroy;
 
-    disposeLiteral(TList);
+    result:=dataRow;
   end;
 {$endif}
 

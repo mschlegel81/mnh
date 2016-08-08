@@ -118,6 +118,7 @@ TYPE
       FUNCTION longtestYTic: ansistring;
       PROCEDURE setScreenSize(CONST width, height: longint; CONST skipTics:boolean=false);
     public
+      FUNCTION olxy(CONST xy:T_dataRow):T_dataRow;
       PROPERTY options:T_scalingOptions read getScalingOptions write setScalingOptions;
 
       CONSTRUCTOR createWithDefaults;
@@ -143,7 +144,6 @@ TYPE
 
       PROCEDURE CopyFrom(VAR p:T_plot);
   end;
-
 
 IMPLEMENTATION
 VAR MAJOR_TIC_STYLE, MINOR_TIC_STYLE:T_style;
@@ -730,9 +730,9 @@ FUNCTION T_plot.realToScreen(CONST axis: char; CONST p: double): double;
 FUNCTION T_plot.olx(CONST x: double): double;
   begin
     if scalingOptions.logscale['x'] then begin
-      if x<1E-324 then exit(-324);
+      if x<1E-323 then exit(Nan);
       result:=ln(x)/ln(10);
-      if isNan(result) or isInfinite(result) then result:=-324;
+      if isNan(result) or isInfinite(result) then result:=Nan;
     end else result:=x;
   end;
 
@@ -745,9 +745,9 @@ FUNCTION T_plot.oex(CONST x: double): double;
 FUNCTION T_plot.oly(CONST y: double): double;
   begin
     if scalingOptions.logscale['y'] then begin
-      if y<1E-324 then exit(-324);
+      if y<1E-323 then exit(Nan);
       result:=ln(y)/ln(10);
-      if isNan(result) or isInfinite(result) then result:=-324;
+      if isNan(result) or isInfinite(result) then result:=Nan;
     end else result:=y;
   end;
 
@@ -755,6 +755,22 @@ FUNCTION T_plot.oey(CONST y: double): double;
   begin
     if scalingOptions.logscale['y'] then result:=exp(y*ln(10))
                                     else result:=y;
+  end;
+
+FUNCTION T_plot.olxy(CONST xy:T_dataRow):T_dataRow;
+  VAR cAxis:char;
+      iAxis:longint;
+      i:longint;
+  begin
+    setLength(result,length(xy));
+    for cAxis:='x' to 'y' do begin
+      iAxis:=ord(cAxis)-ord('x');
+      if scalingOptions.logscale[cAxis] then for i:=0 to length(xy)-1 do begin
+        if xy[i,iAxis]<1E-323 then result[i,iAxis]:=Nan
+                              else result[i,iAxis]:=ln(xy[i,iAxis])/ln(10);
+        if isNan(result[i,iAxis]) or isInfinite(result[i,iAxis]) then result[i,iAxis]:=Nan;
+      end else for i:=0 to length(xy)-1 do result[i,iAxis]:=xy[i,iAxis];
+    end;
   end;
 
 FUNCTION T_plot.isSampleValid(CONST sample: T_point): boolean;
