@@ -62,7 +62,7 @@ currentCodeHash:=begin
   result;
 end;
 
-binName(8)->'mnh_imig' & (isLinux ? '' : '.exe');
+binName(8)->'./mnh_imig' & (isLinux ? '' : '.exe');
 binName(FI:int)->format('%smnh%s%s%s',
                                 (FI and 1)>0 OR isLinux ? './' : 'bin32/',
                                 (FI and 2)>0 ? '' : '_light',
