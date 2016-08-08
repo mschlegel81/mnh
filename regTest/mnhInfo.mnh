@@ -21,3 +21,5 @@ codeHash(exe)->exe.exeInfo['codeHash'];
 isDebug(exe)->exe.exeInfo['isDebug'];
 flavour->executor.flavour;
 flavour(exe)->exe.exeInfo['flavour'];
+
+main(exe)->exe.exeInfo.each(line,line.join("\t")).join("\n").print;
