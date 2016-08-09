@@ -235,7 +235,7 @@ TYPE
       CONSTRUCTOR create(CONST initialId:idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
-      FUNCTION mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+      FUNCTION mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
       FUNCTION getId:idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
@@ -2355,7 +2355,7 @@ PROCEDURE T_namedVariable.setValue(CONST newValue:P_literal);
     value^.rereference;
   end;
 
-FUNCTION T_namedVariable.mutate(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
+FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
   CONST MAPPED_OP:array[tt_cso_assignPlus..tt_cso_assignDiv] of T_tokenType=(tt_operatorPlus,tt_operatorMinus,tt_operatorMult,tt_operatorDivReal);
   VAR oldValue:P_literal;
   begin

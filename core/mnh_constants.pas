@@ -123,6 +123,7 @@ TYPE
 
   T_tokenTypeSet=set of T_tokenType;
   T_modifier=                         tt_modifier_private..tt_modifier_synchronized;
+  T_cStyleOperator=tt_cso_assignPlus..tt_cso_assignAppend;
 CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized];
 TYPE
   T_modifierSet=set of T_modifier;
