@@ -277,7 +277,7 @@ PROCEDURE T_editorMeta.insertText(CONST s:string);
   VAR lineIdx,colIdx:longint;
   begin
     lineIdx:=editor.CaretY-1;
-    colIdx:=editor.CaretX;
+    colIdx:=editor.CaretX-1;
     editor.lines[lineIdx]:=copy(editor.lines[lineIdx],1,colIdx)+s+
                            copy(editor.lines[lineIdx],colIdx+1,length(editor.lines[lineIdx]));
   end;
