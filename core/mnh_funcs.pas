@@ -100,6 +100,17 @@ FUNCTION deserialize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     else result:=nil;
   end;
 
+FUNCTION bits_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR bits:bitpacked array [0..63] of boolean;
+      k:longint;
+  begin
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
+      move(P_intLiteral(params^.value(0))^.value,bits,8);
+      result:=newListLiteral;
+      for k:=0 to 63 do P_listLiteral(result)^.appendBool(bits[k]);
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   intrinsicRuleMap.create;
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
@@ -108,6 +119,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'mnhParameters',@mnhParameters_imp,'mnhParameters;#Returns the command line parameters/switches passed on program startup');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x. Strings will NOT(!) be compressed.#serialize(x,compressStrings:boolean);#Returns a string representing x.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);#Returns the literal represented by s which was created using serialize(x)');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits',@bits_impl,'bits(i:int);#Returns the bits of i');
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);
