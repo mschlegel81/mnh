@@ -1,0 +1,37 @@
+private diffList(L:list)->L.each(e,[e[0]-1,-e[1]],[e[0]+1, e[1]]).group(0,{[$x[0],$x[1]+$y[1]]}).sort;
+
+memoized
+private abstractD(i==0)->[[0,1]];
+private abstractD(i>0)->abstractD(i-1).diffList;
+private abstractD(i,h)->abstractD(i).each(p,p*[h^(1/i),0.5^i/h]);
+
+//*Returns the first derivative of f at point t
+D(f:expression(1),t:numeric,h>0.0)->D(f,t,h,1);
+//*Returns the value of f at point t
+D(f:expression(1),t:numeric,h    ,k=0)->f(t);
+//*Returns the k-th derivative f at point t
+D(f:expression(1),t:numeric,h>0.0,k>0)->abstractD(k,h).pEach(p,f(t+p[0])*p[1],+);
+//*Returns the k-th derivative f at points T
+D(f:expression(1),T:numericList,h>0.0,k>=0)->T.pEach(t,f.D(t,h,k));
+
+private taylorPower(shift=0,power=0)->{$x};
+private taylorPower(shift=0,power)->{$x}^power;
+private taylorPower(shift,power)->({$x}-shift)^power;
+
+private factorial(n>39)->[1..n].each(i,toReal(i),*);
+private factorial(n>0)->[1..n].agg(*);
+private factorial(n)->1;
+
+//*Returns the factors of the Taylor series expansion of f around x0
+taylorFactors(f:expression(1),x0:numeric,h>0.0,termCount>=1)->[0..termCount-1].pEach(i,f.D(x0,h,i)/factorial(i));
+//*Returns Taylor series expansion of f around x0
+taylorExpansion(f:expression(1),x0:numeric,h>0.0,termCount>=1)->f.taylorFactors(x0,h,termCount).each(term,term.abs<1E-6 ? void : taylorPower(x0,index)*term,+);
+//*Returns MacLaurin series expansion of f (i.e. the Taylor series expansion arounf 0)
+macLaurinExpansion(f:expression(1),h>0.0,termCount>=1)->taylorExpansion(f,0,h,termCount);
+
+//*For regression test
+main->begin
+  local F:={$t^(1+sin($t))};
+  local tF:=F.taylorExpansion(1,1E-12,6);
+  print('The approximate taylor expansion of ',F," around 1 is \n  ",tF);
+end;
