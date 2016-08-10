@@ -62,6 +62,12 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
       i:longint;
       currentProgress:string;
       lastProgress:string='';
+
+  FUNCTION newFromWorkflowImage:P_rawImage;
+    begin
+      new(result,create(workflowImage));
+    end;
+
   begin
     if (params<>nil) and (params^.size>=2) and (params^.value(0)^.literalType in [lt_stringList,lt_list,lt_keyValueList]) then begin
       for i:=1 to params^.size-1 do begin
@@ -94,6 +100,14 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
       end;
       enterCriticalSection(imigCS);
       workflow:=createWorkflow(P_listLiteral(params^.value(0)),false,isValid,tokenLocation,context);
+      if isValid and (Source=C_nullSourceOrTargetFileName) then with context.adapters^.Picture do begin
+        lock;
+        if value=nil then begin
+          context.adapters^.raiseError('Current image ("#") given as input image but no current image loaded.',tokenLocation);
+          isValid:=false;
+        end else workflowImage.copyFromImage(value^);
+        unlock;
+      end;
       if isValid then begin
         if Source<>'' then workflow.executeForTarget(Source,sizeLimit,dest)
                       else workflow.executeForTarget(xRes,yRes,sizeLimit,dest);
@@ -107,6 +121,14 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         progressQueue.cancelCalculation(true);
       end;
       workflow.destroy;
+      if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.Picture do begin
+        lock;
+        if value=nil then value:=newFromWorkflowImage
+                     else value^.copyFromImage(workflowImage);
+        unlock;
+      end;
+      workflowImage.clear;
+
       leaveCriticalSection(imigCS);
       if isValid then exit(newVoidLiteral) else exit(nil);
     end else result:=nil;
@@ -193,6 +215,35 @@ FUNCTION imageSize_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
   end;
 
+FUNCTION resizeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  CONST styleString:array[res_exact..res_fit] of string=('exact','fill','fit');
+  VAR xRes:longint=0;
+      yRes:longint=0;
+      style:string='exact';
+      s,r:T_resizeStyle;
+
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.value(0)^.literalType=lt_int) and (params^.value(1)^.literalType=lt_int)
+      and ((params^.size=2) or (params^.size=3) and (params^.value(2)^.literalType=lt_string)) then begin
+      xRes:=P_intLiteral(params^.value(0))^.value;
+      yRes:=P_intLiteral(params^.value(1))^.value;
+      if params^.size=3 then style:=P_stringLiteral(params^.value(2))^.value;
+      r:=res_dataResize;
+      for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
+
+      if (r=res_dataResize) or (xRes<=0) or (yRes<=0) then exit(nil);
+      with context.adapters^.Picture do begin
+        lock;
+        if value<>nil then begin
+          value^.resize(xRes,yRes,r);
+          result:=newVoidLiteral;
+        end else context.adapters^.raiseError('Cannot resize image because no image is loaded',tokenLocation);
+        unlock;
+      end;
+    end;
+  end;
+
 FUNCTION displayImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -209,11 +260,13 @@ INITIALIZATION
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
-                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options.');
+                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options. Use "-" as source or target to read/write the current image.');
   registerRule(IMIG_NAMESPACE,'loadImage',@loadImage_imp,'loadImage(filename:string);//Loads image from the given file');
   registerRule(IMIG_NAMESPACE,'saveImage',@saveImage_imp,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
   registerRule(IMIG_NAMESPACE,'closeImage',@closeImage_imp,'closeImage;//Closes the current image, freeing associated memory');
   registerRule(IMIG_NAMESPACE,'imageSize',@imageSize_imp,'imageSize;//Returns the size as [width,height] of the current image.');
+  registerRule(IMIG_NAMESPACE,'resizeImage',@resizeImage_imp,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["fit","fill"]);//Resizes the current image with non-default scaling options');
+
   registerRule(IMIG_NAMESPACE,'displayImage',@displayImage_imp,'displayImage;//Displays the current image.');
 FINALIZATION
   doneCriticalSection(imigCS);
