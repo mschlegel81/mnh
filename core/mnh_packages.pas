@@ -280,12 +280,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       VAR i,j:longint;
           locationForErrorFeedback:T_tokenLocation;
           newId:string;
-          fullClause:string;
       begin
         locationForErrorFeedback:=first^.location;
-        fullClause:=tokensToString(first);
         first:=context.disposeToken(first);
         while first<>nil do begin
+          j:=-1;
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
             {$ifdef FULLVERSION}
@@ -294,22 +293,25 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             end else
             {$endif}
             begin
-              setLength(packageUses,length(packageUses)+1);
-              packageUses[length(packageUses)-1].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
+              j:=length(packageUses);
+              setLength(packageUses,j+1);
+              packageUses[j].create(codeProvider.getPath,first^.txt,first^.location,context.adapters);
             end;
           end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
             newId:=P_stringLiteral(first^.data)^.value;
-            setLength(packageUses,length(packageUses)+1);
-            packageUses[length(packageUses)-1].createWithSpecifiedPath(newId,first^.location,context.adapters);
+            j:=length(packageUses);
+            setLength(packageUses,j+1);
+            packageUses[j].createWithSpecifiedPath(newId,first^.location,context.adapters);
           end else if first^.tokType<>tt_separatorComma then
             context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Cannot interpret use clause containing '+first^.singleTokenToString,first^.location);
+          if (j>0) then for i:=0 to j-1 do
+            if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
+                           or (packageUses[i].id   =               packageUses[j].id)
+            then context.adapters^.raiseError('Duplicate import: '+newId,first^.location);
+
           first:=context.disposeToken(first);
         end;
-        for i:=1 to length(packageUses)-1 do for j:=0 to i-1 do
-          if (expandFileName(packageUses[i].path)=expandFileName(packageUses[j].path))
-          or (packageUses[i].id=packageUses[j].id) then context.adapters^.raiseError('Duplicate import: '+packageUses[i].id,locationForErrorFeedback);
         if not(context.adapters^.noErrors) then begin
-          context.adapters^.raiseCustomMessage(mt_el4_parsingError,'Full clause: '+fullClause,locationForErrorFeedback);
           for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
           setLength(packageUses,0);
         end;
@@ -545,6 +547,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     VAR statementHash:T_hashInt;
     begin
       if first=nil then exit;
+      if usecase=lu_forCodeAssistance then context.adapters^.resetErrorFlags;
+
       if not(context.adapters^.noErrors) then begin
         context.cascadeDisposeToken(first);
         exit;

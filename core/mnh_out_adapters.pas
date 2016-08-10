@@ -113,6 +113,7 @@ TYPE
       PROCEDURE ClearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
+      PROCEDURE resetErrorFlags;
       PROCEDURE updateErrorlevel;
       {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
       PROCEDURE haltEvaluation;
@@ -500,6 +501,13 @@ FUNCTION T_adapters.noErrors: boolean;
     {$ifdef fullVersion}
     and not(hasNeedGUIerror)
     {$endif};
+  end;
+
+PROCEDURE T_adapters.resetErrorFlags;
+  VAR mt:T_messageType;
+  begin
+    maxErrorLevel:=0;
+    for mt:=low(T_messageType) to high(T_messageType) do hasMessageOfType[mt]:=false;
   end;
 
 PROCEDURE T_adapters.updateErrorlevel;
