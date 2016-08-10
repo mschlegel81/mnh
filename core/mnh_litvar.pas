@@ -292,7 +292,7 @@ FUNCTION newIntLiteral(CONST value: int64): P_intLiteral; inline;
 FUNCTION newRealLiteral(CONST value: T_myFloat): P_realLiteral; inline;
 FUNCTION newStringLiteral(CONST value: ansistring): P_stringLiteral; inline;
 FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral; inline;
-FUNCTION newListLiteral: P_listLiteral; inline;
+FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral; inline;
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral; inline;
 FUNCTION newErrorLiteral: P_scalarLiteral; inline;
 FUNCTION newErrorLiteralRaising(CONST errorMessage: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters): P_scalarLiteral;
@@ -394,9 +394,10 @@ FUNCTION newExpressionLiteral(CONST value: pointer): P_expressionLiteral;
     new(result, create(value));
   end;
 
-FUNCTION newListLiteral: P_listLiteral;
+FUNCTION newListLiteral(CONST initialSize:longint=0): P_listLiteral;
   begin
     new(result, create);
+    if initialSize>0 then setLength(result^.dat,initialSize);
   end;
 
 FUNCTION newOneElementListLiteral(CONST value: P_literal; CONST incRefs: boolean): P_listLiteral;
