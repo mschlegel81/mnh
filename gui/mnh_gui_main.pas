@@ -11,7 +11,7 @@ USES
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,
-  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables;
+  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables{$ifdef imig},mnh_imig_form{$endif};
 
 CONST DEBUG_LINE_COUNT=200;
 
@@ -1538,15 +1538,19 @@ PROCEDURE TMnhForm.processFileHistory;
   end;
 
 PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
+  CONST formCount={$ifdef imig}4{$else}4{$endif};
   VAR newId:byte;
       form:TForm;
   begin
-    if next then newId:=(ownId and 255+1) mod 3
-            else newId:=(ownId and 255+2) mod 3;
+    if next then newId:=(ownId and 255+          1) mod formCount
+            else newId:=(ownId and 255+formCount-1) mod formCount;
     case newId of
-      0: form:=MnhForm;
       1: form:=plotForm;
       2: form:=tableForm;
+      {$ifdef imig}
+      3: form:=DisplayImageForm;
+      {$endif}
+    else form:=MnhForm;
     end;
     form.Show;
     form.BringToFront;
@@ -1559,8 +1563,10 @@ PROCEDURE lateInitialization;
     guiOutAdapter.create;
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
+    {$ifdef imig}
+    mnh_imig_form.guiAdapters:=@guiAdapters;
+    {$endif}
     tempAdapter:=nil;
-
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
     for i:=0 to consoleAdapters.adapterCount-1 do
       if consoleAdapters.getAdapter(i)^.adapterType in [at_textFile,at_htmlFile] then
@@ -1568,6 +1574,9 @@ PROCEDURE lateInitialization;
 
     mnh_plotForm.formCycleCallback:=@formCycle;
     mnh_tables.formCycleCallback:=@formCycle;
+    {$ifdef imig}
+    mnh_imig_form.formCycleCallback:=@formCycle;
+    {$endif}
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
     initLists;
     mnh_evalThread.initUnit(@guiAdapters);

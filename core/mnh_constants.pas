@@ -433,16 +433,21 @@ TYPE
     mt_evaluatedStatementInInteractiveMode,
     mt_displayTable,
     mt_guiPseudoPackageFound
+    {$endif}
+    {$ifdef IMIG},
+    mt_displayImage
     {$endif});
 
   T_messageTypeSet=set of T_messageType;
 
 CONST
   {$ifdef fullVersion}
-  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..2] of T_messageType=(mt_plotCreatedWithInstantDisplay,mt_displayTable,mt_guiPseudoPackageFound);
+  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..{$ifdef imig}3{$else}2{$endif}] of T_messageType=
+     (mt_plotCreatedWithInstantDisplay,mt_displayTable,mt_guiPseudoPackageFound{$ifdef imig},mt_displayImage{$endif});
   {$endif}
   C_MESSAGE_TYPES_IGNORED_BY_SANDBOX:T_messageTypeSet=[mt_endOfEvaluation,mt_reloadRequired,mt_timing_info
-  {$ifdef fullVersion},mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged,mt_evaluatedStatementInInteractiveMode,mt_displayTable{$endif}];
+  {$ifdef fullVersion},mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged,mt_evaluatedStatementInInteractiveMode,mt_displayTable{$endif}
+  {$ifdef imig},mt_displayImage{$endif}];
 
   C_errorLevelForMessageType:array[T_messageType] of shortint=(
    -2,//mt_clearConsole,
@@ -468,6 +473,9 @@ CONST
    -1, //mt_evaluatedStatementInInteractiveMode
    -1, //mt_displayTable
    -1  //mt_guiPseudoPackageFound
+   {$endif}
+   {$ifdef imig},
+   -1
    {$endif});
 
   SELF_TOKEN_TEXT='$self';
@@ -502,6 +510,9 @@ CONST
     'Plot settings changed',
     'Statement No.',
     '',
+    ''
+    {$endif}
+    {$ifdef imig},
     ''
     {$endif});
 

@@ -124,7 +124,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="39">
+    <Units Count="40">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -310,6 +310,12 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit38>
+      <Unit39>
+        <Filename Value="mnh_imig_form.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="DisplayImageForm"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit39>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

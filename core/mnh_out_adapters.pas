@@ -1,7 +1,7 @@
 UNIT mnh_out_adapters;
 INTERFACE
 
-USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData,EpikTimer{$endif};
+USES mnh_constants, mnh_tokLoc, myGenerics,mySys,sysutils,myStringUtil{$ifdef fullVersion},mnh_plotData,EpikTimer{$endif}{$ifdef IMIG},mypics{$endif};
 
 TYPE
   T_storedMessage = record
@@ -92,6 +92,9 @@ TYPE
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
       plot:T_plot;
+      {$endif}
+      {$ifdef IMIG}
+      Picture:specialize G_safeVar<P_rawImage>;
       {$endif}
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -380,6 +383,9 @@ CONSTRUCTOR T_adapters.create;
     {$ifdef fullVersion}
     plot.createWithDefaults;
     {$endif}
+    {$ifdef IMIG}
+    Picture.create(nil);
+    {$endif}
     setLength(adapter,0);
     nextAdapterId:=0;
   end;
@@ -391,6 +397,10 @@ DESTRUCTOR T_adapters.destroy;
     setLength(adapter,0);
     {$ifdef fullVersion}
     plot.destroy;
+    {$endif}
+    {$ifdef IMIG}
+    if (Picture.value<>nil) then dispose(Picture.value,destroy);
+    Picture.destroy;
     {$endif}
   end;
 
@@ -486,6 +496,10 @@ PROCEDURE T_adapters.ClearAll;
   begin
     clearPrint;
     clearErrors;
+    {$ifdef imig}
+    if Picture.value<>nil then dispose(Picture.value,destroy);
+    Picture.value:=nil;
+    {$endif}
   end;
 
 PROCEDURE T_adapters.stopEvaluation;

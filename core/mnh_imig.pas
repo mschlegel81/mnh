@@ -1,6 +1,7 @@
 UNIT mnh_imig;
 INTERFACE
 USES workflows,mnh_funcs,mnh_litVar,mnh_contexts,mnh_constants,mnh_funcs_list,mnh_tokLoc,sysutils,
+     mypics,
      ig_gradient,
      ig_perlin,
      ig_simples,
@@ -111,13 +112,109 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
     end else result:=nil;
   end;
 
+PROCEDURE doCloseImage(VAR context:T_evaluationContext);
+  begin
+    with context.adapters^.Picture do begin
+      lock;
+      if (value<>nil) then dispose(value,destroy);
+      value:=nil;
+      unlock;
+    end;
+  end;
+
+FUNCTION loadImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR loadedImage:P_rawImage;
+      ok:boolean=true;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string) then begin
+      new(loadedImage,create(1,1));
+      try
+        loadedImage^.loadFromFile(P_stringLiteral(params^.value(0))^.value);
+      except
+        ok:=false;
+        context.adapters^.raiseError('Error loading image '+params^.value(0)^.toString(),tokenLocation);
+      end;
+      if ok then with context.adapters^.Picture do begin
+        lock;
+        if value<>nil then dispose(value,destroy);
+        value:=loadedImage;
+        unlock;
+        result:=newVoidLiteral;
+      end else dispose(loadedImage,destroy);
+    end;
+  end;
+
+FUNCTION saveImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR ok:boolean=true;
+  begin
+    result:=nil;
+    with context.adapters^.Picture do begin
+      lock;
+      if value=nil then begin
+        unlock;
+        context.adapters^.raiseNote('Cannot save image because no image is loaded.',tokenLocation);
+        exit(newBoolLiteral(false));
+      end;
+      try
+        if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_string)
+        then value^.saveToFile(P_stringLiteral(params^.value(0))^.value)
+        else if (params<>nil) and (params^.size=2) and (params^.value(0)^.literalType=lt_string) and (params^.value(1)^.literalType=lt_int)
+        then value^.saveJpgWithSizeLimit(P_stringLiteral(params^.value(0))^.value,P_intLiteral(params^.value(1))^.value)
+        else ok:=false;
+      except
+        on e:Exception do begin
+          context.adapters^.raiseError(e.message,tokenLocation);
+          ok:=false;
+        end;
+      end;
+      unlock;
+      if ok then result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION closeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      doCloseImage(context);
+      result:=newVoidLiteral;
+    end;
+  end;
+
+FUNCTION imageSize_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then with context.adapters^.Picture do begin
+      lock;
+      if value<>nil then result:=newListLiteral(2)^.appendInt(value^.width)^.appendInt(value^.height)
+                    else result:=newListLiteral();
+      unlock;
+    end;
+  end;
+
+FUNCTION displayImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      if context.adapters^.Picture.value<>nil then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
+                                              else context.adapters^.raiseNote('Cannot display image because no image is loaded',tokenLocation);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 INITIALIZATION
   initCriticalSection(imigCS);
-  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,'validateWorkflow(wf:list);Validates the workflow returning a boolean flag indicating validity');
+  registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
   registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,target:string);#'+
                                                                      'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
                                                                      'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#Executes the workflow with the given options.');
+  registerRule(IMIG_NAMESPACE,'loadImage',@loadImage_imp,'loadImage(filename:string);//Loads image from the given file');
+  registerRule(IMIG_NAMESPACE,'saveImage',@saveImage_imp,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
+  registerRule(IMIG_NAMESPACE,'closeImage',@closeImage_imp,'closeImage;//Closes the current image, freeing associated memory');
+  registerRule(IMIG_NAMESPACE,'imageSize',@imageSize_imp,'imageSize;//Returns the size as [width,height] of the current image.');
+  registerRule(IMIG_NAMESPACE,'displayImage',@displayImage_imp,'displayImage;//Displays the current image.');
 FINALIZATION
   doneCriticalSection(imigCS);
 end.

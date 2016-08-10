@@ -22,6 +22,9 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
       instantPlotRequested:boolean=false;
+      {$ifdef imig}
+      imageDisplayRequested:boolean=false;
+      {$endif}
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -69,6 +72,9 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
         mt_plotCreatedWithInstantDisplay: instantPlotRequested:=true;
+        {$ifdef imig}
+        mt_displayImage: imageDisplayRequested:=true;
+        {$endif}
         mt_displayTable,mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
@@ -99,6 +105,9 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       plotForm.doPlot();
       guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
     end;
+    {$ifdef imig}
+    if imageDisplayRequested then DisplayImageForm.displayCurrentImage;
+    {$endif}
     system.leaveCriticalSection(cs);
   end;
 
