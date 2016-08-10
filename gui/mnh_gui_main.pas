@@ -1538,7 +1538,7 @@ PROCEDURE TMnhForm.processFileHistory;
   end;
 
 PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
-  CONST formCount={$ifdef imig}4{$else}4{$endif};
+  CONST formCount={$ifdef imig}4{$else}3{$endif};
   VAR newId:byte;
       form:TForm;
   begin
