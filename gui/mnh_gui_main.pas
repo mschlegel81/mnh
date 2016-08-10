@@ -1544,9 +1544,9 @@ PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
     if next then newId:=(ownId and 255+1) mod 3
             else newId:=(ownId and 255+2) mod 3;
     case newId of
-      0: form:=MnhForm;
       1: form:=plotForm;
       2: form:=tableForm;
+    else form:=MnhForm;
     end;
     form.Show;
     form.BringToFront;
