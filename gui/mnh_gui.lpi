@@ -269,6 +269,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit38>
+        <HasResources Value="True"/>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
