@@ -103,8 +103,12 @@ end;
 private executeExamples(examplesFile:string)->begin
   print('***** examples from file *****');
   local codeToExecute:=[];
-  print('Examples file has ',fileLines(examplesFile).size,' lines');
-  fileLines(examplesFile).each(line,
+  local inputLines:=fileLines(examplesFile);
+  print('Examples file has ',inputLines.size,' lines');
+
+  inputLines:=inputLines.head(indexOf(inputLines.matches('==END REG TEST=='))[0] orElse inputLines.size);
+
+  inputLines.each(line,
     line=='' ? begin
       printExecute(codeToExecute);
       codeToExecute:=[];

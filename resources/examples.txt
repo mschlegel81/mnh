@@ -507,3 +507,78 @@ printf("sin(%{$0}s)=%{sin($0)}4.4g",1);
 permutations([1,1,2]);
 
 permutations([1..3]);
+
+//#bits
+//Binary representation of integer
+bits(123).ord.join
+
+//Test serilization
+input:=[[1..10],1/7,'test',random(9)];
+serialized:=input.serialize;
+print(input.toString.length,' > ',serialized.length);
+input==serialized.deserialize;
+
+factorize(1001);
+
+formatTabs("\v-2\n3\t4.3");
+
+//#utf8ToSys
+utf8ToSys('ÄÖÜ').chars.ord;
+
+sysToUtf8('T'#196'T'#220);
+
+type(3);
+
+type([1..5,7.5]);
+
+type({$x^2+$y});
+
+'Test something'.base92encode;
+
+'!&NY> fdTx< $-h|; T*=u_'.base92decode;
+
+x:=transpose([1,[1,2,3],[1,2]]);
+x;
+x.transpose;
+
+resetRandom(12157);
+
+//Reset random with default seed 0
+resetRandom;
+
+intRandom(7);
+
+intRandom(7,10);
+
+random;
+
+random(3);
+
+wrapTextInHttp('Test');
+
+//==END REG TEST==
+
+t0:=time;
+sleep(0.1);
+time-t0;
+
+//#time
+time({sin(random(1000)).agg(+)});
+
+//#systime
+formatTime('hh:nn dd.mm.yyyy',systime);
+
+getOptions;
+
+//#fileInfo
+fileInfo(executor);
+
+//#getEnv
+getEnv.head;
+
+//#fileStats
+fileStats(executor);
+
+//#exec
+executor.exec(['-h']).head(5).join("\n").print;
+
