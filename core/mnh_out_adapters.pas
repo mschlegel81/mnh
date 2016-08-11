@@ -46,8 +46,9 @@ TYPE
   P_collectingOutAdapter = ^T_collectingOutAdapter;
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
+    includeNonTextOutput:boolean;
     cs:TRTLCriticalSection;
-    CONSTRUCTOR create(CONST typ:T_adapterType);
+    CONSTRUCTOR create(CONST typ:T_adapterType; CONST collectNonTextOutput:boolean);
     DESTRUCTOR destroy; virtual;
     PROCEDURE clearConsole; virtual;
     PROCEDURE printOut(CONST s:T_arrayOfString); virtual;
@@ -209,8 +210,19 @@ VAR
   nullAdapter:T_adapters;
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
-FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
+FUNCTION includeMessage(CONST outputBehaviour:T_outputBehaviour; CONST messageType:T_messageType; CONST includeNonTextMessages:boolean):boolean;
 IMPLEMENTATION
+FUNCTION message(CONST messageType  : T_messageType;
+                 CONST simpleMessage: ansistring;
+                 CONST location     : T_searchTokenLocation):T_storedMessage;
+  begin
+    result.messageType  :=messageType  ;
+    result.simpleMessage:=simpleMessage;
+    result.location     :=location     ;
+    result.multiMessage:=C_EMPTY_STRING_ARRAY;
+  end;
+
 FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
   begin
     with message do if (length(simpleMessage)=0) and (length(multiMessage)>0)
@@ -218,19 +230,31 @@ FUNCTION defaultFormatting(CONST message: T_storedMessage): ansistring;
     else result:=defaultFormatting(messageType,simpleMessage,location);
   end;
 
-FUNCTION defaultFormatting(CONST messageType : T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
+FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
   begin
-    case messageType of
-      mt_printline: result:=message;
-      mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
-           result:=C_errorLevelTxt[messageType]+ansistring(location)+' '+message;
-      else result:=C_errorLevelTxt[messageType]+' '+message;
+    if messageType=mt_printline then exit(message);
+    with C_messageTypeMeta[messageType] do begin
+      result:=prefix;
+      if includeLocation then result:=result+ansistring(location)+' ';
+      result:=result+message;
     end;
+  end;
+
+FUNCTION includeMessage(CONST outputBehaviour:T_outputBehaviour; CONST messageType:T_messageType; CONST includeNonTextMessages:boolean):boolean;
+  begin
+    //Defined by negative criteria:
+    with C_messageTypeMeta[messageType] do
+    result:=not((level>=0) and (level<outputBehaviour.minErrorLevel)
+                or not(textOut or includeNonTextMessages)
+                or (messageType=mt_timing_info)      and not(outputBehaviour.doShowTimingInfo)
+                or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
+                or (messageType=mt_echo_input)       and not(outputBehaviour.doEchoInput)
+                or (messageType=mt_echo_output)      and not(outputBehaviour.doShowExpressionOut));
   end;
 
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring);
   begin
-    inherited create(at_textFile);
+    inherited create(at_textFile,false);
     lastWasEndOfEvaluation:=true;
     longestLineUpToNow:=0;
     outputFileName:=expandFileName(fileName);
@@ -276,15 +300,10 @@ PROCEDURE T_textFileOutAdapter.flush;
       for i:=0 to length(storedMessages)-1 do begin
         with storedMessages[i] do begin
           case messageType of
-            mt_clearConsole, mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}: begin end;
-            mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
-            mt_echo_input:       if outputBehaviour.doEchoInput         then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-            mt_echo_output:      if outputBehaviour.doShowExpressionOut then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-            mt_echo_declaration: if outputBehaviour.doEchoDeclaration   then myWrite(C_errorLevelTxt[messageType]+simpleMessage);
-            mt_timing_info:      if outputBehaviour.doShowTimingInfo    then myWrite(simpleMessage);
             mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
-            else if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel) then
-              myWrite(C_errorLevelTxt[messageType]+ansistring(location)+' '+ simpleMessage);
+            mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,StringOfChar('=',longestLineUpToNow));
+            mt_timing_info:     if outputBehaviour.doShowTimingInfo then myWrite(simpleMessage);
+            else if C_messageTypeMeta[messageType].textOut then myWrite(defaultFormatting(storedMessages[i]));
           end;
         end;
         lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
@@ -410,8 +429,8 @@ PROCEDURE T_adapters.clearErrors;
   begin
     for mt:=low(T_messageType) to high(T_messageType) do begin
       hasMessageOfType[mt]:=false;
-      if   maxErrorLevel>=C_errorLevelForMessageType[mt]
-      then maxErrorLevel:=C_errorLevelForMessageType[mt]-1;
+      if   maxErrorLevel>=C_messageTypeMeta[mt].level
+      then maxErrorLevel:=C_messageTypeMeta[mt].level-1;
     end;
     stackTraceCount:=0;
     errorCount:=0;
@@ -420,8 +439,8 @@ PROCEDURE T_adapters.clearErrors;
 PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
-    if maxErrorLevel< C_errorLevelForMessageType[thisErrorLevel] then
-       maxErrorLevel:=C_errorLevelForMessageType[thisErrorLevel];
+    if maxErrorLevel< C_messageTypeMeta[thisErrorLevel].level then
+       maxErrorLevel:=C_messageTypeMeta[thisErrorLevel].level;
     hasMessageOfType[thisErrorLevel]:=true;
     if (thisErrorLevel=mt_el3_stackTrace) then begin
       inc(stackTraceCount);
@@ -437,8 +456,8 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
-    if maxErrorLevel< C_errorLevelForMessageType[message.messageType] then
-       maxErrorLevel:=C_errorLevelForMessageType[message.messageType];
+    if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
+       maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     hasMessageOfType[message.messageType]:=true;
     if (message.messageType=mt_el3_stackTrace) then begin
       inc(stackTraceCount);
@@ -451,34 +470,19 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
     for i:=0 to length(adapter)-1 do adapter[i].ad^.append(message);
   end;
 
-PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring;
-  CONST errorLocation: T_searchTokenLocation);
-  VAR i:longint;
+PROCEDURE T_adapters.raiseError(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
-    if maxErrorLevel< C_errorLevelForMessageType[mt_el3_evalError] then
-       maxErrorLevel:=C_errorLevelForMessageType[mt_el3_evalError];
-    hasMessageOfType[mt_el3_evalError]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_el3_evalError,errorMessage,errorLocation);
+    raiseCustomMessage(message(mt_el3_evalError,errorMessage,errorLocation));
   end;
 
-PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring;
-  CONST errorLocation: T_searchTokenLocation);
-  VAR i:longint;
+PROCEDURE T_adapters.raiseWarning(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
-    if maxErrorLevel< C_errorLevelForMessageType[mt_el2_warning] then
-       maxErrorLevel:=C_errorLevelForMessageType[mt_el2_warning];
-    hasMessageOfType[mt_el2_warning]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_el2_warning,errorMessage,errorLocation);
+    raiseCustomMessage(message(mt_el2_warning,errorMessage,errorLocation));
   end;
 
-PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring;
-  CONST errorLocation: T_searchTokenLocation);
-  VAR i:longint;
+PROCEDURE T_adapters.raiseNote(CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
-    if maxErrorLevel< C_errorLevelForMessageType[mt_el1_note] then
-       maxErrorLevel:=C_errorLevelForMessageType[mt_el1_note];
-    hasMessageOfType[mt_el1_note]:=true;
-    for i:=0 to length(adapter)-1 do adapter[i].ad^.messageOut(mt_el1_note,errorMessage,errorLocation);
+    raiseCustomMessage(message(mt_el1_note,errorMessage,errorLocation));
   end;
 
 PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
@@ -531,16 +535,16 @@ PROCEDURE T_adapters.updateErrorlevel;
     for mt:=low(T_messageType) to high(T_messageType) do
     if (mt<>mt_el5_haltMessageQuiet) and
        (hasMessageOfType[mt]) and
-       (C_errorLevelForMessageType[mt]>maxErrorLevel) then maxErrorLevel:=C_errorLevelForMessageType[mt];
+       (C_messageTypeMeta[mt].level>maxErrorLevel) then maxErrorLevel:=C_messageTypeMeta[mt].level;
   end;
 
 {$ifdef fullVersion}
 FUNCTION T_adapters.hasNeedGUIerror: boolean;
-  VAR i:longint;
+  VAR m:T_messageType;
   begin
     if gui_started then exit(false);
-    for i:=0 to length(   C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP)-1 do
-      if hasMessageOfType[C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP[i]] then exit(true);
+    for m:=low(T_messageType) to high(T_messageType) do
+    if hasMessageOfType[m] and C_messageTypeMeta[m].triggersGuiStartup then exit(true);
     result:=false;
   end;
 {$endif}
@@ -604,7 +608,7 @@ FUNCTION T_adapters.collectingClone: P_adapters;
   VAR collector:P_collectingOutAdapter;
   begin
     new(result,create);
-    new(collector,create(at_sandboxAdapter));
+    new(collector,create(at_sandboxAdapter,true));
     result^.addOutAdapter(collector,true);
     result^.outputBehaviour:=outputBehaviour;
     {$ifdef fullVersion}
@@ -708,26 +712,14 @@ PROCEDURE T_consoleOutAdapter.printOut(CONST s: T_arrayOfString);
 
 PROCEDURE T_consoleOutAdapter.messageOut(CONST messageType: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   begin
-    if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
-    or (messageType in [mt_endOfEvaluation,mt_reloadRequired{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged{$endif}])
-    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
-    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
-    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
-    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
-    case messageType of
-      mt_timing_info: writeln(stdErr,'',errorMessage);
-      mt_el3_stackTrace:
-        writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',replaceAll(errorMessage,#28,' '));
-      mt_el1_note,mt_el2_warning,mt_el3_evalError,mt_el3_noMatchingMain, mt_el4_parsingError,mt_el5_systemError,mt_el5_haltMessageReceived:
-        writeln(stdErr, C_errorLevelTxt[messageType],ansistring(errorLocation),' ',           errorMessage         );
-      else
-        writeln(stdErr, C_errorLevelTxt[messageType],' ', errorMessage);
-    end;
+    if includeMessage(outputBehaviour,messageType,false) then
+    writeln(stdErr,defaultFormatting(messageType,errorMessage,errorLocation));
   end;
 
-CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType);
+CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST collectNonTextOutput:boolean);
   begin
     inherited create(typ);
+    includeNonTextOutput:=collectNonTextOutput;
     system.initCriticalSection(cs);
     setLength(storedMessages,0);
   end;
@@ -765,15 +757,12 @@ PROCEDURE T_collectingOutAdapter.messageOut(CONST messageType: T_messageType; CO
 
 PROCEDURE T_collectingOutAdapter.append(CONST message: T_storedMessage);
   begin
-    with message do if (C_errorLevelForMessageType[messageType]>=0) and (C_errorLevelForMessageType[messageType]<outputBehaviour.minErrorLevel)
-    or (messageType=mt_timing_info) and not(outputBehaviour.doShowTimingInfo)
-    or (messageType=mt_echo_declaration) and not(outputBehaviour.doEchoDeclaration)
-    or (messageType=mt_echo_input) and not(outputBehaviour.doEchoInput)
-    or (messageType=mt_echo_output) and not(outputBehaviour.doShowExpressionOut) then exit;
-    system.enterCriticalSection(cs);
-    setLength(storedMessages,length(storedMessages)+1);
-    storedMessages[length(storedMessages)-1]:=message;
-    system.leaveCriticalSection(cs);
+    if includeMessage(outputBehaviour,message.messageType,includeNonTextOutput) then begin
+      system.enterCriticalSection(cs);
+      setLength(storedMessages,length(storedMessages)+1);
+      storedMessages[length(storedMessages)-1]:=message;
+      system.leaveCriticalSection(cs);
+    end;
   end;
 
 PROCEDURE T_collectingOutAdapter.clearMessages;

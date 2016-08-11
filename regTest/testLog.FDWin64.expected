@@ -3125,7 +3125,6 @@ out> 1
 out> {($x-$x^2+$x^3)}
  in> toExpression('');
 Error  The parsed expression appears to be empty
-Error [stack trace]  # toExpression('')
 out> toExpression('')
  in> not(true);
 out> false
@@ -3153,7 +3152,6 @@ out> 65
 out> -1
  in> ord(2.1);
 Error  ord can only be applied to booleans, ints and strings
-Error [stack trace]  # <ERR>
 out> <ERR>
  in> softCast('A');
 out> 'A'
@@ -3313,11 +3311,9 @@ out> '"\t"'
 out> [[1,2,4,5,7,8,10],[3,6,9]]
  in> fail;
 User-Error  Fail.
-Error [stack trace]  # fail
 out> fail
  in> fail("Told you this wouldn't work!");
-User-Error  "Told you this wouldn't work!"
-Error [stack trace]  # fail("Told you this wouldn't work!")
+User-Error  Told you this wouldn't work!
 out> fail("Told you this wouldn't work!")
  in> hash(1);
 out> 3
@@ -3551,7 +3547,6 @@ out> true
 out> true
  in> toBoolean(3);
 Error  Cannot apply intrinsic rule toBoolean to parameter list (int):  (3)
-Error [stack trace]  # toBoolean(3)
 out> toBoolean(3)
  in> toInt('32');
 out> 32
@@ -3559,7 +3554,6 @@ out> 32
 out> 3
  in> toInt(3.1);
 Error  Cannot apply intrinsic rule toInt to parameter list (real):  (3.1)
-Error [stack trace]  # toInt(3.1)
 out> toInt(3.1)
  in> toInt(false);
 out> 0

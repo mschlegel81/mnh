@@ -305,7 +305,7 @@ FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
 FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 FUNCTION mapDrop(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
 
-FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
+FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
 
 FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
@@ -321,18 +321,18 @@ VAR
   errLit: T_scalarLiteral;
   voidLit: T_voidLiteral;
 
-FUNCTION messagesToLiteral(CONST messages:T_storedMessages; CONST messageTypeBlackList:T_messageTypeSet=[]):P_listLiteral;
+FUNCTION messagesToLiteralForSandbox(CONST messages:T_storedMessages):P_listLiteral;
   FUNCTION headByMessageType(CONST messageType:T_messageType):P_listLiteral;
     begin
-      if C_errorLevelTxt[messageType]=''
-      then result:=newListLiteral^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
-      else result:=newListLiteral^.appendString(C_errorLevelTxt[messageType]);
+      if C_messageTypeMeta[messageType].prefix=''
+      then result:=newListLiteral(3)^.appendString(copy(getEnumName(TypeInfo(messageType),ord(messageType)),4,1000))
+      else result:=newListLiteral(3)^.appendString(C_messageTypeMeta[messageType].prefix);
     end;
 
   VAR i,j:longint;
   begin
     result:=newListLiteral;
-    for i:=0 to length(messages)-1 do with messages[i] do if not(messageType in messageTypeBlackList) then begin
+    for i:=0 to length(messages)-1 do with messages[i] do if not(C_messageTypeMeta[messageType].ignoredBySandbox) then begin
       if length(multiMessage)>0 then begin
         simpleMessage:=multiMessage[0];
         for j:=1 to length(multiMessage)-1 do simpleMessage:=simpleMessage+C_lineBreakChar+multiMessage[j];

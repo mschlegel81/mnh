@@ -107,7 +107,7 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
   begin
-    inherited create(at_htmlFile);
+    inherited create(at_htmlFile,true);
     outputFileName:=expandFileName(fileName);
     lastFileFlushTime:=now;
     lastWasEndOfEvaluation:=true;
@@ -161,13 +161,13 @@ PROCEDURE T_htmlOutAdapter.flush;
 
           mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
 
-          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
+          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
           {$ifdef fullVersion}
-          mt_plotFileCreated: writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td></td><td>',
+          mt_plotFileCreated: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',
                                    imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
           mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged: begin end;
           {$endif}
-          else writeln(handle,'<tr><td>',C_errorLevelTxt[messageType],'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
+          else writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;
         lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
       end;

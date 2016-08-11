@@ -50,8 +50,7 @@ TYPE
   P_assistanceEvaluator=^T_assistanceEvaluator;
   T_assistanceEvaluator=object(T_evaluator)
     private
-      errors:T_storedMessages;
-      warnings:T_storedMessages;
+      localErrors,externalErrors:T_storedMessages;
       stateCounter:longint;
       userRules,
       completionList:T_listOfString;
@@ -60,8 +59,7 @@ TYPE
       CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
       DESTRUCTOR destroy;
 
-      FUNCTION isErrorLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
-      FUNCTION isWarningLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
+      FUNCTION isErrorLocation(CONST lineIndex,tokenStart,tokenEnd:longint):byte;
       FUNCTION getErrorHints:T_arrayOfString;
       FUNCTION getStateCounter:longint;
       FUNCTION isUserRule(CONST id:string):boolean;
@@ -127,9 +125,8 @@ FUNCTION main(p:pointer):ptrint;
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
-  CONST MAX_SLEEP_TIME=250;
+  CONST MAX_SLEEP_TIME=1000;
   VAR mainEvaluationContext:T_evaluationContext;
-      i:longint;
 
   begin with P_assistanceEvaluator(p)^ do begin
     mainEvaluationContext.createNormalContext(adapter);
@@ -138,22 +135,10 @@ FUNCTION docMain(p:pointer):ptrint;
     repeat
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
-        package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         enterCriticalSection(cs);
-        setLength(errors,0);
-        setLength(warnings,0);
-        with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
-        for i:=0 to length(storedMessages)-1 do
-        if (storedMessages[i].location.fileName=package.getPath) and
-           (C_errorLevelForMessageType[storedMessages[i].messageType]>=3) then begin
-          setLength(errors,length(errors)+1);
-          errors[length(errors)-1]:=storedMessages[i];
-        end else if C_errorLevelForMessageType[storedMessages[i].messageType]=2 then begin
-          setLength(warnings,length(warnings)+1);
-          warnings[length(warnings)-1]:=storedMessages[i];
-        end;
-        postEval;
+        package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         leaveCriticalSection(cs);
+        postEval;
       end;
       ThreadSwitch;
       sleep(MAX_SLEEP_TIME);
@@ -184,7 +169,8 @@ CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc:
   begin
     inherited create(adapters,threadFunc);
     stateCounter:=0;
-    setLength(errors,0);
+    setLength(localErrors,0);
+    setLength(externalErrors,0);
     userRules.create;
     completionList.create;
   end;
@@ -256,8 +242,7 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings;
-  params: ansistring);
+PROCEDURE T_evaluator.callMain(CONST path: ansistring; CONST L: TStrings; params: ansistring);
   VAR sp:longint;
   begin
     enterCriticalSection(cs);
@@ -298,8 +283,7 @@ FUNCTION T_evaluator.getCodeProvider: P_codeProvider;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
-  CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
+PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY, CaretX: longint; VAR info: T_tokenInfo);
   PROCEDURE appendBuiltinRuleInfo(CONST prefix:string='');
     VAR doc:P_intrinsicFunctionDocumentation;
     begin
@@ -318,6 +302,13 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
       lastComment:ansistring='';
   begin
     if (CaretY=info.startLoc.line) and (CaretX>=info.startLoc.column) and (CaretX<info.endLoc.column) then exit;
+    enterCriticalSection(cs);
+    while (state=es_running) do begin
+      leaveCriticalSection(cs);
+      ThreadSwitch;
+      sleep(1);
+      enterCriticalSection(cs);
+    end;
 
     tokens.create;
     loc.line:=1;
@@ -368,6 +359,7 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring;
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
     end;
+    leaveCriticalSection(cs);
   end;
 
 PROCEDURE T_evaluator.reportVariables(VAR report: T_variableReport);
@@ -384,40 +376,35 @@ FUNCTION T_evaluator.getEndOfEvaluationText: ansistring;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, TokenStart, tokenEnd: longint): boolean;
+FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
   VAR i:longint;
   begin
     enterCriticalSection(cs);
-    result:=false;
-    for i:=0 to length(errors)-1 do with errors[i].location do
-      result:=result or (lineIndex=line-1) and (TokenStart<=column-1) and (tokenEnd>column-1);
-    leaveCriticalSection(cs);
-  end;
-
-FUNCTION T_assistanceEvaluator.isWarningLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
-  VAR i:longint;
-  begin
-    enterCriticalSection(cs);
-    result:=false;
-    for i:=0 to length(warnings)-1 do with warnings[i].location do
-      result:=result or (lineIndex=line-1) and (TokenStart<=column-1) and (tokenEnd>column-1);
+    result:=0;
+    for i:=0 to length(localErrors)-1 do with localErrors[i] do
+    if (result=0) and (lineIndex=location.line-1) and (tokenStart<=location.column-1) and (tokenEnd>location.column-1) then begin
+      if C_messageTypeMeta[messageType].level>2 then result:=2 else result:=1;
+    end;
     leaveCriticalSection(cs);
   end;
 
 FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
-  VAR i,k:longint;
+  VAR k:longint;
+  PROCEDURE addErrors(CONST list:T_storedMessages);
+    VAR i:longint;
+    begin
+      for i:=0 to length(list)-1 do with list[i] do begin
+        result[k]:=UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage);
+        inc(k);
+      end;
+    end;
+
   begin
     enterCriticalSection(cs);
-    setLength(result,length(errors)+length(warnings));
+    setLength(result,length(localErrors)+length(externalErrors));
     k:=0;
-    for i:=0 to length(errors)-1 do with errors[i] do begin
-      result[k]:=UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage);
-      inc(k);
-    end;
-    for i:=0 to length(warnings)-1 do with warnings[i] do begin
-      result[k]:=UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage);
-      inc(k);
-    end;
+    addErrors(localErrors);
+    addErrors(externalErrors);
     leaveCriticalSection(cs);
   end;
 
@@ -458,12 +445,12 @@ PROCEDURE T_evaluator.preEval;
 PROCEDURE T_evaluator.postEval;
   begin
     enterCriticalSection(cs);
-    state:=es_idle;
     if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
     then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
     else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
     while not(adapter^.hasMessageOfType[mt_endOfEvaluation])
     do adapter^.logEndOfEvaluation;
+    state:=es_idle;
     leaveCriticalSection(cs);
   end;
 
@@ -479,11 +466,28 @@ PROCEDURE T_assistanceEvaluator.postEval;
       completionList.unique;
     end;
 
+  VAR i:longint;
   begin
     enterCriticalSection(cs);
-    inherited postEval;
     updateCompletionList;
+
+    setLength(localErrors,0);
+    setLength(externalErrors,0);
+    with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
+    for i:=0 to length(storedMessages)-1 do with storedMessages[i] do
+    if C_messageTypeMeta[messageType].level>=2 then begin
+      if location.fileName=package.getPath
+      then begin
+        setLength(localErrors,length(localErrors)+1);
+        localErrors[length(localErrors)-1]:=storedMessages[i];
+      end else begin
+        setLength(externalErrors,length(externalErrors)+1);
+        externalErrors[length(externalErrors)-1]:=storedMessages[i];
+      end;
+    end;
+
     inc(stateCounter);
+    inherited postEval;
     leaveCriticalSection(cs);
   end;
 
@@ -546,7 +550,7 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   begin
     runEvaluator.create(guiAdapters,@main);
     new(silentAdapters,create);
-    new(collector,create(at_unknown));
+    new(collector,create(at_unknown,false));
     silentAdapters^.addOutAdapter(collector,true);
     silentAdapters^.minErrorLevel:=1;
     codeAssistant.create(silentAdapters,@docMain);

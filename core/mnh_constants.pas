@@ -442,81 +442,48 @@ TYPE
   T_messageTypeSet=set of T_messageType;
 
 CONST
-  {$ifdef fullVersion}
-  C_MESSAGE_TYPES_REQUIRING_GUI_STARTUP:array[0..{$ifdef imig}3{$else}2{$endif}] of T_messageType=
-     (mt_plotCreatedWithInstantDisplay,mt_displayTable,mt_guiPseudoPackageFound{$ifdef imig},mt_displayImage{$endif});
-  {$endif}
-  C_MESSAGE_TYPES_IGNORED_BY_SANDBOX:T_messageTypeSet=[mt_endOfEvaluation,mt_reloadRequired,mt_timing_info
-  {$ifdef fullVersion},mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged,mt_evaluatedStatementInInteractiveMode,mt_displayTable{$endif}
-  {$ifdef imig},mt_displayImage{$endif}];
+  C_messageTypeMeta:array[T_messageType] of record
+    level:shortint;
+    prefix:string;
+    includeLocation,ignoredBySandbox,triggersGuiStartup,textOut:boolean;
+  end = (
+{mt_clearConsole           }             (level:-2; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_printline              }             (level:-2; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_echo_input             }             (level:-1; prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_echo_declaration       }             (level:-1; prefix: ' in>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_echo_output            }             (level:-1; prefix: 'out>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_echo_continued         }             (level:-1; prefix: '...>'                 ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el1_note               }             (level: 1; prefix: 'Note '                ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el2_warning            }             (level: 2; prefix: 'Warning '             ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el3_evalError          }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el3_noMatchingMain     }             (level: 3; prefix: 'Error '               ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el3_stackTrace         }             (level: 3; prefix: 'Error [stack trace]'  ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el3_userDefined        }             (level: 3; prefix: 'User-Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el4_parsingError       }             (level: 4; prefix: 'Parsing Error '       ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el5_systemError        }             (level: 5; prefix: 'Sys. Error '          ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el5_haltMessageReceived}             (level: 5; prefix: 'Evaluation haltet'    ; includeLocation:  true; ignoredBySandbox: false; triggersGuiStartup:false; textOut:true),
+{mt_el5_haltMessageQuiet   }             (level: 5; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:false),
+{mt_endOfEvaluation        }             (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:false),
+{mt_reloadRequired         }             (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:false),
+{mt_timing_info            }             (level:-1; prefix: UTF8_ZERO_WIDTH_SPACE  ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:true)
+{$ifdef fullVersion},
+{mt_plotFileCreated                    } (level:-1; prefix: 'Image:'               ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup:false; textOut:false),
+{mt_plotCreatedWithDeferredDisplay     } (level:-1; prefix: 'Deferred plot request'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:false),
+{mt_plotCreatedWithInstantDisplay      } (level:-1; prefix: 'Instant plot request' ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; textOut:false),
+{mt_plotSettingsChanged                } (level:-1; prefix: 'Plot settings changed'; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:false),
+{mt_evaluatedStatementInInteractiveMode} (level:-1; prefix: 'Statement No.'        ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup:false; textOut:false),
+{mt_displayTable                       } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; textOut:false),
+{mt_guiPseudoPackageFound              } (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox: false; triggersGuiStartup: true; textOut:false)
+{$endif}{$ifdef imig},
+{mt_displayImage}                        (level:-1; prefix: ''                     ; includeLocation: false; ignoredBySandbox:  true; triggersGuiStartup: true; textOut:false)
+{$endif});
 
-  C_errorLevelForMessageType:array[T_messageType] of shortint=(
-   -2,//mt_clearConsole,
-   -2,//mt_printline,
-   -1,//mt_echo_input,
-   -1,//mt_echo_declaration,
-   -1,-1,//mt_echo_output,.. continued
-    1,//mt_el1_note,
-    2,//mt_el2_warning,
-    3,//mt_el3_evalError,
-    3,//mt_el3_noMatchingMain
-    3,//mt_el3_stackTrace
-    3,//mt_el3_userDefined
-    4,//mt_el4_parsingError,
-    5,//mt_el5_systemError,
-    5,//mt_el5_haltMessageReceived
-    5,//mt_el5_haltMessageQuiet
-   -1,//mt_endOfEvaluation
-   -1,//mt_reloadRequired
-   -1//mt_timing_info
-   {$ifdef fullVersion},
-   -1,-1,-1,-1, //mt_plot...
-   -1, //mt_evaluatedStatementInInteractiveMode
-   -1, //mt_displayTable
-   -1  //mt_guiPseudoPackageFound
-   {$endif}
-   {$ifdef imig},
-   -1
-   {$endif});
 
   SELF_TOKEN_TEXT='$self';
   SELF_TOKEN_PAR_IDX=maxLongint;
   ALL_PARAMETERS_TOKEN_TEXT='$params';
   ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
   REMAINING_PARAMETERS_IDX=ALL_PARAMETERS_PAR_IDX-1;
-  C_errorLevelTxt: array[T_messageType] of string = (
-    '',//cls
-    '',//out
-    ' in>',//echo input
-    ' in>',//echo declaration
-    'out>',//echo output
-    '...>',//echo output continued
-    'Note ',
-    'Warning ',
-    'Error ',
-    'Error ',
-    'Error [stack trace]',
-    'User-Error ',
-    'Parsing Error ',
-    'Sys. Error ',
-    'Evaluation haltet (most probably by user).',
-    '', //Halt message quiet
-    '',
-    '',
-    UTF8_ZERO_WIDTH_SPACE
-    {$ifdef fullVersion},
-    'Image:',
-    'Deferred plot request',
-    'Instant plot request',
-    'Plot settings changed',
-    'Statement No.',
-    '',
-    ''
-    {$endif}
-    {$ifdef imig},
-    ''
-    {$endif});
-
   DOC_COMMENT_PREFIX='//*';
   SPECIAL_COMMENT_BLOB_BEGIN='//!';
 

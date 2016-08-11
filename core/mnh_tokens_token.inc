@@ -1071,7 +1071,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         stack.push(first);
         didSubstitution:=true;
         context.valueStore.scopePush(false);
-        context.valueStore.createVariable('messages',messagesToLiteral(messages),true);
+        context.valueStore.createVariable('messages',messagesToLiteralForSandbox(messages),true);
       end else begin
         first^.tokType:=tt_braceOpen; //mutate try-token to (
         first^.next:=bodyParts[0].first;
@@ -1808,7 +1808,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-      context.adapters^.raiseCustomMessage(mt_el3_stackTrace,stack.toString(first,50),first^.location);
+      {$ifdef fullVersion}
+      if gui_started then context.adapters^.raiseCustomMessage(mt_el3_stackTrace,stack.toString(first,50),first^.location);
+      {$endif}
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
     {$ifdef fullVersion}

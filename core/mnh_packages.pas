@@ -123,7 +123,7 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
       adapter:T_adapters;
       i:longint;
   begin
-    collector.create(at_unknown);
+    collector.create(at_unknown,true);
     adapter.create;
     adapter.addOutAdapter(@collector,false);
     adapter.minErrorLevel:=0;
@@ -148,21 +148,21 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
     for i:=0 to length(input)-1 do begin
       tmp:=trim(input[i]);
       if copy(tmp,1,2)='//'
-      then append(result,StringOfChar(' ',length(C_errorLevelTxt[mt_echo_input])+1)+toHtmlCode(tmp))
-      else append(result,                        C_errorLevelTxt[mt_echo_input]+' '+toHtmlCode(tmp));
+      then append(result,StringOfChar(' ',length(C_messageTypeMeta[mt_echo_input].prefix)+1)+toHtmlCode(tmp))
+      else append(result,                        C_messageTypeMeta[mt_echo_input].prefix+' '+toHtmlCode(tmp));
     end;
     for i:=0 to length(messages)-1 do begin
       with messages[i] do case messageType of
         mt_printline: append(result,multiMessage);
-        mt_echo_output: append(result,C_errorLevelTxt[mt_echo_output]+' '+toHtmlCode(simpleMessage));
+        mt_echo_output: append(result,C_messageTypeMeta[messageType].prefix+' '+toHtmlCode(simpleMessage));
         mt_el1_note,
-        mt_el2_warning: append(result,C_errorLevelTxt[messageType]+' '+simpleMessage);
+        mt_el2_warning: append(result,C_messageTypeMeta[messageType].prefix+' '+simpleMessage);
         mt_el3_evalError,
         mt_el3_noMatchingMain,
         mt_el3_stackTrace,
         mt_el4_parsingError,
         mt_el5_systemError,
-        mt_el5_haltMessageReceived: append(result,span('error',C_errorLevelTxt[messageType]+' '+simpleMessage));
+        mt_el5_haltMessageReceived: append(result,span('error',C_messageTypeMeta[messageType].prefix+' '+simpleMessage));
         {$ifdef fullVersion}
         mt_plotFileCreated: begin
           tmp:=extractFileName(simpleMessage);
@@ -507,7 +507,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                      ruleGroup^.setMutableValue(inlineValue,true,context.adapters);
                      inlineValue^.unreference;
                    end
-              else ruleGroup^.setMutableValue(newVoidLiteral         ,true,context.adapters);
+              else ruleGroup^.setMutableValue(newVoidLiteral,true,context.adapters);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;
@@ -617,10 +617,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         i:longint;
     begin
       resolveRuleIds(nil);
-      if not(ready) or not(context.adapters^.noErrors) then begin
-        context.adapters^.raiseCustomMessage(mt_el5_systemError,'Call of main has been rejected due to a previous error.',packageTokenLocation(@self));
-        exit;
-      end;
+      if not(ready) or not(context.adapters^.noErrors) then exit;
       if not(packageRules.containsKey('main',mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
@@ -635,8 +632,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
-          then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',packageTokenLocation(@self))
-          else {$endif} context.adapters^.raiseError('Evaluation of main seems to be incomplete or erroneous.',packageTokenLocation(@self));
+          then context.adapters^.raiseNote('Evaluation requires GUI-startup. Re-evaluating.',packageTokenLocation(@self));
+          {$endif}
         end;
         //------------------:error handling if main returns more than one token
         //special handling if main returns an expression:----------------------

@@ -1234,12 +1234,12 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
       if (scalingOptions.axisStyle['y'] and C_ticsAndGrid) > 0 then for i:=0 to length(tic['y'])-1 do with tic['y'][i] do if major then begin
         y:=round(pos);
         target.line(xOffset-5, y, xOffset, y);
-        if (scalingOptions.axisStyle['y'] and C_tics)>0 then target.TextOut(xOffset-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
+        if (scalingOptions.axisStyle['y'] and C_tics)>0 then target.textOut(xOffset-5-target.TextWidth(txt), y-target.TextHeight(txt) shr 1, txt);
       end;
       if (scalingOptions.axisStyle['x'] and C_ticsAndGrid) >0 then for i:=0 to length(tic['x'])-1 do with tic['x'][i] do if major then begin
         x:=round(pos);
         target.line(x, yOffset+5, x, yOffset);
-        if (scalingOptions.axisStyle['x'] and C_tics)>0 then target.TextOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
+        if (scalingOptions.axisStyle['x'] and C_tics)>0 then target.textOut(x-target.TextWidth(txt) shr 1, yOffset+5, txt);
       end;
       //-------------------------------------------------------------------:tics
       //======================================================:coordinate system

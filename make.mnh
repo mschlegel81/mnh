@@ -215,7 +215,6 @@ private testMnh(...)->begin
   AND);
 end;
 
-
 //*Tests all files
 main('test')->testMnh;
 
@@ -225,16 +224,22 @@ main('retest')->testMnh('retest');
 //*Only prepare code hash
 main('prepare')->updateCurrentCodeHash;
 
+private memoized acceptedMainParameters->inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p);
+private isSameFileName(i:int,s:string)->begin
+  local case:=isLinux ? {$x} : {$x.upper};
+  local s0:=binName(i).splitFileName['expanded'].case;
+  local s1:=s.case;
+  s0==s1;
+end;
+
 //*Several steps in succession
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  (isLinux ? [0,2,4,6,8] : [0..8]).each(i,
-    pos(upper(p),upper(binName(i)))>=0
-    ? build(i) OR true
-    :             false,or)
+  (isLinux ? [0,2,4,6,8] : [0..8])
+  .each(i,isSameFileName(i,p) ? build(i) : false,OR)
   ? void
-  : p in inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p)
+  : p in acceptedMainParameters
     ? main(p)
-    : void);
+    : fail("Don't know what to do with: "+p));
 end;
