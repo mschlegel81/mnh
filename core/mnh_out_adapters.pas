@@ -94,7 +94,7 @@ TYPE
       plot:T_plot;
       {$endif}
       {$ifdef IMIG}
-      Picture:specialize G_safeVar<P_rawImage>;
+      picture:specialize G_safeVar<P_rawImage>;
       {$endif}
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -385,7 +385,7 @@ CONSTRUCTOR T_adapters.create;
     plot.createWithDefaults;
     {$endif}
     {$ifdef IMIG}
-    Picture.create(nil);
+    picture.create(nil);
     {$endif}
     setLength(adapter,0);
     nextAdapterId:=0;
@@ -400,8 +400,8 @@ DESTRUCTOR T_adapters.destroy;
     plot.destroy;
     {$endif}
     {$ifdef IMIG}
-    if (Picture.value<>nil) then dispose(Picture.value,destroy);
-    Picture.destroy;
+    if (picture.value<>nil) then dispose(picture.value,destroy);
+    picture.destroy;
     {$endif}
   end;
 
@@ -498,8 +498,8 @@ PROCEDURE T_adapters.ClearAll;
     clearPrint;
     clearErrors;
     {$ifdef imig}
-    if Picture.value<>nil then dispose(Picture.value,destroy);
-    Picture.value:=nil;
+    if picture.value<>nil then dispose(picture.value,destroy);
+    picture.value:=nil;
     {$endif}
   end;
 

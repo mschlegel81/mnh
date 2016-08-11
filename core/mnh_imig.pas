@@ -100,7 +100,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
       end;
       enterCriticalSection(imigCS);
       workflow:=createWorkflow(P_listLiteral(params^.value(0)),false,isValid,tokenLocation,context);
-      if isValid and (Source=C_nullSourceOrTargetFileName) then with context.adapters^.Picture do begin
+      if isValid and (Source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then begin
           context.adapters^.raiseError('Current image ("#") given as input image but no current image loaded.',tokenLocation);
@@ -121,7 +121,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         progressQueue.cancelCalculation(true);
       end;
       workflow.destroy;
-      if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.Picture do begin
+      if (context.adapters^.noErrors) and (dest=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then value:=newFromWorkflowImage
                      else value^.copyFromImage(workflowImage);
@@ -136,7 +136,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
 
 PROCEDURE doCloseImage(VAR context:T_evaluationContext);
   begin
-    with context.adapters^.Picture do begin
+    with context.adapters^.picture do begin
       lock;
       if (value<>nil) then dispose(value,destroy);
       value:=nil;
@@ -157,7 +157,7 @@ FUNCTION loadImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
         ok:=false;
         context.adapters^.raiseError('Error loading image '+params^.value(0)^.toString(),tokenLocation);
       end;
-      if ok then with context.adapters^.Picture do begin
+      if ok then with context.adapters^.picture do begin
         lock;
         if value<>nil then dispose(value,destroy);
         value:=loadedImage;
@@ -171,7 +171,7 @@ FUNCTION saveImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
   VAR ok:boolean=true;
   begin
     result:=nil;
-    with context.adapters^.Picture do begin
+    with context.adapters^.picture do begin
       lock;
       if value=nil then begin
         unlock;
@@ -207,7 +207,7 @@ FUNCTION closeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
 FUNCTION imageSize_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then with context.adapters^.Picture do begin
+    if (params=nil) or (params^.size=0) then with context.adapters^.picture do begin
       lock;
       if value<>nil then result:=newListLiteral(2)^.appendInt(value^.width)^.appendInt(value^.height)
                     else result:=newListLiteral();
@@ -233,7 +233,7 @@ FUNCTION resizeImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_token
       for s:=res_exact to res_fit do if styleString[s]=style then r:=s;
 
       if (r=res_dataResize) or (xRes<=0) or (yRes<=0) then exit(nil);
-      with context.adapters^.Picture do begin
+      with context.adapters^.picture do begin
         lock;
         if value<>nil then begin
           value^.resize(xRes,yRes,r);
@@ -248,7 +248,7 @@ FUNCTION displayImage_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      if context.adapters^.Picture.value<>nil then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
+      if context.adapters^.picture.value<>nil then context.adapters^.raiseCustomMessage(mt_displayImage,'',tokenLocation)
                                               else context.adapters^.raiseNote('Cannot display image because no image is loaded',tokenLocation);
       result:=newVoidLiteral;
     end;

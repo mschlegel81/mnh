@@ -53,7 +53,7 @@ PROCEDURE TDisplayImageForm.FormShow(Sender: TObject);
 PROCEDURE TDisplayImageForm.displayCurrentImage;
   VAR resizedPic:T_rawImage;
   begin
-    with guiAdapters^.Picture do begin
+    with guiAdapters^.picture do begin
       lock;
       if value=nil then begin
         unlock;
