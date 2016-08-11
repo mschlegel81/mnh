@@ -494,7 +494,7 @@ FUNCTION sandBoxExecute_imp(CONST params:P_listLiteral; CONST tokenLocation:T_to
         setLength(src,0);
         for i:=0 to P_listLiteral(params^.value(0))^.size-1 do append(src,P_stringLiteral(P_listLiteral(params^.value(0))^.value(i))^.value);
       end;
-      result:=messagesToLiteral(runAlone(src),C_MESSAGE_TYPES_IGNORED_BY_SANDBOX);
+      result:=messagesToLiteralForSandbox(runAlone(src));
     end;
   end;
 

@@ -91,7 +91,7 @@ TYPE
     FUNCTION GetEol: boolean; override;
     FUNCTION getRange: pointer; override;
     FUNCTION getToken: ansistring; override;
-    PROCEDURE GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer); override;
+    PROCEDURE GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer); override;
     FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
     FUNCTION GetTokenKind: integer; override;
     FUNCTION GetTokenPos: integer; override;
@@ -241,9 +241,9 @@ PROCEDURE TSynMnhSyn.next;
     if (run = 0) and (flavour in [msf_output,msf_guessing]) then begin
       specialLineCase:=mt_clearConsole;
       i:=-1;
-      for lc:=low(T_messageType) to high(T_messageType) do if (C_errorLevelTxt[lc]<>'') and startsWith(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[lc]) then begin
+      for lc:=low(T_messageType) to high(T_messageType) do if (C_messageTypeMeta[lc].prefix<>'') and startsWith(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[lc].prefix) then begin
         specialLineCase:=lc;
-        i:=length(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[lc]);
+        i:=length(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[lc].prefix);
       end;
       if (flavour=msf_guessing) and (specialLineCase=mt_clearConsole) then begin
         i:=0;
@@ -388,9 +388,9 @@ PROCEDURE TSynMnhSyn.next;
       end;
     end;
     if (fLineNumber=markedToken.line) and (fTokenPos<=markedToken.column) and (run>markedToken.column) then fTokenId:=tkHighlightedItem;
-    if (flavour=msf_input) then begin
-      if codeAssistant.isErrorLocation  (fLineNumber,fTokenPos,run) then fTokenSubId:=skError else
-      if codeAssistant.isWarningLocation(fLineNumber,fTokenPos,run) then fTokenSubId:=skWarn;
+    if (flavour=msf_input) then case codeAssistant.isErrorLocation(fLineNumber,fTokenPos,run) of
+      2: fTokenSubId:=skError;
+      1: fTokenSubId:=skWarn;
     end;
   end;
 
@@ -413,10 +413,10 @@ FUNCTION TSynMnhSyn.getToken: ansistring;
     SetString(result, (fLine+fTokenPos), len);
   end;
 
-PROCEDURE TSynMnhSyn.GetTokenEx(OUT TokenStart: PChar; OUT TokenLength: integer);
+PROCEDURE TSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer);
   begin
-    TokenLength := run-fTokenPos;
-    TokenStart := fLine+fTokenPos;
+    tokenLength := run-fTokenPos;
+    tokenStart := fLine+fTokenPos;
   end;
 
 FUNCTION TSynMnhSyn.GetTokenAttribute: TSynHighlighterAttributes;

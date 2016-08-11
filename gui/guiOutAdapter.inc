@@ -10,7 +10,7 @@ end;
 {$ifdef includeImplementation}
 CONSTRUCTOR T_guiOutAdapter.create;
   begin
-    inherited create(at_gui);
+    inherited create(at_gui,true);
     setLength(lineIndexPerEvaluatedStatement,0);
   end;
 
@@ -40,11 +40,11 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
             firstInLine:=false;
           end;
           if first
-          then syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]      +' '+txt)
-          else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[mt_echo_continued]+' '+txt);
+          then syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType]      .prefix+' '+txt)
+          else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[mt_echo_continued].prefix+' '+txt);
           first:=false;
         end;
-      end else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+message);
+      end else syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+message);
     end;
 
   begin
@@ -85,8 +85,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);
-        mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+                         ' '+(simpleMessage));
-        else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage));
+        mt_timing_info:      syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+                         ' '+(simpleMessage));
+        else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage));
         end;
       end;
     end;

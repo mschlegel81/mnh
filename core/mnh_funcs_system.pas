@@ -594,7 +594,7 @@ FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   end;
 
 FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
-  begin new(result,create(at_unknown)); end;
+  begin new(result,create(at_unknown,true)); end;
 
 VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
 FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
@@ -610,7 +610,7 @@ FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
 FUNCTION collectedOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params=nil) or (params^.size=0)
-    then result:=messagesToLiteral(collector.value^.storedMessages)
+    then result:=messagesToLiteralForSandbox(collector.value^.storedMessages)
     else result:=nil;
   end;
 

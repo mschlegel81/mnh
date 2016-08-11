@@ -443,8 +443,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
     UpdateTimeTimer.interval:=20;
   end;
 
-PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,
-  updateMarker: boolean);
+PROCEDURE TMnhForm.inputEditReposition(CONST caret: TPoint; CONST doJump,updateMarker: boolean);
   VAR wordUnderCursor:string;
       newCaret:TPoint;
       pageIdx:longint;
@@ -530,6 +529,7 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     doNotCheckFileBefore:=now+ONE_SECOND;
 
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
+    OutputEdit.highlighter:=outputHighlighter;
     assistanceSynEdit.highlighter:=outputHighlighter;
 
     helpHighlighter:=TSynMnhSyn.create(nil,msf_guessing);
