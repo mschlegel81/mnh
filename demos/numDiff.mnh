@@ -10,9 +10,9 @@ D(f:expression(1),t:numeric,h>0.0)->D(f,t,h,1);
 //*Returns the value of f at point t
 D(f:expression(1),t:numeric,h    ,k=0)->f(t);
 //*Returns the k-th derivative f at point t
-D(f:expression(1),t:numeric,h>0.0,k>0)->abstractD(k,h).pEach(p,f(t+p[0])*p[1],+);
+D(f:expression(1),t:numeric,h>0.0,k>0)->abstractD(k,h).each(p,f(t+p[0])*p[1],+);
 //*Returns the k-th derivative f at points T
-D(f:expression(1),T:numericList,h>0.0,k>=0)->T.pEach(t,f.D(t,h,k));
+D(f:expression(1),T:numericList,h>0.0,k>=0)->T.each(t,f.D(t,h,k));
 
 private taylorPower(shift=0,power=0)->{$x};
 private taylorPower(shift=0,power)->{$x}^power;
@@ -23,7 +23,7 @@ private factorial(n>0)->[1..n].agg(*);
 private factorial(n)->1;
 
 //*Returns the factors of the Taylor series expansion of f around x0
-taylorFactors(f:expression(1),x0:numeric,h>0.0,termCount>=1)->[0..termCount-1].pEach(i,f.D(x0,h,i)/factorial(i));
+taylorFactors(f:expression(1),x0:numeric,h>0.0,termCount>=1)->[0..termCount-1].each(i,f.D(x0,h,i)/factorial(i));
 //*Returns Taylor series expansion of f around x0
 taylorExpansion(f:expression(1),x0:numeric,h>0.0,termCount>=1)->f.taylorFactors(x0,h,termCount).each(term,term.abs<1E-6 ? void : taylorPower(x0,index)*term,+);
 //*Returns MacLaurin series expansion of f (i.e. the Taylor series expansion arounf 0)
