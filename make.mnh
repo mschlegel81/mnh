@@ -227,9 +227,8 @@ main('prepare')->updateCurrentCodeHash;
 private memoized acceptedMainParameters->inspect['declares','main','subrules'].getInner('pattern').clean(['a'..'z','A'..'Z'],' ').trim.each(p,p='' ? void : p);
 private isSameFileName(i:int,s:string)->begin
   local case:=isLinux ? {$x} : {$x.upper};
-  local s0:=binName(i).splitFileName['expanded'].case;
-  local s1:=s.case;
-  s0==s1;
+  (binName(i).splitFileName['expanded'].case)==
+  (s         .splitFileName['expanded'].case)
 end;
 
 //*Several steps in succession
