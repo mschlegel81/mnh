@@ -24,8 +24,7 @@ TYPE
     tkWarning,
     tkNote,
     tkTimingNote,
-    tkHighlightedItem,
-    tkHashVariable);
+    tkHighlightedItem);
   T_tokenSubKind =(skNormal,skWarn,skError);
   T_mnhSynFlavour=(msf_input,msf_output,msf_guessing);
 
@@ -107,11 +106,7 @@ TYPE
 PROCEDURE initLists;
 IMPLEMENTATION
 VAR listsAreInitialized:boolean=false;
-    modifierStrings:T_listOfString;
-    intrinsicRules:T_listOfString;
-    operatorStrings:T_listOfString;
-    specialLiteralStrings:T_listOfString;
-    specialConstructStrings:T_listOfString;
+    tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
 
 CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   VAR t:T_tokenKind;
@@ -138,7 +133,6 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkNote            ,s]:=TSynHighlighterAttributes.create('Note');
       styleTable[tkTimingNote      ,s]:=TSynHighlighterAttributes.create('Time');
       styleTable[tkHighlightedItem ,s]:=TSynHighlighterAttributes.create('Highlighted');
-      styleTable[tkHashVariable    ,s]:=TSynHighlighterAttributes.create('HashVariable');
 
       styleTable[tkComment         ,s].style:=[fsItalic];
       styleTable[tkDocComment      ,s].style:=[fsItalic,fsBold];
@@ -148,7 +142,6 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkSpecialRule     ,s].style:=[fsBold];
       styleTable[tkOperator        ,s].style:=[fsBold];
       styleTable[tkModifier        ,s].style:=[fsBold];
-      styleTable[tkHashVariable    ,s].style:=[fsBold];
       styleTable[tkError           ,s].style:=[fsBold];
       styleTable[tkWarning         ,s].style:=[fsBold];
       styleTable[tkNote            ,s].style:=[fsBold];
@@ -171,8 +164,6 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
       styleTable[tkError           ,s].background:=$0000FFFF;
       styleTable[tkWarning         ,s].foreground:=$000000ff;
       styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
-      styleTable[tkHashVariable    ,s].foreground:=$00FF0000;
-      styleTable[tkHashVariable    ,s].background:=$00FFEEDD;
     end;
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       styleTable[t,skWarn].style:=styleTable[t,skWarn].style+[fsUnderline];
@@ -307,13 +298,8 @@ PROCEDURE TSynMnhSyn.next;
           localId := localId+fLine [run];
           inc(run);
         end;
-        if      operatorStrings        .contains(localId) then fTokenId := tkOperator
-        else if specialLiteralStrings  .contains(localId) then fTokenId := tkNonStringLiteral
-        else if modifierStrings        .contains(localId) or
-                (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
-        else if specialConstructStrings.contains(localId) then fTokenId := tkSpecialRule
-        else
-        if intrinsicRules.contains(localId) then fTokenId := tkBultinRule
+        if tokenTypeMap.containsKey(localId,fTokenId) then begin end
+        else if (fLineNumber=0) and (localId='USE') and (flavour=msf_input) then fTokenId := tkModifier
         else if codeAssistant.isUserRule(localId) then fTokenId := tkUserRule
         else fTokenId := tkDefault;
         isMarked:=(localId=markedWord);
@@ -475,49 +461,38 @@ FUNCTION TSynMnhSyn.GetIdentChars: TSynIdentChars;
   end;
 
 PROCEDURE initLists;
+  PROCEDURE put(CONST wc:T_reservedWordClass; CONST txt:string);
+    CONST tt:array[T_reservedWordClass] of T_tokenKind=(
+                   {rwc_not_reserved    } tkBultinRule,
+                   {rwc_specialLiteral  } tkNonStringLiteral,
+                   {rwc_specialConstruct} tkSpecialRule,
+                   {rwc_operator        } tkOperator,
+                   {rwc_typeCheck       } tkOperator,
+                   {rwc_modifier        } tkModifier);
+    begin
+      if (length(txt)<=0) then exit;
+      if (txt[1]='.') then begin
+        put(wc,copy(txt,2,length(txt)-1));
+        exit;
+      end;
+      if not(isIdentifier(txt,true)) then exit;
+      tokenTypeMap.put(txt,tt[wc]);
+    end;
+
   VAR tt:T_tokenType;
       i:longint;
-
+      builtin:T_arrayOfString;
   begin
-    operatorStrings.create;
-    modifierStrings.create;
-    specialConstructStrings.create;
-    specialLiteralStrings.create;
-    intrinsicRules.create;
-    for tt:=low(T_tokenType) to high(T_tokenType) do begin
-      case C_tokenInfo[tt].reservedWordClass of
-        rwc_typeCheck,
-        rwc_operator:         operatorStrings        .add(C_tokenInfo[tt].defaultId);
-        rwc_specialLiteral:   specialLiteralStrings  .add(C_tokenInfo[tt].defaultId);
-        rwc_specialConstruct: specialConstructStrings.add(replaceAll(C_tokenInfo[tt].defaultId,'.',''));
-        rwc_modifier:         modifierStrings        .add(C_tokenInfo[tt].defaultId);
-      end;
-    end;
-    for i:=1 to high(C_specialWordInfo) do begin
-      case C_specialWordInfo[i].reservedWordClass of
-        rwc_typeCheck,
-        rwc_operator:         operatorStrings        .add(C_specialWordInfo[i].txt);
-        rwc_specialLiteral:   specialLiteralStrings  .add(C_specialWordInfo[i].txt);
-        rwc_specialConstruct: specialConstructStrings.add(C_specialWordInfo[i].txt);
-        rwc_modifier:         modifierStrings        .add(C_specialWordInfo[i].txt);
-      end;
-    end;
-    intrinsicRules.addAll(intrinsicRuleMap.keySet);
+    if listsAreInitialized then exit;
+    tokenTypeMap.create();
+    for tt:=low(T_tokenType) to high(T_tokenType) do with C_tokenInfo[tt] do put(reservedWordClass,defaultId);
+    for i:=1 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
 
-    operatorStrings.unique;
-    modifierStrings.unique;
-    specialConstructStrings.unique;
-    specialLiteralStrings.unique;
-    intrinsicRules.unique;
+    builtin:=intrinsicRuleMap.keySet;
+    for i:=0 to length(builtin)-1 do put(rwc_not_reserved,builtin[i]);
     listsAreInitialized:=true;
   end;
 
 FINALIZATION
-  if listsAreInitialized then begin
-    operatorStrings.destroy;
-    modifierStrings.destroy;
-    specialConstructStrings.destroy;
-    specialLiteralStrings.destroy;
-    intrinsicRules.destroy;
-  end;
+  if listsAreInitialized then tokenTypeMap.destroy;
 end.

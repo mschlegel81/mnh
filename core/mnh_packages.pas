@@ -726,7 +726,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             last^.next:=context.newToken(fileTokens.current); fileTokens.current.undefine;
             last      :=last^.next;
           end;
-             localIdStack.clear;
+          localIdStack.clear;
           localIdStack.scopePush;
           stepToken;
           while (not(fileTokens.atEnd)) and not((fileTokens.current.tokType=tt_endBlock) and (localIdStack.oneAboveBottom)) do begin
@@ -952,7 +952,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifi
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
       else if (ruleType in C_mutableRuleTypes)
-      then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+' rules must have exactly one subrule',ruleDeclarationStart)
+      then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
       else adapters.raiseCustomMessage(mt_el1_note,'Extending rule: '+ruleId,ruleDeclarationStart);
     end;
     result^.declarationEnd:=ruleDeclarationEnd;
