@@ -47,14 +47,14 @@ TYPE
       FUNCTION needReload:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
       PROCEDURE loadForDocumentation;
-      PROCEDURE clear;
+      PROCEDURE clear(CONST includeSecondaries:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       {$ifdef fullVersion}
-      PROCEDURE complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
+      PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       FUNCTION getDoc:P_userPackageDocumentation;
       {$endif}
       PROCEDURE printHelpOnMain(VAR adapters:T_adapters);
@@ -804,7 +804,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end else profiler.active:=false;
 
     if usecase<>lu_interactiveMode
-    then clear
+    then clear(false)
     else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
@@ -827,8 +827,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       lu_forCallingMain:   executeMain;
     end;
     {$ifdef fullVersion}
-    if (usecase in [lu_forDirectExecution,lu_forCallingMain]) and gui_started and context.adapters^.noErrors
-    then complainAboutUncalled(true,context.adapters^);
+    if (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_forCodeAssistance]) and gui_started and context.adapters^.noErrors
+    then complainAboutUnused(true,context.adapters^);
     {$endif}
     if isMain and (usecase in [lu_forDirectExecution,lu_forCallingMain])
     then begin
@@ -883,11 +883,13 @@ FUNCTION T_package.needReload: boolean;
     result:=codeProvider.fileHasChanged;
   end;
 
-PROCEDURE T_package.clear;
+PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
-    setLength(secondaryPackages,0);
+    if includeSecondaries then begin
+      for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
+      setLength(secondaryPackages,0);
+    end;
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
     setLength(packageUses,0);
     packageRules.clear;
@@ -916,7 +918,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
 
 DESTRUCTOR T_package.destroy;
   begin
-    clear;
+    clear(true);
     codeProvider.destroy;
     packageRules.destroy;
     importedRules.destroy;
@@ -931,11 +933,13 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if packageRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_localUserRule;
       token.data:=userRule;
+      userRule^.idResolved:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
       token.tokType:=tt_importedUserRule;
       token.data:=userRule;
+      userRule^.idResolved:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
@@ -998,17 +1002,17 @@ PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_package.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters);
+PROCEDURE T_package.complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
   VAR ruleList:array of P_rule;
       i:longint;
       anyCalled:boolean=false;
   begin
     ruleList:=packageRules.valueSet;
-    for i:=0 to length(ruleList)-1 do if ruleList[i]^.complainAboutUncalled(inMainPackage,adapters) then anyCalled:=true;
+    for i:=0 to length(ruleList)-1 do if not(ruleList[i]^.complainAboutUnused(adapters)) then anyCalled:=true;
     if not(anyCalled) and not(inMainPackage) then adapters.raiseWarning('Unused import '+codeProvider.id,packageTokenLocation(@self));
     if inMainPackage then begin
       for i:=0 to length(packageUses)-1 do begin
-        packageUses[i].pack^.complainAboutUncalled(false,adapters);
+        packageUses[i].pack^.complainAboutUnused(false,adapters);
       end;
     end;
     setLength(ruleList,0);

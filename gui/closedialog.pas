@@ -39,46 +39,46 @@ PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
 
 FUNCTION TcloseDialogForm.showOnQuit: integer;
   begin
-    Caption:='The current file has been changed';
-    ButtonPanel1.OKButton.Caption := 'Save and quit';
-    ButtonPanel1.CancelButton.Caption := 'Cancel';
-    ButtonPanel1.CloseButton.Caption := 'Discard changes';
+    caption:='The current file has been changed';
+    ButtonPanel1.OKButton.caption := 'Save and quit';
+    ButtonPanel1.CancelButton.caption := 'Cancel';
+    ButtonPanel1.CloseButton.caption := 'Discard changes';
     result := ShowModal;
   end;
 
 FUNCTION TcloseDialogForm.showOnLoad: integer;
   begin
-    Caption:='The current file has been changed';
-    ButtonPanel1.OKButton.Caption := 'Save and change file';
-    ButtonPanel1.CancelButton.Caption := 'Cancel (stay here)';
-    ButtonPanel1.CloseButton.Caption := 'Discard changes';
+    caption:='The current file has been changed';
+    ButtonPanel1.OKButton.caption := 'Save and change file';
+    ButtonPanel1.CancelButton.caption := 'Cancel (stay here)';
+    ButtonPanel1.CloseButton.caption := 'Discard changes';
     result := ShowModal;
   end;
 
 FUNCTION TcloseDialogForm.showOnOutOfSync(CONST fileName:string): integer;
   begin
-    Caption:=fileName+' is out of sync';
-    ButtonPanel1.OKButton.Caption := 'Reload';
-    ButtonPanel1.CancelButton.Caption := 'Ignore changes';
-    ButtonPanel1.CloseButton.Caption := 'Overwrite';
+    caption:=fileName+' is out of sync';
+    ButtonPanel1.OKButton.caption := 'Reload';
+    ButtonPanel1.CancelButton.caption := 'Ignore changes';
+    ButtonPanel1.CloseButton.caption := 'Overwrite';
     result:=ShowModal;
   end;
 
 FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName:string): integer;
   begin
-    Caption:=fileName+' is deleted';
-    ButtonPanel1.OKButton.Caption := 'Close';
-    ButtonPanel1.CancelButton.Caption := 'Ignore changes';
-    ButtonPanel1.CloseButton.Caption := 'Overwrite';
+    caption:=fileName+' is deleted';
+    ButtonPanel1.OKButton.caption := 'Close';
+    ButtonPanel1.CancelButton.caption := 'Ignore changes';
+    ButtonPanel1.CloseButton.caption := 'Overwrite';
     result:=ShowModal;
   end;
 
 FUNCTION TcloseDialogForm.showOnUninstall: integer;
   begin
-    Caption:='Do you really want to uninstall MNH5?';
-    ButtonPanel1.OKButton.Caption := 'Uninstall and quit';
-    ButtonPanel1.CancelButton.Caption := 'Cancel';
-    ButtonPanel1.CloseButton.Caption := 'Quit without uninstalling';
+    caption:='Do you really want to uninstall MNH5?';
+    ButtonPanel1.OKButton.caption := 'Uninstall and quit';
+    ButtonPanel1.CancelButton.caption := 'Cancel';
+    ButtonPanel1.CloseButton.caption := 'Quit without uninstalling';
     result := ShowModal;
   end;
 

@@ -12,7 +12,6 @@
   T_subrule=object
     private
       comment:ansistring;
-      called:boolean;
       parent:P_rule;
       typ:T_subruleType;
       declaredAt:T_tokenLocation;
@@ -98,7 +97,6 @@ CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST re
   CONST C_specialConstruct:array[false..true] of T_tokenType=(tt_EOL,tt_while);
   begin
     parent:=parent_;
-    called:=false;
     if isPrivate then typ:=srt_normal_private
                  else typ:=srt_normal_public;
     pattern:=pat;
@@ -110,7 +108,6 @@ CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST re
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
   begin
     parent:=nil;
-    called:=false;
     typ:=srt_inline_for_each;
     pattern.create;
     pattern.appendFreeId(parameterId);
@@ -196,7 +193,6 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
   VAR t:P_token;
   begin
     parent:=nil;
-    called:=false;
     typ:=srt_inline_for_literal;
     declaredAt:=rep^.location;
     pattern.create;
@@ -223,7 +219,6 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
   begin
     parent:=nil;
     comment:='';
-    called:=false;
     typ:=srt_inline_for_literal;
     declaredAt:=tok^.location;
     pattern.create;
@@ -269,7 +264,6 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
   begin
     parent:=nil;
     comment:=original^.comment;
-    called:=false;
     typ:=original^.typ;
     declaredAt:=original^.declaredAt;
     pattern.clone(original^.pattern);
@@ -405,7 +399,6 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
   PROCEDURE prepareResult;
     VAR i:longint;
     begin
-      called:=true;
       with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
       t:=firstRep;
       for i:=1 to length(preparedBody)-1 do with preparedBody[i] do begin
@@ -482,7 +475,6 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
 
   begin
     parent:=nil;
-    called:=false;
     declaredAt:=opLocation;
     //Pattern (including final parameter names)
     if LHS^.literalType=lt_expression then begin
@@ -547,7 +539,6 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
 
   begin
     parent:=nil;
-    called:=false;
     origRule:=original^.value;
     declaredAt:=funcLocation;
     pattern.create;
@@ -670,7 +661,6 @@ FUNCTION T_subrule.getInlineValue:P_literal;
   begin
     if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
     with preparedBody[0] do if token.tokType=tt_literal then begin
-      called:=true;
       result:=token.data;
       result^.rereference;
     end else result:=nil;

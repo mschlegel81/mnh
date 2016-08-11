@@ -46,7 +46,7 @@ TYPE
     requested,current:record
       literal:P_listLiteral;
       headerData:T_arrayOfString;
-      Caption:string;
+      caption:string;
       firstIsHeader:boolean;
     end;
     displayPending:boolean;
@@ -70,7 +70,7 @@ IMPLEMENTATION
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; VAR context:T_evaluationContext): P_literal;
-  VAR Caption:string='MNH table';
+  VAR caption:string='MNH table';
       header:boolean=false;
       i:longint;
   begin
@@ -81,12 +81,12 @@ FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_toke
        (params^.value(0)^.literalType in C_validListTypes) then begin
       for i:=1 to 2 do  if params^.size>i then begin
         case params^.value(i)^.literalType of
-          lt_string: Caption:=P_stringLiteral(params^.value(i))^.value;
+          lt_string: caption:=P_stringLiteral(params^.value(i))^.value;
           lt_boolean: header:=P_boolLiteral(params^.value(i))^.value;
           else exit(nil);
         end;
       end;
-      tableForm.initWithLiteral(P_listLiteral(params^.value(0)),Caption,header);
+      tableForm.initWithLiteral(P_listLiteral(params^.value(0)),caption,header);
       result:=newVoidLiteral;
     end else result:=nil;
   end;
@@ -245,7 +245,7 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral; CONST newCaption: s
     end;
 
     displayPending:=true;
-    requested.Caption:=newCaption;
+    requested.caption:=newCaption;
     leaveCriticalSection(cs);
   end;
 
@@ -254,7 +254,7 @@ PROCEDURE TtableForm.conditionalDoShow;
     enterCriticalSection(cs);
     if displayPending then begin
       displayPending:=false;
-      Caption:=requested.Caption;
+      caption:=requested.caption;
       if current.literal<>nil then disposeLiteral(current.literal);
       current:=requested;
       requested.literal:=nil;

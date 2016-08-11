@@ -24,13 +24,12 @@ TYPE
       endOfEvaluationText:ansistring;
       mainParameters:T_arrayOfString;
       startOfEvaluation:double;
-      errors:T_storedMessages;
-      stateCounter:longint;
+
       PROCEDURE ensureThread;
       PROCEDURE threadStarted;
       PROCEDURE threadStopped;
       PROCEDURE preEval;
-      PROCEDURE postEval(CONST includeLists:boolean=true);
+      PROCEDURE postEval; virtual;
       FUNCTION parametersForMainCall:T_arrayOfString;
       FUNCTION pendingRequest:T_evalRequest;
     public
@@ -46,15 +45,31 @@ TYPE
       PROCEDURE explainIdentifier(CONST fullLine:ansistring; CONST CaretY,CaretX:longint; VAR info:T_tokenInfo);
       PROCEDURE reportVariables(VAR report:T_variableReport);
       FUNCTION getEndOfEvaluationText:ansistring;
-      FUNCTION isErrorLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
-      FUNCTION getErrorHint:string;
-      FUNCTION getStateCounter:longint;
   end;
 
-VAR userRules,
-    completionList:T_listOfString;
-    runEvaluator,
-    docEvaluator:T_evaluator;
+  P_assistanceEvaluator=^T_assistanceEvaluator;
+  T_assistanceEvaluator=object(T_evaluator)
+    private
+      errors:T_storedMessages;
+      warnings:T_storedMessages;
+      stateCounter:longint;
+      userRules,
+      completionList:T_listOfString;
+      PROCEDURE postEval; virtual;
+    public
+      CONSTRUCTOR create(CONST adapters:P_adapters; threadFunc:TThreadFunc);
+      DESTRUCTOR destroy;
+
+      FUNCTION isErrorLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
+      FUNCTION isWarningLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
+      FUNCTION getErrorHints:T_arrayOfString;
+      FUNCTION getStateCounter:longint;
+      FUNCTION isUserRule(CONST id:string):boolean;
+      PROCEDURE extendCompletionList(VAR list:T_listOfString);
+  end;
+
+VAR runEvaluator:T_evaluator;
+    codeAssistant:T_assistanceEvaluator;
 
 PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 
@@ -79,19 +94,19 @@ FUNCTION main(p:pointer):ptrint;
           preEval;
           sleepTime:=0;
           package.load(lu_forDirectExecution,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-          postEval(false);
+          postEval;
         end;
         er_evaluateInteractive: begin
           preEval;
           sleepTime:=0;
           package.load(lu_interactiveMode,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-          postEval(false);
+          postEval;
         end;
         er_callMain: begin
           preEval;
           sleepTime:=0;
           package.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
-          postEval(false);
+          postEval;
         end;
         er_reEvaluateWithGUI: begin
           preEval;
@@ -99,7 +114,7 @@ FUNCTION main(p:pointer):ptrint;
           package.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
           setupOutputBehaviour(mainEvaluationContext.adapters^);
           package.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
-          postEval(false);
+          postEval;
         end;
         else begin
           if sleepTime<MAX_SLEEP_TIME then inc(sleepTime);
@@ -116,7 +131,7 @@ FUNCTION docMain(p:pointer):ptrint;
   VAR mainEvaluationContext:T_evaluationContext;
       i:longint;
 
-  begin with P_evaluator(p)^ do begin
+  begin with P_assistanceEvaluator(p)^ do begin
     mainEvaluationContext.createNormalContext(adapter);
     result:=0;
     threadStarted;
@@ -126,12 +141,16 @@ FUNCTION docMain(p:pointer):ptrint;
         package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
         enterCriticalSection(cs);
         setLength(errors,0);
+        setLength(warnings,0);
         with P_collectingOutAdapter(adapter^.getAdapter(0))^ do
         for i:=0 to length(storedMessages)-1 do
         if (storedMessages[i].location.fileName=package.getPath) and
-           (C_errorLevelForMessageType[storedMessages[i].messageType]>=2) then begin
+           (C_errorLevelForMessageType[storedMessages[i].messageType]>=3) then begin
           setLength(errors,length(errors)+1);
           errors[length(errors)-1]:=storedMessages[i];
+        end else if C_errorLevelForMessageType[storedMessages[i].messageType]=2 then begin
+          setLength(warnings,length(warnings)+1);
+          warnings[length(warnings)-1]:=storedMessages[i];
         end;
         postEval;
         leaveCriticalSection(cs);
@@ -142,6 +161,7 @@ FUNCTION docMain(p:pointer):ptrint;
     mainEvaluationContext.destroy;
     threadStopped;
   end; end;
+
 
 PROCEDURE T_evaluator.ensureThread;
   begin
@@ -158,8 +178,15 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
     endOfEvaluationText:='compiled on: '+{$I %DATE%}+' at: '+{$I %TIME%}+' with FPC'+{$I %FPCVERSION%}+' for '+{$I %FPCTARGET%};
     package.create(nil);
     adapter:=adapters;
+  end;
+
+CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
+  begin
+    inherited create(adapters,threadFunc);
     stateCounter:=0;
     setLength(errors,0);
+    userRules.create;
+    completionList.create;
   end;
 
 DESTRUCTOR T_evaluator.destroy;
@@ -176,6 +203,13 @@ DESTRUCTOR T_evaluator.destroy;
     package.destroy;
     leaveCriticalSection(cs);
     system.doneCriticalSection(cs);
+  end;
+
+DESTRUCTOR T_assistanceEvaluator.destroy;
+  begin
+    inherited destroy;
+    userRules.destroy;
+    completionList.destroy;
   end;
 
 PROCEDURE T_evaluator.haltEvaluation;
@@ -350,7 +384,7 @@ FUNCTION T_evaluator.getEndOfEvaluationText: ansistring;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.isErrorLocation(CONST lineIndex, TokenStart, tokenEnd: longint): boolean;
+FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, TokenStart, tokenEnd: longint): boolean;
   VAR i:longint;
   begin
     enterCriticalSection(cs);
@@ -360,12 +394,30 @@ FUNCTION T_evaluator.isErrorLocation(CONST lineIndex, TokenStart, tokenEnd: long
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.getErrorHint: string;
+FUNCTION T_assistanceEvaluator.isWarningLocation(CONST lineIndex,TokenStart,tokenEnd:longint):boolean;
   VAR i:longint;
   begin
     enterCriticalSection(cs);
-    result:='';
-    for i:=0 to length(errors)-1 do result:=result+intToStr(errors[i].location.line)+','+intToStr(errors[i].location.column)+': '+errors[i].simpleMessage+C_lineBreakChar;
+    result:=false;
+    for i:=0 to length(warnings)-1 do with warnings[i].location do
+      result:=result or (lineIndex=line-1) and (TokenStart<=column-1) and (tokenEnd>column-1);
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_assistanceEvaluator.getErrorHints:T_arrayOfString;
+  VAR i,k:longint;
+  begin
+    enterCriticalSection(cs);
+    setLength(result,length(errors)+length(warnings));
+    k:=0;
+    for i:=0 to length(errors)-1 do with errors[i] do begin
+      result[k]:=UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage);
+      inc(k);
+    end;
+    for i:=0 to length(warnings)-1 do with warnings[i] do begin
+      result[k]:=UTF8_ZERO_WIDTH_SPACE+C_errorLevelTxt[messageType]+' '+ansistring(location)+' '+(simpleMessage);
+      inc(k);
+    end;
     leaveCriticalSection(cs);
   end;
 
@@ -403,7 +455,19 @@ PROCEDURE T_evaluator.preEval;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
+PROCEDURE T_evaluator.postEval;
+  begin
+    enterCriticalSection(cs);
+    state:=es_idle;
+    if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
+    then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
+    else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
+    while not(adapter^.hasMessageOfType[mt_endOfEvaluation])
+    do adapter^.logEndOfEvaluation;
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_assistanceEvaluator.postEval;
   PROCEDURE updateCompletionList;
     VAR i:longint;
     begin
@@ -417,13 +481,8 @@ PROCEDURE T_evaluator.postEval(CONST includeLists: boolean);
 
   begin
     enterCriticalSection(cs);
-    if includeLists then updateCompletionList;
-    state:=es_idle;
-    if adapter^.hasMessageOfType[mt_el5_haltMessageReceived]
-    then endOfEvaluationText:='Aborted after '+myTimeToStr(now-startOfEvaluation)
-    else endOfEvaluationText:='Done in '+myTimeToStr(now-startOfEvaluation);
-    while not(adapter^.hasMessageOfType[mt_endOfEvaluation])
-    do adapter^.logEndOfEvaluation;
+    inherited postEval;
+    updateCompletionList;
     inc(stateCounter);
     leaveCriticalSection(cs);
   end;
@@ -435,10 +494,24 @@ FUNCTION T_evaluator.parametersForMainCall: T_arrayOfString;
     leaveCriticalSection(cs);
   end;
 
-FUNCTION T_evaluator.getStateCounter: longint;
+FUNCTION T_assistanceEvaluator.getStateCounter: longint;
   begin
     enterCriticalSection(cs);
     result:=stateCounter;
+    leaveCriticalSection(cs);
+  end;
+
+FUNCTION T_assistanceEvaluator.isUserRule(CONST id:string):boolean;
+  begin
+    enterCriticalSection(cs);
+    result:=userRules.contains(id);
+    leaveCriticalSection(cs);
+  end;
+
+PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list:T_listOfString);
+  begin
+    enterCriticalSection(cs);
+    list.addAll(completionList.elementArray);
     leaveCriticalSection(cs);
   end;
 
@@ -475,20 +548,16 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
     new(silentAdapters,create);
     new(collector,create(at_unknown));
     silentAdapters^.addOutAdapter(collector,true);
-    silentAdapters^.minErrorLevel:=2;
-    docEvaluator.create(silentAdapters,@docMain);
+    silentAdapters^.minErrorLevel:=1;
+    codeAssistant.create(silentAdapters,@docMain);
     initIntrinsicRuleList;
-    userRules.create;
-    completionList.create;
     unitIsInitialized:=true;
   end;
 
 FINALIZATION
   if unitIsInitialized then begin
     runEvaluator.destroy;
-    docEvaluator.destroy;
+    codeAssistant.destroy;
     dispose(silentAdapters,destroy);
-    userRules.destroy;
-    completionList.destroy;
   end;
 end.

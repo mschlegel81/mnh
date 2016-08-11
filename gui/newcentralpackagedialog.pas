@@ -49,13 +49,13 @@ PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
   begin
     fileNameEdit.text:=configDir+'packages'+DirectorySeparator+packageNameEdit.text+'.mnh';
     if not(isIdentifier(packageNameEdit.text,false)) then begin
-      complaintLabel.Caption:=PACKAGE_NAME_COMPLAINT;
+      complaintLabel.caption:=PACKAGE_NAME_COMPLAINT;
       complaintLabel.visible:=true;
       OKButton.Enabled:=false;
       exit;
     end;
     if fileExists(fileNameEdit.text) then begin
-      complaintLabel.Caption:=FILE_EXISTS_COMPLAINT;
+      complaintLabel.caption:=FILE_EXISTS_COMPLAINT;
       complaintLabel.visible:=true;
       OKButton.Enabled:=false;
       exit;
