@@ -29,12 +29,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         first:boolean=true;
         firstInLine:boolean=true;
     begin
-      if settings.value^.wordWrapEcho and (syn.CharsInWindow-5<length(message)) then begin
+      if settings.value^.wordWrapEcho and (syn.charsInWindow-5<length(message)) then begin
         tokens:=tokenSplit(message);
         while k<length(tokens) do begin
           txt:='';
           firstInLine:=true;
-          while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.CharsInWindow-5)) do begin
+          while (k<length(tokens)) and (firstInLine or (length(txt)+length(tokens[k])<=syn.charsInWindow-5)) do begin
             txt:=txt+tokens[k];
             inc(k);
             firstInLine:=false;

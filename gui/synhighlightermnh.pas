@@ -184,7 +184,7 @@ CONSTRUCTOR TSynMnhSyn.create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
   end; { Create }
 
 DESTRUCTOR TSynMnhSyn.destroy;
-  VAR t: T_TokenKind;
+  VAR t: T_tokenKind;
       s: T_tokenSubKind;
   begin
     for t:=low(T_tokenKind)    to high(T_tokenKind) do

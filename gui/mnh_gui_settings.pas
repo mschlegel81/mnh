@@ -90,7 +90,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
     memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
-    FontButton.Caption := settings.value^.editorFontname;
+    FontButton.caption := settings.value^.editorFontname;
     with settings.value^.mainForm do begin
       if top<0  then top := 0;
       if Left<0 then Left := 0;
@@ -122,7 +122,7 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
 
       FontButton.Font.name := settings.value^.editorFontname;
       FontButton.Font.size := getFontSize;
-      FontButton.Caption := settings.value^.editorFontname;
+      FontButton.caption := settings.value^.editorFontname;
     end;
   end;
 
@@ -140,7 +140,7 @@ PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);
     FontButton.Font.name := settings.value^.editorFontname;
     setFontSize(editorFont.size);
     FontButton.Font.size := getFontSize;
-    FontButton.Caption := settings.value^.editorFontname;
+    FontButton.caption := settings.value^.editorFontname;
   end;
 
 PROCEDURE TSettingsForm.Button1Click(Sender: TObject);
@@ -154,7 +154,7 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
     {$ifndef Windows}
     TabSheet_install.visible:=false;
     TabSheet_install.Enabled:=false;
-    TabSheet_install.TabVisible:=false;
+    TabSheet_install.tabVisible:=false;
     {$endif}
   end;
 

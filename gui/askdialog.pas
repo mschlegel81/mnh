@@ -86,7 +86,7 @@ PROCEDURE TaskForm.FormShow(Sender: TObject);
 
 PROCEDURE TaskForm.ButtonClick(Sender: TObject);
   begin
-    lastAnswer := TButton(Sender).Caption;
+    lastAnswer := TButton(Sender).caption;
     ModalResult := mrOk;
     Hide;
   end;
@@ -100,8 +100,8 @@ PROCEDURE TaskForm.initWithQuestion(CONST question: ansistring);
     lastAnswer := '';
     ComboBox1.Items.clear;
     for i:=0 to length(previousAnswers)-1 do if previousAnswers[i]<>'' then ComboBox1.Items.add(previousAnswers[i]);
-    Caption := question;
-    Label1.Caption:=question;
+    caption := question;
+    Label1.caption:=question;
     ComboBox1.AutoComplete := false;
     ComboBox1.text := '';
     displayPending := true;
@@ -115,13 +115,13 @@ PROCEDURE TaskForm.initWithQuestionAndOptions(CONST question: ansistring; CONST 
     rejectNonmatchingInput := true;
     lastAnswer := '';
     ComboBox1.Items.clear;
-    Caption := question;
-    Label1.Caption:=question;
+    caption := question;
+    Label1.caption:=question;
     if length(options) = 0 then exit;
     for i := 0 to length(options)-1 do ComboBox1.Items.add(options [i]);
-    if length(options)>0 then Button1.Caption:=options[0];
-    if length(options)>1 then Button2.Caption:=options[1];
-    if length(options)>2 then Button3.Caption:=options[2];
+    if length(options)>0 then Button1.caption:=options[0];
+    if length(options)>1 then Button2.caption:=options[1];
+    if length(options)>2 then Button3.caption:=options[2];
     ComboBox1.AutoComplete := true;
     ComboBox1.text := '';
     displayPending := true;
@@ -179,7 +179,7 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
       for i:=0 to 15 do begin
         button(i).Enabled:=length(options)>i;
         button(i).visible:=length(options)>i;
-        if length(options)>i then button(i).Caption:=options[i];
+        if length(options)>i then button(i).caption:=options[i];
       end;
       ComboBox1.Enabled:=false;
       ComboBox1.visible:=false;

@@ -147,7 +147,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint; CONST state: T_editorState);
   VAR i:longint;
   begin
     create(idx);
-    sheet.TabVisible:=true;
+    sheet.tabVisible:=true;
     changed      :=state.changed;
     fileAccessAge:=state.fileAccessAge;
     filePath     :=state.filePath;
@@ -174,7 +174,7 @@ PROCEDURE T_editorMeta.doneDebugging;
 
 PROCEDURE T_editorMeta.closeEditor;
   begin
-    sheet.TabVisible:=false;
+    sheet.tabVisible:=false;
     editor.ClearAll;
     filePath:='';
     changed:=false;
@@ -182,7 +182,7 @@ PROCEDURE T_editorMeta.closeEditor;
 
 PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
-    sheet.TabVisible:=true;
+    sheet.tabVisible:=true;
     filePath:=fileName;
     editor.ClearAll;
     try
@@ -199,7 +199,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
 
 PROCEDURE T_editorMeta.initForNewFile;
   begin
-    sheet.TabVisible:=true;
+    sheet.tabVisible:=true;
     changed      :=false;
     fileAccessAge:=0;
     filePath     :='';
@@ -209,15 +209,15 @@ PROCEDURE T_editorMeta.initForNewFile;
 
 PROCEDURE T_editorMeta.reloadFile(CONST fileName: string);
   begin
-    if sheet.TabVisible and (filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
+    if sheet.tabVisible and (filePath=SysToUTF8(fileName)) and (fileExists(fileName)) then begin
       editor.lines.loadFromFile(filePath);
       fileAge(filePath,fileAccessAge);
-      editor.Modified:=false;
+      editor.modified:=false;
       changed:=false;
-    end else if sheet.TabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
+    end else if sheet.tabVisible and (fileName=pseudoName) and (runEvaluator.getCodeProvider^.getPath=pseudoName) then begin
       runEvaluator.getCodeProvider^.getLinesUTF8(editor.lines);
       fileAge(filePath,fileAccessAge);
-      editor.Modified:=changed;
+      editor.modified:=changed;
     end;
   end;
 
@@ -230,7 +230,7 @@ FUNCTION T_editorMeta.caretInMainFormCoordinates: TPoint;
 
 PROCEDURE T_editorMeta.setMarkedWord(CONST wordText: string);
   begin
-    if sheet.TabVisible and highlighter.setMarkedWord(wordText) then editor.Repaint;
+    if sheet.tabVisible and highlighter.setMarkedWord(wordText) then editor.Repaint;
   end;
 
 PROCEDURE T_editorMeta.setWorkingDir;
@@ -248,7 +248,7 @@ PROCEDURE T_editorMeta.writeToEditorState(CONST settings: P_Settings);
       settings^.editorState[i].create;
       inc(i);
     end;
-    settings^.editorState[index].visible:=sheet.TabVisible;
+    settings^.editorState[index].visible:=sheet.tabVisible;
     if not(settings^.editorState[index].visible) then exit;
     setLength(settings^.editorState[index].markedLines,0);
     for i:=0 to editor.Marks.count-1 do appendIfNew(settings^.editorState[index].markedLines,editor.Marks[i].line);
@@ -322,7 +322,7 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
   begin
     if changed then result:=' *'
                else result:='';
-    sheet.Caption:=pseudoName(true)+result;
+    sheet.caption:=pseudoName(true)+result;
     result:=C_appTitle+' '+pseudoName(false)+result;
   end;
 
