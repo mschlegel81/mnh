@@ -47,7 +47,7 @@ TYPE
       FUNCTION needReload:boolean;
       PROCEDURE load(CONST usecase:T_packageLoadUsecase; VAR context:T_evaluationContext; CONST mainParameters:T_arrayOfString);
       PROCEDURE loadForDocumentation;
-      PROCEDURE clear;
+      PROCEDURE clear(CONST includeSecondaries:boolean);
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
@@ -782,7 +782,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end else profiler.active:=false;
 
     if usecase<>lu_interactiveMode
-    then clear
+    then clear(false)
     else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
@@ -857,11 +857,13 @@ FUNCTION T_package.needReload: boolean;
     result:=codeProvider.fileHasChanged;
   end;
 
-PROCEDURE T_package.clear;
+PROCEDURE T_package.clear(CONST includeSecondaries:boolean);
   VAR i:longint;
   begin
-    for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
-    setLength(secondaryPackages,0);
+    if includeSecondaries then begin
+      for i:=0 to length(secondaryPackages)-1 do dispose(secondaryPackages[i],destroy);
+      setLength(secondaryPackages,0);
+    end;
     for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
     setLength(packageUses,0);
     packageRules.clear;
@@ -890,7 +892,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
 
 DESTRUCTOR T_package.destroy;
   begin
-    clear;
+    clear(true);
     codeProvider.destroy;
     packageRules.destroy;
     importedRules.destroy;
