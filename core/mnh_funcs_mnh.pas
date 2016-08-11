@@ -256,7 +256,11 @@ FUNCTION listKeywords_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
 FUNCTION fail_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params=nil) or (params^.size=0) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,'Fail.',tokenLocation)
-    else if (params<>nil) and (params^.size=1) then context.adapters^.raiseCustomMessage(mt_el3_userDefined,arg0^.toString,tokenLocation);
+    else if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType=lt_string
+      then context.adapters^.raiseCustomMessage(mt_el3_userDefined,str0^.value,tokenLocation)
+      else context.adapters^.raiseCustomMessage(mt_el3_userDefined,arg0^.toString,tokenLocation);
+    end;
     result:=nil;
   end;
 
