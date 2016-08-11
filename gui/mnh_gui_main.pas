@@ -24,8 +24,8 @@ TYPE
   { TMnhForm }
 
   TMnhForm = class(TForm)
-    autosizeToggleBox: TToggleBox;
     debugItemsImageList: TImageList;
+    autoSizeImageList: TImageList;
     pmiOpenFile2: TMenuItem;
     pmiOpenFile1: TMenuItem;
     miFileHistory14: TMenuItem;
@@ -94,6 +94,7 @@ TYPE
     SynCompletion: TSynCompletion;
     assistanceTabSheet: TTabSheet;
     assistanceSynEdit: TSynEdit;
+    dummySheet: TTabSheet;
     tbMicroStep: TToolButton;
     UpdateTimeTimer: TTimer;
     helpPopupMemo: TSynMemo;
@@ -195,6 +196,9 @@ TYPE
       Shift: TShiftState; X, Y: integer);
     PROCEDURE OutputEditMouseUp(Sender: TObject; button: TMouseButton;
       Shift: TShiftState; X, Y: integer);
+    PROCEDURE outputPageControlChange(Sender: TObject);
+    PROCEDURE outputPageControlChanging(Sender: TObject;
+      VAR AllowChange: boolean);
     PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE pmiOpenFile1Click(Sender: TObject);
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
@@ -304,7 +308,7 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
       inputFocus:boolean;
   begin
     result:=false;
-    if autosizeToggleBox.Checked and (PageControl.activePageIndex>=0) then with editorMeta[PageControl.activePageIndex] do begin
+    if miAutosize.Checked and (PageControl.activePageIndex>=0) then with editorMeta[PageControl.activePageIndex] do begin
       scrollbarHeight :=editor.height-editor.ClientHeight;
       idealInputHeight:=scrollbarHeight+editor.Font.GetTextHeight(SAMPLE_TEXT)*(editor.lines.count+1);
       if outputPageControl.activePage=variablesTabSheet
@@ -344,7 +348,6 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
                                  else inc(inputHeightSpeed);
         end;
         PageControl.height:=PageControl.height+inputHeightSpeed;
-        autosizeToggleBox.top:=outputPageControl.top;
         result:=true;
       end;
     end;
@@ -727,8 +730,9 @@ PROCEDURE TMnhForm.MenuItem4Click(Sender: TObject);
 
 PROCEDURE TMnhForm.miAutosizeClick(Sender: TObject);
   begin
-    autosizeToggleBox.Checked:=not(autosizeToggleBox.Checked);
-    miAutosize.Checked:=autosizeToggleBox.Checked;
+    miAutosize.Checked:=not(miAutosize.Checked);
+    if miAutosize.Checked then dummySheet.ImageIndex:=0
+                          else dummySheet.ImageIndex:=1;
   end;
 
 PROCEDURE TMnhForm.miClearClick(Sender: TObject);
@@ -1143,6 +1147,20 @@ PROCEDURE TMnhForm.OutputEditMouseUp(Sender: TObject; button: TMouseButton;
     forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
+VAR pageIndexBeforeChange:longint;
+PROCEDURE TMnhForm.outputPageControlChange(Sender: TObject);
+  begin
+    if outputPageControl.PageIndex=0 then begin
+      outputPageControl.PageIndex:=pageIndexBeforeChange;
+      miAutosizeClick(Sender);
+    end;
+  end;
+
+PROCEDURE TMnhForm.outputPageControlChanging(Sender: TObject; VAR AllowChange: boolean);
+  begin
+    pageIndexBeforeChange:=outputPageControl.PageIndex;
+  end;
+
 PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
   begin
     if PageControl.activePageIndex>=0 then begin
@@ -1179,12 +1197,12 @@ PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;
 PROCEDURE TMnhForm.Splitter1Moved(Sender: TObject);
   begin
     if helpPopupMemo.visible then positionHelpNotifier;
-    autosizeToggleBox.top:=outputPageControl.top;
-    autosizeToggleBox.Checked:=false;
-    miAutosize.Checked:=autosizeToggleBox.Checked;
+    if miAutosize.Checked then miAutosizeClick(Sender);
   end;
 
-PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
+PROCEDURE TMnhForm.SynCompletionCodeCompletion(VAR value: string;
+  sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char;
+  Shift: TShiftState);
   begin
     value:=copy(sourceValue,1,LastDelimiter('.',sourceValue)-1)+value;
     wordsInEditor.clear;
@@ -1618,6 +1636,8 @@ PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
 PROCEDURE lateInitialization;
   VAR i:longint;
   begin
+    SynHighlighterMnh.initLists;
+
     guiOutAdapter.create;
     guiAdapters.create;
     mnh_plotForm.guiAdapters:=@guiAdapters;
@@ -1636,7 +1656,6 @@ PROCEDURE lateInitialization;
     mnh_imig_form.formCycleCallback:=@formCycle;
     {$endif}
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
-    initLists;
     mnh_evalThread.initUnit(@guiAdapters);
   end;
 

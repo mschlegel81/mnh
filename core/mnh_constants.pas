@@ -329,7 +329,7 @@ CONST
       (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'End-Of-Input#Helper token; May also indicate a comment'),
       (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
-  C_specialWordInfo:array[0..5] of record
+  C_specialWordInfo:array[0..6] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
     helpText:string;
@@ -338,7 +338,8 @@ CONST
        (txt:C_nanText; reservedWordClass:rwc_specialLiteral; helpText:'not-a-number real literal'),
        (txt:C_infText; reservedWordClass:rwc_specialLiteral; helpText:'infinity real literal'),
        (txt:'false'; reservedWordClass:rwc_specialLiteral; helpText:'false literal'),
-       (txt:'true'; reservedWordClass:rwc_specialLiteral; helpText:'true literal'));
+       (txt:'true'; reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
+       (txt:'main'; reservedWordClass:rwc_not_reserved; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
 
   C_typeString: array[T_literalType] of string = (
     'error',
