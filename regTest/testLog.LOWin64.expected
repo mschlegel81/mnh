@@ -1477,6 +1477,9 @@ n=   1000 pi approximated as 3.148
 n=  10000 pi approximated as 3.178    
 n= 100000 pi approximated as 3.1466   
 n=1000000 pi approximated as 3.139624 
+***** numDiff *****
+The approximate taylor expansion of {($t^(1+sin($t)))} around 1 is 
+  {(($x-1)^0*1.0+($x-1)^1*1.841552734375+($x-1)^2*1.31510925292969+($x-1)^3*0.26312255859375+($x-1)^4*-0.395398457845052+($x-1)^5*-0.309002653757731)}
 ***** opTest *****
 true and false = false
 true or false = true
