@@ -30,7 +30,7 @@ T_editorMeta=object
   PROCEDURE setStepperBreakpoints;
   PROCEDURE _add_breakpoint_(CONST lineIndex:longint);
   FUNCTION updateSheetCaption:ansistring;
-  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);
+  PROCEDURE repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);
 end;
 {$endif}
 {$ifdef includeImplementation}
@@ -326,19 +326,16 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     result:=C_appTitle+' '+pseudoName(false)+result;
   end;
 
-PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHint:string);
+PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);
+  VAR i:longint;
   begin
     if (stateCounter<>paintedWithState) then begin
       paintedWithState:=stateCounter;
       editor.Repaint;
-    end;
-    if isBlank(errorHint) then begin
-      editor.ShowHint:=false;
-      editor.Gutter.color:=clBtnFace;
-    end else begin
-      editor.Gutter.color:=clRed;
-      editor.ShowHint:=true;
-      editor.Hint:=errorHint;
+      MnhForm.assistanceSynEdit.ClearAll;
+      MnhForm.assistanceSynEdit.lines.clear;
+      for i:=0 to length(errorHints)-1 do MnhForm.assistanceSynEdit.lines.add(errorHints[i]);
+      if (length(errorHints)>0) and not(runEvaluator.evaluationRunning) then MnhForm.outputPageControl.activePage:=MnhForm.assistanceTabSheet;
     end;
   end;
 

@@ -1,7 +1,7 @@
 {$ifdef include_interface}
   T_rule=object
     private
-      used,valueChangedAfterDeclaration:boolean;
+      idResolved,called,valueChangedAfterDeclaration:boolean;
       declarationStart,declarationEnd:T_tokenLocation;
       namedValue:T_namedVariable;
       ruleType:T_ruleType;
@@ -24,7 +24,7 @@
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
       {$ifdef fullVersion}
-      FUNCTION complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
+      FUNCTION complainAboutUnused(VAR adapters:T_adapters):boolean;
       {$endif}
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
@@ -51,7 +51,8 @@ PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapter
 
 CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
-    used:=false;
+    called:=false;
+    idResolved:=false;
     valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
     declarationEnd:=startAt;
@@ -134,7 +135,7 @@ exit}
           CLEAN_EXIT(true);
         end else for useUncurryingFallback:=false to true do
                  for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
-          if (callDepth>=STACK_DEPTH_LIMIT) then begin used:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
+          if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
           if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
             lit:=firstRep^.data;
@@ -147,7 +148,7 @@ exit}
             firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
             lastRep:=firstRep;
           end;
-          used:=true;
+          called:=true;
           CLEAN_EXIT(true);
         end;
         CLEAN_EXIT(false);
@@ -162,7 +163,7 @@ exit}
             lastRep:=firstRep^.last;
             system.leaveCriticalSection(rule_cs);
           end;
-          used:=true;
+          called:=true;
           exit(true);
         end;
         result:=false;
@@ -170,18 +171,18 @@ exit}
       rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
-          if not(used) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+          if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
           system.enterCriticalSection(rule_cs);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
-          used:=true;
+          called:=true;
         end;
       end;
       rt_normal: begin
         for useUncurryingFallback:=false to true do
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
-          used:=true;
+          called:=true;
           exit(true);
         end;
         result:=false;
@@ -225,10 +226,10 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    if not(used) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+    if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
     result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
     valueChangedAfterDeclaration:=true;
-    used:=true;
+    called:=true;
     system.leaveCriticalSection(rule_cs);
   end;
 
@@ -244,32 +245,20 @@ FUNCTION T_rule.getInlineValue:P_literal;
   begin
     if length(subrules)=1 then result:=subrules[0]^.getInlineValue
                           else result:=nil;
-    used:=used or (result<>nil);
+    called:=called or (result<>nil);
   end;
 
 {$ifdef fullVersion}
-FUNCTION T_rule.complainAboutUncalled(CONST inMainPackage:boolean; VAR adapters:T_adapters):boolean;
+FUNCTION T_rule.complainAboutUnused(VAR adapters:T_adapters):boolean;
   CONST PUBLIC_MITIGATION=' (the rule is public and might still be used by importing packages)';
-  VAR i,j:longint;
-      sameSignatureFound:boolean;
-      mitigation:string;
-  begin
-    //If a rule is public, it may be used by importing packages -> no complaint
-    if not(used) then begin
-      if inMainPackage then adapters.raiseWarning('Uncalled rule '+id,declarationStart);
-      exit(false);
+  FUNCTION mitigate:string;
+    begin
+      if hasPublicSubrule then result:=PUBLIC_MITIGATION else result:='';
     end;
-    //If a rule is used and has only one subrule, this one is also used per definition -> no complaint
-    if used and inMainPackage and (length(subrules)>1) then
-      for i:=0 to length(subrules)-1 do begin
-        if subrules[i]^.called then continue;
-        //Might be part of a case distinction; Check for other rules with equal signature (ignoring value restrictions)
-        sameSignatureFound:=false;
-        for j:=0 to length(subrules)-1 do sameSignatureFound:=sameSignatureFound or (j<>i) and subrules[i]^.pattern.isEquivalentIgnoringRestrictions(subrules[j]^.pattern);
-        if subrules[i]^.typ=srt_normal_public then mitigation:=PUBLIC_MITIGATION else mitigation:='';
-        if not(sameSignatureFound) then adapters.raiseWarning('Uncalled subrule '+id+subrules[i]^.pattern.toString+mitigation,subrules[i]^.declaredAt);
-      end;
-    result:=true;
+
+  begin
+    result:=(id<>'main') and not(idResolved);
+    if result then adapters.raiseWarning('Unused rule '+id+mitigate,declarationStart);
   end;
 {$endif}
 

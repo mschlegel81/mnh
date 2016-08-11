@@ -92,6 +92,8 @@ TYPE
     SaveDialog: TSaveDialog;
     StatusBar: TStatusBar;
     SynCompletion: TSynCompletion;
+    assistanceTabSheet: TTabSheet;
+    assistanceSynEdit: TSynEdit;
     tbMicroStep: TToolButton;
     UpdateTimeTimer: TTimer;
     helpPopupMemo: TSynMemo;
@@ -118,6 +120,12 @@ TYPE
     variablesStringGrid: TStringGrid;
     currentExpressionGroupBox: TGroupBox;
     currentExpressionMemo: TSynMemo;
+    PROCEDURE assistanceSynEditKeyUp(Sender: TObject; VAR key: word;
+      Shift: TShiftState);
+    PROCEDURE assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
+    PROCEDURE assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton;
+      Shift: TShiftState; X, Y: integer);
     PROCEDURE EditorPopupMenuPopup(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
@@ -256,6 +264,7 @@ TYPE
     PROCEDURE doStartEvaluation(CONST clearOutput,reEvaluating:boolean);
     PROCEDURE inputEditReposition(CONST caret:TPoint; CONST doJump,updateMarker:boolean);
     PROCEDURE outputEditReposition(CONST caret:TPoint; CONST doJump:boolean);
+    PROCEDURE assistanceEditReposition(CONST caret:TPoint; CONST doJump:boolean);
     PROCEDURE _setErrorlevel_(CONST i: byte);
     FUNCTION _doSaveAs_(CONST index:longint):boolean;
     FUNCTION _doSave_(CONST index:longint):boolean;
@@ -296,16 +305,18 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
   begin
     result:=false;
     if autosizeToggleBox.Checked and (PageControl.ActivePageIndex>=0) then with editorMeta[PageControl.ActivePageIndex] do begin
-      scrollbarHeight     :=editor.height-editor.ClientHeight;
-      idealInputHeight    :=scrollbarHeight+ editor    .Font.GetTextHeight(SAMPLE_TEXT)*(editor    .lines.count+1);
+      scrollbarHeight :=editor.height-editor.ClientHeight;
+      idealInputHeight:=scrollbarHeight+editor.Font.GetTextHeight(SAMPLE_TEXT)*(editor.lines.count+1);
       if outputPageControl.activePage=variablesTabSheet
       then idealOutputHeight:=currentExpressionGroupBox.height+variablesStringGrid.RowCount*variablesStringGrid.DefaultRowHeight
-      else idealOutputHeight:=scrollbarHeight+ OutputEdit.Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit.lines.count+1);
+      else if outputPageControl.activePage=assistanceTabSheet
+      then idealOutputHeight:=scrollbarHeight+assistanceSynEdit.Font.GetTextHeight(SAMPLE_TEXT)*(assistanceSynEdit.lines.count+1)
+      else idealOutputHeight:=scrollbarHeight+OutputEdit       .Font.GetTextHeight(SAMPLE_TEXT)*(OutputEdit       .lines.count+1);
       //Are both editors large enough? Then return right now.
       if (editor.height>=idealInputHeight) and (OutputEdit.height>=idealOutputHeight) then exit;
 
       availableTotalHeight:=editor.height+outputPageControl.activePage.height;
-      inputFocus:=not(forceOutputFocus or OutputEdit.Focused);
+      inputFocus:=not(forceOutputFocus or OutputEdit.Focused or assistanceSynEdit.Focused or (outputPageControl.activePage=variablesTabSheet));
       if (idealInputHeight+idealOutputHeight<=availableTotalHeight) then begin
         //There is enough space for both -> priorize input before output
         idealInputHeight:=availableTotalHeight-idealOutputHeight;
@@ -368,7 +379,7 @@ PROCEDURE TMnhForm.setUnderCursor(CONST wordText: ansistring; CONST updateMarker
       outputHighlighter.setMarkedWord(wordText);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].setMarkedWord(wordText);
     end;
-    if miHelp.Checked or forJump then with editorMeta[PageControl.ActivePageIndex].editor do docEvaluator.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
+    if miHelp.Checked or forJump then with editorMeta[PageControl.ActivePageIndex].editor do codeAssistant.explainIdentifier(lines[CaretY-1],CaretY,CaretX,underCursor);
     if miHelp.Checked then begin
       helpPopupMemo.text:=underCursor.tokenText+C_lineBreakChar+underCursor.tokenExplanation;
       positionHelpNotifier;
@@ -476,6 +487,29 @@ PROCEDURE TMnhForm.outputEditReposition(CONST caret: TPoint;
     end;
   end;
 
+PROCEDURE TMnhForm.assistanceEditReposition(CONST caret: TPoint; CONST doJump: boolean);
+  VAR loc:T_searchTokenLocation;
+      newCaret:TPoint;
+      pageIdx:longint;
+  begin
+    forceInputEditFocusOnOutputEditMouseUp:=false;
+    setUnderCursor(assistanceSynEdit.GetWordAtRowCol(caret),true,doJump);
+    loc:=guessLocationFromString(assistanceSynEdit.lines[caret.y-1],false);
+    if not(doJump) then exit;
+    if (loc.fileName='') or (loc.fileName='?') then exit;
+    pageIdx:=addOrGetEditorMetaForFile(loc.fileName);
+    if pageIdx<0 then exit;
+    PageControl.ActivePageIndex:=pageIdx;
+    with editorMeta[pageIdx] do begin
+      editor.SetFocus;
+      highlighter.setMarkedToken(loc.line-1,loc.column-1);
+      newCaret.x:=loc.column;
+      newCaret.y:=loc.line;
+      editor.CaretXY:=newCaret;
+      forceInputEditFocusOnOutputEditMouseUp:=true;
+    end;
+  end;
+
 PROCEDURE TMnhForm.FormCreate(Sender: TObject);
   VAR i:longint;
   begin
@@ -491,14 +525,20 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     lastStart.mainCall:=false;
     doNotMarkWordBefore:=now;
     doNotCheckFileBefore:=now+ONE_SECOND;
+
     outputHighlighter:=TSynMnhSyn.create(nil,msf_output);
-    OutputEdit.highlighter:=outputHighlighter;
+    assistanceSynEdit.highlighter:=outputHighlighter;
+
     helpHighlighter:=TSynMnhSyn.create(nil,msf_guessing);
     helpPopupMemo.highlighter:=helpHighlighter;
-    OutputEdit.ClearAll;
+
     debugHighlighter:=TSynMnhSyn.create(nil,msf_input);
     currentExpressionMemo.highlighter:=debugHighlighter;
+
+    OutputEdit.ClearAll;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
+    assistanceSynEdit.ClearAll;
+    for i:=0 to length(LOGO)-1 do assistanceSynEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter;
     {$endif}
@@ -527,6 +567,27 @@ PROCEDURE TMnhForm.EditorPopupMenuPopup(Sender: TObject);
     end;
     pmiOpenFile1.Caption:='Open: "'+popupFile[1]+'"';
     pmiOpenFile2.Caption:='Open: "'+popupFile[2]+'"';
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+  begin
+    if ((key=13) and (ssCtrl in Shift)) then assistanceEditReposition(assistanceSynEdit.CaretXY,true);
+    if forceInputEditFocusOnOutputEditMouseUp and (PageControl.ActivePageIndex>=0) then ActiveControl:=editorMeta[PageControl.ActivePageIndex].editor;
+    forceInputEditFocusOnOutputEditMouseUp :=false;
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  VAR point:TPoint;
+  begin
+    point.x:=x;
+    point.y:=y;
+    outputEditReposition(OutputEdit.PixelsToRowColumn(point),ssCtrl in Shift);
+  end;
+
+PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if forceInputEditFocusOnOutputEditMouseUp then ActiveControl:=editorMeta[PageControl.ActivePageIndex].editor;
+    forceInputEditFocusOnOutputEditMouseUp :=false;
   end;
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
@@ -564,18 +625,8 @@ PROCEDURE TMnhForm.FormResize(Sender: TObject);
   end;
 
 PROCEDURE TMnhForm.FormShow(Sender: TObject);
-  VAR i:longint;
   begin
-    if not(settingsReady) then begin
-      processSettings;
-      i:=settings.value^.activePage;
-      PageControl.ActivePageIndex:=i;
-      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
-      {$ifdef UNIX}
-      miIncFontSize.ShortCut:=16605;
-      {$endif}
-      for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(Sender,filesToOpenInEditor[i]);
-    end;
+    if not(settingsReady) then processSettings;
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
     if reEvaluationWithGUIrequired then begin
@@ -592,7 +643,8 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
   begin
-    if (PageControl.ActivePageIndex<0) or
+    if not(settingsReady) or
+       (PageControl.ActivePageIndex<0) or
        (PageControl.ActivePageIndex>=length(editorMeta)) or
        (not(editorMeta[PageControl.ActivePageIndex].sheet.TabVisible)) then exit;
 
@@ -603,7 +655,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
         with editorMeta[PageControl.ActivePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
       end else evaluation.required:=true;
     end;
-    with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
+    with editorMeta[PageControl.ActivePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
     editorMeta[PageControl.ActivePageIndex].changed:=editorMeta[PageControl.ActivePageIndex].editor.Modified;
     Caption:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
   end;
@@ -897,7 +949,6 @@ PROCEDURE TMnhForm.updateDebugParts;
       DebugToolbar.visible:=true;
       DebugToolbar.Enabled:=true;
       DebugToolbar.top:=0;
-      outputPageControl.ShowTabs:=true;
       handleButton(tbStop,runEvaluator.evaluationRunning,2);
       handleButton(tbRun,not(runEvaluator.evaluationRunning) or stepper.haltet,0);
       handleButton(tbStep,runEvaluator.evaluationRunning and stepper.haltet,4);
@@ -906,7 +957,6 @@ PROCEDURE TMnhForm.updateDebugParts;
       handleButton(tbMicroStep,runEvaluator.evaluationRunning and stepper.haltet,10);
     end else begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
-      outputPageControl.ShowTabs:=false;
       outputPageControl.activePage:=outputTabSheet;
       DebugToolbar.visible:=false;
       DebugToolbar.Enabled:=false;
@@ -963,7 +1013,8 @@ PROCEDURE TMnhForm.handleBreak;
     updateDebugParts;
   end;
 
-FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring):longint;
+FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring
+  ): longint;
   VAR i:longint;
   begin
     i:=length(editorMeta)-1;
@@ -1097,7 +1148,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     if PageControl.ActivePageIndex>=0 then begin
       SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
       settings.value^.activePage:=PageControl.ActivePageIndex;
-      with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
+      with editorMeta[PageControl.ActivePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
     end;
   end;
 
@@ -1151,11 +1202,8 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
         if i=caret.y-1 then collectIdentifiers(editor.lines[i],wordsInEditor,caret.x)
                        else collectIdentifiers(editor.lines[i],wordsInEditor,-1);
     end;
-    wordsInEditor.addAll(completionList.elementArray);
-    if PageControl.ActivePageIndex>=0 then with editorMeta[PageControl.ActivePageIndex] do begin
-      wordsInEditor.addAll(completionList.elementArray);
-      wordsInEditor.unique;
-    end;
+    codeAssistant.extendCompletionList(wordsInEditor);
+    wordsInEditor.unique;
   end;
 
 PROCEDURE TMnhForm.SynCompletionExecute(Sender: TObject);
@@ -1213,7 +1261,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta))
       then begin
         aid:=editorMeta[PageControl.ActivePageIndex].updateSheetCaption;
-        editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(docEvaluator.getStateCounter,docEvaluator.getErrorHint);
+        editorMeta[PageControl.ActivePageIndex].repaintWithStateCounter(codeAssistant.getStateCounter,codeAssistant.getErrorHints);
       end else aid:=C_appTitle;
       if aid<>Caption then Caption:=aid;
       //-------------------------------------------------------------:Form caption
@@ -1272,6 +1320,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     end;
 
     flushPerformed:=guiOutAdapter.flushToGui(OutputEdit);
+    if flushPerformed and (outputPageControl.activePage=assistanceTabSheet) then outputPageControl.activePage:=outputTabSheet;
     if guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] and
        not(runEvaluator.evaluationRunning) then plotForm.doPlot();
 
@@ -1472,7 +1521,6 @@ PROCEDURE TMnhForm.processSettings;
       miEvalModeDirectOnKeypress.Checked:=settings.value^.instantEvaluation;
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
-      settingsReady:=true;
 
       setLength(editorMeta,length(settings.value^.editorState));
       stepper.clearBreakpoints;
@@ -1481,7 +1529,16 @@ PROCEDURE TMnhForm.processSettings;
         editorMeta[i].setStepperBreakpoints;
       end;
 
-      if not(reEvaluationWithGUIrequired) and (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta)) then with editorMeta[PageControl.ActivePageIndex] do docEvaluator.evaluate(pseudoName,editor.lines,false);
+      i:=settings.value^.activePage;
+      PageControl.ActivePageIndex:=i;
+      if (i>=0) and (i<length(editorMeta)) then SynCompletion.editor:=editorMeta[PageControl.ActivePageIndex].editor;
+      {$ifdef UNIX}
+      miIncFontSize.ShortCut:=16605;
+      {$endif}
+      for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
+
+      settingsReady:=true;
+      if not(reEvaluationWithGUIrequired) and (PageControl.ActivePageIndex>=0) and (PageControl.ActivePageIndex<length(editorMeta)) then with editorMeta[PageControl.ActivePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
@@ -1492,6 +1549,7 @@ PROCEDURE TMnhForm.processSettings;
     for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Font:=OutputEdit.Font;
 
     currentExpressionMemo.Font:=OutputEdit.Font;
+    assistanceSynEdit.Font:=OutputEdit.Font;
     helpPopupMemo.Font:=OutputEdit.Font;
     helpPopupMemo.Font.size:=helpPopupMemo.Font.size-2;
 
