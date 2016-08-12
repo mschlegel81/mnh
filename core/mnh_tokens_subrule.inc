@@ -73,7 +73,6 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
             end else if (construct=tt_each) and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
             else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
           end;
-          tt_return: begin parIdx:=-1; if construct<>tt_EOL then context.adapters^.raiseError('return is not allowed in special constructs',token.location); end;
           else parIdx:=-1;
         end;
       end;
@@ -202,7 +201,6 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token:=t^;
-        if token.tokType=tt_return then context.adapters^.raiseError('return is not allowed in inline-expressions',token.location);
         t^.tokType:=tt_EOL;
         t:=context.disposeToken(t);
         token.next:=nil;

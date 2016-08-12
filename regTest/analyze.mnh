@@ -92,10 +92,12 @@ end;
 
 private analyzeFlavour(data,flavour:string)->begin
   print('Analyzing flavour: ',flavour);
+  local groupedData:=
   data[data.getInner(1)=flavour] //filter by flavour
   .pEach(e,e[[0,2]]) //drop flavour info
   .group(0,{[$x[0],$x[1]|$y[1]]}) //group by case
-  .sort
+  .sort;
+  groupedData
   .pEach(case,[case[0],
                case[1].size,
                case[1].agg(+)/size(case[1]),
@@ -105,9 +107,19 @@ private analyzeFlavour(data,flavour:string)->begin
   .pEach(case,begin
     local lastGain:=round((case[3]/case[2]-1)*100,2);
     lastGain:=lastGain<0 ? lastGain : '+'&lastGain;
-    format("\n%s\t%s\t%3.6d\t%3.6d\t%s\t%%",case[0],case[1],case[2],case[3],lastGain);
-   end,&)
-  .{print("\nCase\tsamples\taverage\tlast\ttrend\n",$L)};
+    [case[0],case[1],case[2],case[3],lastGain];
+   end)
+  .{showTable([['case','samples','average','last','trend']]|$L,true)};
+  plot;
+  //times only
+  groupedData:=groupedData.getInner(1);
+  //fill with Nan from left to equal size
+  local maxSize:=groupedData.each(L,L.size,max);
+  groupedData:=groupedData.each(L,L.size<maxSize ? [1..maxSize-L.size].each(i,Nan)|L : L);
+  groupedData.each(L,addPlot(L,'0.5 black'));
+  plot.display;
+  [0..maxSize-1].each(i,groupedData.getInner(i).each(t,isNan(t) ? void : t).{$T.agg(+)/$T.size}).addPlot('2 red');
+  plot.display;
 end;
 
 private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,i[2]<0 ? void : i);

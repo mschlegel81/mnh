@@ -850,12 +850,14 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
 
 PROCEDURE T_package.loadForDocumentation;
   VAR silentContext:T_evaluationContext;
+      nullAdapter:T_adapters;
   begin
+    nullAdapter.create;
     silentContext.createSanboxContext(P_adapters(@nullAdapter));
     nullAdapter.clearErrors;
     load(lu_forDocGeneration,silentContext,C_EMPTY_STRING_ARRAY);
-    nullAdapter.clearErrors;
     silentContext.destroy;
+    nullAdapter.destroy;
   end;
 
 PROCEDURE disposeRule(VAR rule:P_rule);
@@ -1176,8 +1178,10 @@ PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
       i:longint;
       p:T_package;
       context:T_evaluationContext;
+      nullAdapter:T_adapters;
   begin
     if includePackageDoc then begin
+      nullAdapter.create;
       ensureDemos;
       context.createSanboxContext(P_adapters(@nullAdapter));
       sourceNames:=locateSources;
@@ -1191,6 +1195,7 @@ PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
       end;
       context.destroy;
       nullAdapter.clearErrors;
+      nullAdapter.destroy;
     end;
     makeHtmlFromTemplate(includePackageDoc);
   end;

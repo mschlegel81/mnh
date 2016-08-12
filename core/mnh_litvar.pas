@@ -179,7 +179,7 @@ TYPE
   public
     CONSTRUCTOR create;
     FUNCTION toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
-    FUNCTION append(CONST L: P_literal; CONST incRefs: boolean):P_listLiteral;
+    FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_listLiteral;
     FUNCTION appendString(CONST s:ansistring):P_listLiteral;
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
     FUNCTION appendInt   (CONST i:int64):P_listLiteral;
@@ -934,7 +934,7 @@ FUNCTION T_listLiteral.transpose:P_listLiteral;
   VAR innerSize:longint=-1;
       i,j:longint;
       innerList:P_listLiteral;
-      innerValue:P_literal;
+
   PROCEDURE removeTrailingVoids;
     begin
       while (innerList^.datFill>0) and (innerList^.dat[innerList^.datFill-1]^.literalType=lt_void) do begin
@@ -953,15 +953,12 @@ FUNCTION T_listLiteral.transpose:P_listLiteral;
 
     result:=newListLiteral;
     for i:=0 to innerSize-1 do begin
-      innerList:=newListLiteral;
-      setLength(innerList^.dat,datFill);
-      innerList^.datFill:=datFill;
+      innerList:=newListLiteral(datFill);
       for j:=0 to datFill-1 do begin
         if (dat[j]^.literalType in C_validListTypes) and (P_listLiteral(dat[j])^.datFill>i)
-        then begin                                                               innerValue:=P_listLiteral(dat[j])^.dat[i]; innerValue^.rereference; end
-        else if (dat[j]^.literalType in C_validScalarTypes) and (i=0) then begin innerValue:=dat[j];                        innerValue^.rereference; end
-        else innerValue:=newVoidLiteral;
-        innerList^.dat[j]:=innerValue;
+        then                                                               innerList^.append(P_listLiteral(dat[j])^.dat[i],true,false)
+        else if (dat[j]^.literalType in C_validScalarTypes) and (i=0) then innerList^.append(              dat[j]         ,true,false)
+        else                                                               innerList^.append(newVoidLiteral,false,true);
       end;
       removeTrailingVoids;
       result^.append(innerList,false);
@@ -1316,67 +1313,67 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean): P_listLiteral;
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_listLiteral;
   begin
     result:=@self;
     if L = nil then begin
       raise Exception.create('Trying to append NIL literal to list');
       exit;
     end;
-    if L^.literalType=lt_void then exit;
+    if (L^.literalType=lt_void) and not(forceVoidAppend) then exit;
     if length(dat)<=datFill then setLength(dat,datFill+16);
     dat[datFill]:=L;
     inc(datFill);
     if incRefs then L^.rereference;
     case literalType of
-      lt_list: if L^.literalType in [lt_error,lt_listWithError,lt_void] then literalType:=lt_listWithError;
+      lt_list: if L^.literalType in [lt_error,lt_listWithError] then literalType:=lt_listWithError;
       lt_booleanList  : case L^.literalType of
   	                  lt_boolean: begin end;
-  			  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  			  lt_error,lt_listWithError         : literalType:=lt_listWithError;
   			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
   	                  else                                literalType:=lt_flatList;
                         end;
       lt_intList      : case L^.literalType of
                           lt_int: begin end;
-  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  	                  lt_error,lt_listWithError         : literalType:=lt_listWithError;
   			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
                           lt_real:                            literalType:=lt_numList;
   			  else                                literalType:=lt_flatList;
   	                end;
       lt_realList     : case L^.literalType of
   	                  lt_real: begin end;
-  			  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  			  lt_error,lt_listWithError         : literalType:=lt_listWithError;
   			  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
   	                  lt_int:                             literalType:=lt_numList;
   			  else                                literalType:=lt_flatList;
                         end;
       lt_numList      : case L^.literalType of
                           lt_int,lt_real: begin end;
-  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  	                  lt_error,lt_listWithError         : literalType:=lt_listWithError;
   	                  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
   	                  else                                literalType:=lt_flatList;
   	                end;
       lt_stringList   : case L^.literalType of
 	                  lt_string: begin end;
-  	                  lt_error,lt_listWithError,lt_void : literalType:=lt_listWithError;
+  	                  lt_error,lt_listWithError         : literalType:=lt_listWithError;
   	                  lt_list..lt_flatList,lt_expression: literalType:=lt_list;
   	                  else                                literalType:=lt_flatList;
   	                end;
       lt_emptyList    : case L^.literalType of
-  	                  lt_error,lt_listWithError,lt_void: literalType:=lt_listWithError;
-                          lt_boolean:                        literalType:=lt_booleanList;
-                          lt_int:                            literalType:=lt_intList;
-                          lt_real:                           literalType:=lt_realList;
-                          lt_string:                         literalType:=lt_stringList;
-                          lt_expression:                     literalType:=lt_list;
+  	                  lt_error,lt_listWithError: literalType:=lt_listWithError;
+                          lt_boolean:                literalType:=lt_booleanList;
+                          lt_int:                    literalType:=lt_intList;
+                          lt_real:                   literalType:=lt_realList;
+                          lt_string:                 literalType:=lt_stringList;
+                          lt_expression:             literalType:=lt_list;
                           lt_list..lt_flatList: if P_listLiteral(L)^.isKeyValuePair
                                                 then literalType:=lt_keyValueList
                                                 else literalType:=lt_list;
                         end;
       lt_keyValueList: if not((L^.literalType in C_validListTypes) and (P_listLiteral(L)^.isKeyValuePair)) then literalType:=lt_list;
       lt_flatList:     case L^.literalType of
-  	                 lt_error,lt_listWithError,lt_void: literalType:=lt_listWithError;
-  	                 lt_list..lt_flatList:              literalType:=lt_list;
+  	                 lt_error,lt_listWithError: literalType:=lt_listWithError;
+  	                 lt_list..lt_flatList:      literalType:=lt_list;
                        end;
     end;
     dropIndexes;

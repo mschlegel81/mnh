@@ -73,7 +73,7 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
 
 IMPLEMENTATION
 VAR unitIsInitialized:boolean=false;
-    silentAdapters:P_adapters;
+    silentAdapters:T_adapters;
     intrinsicRulesForCompletion:T_listOfString;
 
 {$WARN 5024 OFF}
@@ -122,16 +122,17 @@ FUNCTION main(p:pointer):ptrint;
     until (pendingRequest=er_die);
     mainEvaluationContext.destroy;
     threadStopped;
+    writeln('Main evaluation thread stopped');
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
-  CONST MAX_SLEEP_TIME=1000;
+  CONST MAX_SLEEP_TIME=100;
   VAR mainEvaluationContext:T_evaluationContext;
 
   begin with P_assistanceEvaluator(p)^ do begin
+    threadStarted;
     mainEvaluationContext.createNormalContext(adapter);
     result:=0;
-    threadStarted;
     repeat
       if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
@@ -145,12 +146,15 @@ FUNCTION docMain(p:pointer):ptrint;
     until (pendingRequest=er_die);
     mainEvaluationContext.destroy;
     threadStopped;
+    writeln('Assistance thread stopped');
   end; end;
 
 
 PROCEDURE T_evaluator.ensureThread;
   begin
+    enterCriticalSection(cs);
     if state=es_dead then beginThread(thread,@self);
+    leaveCriticalSection(cs);
   end;
 
 CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
@@ -549,19 +553,21 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   VAR collector:P_collectingOutAdapter;
   begin
     runEvaluator.create(guiAdapters,@main);
-    new(silentAdapters,create);
+    silentAdapters.create;
     new(collector,create(at_unknown,false));
-    silentAdapters^.addOutAdapter(collector,true);
-    silentAdapters^.minErrorLevel:=1;
-    codeAssistant.create(silentAdapters,@docMain);
+    silentAdapters.addOutAdapter(collector,true);
+    silentAdapters.minErrorLevel:=1;
+    codeAssistant.create(@silentAdapters,@docMain);
     initIntrinsicRuleList;
     unitIsInitialized:=true;
   end;
 
 FINALIZATION
+  writeln('mnh_evalThread.FINALIZATION start');
   if unitIsInitialized then begin
     runEvaluator.destroy;
     codeAssistant.destroy;
-    dispose(silentAdapters,destroy);
+    silentAdapters.destroy;
   end;
+  writeln('mnh_evalThread.FINALIZATION end');
 end.
