@@ -21,10 +21,6 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
-
-      {$ifdef imig}
-      imageDisplayRequested:boolean=false;
-      {$endif}
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -76,7 +72,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
         end;
         {$ifdef imig}
-        mt_displayImage: imageDisplayRequested:=true;
+        mt_displayImage: DisplayImageForm.displayCurrentImage;
         {$endif}
         mt_displayTable: tableForm.conditionalDoShow;
         mt_plotCreatedWithDeferredDisplay: begin end;
@@ -105,9 +101,6 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
-    {$ifdef imig}
-    if imageDisplayRequested then DisplayImageForm.displayCurrentImage;
-    {$endif}
     system.leaveCriticalSection(cs);
   end;
 
