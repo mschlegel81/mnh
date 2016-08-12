@@ -1,7 +1,10 @@
 UNIT mnh_constants;
 INTERFACE
 USES sysutils;
+{$ifdef CPU32}
+//This directive seems to be beneficial only for 32bit targets
 {$PACKENUM 1}
+{$endif}
 TYPE
   T_hashInt=dword;
   idString =ansistring;
