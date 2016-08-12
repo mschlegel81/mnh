@@ -26,33 +26,35 @@ FUNCTION add_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
-  if (params<>nil) and (params^.size>=1) and (arg0^.literalType in C_validListTypes) then begin
-    if      (params^.size=1) then result:=list0^.CALL_MACRO
-    else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(P_intLiteral(arg1)^.value);
+  if (params<>nil) and (params^.size>=1) then begin
+    if (arg0^.literalType in C_validListTypes) then begin
+      if      (params^.size=1) then result:=list0^.CALL_MACRO
+      else if (params^.size=2) and (arg1^.literalType=lt_int) then result:=list0^.CALL_MACRO(P_intLiteral(arg1)^.value);
+    end else SCALAR_FALLBACK;
   end;
 end}
 
 FUNCTION head_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=head}
-{$define ID_MACRO:='head'}
-SUB_LIST_IMPL;
-
-FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-{$define CALL_MACRO:=tail}
-{$define ID_MACRO:='tail'}
-SUB_LIST_IMPL;
-
-FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-{$define CALL_MACRO:=leading}
-{$define ID_MACRO:='leading'}
+{$define SCALAR_FALLBACK:=begin result:=arg0; result^.rereference; end}
 SUB_LIST_IMPL;
 
 FUNCTION trailing_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 {$define CALL_MACRO:=trailing}
-{$define ID_MACRO:='trailing'}
+SUB_LIST_IMPL;
+
+FUNCTION tail_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+{$define CALL_MACRO:=tail}
+{$define SCALAR_FALLBACK:=result:=newListLiteral}
+SUB_LIST_IMPL;
+
+FUNCTION leading_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+{$define CALL_MACRO:=leading}
 SUB_LIST_IMPL;
 
 {$undef SUB_LIST_IMPL}
+{$undef CALL_MACRO}
+{$undef SCALAR_FALLBACK}
 
 FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin

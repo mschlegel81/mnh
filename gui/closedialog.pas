@@ -21,7 +21,7 @@ TYPE
     FUNCTION showOnLoad: integer;
     FUNCTION showOnDeleted(CONST fileName:string): integer;
     FUNCTION showOnOutOfSync(CONST fileName:string): integer;
-    FUNCTION showOnUninstall: integer;
+    FUNCTION showOnReEvaluationError:integer;
   end;
 
 VAR
@@ -73,12 +73,12 @@ FUNCTION TcloseDialogForm.showOnDeleted(CONST fileName:string): integer;
     result:=ShowModal;
   end;
 
-FUNCTION TcloseDialogForm.showOnUninstall: integer;
+FUNCTION TcloseDialogForm.showOnReEvaluationError: integer;
   begin
-    caption:='Do you really want to uninstall MNH5?';
-    ButtonPanel1.OKButton.caption := 'Uninstall and quit';
-    ButtonPanel1.CancelButton.caption := 'Cancel';
-    ButtonPanel1.CloseButton.caption := 'Quit without uninstalling';
+    caption:='Evaluation failed - do you want to edit the script?';
+    ButtonPanel1.OKButton.caption := 'Yes';
+    ButtonPanel1.CancelButton.caption := 'No';
+    ButtonPanel1.CloseButton.caption := 'Cancel';
     result := ShowModal;
   end;
 

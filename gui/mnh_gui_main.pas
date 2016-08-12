@@ -255,6 +255,7 @@ TYPE
     lastWordsCaret:longint;
     wordsInEditor:T_listOfString;
 
+    PROCEDURE setEditorMode(CONST enable:boolean);
     FUNCTION editForSearch(CONST replacing:boolean):TSynEdit;
     PROCEDURE processSettings;
     PROCEDURE processFileHistory;
@@ -410,6 +411,7 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
   VAR i:longint;
       logName:string;
   begin
+    if closeGuiFlag then close;
     with evaluation do begin
       required:=false;
       deferredUntil:=now+0.1*ONE_SECOND;
@@ -595,7 +597,7 @@ PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButto
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
-    UpdateTimeTimer.Enabled:=false;
+    UpdateTimeTimer.enabled:=false;
     if not(reEvaluationWithGUIrequired) then saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;
@@ -632,34 +634,12 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
   begin
     if not(settingsReady) then processSettings;
     KeyPreview:=true;
-    UpdateTimeTimer.Enabled:=true;
+    UpdateTimeTimer.enabled:=true;
     if reEvaluationWithGUIrequired then begin
       doStartEvaluation(true,true);
       runEvaluator.reEvaluateWithGUI;
-      plotForm.caption:=plotForm.caption+' - close to quit';
-      sleep(UpdateTimeTimer.interval);
-      askForm.showInTaskBar:=stAlways;
-      plotForm.showInTaskBar:=stAlways;
-      tableForm.showInTaskBar:=stAlways;
 
-      subMenuFile.Enabled:=false;
-      subMenuFile.visible:=false;
-
-      subMenuEvaluation.Enabled:=false;
-      subMenuEvaluation.visible:=false;
-
-      subMenuHelp.Enabled:=false;
-      subMenuHelp.visible:=false;
-
-      subMenuCode.Enabled:=false;
-      subMenuCode.visible:=false;
-
-      miAutosize.Checked:=false;
-      PageControl.visible:=false;
-      PageControl.Enabled:=false;
-      Splitter1.visible:=false;
-      Splitter1.Enabled:=false;
-      outputPageControl.ShowTabs:=false;
+      setEditorMode(false);
     end;
   end;
 
@@ -689,11 +669,11 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     then inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,false,false);
     if currentlyDebugging and runEvaluator.evaluationRunning then begin
-      if (key=116) and tbRun      .Enabled then tbRunClick(Sender);
-      if (key=117) and tbStepIn   .Enabled then tbStepInClick(Sender);
-      if (key=118) and tbStep     .Enabled then tbStepClick(Sender);
-      if (key=119) and tbStepOut  .Enabled then tbStepOutClick(Sender);
-      if (key=122) and tbMicroStep.Enabled then tbMicroStepClick(Sender);
+      if (key=116) and tbRun      .enabled then tbRunClick(Sender);
+      if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
+      if (key=118) and tbStep     .enabled then tbStepClick(Sender);
+      if (key=119) and tbStepOut  .enabled then tbStepOutClick(Sender);
+      if (key=122) and tbMicroStep.enabled then tbMicroStepClick(Sender);
     end;
   end;
 
@@ -958,10 +938,10 @@ FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
 
 PROCEDURE TMnhForm.updateDebugParts;
 
-  PROCEDURE handleButton(VAR button:TToolButton; CONST Enabled:boolean; CONST enabledImageIndex:longint);
+  PROCEDURE handleButton(VAR button:TToolButton; CONST enabled:boolean; CONST enabledImageIndex:longint);
     begin
-      button.Enabled:=Enabled;
-      if Enabled then button.ImageIndex:=enabledImageIndex
+      button.enabled:=enabled;
+      if enabled then button.ImageIndex:=enabledImageIndex
                  else button.ImageIndex:=enabledImageIndex+1;
     end;
 
@@ -970,7 +950,7 @@ PROCEDURE TMnhForm.updateDebugParts;
     if miDebug.Checked then begin
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=true;
       DebugToolbar.visible:=true;
-      DebugToolbar.Enabled:=true;
+      DebugToolbar.enabled:=true;
       DebugToolbar.top:=0;
       handleButton(tbStop,runEvaluator.evaluationRunning,2);
       handleButton(tbRun,not(runEvaluator.evaluationRunning) or stepper.haltet,0);
@@ -982,7 +962,7 @@ PROCEDURE TMnhForm.updateDebugParts;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].editor.Gutter.MarksPart.visible:=false;
       outputPageControl.activePage:=outputTabSheet;
       DebugToolbar.visible:=false;
-      DebugToolbar.Enabled:=false;
+      DebugToolbar.enabled:=false;
     end;
   end;
 
@@ -1313,10 +1293,10 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       end else StatusBar.SimpleText:=runEvaluator.getEndOfEvaluationText+aid;
       //------------------------------------------------------------:progress time
       //Halt/Run enabled states:--------------------------------------------------
-      if isEvaluationRunning<>miHaltEvalutaion.Enabled then miHaltEvalutaion.Enabled:=isEvaluationRunning;
-      if not(isEvaluationRunning)<>miEvaluateNow.Enabled then begin
-        miEvaluateNow.Enabled:=not(isEvaluationRunning);
-        miCallMain.Enabled:=not(isEvaluationRunning);
+      if isEvaluationRunning<>miHaltEvalutaion.enabled then miHaltEvalutaion.enabled:=isEvaluationRunning;
+      if not(isEvaluationRunning)<>miEvaluateNow.enabled then begin
+        miEvaluateNow.enabled:=not(isEvaluationRunning);
+        miCallMain.enabled:=not(isEvaluationRunning);
       end;
       //--------------------------------------------------:Halt/Run enabled states
       autosizingDone:=autosizeBlocks(isEvaluationRunning);
@@ -1516,6 +1496,36 @@ FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;
     else exit(OutputEdit); //not nice, but a valid fallback
   end;
 
+PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
+  begin
+    if enable then begin
+      Splitter1.visible:=true;
+      Splitter1.enabled:=true;
+      PageControl.visible:=true;
+      PageControl.enabled:=true;
+      reEvaluationWithGUIrequired:=false;
+    end else begin
+      miAutosize.Checked:=false;
+      PageControl.visible:=false;
+      PageControl.enabled:=false;
+      Splitter1.visible:=false;
+      Splitter1.enabled:=false;
+    end;
+    subMenuFile.enabled:=enable;
+    subMenuFile.visible:=enable;
+
+    subMenuEvaluation.enabled:=enable;
+    subMenuEvaluation.visible:=enable;
+
+    subMenuHelp.enabled:=enable;
+    subMenuHelp.visible:=enable;
+
+    subMenuCode.enabled:=enable;
+    subMenuCode.visible:=enable;
+
+    outputPageControl.ShowTabs:=enable;
+  end;
+
 PROCEDURE TMnhForm.processSettings;
   VAR formPosition:T_formPosition;
       i:longint;
@@ -1612,10 +1622,10 @@ PROCEDURE TMnhForm.processFileHistory;
   VAR i:longint;
   begin
     for i:=0 to 19 do if settings.value^.historyItem(i)='' then begin
-      historyMenuItem(i).Enabled:=false;
+      historyMenuItem(i).enabled:=false;
       historyMenuItem(i).visible:=false;
     end else begin
-      historyMenuItem(i).Enabled:=true;
+      historyMenuItem(i).enabled:=true;
       historyMenuItem(i).visible:=true;
       historyMenuItem(i).caption:=intToStr(i)+': '+settings.value^.historyItem(i);
     end;
@@ -1672,15 +1682,6 @@ PROCEDURE doFinalization;
     guiAdapters.destroy;
     guiOutAdapter.destroy;
   end;
-
-FUNCTION closeGUI_impl(CONST params: P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    result:=newVoidLiteral;
-    closeGuiFlag:=true;
-  end;
-
-INITIALIZATION
-  registerRule(SYSTEM_BUILTIN_NAMESPACE,'closeGui',@closeGUI_impl,'closeGui;#Closes the GUI even if plot window or table is showing#Returns void');
 
 end.
 

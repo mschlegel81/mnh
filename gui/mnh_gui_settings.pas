@@ -153,7 +153,7 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
   begin
     {$ifndef Windows}
     TabSheet_install.visible:=false;
-    TabSheet_install.Enabled:=false;
+    TabSheet_install.enabled:=false;
     TabSheet_install.tabVisible:=false;
     {$endif}
   end;

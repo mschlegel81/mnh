@@ -51,17 +51,17 @@ PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
     if not(isIdentifier(packageNameEdit.text,false)) then begin
       complaintLabel.caption:=PACKAGE_NAME_COMPLAINT;
       complaintLabel.visible:=true;
-      OKButton.Enabled:=false;
+      OKButton.enabled:=false;
       exit;
     end;
     if fileExists(fileNameEdit.text) then begin
       complaintLabel.caption:=FILE_EXISTS_COMPLAINT;
       complaintLabel.visible:=true;
-      OKButton.Enabled:=false;
+      OKButton.enabled:=false;
       exit;
     end;
     complaintLabel.visible:=false;
-    OKButton.Enabled:=true;
+    OKButton.enabled:=true;
   end;
 
 end.
