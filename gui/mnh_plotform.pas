@@ -259,7 +259,6 @@ PROCEDURE TplotForm.plotImageMouseUp(Sender: TObject; button: TMouseButton; Shif
 
 PROCEDURE TplotForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
-    if reEvaluationWithGUIrequired then guiAdapters^.haltEvaluation;
   end;
 
 PROCEDURE TplotForm.pullPlotSettingsToGui;

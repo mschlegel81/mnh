@@ -177,17 +177,17 @@ PROCEDURE TaskForm.setButtons(CONST enable: boolean; CONST options: T_arrayOfStr
   begin
     if enable then begin
       for i:=0 to 15 do begin
-        button(i).Enabled:=length(options)>i;
+        button(i).enabled:=length(options)>i;
         button(i).visible:=length(options)>i;
         if length(options)>i then button(i).caption:=options[i];
       end;
-      ComboBox1.Enabled:=false;
+      ComboBox1.enabled:=false;
       ComboBox1.visible:=false;
     end else begin
-      ComboBox1.Enabled:=true;
+      ComboBox1.enabled:=true;
       ComboBox1.visible:=true;
       for i:=0 to 15 do begin
-        button(i).Enabled:=false;
+        button(i).enabled:=false;
         button(i).visible:=false;
       end;
     end;

@@ -99,6 +99,19 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
+    if reEvaluationWithGUIrequired
+       and not(runEvaluator.evaluationRunning)
+       and guiAdapters.hasMessageOfType[mt_el3_evalError]
+    then begin
+      j:=closeDialogForm.showOnReEvaluationError;
+      if j=mrOk then begin
+        MnhForm.setEditorMode(true);
+        MnhForm.FormDropFiles(nil,getFileOrCommandToInterpretFromCommandLine);
+      end else begin
+        guiAdapters.clearErrors;
+        if j=mrClose then closeGuiFlag:=true;
+      end;
+    end;
     system.leaveCriticalSection(cs);
   end;
 
