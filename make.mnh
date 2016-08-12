@@ -67,6 +67,8 @@ binName(FI:int)->format('%smnh%s%s%s',
                                 (FI and 4)>0 ? '_debug' : '',
                                 isLinux ? '' : '.exe');
 
+buildableVersions:=isLinux ? [0,2,4,6] : [0..7];
+
 private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
   fileExists(exeName)
@@ -160,7 +162,7 @@ end;
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  (isLinux ? [0,2,4,6] : [0..7]).scramble.each(i,build(i),AND);
+  buildableVersions.scramble.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -199,7 +201,7 @@ private scramble(L:list)->L[L.size.random.sortPerm];
 
 private testMnh(...)->begin
   updateCurrentCodeHash;
-  (isLinux ? [0,2,4,6] : [0..7])
+  buildableVersions
   .scramble
   .each(i,
   i in [0..3]
@@ -225,17 +227,21 @@ private memoized acceptedMainParameters->inspect['declares','main','subrules'].g
 private isSameFileName(i:int,s:string)->begin
   local case:=isLinux ? {$x} : {$x.upper};
   (binName(i).splitFileName['expanded'].case)==
-  (s         .splitFileName['expanded'].case)
+  (s         .splitFileName['expanded'].case);
 end;
+private isSimilarFile(i:int,s:string)->pos(s.upper,binName(i).upper)>=0;
 
 //*Several steps in succession
 main(...)->begin
   updateCurrentCodeHash;
   ... .each(p,
-  (isLinux ? [0,2,4,6] : [0..7])
+  buildableVersions
   .each(i,isSameFileName(i,p) ? build(i) : false,OR)
   ? void
-  : p in acceptedMainParameters
-    ? main(p)
-    : fail("Don't know what to do with: "+p));
+  : buildableVersions
+    .each(i,isSimilarFile(i,p) ? build(i) : false,OR)
+    ? void
+    : p in acceptedMainParameters
+      ? main(p)
+      : fail("Don't know what to do with: "+p));
 end;
