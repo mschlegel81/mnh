@@ -232,7 +232,7 @@ FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansis
     with C_messageTypeMeta[messageType] do begin
       result:=prefix;
       if includeLocation then result:=result+ansistring(location)+' ';
-      result:=result+replaceAll(message,UTF8_ZERO_WIDTH_SPACE,'');
+      result:=replaceAll(result+message,UTF8_ZERO_WIDTH_SPACE,'');
     end;
   end;
 
