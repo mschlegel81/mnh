@@ -21,7 +21,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
-      instantPlotRequested:boolean=false;
+
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -68,8 +68,12 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         end;
         mt_clearConsole: syn.lines.clear;
         mt_plotSettingsChanged: plotForm.pullPlotSettingsToGui;
-        mt_plotCreatedWithInstantDisplay: instantPlotRequested:=true;
-        mt_displayTable,mt_plotCreatedWithDeferredDisplay: begin end;
+        mt_plotCreatedWithInstantDisplay: begin
+          plotForm.doPlot();
+          guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
+        end;
+        mt_displayTable: tableForm.conditionalDoShow;
+        mt_plotCreatedWithDeferredDisplay: begin end;
         mt_printline:
           begin
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
@@ -94,10 +98,6 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     if result then begin
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
-    end;
-    if instantPlotRequested then begin
-      plotForm.doPlot();
-      guiAdapters.hasMessageOfType[mt_plotCreatedWithDeferredDisplay]:=false;
     end;
     system.leaveCriticalSection(cs);
   end;
