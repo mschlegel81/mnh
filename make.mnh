@@ -204,7 +204,7 @@ private testMnh(...)->begin
   buildableVersions
   .scramble
   .each(i,
-  i in [0..3]
+  i in buildableVersions.minus([4..7])
   ? build(i)
   : void,
   exeHasWrongVersion(i)
