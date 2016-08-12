@@ -3112,7 +3112,7 @@ Hash of regTest/../demos/turtleGfx.png is 427DABDB
 ***** heart *****
 Hash of regTest/../demos/heart.png is 9B4CB332
 ***** examples from file *****
-Examples file has 509 lines
+Examples file has 584 lines
  in> arity({3});
 out> 0
  in> arity({sin($x)/$x});
@@ -3620,3 +3620,50 @@ out> void
 out> [[1,1,2],[1,2,1],[1,1,2],[1,2,1],[2,1,1],[2,1,1]]
  in> permutations([1..3]);
 out> [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
+ in> bits(123).ord.join;
+out> '1101111000000000000000000000000000000000000000000000000000000000'
+ in> input :=[[1..10], 1/7,'test', random(9)];
+Note  Creating new rule: input
+ in> serialized :=input.serialize;
+Note  Creating new rule: serialized
+ in> print(input.toString.length,' > ', serialized.length);
+211 > 204
+out> void
+ in> input==serialized.deserialize;
+out> true
+ in> factorize(1001);
+out> [7,11,13]
+ in> formatTabs("\v-2\n3\t4.3");
+out> ['  -2','3  4.3']
+ in> utf8ToSys('ÄÖÜ').chars.ord;
+out> [196,214,220]
+ in> sysToUtf8('T�T�');
+out> 'TÄTÜ'
+ in> type(3);
+out> 'int'
+ in> type([1..5, 7.5]);
+out> 'numericList(6)'
+ in> type({$x^2+$y});
+out> 'expression(2)'
+ in> 'Test something'.base92encode;
+out> '!&NY>fdTx<$-h|;T*=u_'
+ in> '!&NY> fdTx< $-h|; T*=u_'.base92decode;
+out> 'Test something'
+ in> x :=transpose([1,[1, 2, 3],[1, 2]]);
+Note  Creating new rule: x
+ in> x;
+out> [[1,1,1],[void,2,2],[void,3]]
+ in> x.transpose;
+out> [[1],[1,2,3],[1,2]]
+ in> resetRandom(12157);
+out> void
+ in> resetRandom;
+out> void
+ in> intRandom(7);
+out> 1
+ in> intRandom(7, 10);
+out> [0,1,3,2,2,0,4,5,5,6]
+ in> random;
+out> 0.528894921531901
+ in> random(3);
+out> [0.479977171402425,0.568044563755393,0.392784793162718]
