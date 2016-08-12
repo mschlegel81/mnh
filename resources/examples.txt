@@ -554,9 +554,9 @@ random;
 
 random(3);
 
-wrapTextInHttp('Test');
-
 //==END REG TEST==
+
+wrapTextInHttp('Test');
 
 t0:=time;
 sleep(0.1);
