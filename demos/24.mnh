@@ -21,24 +21,29 @@ end;
 private errPrint(...)->print@(...) orElse false;
 
 private isCorrectSolution(set,text)->begin
+  local result:=true;
   not(text.chars.each(c,c in (set&"") | OPLIST | [' ','(',')'],AND) orElse true)
-  ? return errPrint('The input contains an invalid character.')
+  ? result:=errPrint('The input contains an invalid character.')
   : void;
 
   '++' in copy(replace(text,OPLIST,'+'),[0..length(text)-2],2) or
   '00' in copy(replace(text,set&"",'0'),[0..length(text)-2],2)
-  ? return errPrint('The input contains an invalid character sequence.')
+  ? result:=errPrint('The input contains an invalid character sequence.')
   : void;
 
   not(text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void).sort == set.sort)
-  ? return errPrint('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void))
+  ? result:=errPrint('The input uses other numbers than the given input set: ',text.chars.each(c,c in ['0'..'9'] ? softCast(c) : void))
   : void;
 
-  local expressionResult:=toExpression(text)();
-  not(expressionResult=24)
-  ? errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
-  : print('The solution is valid.')
-    orElse true;
+  result
+  ? begin
+      local expressionResult:=toExpression(text)();
+      not(expressionResult=24)
+      ? errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
+      : print('The solution is valid.')
+        orElse true;
+    end
+  : false;
 end;
 
 private playARound->print('-------------------------------------------------------------------')|playARound(getRiddle);

@@ -1482,9 +1482,6 @@ tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) then begin
     first:=context.disposeToken(first);
     didSubstitution:=true;
   end;
-end else if cTokType[-1]=tt_return then begin
-  stack.popLink(first);
-  didSubstitution:=true;
 end else context.adapters^.raiseError('Token ; is only allowed in begin-end-blocks',first^.next^.location)}
 
   begin
@@ -1771,18 +1768,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
-        tt_return: if (cTokType[1]<>tt_literal) or (cTokType[2]<>tt_semicolon) then begin
-          stack.push(first);
-          didSubstitution:=true;
-        end else begin
-          while (stack.topIndex>=0) and (stack.dat[stack.topIndex]^.tokType<>tt_beginFunc) do stack.popDestroy(context);
-          first:=context.disposeToken(first); //dispose tt_return
-          while (first^.next<>nil) and (first^.next^.tokType<>tt_endFunc) do first^.next:=context.disposeToken(first^.next);
-          {$ifdef fullVersion}  if currentlyDebugging then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
-          stack.popDestroy(context); //dispose tt_beginFunc
-          first^.next:=context.disposeToken(first^.next); //dispose tt_endFunc
-          didSubstitution:=true;
-        end;
       end;
       {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
