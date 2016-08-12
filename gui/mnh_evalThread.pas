@@ -122,7 +122,6 @@ FUNCTION main(p:pointer):ptrint;
     until (pendingRequest=er_die);
     mainEvaluationContext.destroy;
     threadStopped;
-    writeln('Main evaluation thread stopped');
   end; end;
 
 FUNCTION docMain(p:pointer):ptrint;
@@ -146,7 +145,6 @@ FUNCTION docMain(p:pointer):ptrint;
     until (pendingRequest=er_die);
     mainEvaluationContext.destroy;
     threadStopped;
-    writeln('Assistance thread stopped');
   end; end;
 
 
@@ -563,11 +561,9 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   end;
 
 FINALIZATION
-  writeln('mnh_evalThread.FINALIZATION start');
   if unitIsInitialized then begin
     runEvaluator.destroy;
     codeAssistant.destroy;
     silentAdapters.destroy;
   end;
-  writeln('mnh_evalThread.FINALIZATION end');
 end.
