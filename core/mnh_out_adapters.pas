@@ -198,13 +198,12 @@ TYPE
   end;
   {$endif}
 
+{$ifdef fullVersion}
 VAR
-  {$ifdef fullVersion}
   stepper:T_stepper;
   currentlyDebugging:boolean=false;
   gui_started:boolean=false;
-  {$endif}
-  nullAdapter:T_adapters;
+{$endif}
 
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
@@ -1020,17 +1019,10 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
       floatToStr(entrySet[i].value.timer.Elapsed),C_nilTokenLocation);
   end;
 
+INITIALIZATION
+  stepper.create;
+FINALIZATION
+  stepper.destroy;
 {$endif}
 
-INITIALIZATION
-  nullAdapter.create;
-  {$ifdef fullVersion}
-  stepper.create;
-  {$endif}
-
-FINALIZATION
-  {$ifdef fullVersion}
-  stepper.destroy;
-  {$endif}
-  nullAdapter.destroy;
 end.

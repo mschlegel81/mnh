@@ -145,7 +145,9 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
       lastComment:ansistring='';
       intrinsicFuncPtr:T_intFuncCallback;
+      nullAdapter:T_adapters;
   begin
+    nullAdapter.create;
     setLength(result,0);
     repeat
       step(nil,lastComment,nullAdapter);
@@ -157,6 +159,7 @@ FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
       end;
     until atEnd;
     for k:=0 to length(t)-1 do t[k].undefine;
+    nullAdapter.destroy;
   end;
 
 FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_tokenLocation; CONST inPackage: P_package; VAR adapters: T_adapters; CONST retainBlanks: boolean): T_token;

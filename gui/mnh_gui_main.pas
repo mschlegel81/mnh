@@ -595,6 +595,7 @@ PROCEDURE TMnhForm.assistanceSynEditMouseUp(Sender: TObject; button: TMouseButto
 
 PROCEDURE TMnhForm.FormDestroy(Sender: TObject);
   begin
+    UpdateTimeTimer.Enabled:=false;
     if not(reEvaluationWithGUIrequired) then saveSettings;
     guiAdapters.removeOutAdapter(@guiOutAdapter);
     outputHighlighter.destroy;
@@ -1270,10 +1271,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       currentFileAge:double;
   begin
     isEvaluationRunning:=runEvaluator.evaluationRunning;
-    if isEvaluationRunning then begin
-      if askForm.displayPending then askForm.Show;
-      tableForm.conditionalDoShow;
-    end;
+    if askForm.displayPending then askForm.Show;
     if showing then begin
       //Form caption:-------------------------------------------------------------
       if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
