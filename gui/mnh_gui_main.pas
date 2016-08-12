@@ -643,21 +643,21 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       tableForm.showInTaskBar:=stAlways;
 
       subMenuFile.Enabled:=false;
-      subMenuFile.Visible:=false;
+      subMenuFile.visible:=false;
 
       subMenuEvaluation.Enabled:=false;
-      subMenuEvaluation.Visible:=false;
+      subMenuEvaluation.visible:=false;
 
       subMenuHelp.Enabled:=false;
-      subMenuHelp.Visible:=false;
+      subMenuHelp.visible:=false;
 
       subMenuCode.Enabled:=false;
-      subMenuCode.Visible:=false;
+      subMenuCode.visible:=false;
 
-      miAutosize.checked:=false;
-      PageControl.Visible:=false;
+      miAutosize.Checked:=false;
+      PageControl.visible:=false;
       PageControl.Enabled:=false;
-      Splitter1.Visible:=false;
+      Splitter1.visible:=false;
       Splitter1.Enabled:=false;
       outputPageControl.ShowTabs:=false;
     end;
