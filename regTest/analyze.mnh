@@ -104,12 +104,8 @@ private analyzeFlavour(data,flavour:string)->begin
                case[1].trailing,
                (case[1].leading.agg(+) orElse 0)/max(1,size(case[1])-1)])
   .{$L|['TOTAL'| $L.agg(+).tail]}
-  .pEach(case,begin
-    local lastGain:=round((case[3]/case[2]-1)*100,2);
-    lastGain:=lastGain<0 ? lastGain : '+'&lastGain;
-    [case[0],case[1],case[2],case[3],lastGain];
-   end)
-  .{showTable([['case','samples','average','last','trend']]|$L,true)};
+  .pEach(case,[case[0],case[1],case[2],case[3],round((case[3]/case[2]-1)*100,2)])
+  .{showTable([['case','samples','average','last','trend (%)']]|$L,true)};
   plot;
   //times only
   groupedData:=groupedData.getInner(1);
