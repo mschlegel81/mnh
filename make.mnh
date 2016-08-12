@@ -239,7 +239,7 @@ main(...)->begin
   .each(i,isSameFileName(i,p) ? build(i) : false,OR)
   ? void
   : buildableVersions
-    .each(i,isSimilarFile(i,p) ? build(i) : false,OR)
+    .each(i,isSimilarFile(i,p) ? build(i) : false,or)
     ? void
     : p in acceptedMainParameters
       ? main(p)
