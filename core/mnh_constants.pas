@@ -44,6 +44,7 @@ CONST
   C_ID_QUALIFY_CHARACTER='.';
 
   C_eachIndexIdentifier='index';
+  C_tryMessageIdentifier='messages';
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
@@ -227,16 +228,16 @@ CONST
       (defaultId:'.'; reservedWordClass:rwc_not_reserved; helpText:'A pseudo-object-notation flipper'),
       (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
     //special operators
-      (defaultId:'.each'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.'),
-      (defaultId:'.pEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: pEach (parallel each)#Used for parallel list operations.#Parallelized depending on the systen settings.'),
-      (defaultId:'.PEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: PEach (forced parallel each)#Used for parallel list operations.#Parallelized independent from systen settings.'),
-      (defaultId:'.agg'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: agg#Used for list aggregation'),
-      (defaultId:'while'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: while#Used for loops'),
+      (defaultId:'.each'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.#Syntax: <list>.each(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.pEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: pEach (parallel each)#Used for parallel list operations.#Parallelized depending on the systen settings.#Syntax: <list>.pEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.PEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: PEach (forced parallel each)#Used for parallel list operations.#Parallelized independent from systen settings.#Syntax: <list>.PEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.agg'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: agg#Used for list aggregation#Syntax: <list>.agg(<aggregator>) - where <aggregator> may be an expression or a simple operator as +'),
+      (defaultId:'while'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: while#Used for loops#Syntax: while(<entry condition>,<body>) - where <entry condition> must return a scalar boolean'),
       (defaultId:'begin'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: begin#Opening delimiter for procedural blocks'),
       (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
       (defaultId:'end'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: end#Closing delimiter for procedural blocks'),
       (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
-      (defaultId:'try'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling'),
+      (defaultId:'try'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
       (defaultId:'toId'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
       (defaultId:'return'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: return#Returns from the current function call'),
       //lists and list constructor

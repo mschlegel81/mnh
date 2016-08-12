@@ -1071,7 +1071,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         stack.push(first);
         didSubstitution:=true;
         context.valueStore.scopePush(false);
-        context.valueStore.createVariable('messages',messagesToLiteralForSandbox(messages),true);
       end else begin
         first^.tokType:=tt_braceOpen; //mutate try-token to (
         first^.next:=bodyParts[0].first;

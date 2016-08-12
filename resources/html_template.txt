@@ -1341,39 +1341,16 @@ Syntax:<code>
 <!--end-->
 </code>
 First <code>body</code> is executed. If no exception is encountered, <code>exceptionHandling</code> is ignored.<br>
-If there is an exception, <code>exceptionHandling</code> is executed and messages (infos, warnings, errors and even console-outputs) are
-made available in a special variable <code>messages</code>. Plot output however is rolled back to the state before entering the try-construct.<br>
-Each element of <code>messages</code> is a triplet <code>[messageText, level, location]</code>, where levels are:<br>
-<ul>
-  <li> <b>5: Severe errors</b> (stack overflow, out of memory, etc.)
-  <li> <b>4: Parsing errors</b> (errors ocurring on tokenizing)
-  <li> <b>3: Evaluation errors</b> (errors ocurring on evaluation)
-  <li> <b>2: Warnings</b> 
-  <li> <b>1: Notes</b> 
-  <li> <b>-1: Internal messages</b> (plot creation messages, etc.)
-  <li> <b>-2: Console ouput</b>
-</ul>
+If there is an exception, <code>exceptionHandling</code> is executed.
 Note that only a message of level 3 or higher will lead to execution of the <code>exceptionHandling</code> block.<br>
 Example:<code>
 <!--mnh-->
-   in>  safeParse(s:string)->
-          try(expression(s),
-              //exception handling:
-              begin
-                print('Parsing failed with:');
-                messages.each(m,m[1]>=3
-                                ? print('  ',m[2],' ',m[0])
-                                : void);
-                print('Returning fallback result.');
-                {0};
-              end);   
+   in> safeParse(s:string)->
+         try(toExpression(s),
+             print('Parsing failed - returning fallback result.') orElse {0});   
    in> safeParse('!');
 <!--end-->   
-  Parsing failed with:
-    @<new 9>:3,1 Cannot parse: ! (first char is "!"=#33)
-    @<new 9>:3,7 The parsed expression appears to be empty
-    @<new 9>:3,7   # expression('!')
-  Returning fallback result.
+  Parsing failed - returning fallback result.
 <!--mnh-->  
   out> {0}
    in> safeParse('2+$x^2');
