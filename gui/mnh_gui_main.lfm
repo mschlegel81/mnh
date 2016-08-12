@@ -41,7 +41,7 @@ object MnhForm: TMnhForm
     end
     object assistanceTabSheet: TTabSheet
       Caption = 'Assistance'
-      ClientHeight = 240
+      ClientHeight = 253
       ClientWidth = 657
       inline assistanceSynEdit: TSynEdit
         Left = 0
@@ -2172,7 +2172,7 @@ object MnhForm: TMnhForm
   object MainMenu1: TMainMenu
     left = 272
     top = 80
-    object MenuItem1: TMenuItem
+    object subMenuFile: TMenuItem
       Caption = '&File'
       object mi_settings: TMenuItem
         Caption = 'Settings'
@@ -2288,7 +2288,7 @@ object MnhForm: TMnhForm
         OnClick = miFileHistory19Click
       end
     end
-    object MenuItem5: TMenuItem
+    object subMenuSearch: TMenuItem
       Caption = '&Search'
       object miFind: TMenuItem
         Caption = '&Find'
@@ -2311,7 +2311,7 @@ object MnhForm: TMnhForm
         OnClick = miFindPreviousClick
       end
     end
-    object MenuItem2: TMenuItem
+    object subMenuEvaluation: TMenuItem
       Caption = '&Evaluation'
       object miHaltEvalutaion: TMenuItem
         Caption = 'HALT EVALUATION!'
@@ -2413,7 +2413,7 @@ object MnhForm: TMnhForm
         OnClick = miAutosizeClick
       end
     end
-    object miHelpExternally: TMenuItem
+    object subMenuHelp: TMenuItem
       Caption = '&Help'
       object miHelp: TMenuItem
         Caption = 'Display help popup'
@@ -2434,7 +2434,7 @@ object MnhForm: TMnhForm
         OnClick = miOpenDemoClick
       end
     end
-    object MenuItem3: TMenuItem
+    object subMenuCode: TMenuItem
       Caption = '&Code'
       object mi_insertFilename: TMenuItem
         Caption = 'Insert &Filename'

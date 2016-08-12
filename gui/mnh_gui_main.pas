@@ -34,7 +34,7 @@ TYPE
     miFileHistory17: TMenuItem;
     miFileHistory18: TMenuItem;
     miFileHistory19: TMenuItem;
-    MenuItem3: TMenuItem;
+    subMenuCode: TMenuItem;
     miFileHistory10: TMenuItem;
     miFileHistory11: TMenuItem;
     miFileHistory12: TMenuItem;
@@ -55,13 +55,13 @@ TYPE
     miDebug: TMenuItem;
     miCallMain: TMenuItem;
     miHelp: TMenuItem;
-    miHelpExternally: TMenuItem;
+    subMenuHelp: TMenuItem;
     OutputEdit: TSynEdit;
     miFileHistory6: TMenuItem;
     miFileHistory7: TMenuItem;
     miFileHistory8: TMenuItem;
     miFileHistory9: TMenuItem;
-    MenuItem2: TMenuItem;
+    subMenuEvaluation: TMenuItem;
     miFileHistory0: TMenuItem;
     miFileHistory1: TMenuItem;
     miFileHistory2: TMenuItem;
@@ -78,7 +78,7 @@ TYPE
     miSaveAs: TMenuItem;
     OpenDialog: TOpenDialog;
     MainMenu1: TMainMenu;
-    MenuItem1: TMenuItem;
+    subMenuFile: TMenuItem;
     EditorPopupMenu: TPopupMenu;
     Splitter1: TSplitter;
     submenuEditorAppearance: TMenuItem;
@@ -102,7 +102,7 @@ TYPE
     miNewCentralPackage: TMenuItem;
     FindDialog: TFindDialog;
     ReplaceDialog: TReplaceDialog;
-    MenuItem5: TMenuItem;
+    subMenuSearch: TMenuItem;
     miFind: TMenuItem;
     miReplace: TMenuItem;
     miFindNext: TMenuItem;
@@ -634,7 +634,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     KeyPreview:=true;
     UpdateTimeTimer.Enabled:=true;
     if reEvaluationWithGUIrequired then begin
-      {$ifndef debugMode}guiAdapters.addConsoleOutAdapter;{$endif}
       doStartEvaluation(true,true);
       runEvaluator.reEvaluateWithGUI;
       plotForm.caption:=plotForm.caption+' - close to quit';
@@ -642,6 +641,25 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
       askForm.showInTaskBar:=stAlways;
       plotForm.showInTaskBar:=stAlways;
       tableForm.showInTaskBar:=stAlways;
+
+      subMenuFile.Enabled:=false;
+      subMenuFile.Visible:=false;
+
+      subMenuEvaluation.Enabled:=false;
+      subMenuEvaluation.Visible:=false;
+
+      subMenuHelp.Enabled:=false;
+      subMenuHelp.Visible:=false;
+
+      subMenuCode.Enabled:=false;
+      subMenuCode.Visible:=false;
+
+      miAutosize.checked:=false;
+      PageControl.Visible:=false;
+      PageControl.Enabled:=false;
+      Splitter1.Visible:=false;
+      Splitter1.Enabled:=false;
+      outputPageControl.ShowTabs:=false;
     end;
   end;
 
@@ -1345,17 +1363,9 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       if UpdateTimeTimer.interval>MAX_INTERVALL then UpdateTimeTimer.interval:=MAX_INTERVALL;
     end else UpdateTimeTimer.interval:=MIN_INTERVALL;
 
-    if reEvaluationWithGUIrequired then begin
-      Hide;
-      if not(isEvaluationRunning) and (not(plotForm.showing) and not(tableForm.showing) or closeGuiFlag) then begin
-        guiAdapters.setExitCode;
-        close;
-      end;
-    end else begin
-      if settings.value^.savingRequested then begin
-        for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
-        saveSettings;
-      end;
+    if not(reEvaluationWithGUIrequired) and settings.value^.savingRequested then begin
+      for i:=0 to length(editorMeta)-1 do editorMeta[i].writeToEditorState(settings.value);
+      saveSettings;
     end;
   end;
 
