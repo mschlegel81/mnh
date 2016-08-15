@@ -96,6 +96,8 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
     end;
     clearMessages;
     if result then begin
+      i:=settings.value^.outputLinesLimit;
+      while syn.lines.count>i do syn.lines.delete(0);
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;
