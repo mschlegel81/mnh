@@ -17,9 +17,9 @@ object SettingsForm: TSettingsForm
     Height = 240
     Top = 0
     Width = 320
-    ActivePage = TabSheet_install
+    ActivePage = TabSheet_display
     Align = alClient
-    TabIndex = 2
+    TabIndex = 0
     TabOrder = 0
     object TabSheet_display: TTabSheet
       Caption = 'display'
@@ -58,6 +58,7 @@ object SettingsForm: TSettingsForm
         Width = 232
         Anchors = [akTop, akLeft, akRight]
         NumbersOnly = True
+        OnEditingDone = FontSizeEditEditingDone
         TabOrder = 1
         Text = 'FontSizeEdit'
       end
@@ -77,6 +78,24 @@ object SettingsForm: TSettingsForm
         Width = 34
         Caption = 'Editor:'
         ParentColor = False
+      end
+      object Label7: TLabel
+        Left = 8
+        Height = 15
+        Top = 109
+        Width = 90
+        Caption = 'Output size limit:'
+        ParentColor = False
+      end
+      object outputSizeLimit: TEdit
+        Left = 104
+        Height = 23
+        Top = 109
+        Width = 200
+        NumbersOnly = True
+        OnEditingDone = outputSizeLimitEditingDone
+        TabOrder = 3
+        Text = 'outputSizeLimit'
       end
     end
     object TabSheet_global: TTabSheet

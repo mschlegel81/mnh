@@ -15,6 +15,8 @@ TYPE
 
   TSettingsForm = class(TForm)
     Button2: TButton;
+    outputSizeLimit: TEdit;
+    Label7: TLabel;
     memLimitEdit: TEdit;
     Label6: TLabel;
     logNameEdit: TEdit;
@@ -40,11 +42,13 @@ TYPE
     autosaveComboBox: TComboBox;
     PROCEDURE Button2Click(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
+    PROCEDURE FontSizeEditEditingDone(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE Button1Click(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);
     PROCEDURE logNameEditChange(Sender: TObject);
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
+    PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
     PROCEDURE rbLogOffChange(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
@@ -52,6 +56,8 @@ TYPE
   private
     FUNCTION getFontSize: longint;
     PROCEDURE setFontSize(CONST value: longint);
+    FUNCTION getOutputLimit: longint;
+    PROCEDURE setOutputLimit(CONST value: longint);
   public
     PROPERTY fontSize:longint read getFontSize write setFontSize;
     PROCEDURE ensureFont(CONST editorFont:TFont);
@@ -86,6 +92,7 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     end;
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
+    setOutputLimit(settings.value^.outputLinesLimit);
     if not(settings.value^.wasLoaded) then settings.value^.activePage:=0;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
     memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
@@ -124,6 +131,11 @@ PROCEDURE TSettingsForm.FontButtonClick(Sender: TObject);
       FontButton.Font.size := getFontSize;
       FontButton.caption := settings.value^.editorFontname;
     end;
+  end;
+
+PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
+  begin
+    setFontSize(getFontSize);
   end;
 
 PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
@@ -172,6 +184,11 @@ PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
     memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
   end;
 
+PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
+  begin
+    setOutputLimit(getOutputLimit);
+  end;
+
 PROCEDURE TSettingsForm.rbLogOffChange(Sender: TObject);
   begin
     if rbLogOff.Checked then begin
@@ -211,6 +228,19 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
     FontSizeEdit.text := intToStr(value);
     EditorFontDialog.Font.size := value;
     settings.value^.fontSize:=value;
+  end;
+
+FUNCTION TSettingsForm.getOutputLimit: longint;
+  begin
+    result := StrToInt64Def(trim(outputSizeLimit.text), maxLongint);
+    if result<=0 then result:=1;
+  end;
+
+PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
+  begin
+    outputSizeLimit.text := intToStr(value);
+    EditorFontDialog.Font.size := value;
+    settings.value^.outputLinesLimit:=value;
   end;
 
 end.
