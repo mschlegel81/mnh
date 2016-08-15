@@ -103,9 +103,12 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
       if isValid and (Source=C_nullSourceOrTargetFileName) then with context.adapters^.picture do begin
         lock;
         if value=nil then begin
-          context.adapters^.raiseError('Current image ("#") given as input image but no current image loaded.',tokenLocation);
+          context.adapters^.raiseError('Current image ("-") given as input image but no current image loaded.',tokenLocation);
           isValid:=false;
-        end else workflowImage.copyFromImage(value^);
+        end else begin
+          workflowImage.copyFromImage(value^);
+          context.adapters^.raiseNote('Input for workflow copied from current image',tokenLocation);
+        end;
         unlock;
       end;
       if isValid then begin
@@ -126,6 +129,7 @@ FUNCTION executeWorkflow_imp(CONST params:P_listLiteral; CONST tokenLocation:T_t
         if value=nil then value:=newFromWorkflowImage
                      else value^.copyFromImage(workflowImage);
         unlock;
+        context.adapters^.raiseNote('Output of workflow copied to current image',tokenLocation);
       end;
       workflowImage.clear;
 
