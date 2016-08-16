@@ -13,8 +13,6 @@ USES
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,
   SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables;
 
-CONST DEBUG_LINE_COUNT=200;
-
 TYPE
   {$define includeInterface}
   {$include editorMeta.inc}
@@ -69,9 +67,7 @@ TYPE
     miFileHistory4: TMenuItem;
     miFileHistory5: TMenuItem;
     miHaltEvalutaion: TMenuItem;
-    miEvalModeDirect: TMenuItem;
     miEvaluateNow: TMenuItem;
-    miEvalModeDirectOnKeypress: TMenuItem;
     miClear: TMenuItem;
     miOpen: TMenuItem;
     miSave: TMenuItem;
@@ -148,8 +144,6 @@ TYPE
     PROCEDURE miDebugClick(Sender: TObject);
     PROCEDURE miDecFontSizeClick(Sender: TObject);
     PROCEDURE miDeclarationEchoClick(Sender: TObject);
-    PROCEDURE miEvalModeDirectClick(Sender: TObject);
-    PROCEDURE miEvalModeDirectOnKeypressClick(Sender: TObject);
     PROCEDURE miEvaluateNowClick(Sender: TObject);
     PROCEDURE miExpressionEchoClick(Sender: TObject);
     PROCEDURE miExpressionResultClick(Sender: TObject);
@@ -650,14 +644,7 @@ PROCEDURE TMnhForm.InputEditChange(Sender: TObject);
        (PageControl.activePageIndex>=length(editorMeta)) or
        (not(editorMeta[PageControl.activePageIndex].sheet.tabVisible)) then exit;
 
-    if (miEvalModeDirectOnKeypress.Checked) and not(SynCompletion.isActive) then begin
-      if now>evaluation.deferredUntil then begin
-        doStartEvaluation(false,false);
-        lastStart.mainCall:=false;
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
-      end else evaluation.required:=true;
-    end;
-    with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
+    with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
     editorMeta[PageControl.activePageIndex].changed:=editorMeta[PageControl.activePageIndex].editor.modified;
     caption:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
   end;
@@ -792,31 +779,12 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.miEvalModeDirectClick(Sender: TObject);
-  begin
-    if miEvalModeDirect.Checked then exit;
-    miEvalModeDirect.Checked:=true;
-    miEvalModeDirectOnKeypress.Checked:=false;
-    settings.value^.instantEvaluation:=false;
-  end;
-
-PROCEDURE TMnhForm.miEvalModeDirectOnKeypressClick(Sender: TObject);
-  begin
-    if miEvalModeDirectOnKeypress.Checked then exit;
-    if runEvaluator.evaluationRunning and (miDebug.Checked) then runEvaluator.haltEvaluation;
-    miDebug.Checked:=false;
-    updateDebugParts;
-    miEvalModeDirect.Checked:=false;
-    miEvalModeDirectOnKeypress.Checked:=true;
-    settings.value^.instantEvaluation:=true;
-  end;
-
 PROCEDURE TMnhForm.miEvaluateNowClick(Sender: TObject);
   begin
     if now>evaluation.deferredUntil then begin
       doStartEvaluation(true,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,false);
+      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
     end else evaluation.required:=true;
   end;
 
@@ -1165,7 +1133,7 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     if PageControl.activePageIndex>=0 then begin
       SynCompletion.editor:=editorMeta[PageControl.activePageIndex].editor;
       settings.value^.activePage:=PageControl.activePageIndex;
-      with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
+      with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
     end;
   end;
 
@@ -1329,7 +1297,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     if evaluation.required and not(runEvaluator.evaluationRunning) and (now>evaluation.deferredUntil) then begin
       doStartEvaluation(false,false);
       lastStart.mainCall:=false;
-      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
+      with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
       UpdateTimeTimer.interval:=MIN_INTERVALL;
     end;
 
@@ -1449,7 +1417,7 @@ PROCEDURE TMnhForm.tbRunClick(Sender: TObject);
       if lastStart.mainCall then begin
         with editorMeta[PageControl.activePageIndex] do runEvaluator.callMain(pseudoName,editor.lines,lastStart.parameters);
       end else begin
-        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines,true);
+        with editorMeta[PageControl.activePageIndex] do runEvaluator.evaluate(pseudoName,editor.lines);
       end;
     end else stepper.doStart(true);
     updateDebugParts;
@@ -1553,8 +1521,6 @@ PROCEDURE TMnhForm.processSettings;
       end;
 
       plotForm.miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
-      miEvalModeDirect.Checked:=not(settings.value^.instantEvaluation);
-      miEvalModeDirectOnKeypress.Checked:=settings.value^.instantEvaluation;
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
 
@@ -1574,7 +1540,7 @@ PROCEDURE TMnhForm.processSettings;
       for i:=0 to length(filesToOpenInEditor)-1 do FormDropFiles(nil,filesToOpenInEditor[i]);
 
       settingsReady:=true;
-      if not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta)) then with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines,false);
+      if not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta)) then with editorMeta[PageControl.activePageIndex] do codeAssistant.evaluate(pseudoName,editor.lines);
     end;
 
     OutputEdit.Font.name:=settings.value^.editorFontname;
