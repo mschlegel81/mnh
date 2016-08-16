@@ -2320,7 +2320,7 @@ object MnhForm: TMnhForm
         OnClick = miHaltEvalutaionClick
       end
       object miEvaluateNow: TMenuItem
-        Caption = 'Evaluate Now'
+        Caption = 'Evaluate'
         ShortCut = 116
         OnClick = miEvaluateNowClick
       end
@@ -2328,15 +2328,6 @@ object MnhForm: TMnhForm
         Caption = 'Call main'
         ShortCut = 120
         OnClick = MenuItem4Click
-      end
-      object miEvalModeDirectOnKeypress: TMenuItem
-        Caption = 'Instantly evaluate input'
-        Checked = True
-        OnClick = miEvalModeDirectOnKeypressClick
-      end
-      object miEvalModeDirect: TMenuItem
-        Caption = 'Evaluate input on request'
-        OnClick = miEvalModeDirectClick
       end
       object miDebug: TMenuItem
         Caption = 'Debug'

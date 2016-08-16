@@ -3,7 +3,7 @@ INTERFACE
 USES FileUtil,sysutils,myGenerics,mnh_packages,mnh_out_adapters,Classes,mnh_constants,mnh_tokLoc,mnh_funcs,mnh_litVar,
      myStringUtil,mnh_tokens,mnh_contexts,mnh_doc,mnh_cmdLineInterpretation, LazUTF8, mnh_fileWrappers;
 TYPE
-  T_evalRequest    =(er_none,er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI,er_die);
+  T_evalRequest    =(er_none,er_evaluate,er_callMain,er_reEvaluateWithGUI,er_die);
   T_evaluationState=(es_dead,es_idle,es_running);
 
   T_tokenInfo=record
@@ -38,7 +38,7 @@ TYPE
       PROCEDURE haltEvaluation;
 
       PROCEDURE reEvaluateWithGUI;
-      PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings; CONST interactive:boolean);
+      PROCEDURE evaluate(CONST path:ansistring; CONST L: TStrings);
       PROCEDURE callMain(CONST path:ansistring; CONST L: TStrings; params: ansistring);
       FUNCTION evaluationRunning: boolean;
       FUNCTION getCodeProvider:P_codeProvider;
@@ -94,12 +94,6 @@ FUNCTION main(p:pointer):ptrint;
           package.load(lu_forDirectExecution,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
           postEval;
         end;
-        er_evaluateInteractive: begin
-          preEval;
-          sleepTime:=0;
-          package.load(lu_interactiveMode,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
-          postEval;
-        end;
         er_callMain: begin
           preEval;
           sleepTime:=0;
@@ -133,7 +127,7 @@ FUNCTION docMain(p:pointer):ptrint;
     mainEvaluationContext.createNormalContext(adapter);
     result:=0;
     repeat
-      if not(currentlyDebugging) and (request in [er_evaluate,er_evaluateInteractive,er_callMain,er_reEvaluateWithGUI]) then begin
+      if not(currentlyDebugging) and (request in [er_evaluate,er_callMain,er_reEvaluateWithGUI]) then begin
         preEval;
         enterCriticalSection(cs);
         package.load(lu_forCodeAssistance,mainEvaluationContext,C_EMPTY_STRING_ARRAY);
@@ -228,8 +222,7 @@ PROCEDURE T_evaluator.reEvaluateWithGUI;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
-  CONST interactive: boolean);
+PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
   begin
     enterCriticalSection(cs);
     ensureThread;
@@ -238,9 +231,6 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings;
       exit;
     end;
     package.setSourceUTF8AndPath(L,path);
-    if interactive
-    then request:=er_evaluateInteractive
-    else request:=er_evaluate;
     leaveCriticalSection(cs);
   end;
 
