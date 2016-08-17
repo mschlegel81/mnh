@@ -1037,7 +1037,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         errorCase:boolean;
         oldAdapters:P_adapters;
         prev_allowDelegation:boolean;
-        messages:T_storedMessages;
 
     begin
       bodyParts:=getBodyParts(first,1,context,closingBracket);
@@ -1061,7 +1060,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.cascadeDisposeToken(bodyParts[0].first);
         errorCase:=true;
       end;
-      messages:=oldAdapters^.copyDataFromCollectingCloneDisposing(context.adapters,errorCase);
       context.adapters:=oldAdapters;
       context.allowDelegation:=prev_allowDelegation;
       if errorCase then begin
@@ -1221,7 +1219,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     VAR newValue:P_literal;
     begin
       newValue:=first^.next^.data;
-      P_rule(first^.data)^.setMutableValue(newValue,false,context.adapters);
+      P_rule(first^.data)^.setMutableValue(newValue,false);
       first:=context.disposeToken(first);
     end;
 

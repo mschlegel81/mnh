@@ -230,6 +230,7 @@ PROCEDURE T_evaluator.evaluate(CONST path: ansistring; CONST L: TStrings);
       leaveCriticalSection(cs);
       exit;
     end;
+    request:=er_evaluate;
     package.setSourceUTF8AndPath(L,path);
     leaveCriticalSection(cs);
   end;

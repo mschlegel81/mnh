@@ -9,6 +9,7 @@ USES
   StdCtrls, mnh_funcs, myGenerics, mnh_out_adapters, mnh_constants,
   mnh_packages,myStringUtil,mnh_settings;
 
+CONST MINIMUM_OUTPUT_LINES=16;
 TYPE
 
   { TSettingsForm }
@@ -233,14 +234,17 @@ PROCEDURE TSettingsForm.setFontSize(CONST value: longint);
 FUNCTION TSettingsForm.getOutputLimit: longint;
   begin
     result := StrToInt64Def(trim(outputSizeLimit.text), maxLongint);
-    if result<=0 then result:=1;
+    if result<MINIMUM_OUTPUT_LINES then result:=MINIMUM_OUTPUT_LINES;
   end;
 
 PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
   begin
-    outputSizeLimit.text := intToStr(value);
-    EditorFontDialog.Font.size := value;
-    settings.value^.outputLinesLimit:=value;
+    if value<MINIMUM_OUTPUT_LINES
+    then setOutputLimit(MINIMUM_OUTPUT_LINES)
+    else begin
+      outputSizeLimit.text := intToStr(value);
+      settings.value^.outputLinesLimit:=value;
+    end;
   end;
 
 end.
