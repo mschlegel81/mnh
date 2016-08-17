@@ -473,7 +473,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             end;
             parts:=nil;
           end;
-          rulePattern.finalizeRefs(ruleDeclarationStart,context,@self);
+          rulePattern.finalizeRefs(ruleDeclarationStart,context);
           context.disposeToken(first);
           first:=context.disposeToken(closingBracket);
         end;
@@ -504,10 +504,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
               if (usecase<>lu_forCodeAssistance)
               then begin
                      inlineValue:=subRule^.getInlineValue;
-                     ruleGroup^.setMutableValue(inlineValue,true,context.adapters);
+                     ruleGroup^.setMutableValue(inlineValue,true);
                      inlineValue^.unreference;
                    end
-              else ruleGroup^.setMutableValue(newVoidLiteral,true,context.adapters);
+              else ruleGroup^.setMutableValue(newVoidLiteral,true);
               dispose(subRule,destroy);
             end else ruleGroup^.addOrReplaceSubRule(subRule,context);
             first:=nil;

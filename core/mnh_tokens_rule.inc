@@ -19,7 +19,7 @@
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
       FUNCTION getLocationOfDeclaration:T_tokenLocation;
       FUNCTION getSubRuleHeaders:ansistring;
-      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; CONST adapters:P_adapters);
+      PROCEDURE setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
       FUNCTION mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
       FUNCTION hasPublicSubrule:boolean;
       FUNCTION getInlineValue:P_literal;
@@ -215,7 +215,7 @@ FUNCTION T_rule.getSubRuleHeaders:ansistring;
       result:=result+'#'+id+subrules[i]^.pattern.toString;
   end;
 
-PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean; CONST adapters:P_adapters);
+PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:boolean);
   begin
     system.enterCriticalSection(rule_cs);
     namedValue.setValue(value);

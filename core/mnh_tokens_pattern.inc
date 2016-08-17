@@ -38,7 +38,7 @@
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     FUNCTION idForIndexInline(CONST index:longint):ansistring;
-    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext; CONST package:P_package);
+    PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
     FUNCTION matchesNilPattern:boolean;
@@ -256,7 +256,7 @@ FUNCTION T_pattern.idForIndexInline(CONST index:longint):ansistring;
     if result='' then result:='$'+intToStr(index);
   end;
 
-PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext; CONST package:P_package);
+PROCEDURE T_pattern.finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
   VAR i,j:longint;
 
   begin
