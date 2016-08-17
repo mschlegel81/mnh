@@ -12,8 +12,9 @@
     next:P_futureTask;
     scope:P_evaluationContext;
 
-    {$ifdef FULLVERSION}
-    bodyLocation,bodyId:ansistring;
+    {$ifdef fullVersion}
+    variableName:string;
+    variableValue:P_literal;
     {$endif}
 
     CONSTRUCTOR createTask(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
@@ -85,13 +86,12 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr: P_subrule; CONST idx: longint; C
     if expr^.replaces(@param,nil,task,dummy,context^,false)
     then state:=fts_pending
     else state:=fts_errorOnInitialization;
-    param.destroy;
     {$ifdef FULLVERSION}
-    if currentlyDebugging then begin
-      bodyLocation:=ansistring(task^.location);
-      bodyId:=expr^.getSubruleId;
-    end;
+    variableName:=expr^.pattern.sig[0].id;
+    variableValue:=x;
+    x^.rereference;
     {$endif}
+    param.destroy;
     next:=nil;
   end;
 
@@ -105,11 +105,12 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     idxLit^.unreference;
     if context.adapters^.noErrors then begin
       {$ifdef FULLVERSION}
-      if currentlyDebugging then stepper.steppingIn(bodyLocation,bodyId);
+      if currentlyDebugging then context.callStackPushInEach(task^.location,variableValue,variableName);
+      disposeLiteral(variableValue);
       {$endif}
       reduceExpression(task,callDepth,context);
       {$ifdef FULLVERSION}
-      if currentlyDebugging then stepper.steppingOut(bodyLocation);
+      if currentlyDebugging then context.callStackPop();
       {$endif}
     end else begin
       context.cascadeDisposeToken(task);

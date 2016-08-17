@@ -241,6 +241,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
   end;
 
+ {$ifdef FULLVERSION}
   T_variableReport=object
     dat:array of record
           id:ansistring;
@@ -249,9 +250,11 @@ TYPE
         end;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:string);
+    PROCEDURE addVariable(CONST id:ansistring; CONST value:P_literal; CONST location:string; CONST retainExistent:boolean=false);
     PROCEDURE addVariable(CONST namedVar:P_namedVariable; CONST location:string);
+    PROCEDURE addSubReport(VAR sub:T_variableReport; CONST pseudoLocation:string);
   end;
+  {$endif}
 
   T_disposeSubruleCallback = PROCEDURE(VAR p: pointer);
   T_subruleApplyOpCallback = FUNCTION(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation): pointer;
@@ -473,6 +476,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
+{$ifdef fullVersion}
 CONSTRUCTOR T_variableReport.create;
   begin
     setLength(dat,0);
@@ -483,15 +487,17 @@ DESTRUCTOR T_variableReport.destroy;
     setLength(dat,0);
   end;
 
-PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal; CONST location: string);
+PROCEDURE T_variableReport.addVariable(CONST id: ansistring; CONST value: P_literal; CONST location: string; CONST retainExistent:boolean=false);
   VAR i,j:longint;
   begin
-    j:=0;
-    for i:=0 to length(dat)-1 do if dat[i].id<>id then begin
-      dat[j]:=dat[i];
-      inc(j);
+    if not(retainExistent) then begin
+      j:=0;
+      for i:=0 to length(dat)-1 do if dat[i].id<>id then begin
+        dat[j]:=dat[i];
+        inc(j);
+      end;
+      setLength(dat,j);
     end;
-    setLength(dat,j);
     setLength(dat,length(dat)+1);
     dat[length(dat)-1].id:=id;
     dat[length(dat)-1].value:=value;
@@ -503,6 +509,15 @@ PROCEDURE T_variableReport.addVariable(CONST namedVar: P_namedVariable; CONST lo
     addVariable(namedVar^.id,namedVar^.value,location);
   end;
 
+PROCEDURE T_variableReport.addSubReport(VAR sub:T_variableReport; CONST pseudoLocation:string);
+  VAR i,i1:longint;
+  begin
+    i1:=length(sub.dat)-1;
+    for i:=i1 downto 0 do
+    if i=0 then addVariable('par.: '+sub.dat[i].id,sub.dat[i].value,pseudoLocation,true)
+           else addVariable('par.: '+sub.dat[i].id,sub.dat[i].value,''            ,true);
+  end;
+{$endif}
 //=====================================================================================================================
 
 CONSTRUCTOR G_literalKeyMap.create();
