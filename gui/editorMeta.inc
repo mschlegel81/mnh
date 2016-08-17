@@ -335,7 +335,6 @@ PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST
       MnhForm.assistanceSynEdit.ClearAll;
       MnhForm.assistanceSynEdit.lines.clear;
       for i:=0 to length(errorHints)-1 do MnhForm.assistanceSynEdit.lines.add(errorHints[i]);
-      if (length(errorHints)>0) and not(runEvaluator.evaluationRunning) then MnhForm.outputPageControl.activePage:=MnhForm.assistanceTabSheet;
     end;
   end;
 

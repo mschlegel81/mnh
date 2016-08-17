@@ -20,8 +20,10 @@ TYPE
     PROCEDURE scopePop;
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     PROCEDURE createVariable(CONST id:ansistring; CONST value:P_literal; CONST readonly:boolean);
+    {$ifdef FULLVERSION}
     //For debugging:
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+    {$endif}
   end;
 
   P_evaluationContext=^T_evaluationContext;
@@ -32,6 +34,13 @@ TYPE
     valueStore:T_valueStore;
     adapters:P_adapters;
     allowDelegation:boolean;
+    {$ifdef FULLVERSION}
+    callStack:array of record
+      calledFuncLoc:T_tokenLocation;
+      calledFunctionId:ansistring;
+      parameters:T_variableReport;
+    end;
+    {$endif}
     CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
     CONSTRUCTOR createSanboxContext(CONST outAdapters:P_adapters);
     PROCEDURE adopt(CONST parent:P_evaluationContext);
@@ -45,8 +54,13 @@ TYPE
     //Local scope routines:
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
+    {$ifdef FULLVERSION}
     //For debugging:
+    PROCEDURE callStackPush(CONST calledFuncLoc:T_tokenLocation; CONST calledFunctionId:ansistring; CONST parameters:T_variableReport);
+    PROCEDURE callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
+    PROCEDURE callStackPop();
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
+    {$endif}
   end;
 
 IMPLEMENTATION
@@ -127,6 +141,7 @@ PROCEDURE T_valueStore.createVariable(CONST id:ansistring; CONST value:P_literal
     system.leaveCriticalSection(cs);
   end;
 
+{$ifdef FULLVERSION}
 PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
   VAR i :longint;
       i0:longint=0;
@@ -146,6 +161,7 @@ PROCEDURE T_valueStore.reportVariables(VAR variableReport:T_variableReport);
     end;
     system.leaveCriticalSection(cs);
   end;
+{$endif}
 
 PROCEDURE T_evaluationContext.adopt(CONST parent:P_evaluationContext);
   begin
@@ -251,10 +267,53 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
                  else result:=named^.getValue;
   end;
 
+{$ifdef FULLVERSION}
+PROCEDURE T_evaluationContext.callStackPush(CONST calledFuncLoc:T_tokenLocation; CONST calledFunctionId:ansistring; CONST parameters:T_variableReport);
+  VAR i:longint;
+  begin
+    i:=length(callStack);
+    setLength(callStack,i+1);
+    callStack[i].calledFuncLoc   :=calledFuncLoc;
+    callStack[i].calledFunctionId:=calledFunctionId;
+    callStack[i].parameters      :=parameters;
+    for i:=0 to length(parameters.dat)-1 do with parameters.dat[i] do value^.rereference;
+    stepper.steppingIn(calledFuncLoc,calledFunctionId);
+  end;
+
+PROCEDURE T_evaluationContext.callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
+  VAR i:longint;
+  begin
+    i:=length(callStack);
+    setLength(callStack,i+1);
+    callStack[i].calledFuncLoc   :=calledFuncLoc;
+    callStack[i].calledFunctionId:='(p)each body';
+    callStack[i].parameters.create;
+    callStack[i].parameters.addVariable(listElementName,listElementValue,'');
+    listElementValue^.rereference;
+    stepper.steppingIn(calledFuncLoc,'(p)each body');
+  end;
+
+PROCEDURE T_evaluationContext.callStackPop();
+  VAR i:longint;
+  begin
+    if length(callStack)<=0 then exit;
+    with callStack[length(callStack)-1] do begin
+      stepper.steppingOut(calledFuncLoc);
+      for i:=0 to length(parameters.dat)-1 do with parameters.dat[i] do disposeLiteral(value);
+      parameters.destroy;
+    end;
+    setLength(callStack,length(callStack)-1);
+  end;
+
 PROCEDURE T_evaluationContext.reportVariables(VAR variableReport:T_variableReport);
+  VAR i:longint;
   begin
     if parentContext<>nil then parentContext^.reportVariables(variableReport);
+    for i:=0 to length(callStack)-1 do begin
+      variableReport.addSubReport(callStack[i].parameters,'call '+callStack[i].calledFunctionId);
+    end;
     valueStore.reportVariables(variableReport);
   end;
 
+{$endif}
 end.

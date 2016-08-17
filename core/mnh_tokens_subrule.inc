@@ -123,6 +123,7 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
 PROCEDURE T_subrule.embrace;
   VAR i:longint;
   begin
+
     setLength(preparedBody,length(preparedBody)+2);
     for i:=length(preparedBody)-2 downto 1 do preparedBody[i]:=preparedBody[i-1];
     with preparedBody[0] do begin
@@ -334,45 +335,28 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         if result='' then result:='#'+intToStr(i);
       end;
 
-    VAR newFirst,tmp:P_token;
-        i,i1:longint;
-        subruleId:ansistring;
-        subruleLocation:ansistring;
+    VAR i,i1:longint;
+        report:T_variableReport;
+        tmp:P_token;
     begin
-      //Example: f(x,y)->...
-      //add before: begin
-      //              local x:=x;
-      //              local y:=y;
-      //add after:  ; end
-      //pattern.sig[0].id;
-      subruleId:=getSubruleId;
-      subruleLocation:=ansistring(declaredAt);
-      if (firstRep^.tokType=tt_beginFunc) and
-         (lastRep ^.tokType=tt_endFunc) then begin
-        firstRep  ^.tokType:=tt_beginBlock;
-        lastRep   ^.tokType:=tt_endBlock;
-      end;
-      if typ in [srt_normal_private,srt_normal_public]
-      then newFirst:=context.newToken(declaredAt,subruleId,tt_beginFunc)
-      else newFirst:=context.newToken(declaredAt,subruleId,tt_beginBlock);
-      tmp:=newFirst;
-      if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
-      for i:=0 to i1-1 do begin
-        tmp^.next:=context.newToken(declaredAt,parId(i),tt_assignNewBlockLocal); tmp:=tmp^.next;
-        tmp^.next:=context.newToken(declaredAt,'',tt_literal,param^.value(i));   tmp:=tmp^.next;
-        tmp^.next:=context.newToken(declaredAt,'',tt_semicolon);                 tmp:=tmp^.next;
-        param^.value(i)^.rereference;
-      end;
-      tmp^.next:=firstRep;
-      firstRep:=newFirst;
-      lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon); lastRep:=lastRep^.next;
+      if typ in [srt_normal_private,srt_normal_public] then begin
+        report.create;
+        if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
+        for i:=0 to i1-1 do report.addVariable(parId(i),param^.value(i),'');
+        context.callStackPush(declaredAt,getSubruleId,report);
+        if firstRep^.tokType<>tt_beginFunc then begin
+          //new first
+          tmp:=context.newToken(declaredAt,'',tt_beginFunc);
+          tmp^.next:=firstRep;
+          firstRep:=tmp;
 
-      if typ in [srt_normal_private,srt_normal_public]
-      then lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc)
-      else lastRep^.next:=context.newToken(declaredAt,'',tt_endBlock);
-      lastRep:=lastRep^.next;
-      if typ in [srt_normal_private,srt_normal_public]
-      then stepper.steppingIn(subruleLocation,subruleId);
+          //new last
+          lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
+          lastRep:=lastRep^.next;
+          lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc);
+          lastRep:=lastRep^.next;
+        end;
+      end;
     end;
   {$endif}
 

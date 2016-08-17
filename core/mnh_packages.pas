@@ -66,11 +66,11 @@ TYPE
       PROCEDURE setSourcePath(CONST path:ansistring);
       {$ifdef fullVersion}
       PROCEDURE setSourceUTF8AndPath(CONST sourceUtf8:TStrings; CONST pathOrPseudoPath:string);
+      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       {$else}
       PROCEDURE clearSource;
       PROCEDURE appendSource(CONST line:string);
       {$endif}
-      PROCEDURE reportVariables(VAR variableReport:T_variableReport);
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_listLiteral;
 
@@ -1090,6 +1090,7 @@ PROCEDURE T_package.appendSource(CONST line:string);
   end;
 {$endif}
 
+{$ifdef fullVersion}
 PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
   VAR i:longint;
       r:T_ruleMap.VALUE_TYPE_ARRAY;
@@ -1102,6 +1103,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport:T_variableReport);
     for i:=0 to length(r)-1 do if r[i]^.isReportable(value) then variableReport.addVariable(r[i]^.id, value,r[i]^.declarationStart);
     setLength(r,0);
   end;
+{$endif}
 
 FUNCTION T_package.getCodeProvider:P_codeProvider;
   begin

@@ -1132,7 +1132,13 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
+        {$ifdef FULLVERSION}
+        stepper.steppingIn('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
+        {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
+        {$ifdef FULLVERSION}
+        stepper.steppingOut('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
+        {$endif}
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
           lastReplace:=firstReplace;
@@ -1472,7 +1478,7 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 {$define COMMON_SEMICOLON_HANDLING:=
 tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
-    {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
+    {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop; {$endif}
     stack.popDestroy(context);
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
@@ -1489,7 +1495,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     stack.create;
     {$ifdef fullVersion}
     stepInLocation:=first^.location;
-    if currentlyDebugging then stepper.steppingIn(first^.location,'');
     {$endif}
     {$ifndef DEBUGMODE}try{$endif}
     repeat
@@ -1621,7 +1626,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end;
           tt_mutate: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
-              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
+              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop(); {$endif}
               stack.popDestroy(context);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1642,7 +1647,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.disposeToken(first);
-              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then stepper.steppingOut(stack.dat[stack.topIndex]^.txt); {$endif}
+              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop(); {$endif}
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1798,9 +1803,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       {$endif}
       while (stack.topIndex>=0) do stack.popLink(first);
     end;
-    {$ifdef fullVersion}
-    if currentlyDebugging then stepper.steppingOut(stepInLocation);
-    {$endif}
     stack.destroy;
   end;
 
