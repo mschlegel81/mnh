@@ -20,7 +20,7 @@ TYPE
     minErrorLevel: shortint;
   end;
 
-  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,at_sandboxAdapter);
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,at_sandboxAdapter,at_printTextFileAtRuntime);
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
@@ -59,14 +59,17 @@ TYPE
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
-    lastFileFlushTime:double;
-    outputFileName:ansistring;
-    longestLineUpToNow:longint;
-    lastWasEndOfEvaluation:boolean;
-    CONSTRUCTOR create(CONST fileName:ansistring);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE append(CONST message: T_storedMessage); virtual;
-    PROCEDURE flush;
+    private
+      lastFileFlushTime:double;
+      outputFileName:ansistring;
+      longestLineUpToNow:longint;
+      lastWasEndOfEvaluation:boolean;
+      PROCEDURE switchFile(CONST newFileName:string);
+    public
+      CONSTRUCTOR create(CONST fileName:ansistring);
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE append(CONST message: T_storedMessage); virtual;
+      PROCEDURE flush;
   end;
 
   P_adapters=^T_adapters;
@@ -127,12 +130,14 @@ TYPE
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
+      PROCEDURE removeOutAdapter(CONST index:longint);
+      PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
 
       FUNCTION collectingClone:P_adapters;
-      FUNCTION copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean):T_storedMessages;
+      PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
 
       PROCEDURE setExitCode;
   end;
@@ -311,6 +316,15 @@ PROCEDURE T_textFileOutAdapter.flush;
     except
     end;
     clearMessages;
+    lastFileFlushTime:=now;
+  end;
+
+PROCEDURE T_textFileOutAdapter.switchFile(CONST newFileName:string);
+  begin
+    flush;
+    lastWasEndOfEvaluation:=true;
+    longestLineUpToNow:=0;
+    outputFileName:=expandFileName(newFileName);
     lastFileFlushTime:=now;
   end;
 
@@ -583,13 +597,46 @@ PROCEDURE T_adapters.addConsoleOutAdapter;
   end;
 
 PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
-  VAR i,j:longint;
+  VAR i:longint;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].ad=p then begin
-      if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
-      for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
-      setLength(adapter,length(adapter)-1);
+      removeOutAdapter(i);
       exit;
+    end;
+  end;
+
+PROCEDURE T_adapters.removeOutAdapter(CONST index:longint);
+  VAR j:longint;
+  begin
+    if (index<0) or (index>=length(adapter)) then exit;
+    if adapter[index].doDestroy then dispose(adapter[index].ad,destroy);
+    for j:=index to length(adapter)-2 do adapter[j]:=adapter[j+1];
+    setLength(adapter,length(adapter)-1);
+  end;
+
+PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
+  VAR currentAdapterIndex:longint;
+      txtAdapter:P_textFileOutAdapter;
+  begin
+    currentAdapterIndex:=length(adapter)-1;
+    while (currentAdapterIndex>=0) and (adapter[currentAdapterIndex].ad^.adapterType<>at_printTextFileAtRuntime) do dec(currentAdapterIndex);
+
+    if isBlank(filenameOrBlank) then begin
+      if currentAdapterIndex>=0 then removeOutAdapter(currentAdapterIndex);
+      //...else there is no adapter to be removed
+    end else begin
+      if currentAdapterIndex>=0 then P_textFileOutAdapter(adapter[currentAdapterIndex].ad)^.switchFile(filenameOrBlank)
+      else begin
+        new(txtAdapter,create(filenameOrBlank));
+        addOutAdapter(txtAdapter,true);
+        with txtAdapter^.outputBehaviour do begin
+          doEchoInput:=false;
+          doEchoDeclaration:=false;
+          doShowExpressionOut:=false;
+          doShowTimingInfo:=false;
+          minErrorLevel:=100;
+        end;
+      end;
     end;
   end;
 
@@ -615,19 +662,14 @@ FUNCTION T_adapters.collectingClone: P_adapters;
     {$endif}
   end;
 
-FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean): T_storedMessages;
+PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean);
   VAR collector:P_collectingOutAdapter=nil;
       i:longint;
-  PROCEDURE appendToResult;
-    begin
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=collector^.storedMessages[i];
-    end;
+
   begin
     for i:=0 to length(clone^.adapter)-1 do
     if (collector=nil) and
        (clone^.adapter[i].ad^.adapterType=at_sandboxAdapter) then collector:=P_collectingOutAdapter(clone^.adapter[i].ad);
-    setLength(result,0);
     {$ifdef fullVersion}
     if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
                            clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
@@ -638,12 +680,9 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
       mt_el5_haltMessageReceived,
       mt_endOfEvaluation,
-      mt_reloadRequired: begin appendToResult; raiseCustomMessage(collector^.storedMessages[i]); end;
+      mt_reloadRequired: raiseCustomMessage(collector^.storedMessages[i]);
       else begin
-             if errorCase then appendToResult else begin
-               raiseCustomMessage(collector^.storedMessages[i]);
-             end;
-
+        if not(errorCase) then raiseCustomMessage(collector^.storedMessages[i]);
       end;
     end;
     dispose(clone,destroy);

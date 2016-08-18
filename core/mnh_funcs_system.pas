@@ -623,6 +623,15 @@ FUNCTION logTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
     end;
   end;
 
+FUNCTION printTo_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)  then begin
+      context.adapters^.setPrintTextFileAdapter(str0^.value);
+      result:=newVoidLiteral;
+    end;
+  end;
+
 FUNCTION setExitCode_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
@@ -673,6 +682,7 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectOutput',@collectOutput_impl,'collectOutput;#Starts collecting output messages to be accessed via function collectedOutput');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'collectedOutput',@collectedOutput_impl,'collectedOutput;#Returns messages collected since the last call of collectOutput.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'logTo',@logTo_impl,'logTo(logName:string,appendMode:boolean);#Adds a log with given name and write mode and returns void.');
+  registerRule(SYSTEM_BUILTIN_NAMESPACE,'printTo',@printTo_impl,'printTo(logName:string);#Adds a log receiving only print messages with given name and and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode',@setExitCode_impl,'setExitCode(code:int);#Sets the exit code of the executable.#Might be overridden by an evaluation error.');
 FINALIZATION
   collector.destroy;

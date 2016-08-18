@@ -1060,6 +1060,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         context.cascadeDisposeToken(bodyParts[0].first);
         errorCase:=true;
       end;
+      oldAdapters^.copyDataFromCollectingCloneDisposing(context.adapters,errorCase);
       context.adapters:=oldAdapters;
       context.allowDelegation:=prev_allowDelegation;
       if errorCase then begin
