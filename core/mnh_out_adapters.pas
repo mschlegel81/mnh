@@ -20,7 +20,7 @@ TYPE
     minErrorLevel: shortint;
   end;
 
-  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,at_sandboxAdapter);
+  T_adapterType=(at_unknown,at_console,at_textFile,at_htmlFile,at_gui,at_sandboxAdapter,at_printTextFileAtRuntime);
 
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
@@ -59,14 +59,17 @@ TYPE
 
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_collectingOutAdapter)
-    lastFileFlushTime:double;
-    outputFileName:ansistring;
-    longestLineUpToNow:longint;
-    lastWasEndOfEvaluation:boolean;
-    CONSTRUCTOR create(CONST fileName:ansistring);
-    DESTRUCTOR destroy; virtual;
-    PROCEDURE append(CONST message: T_storedMessage); virtual;
-    PROCEDURE flush;
+    private
+      lastFileFlushTime:double;
+      outputFileName:ansistring;
+      longestLineUpToNow:longint;
+      lastWasEndOfEvaluation:boolean;
+      PROCEDURE switchFile(CONST newFileName:string);
+    public
+      CONSTRUCTOR create(CONST fileName:ansistring);
+      DESTRUCTOR destroy; virtual;
+      PROCEDURE append(CONST message: T_storedMessage); virtual;
+      PROCEDURE flush;
   end;
 
   P_adapters=^T_adapters;
@@ -124,6 +127,8 @@ TYPE
       PROCEDURE addOutAdapter(CONST p:P_abstractOutAdapter; CONST destroyIt:boolean);
       PROCEDURE addConsoleOutAdapter;
       PROCEDURE removeOutAdapter(CONST p:P_abstractOutAdapter);
+      PROCEDURE removeOutAdapter(CONST index:longint);
+      PROCEDURE setPrintTextFileAdapter(CONST filenameOrBlank:string);
 
       FUNCTION adapterCount:longint;
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
@@ -308,6 +313,15 @@ PROCEDURE T_textFileOutAdapter.flush;
     except
     end;
     clearMessages;
+    lastFileFlushTime:=now;
+  end;
+
+PROCEDURE T_textFileOutAdapter.switchFile(CONST newFileName:string);
+  begin
+    flush;
+    lastWasEndOfEvaluation:=true;
+    longestLineUpToNow:=0;
+    outputFileName:=expandFileName(newFileName);
     lastFileFlushTime:=now;
   end;
 
@@ -569,13 +583,46 @@ PROCEDURE T_adapters.addConsoleOutAdapter;
   end;
 
 PROCEDURE T_adapters.removeOutAdapter(CONST p: P_abstractOutAdapter);
-  VAR i,j:longint;
+  VAR i:longint;
   begin
     for i:=0 to length(adapter)-1 do if adapter[i].ad=p then begin
-      if adapter[i].doDestroy then dispose(adapter[i].ad,destroy);
-      for j:=i to length(adapter)-2 do adapter[j]:=adapter[j+1];
-      setLength(adapter,length(adapter)-1);
+      removeOutAdapter(i);
       exit;
+    end;
+  end;
+
+PROCEDURE T_adapters.removeOutAdapter(CONST index:longint);
+  VAR j:longint;
+  begin
+    if (index<0) or (index>=length(adapter)) then exit;
+    if adapter[index].doDestroy then dispose(adapter[index].ad,destroy);
+    for j:=index to length(adapter)-2 do adapter[j]:=adapter[j+1];
+    setLength(adapter,length(adapter)-1);
+  end;
+
+PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
+  VAR currentAdapterIndex:longint;
+      txtAdapter:P_textFileOutAdapter;
+  begin
+    currentAdapterIndex:=length(adapter)-1;
+    while (currentAdapterIndex>=0) and (adapter[currentAdapterIndex].ad^.adapterType<>at_printTextFileAtRuntime) do dec(currentAdapterIndex);
+
+    if isBlank(filenameOrBlank) then begin
+      if currentAdapterIndex>=0 then removeOutAdapter(currentAdapterIndex);
+      //...else there is no adapter to be removed
+    end else begin
+      if currentAdapterIndex>=0 then P_textFileOutAdapter(adapter[currentAdapterIndex].ad)^.switchFile(filenameOrBlank)
+      else begin
+        new(txtAdapter,create(filenameOrBlank));
+        addOutAdapter(txtAdapter,true);
+        with txtAdapter^.outputBehaviour do begin
+          doEchoInput:=false;
+          doEchoDeclaration:=false;
+          doShowExpressionOut:=false;
+          doShowTimingInfo:=false;
+          minErrorLevel:=100;
+        end;
+      end;
     end;
   end;
 
