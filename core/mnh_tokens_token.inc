@@ -1133,11 +1133,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifdef FULLVERSION}
-        stepper.steppingIn('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
+        if currentlyDebugging then stepper.steppingIn('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
         {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         {$ifdef FULLVERSION}
-        stepper.steppingOut('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
+        if currentlyDebugging then stepper.steppingOut('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
         {$endif}
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
