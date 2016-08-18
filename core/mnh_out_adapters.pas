@@ -129,7 +129,7 @@ TYPE
       FUNCTION getAdapter(CONST index:longint):P_abstractOutAdapter;
 
       FUNCTION collectingClone:P_adapters;
-      FUNCTION copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean):T_storedMessages;
+      PROCEDURE copyDataFromCollectingCloneDisposing(VAR clone:P_adapters; CONST errorCase:boolean);
 
       PROCEDURE setExitCode;
   end;
@@ -601,19 +601,14 @@ FUNCTION T_adapters.collectingClone: P_adapters;
     {$endif}
   end;
 
-FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean): T_storedMessages;
+PROCEDURE T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; CONST errorCase:boolean);
   VAR collector:P_collectingOutAdapter=nil;
       i:longint;
-  PROCEDURE appendToResult;
-    begin
-      setLength(result,length(result)+1);
-      result[length(result)-1]:=collector^.storedMessages[i];
-    end;
+
   begin
     for i:=0 to length(clone^.adapter)-1 do
     if (collector=nil) and
        (clone^.adapter[i].ad^.adapterType=at_sandboxAdapter) then collector:=P_collectingOutAdapter(clone^.adapter[i].ad);
-    setLength(result,0);
     {$ifdef fullVersion}
     if not(errorCase) and (clone^.hasMessageOfType[mt_plotFileCreated] or
                            clone^.hasMessageOfType[mt_plotCreatedWithDeferredDisplay] or
@@ -624,12 +619,9 @@ FUNCTION T_adapters.copyDataFromCollectingCloneDisposing(VAR clone: P_adapters; 
     for i:=0 to length(collector^.storedMessages)-1 do case collector^.storedMessages[i].messageType of
       mt_el5_haltMessageReceived,
       mt_endOfEvaluation,
-      mt_reloadRequired: begin appendToResult; raiseCustomMessage(collector^.storedMessages[i]); end;
+      mt_reloadRequired: raiseCustomMessage(collector^.storedMessages[i]);
       else begin
-             if errorCase then appendToResult else begin
-               raiseCustomMessage(collector^.storedMessages[i]);
-             end;
-
+        if not(errorCase) then raiseCustomMessage(collector^.storedMessages[i]);
       end;
     end;
     dispose(clone,destroy);
