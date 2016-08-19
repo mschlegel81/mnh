@@ -632,7 +632,6 @@ PROCEDURE TMnhForm.FormShow(Sender: TObject);
     if reEvaluationWithGUIrequired then begin
       doStartEvaluation(true,true);
       runEvaluator.reEvaluateWithGUI;
-
       setEditorMode(false);
     end;
   end;
@@ -1239,14 +1238,16 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
     isEvaluationRunning:=runEvaluator.evaluationRunning;
     if askForm.displayPending then askForm.Show;
     if showing then begin
-      //Form caption:-------------------------------------------------------------
-      if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
-      then begin
-        aid:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
-        editorMeta[PageControl.activePageIndex].repaintWithStateCounter(codeAssistant.getStateCounter,codeAssistant.getErrorHints);
-      end else aid:=C_appTitle;
-      if aid<>caption then caption:=aid;
-      //-------------------------------------------------------------:Form caption
+      if not (reEvaluationWithGUIrequired) then begin
+        //Form caption:-------------------------------------------------------------
+        if (PageControl.activePageIndex>=0) and (PageControl.activePageIndex<length(editorMeta))
+        then begin
+          aid:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
+          editorMeta[PageControl.activePageIndex].repaintWithStateCounter(codeAssistant.getStateCounter,codeAssistant.getErrorHints);
+        end else aid:=C_appTitle;
+        if aid<>caption then caption:=aid;
+        //-------------------------------------------------------------:Form caption
+      end;
       //progress time:------------------------------------------------------------
       if PageControl.activePageIndex>=0
       then aid:=C_tabChar+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretX)
@@ -1478,6 +1479,7 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
       PageControl.enabled:=false;
       Splitter1.visible:=false;
       Splitter1.enabled:=false;
+      caption:=C_appTitle+' '+getFileOrCommandToInterpretFromCommandLine;
     end;
     subMenuFile.enabled:=enable;
     subMenuFile.visible:=enable;
