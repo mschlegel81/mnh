@@ -87,7 +87,7 @@ private analyzeCase(data,testCase:string)->begin
 
   local star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
-  table.each(line,line.each(x,x:numeric ? round(x,4) : x).join("\t")).join("\n").print;
+  table.each(line,line.each(x,x.isNumeric ? round(x,4) : x).join("\t")).join("\n").print;
 end;
 
 private analyzeFlavour(data,flavour:string)->begin
