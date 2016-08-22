@@ -978,7 +978,7 @@ PROCEDURE TMnhForm.handleBreak;
     first:=stepper.token;
     stack:=stepper.stack;
     currentExpressionMemo.clear;
-    if first<>nil then currentExpressionMemo.lines.append(stack^.toString(first,30));
+    if first<>nil then currentExpressionMemo.lines.append(stack^.toString(first,120));
 
     updateDebugParts;
   end;
