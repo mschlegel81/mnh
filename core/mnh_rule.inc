@@ -331,7 +331,7 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
 
 FUNCTION T_rule.isReportable(OUT value:P_literal):boolean;
   begin
-    if ruleType in [rt_memoized,rt_synchronized,rt_normal]
+    if ruleType in [rt_memoized,rt_synchronized,rt_normal,rt_customTypeCheck]
     then value:=getInlineValue
     else value:=namedValue.getValue;
     if value=nil then exit(false);

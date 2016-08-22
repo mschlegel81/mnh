@@ -434,8 +434,8 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
       stepper.doStart(false);
       updateDebugParts;
-      breakPointHandlingPending:=true;
     end else currentlyDebugging:=false;
+    breakPointHandlingPending:=true;
     UpdateTimeTimer.interval:=20;
   end;
 
@@ -974,12 +974,10 @@ PROCEDURE TMnhForm.handleBreak;
       variablesStringGrid.Cells[2,length(report.dat)-i]:=report.dat[i].value^.typeString;
       variablesStringGrid.Cells[3,length(report.dat)-i]:=report.dat[i].value^.toString;
     end;
-
     first:=stepper.token;
     stack:=stepper.stack;
     currentExpressionMemo.clear;
     if first<>nil then currentExpressionMemo.lines.append(stack^.toString(first,120));
-
     updateDebugParts;
   end;
 
