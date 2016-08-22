@@ -15,7 +15,7 @@ private isSolved(Board)->COMPONENTS.each(c,Board[c].sort==[1..9],AND);
 private isValid(Board)->Board.each(cell,not(cell==[]),AND) AND
                         COMPONENTS.each(c,Board[c].flatten.unique==[1..9],AND);
 //*A board's difficulty is given by the number of cells to fill
-private difficulty(Board)->Board.each(cell,cell:int ? 0 : 1,+);
+private difficulty(Board)->Board.each(cell,cell.isInt ? 0 : 1,+);
 
 private
 initialBoard->begin
@@ -29,7 +29,7 @@ printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+-------
                [0..8].each(col,begin
                  local i:=col+9*row;
                  (col in [3,6] ? '|' : '')&
-                 " "&(B[i] :int ? B[i] : " ")&" ";
+                 " "&(B[i].isInt ? B[i] : " ")&" ";
                end,&)))|B;
 
 private
@@ -39,9 +39,9 @@ solve(B)->begin
   while(needRun,
   begin
     needRun:=false;
-    local intsOnly:=Board.each(c,c:int ? c : []);
+    local intsOnly:=Board.each(c,c.isInt ? c : []);
     Board:=[0..80].each(i,
-      Board[i]:int
+      Board[i].isInt
       ? Board[i]
       : begin
           local newList:=drop(Board[i],intsOnly[connectedIdx(i)].flatten);
@@ -63,29 +63,8 @@ solve(B)->begin
   Board;
 end;
 
-private
-bruteForceSolve(B)->begin
-  local Board:=solve(B);
-  isSolved(Board) ? Board : begin
-    local firstListIdx:=min(81|each(i,[0..80],Board[i]:int ? void : i));
-    local candidates:=Board[firstListIdx];
-    local numberOfSolutions:=0;
-    local finalSolution:=void;
-    each(candidate,candidates,numberOfSolutions>1 ? void : begin
-      local newSolution:=bruteForceSolve(each(i,[0..80],i=firstListIdx ? candidate : Board[i]));
-      isSolved(newSolution)
-      ? begin
-          finalSolution:=newSolution;
-          numberOfSolutions+=1;
-        end
-      : void;
-    end);
-    numberOfSolutions=1 ? finalSolution : initialBoard;
-  end;
-end;
-
 private restrictRandom(B)->begin
-  local listIndexes:=[0..80].each(i,B[i]:int ? void : i);
+  local listIndexes:=[0..80].each(i,B[i].isInt ? void : i);
   listIndexes==[] ? B : begin
     local randomListIdx:=listIndexes[intRandom(size(listIndexes))];
     [0..80].each(i,i=randomListIdx ? B[i,intRandom(size(B.get(i)))] : B[i]);

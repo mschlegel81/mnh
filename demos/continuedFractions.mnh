@@ -1,6 +1,6 @@
 private continuedFraction(a,b)->begin
-  local A:=a:expression ? a : {$n*0+(a)};
-  local B:=b:expression ? b : {$n*0+(b)};
+  local A:=a.isExpression ? a : {$n*0+(a)};
+  local B:=b.isExpression ? b : {$n*0+(b)};
 
   local resultNum:=0;
   local resultTxt:="...";
