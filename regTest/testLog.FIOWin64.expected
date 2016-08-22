@@ -3323,7 +3323,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.executor','mnh.parameterNames','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.bits','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.myPath','mnh.not','mnh.ord']
+out> ['mnh.isNumList','mnh.executor','mnh.isString','mnh.parameterNames','mnh.isExpression','mnh.isRealList','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.bits','mnh.isInt','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.group','mnh.isStringList','mnh.isKeyValueList','mnh.isReal','mnh.isList','mnh.myPath','mnh.not','mnh.isBoolList','mnh.isScalar','mnh.isBoolean','mnh.isIntList','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
@@ -3572,21 +3572,20 @@ out> '\mnh_imig.exe'
 Package ID is: sudoku
 Path         : \demos\sudoku.mnh
 Uses         : []
- rule:          COMPONENTS      @\demos\sudoku.mnh:4,1
-memoized  rule: connectedIdx    @\demos\sudoku.mnh:9,1
-memoized  rule: components      @\demos\sudoku.mnh:10,1
- rule:          difficulty      @\demos\sudoku.mnh:18,1
- rule:          restrictRandom  @\demos\sudoku.mnh:87,1
- rule:          main            @\demos\sudoku.mnh:119,1
- rule:          initialBoard    @\demos\sudoku.mnh:20,1
- rule:          solve           @\demos\sudoku.mnh:35,1
- rule:          randomSolution  @\demos\sudoku.mnh:95,1
- rule:          drop            @\demos\sudoku.mnh:1,1
- rule:          isSolved        @\demos\sudoku.mnh:13,1
- rule:          isValid         @\demos\sudoku.mnh:15,1
- rule:          printBoard      @\demos\sudoku.mnh:27,1
- rule:          bruteForceSolve @\demos\sudoku.mnh:66,1
- rule:          randomRiddle    @\demos\sudoku.mnh:106,1
+ rule:          COMPONENTS     @\demos\sudoku.mnh:4,1
+memoized  rule: connectedIdx   @\demos\sudoku.mnh:9,1
+memoized  rule: components     @\demos\sudoku.mnh:10,1
+ rule:          difficulty     @\demos\sudoku.mnh:18,1
+ rule:          restrictRandom @\demos\sudoku.mnh:66,1
+ rule:          main           @\demos\sudoku.mnh:98,1
+ rule:          initialBoard   @\demos\sudoku.mnh:20,1
+ rule:          solve          @\demos\sudoku.mnh:35,1
+ rule:          randomSolution @\demos\sudoku.mnh:74,1
+ rule:          drop           @\demos\sudoku.mnh:1,1
+ rule:          isSolved       @\demos\sudoku.mnh:13,1
+ rule:          isValid        @\demos\sudoku.mnh:15,1
+ rule:          printBoard     @\demos\sudoku.mnh:27,1
+ rule:          randomRiddle   @\demos\sudoku.mnh:85,1
 out> []
  in> print("1\n2.0\n03.45");
 1
@@ -3640,11 +3639,11 @@ out> ['  -2','3  4.3']
 out> [196,214,220]
  in> sysToUtf8('TÄTÜ');
 out> 'TÃ„TÃœ'
- in> type(3);
+ in> typeOf(3);
 out> 'int'
- in> type([1..5, 7.5]);
+ in> typeOf([1..5, 7.5]);
 out> 'numericList(6)'
- in> type({$x^2+$y});
+ in> typeOf({$x^2+$y});
 out> 'expression(2)'
  in> 'Test something'.base92encode;
 out> '!&NY>fdTx<$-h|;T*=u_'
