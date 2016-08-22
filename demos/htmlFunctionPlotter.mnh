@@ -50,7 +50,7 @@ pageSet(rawParameters,parameters)->begin
       //if there are no validation messages, add link to image and generate image
       htmlCode&='<img src="plotImg.png?'&rawParameters&'">';
       local X:=([0,1]|random(sp-2)).sort*(x1-x0)+x0;
-      plot(X,f(X));
+      plot(f,x0,x1,sp,'1.5 red');
       imageCode:=wrapTextInHttp(plot.renderToString(400,400,4),'image/png');
     end
   : begin
