@@ -1,13 +1,14 @@
-type matrix(M:list)->M.each(row,row.isNumList ? row.size : -1).unique.size=1;
+type matrix(M:list)->M.pEach(row,row.isNumList,AND) AND M.pEach(row,row.size).unique.size=1;
 type squareMatrix(M:list)->M.each(row,row.isNumList(M.size),AND);
 
-subMatrix(M:list,skipRow,skipCol)->M.each(row,index=skipRow
-                                              ? void
-                                              : row.each(cell,index=skipCol ? void : cell));
+private subMatrix(M:list,skipRow,skipCol)->
+  M.each(row,index=skipRow
+             ? void
+             : row.each(cell,index=skipCol ? void : cell));
 
-matrixDimensions(M:matrix)->[M.size,M[0].size];
+private matrixDimensions(M:matrix)->[M.size,M[0].size];
 
-
+//*Matrix multiplication
 mult(x:matrix,y:matrix)->begin
   local dimX:=matrixDimensions(x);
   local dimY:=matrixDimensions(y);
@@ -15,6 +16,10 @@ mult(x:matrix,y:matrix)->begin
                        [0..dimY[1]-1].each(k,(x.get(i)*y.getInner(k)).agg(+)))
                      : fail('Matrices must have compatible sizes for multiplication.');
 end;
+//*Matrix+vector multiplication
+mult(x:matrix,vec:numericList)->x.mult(vec.each(c,[c]));
+//*Vector+matrix multiplication
+mult(vec:numericList,y:matrix)->[vec].mult(y);
 
 determinant(M:squareMatrix)->
   M.size=1 ? M[0,0] :
@@ -57,3 +62,14 @@ invert(M:squareMatrix)->begin
   aid.each(row,row.tail(M.size));
 end;
 
+isUnitMatrix(M:squareMatrix)->M.each(row,begin local rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
+
+rotZ(angle)->[[ cos(angle),sin(angle),0],
+              [-sin(angle),cos(angle),0],
+              [         0 ,        0 ,1]];
+rotY(angle)->[[ cos(angle),0,sin(angle)],
+              [         0 ,1,        0 ],
+              [-sin(angle),0,cos(angle)]];
+rotX(angle)->[[1,         0 ,        0 ],
+              [0, cos(angle),sin(angle)],
+              [0,-sin(angle),cos(angle)]];
