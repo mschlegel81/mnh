@@ -179,7 +179,7 @@ exit}
           called:=true;
         end;
       end;
-      rt_normal: begin
+      rt_normal,rt_customTypeCheck: begin
         for useUncurryingFallback:=false to true do
         for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
           called:=true;

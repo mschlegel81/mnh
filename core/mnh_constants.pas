@@ -70,6 +70,7 @@ TYPE
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRule,
     tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue,
+    tt_customTypeRule,
     tt_blockLocalVariable,
     tt_ponFlipper,
     tt_aggregatorConstructor,
@@ -111,6 +112,7 @@ TYPE
     tt_typeCheckNumeric, tt_typeCheckNumList,
     tt_typeCheckExpression,
     tt_typeCheckKeyValueList,
+    tt_customTypeCheck,
     tt_semicolon,
     tt_optionalParameters,
     //modifiers:
@@ -121,14 +123,15 @@ TYPE
     tt_modifier_datastore,
     tt_modifier_synchronized,
     tt_modifier_local,
+    tt_modifier_customType,
     //special: [E]nd [O]f [L]ine
     tt_EOL,
     tt_blank);
 
   T_tokenTypeSet=set of T_tokenType;
-  T_modifier=                         tt_modifier_private..tt_modifier_synchronized;
+  T_modifier=                         tt_modifier_private..tt_modifier_customType;
   T_cStyleOperator=tt_cso_assignPlus..tt_cso_assignAppend;
-CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized];
+CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
 TYPE
   T_modifierSet=set of T_modifier;
 
@@ -231,6 +234,7 @@ CONST
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A put-cache-value call'),
+      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A custom type check rule'),
       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A block-local variable'),
       (defaultId:'.'; reservedWordClass:rwc_not_reserved; helpText:'A pseudo-object-notation flipper'),
       (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
@@ -321,6 +325,7 @@ CONST
       (defaultId:':numericList';reservedWordClass:rwc_typeCheck; helpText:'Type check numeric list;#Matches on lists of integers and reals (mixing is allowed) and empty lists'),
       (defaultId:':expression';reservedWordClass:rwc_typeCheck; helpText:'Type check expression;#Matches on expressions#In patterns it can be modified to match only on expressions with a given arity'),
       (defaultId:':keyValueList';reservedWordClass:rwc_typeCheck; helpText:'Type check key-value-list;#Matches on key-value-lists and empty lists#A key-value list only consists of sub-lists of size 2 whose first element is a string'),
+      (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'Custom type check'),
       (defaultId:';';reservedWordClass:rwc_not_reserved; helpText:'Semicolon#Ends a statement'),
       (defaultId:'...';reservedWordClass:rwc_not_reserved; helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
       (defaultId:'private';reservedWordClass:rwc_modifier; helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
@@ -330,6 +335,7 @@ CONST
       (defaultId:'datastore';reservedWordClass:rwc_modifier; helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
       (defaultId:'synchronized';reservedWordClass:rwc_modifier; helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
       (defaultId:'local';reservedWordClass:rwc_modifier; helpText:'Modifier local#Used for declaring block-local variables'),
+      (defaultId:'type';reservedWordClass:rwc_modifier; helpText:'Modifier type#Used for declaring custom type checks'),
       (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'End-Of-Input#Helper token; May also indicate a comment'),
       (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
@@ -378,10 +384,12 @@ TYPE
           rt_persistent_private,
           rt_datastore_public,
           rt_datastore_private,
-          rt_synchronized);
+          rt_synchronized,
+          rt_customTypeCheck);
 CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
+      C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private,rt_customTypeCheck];
       C_csProtectedRuleTypes:set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
-      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public];
+      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public,rt_customTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
       '','memoized ',
          'mutable ',
@@ -390,8 +398,9 @@ CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private
          'private persistent ',
          'datastore ',
          'private datastore ',
-         'synchronized ');
-      C_validModifierCombinations:array[0..13] of record
+         'synchronized ',
+         'type ');
+      C_validModifierCombinations:array[0..14] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
       end=((modifiers:[];ruleType:rt_normal),
@@ -407,7 +416,8 @@ CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private
            (modifiers:[tt_modifier_memoized];ruleType:rt_memoized),
            (modifiers:[tt_modifier_memoized,tt_modifier_private];ruleType:rt_memoized),
            (modifiers:[tt_modifier_synchronized];ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_synchronized,tt_modifier_private];ruleType:rt_synchronized));
+           (modifiers:[tt_modifier_synchronized,tt_modifier_private];ruleType:rt_synchronized),
+           (modifiers:[tt_modifier_customType];ruleType:rt_customTypeCheck));
 
 TYPE
   T_messageType = (

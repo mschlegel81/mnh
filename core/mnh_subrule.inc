@@ -8,7 +8,6 @@
     token:T_token;
   end;
 
-  P_subrule=^T_subrule;
   T_subrule=object
     private
       comment:ansistring;
@@ -40,6 +39,7 @@
       FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+      FUNCTION accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
       FUNCTION getInlineValue:P_literal;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
@@ -143,21 +143,7 @@ FUNCTION T_subrule.needEmbrace:boolean;
     if length(preparedBody)<=1 then exit(false);
     result:=false;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
-      if (tokType in [tt_separatorComma, tt_separatorCnt,
-            tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq,
-            tt_operatorAnd, tt_operatorOr, tt_operatorXor,
-            tt_operatorPlus, tt_operatorMinus, tt_operatorMult, tt_operatorDivReal, tt_operatorDivInt, tt_operatorMod, tt_operatorPot,
-            tt_operatorStrConcat,
-            tt_operatorConcat, tt_operatorIn,
-            tt_iifCheck, tt_iifElse,
-            tt_typeCheckScalar,  tt_typeCheckList,
-            tt_typeCheckBoolean, tt_typeCheckBoolList,
-            tt_typeCheckInt,     tt_typeCheckIntList,
-            tt_typeCheckReal,    tt_typeCheckRealList,
-            tt_typeCheckString,  tt_typeCheckStringList,
-            tt_typeCheckNumeric, tt_typeCheckNumList,
-            tt_typeCheckExpression,
-            tt_typeCheckKeyValueList]) and (level=0) then exit(true);
+      if ((tokType in C_operatorsAndComparators) or (tokType in [tt_iifCheck, tt_iifElse])) and (level=0) then exit(true);
       if      tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level);
     end;
@@ -364,7 +350,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     begin
       result:=useUncurryingFallback and
               //The given parameters must match
-             (param<>nil) and pattern.matchesForFallback(param^,selfLiteral<>nil) and
+             (param<>nil) and pattern.matchesForFallback(param^,selfLiteral<>nil,context) and
               //The function result must (likely) be an expression
          (    (preparedBody[0].token.tokType=tt_literal)
           and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
@@ -389,7 +375,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
   VAR tempInnerParam:P_listLiteral;
   begin
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,selfLiteral<>nil) then begin
+       (param<>nil) and pattern.matches(param^,selfLiteral<>nil,context) then begin
       prepareResult;
     end else if fallbackFeasible then begin
       prepareResult;
@@ -619,6 +605,18 @@ FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSC
     tempcontext.createNormalContext(P_adapters(@adapters));
     result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempcontext);
     tempcontext.destroy;
+  end;
+
+FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
+  VAR param:T_listLiteral;
+      L:P_literal;
+  begin
+    param.create;
+    param.append(x,true);
+    L:=directEvaluate(nil,@param,0,context);
+    param.destroy;
+    result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
+    if L<>nil then disposeLiteral(L);
   end;
 
 FUNCTION evaluateSubrule(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;

@@ -572,7 +572,7 @@ Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed
 Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
 
 <h3><a name="typecheckOps"> Type check operators</a></h3>
-Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. <br>Syntactically type checks are unary operators in postfix notation.
+Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. 
 <br>The following type checks are defined:<code>
 <!--mnh-->
   :scalar
@@ -591,23 +591,24 @@ Type check operators can be employed to test a value or an expression for it's t
   :expression
 <!--end-->
 </code><br>
+Every type check corresponds to a builtin rule <b><code>is...</code></b>.<br>
 Examples: <code>
 <!--mnh-->
    in> checkedType(x)->
-         (x:scalar      ? 'scalar'      : void)|
-         (x:list        ? 'list'        : void)|
-         (x:boolean     ? 'boolean'     : void)|
-         (x:booleanList ? 'booleanList' : void)|
-         (x:int         ? 'int'         : void)|
-         (x:intList     ? 'intList'     : void)|
-         (x:real        ? 'real'        : void)|
-         (x:realList    ? 'realList'    : void)|
-         (x:string      ? 'string'      : void)|
-         (x:stringList  ? 'stringList'  : void)|
-         (x:numeric     ? 'numeric'     : void)|
-         (x:numericList ? 'numericList' : void)|
-         (x:keyValueList? 'keyValueList': void)|
-         (x:expression  ? 'expression'  : void);
+         (x.isScalar      ? 'scalar'      : void)|
+         (x.isList        ? 'list'        : void)|
+         (x.isBoolean     ? 'boolean'     : void)|
+         (x.isBooleanList ? 'booleanList' : void)|
+         (x.isInt         ? 'int'         : void)|
+         (x.isIntList     ? 'intList'     : void)|
+         (x.isReal        ? 'real'        : void)|
+         (x.isRealList    ? 'realList'    : void)|
+         (x.isString      ? 'string'      : void)|
+         (x.isStringList  ? 'stringList'  : void)|
+         (x.isNumeric     ? 'numeric'     : void)|
+         (x.isNumericList ? 'numericList' : void)|
+         (x.isKeyValueList? 'keyValueList': void)|
+         (x.isExpression  ? 'expression'  : void);
 
    in> checkedType(3)
   out> ["scalar","int","numeric"]
@@ -670,7 +671,8 @@ the latter 2 additionally allow for specific optimizations, making e.g. the oper
 <li><h5><a href="#mutableMod">mutable</a></h5></li>
 <li><h5><a href="#persistentMod">persistent</a></h5></li>
 <li><h5><a href="#datastoreMod">datastore</a></h5></li>
-<li><h5><a href="#localMod">local</a></h5></li></ul></li>
+<li><h5><a href="#localMod">local</a></h5></li>
+<li><h5><a href="#typeMod">type</a></h5></li></ul></li>
 </ul>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
@@ -782,7 +784,7 @@ A less reasonable example would be the following declaration - a "random" number
 </code>
 <h3><a name="restrictions">Parameter restrictions</a></h3>
 Parameter restrictions fall in three categories:<ul>
-  <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>)
+  <li> Type checks (see <a href="operators.html#typecheckOps"> operators</a>) or custom type checks (see <a href="#typeMod">type</a>)
   <li> Comparison with a literal (see <a href="operators.html#compOps"> Comparators</a>)
   <li> Comparison with another parameter
 </ul>
@@ -842,22 +844,6 @@ are declared with a <a href="#localMod">local</a>-modifier <b>or</b> cannot be f
 <!--end-->
 </code>This function makes use of the fact that the assignment-operator and C-style operators return the value of the variable after the assignment.<br>
 Note, that parallel processing via <code>pEach</code> is unsafe within Begin-End-Blocks if block local variables are reassigned.
-<br>
-You can use the <code><span class="builtin">return</span></code> statement to immediately return from the current function. Currently this works only
-for normal functions (i.e. not for inline-expressions) ans is not allowed in <code><span class="while">return</span></code> or <code><span class="each">return</span></code> statements. <br>
-An example:<code>
-<!--mnh-->
-  isNaturalNumber(x)->begin
-    x:int 
-    ? void
-    : return print(x," isn't an integer") orElse false;
-    //If x isn't an integer, the following check will never be executed
-    x>=0
-    ? true
-    : print(x,' is negative') orElse false;    
-  end;
-<!--end-->
-</code>
 
 <h3><a name="modifiers">Modifiers</a></h3>
 <h4><a name="privateMod">private</a></h4>
@@ -910,6 +896,15 @@ Functions modifying the value of a datastore value should be <a href="#synchroni
 <h4><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
 It is only allowed in this context. Local variables always are mutable.
+
+<h4><a name="typeMod">type</a></h4>
+The <i>type modifier</i> allowes for the declaration of custom type checks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
+The rule must contain exactly one subrule accepting one parameter and returning a boolean.<br>
+The following restrictions apply:<ul>
+  <li> A type rule cannot be private </li>
+  <li> A type rule must have exactly one subrule</li>  
+</ul>
+
 </div>
 <!--commonFoot-->
 <!--file types.html-->

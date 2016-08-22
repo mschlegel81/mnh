@@ -11,15 +11,16 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  {$include mnh_tokens_token.inc}
-  {$include mnh_tokens_pattern.inc}
+  {$include mnh_token.inc}
+  P_subrule=^T_subrule;
+  {$include mnh_pattern.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_tokens_subrule.inc}
-  {$include mnh_tokens_rule.inc}
-  {$include mnh_tokens_futureTask.inc}
-  {$include mnh_tokens_procBlock.inc}
-  {$include mnh_tokens_fmtStmt.inc}
+  {$include mnh_subrule.inc}
+  {$include mnh_rule.inc}
+  {$include mnh_futureTask.inc}
+  {$include mnh_procBlock.inc}
+  {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
 
   T_packageReference=object
@@ -175,14 +176,14 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
   end;
 
 {$define include_implementation}
-{$include mnh_tokens_token.inc}
-{$include mnh_tokens_pattern.inc}
-{$include mnh_tokens_subrule.inc}
-{$include mnh_tokens_futureTask.inc}
-{$include mnh_tokens_procBlock.inc}
-{$include mnh_tokens_rule.inc}
-{$include mnh_tokens_funcs.inc}
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_token.inc}
+{$include mnh_pattern.inc}
+{$include mnh_subrule.inc}
+{$include mnh_futureTask.inc}
+{$include mnh_procBlock.inc}
+{$include mnh_rule.inc}
+{$include mnh_funcs.inc}
+{$include mnh_fmtStmt.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   VAR i:longint;
@@ -322,7 +323,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         ruleDeclarationStart:T_tokenLocation;
 
     PROCEDURE parseRule;
-      CONST C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER:set of T_tokenType=[tt_typeCheckExpression,tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList];
       VAR partLocation:T_tokenLocation;
 
       PROCEDURE fail(VAR firstOfPart:P_token);
@@ -440,7 +440,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                           assertNil(parts[i].first);
                         end else fail(parts[i].first);
                       end;
-                    end else if rulePatternElement.restrictionType in C_TYPE_RESTRICTIONS_WITH_ADDITIONAL_PARAMETER then begin
+                    end else if rulePatternElement.restrictionType in C_modifieableTypeChecks then begin
                       if (parts[i].first=nil) then begin end else
                       if (parts[i].first^.tokType=tt_braceOpen) and
                          (parts[i].first^.next<>nil) and
@@ -454,6 +454,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
                         context.cascadeDisposeToken(parts[i].first);
                       end else fail(parts[i].first);
                     end else assertNil(parts[i].first);
+                  end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
+                    rulePatternElement.restrictionType:=tt_customTypeCheck;
+                    rulePatternElement.customTypeCheck:=P_rule(parts[i].first^.data)^.subrules[0];
+                    parts[i].first:=context.disposeToken(parts[i].first);
+                    assertNil(parts[i].first);
                   end else fail(parts[i].first);
                 end;
                 rulePattern.append(rulePatternElement);
@@ -584,6 +589,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
         with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
+          context.cascadeDisposeToken(first);
+          exit;
+        end;
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
@@ -596,6 +605,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
           with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
+          if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
+            context.cascadeDisposeToken(first);
+            exit;
+          end;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           resolveRuleIds(nil);
@@ -741,7 +754,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
             stepToken;
           end;
         end else if (fileTokens.current.tokType=tt_semicolon) then begin
-          if (first<>nil) and (first^.areBracketsPlausible(context.adapters^))
+          if (first<>nil)
           then interpret(first,fileTokens.current.location)
           else context.cascadeDisposeToken(first);
           last:=nil;
@@ -930,13 +943,17 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
   begin
     ruleId   :=token.txt;
     if packageRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_localUserRule;
+      if userRule^.ruleType=rt_customTypeCheck
+      then token.tokType:=tt_customTypeRule
+      else token.tokType:=tt_localUserRule;
       token.data:=userRule;
       userRule^.idResolved:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
-      token.tokType:=tt_importedUserRule;
+      if userRule^.ruleType=rt_customTypeCheck
+      then token.tokType:=tt_customTypeRule
+      else token.tokType:=tt_importedUserRule;
       token.data:=userRule;
       userRule^.idResolved:=true;
       exit;
@@ -976,7 +993,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifi
     end else begin
       if (result^.ruleType<>ruleType) and (ruleType<>rt_normal)
       then adapters.raiseCustomMessage(mt_el4_parsingError,'Colliding modifiers! Rule '+ruleId+' is '+C_ruleTypeText[result^.ruleType]+', redeclared as '+C_ruleTypeText[ruleType],ruleDeclarationStart)
-      else if (ruleType in C_mutableRuleTypes)
+      else if (ruleType in C_ruleTypesWithOnlyOneSubrule)
       then adapters.raiseCustomMessage(mt_el4_parsingError,C_ruleTypeText[ruleType]+'rules must have exactly one subrule',ruleDeclarationStart)
       else adapters.raiseCustomMessage(mt_el1_note,'Extending rule: '+ruleId,ruleDeclarationStart);
     end;
@@ -1219,7 +1236,7 @@ PROCEDURE disposeTimer(t:TEpikTimer);
 INITIALIZATION
   timer.create(@initTimer,@disposeTimer);
 {$define include_initialization}
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_fmtStmt.inc}
   pendingTasks.create;
 
   //callbacks in mnh_litvar:
@@ -1236,12 +1253,12 @@ INITIALIZATION
   {$endif}
   //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
-  {$include mnh_tokens_funcs.inc}
+  {$include mnh_funcs.inc}
 {$undef include_initialization}
 
 FINALIZATION
 {$define include_finalization}
   pendingTasks.destroy;
   timer.destroy;
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_fmtStmt.inc}
 end.

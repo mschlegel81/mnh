@@ -90,7 +90,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
         tt_each,tt_forcedParallelEach,tt_parallelEach: if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
-         (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule]) and
+         (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
          (t[i+3].tokType=tt_separatorComma) then begin
            //resolve each ( i , ... to each(i, ... (each with identifier; expected in further processing!)
           t[i+3].tokType:=t[i].tokType;
@@ -107,7 +107,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
         end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
          ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
-         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
+         (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
           if t[i].tokType=tt_operatorMinus
           then t[i].tokType:=tt_unaryOpMinus //unary - is special token
           else inc(i);                       //unary + is skipped
@@ -520,7 +520,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_package; VAR context:T_
     t:=first;
     while t<>nil do begin
       case t^.tokType of
-        tt_identifier,tt_localUserRule,tt_importedUserRule: if inPackage<>nil then begin
+        tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule: if inPackage<>nil then begin
           if t^.data=nil then t^.data:=inPackage;
           if (t^.next<>nil) and (t^.next^.tokType in [tt_assign,tt_cso_assignPlus..tt_cso_assignAppend]) then begin
             inPackage^.resolveRuleId(t^,nil);
@@ -603,7 +603,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       newLit:P_literal;
       didSubstitution:boolean;
       cTokType:array[-1..2] of T_tokenType;
-      {$ifdef FULLVERSION}stepInLocation:T_tokenLocation;{$endif}
 
   PROCEDURE initTokTypes; inline;
     begin
@@ -1090,11 +1089,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       if parameterListToken=nil then parameterListLiteral:=nil
                                 else parameterListLiteral:=parameterListToken^.data;
-      if (first^.tokType in [tt_localUserRule,tt_importedUserRule]) then begin
+      if (first^.tokType in [tt_localUserRule,tt_importedUserRule,tt_customTypeRule]) then begin
         {$ifndef DEBUGMODE}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType=tt_localUserRule,context)) then begin
+          if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if parameterListLiteral=nil
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
             else begin
@@ -1220,36 +1219,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         first^.data:=newListLiteral;
       end;
       stack.push(first);
-      didSubstitution:=true;
-    end;
-
-  PROCEDURE applyCheck;
-    VAR checkResult:boolean;
-        checkModifier:longint;
-        modifierPresent:boolean=false;
-        p:P_listLiteral;
-    begin
-      if (first^.next^.next<>nil) then case first^.next^.next^.tokType of
-        tt_braceOpen: begin stack.push(first); startOrPushParameterList; exit; end;
-        tt_parList: begin
-          p:=P_listLiteral(first^.next^.next^.data);
-          if (p^.size=1) and (p^.value(0)^.literalType=lt_int) and (first^.next^.tokType in C_modifieableTypeChecks)  then begin
-            checkModifier:=P_intLiteral(p^.value(0))^.value;
-            modifierPresent:=true;
-          end else context.adapters^.raiseError('Invalid type check '+safeTokenToString(first^.next)+p^.toParameterListString(true,50),first^.next^.location);
-          first^.next^.next:=context.disposeToken(first^.next^.next);
-        end;
-      end;
-      checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
-      if modifierPresent and checkResult then begin
-        if P_literal(first^.data)^.literalType in C_validListTypes
-        then checkResult:=checkResult and (P_listLiteral(first^.data)^.size=checkModifier)
-        else if P_literal(first^.data)^.literalType = lt_expression
-        then checkResult:=checkResult and (P_expressionLiteral(first^.data)^.arity=checkModifier);
-      end;
-      first^.next:=context.disposeToken(first^.next);
-      disposeLiteral(first^.data);
-      first^.data:=newBoolLiteral(checkResult);
       didSubstitution:=true;
     end;
 
@@ -1381,7 +1350,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end else applyRule(first^.next,first^.next^.next)
       end
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
-      else if cTokType[1] in [tt_typeCheckScalar..tt_typeCheckKeyValueList]               then applyCheck
       else if cTokType[1]=tt_ponFlipper then pon_flip
       else if cTokType[1] in [tt_each,tt_forcedParallelEach,tt_parallelEach] then resolveEach(cTokType[1])
       else if cTokType[1]= tt_listBraceOpen then begin stack.push(first); didSubstitution:=true; end
@@ -1489,7 +1457,6 @@ tt_parList:  if (cTokType[2]=tt_listToParameterList) then begin
              end else applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
-tt_typeCheckScalar..tt_typeCheckKeyValueList: applyCheck;
 tt_each,tt_parallelEach,tt_forcedParallelEach: resolveEach(cTokType[1])}
 
 {$define FORBIDDEN_SEPARATORS:=
@@ -1515,9 +1482,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
 
   begin
     stack.create;
-    {$ifdef fullVersion}
-    stepInLocation:=first^.location;
-    {$endif}
     {$ifndef DEBUGMODE}try{$endif}
     repeat
       didSubstitution:=false;
@@ -1764,7 +1728,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           end else applyRule(first^.next,first^.next^.next);
         end;
 
-        tt_localUserRule, tt_importedUserRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
+        tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule, tt_rulePutCacheValue, tt_toId : case cTokType[1] of
           tt_braceOpen, tt_parList_constructor, tt_listToParameterList: startOrPushParameterList;
           tt_parList: if cTokType[0]=tt_toId then begin
             if (P_listLiteral(first^.next^.data)^.size=1) and (P_listLiteral(first^.next^.data)^.value(0)^.literalType=lt_string) then begin
@@ -1781,7 +1745,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_typeCheckScalar..tt_typeCheckKeyValueList, tt_ponFlipper, tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
+          tt_ponFlipper, tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
@@ -1796,10 +1760,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
-        tt_typeCheckScalar..tt_typeCheckKeyValueList: begin
-          stack.popLink(first);
-          didSubstitution:=true;
-        end;
       end;
       {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
