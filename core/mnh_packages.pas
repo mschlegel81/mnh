@@ -11,15 +11,15 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  {$include mnh_tokens_token.inc}
-  {$include mnh_tokens_pattern.inc}
+  {$include mnh_token.inc}
+  {$include mnh_pattern.inc}
   P_rule=^T_rule;
   T_ruleMap=specialize G_stringKeyMap<P_rule>;
-  {$include mnh_tokens_subrule.inc}
-  {$include mnh_tokens_rule.inc}
-  {$include mnh_tokens_futureTask.inc}
-  {$include mnh_tokens_procBlock.inc}
-  {$include mnh_tokens_fmtStmt.inc}
+  {$include mnh_subrule.inc}
+  {$include mnh_rule.inc}
+  {$include mnh_futureTask.inc}
+  {$include mnh_procBlock.inc}
+  {$include mnh_fmtStmt.inc}
   T_packageLoadUsecase=(lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forDocGeneration,lu_forCodeAssistance,lu_interactiveMode);
 
   T_packageReference=object
@@ -175,14 +175,14 @@ FUNCTION demoCallToHtml(CONST input:T_arrayOfString):T_arrayOfString;
   end;
 
 {$define include_implementation}
-{$include mnh_tokens_token.inc}
-{$include mnh_tokens_pattern.inc}
-{$include mnh_tokens_subrule.inc}
-{$include mnh_tokens_futureTask.inc}
-{$include mnh_tokens_procBlock.inc}
-{$include mnh_tokens_rule.inc}
-{$include mnh_tokens_funcs.inc}
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_token.inc}
+{$include mnh_pattern.inc}
+{$include mnh_subrule.inc}
+{$include mnh_futureTask.inc}
+{$include mnh_procBlock.inc}
+{$include mnh_rule.inc}
+{$include mnh_funcs.inc}
+{$include mnh_fmtStmt.inc}
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   VAR i:longint;
@@ -1193,7 +1193,7 @@ PROCEDURE disposeTimer(t:TEpikTimer);
 INITIALIZATION
   timer.create(@initTimer,@disposeTimer);
 {$define include_initialization}
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_fmtStmt.inc}
   pendingTasks.create;
 
   //callbacks in mnh_litvar:
@@ -1210,12 +1210,12 @@ INITIALIZATION
   {$endif}
   //callbacks in html
   rawTokenizeCallback:=@tokenizeAllReturningRawTokens;
-  {$include mnh_tokens_funcs.inc}
+  {$include mnh_funcs.inc}
 {$undef include_initialization}
 
 FINALIZATION
 {$define include_finalization}
   pendingTasks.destroy;
   timer.destroy;
-{$include mnh_tokens_fmtStmt.inc}
+{$include mnh_fmtStmt.inc}
 end.
