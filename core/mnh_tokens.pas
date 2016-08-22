@@ -131,6 +131,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
                    else result:=C_tokenInfo[tt_agg].defaultId+'(';
         if data<>nil then result:=result+P_literal(data)^.toString(limit-6)+',';
       end;
+      tt_customTypeCheck: result:=':'+txt;
       tt_aggregatorExpressionLiteral,
       tt_literal            : result:=P_literal    (data)^.toString(limit);
       tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false,limit);
@@ -145,6 +146,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_importedUserRule,
       tt_intrinsicRule,
       tt_rulePutCacheValue,
+      tt_customTypeRule,
       tt_parameterIdentifier,
       tt_blockLocalVariable,
       tt_blank: result:=txt;
@@ -178,12 +180,12 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
   FUNCTION popPlausible(CONST token:P_token):boolean;
     begin
       if length(bracketStack)<=0 then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing opening bracket.',token^.location);
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Missing opening bracket for closing '+safeTokenToString(token),token^.location);
         exit(false);
       end;
       if token^.tokType<>C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType] then begin
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; open matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
-        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; close',token                               ^.location);
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; opening '+safeTokenToString(bracketStack[length(bracketStack)-1])+' (matches with "'+C_tokenInfo[C_matchingClosingBracket[bracketStack[length(bracketStack)-1]^.tokType]].defaultId+'")',bracketStack[length(bracketStack)-1]^.location);
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Bracket mismatch; closing with '+safeTokenToString(token) ,token^.location);
         exit(false);
       end;
       setLength(bracketStack,length(bracketStack)-1);
@@ -203,7 +205,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
     t:=@self;
     result:=true;
     while result and (t<>nil) do begin
-      if t^.tokType in C_openingBrackets then push(t)
+      if      t^.tokType in C_openingBrackets then push(t)
       else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
       t:=t^.next;
     end;
@@ -226,8 +228,26 @@ FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLev
   end;
 
 FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
+  VAR level:longint=0;
+      t,newNext:P_token;
+
   begin
-    result:=getTokenOnBracketLevel([tt_declare,tt_assign],0);
+    t:=@self;
+    while (t<>nil) do begin
+      if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
+        newNext:=t^.next^.next;
+        t^.tokType:=tt_customTypeCheck;
+        t^.txt    :=t^.next^.txt;
+        t^.data   :=t^.next^.data;
+        dispose(t^.next,destroy);
+        t^.next:=newNext;
+      end;
+      if t^.tokType      in C_openingBrackets then inc(level)
+      else if t^.tokType in C_closingBrackets then dec(level);
+      if (level=0) and (t^.tokType in [tt_declare,tt_assign]) then exit(t);
+      t:=t^.next;
+    end;
+    result:=nil;
   end;
 
 FUNCTION T_token.getRawToken: T_rawToken;

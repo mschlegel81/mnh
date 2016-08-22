@@ -1,7 +1,4 @@
 {$ifdef include_interface}
-
-  { T_patternElement }
-
   T_patternElement=object
     private
       id               :ansistring;
@@ -10,10 +7,11 @@
       restrictionIdx   :longint;
       typeWhitelist    :set of T_literalType;
       restrictionId    :ansistring;
+      customTypeCheck  :P_subrule;
     public
     CONSTRUCTOR createAnonymous;
     CONSTRUCTOR create(CONST parameterId:ansistring);
-    FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
+    FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
     PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
@@ -32,15 +30,15 @@
     CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
-    FUNCTION appendFreeId    (CONST parId:ansistring):longint;
+    FUNCTION appendFreeId(CONST parId:ansistring):longint;
     PROCEDURE append(CONST el:T_patternElement);
     PROCEDURE appendOptional;
     FUNCTION indexOfId(CONST id:ansistring):longint;
     FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
     FUNCTION idForIndexInline(CONST index:longint):ansistring;
     PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
-    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
-    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
+    FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
+    FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
@@ -65,11 +63,12 @@ CONSTRUCTOR T_patternElement.create(CONST parameterId: ansistring);
     id:=parameterId;
   end;
 
-FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint):boolean;
+FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
   VAR L:P_literal;
   begin
     L:=parameterList.value(ownIndex);
     if not(L^.literalType in typeWhitelist) then exit(false);
+    if restrictionType=tt_customTypeCheck then exit(customTypeCheck^.accept(L,context));
     if (restrictionIdx>=0) and (restrictionType=tt_typeCheckExpression) and (P_expressionLiteral(L)^.arity<>restrictionIdx) then exit(false);
     if (restrictionIdx>=0) and (restrictionType in [tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckKeyValueList])
       and (P_listLiteral(L)^.size<>restrictionIdx) then exit(false);
@@ -86,6 +85,7 @@ FUNCTION T_patternElement.toString: ansistring;
     result:='';
     case restrictionType of
       tt_literal: result:=id;
+      tt_customTypeCheck    : result:=id+':'+customTypeCheck^.parent^.id;
       tt_typeCheckScalar    ,
       tt_typeCheckBoolean   ,
       tt_typeCheckInt       ,
@@ -142,6 +142,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
 
 PROCEDURE T_patternElement.thinOutWhitelist;
   begin
+    if restrictionType = tt_modifier_customType then exit;
     if restrictionType in C_typeChecks then typeWhitelist:=C_matchingTypes[restrictionType];
     if (restrictionType in [tt_comparatorEq,tt_comparatorNeq, tt_comparatorLeq, tt_comparatorGeq, tt_comparatorLss, tt_comparatorGrt, tt_comparatorListEq])
        and (restrictionValue<>nil)
@@ -288,17 +289,17 @@ FUNCTION T_pattern.matchesNilPattern: boolean;
     result:=(length(sig)=0);
   end;
 
-FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST selfPointerProvided: boolean): boolean;
+FUNCTION T_pattern.matches(VAR par: T_listLiteral; CONST selfPointerProvided: boolean; VAR context:T_evaluationContext): boolean;
   begin
-    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,selfPointerProvided);
+    result:=((par.size<=length(sig)) or hasOptionals) and matchesForFallback(par,selfPointerProvided,context);
   end;
 
-FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean):boolean;
+FUNCTION T_pattern.matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
   VAR i:longint;
   begin
     if (par.size<length(sig)) then exit(false);
     result:=true;
-    for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i)) then exit(false);
+    for i:=0 to length(sig)-1 do if not(sig[i].accept(par,i,context)) then exit(false);
     result:=selfPointerProvided or not(containsSelfPointer);
   end;
 
