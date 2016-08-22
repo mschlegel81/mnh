@@ -1,0 +1,63 @@
+type matrix(M:list)->M.each(row,row.isNumList ? row.size : -1).unique.size=1;
+type squareMatrix(M:list)->M.each(row,row.isNumList(M.size),AND);
+
+subMatrix(M:list,skipRow,skipCol)->M.each(row,index=skipRow
+                                              ? void
+                                              : row.each(cell,index=skipCol ? void : cell));
+
+matrixDimensions(M:matrix)->[M.size,M[0].size];
+
+
+mult(x:matrix,y:matrix)->begin
+  local dimX:=matrixDimensions(x);
+  local dimY:=matrixDimensions(y);
+  (dimX[1]==dimY[0]) ? [0..dimX[0]-1].each(i,
+                       [0..dimY[1]-1].each(k,(x.get(i)*y.getInner(k)).agg(+)))
+                     : fail('Matrices must have compatible sizes for multiplication.');
+end;
+
+determinant(M:squareMatrix)->
+  M.size=1 ? M[0,0] :
+  M.size=2 ? M[0,0]*M[1,1]-M[1,0]*M[0,1] :
+             [0..M.size-1].each(i,-1^(i)*M[i,0]*M.subMatrix(i,0).determinant,+);
+
+cross(x:numericList(3),y:numericList(3))->[x[1]*y[2]-y[1]*x[2],
+                                           x[2]*y[0]-y[2]*x[0],
+                                           x[0]*y[1]-y[0]*x[1]];
+euclidNorm(x:numericList)->x.sqr.agg(+).sqrt;
+randomVec3OnSphere->begin
+  local x:=random(3)-0.5;
+  x/euclidNorm(x);
+end;
+
+randomOrthoMatrix->begin
+  local x:=randomVec3OnSphere;
+  local y:=x.cross(randomVec3OnSphere);
+        y:=y/euclidNorm(y);
+  local z:=x.cross(y);
+  [x,y,z];
+end;
+
+printMatrix(M)->M.each(row,row.join("\t")).join("\n").print;
+
+invert(M:squareMatrix)->begin
+  //Gauss-Jordan Algorithm
+  local aid:=M.each(row,begin local i:=index; row|(row.each(i,index=i ? 1 : 0)); end);
+  [0..M.size-1].each(rowIndex,
+    begin
+      aid.printMatrix; print('Pivot');
+      //Pivot
+      aid:=aid.head(rowIndex) |
+           aid.tail(rowIndex).sort({$x[rowIndex]>=$y[rowIndex]});
+      aid.printMatrix; print('Divide');
+      //Divide by diagonal element
+      aid:=aid.each(row,index=rowIndex ? row/row[rowIndex] : row);
+      aid.printMatrix; print('Subtract');
+      //Subtract
+      local x:=M[rowIndex];
+      aid:=aid.each(row,index=rowIndex ? row : row-row[rowIndex]*x);
+    end);
+  aid;
+end;
+
+invert([[0.1,1],[2,0]]).printMatrix;
