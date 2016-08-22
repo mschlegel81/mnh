@@ -45,19 +45,15 @@ invert(M:squareMatrix)->begin
   local aid:=M.each(row,begin local i:=index; row|(row.each(i,index=i ? 1 : 0)); end);
   [0..M.size-1].each(rowIndex,
     begin
-      aid.printMatrix; print('Pivot');
       //Pivot
       aid:=aid.head(rowIndex) |
            aid.tail(rowIndex).sort({$x[rowIndex]>=$y[rowIndex]});
-      aid.printMatrix; print('Divide');
       //Divide by diagonal element
       aid:=aid.each(row,index=rowIndex ? row/row[rowIndex] : row);
-      aid.printMatrix; print('Subtract');
       //Subtract
-      local x:=M[rowIndex];
+      local x:=aid[rowIndex];
       aid:=aid.each(row,index=rowIndex ? row : row-row[rowIndex]*x);
     end);
-  aid;
+  aid.each(row,row.tail(M.size));
 end;
 
-invert([[0.1,1],[2,0]]).printMatrix;
