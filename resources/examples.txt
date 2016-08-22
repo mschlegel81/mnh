@@ -527,11 +527,11 @@ utf8ToSys('ÄÖÜ').chars.ord;
 
 sysToUtf8('T'#196'T'#220);
 
-type(3);
+typeOf(3);
 
-type([1..5,7.5]);
+typeOf([1..5,7.5]);
 
-type({$x^2+$y});
+typeOf({$x^2+$y});
 
 'Test something'.base92encode;
 
