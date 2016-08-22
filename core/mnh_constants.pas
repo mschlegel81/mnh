@@ -212,6 +212,8 @@ CONST
     {tt_typeCheckNumList}      [lt_intList, lt_realList, lt_numList, lt_emptyList],
     {tt_typeCheckExpression}   [lt_expression],
     {tt_typeCheckKeyValueList} [lt_emptyList, lt_keyValueList]);
+  C_modifieableTypeChecks: T_tokenTypeSet=[tt_typeCheckList,tt_typeCheckBoolList,tt_typeCheckIntList,tt_typeCheckRealList,tt_typeCheckStringList,tt_typeCheckNumList,tt_typeCheckExpression,tt_typeCheckKeyValueList];
+
   C_compatibleEnd:array[tt_beginBlock..tt_beginFunc] of T_tokenType=(tt_endBlock,tt_endFunc);
   C_tokenInfo:array[T_tokenType] of record
     defaultId:string;

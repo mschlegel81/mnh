@@ -1212,10 +1212,41 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       didSubstitution:=true;
     end;
 
+  PROCEDURE startOrPushParameterList; inline;
+    begin
+      stack.push(first);
+      if first^.tokType=tt_braceOpen then begin
+        first^.tokType:=tt_parList_constructor;
+        first^.data:=newListLiteral;
+      end;
+      stack.push(first);
+      didSubstitution:=true;
+    end;
+
   PROCEDURE applyCheck;
     VAR checkResult:boolean;
+        checkModifier:longint;
+        modifierPresent:boolean=false;
+        p:P_listLiteral;
     begin
+      if (first^.next^.next<>nil) then case first^.next^.next^.tokType of
+        tt_braceOpen: begin stack.push(first); startOrPushParameterList; exit; end;
+        tt_parList: begin
+          p:=P_listLiteral(first^.next^.next^.data);
+          if (p^.size=1) and (p^.value(0)^.literalType=lt_int) and (first^.next^.tokType in C_modifieableTypeChecks)  then begin
+            checkModifier:=P_intLiteral(p^.value(0))^.value;
+            modifierPresent:=true;
+          end else context.adapters^.raiseError('Invalid type check '+safeTokenToString(first^.next)+p^.toParameterListString(true,50),first^.next^.location);
+          first^.next^.next:=context.disposeToken(first^.next^.next);
+        end;
+      end;
       checkResult:=P_literal(first^.data)^.literalType in C_matchingTypes[first^.next^.tokType];
+      if modifierPresent and checkResult then begin
+        if P_literal(first^.data)^.literalType in C_validListTypes
+        then checkResult:=checkResult and (P_listLiteral(first^.data)^.size=checkModifier)
+        else if P_literal(first^.data)^.literalType = lt_expression
+        then checkResult:=checkResult and (P_expressionLiteral(first^.data)^.arity=checkModifier);
+      end;
       first^.next:=context.disposeToken(first^.next);
       disposeLiteral(first^.data);
       first^.data:=newBoolLiteral(checkResult);
@@ -1261,16 +1292,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-  PROCEDURE startOrPushParameterList; inline;
-    begin
-      stack.push(first);
-      if first^.tokType=tt_braceOpen then begin
-        first^.tokType:=tt_parList_constructor;
-        first^.data:=newListLiteral;
-      end;
-      stack.push(first);
-      didSubstitution:=true;
-    end;
 
   PROCEDURE pon_flip;
     VAR newFunctionToken:P_token;
@@ -1775,6 +1796,10 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
+        tt_typeCheckScalar..tt_typeCheckKeyValueList: begin
+          stack.popLink(first);
+          didSubstitution:=true;
+        end;
       end;
       {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
