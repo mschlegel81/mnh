@@ -158,6 +158,13 @@ FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tok
     end;
   end;
 
+FUNCTION changeFileExtension_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
+    then result:=newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
+  end;
+
 FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   VAR i:longint;
   begin
@@ -300,6 +307,7 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);#Returns the path of file with the new extension');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');

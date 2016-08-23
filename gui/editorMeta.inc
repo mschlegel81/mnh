@@ -59,7 +59,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.Gutter.MarksPart.visible:=false;
     editor.Gutter.CodeFoldPart.visible:=false;
     style:=editor.BracketMatchColor;
-    style.Background:=clLime;
+    style.background:=clLime;
 
 
     editor.OnChange:=@MnhForm.InputEditChange;

@@ -4,7 +4,7 @@ INTERFACE
 
 USES myGenerics, mnh_litVar, mnh_out_adapters, sysutils, mnh_constants,mySys,mnh_settings;
 CONST MAX_ACCEPTED_COLLISIONS=10;
-      MIN_BIN_COUNT=16;
+      MIN_BIN_COUNT=1;
       POLISH_FREQUENCY=32;
 
 TYPE

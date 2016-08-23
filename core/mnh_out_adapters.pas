@@ -280,7 +280,7 @@ PROCEDURE T_textFileOutAdapter.append(CONST message: T_storedMessage);
     if (message.messageType<>mt_clearConsole) then inherited append(message);
     {$ifndef DEBUGMODE}
     //Debugmode: flush immediately
-    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) then
+    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) or (length(storedMessages)>=1000) then
     {$endif}
     flush;
   end;
