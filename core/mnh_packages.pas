@@ -1057,7 +1057,7 @@ PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);
     if not(packageRules.containsKey('main',mainRule))
     then adapters.printOut('The package contains no main rule')
     else begin
-      docText:=split(mainRule^.getDocTxt,C_lineBreakChar);
+      docText:=split(mainRule^.getCmdLineHelpText,C_lineBreakChar);
       for i:=0 to 1 do adapters.printOut(docText[i]);
       dropFirst(docText,2);
       adapters.printOut(formatTabs(docText));

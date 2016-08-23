@@ -49,6 +49,7 @@ currentCodeHash:=begin
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureDemos.mnh','core/res_ensureDemos.inc');
   templateToInc('resources/ensureInstallScripts.mnh','core/res_ensureInstallScripts.inc');
+  templateToInc('resources/ensureInstallScripts_imig.mnh','core/res_ensureInstallScripts_imig.inc');
   templateToInc('resources/ensurePackages.mnh','core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   //update code hash
@@ -160,6 +161,7 @@ main('distro')->isLinux ? fail('Distro building is currently not supported under
       : void;
     end
   : void;
+  fileExists('distro_hook.mnh') ? executor.execPipeless(['distro_hook.mnh']) : void;
 end;
 
 //*Build - ignoring potentially existing executables
@@ -184,13 +186,7 @@ main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') 
    files(allFolders('..')&'/*.bak')|
    files('resources/ensureDemos.mnh')|
    files('resources/ensurePackages.mnh')|
-   files('core/res_examples.inc')|
-   files('core/res_html_template.inc')|
-   files('core/res_ensureMnhFileAssociations.inc')|
-   files('core/res_removeMnhFileAssociations.inc')|
-   files('core/res_ensureNppHighlighting.inc')|
-   files('core/res_ensureDemos.inc')|
-   files('core/res_ensurePackages.inc')|
+   files('core/res_*.inc')|
    allFiles('versions','*.exe')|
    allFiles('gui','*.exe')|
    allFiles('consoles','*.exe')|
@@ -237,21 +233,26 @@ private isSimilarFile(i:int,s:string)->pos(s.upper,binName(i).upper)>=0;
 //*Continuous integration run - automatically build and test every 5 minutes
 main('continuous')->begin
   while(true,begin
-    print('Continuous run - building/testing');
+    print("\n\nContinuous run - building/testing");
     updateCurrentCodeHash;
     local versionToTest:=buildableVersions[intRandom(buildableVersions.size)];
     local buildOk:=build(versionToTest);
+    local skip:=false;
     buildOk
     ? begin
-        print('Testing ',binName(versionToTest));
-        binName(versionToTest).exec(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...);
-        testAlreadyPassed(binName(versionToTest))
-        ? void
-        : print('  TEST FAILED!') orElse beep;
+        skip:=testAlreadyPassed(binName(versionToTest));
+        skip
+        ? print('Skipping already passed test')
+        : begin
+            print('Testing ',binName(versionToTest));
+            binName(versionToTest).exec(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...);
+            testAlreadyPassed(binName(versionToTest))
+            ? void
+            : print('  TEST FAILED!') orElse beep;
+          end;
       end
     : print('  BUILD FAILED!') orElse beep;
-    print('Continuous run - sleeping');
-    sleep(5*60);
+    skip ? void : print('Continuous run - sleeping') orElse sleep(5*60);
   end);
 end;
 

@@ -1,0 +1,14 @@
+main->begin
+  fileExists('mnh.exe')
+  ? begin
+      deleteFile('C:\bin\mnh.exe');
+      copyFile('mnh.exe','C:\bin\mnh.exe');
+    end
+  : void;
+  fileExists('mnh_imig.exe')
+  ? begin
+      deleteFile('C:\bin\mnh_imig.exe');
+      copyFile('mnh_imig.exe','C:\bin\mnh_imig.exe');
+    end
+  : void;
+end;
