@@ -234,21 +234,26 @@ private isSimilarFile(i:int,s:string)->pos(s.upper,binName(i).upper)>=0;
 //*Continuous integration run - automatically build and test every 5 minutes
 main('continuous')->begin
   while(true,begin
-    print('Continuous run - building/testing');
+    print("\n\nContinuous run - building/testing");
     updateCurrentCodeHash;
     local versionToTest:=buildableVersions[intRandom(buildableVersions.size)];
     local buildOk:=build(versionToTest);
+    local skip:=false;
     buildOk
     ? begin
-        print('Testing ',binName(versionToTest));
-        binName(versionToTest).exec(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...);
-        testAlreadyPassed(binName(versionToTest))
-        ? void
-        : print('  TEST FAILED!') orElse beep;
+        skip:=testAlreadyPassed(binName(versionToTest));
+        skip
+        ? print('Skipping already passed test')
+        : begin
+            print('Testing ',binName(versionToTest));
+            binName(versionToTest).exec(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...);
+            testAlreadyPassed(binName(versionToTest))
+            ? void
+            : print('  TEST FAILED!') orElse beep;
+          end;
       end
     : print('  BUILD FAILED!') orElse beep;
-    print('Continuous run - sleeping');
-    sleep(5*60);
+    skip ? void : print('Continuous run - sleeping') orElse sleep(5*60);
   end);
 end;
 
