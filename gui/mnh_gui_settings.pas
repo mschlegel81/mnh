@@ -140,9 +140,17 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
   end;
 
 PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
+  {$ifdef imig}
+  {$i res_ensureInstallScripts_imig.inc}
+  {$else}
   {$i res_ensureInstallScripts.inc}
+  {$endif}
   begin
+    {$ifdef imig}
+    runAlone(ensureInstallScripts_imig_mnh);
+    {$else}
     runAlone(ensureInstallScripts_mnh);
+    {$endif}
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);

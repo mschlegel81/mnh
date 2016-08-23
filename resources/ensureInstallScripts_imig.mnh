@@ -1,0 +1,13 @@
+writeFileLines('install.vbs',
+['UAC.ShellExecute "cmd", "/c assoc .mnh=mnh.script",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c ftype mnh.script=\"#\" %%1 %%*", "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c assoc .mnhwf=mnhwf.script",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c ftype mnhwf.script=\"#\" %%1 %%*", "", "runas", 1'].replace('#',executor));
+writeFileLines('uninstall.vbs',
+['Set UAC = CreateObject("Shell.Application")',
+ 'UAC.ShellExecute "cmd", "/c ftype mnh.script=", "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c assoc .mnh=",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c ftype mnhwf.script=", "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c assoc .mnhwf=",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c rmdir /S /Q %ALLUSERSPROFILE%\MNH_IMIG",  "", "runas", 1',
+ 'UAC.ShellExecute "cmd", "/c del #",  "", "runas", 1'].replace('#',executor));
