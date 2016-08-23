@@ -13,6 +13,7 @@
     CONSTRUCTOR create(CONST parameterId:ansistring);
     FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
     FUNCTION toString:ansistring;
+    FUNCTION toCmdLineHelpStringString:ansistring;
     FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
     PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
     PROCEDURE thinOutWhitelist;
@@ -41,6 +42,7 @@
     FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
     FUNCTION matchesNilPattern:boolean;
     FUNCTION toString:ansistring;
+    FUNCTION toCmdLineHelpStringString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
     FUNCTION isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
     PROCEDURE toParameterIds(CONST tok:P_token);
@@ -113,6 +115,17 @@ FUNCTION T_patternElement.toString: ansistring;
       tt_operatorIn: if restrictionId='' then result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionValue^.toString)
                                          else result:=(id+' '+C_tokenInfo[restrictionType].defaultId+' '+restrictionId);
       else result:=result+id;
+    end;
+  end;
+
+FUNCTION T_patternElement.toCmdLineHelpStringString:ansistring;
+  begin
+    case restrictionType of
+      tt_comparatorListEq: if restrictionId='' then begin
+        if restrictionValue^.literalType=lt_string then result:=P_stringLiteral(restrictionValue)^.value
+                                                   else result:=restrictionValue^.toString
+      end else result:='<'+id+'>';
+      else result:='<'+id+'>';
     end;
   end;
 
@@ -317,6 +330,21 @@ FUNCTION T_pattern.toString: ansistring;
       result:=result+'...';
     end;
     result:=result+')';
+  end;
+
+FUNCTION T_pattern.toCmdLineHelpStringString:ansistring;
+  VAR i:longint;
+  begin
+    if (length(sig)=0) and not(hasOptionals) then exit('< no parameters >');
+    result:='';
+    for i:=0 to length(sig)-1 do begin
+      if i>0 then result:=result+' ';
+      result:=result+sig[i].toCmdLineHelpStringString;
+    end;
+    if hasOptionals then begin
+      if  length(sig)>0 then result:=result+',';
+      result:=result+'...';
+    end;
   end;
 
 FUNCTION T_pattern.isEquivalent(CONST p: T_pattern): boolean;

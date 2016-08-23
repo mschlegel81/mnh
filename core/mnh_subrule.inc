@@ -41,6 +41,7 @@
       FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
       FUNCTION accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
       FUNCTION getInlineValue:P_literal;
+      FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
       FUNCTION getSubruleId:ansistring;
@@ -631,6 +632,12 @@ FUNCTION T_subrule.getInlineValue:P_literal;
       result:=token.data;
       result^.rereference;
     end else result:=nil;
+  end;
+
+FUNCTION T_subrule.getCmdLineHelpText:ansistring;
+  begin
+    result:='  '+pattern.toCmdLineHelpStringString;
+    if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
   end;
 
 FUNCTION T_subrule.getDocTxt():ansistring;
