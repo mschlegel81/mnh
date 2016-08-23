@@ -24,12 +24,12 @@ object MnhForm: TMnhForm
     Top = 160
     Width = 665
     TabStop = False
-    ActivePage = variablesTabSheet
+    ActivePage = outputTabSheet
     Align = alClient
     Font.Color = clBlack
     Images = autoSizeImageList
     ParentFont = False
-    TabIndex = 3
+    TabIndex = 2
     TabOrder = 5
     OnChange = outputPageControlChange
     OnChanging = outputPageControlChanging
@@ -503,7 +503,7 @@ object MnhForm: TMnhForm
         SelectedColor.UnderlinePriority = 50
         SelectedColor.StrikeOutPriority = 50
         BracketHighlightStyle = sbhsBoth
-        BracketMatchColor.Background = clNone
+        BracketMatchColor.Background = clLime
         BracketMatchColor.Foreground = clNone
         BracketMatchColor.Style = [fsBold]
         FoldedCodeColor.Background = clNone
@@ -1006,9 +1006,8 @@ object MnhForm: TMnhForm
         SelectedColor.UnderlinePriority = 50
         SelectedColor.StrikeOutPriority = 50
         BracketHighlightStyle = sbhsBoth
-        BracketMatchColor.Background = clYellow
+        BracketMatchColor.Background = clLime
         BracketMatchColor.Foreground = clNone
-        BracketMatchColor.FrameColor = clRed
         BracketMatchColor.Style = [fsBold]
         FoldedCodeColor.Background = clNone
         FoldedCodeColor.Foreground = clGray

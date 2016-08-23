@@ -44,6 +44,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
       keyStroke.ShortCut:=ShortCut;
     end;
 
+  VAR style:TSynSelectedColor;
   begin
     paintedWithState:=-1;
     index:=idx;
@@ -57,6 +58,9 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.WantTabs:=false;
     editor.Gutter.MarksPart.visible:=false;
     editor.Gutter.CodeFoldPart.visible:=false;
+    style:=editor.BracketMatchColor;
+    style.Background:=clLime;
+
 
     editor.OnChange:=@MnhForm.InputEditChange;
     editor.OnKeyUp:=@MnhForm.InputEditKeyDown;
