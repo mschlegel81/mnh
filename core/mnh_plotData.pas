@@ -665,7 +665,11 @@ PROCEDURE T_plot.setScreenSize(CONST width, height: longint; CONST skipTics:bool
         then logRange:=0.5*(log10(range['x',1]-range['x',0])
                            +log10(range['y',1]-range['y',0]))
         else logRange:=log10(range[axis,1]-range[axis,0]);
-         i:=round(logRange-1.8);
+        try
+          i:=round(logRange-1.8);
+        except
+          i:=1;
+        end;
         initLinearTics(i,10,1);
       end;
     end; end;
