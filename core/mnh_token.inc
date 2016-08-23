@@ -59,6 +59,7 @@ PROCEDURE T_tokenArray.append(CONST newTok: T_token);
 
 PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistring; VAR adapters: T_adapters);
   VAR fullText:ansistring;
+      line:longint;
   begin
     repeat
       inc(i);
@@ -68,11 +69,15 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
            then lastComment:=t[i].txt
            else lastComment:=lastComment+C_lineBreakChar+t[i].txt;
         end;
-        tt_literal: if (P_literal(t[i].data)^.literalType=lt_string) and (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string) then begin
+        tt_literal: if (P_literal(t[i].data)^.literalType=lt_string) and (i<length(t)-1)
+                   and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)
+                   and (t[i].location.line=t[i+1].location.line)
+        then begin
+          line:=t[i].location.line;
           fullText:=P_stringLiteral(t[i].data)^.value;
           disposeLiteral(t[i].data);
           t[i].tokType:=tt_EOL;
-          while (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string)  do begin
+          while (i<length(t)-1) and (t[i+1].tokType=tt_literal) and (P_literal(t[i+1].data)^.literalType=lt_string) and (t[i+1].location.line=line) do begin
             inc(i);
             fullText:=fullText+P_stringLiteral(t[i].data)^.value;
             disposeLiteral(t[i].data);

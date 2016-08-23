@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
+USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -162,8 +162,9 @@ TYPE
 
   P_literalKeyLongintValueMap=^T_literalKeyLongintValueMap;
   T_literalKeyLongintValueMap=specialize G_literalKeyMap<longint>;
-  P_literalKeyLiteralValueMap=^T_literalKeyLiteralValueMap;
-  T_literalKeyLiteralValueMap=specialize G_literalKeyMap<P_literal>;
+  P_stringKeyLiteralValueMap=^T_stringKeyLiteralValueMap;
+  T_stringKeyLiteralValueMap=specialize G_stringKeyMap<P_literal>;
+
 
   T_listLiteral = packed object(T_literal)
   private
@@ -173,9 +174,9 @@ TYPE
 
     indexBacking:record
       setBack:P_literalKeyLongintValueMap;
-      mapBack:P_literalKeyLiteralValueMap;
+      mapBack:P_stringKeyLiteralValueMap;
     end;
-
+    PROCEDURE modifyType(CONST L:P_literal); inline;
   public
     CONSTRUCTOR create;
     FUNCTION toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
@@ -184,7 +185,7 @@ TYPE
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
     FUNCTION appendInt   (CONST i:int64):P_listLiteral;
     FUNCTION appendReal  (CONST r:T_myFloat):P_listLiteral;
-    FUNCTION appendAll(CONST L: P_listLiteral):P_listLiteral;
+    FUNCTION appendAll   (CONST L: P_listLiteral):P_listLiteral;
     PROCEDURE appendConstructing(CONST L: P_literal; CONST tokenLocation: T_tokenLocation; VAR adapters:T_adapters);
     PROCEDURE setRangeAppend;
     PROCEDURE dropIndexes;
@@ -1120,8 +1121,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
       end;
       lt_string: if literalType in [lt_keyValueList,lt_emptyList] then begin
         if indexBacking.mapBack<>nil then begin
-          result:=indexBacking.mapBack^.get(other,nil);
-          if result=nil then exit(newVoidLiteral);
+          if not(indexBacking.mapBack^.containsKey(P_stringLiteral(other)^.val,result)) then exit(newVoidLiteral);
           result^.rereference;
           exit(result);
         end else begin
@@ -1143,8 +1143,7 @@ FUNCTION T_listLiteral.get(CONST other: P_literal; CONST tokenLocation: T_tokenL
         setLength(P_listLiteral(result)^.dat,P_listLiteral(other)^.size);
         if indexBacking.mapBack<>nil then begin
           for j:=0 to P_listLiteral(other)^.size-1 do begin
-            L:=indexBacking.mapBack^.get(P_listLiteral(other)^.dat[j],nil);
-            if L<>nil then begin
+            if indexBacking.mapBack^.containsKey(P_stringLiteral(P_listLiteral(other)^.dat[j])^.val,L) then begin
               P_listLiteral(result)^.append(L,true);
               break;
             end;
@@ -1328,18 +1327,8 @@ PROCEDURE T_stringLiteral.append(CONST suffix:ansistring);
     val:=val+suffix;
   end;
 
-FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_listLiteral;
+PROCEDURE T_listLiteral.modifyType(CONST L:P_literal); inline;
   begin
-    result:=@self;
-    if L = nil then begin
-      raise Exception.create('Trying to append NIL literal to list');
-      exit;
-    end;
-    if (L^.literalType=lt_void) and not(forceVoidAppend) then exit;
-    if length(dat)<=datFill then setLength(dat,datFill+16);
-    dat[datFill]:=L;
-    inc(datFill);
-    if incRefs then L^.rereference;
     case literalType of
       lt_list: if L^.literalType in [lt_error,lt_listWithError] then literalType:=lt_listWithError;
       lt_booleanList  : case L^.literalType of
@@ -1391,6 +1380,21 @@ FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST 
   	                 lt_list..lt_flatList:      literalType:=lt_list;
                        end;
     end;
+  end;
+
+FUNCTION T_listLiteral.append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false): P_listLiteral;
+  begin
+    result:=@self;
+    if L = nil then begin
+      raise Exception.create('Trying to append NIL literal to list');
+      exit;
+    end;
+    if (L^.literalType=lt_void) and not(forceVoidAppend) then exit;
+    if length(dat)<=datFill then setLength(dat,datFill+16);
+    dat[datFill]:=L;
+    inc(datFill);
+    if incRefs then L^.rereference;
+    modifyType(L);
     dropIndexes;
   end;
 
@@ -1720,7 +1724,8 @@ PROCEDURE T_listLiteral.unique;
 
 PROCEDURE T_listLiteral.toKeyValueList;
   VAR i,j:longint;
-      key,val:P_literal;
+      key:ansistring;
+      val:P_literal;
   begin
     with indexBacking do begin
       if (literalType<>lt_keyValueList) or (mapBack<>nil) then exit;
@@ -1731,9 +1736,9 @@ PROCEDURE T_listLiteral.toKeyValueList;
       j:=0;
       new(mapBack,create());
       for i:=0 to datFill-1 do begin
-        key:=P_listLiteral(dat[i])^.dat[0];
-        val:=P_listLiteral(dat[i])^.dat[1];
-        if mapBack^.get(key,nil)=nil then begin
+        key:=P_stringLiteral(P_listLiteral(dat[i])^.dat[0])^.val;
+        val:=                P_listLiteral(dat[i])^.dat[1];
+        if not(mapBack^.containsKey(key)) then begin
           mapBack^.put(key,val);
           dat[j]:=dat[i];
           inc(j);
@@ -2463,8 +2468,9 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
   VAR map,keyValuePair,keyList,fallbackList,resultList:P_listLiteral;
       key:P_stringLiteral;
       fallback:P_literal;
+      nextElement:P_literal;
       i:longint;
-      back:P_literalKeyLiteralValueMap;
+      back:P_stringKeyLiteralValueMap;
       tempBack:boolean=false;
   begin
     result:=nil;
@@ -2482,17 +2488,19 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
           new(back,create);
           for i:=0 to map^.datFill-1 do begin
             keyValuePair:=P_listLiteral(map^.dat[i]);
-            back^.put(keyValuePair^.dat[0],keyValuePair^.dat[1]);
+            back^.put(P_stringLiteral(keyValuePair^.dat[0])^.val,keyValuePair^.dat[1]);
           end;
         end;
         resultList:=newListLiteral;
         if (fallback<>nil) and (fallback^.literalType in C_validListTypes) and (P_listLiteral(fallback)^.size=keyList^.size) then begin
           fallbackList:=P_listLiteral(fallback);
-          for i:=0 to keyList^.size-1 do resultList^.append(back^.get(keyList^.dat[i],fallbackList^.dat[i]),true);
+          for i:=0 to keyList^.size-1 do if back^.containsKey(P_stringLiteral(keyList^.dat[i])^.val,nextElement)
+          then resultList^.append(nextElement         ,true)
+          else resultList^.append(fallbackList^.dat[i],true);
         end else begin
           for i:=0 to keyList^.size-1 do begin
-            result:=back^.get(keyList^.dat[i],fallback);
-            if result<>nil then resultList^.append(result,true);
+            if back^.containsKey(P_stringLiteral(keyList^.dat[i])^.val,nextElement)
+            then resultList^.append(nextElement,true);
           end;
         end;
         if tempBack then dispose(back,destroy);
@@ -2510,8 +2518,8 @@ FUNCTION mapGet(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation;
             end;
           end;
         end else begin
-          result:=back^.get(key,nil);
-          if result<>nil then begin
+          if back^.containsKey(P_stringLiteral(key)^.val,result)
+          then begin
             result^.rereference;
             exit(result);
           end;

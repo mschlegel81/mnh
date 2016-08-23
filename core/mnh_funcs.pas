@@ -139,6 +139,10 @@ GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tt_typeCheckReal}
 GENERIC_TYPE_CHECK;
 
+{$define FUNC_ID:=isNumeric}
+{$define TYPE_CHECK:=tt_typeCheckNumeric}
+GENERIC_TYPE_CHECK;
+
 {$define FUNC_ID:=isString}
 {$define TYPE_CHECK:=tt_typeCheckString}
 GENERIC_TYPE_CHECK;
@@ -184,19 +188,20 @@ INITIALIZATION
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize',@serialize_impl,'serialize(x);#Returns a string representing x. Strings will NOT(!) be compressed.#serialize(x,compressStrings:boolean);#Returns a string representing x.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize',@deserialize_impl,'deserialize(s:string);#Returns the literal represented by s which was created using serialize(x)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'bits',@bits_impl,'bits(i:int);#Returns the bits of i');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isScalar',@isScalar              ,'isScalar      (x);//Returns true if x is a scalar.'                                                                            );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isBoolean',@isBoolean            ,'isBoolean     (x);//Returns true if x is a boolean.'                                                                           );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isInt',@isInt                    ,'isInt         (x);//Returns true if x is an int.'                                                                              );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isReal',@isReal                  ,'isReal        (x);//Returns true if x is a real.'                                                                              );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isString',@isString              ,'isString      (x);//Returns true if x is a string.'                                                                            );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isList',@isList                  ,'isList        (x);//Returns true if x is a list. Specify an additional int parameter to additionally check the length.'        );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isBoolList',@isBoolList          ,'isBoolList    (x);//Returns true if x is a boolList. Specify an additional int parameter to additionally check the length.'    );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isIntList',@isIntList            ,'isIntList     (x);//Returns true if x is an intList. Specify an additional int parameter to additionally check the length.'    );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isRealList',@isRealList          ,'isRealList    (x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.'    );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isStringList',@isStringList      ,'isStringList  (x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.'  );
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isNumList',@isNumList            ,'isNumList     (x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.'     );
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isScalar',@isScalar              ,'isScalar(x);//Returns true if x is a scalar.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isBoolean',@isBoolean            ,'isBoolean(x);//Returns true if x is a boolean.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isInt',@isInt                    ,'isInt(x);//Returns true if x is an int.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isReal',@isReal                  ,'isReal(x);//Returns true if x is numeric.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isNumeric',@isNumeric            ,'isNumeric(x);//Returns true if x is a real.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isString',@isString              ,'isString      (x);//Returns true if x is a string.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isList',@isList                  ,'isList        (x);//Returns true if x is a list. Specify an additional int parameter to additionally check the length.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isBoolList',@isBoolList          ,'isBoolList    (x);//Returns true if x is a boolList. Specify an additional int parameter to additionally check the length.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isIntList',@isIntList            ,'isIntList     (x);//Returns true if x is an intList. Specify an additional int parameter to additionally check the length.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isRealList',@isRealList          ,'isRealList    (x);//Returns true if x is a realList. Specify an additional int parameter to additionally check the length.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isStringList',@isStringList      ,'isStringList  (x);//Returns true if x is a stringList. Specify an additional int parameter to additionally check the length.');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isNumList',@isNumList            ,'isNumList     (x);//Returns true if x is a numList. Specify an additional int parameter to additionally check the length.');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'isKeyValueList',@isKeyValueList  ,'isKeyValueList(x);//Returns true if x is a keyValueList. Specify an additional int parameter to additionally check the length.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isExpression',@isExpression      ,'isExpression  (x);//Returns true if x is an expression. Specify an additional int parameter to additionally check the arity.'  );
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'isExpression',@isExpression      ,'isExpression  (x);//Returns true if x is an expression. Specify an additional int parameter to additionally check the arity.');
   system.initCriticalSection(print_cs);
 FINALIZATION
   if mnhParameters<>nil then disposeLiteral(mnhParameters);
