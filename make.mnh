@@ -157,6 +157,7 @@ main('distro')->isLinux ? fail('Distro building is currently not supported under
       : void;
     end
   : void;
+  fileExists('distro_hook.mnh') ? executor.execPipeless(['distro_hook.mnh']) : void;
 end;
 
 //*Build - ignoring potentially existing executables
