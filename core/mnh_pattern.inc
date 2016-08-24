@@ -45,6 +45,7 @@
     FUNCTION toCmdLineHelpStringString:ansistring;
     FUNCTION isEquivalent(CONST p:T_pattern):boolean;
     FUNCTION isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
+    FUNCTION isValidMainPattern:boolean;
     PROCEDURE toParameterIds(CONST tok:P_token);
   end;
 {$endif}
@@ -326,7 +327,7 @@ FUNCTION T_pattern.toString: ansistring;
       result:=result+sig[i].toString;
     end;
     if hasOptionals then begin
-      if  length(sig)>0 then result:=result+',';
+      if  length(sig)>0 then result:=result+' ';
       result:=result+'...';
     end;
     result:=result+')';
@@ -363,6 +364,13 @@ FUNCTION T_pattern.isEquivalentIgnoringRestrictions(CONST p:T_pattern):boolean;
             (containsSelfPointer=p.containsSelfPointer) and
             (hasOptionals=p.hasOptionals);
     for i:=0 to length(sig)-1 do result:=result and (sig[i].typeWhitelist=p.sig[i].typeWhitelist);
+  end;
+
+FUNCTION T_pattern.isValidMainPattern:boolean;
+  VAR i:longint;
+  begin
+    result:=not(containsSelfPointer);
+    for i:=0 to length(sig)-1 do result:=result and (lt_string in sig[i].typeWhitelist);
   end;
 
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
