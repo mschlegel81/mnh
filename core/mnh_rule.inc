@@ -188,16 +188,6 @@ exit}
         end;
         result:=false;
       end;
-      rt_main: begin
-        //TODO: Special handling! Cast parameters to match!
-        for useUncurryingFallback:=false to true do
-        for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(param,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
-          called:=true;
-          exit(true);
-        end;
-        result:=false;
-
-      end;
     end;
   end;
 

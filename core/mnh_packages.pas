@@ -960,7 +960,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifi
       exit;
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
-      if (ruleID=C_mainRuleId) then begin
+      if (ruleId=C_mainRuleId) then begin
         if modifiers<>[] then begin
           adapters.raiseError('main rules must not have any modifiers',ruleDeclarationStart);
           exit;
