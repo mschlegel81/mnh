@@ -50,6 +50,7 @@ USE testLog,mnhInfo,
     '../demos/quine.mnh',
     '../demos/quine2.mnh',
     '../demos/range_extract_expand.mnh',
+    '../demos/randomWords.mnh',
     '../demos/roman.mnh',
     '../demos/selfRefSeq.mnh',
     '../demos/semordnilap.mnh',
@@ -142,9 +143,9 @@ main->main('',false);
 //*Retest without examples file
 main('retest')->main('',true);
 //*Test with examples file
-main(examplesFile:string)->main(examplesFile,false);
+main(examplesFile:string)->main_impl(examplesFile,false);
 //*Retest with examples file
-main(examplesFile:string,'retest')->main(examplesFile,true);
+main(examplesFile:string,'retest')->main_impl(examplesFile,true);
 
 private executeMainCall(import:string,...)->begin
   print('***** ',import,' *****');
@@ -155,7 +156,7 @@ private executeMainCall(import:string,...)->begin
   void;
 end;
 
-main(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
+main_impl(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
 begin
   resetRandom;
   collectOutput;

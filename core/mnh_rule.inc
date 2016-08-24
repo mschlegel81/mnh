@@ -194,12 +194,14 @@ exit}
 PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evaluationContext);
   VAR i:longint;
   begin
+    if (id=C_mainRuleId) and not(rule^.pattern.isValidMainPattern) then context.adapters^.raiseError('Invalid pattern/signature for main rule! Must accept strings.',rule^.declaredAt);
+
     i:=0;
     while (i<length(subrules)) and not(rule^.pattern.isEquivalent(subrules[i]^.pattern)) do inc(i);
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>0) and (ruleType in C_mutableRuleTypes) then context.adapters^.raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>0) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 
@@ -258,7 +260,7 @@ FUNCTION T_rule.complainAboutUnused(VAR adapters:T_adapters):boolean;
     end;
 
   begin
-    result:=(id<>'main') and not(idResolved);
+    result:=(id<>C_mainRuleId) and not(idResolved);
     if result then adapters.raiseWarning('Unused rule '+id+mitigate,declarationStart);
   end;
 {$endif}
@@ -285,7 +287,7 @@ FUNCTION T_rule.getDocHtml:ansistring;
   begin
     result:='<table><tr class="ruleHead"><td>';
     result:=result+toHtmlCode(C_ruleTypeText[ruleType]+' ');
-    if id = 'main' then result:=result+'<b>'+id+'</b>' else result:=result+id;
+    if id = C_mainRuleId then result:=result+'<b>'+id+'</b>' else result:=result+id;
     result:=result+'</td></tr>';
     for i:=0 to length(subrules)-1 do if subrules[i]^.typ=srt_normal_public then begin
       anyPublic:=true;

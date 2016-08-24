@@ -25,9 +25,9 @@ end;
 
 private epsilon:=1E-12;
 
-main(F:expression)->print("Analyzing ",F) and
-                    roots(F,-6,6).each(r,print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));
-main(F:string)->main(expression(F));
+roots(F:expression)->print("Analyzing ",F.toString.unbrace.unbrace) and
+                     roots(F,-6,6).each(r,print("Root found ",abs(F(r))<epsilon?"at   ":"near ",r));
+main(F)->roots(F.toExpression);
 //*Solves the "Roots of a function" task from <a href="http://rosettacode.org/wiki/Roots_of_a_function">RosettaCode</a>
 main->print('See http://rosettacode.org/wiki/Roots_of_a_function') and
-      main({$x^3-3*$x^2+2*$x});
+      main("$x^3-3*$x^2+2*$x");

@@ -51,6 +51,8 @@ CONST
 
   C_eachIndexIdentifier='index';
   C_tryMessageIdentifier='messages';
+  C_mainRuleId='main';
+  C_builtinPseudolocationPrefix='builtin';
 
 FUNCTION isQualified(CONST s:string):boolean;
 FUNCTION configDir:string;
