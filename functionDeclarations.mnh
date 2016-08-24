@@ -5,7 +5,7 @@ firstString(c:string)->begin
   : c.copy(indexes[0],indexes[1]-indexes[0]-1);
 end;
 
-allFolders('.')
+main->allFolders('.')
   .each(f,files(f&['/*.pas','/*.inc']),|)
   .each(file,
     file

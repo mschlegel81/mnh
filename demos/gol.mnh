@@ -11,7 +11,6 @@ private xyPos:=[0.. worldHeight-1].each(i,
 
 private
 plotWorld(w:intList)->begin
-  setAxisStyle([0,0]);
   plot([[0,0],[worldWidth+1,worldHeight+1]],'box RGB1,1,1');
   addPlot([0..size(w)-1].each(i,
                   w[i]=0 ? void : [xyPos[i],xyPos[i]+1],|),'black box');
@@ -71,6 +70,6 @@ playSteps(w,n>0)->begin
   end);
 end;
 
-main->playSteps(initWorld,10);
+main->isGuiActive ? playGui : playSteps(initWorld,10);
 main("-long")->playUntilStatic(initWorld,0.05);
 main(steps)->playSteps(initWorld,softCast(steps));

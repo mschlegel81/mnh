@@ -21,7 +21,5 @@ private sum1(i)->sum(summands(i));
 private sum2(i)->sum(summands(i)*weights(i));
 private errors1->[1..maxN].each(i,abs(sum1(i)-arctan(1)));
 private errors2->[1..maxN].each(i,abs(sum2(i)-arctan(1)));
-private T (i)->abs(time({sum1($p)},[i]).get([2,1]).getInner(1)-[0,arctan(1)])*[60000,1];
-private T2(i)->abs(time({sum2($p)},[i]).get([2,1]).getInner(1)-[0,arctan(1)])*[60000,1];
 
 main->printf('%17.15f %17.15f',errors1,errors2);

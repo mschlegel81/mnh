@@ -5,7 +5,8 @@ private AKSPoly(n)->pascal(n)*(-1^[0..n]);
 private powerOfX(0)->"1";
 private powerOfX(1)->"x";
 private powerOfX(n)->"x^"&n;
-private AKSPolyToString(coeff)->[0..size(coeff)-1].each(i,
+//Used in formatted print
+private AKSPolyToString(coeff:intList)->[0..size(coeff)-1].each(i,
   coeff[i]>0 and i>0 ? "+" : "",
   coeff[i] = 1 ? "" : coeff[i] = -1 ? "-" : coeff[i],
   powerOfX(size(coeff)-i-1)).join;
