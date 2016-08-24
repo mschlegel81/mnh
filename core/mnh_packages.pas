@@ -794,11 +794,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           tokenLocation.line:=codeProvider.numberOfLines+1;
           tokenLocation.column:=1;
           context.adapters^.raiseNote('Adding default main rule: '+C_defMain,fileTokenLocation(@codeProvider));
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+          with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
           fileTokens.create;
           fileTokens.tokenizeAll(C_defMain,tokenLocation,@self,context.adapters^,false);
           fileTokens.step(@self,lastComment,context.adapters^);
-          with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+          with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
           processTokens(fileTokens);
         end;
       end;
