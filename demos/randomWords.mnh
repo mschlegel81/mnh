@@ -1,0 +1,39 @@
+USE inputs;
+
+private words:=dict.fileLines.trim;
+
+private relativeFrequency(L:list)->begin
+  local Freq:=L.elementFrequency.sort(1);
+  local f:=1/Freq.getInner(0).max;
+  Freq.each(t,[t[0]*f,t[1]]);
+end;
+
+private lengthTable:=length(words).relativeFrequency;
+private firstTable:=words.copy(0,1).relativeFrequency;
+private followerTable:=words.each(word,word.copy([0..length(word)-2],2)).flatten.each(s,s.chars).group(0).each(g,[g[0,0],g.getInner(1).relativeFrequency]);
+
+private randomFromTable(T:list)->begin
+  local index:=intRandom(T.size);
+  while(T[index,0]<random,index:=intRandom(T.size));
+  T[index,1];
+end;
+
+randomWord->begin
+  local len:=lengthTable.randomFromTable;
+  local result:=firstTable.randomFromTable;
+  local lastChar:=result;
+  [2..len].each(i,begin
+    local nextChar:=followerTable[lastChar].randomFromTable;
+    result&=nextChar;
+    lastChar:=nextChar;
+  end);
+  result;
+end;
+
+main(count)->begin
+  local cnt:=toInt(count);
+  cnt<=0 ? fail('count must be >0') : void;
+  [1..cnt].each(w,randomWord.print);
+end;
+
+main->main(16);
