@@ -5,7 +5,7 @@
       restrictionType  :T_tokenType;
       restrictionValue :P_literal;
       restrictionIdx   :longint;
-      typeWhitelist    :set of T_literalType;
+      typeWhitelist    :T_literalTypeSet;
       restrictionId    :ansistring;
       customTypeCheck  :P_subrule;
     public

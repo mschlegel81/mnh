@@ -21,7 +21,6 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
-
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;

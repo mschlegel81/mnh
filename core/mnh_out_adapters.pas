@@ -141,15 +141,17 @@ TYPE
 
   {$ifdef fullVersion}
   T_timerEntry=record
-    timer:TEpikTimer;
+    elapsed:extended;
     into:longint;
     functionId:string;
+    callCount:longint;
   end;
 
   T_TimerMap=specialize G_stringKeyMap<T_timerEntry>;
 
   T_stepper=object
     private
+      wallClock:TEpikTimer;
       timerMap:T_TimerMap;
 
       waitingForGUI:boolean;
@@ -804,38 +806,30 @@ CONSTRUCTOR T_stepper.create;
     contextPointer:=nil;
     tokenPointer:=nil;
     stackPointer:=nil;
+    wallClock:=TEpikTimer.create(nil);
   end;
 
 DESTRUCTOR T_stepper.destroy;
   begin
     clearTimers;
     timerMap.destroy;
+    wallClock.destroy;
     system.doneCriticalSection(cs);
   end;
 
 PROCEDURE T_stepper.clearTimers;
-  VAR v:array of T_timerEntry;
-      i:longint;
   begin
-    v:=timerMap.valueSet;
-    for i:=0 to length(v)-1 do with v[i] do timer.destroy;
     timerMap.clear;
   end;
 
 PROCEDURE T_stepper.stopAllTimers;
-  VAR v:array of T_timerEntry;
-      i:longint;
   begin
-    v:=timerMap.valueSet;
-    for i:=0 to length(v)-1 do with v[i] do if into>0 then timer.stop;
+    wallClock.stop;
   end;
 
 PROCEDURE T_stepper.resumeAllTimers;
-  VAR v:array of T_timerEntry;
-      i:longint;
   begin
-    v:=timerMap.valueSet;
-    for i:=0 to length(v)-1 do with v[i] do if into>0 then timer.start;
+    wallClock.start;
   end;
 
 PROCEDURE T_stepper.stepping(CONST location: T_tokenLocation; CONST pointerToFirst, pointerToContext, pointerToStack: pointer);
@@ -892,12 +886,13 @@ PROCEDURE T_stepper.steppingIn(CONST location,functionId:ansistring);
     system.enterCriticalSection(cs);
     levelChanged:=true;
     if not(timerMap.containsKey(location,t)) then begin
-      t.timer:=TEpikTimer.create(nil);
+      t.elapsed:=wallClock.elapsed;
       t.into:=1;
-      t.timer.start;
+      t.callCount:=1;
       t.functionId:=functionId;
     end else begin
-      if t.into<=0 then t.timer.start;
+      if t.into<=0 then t.elapsed:=wallClock.elapsed-t.elapsed;
+      inc(t.callCount);
       inc(t.into);
       if t.functionId='' then t.functionId:=functionId;;
     end;
@@ -915,10 +910,9 @@ PROCEDURE T_stepper.steppingOut(CONST location:ansistring);
     dec(currentLevel);
     if timerMap.containsKey(location,t) then begin
       dec(t.into);
-      if t.into<=0 then t.timer.stop;
+      if t.into<=0 then t.elapsed:=wallClock.elapsed-t.elapsed;
       timerMap.put(location,t);
     end;
-
     system.leaveCriticalSection(cs);
   end;
 
@@ -961,6 +955,8 @@ PROCEDURE T_stepper.doStart(CONST continue: boolean);
       currentLine.column:=0;
       currentLine.line:=0;
       state:=runUntilBreakpoint;
+      wallClock.clear;
+      wallClock.start;
     end else state:=runUntilBreakpoint;
     waitingForGUI:=false;
     system.leaveCriticalSection(cs);
@@ -1028,34 +1024,48 @@ FUNCTION T_stepper.loc: T_tokenLocation;
   end;
 
 PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
-  CONST unknownLocTxt='Unknown location';
+  FUNCTION nicestTime(CONST seconds:double):string;
+    begin
+      if seconds>=10         then result:=formatFloat('0.000',seconds)+C_invisibleTabChar+'s'
+      else if seconds>=10E-3 then result:=formatFloat('0.000',seconds*1E3)+C_invisibleTabChar+'ms'
+      else                        result:=formatFloat('0.000',seconds*1E6)+C_invisibleTabChar+'µs';
+    end;
+
+  CONST headerLine='Location'+C_tabChar+'ID'+C_tabChar+'count'+C_tabChar+'time';
   VAR entrySet:T_TimerMap.KEY_VALUE_LIST;
       i,j:longint;
       swapTemp:T_TimerMap.KEY_VALUE_PAIR;
-      locWidth:longint=0;
-      idWidth:longint=0;
+      linesToPrint:T_arrayOfString;
   begin
     entrySet:=timerMap.entrySet;
+    //for i:=0 to length(entrySet)-1 do begin
+    //
+    //  j:=length(entrySet[i].key);                       if j>locWidth then locWidth:=j;
+    //  j:=length(entrySet[i].value.functionId);          if j>idWidth then idWidth:=j;
+    //  j:=length(IntToStr(entrySet[i].value.callCount)); if j>countWidth then countWidth:=j;
+    //end;
 
-    for i:=0 to length(entrySet)-1 do begin
-      entrySet[i].value.timer.stop;
-      if entrySet[i].key='' then entrySet[i].key:=unknownLocTxt;
-      if length(entrySet[i].key)>locWidth then locWidth:=length(entrySet[i].key);
-      if length(entrySet[i].value.functionId)>idWidth then idWidth:=length(entrySet[i].value.functionId);
-    end;
-
-    for j:=1 to length(entrySet)-1 do for i:=0 to j-1 do if entrySet[i].value.timer.Elapsed<entrySet[j].value.timer.Elapsed then begin
+    for j:=1 to length(entrySet)-1 do for i:=0 to j-1 do if entrySet[i].value.elapsed<entrySet[j].value.elapsed then begin
       swapTemp:=entrySet[i];
       entrySet[i]:=entrySet[j];
       entrySet[j]:=swapTemp;
     end;
+    setLength(linesToPrint,length(entrySet)+1);
+    linesToPrint[0]:=headerLine;
+    for i:=0 to length(entrySet)-1 do begin
+      if startsWith(entrySet[i].key,C_builtinPseudolocationPrefix)
+      then linesToPrint[i+1]:=C_builtinPseudolocationPrefix
+      else linesToPrint[i+1]:=entrySet[i].key;
+      linesToPrint[i+1]:=linesToPrint[i+1]+C_tabChar+
+                       entrySet[i].value.functionId+C_tabChar+
+                       intToStr(entrySet[i].value.callCount)+C_tabChar+
+                       nicestTime(entrySet[i].value.elapsed);
+    end;
+    linesToPrint:=formatTabs(linesToPrint);
 
     adapters.raiseCustomMessage(mt_timing_info,'',C_nilTokenLocation);
     adapters.raiseCustomMessage(mt_timing_info,'Time spent by locations:',C_nilTokenLocation);
-    for i:=0 to length(entrySet)-1 do adapters.raiseCustomMessage(mt_timing_info,
-      entrySet[i].key             +StringOfChar(' ',locWidth-length(entrySet[i].key             ))+' '+
-      entrySet[i].value.functionId+StringOfChar(' ',idWidth- length(entrySet[i].value.functionId))+' '+
-      floatToStr(entrySet[i].value.timer.Elapsed),C_nilTokenLocation);
+    for i:=0 to length(linesToPrint)-1 do adapters.raiseCustomMessage(mt_timing_info,linesToPrint[i],C_nilTokenLocation);
   end;
 
 INITIALIZATION

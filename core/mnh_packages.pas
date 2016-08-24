@@ -256,9 +256,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         rulesSet:T_ruleMap.KEY_VALUE_LIST;
         dummyRule:P_rule;
     begin
-      with profiler do if active then importing:=timer.value.Elapsed;
+      with profiler do if active then importing:=timer.value.elapsed;
       for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
-      with profiler do if active then importing:=timer.value.Elapsed-importing;
+      with profiler do if active then importing:=timer.value.elapsed-importing;
       i:=0;
       while i<length(packageUses) do begin
         if packageUses[i].pack=nil then begin
@@ -588,7 +588,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
-        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        with profiler do if active then declarations:=timer.value.elapsed-declarations;
         if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
           context.cascadeDisposeToken(first);
           exit;
@@ -596,15 +596,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
-        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        with profiler do if active then declarations:=timer.value.elapsed-declarations;
       end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
-        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        with profiler do if active then declarations:=timer.value.elapsed-declarations;
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseDataStore;
-        with profiler do if active then declarations:=timer.value.Elapsed-declarations;
+        with profiler do if active then declarations:=timer.value.elapsed-declarations;
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
-          with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
+          with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
           if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
             exit;
@@ -613,7 +613,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           resolveRuleIds(nil);
           reduceExpression(first,0,context);
-          with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
+          with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -631,17 +631,17 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     begin
       resolveRuleIds(nil);
       if not(ready) or not(context.adapters^.noErrors) then exit;
-      if not(packageRules.containsKey('main',mainRule)) then begin
+      if not(packageRules.containsKey(C_mainRuleId,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
-        t:=context.newToken(packageTokenLocation(@self),'main',tt_localUserRule,mainRule);
+        t:=context.newToken(packageTokenLocation(@self),C_mainRuleId,tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
-        with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
+        with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
         reduceExpression(t,0,context);
-        with profiler do if active then interpretation:=timer.value.Elapsed-interpretation;
+        with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
@@ -717,9 +717,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   {$define stepToken:=
-    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
     fileTokens.step(@self,lastComment,context.adapters^);
-    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing}
+    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing}
 
   PROCEDURE processTokens(VAR fileTokens:T_tokenArray);
     VAR first:P_token=nil;
@@ -772,10 +772,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           stepToken;
         end;
       end;
-      with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+      with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
       fileTokens.destroy;
       localIdStack.destroy;
-      with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+      with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
 
       if (context.adapters^.noErrors)
       then begin if first<>nil then interpret(first,first^.location); end
@@ -788,7 +788,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       profiler.active:=usecase<>lu_interactiveMode;
       timer.value.clear;
       timer.value.start;
-      profiler.unaccounted:=timer.value.Elapsed;
+      profiler.unaccounted:=timer.value.elapsed;
     end else profiler.active:=false;
 
     if usecase<>lu_interactiveMode
@@ -796,11 +796,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
-    with profiler do if active then tokenizing:=timer.value.Elapsed;
+    with profiler do if active then tokenizing:=timer.value.elapsed;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     fileTokens.step(@self,lastComment,context.adapters^);
-    with profiler do if active then tokenizing:=timer.value.Elapsed-tokenizing;
+    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
     processTokens(fileTokens);
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
@@ -829,7 +829,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
     with profiler do if active then begin
-      unaccounted:=timer.value.Elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
+      unaccounted:=timer.value.elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
       prettyPrintTime;
     end;
     if isMain then context.adapters^.logEndOfEvaluation;
@@ -960,6 +960,12 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifi
       exit;
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
+      if (ruleID=C_mainRuleId) then begin
+        if modifiers<>[] then begin
+          adapters.raiseError('main rules must not have any modifiers',ruleDeclarationStart);
+          exit;
+        end;
+      end;
       new(result,create(ruleId,ruleType,ruleDeclarationStart));
       packageRules.put(ruleId,result);
       adapters.raiseCustomMessage(mt_el1_note,'Creating new rule: '+ruleId,ruleDeclarationStart);
@@ -1016,7 +1022,7 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       result^.addRuleDoc(ruleList[i]^.getDocHtml);
-      if ruleList[i]^.id='main' then result^.isExecutable:=true;
+      if ruleList[i]^.id=C_mainRuleId then result^.isExecutable:=true;
     end;
     setLength(ruleList,0);
     for i:=0 to length(packageUses)-1 do result^.addUses(expandFileName(packageUses[i].path));
@@ -1028,7 +1034,7 @@ PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);
       docText:T_arrayOfString;
       i:longint;
   begin
-    if not(packageRules.containsKey('main',mainRule))
+    if not(packageRules.containsKey(C_mainRuleId,mainRule))
     then adapters.printOut('The package contains no main rule')
     else begin
       docText:=split(mainRule^.getCmdLineHelpText,C_lineBreakChar);

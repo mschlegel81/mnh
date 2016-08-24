@@ -249,9 +249,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     begin
-      t:=timer.value.Elapsed;
+      t:=timer.value.elapsed;
       result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,context);
-      t:=timer.value.Elapsed-t;
+      t:=timer.value.elapsed-t;
     end;
 
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
@@ -259,9 +259,9 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
     begin
       first:=context.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
       first^.next:=context.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
-      t:=timer.value.Elapsed;
+      t:=timer.value.elapsed;
       reduceExpression(first,0,context);
-      t:=timer.value.Elapsed-t;
+      t:=timer.value.elapsed-t;
       if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
       then begin result:=first^.data; result^.rereference; end
       else result:=nil;
@@ -271,7 +271,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
 
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then exit(newRealLiteral(timer.value.Elapsed))
+    if (params=nil) or (params^.size=0) then exit(newRealLiteral(timer.value.elapsed))
     else if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
       ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       if params^.size=2 then res:=evaluate(P_expressionLiteral(params^.value(0)),P_listLiteral(params^.value(1)))
@@ -334,13 +334,13 @@ FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=timer.value.Elapsed;
+      sleepUntil:=timer.value.elapsed;
       result:=newVoidLiteral;
       if params^.value(0)^.literalType=lt_int
       then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
       else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
-      while (timer.value.Elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-timer.value.Elapsed));
+      while (timer.value.elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-timer.value.elapsed));
         if sleepInt>100 then sleepInt:=100;
         if (sleepInt>0) then sleep(sleepInt);
       end;

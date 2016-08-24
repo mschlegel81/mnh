@@ -1102,7 +1102,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if parameterListLiteral=nil
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
             else begin
-              if (P_rule(first^.data)^.id='main')
+              if (P_rule(first^.data)^.id=C_mainRuleId)
               then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.parameterListTypeString+':  '+parameterListLiteral^.toParameterListString(true),first^.location)
               else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
             end;
@@ -1138,11 +1138,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingIn('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
+        if currentlyDebugging then stepper.steppingIn(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
         {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingOut('builtin'+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
+        if currentlyDebugging then stepper.steppingOut(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
         {$endif}
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);
