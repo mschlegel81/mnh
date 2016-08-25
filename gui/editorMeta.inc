@@ -8,6 +8,7 @@ T_editorMeta=object
 
   sheet       : TTabSheet;
   editor      : TSynEdit;
+  plugin      : TSynPluginMultiCaret;
   highlighter : TSynMnhSyn;
   CONSTRUCTOR create(CONST idx:longint);
   CONSTRUCTOR create(CONST idx:longint; CONST state:T_editorState);
@@ -58,10 +59,10 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.WantTabs:=false;
     editor.Gutter.MarksPart.visible:=false;
     editor.Gutter.CodeFoldPart.visible:=false;
+    plugin:=TSynPluginMultiCaret.create(editor);
+    plugin.editor:=editor;
     style:=editor.BracketMatchColor;
     style.background:=clLime;
-
-
     editor.OnChange:=@MnhForm.InputEditChange;
     editor.OnKeyUp:=@MnhForm.InputEditKeyDown;
     editor.OnMouseDown:=@MnhForm.InputEditMouseDown;

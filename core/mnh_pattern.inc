@@ -9,15 +9,15 @@
       restrictionId    :ansistring;
       customTypeCheck  :P_subrule;
     public
-    CONSTRUCTOR createAnonymous;
-    CONSTRUCTOR create(CONST parameterId:ansistring);
-    FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
-    FUNCTION toString:ansistring;
-    FUNCTION toCmdLineHelpStringString:ansistring;
-    FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
-    PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
-    PROCEDURE thinOutWhitelist;
-    DESTRUCTOR destroy;
+      CONSTRUCTOR createAnonymous;
+      CONSTRUCTOR create(CONST parameterId:ansistring);
+      FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
+      FUNCTION toString:ansistring;
+      FUNCTION toCmdLineHelpStringString:ansistring;
+      FUNCTION isEquivalent(CONST pe:T_patternElement):boolean;
+      PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
+      PROCEDURE thinOutWhitelist;
+      DESTRUCTOR destroy;
   end;
 
   P_pattern=^T_pattern;
