@@ -125,12 +125,13 @@ main('export',filename:string)->writeFile(filename,runTimes.serialize);
 //*Limit number of samples to count per flavour/testcase retaining the newest samples
 main('limit',count:string)->begin
   local limit:=count.softCast;
-  limit:int AND limit>1
+  limit.isInt AND limit>1
   ? begin
-      local indexLists:=runTimes.pEach(sample,sample.leading|index).group(runTimes.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}).getInner(2).each(i,i:list ? i : [i]);
+      local indexLists:=runTimes.pEach(sample,sample.leading|index).group(runTimes.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}).getInner(2).each(i,i.isList ? i : [i]);
       indexLists.each(list,list.size>limit,OR) //update only if at least one list is too long
       ? begin
           local indexesToRetain:=indexLists.each(l,l.trailing(limit)).flatten;
+          printf('Dropping %{$1-$0}s of %{$1}s entries',indexesToRetain.size,runTimes.size);
           runTimes:=runTimes.get(indexesToRetain);
         end
       : void;

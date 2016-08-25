@@ -589,7 +589,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
         with profiler do if active then declarations:=timer.value.elapsed-declarations;
-        if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
+        if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
           context.cascadeDisposeToken(first);
           exit;
         end;
@@ -605,7 +605,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
           with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
-          if not (assignmentToken^.areBracketsPlausible(context.adapters^)) then begin
+          if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
             exit;
           end;
