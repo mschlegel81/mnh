@@ -14,6 +14,7 @@ TYPE
 
 FUNCTION fileTokenLocation(CONST provider: P_codeProvider): T_searchTokenLocation;
 FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
+FUNCTION lineLocation(CONST loc:T_tokenLocation):T_tokenLocation;
 OPERATOR := (CONST x: T_tokenLocation): ansistring;
 OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;
@@ -35,16 +36,27 @@ FUNCTION packageTokenLocation(CONST package:P_abstractPackage):T_tokenLocation;
     result.column := 1;
   end;
 
+FUNCTION lineLocation(CONST loc:T_tokenLocation):T_tokenLocation;
+  begin
+    result.package:=loc.package;
+    result.line:=loc.line;
+    result.column:=-1;
+  end;
+
 OPERATOR := (CONST x: T_tokenLocation): ansistring;
   begin
     if (x.package=nil) or (x.line=0) and (x.column=0) then exit('');
-    result:='@'+x.package^.getPath+':'+intToStr(x.line)+','+intToStr(x.column);
+    if x.column<0
+    then result:='@'+x.package^.getPath+':'+intToStr(x.line)+',1'
+    else result:='@'+x.package^.getPath+':'+intToStr(x.line)+','+intToStr(x.column);
   end;
 
 OPERATOR := (CONST x: T_searchTokenLocation): ansistring;
   begin
     if (x.fileName='?') and (x.line=0) and (x.column=0) then exit('');
-    result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
+    if x.column<0
+    then result:='@'+x.fileName+':'+intToStr(x.line)+',1'
+    else result:='@'+x.fileName+':'+intToStr(x.line)+','+intToStr(x.column);
   end;
 
 OPERATOR := (CONST x: T_tokenLocation): T_searchTokenLocation;

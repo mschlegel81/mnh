@@ -261,7 +261,7 @@ FUNCTION T_rule.complainAboutUnused(VAR adapters:T_adapters):boolean;
 
   begin
     result:=(id<>C_mainRuleId) and not(idResolved);
-    if result then adapters.raiseWarning('Unused rule '+id+mitigate,declarationStart);
+    if result then adapters.raiseWarning('Unused rule '+id+mitigate,lineLocation(declarationStart));
   end;
 {$endif}
 
