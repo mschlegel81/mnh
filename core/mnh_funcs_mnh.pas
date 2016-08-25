@@ -51,14 +51,17 @@ FUNCTION toString_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
 FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_boolean: begin result:=arg0; result^.rereference; end;
-      lt_string: if lowercase(str0^.value) = C_boolText[false] then exit(newBoolLiteral(false))
-            else if lowercase(str0^.value) = C_boolText[true]  then exit(newBoolLiteral(true));
-      lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
-         else if int0^.value=1 then exit(newBoolLiteral(true));
-      lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
-          else if real0^.value=1 then exit(newBoolLiteral(true));
+    if (params<>nil) and (params^.size=1) then begin
+      case arg0^.literalType of
+        lt_boolean: begin result:=arg0; result^.rereference; exit(result); end;
+        lt_string: if lowercase(str0^.value) = C_boolText[false] then exit(newBoolLiteral(false))
+              else if lowercase(str0^.value) = C_boolText[true]  then exit(newBoolLiteral(true));
+        lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
+           else if int0^.value=1 then exit(newBoolLiteral(true));
+        lt_real: if real0^.value=0 then exit(newBoolLiteral(false))
+            else if real0^.value=1 then exit(newBoolLiteral(true));
+      end;
+      context.adapters^.raiseError(arg0^.toString+' cannot be cast to boolean',tokenLocation);
     end;
   end;
 
@@ -67,23 +70,26 @@ FUNCTION toInt_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       i:int64;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_int: begin result:=arg0; result^.rereference; end;
-      lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-      lt_real: if real0^.value=round(real0^.value) then exit(newIntLiteral(round(real0^.value)));
-      lt_string: begin
-        result:=parseNumber(str0^.value,1,false,len);
-        if (result=nil) or (result^.literalType=lt_int) then exit(result);
-        //parsed a real number
-        if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
-          i:=round(P_realLiteral(result)^.value);
-          disposeLiteral(result);
-          result:=newIntLiteral(i);
-        end else begin
-          disposeLiteral(result);
-          result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      case arg0^.literalType of
+        lt_int: begin result:=arg0; result^.rereference; exit(result); end;
+        lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_real: if real0^.value=round(real0^.value) then exit(newIntLiteral(round(real0^.value)));
+        lt_string: begin
+          result:=parseNumber(str0^.value,1,false,len);
+          if (result=nil) or (result^.literalType=lt_int) then exit(result);
+          //parsed a real number
+          if P_realLiteral(result)^.value=round(P_realLiteral(result)^.value) then begin
+            i:=round(P_realLiteral(result)^.value);
+            disposeLiteral(result);
+            exit(newIntLiteral(i));
+          end else begin
+            disposeLiteral(result);
+            result:=nil;
+          end;
         end;
       end;
+      context.adapters^.raiseError(arg0^.toString+' cannot be cast to int',tokenLocation);
     end;
   end;
 
@@ -92,18 +98,21 @@ FUNCTION toReal_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
       x:T_myFloat;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_real: begin result:=arg0; result^.rereference; end;
-      lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
-      lt_int: exit(newRealLiteral(int0^.value));
-      lt_string: begin
-        result:=parseNumber(str0^.value,1,false,len);
-        if (result=nil) or (result^.literalType=lt_real) then exit(result);
-        //parsed an integer
-        x:=P_intLiteral(result)^.value;
-        disposeLiteral(result);
-        result:=newRealLiteral(x);
+    if (params<>nil) and (params^.size=1) then begin
+      case arg0^.literalType of
+        lt_real: begin result:=arg0; result^.rereference; exit(result); end;
+        lt_boolean: if bool0^.value then exit(newIntLiteral(1)) else exit(newIntLiteral(0));
+        lt_int: exit(newRealLiteral(int0^.value));
+        lt_string: begin
+          result:=parseNumber(str0^.value,1,false,len);
+          if (result=nil) or (result^.literalType=lt_real) then exit(result);
+          //parsed an integer
+          x:=P_intLiteral(result)^.value;
+          disposeLiteral(result);
+          exit(newRealLiteral(x));
+        end;
       end;
+      context.adapters^.raiseError(arg0^.toString+' cannot be cast to real',tokenLocation);
     end;
   end;
 

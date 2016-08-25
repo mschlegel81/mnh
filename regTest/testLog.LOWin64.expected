@@ -3544,14 +3544,14 @@ out> true
  in> toBoolean('true');
 out> true
  in> toBoolean(3);
-Error  Cannot apply intrinsic rule toBoolean to parameter list (int):  (3)
+Error  3 cannot be cast to boolean
 out> toBoolean(3)
  in> toInt('32');
 out> 32
  in> toInt(3.0);
 out> 3
  in> toInt(3.1);
-Error  Cannot apply intrinsic rule toInt to parameter list (real):  (3.1)
+Error  3.1 cannot be cast to int
 out> toInt(3.1)
  in> toInt(false);
 out> 0
