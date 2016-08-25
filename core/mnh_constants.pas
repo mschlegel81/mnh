@@ -162,6 +162,29 @@ TYPE
   end;
 
 CONST
+  C_forbiddenTokenTypes: T_tokenTypeSet=[tt_rulePutCacheValue, tt_agg, tt_parList_constructor, tt_parList,
+    tt_declare,
+    //type checks:
+    tt_typeCheckScalar, tt_typeCheckList,
+    tt_typeCheckBoolean, tt_typeCheckBoolList,
+    tt_typeCheckInt, tt_typeCheckIntList,
+    tt_typeCheckReal, tt_typeCheckRealList,
+    tt_typeCheckString, tt_typeCheckStringList,
+    tt_typeCheckNumeric, tt_typeCheckNumList,
+    tt_typeCheckExpression,
+    tt_typeCheckKeyValueList,
+    tt_customTypeCheck,
+    //modifiers:
+    tt_modifier_private,
+    tt_modifier_memoized,
+    tt_modifier_mutable,
+    tt_modifier_persistent,
+    tt_modifier_datastore,
+    tt_modifier_synchronized,
+    tt_modifier_customType,
+    //special: [E]nd [O]f [L]ine
+    tt_EOL,
+    tt_blank];
   C_validNonVoidTypes: T_literalTypeSet=[lt_boolean..lt_flatList];
   C_validListTypes: T_literalTypeSet=[lt_list..lt_flatList];
   C_validScalarTypes: T_literalTypeSet=[lt_boolean..lt_expression,lt_void];
