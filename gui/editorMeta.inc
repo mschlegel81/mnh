@@ -40,7 +40,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
   PROCEDURE addKeystroke(CONST command:TSynEditorCommand; CONST ShortCut:TShortCut);
     VAR keyStroke:TSynEditKeyStroke;
     begin
-      keyStroke:=editor.Keystrokes.add;
+      keyStroke:=plugin.Keystrokes.add;
       keyStroke.command:=command;
       keyStroke.ShortCut:=ShortCut;
     end;
@@ -61,6 +61,7 @@ CONSTRUCTOR T_editorMeta.create(CONST idx: longint);
     editor.Gutter.CodeFoldPart.visible:=false;
     plugin:=TSynPluginMultiCaret.create(editor);
     plugin.editor:=editor;
+    plugin.Keystrokes.clear;
     style:=editor.BracketMatchColor;
     style.background:=clLime;
     editor.OnChange:=@MnhForm.InputEditChange;

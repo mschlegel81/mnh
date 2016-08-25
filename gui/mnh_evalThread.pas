@@ -375,7 +375,7 @@ FUNCTION T_assistanceEvaluator.isErrorLocation(CONST lineIndex, tokenStart, toke
     enterCriticalSection(cs);
     result:=0;
     for i:=0 to length(localErrors)-1 do with localErrors[i] do
-    if (result=0) and (lineIndex=location.line-1) and (tokenStart<=location.column-1) and (tokenEnd>location.column-1) then begin
+    if (result=0) and (lineIndex=location.line-1) and ((location.column<0) or (tokenStart<=location.column-1) and (tokenEnd>location.column-1)) then begin
       if C_messageTypeMeta[messageType].level>2 then result:=2 else result:=1;
     end;
     leaveCriticalSection(cs);
