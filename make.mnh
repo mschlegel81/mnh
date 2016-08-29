@@ -1,6 +1,6 @@
 USE hash,testLog,mnhInfo;
 
-private delp->'..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe'.execPipeless(
+private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe').execPipeless(
        ['gui\lib\i386-win32',
         'gui\lib\x86_64-linux',
         'gui\lib\x86_64-win64',
@@ -109,7 +109,7 @@ exeHasWrongVersion(FI) ? begin
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
   myMove(outName,exeName);
   not(exeHasWrongVersion(FI));
-end : true;
+end : print('Build of ',binName(FI),' skipped ') orElse true;
 
 private call7z(fileList,suffix)->isLinux ? void : begin
   local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList;
@@ -171,7 +171,7 @@ end;
 main->main('build');
 
 //*Deletes all nppBackup folders, temporary object files, executables and png-files
-main('clean')->isLinux ? fail('Cleanup is currently not supported under Linux') : begin
+main('clean')->begin
   allFolders('..')
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched

@@ -1,35 +1,24 @@
 USE mnhInfo;
 
+datastore log;
+
 startOfEvaluation:=time;
 
 private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]};
 
-private memoized logName(exe)->myPath.replace('.mnh','.'&flavour(exe)&'.txt');
-private logName:=executor.logName;
-
-testAlreadyPassed(exe)->logName(exe).fileExists AND ((codeHash(exe)&' '&'o.k.') in logName(exe).fileLines);
+testAlreadyPassed(exe)->[flavour(exe),codeHash(exe)] in (log orElse []).getInner([0,1]);
 testAlreadyPassed:=executor.testAlreadyPassed;
+linuxTestsPassed->['FOLinux',codeHash] in log.getInner([0,1])
+              AND ['LOLinux',codeHash] in log.getInner([0,1]);
 
-timeForTest(exe)->(logName(exe).fileExists ? begin
-  local lines:=logName(exe).fileLines;
-  local timeIdx:=indexOf(lines=(codeHash(exe)&' '&'o.k.'));
-  timeIdx==[]
-  ? void
-  : lines[timeIdx[0]+1].replace('Total time: ','');
-end : void);
-
-linuxTestsPassed->
-  [[myPath.replace('.mnh','.FOLinux.txt'),'FOLinux'],
-   [myPath.replace('.mnh','.LOLinux.txt'),'LOLinux']]
-  .each(log,log[0].fileExists AND (((log[1])&':'&executor.codeVersion &' '&'o.k.') in log[0].fileLines),AND);
+timeForTest(exe)->log[log.getInner(0)=flavour(exe) and log.getInner(1)=codeHash(exe)][0,2];
 
 validateCollectedOutput->begin
   local printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten.pEach(line,line.replace(mnhRoot,''));
-  local expectedResultName:=myPath.replace('.mnh','.'&flavour&'.expected');
-  local lastResultName    :=myPath.replace('.mnh','.'&flavour&'.last');
+  local expectedResultName:=myPath.changeFileExt('.'&flavour&'.expected');
+  local lastResultName    :=myPath.changeFileExt('.'&flavour&'.last');
   local stateMessage:='';
   clearPrint;
-  collectOutput;
   print("Test finished at ",formatTime('c',systime));
   fileExists(expectedResultName)
   ? begin
@@ -48,14 +37,11 @@ validateCollectedOutput->begin
     end;
   printf('%s',exec(executor,['-version'],false)[0]| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
   print('');
-  printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten;
-  logName.writeFileLines(printOut | head(logName.fileLines,80));
+  log|=[[flavour,codeHash,time-startOfEvaluation]];
 end;
 
-testHistory->regex.replace(myPath,'\.mnh$','.*.txt').files.each(file,begin
-  local lines:=file.fileLines;
-  indexOf(lines.matches('^Total time: ')).each(i,
-      lines[i-1].split(' ')[0].split(':').reverseList|
-     [lines[i].replace('Total time: ',''),
-     (lines[i-1].split(' ')[1] orElse '')=='o.k.']);
-end,|);
+testHistory->begin
+  local hashes:=log.getInner(1);
+  hashes:=hashes.each(h,h in hashes.head(index) ? void : h);
+  log;
+end;

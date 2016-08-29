@@ -41,3 +41,4 @@ mnh_debug
 mnh_light_debug
 
 regTest/regTest.datastore0
+regTest/testLog.datastore0
