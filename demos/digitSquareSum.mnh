@@ -1,8 +1,7 @@
-private POWERS_OF_TEN:=10^[0..6];
 memoized
 private digitSquareFinal(1)->1;
 private digitSquareFinal(89)->89;
-private digitSquareFinal(x)->digitSquareFinal(sqr((x div POWERS_OF_TEN) mod 10).agg(+));
+private digitSquareFinal(x)->digitSquareFinal(sqr(x.digits).agg(+));
 
 private count89->([1..100000].each(i,digitSquareFinal(i))=89).trueCount;
 //*See <a href="http://rosettacode.org/wiki/Iterated_digits_squaring">Iterated_digits_squaring</a>

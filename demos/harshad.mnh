@@ -1,4 +1,4 @@
-private sumOfDigits(n:int)->(n div 10^[0..18] mod 10).agg(+);
+private sumOfDigits(n:int)->n.digits.agg(+);
 private isHarshadNumber(n:int)->n mod sumOfDigits(n) = 0;
 private mutable lastHarshad:=0;
 private synchronized nextHarshad->begin
