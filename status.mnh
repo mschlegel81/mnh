@@ -3,26 +3,10 @@ USE testLog,make,mnhInfo;
 currentHash:='core/code_hash.inc'.fileContents.clean(['0'..'9','A'..'F'],' ').trim;
 
 main('history')->begin
-  local history:=testHistory;
-  local codeHashes:=history
-    .getInner(0)                    //all code hashes
-    .group(history.getInner(1))     //group by flavors
-    .each(g,g.each(e,[e,index]),|)  //attach index to elements
-    .group(0,{[$x[0],$x[1]|$y[1]]}) //group by code hashes, creating a list of indexes
-    .each(set,[set[0],set[1].agg(+)/set[1].size]) //transform index list to average index
-    .sort(1) //sort by average index
-    .getInner(0) //drop average indexes
-    .reverseList; //reverse to obtain chronological order
-  local flavours  :=history.getInner(1).unique.{$L[sortPerm(regex.replace($L,'^[F|L]I*',''))]}.reverseList;
-  codeHashes.each(codeHash,
-    print("\nPrevious code hash: ",codeHash) orElse
-    ("Flavour\tTime\tTest result\n"&(
-    flavours.each(flavour,
-      history[codeHash=history.getInner(0) and flavour=history.getInner(1)].each(entry,
-        flavour&"\t"&entry[2]&"\t"&(entry[3] ? 'o.k.' : 'failed')
-      ).join("\n")
-    ).{$x[$x<>'']}.join("\n"))).print
-  );
+  testHistory.each(ch,begin
+    print('Codehash: ',ch[0]);
+    printf("  %s\t%s\vs",ch[1].getInner(0),round(ch[1].getInner(1),2));
+  end);
   print;
   main;
 end;
@@ -30,7 +14,7 @@ end;
 main->print('Current code hash: '&currentHash&"\nTime: "&formatTime('c',systime)&
 "\n                     Binary | Exists | Version |\v Test time\n"&
 "----------------------------+--------+---------+\v-------------------\n"&
-((isLinux ? [0,2,4,6] : [0..7]).pEach(i,begin
+(buildableVersions.pEach(i,begin
   local bin:=binName(i);
   local ex:=bin.fileExists;
   local hashOk:=bin.codeVersion==currentHash;
