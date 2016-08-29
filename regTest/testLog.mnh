@@ -6,12 +6,12 @@ startOfEvaluation:=time;
 
 private mnhRoot:=myPath.split(['\','/']).leading(2).{[$x.join('/'),$x.join('\')]};
 
-testAlreadyPassed(exe)->[flavour(exe),codeHash(exe)] in (log orElse []).getInner([0,1]);
+testAlreadyPassed(exe)->[flavour(exe),codeVersion(exe)] in (log orElse []).getInner([0,1]);
 testAlreadyPassed:=executor.testAlreadyPassed;
-linuxTestsPassed->['FOLinux',codeHash] in log.getInner([0,1])
-              AND ['LOLinux',codeHash] in log.getInner([0,1]);
+linuxTestsPassed->['FOLinux',executor.codeVersion] in log.getInner([0,1])
+              AND ['LOLinux',executor.codeVersion] in log.getInner([0,1]);
 
-timeForTest(exe)->log[log.getInner(0)=flavour(exe) and log.getInner(1)=codeHash(exe)][0,2];
+timeForTest(exe)->log[log.getInner(0)=flavour(exe) and log.getInner(1)=codeVersion(exe)][0,2];
 
 validateCollectedOutput->begin
   local printOut:=collectedOutput.get(collectedOutput.getInner(0)='printline').getInner(2).split("\n").flatten.pEach(line,line.replace(mnhRoot,''));
@@ -37,11 +37,11 @@ validateCollectedOutput->begin
     end;
   printf('%s',exec(executor,['-version'],false)[0]| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
   print('');
-  log|=[[flavour,codeHash,time-startOfEvaluation]];
+  log|=[[flavour,executor.codeVersion,time-startOfEvaluation]];
 end;
 
 testHistory->begin
   local hashes:=log.getInner(1);
   hashes:=hashes.each(h,h in hashes.head(index) ? void : h);
-  log;
+  log.group(1).each(g,[g[0,1],g.getInner([0,2]).sort]);
 end;
