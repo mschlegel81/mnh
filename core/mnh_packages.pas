@@ -6,7 +6,7 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,{$endif}
      mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
-     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},serializationUtil;
+     mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},mnh_datastores;
 
 {$define include_interface}
 TYPE
@@ -74,8 +74,6 @@ TYPE
       {$endif}
       FUNCTION getCodeProvider:P_codeProvider;
       FUNCTION inspect:P_listLiteral;
-
-      FUNCTION getDatastoreForId(CONST id:ansistring; CONST forReading:boolean):T_streamWrapper;
     end;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
@@ -1168,33 +1166,6 @@ FUNCTION T_package.inspect:P_listLiteral;
       .append(newListLiteral^
               .appendString('declares')^
               .append(rulesList,false),false);
-  end;
-
-FUNCTION T_package.getDatastoreForId(CONST id:ansistring; CONST forReading:boolean):T_streamWrapper;
-  VAR allStores:T_arrayOfString;
-      i:longint;
-  begin
-    allStores:=find(ChangeFileExt(getPath,'.datastore*'),true,false);
-    for i:=0 to length(allStores)-1 do begin
-      result.createToReadFromFile(allStores[i]);
-      if result.readAnsiString=id then begin
-        if not(forReading) then begin
-          result.destroy;
-          result.createToWriteToFile(allStores[i]);
-          result.writeAnsiString(id);
-        end;
-        exit(result);
-      end;
-      result.destroy;
-    end;
-    if forReading then begin
-      result.createToReadFromFile('');
-    end else begin
-      i:=0;
-      while fileExists(ChangeFileExt(getPath,'.datastore'+intToStr(i))) do inc(i);
-      result.createToWriteToFile(ChangeFileExt(getPath,'.datastore'+intToStr(i)));
-      result.writeAnsiString(id);
-    end;
   end;
 
 {$ifdef fullVersion}

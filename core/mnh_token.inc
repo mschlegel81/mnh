@@ -1766,7 +1766,6 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
       end;
-      {$ifdef DEBUGMODE} first^.validate(true); {$endif}
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef DEBUGMODE}
     except

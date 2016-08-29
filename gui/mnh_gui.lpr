@@ -3,8 +3,8 @@ PROGRAM mnh_gui;
 
 {$mode objfpc}{$H+}
 
-USES {$IFDEF UNIX} cthreads, cmem,{$ENDIF}
-  {$ifdef DEBUGMODE}heaptrc,{$endif}
+USES {$IFDEF UNIX} cthreads, cmem,{$else}
+  {$ifdef DEBUGMODE}heaptrc,{$endif}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mnh_gui_main,mnh_gui_settings,closeDialog,askDialog,mnh_plotForm, newCentralPackageDialog, mnh_tables, //actual Forms

@@ -26,9 +26,6 @@ TYPE
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
     FUNCTION hash:T_hashInt;
-    {$ifdef DEBUGMODE}
-    PROCEDURE validate(CONST recurse:boolean=false);
-    {$endif}
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
@@ -280,22 +277,6 @@ FUNCTION T_token.hash:T_hashInt;
       pt:=pt^.next;
     end;
     {$Q+}{$R+}
-    {$ifdef DEBUGMODE}
-    validate;
-    {$endif}
   end;
-
-{$ifdef DEBUGMODE}
-PROCEDURE T_token.validate(CONST recurse:boolean=false);
-  VAR p:P_token;
-  begin
-    if (data=nil) and (tokType=tt_literal) then raise Exception.create('Encountered literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column));
-    p:=next;
-    while recurse and (p<>nil) do begin
-      p^.validate;
-      p:=p^.next;
-    end;
-  end;
-{$endif}
 
 end.

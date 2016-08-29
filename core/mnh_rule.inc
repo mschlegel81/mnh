@@ -2,6 +2,7 @@
   T_rule=object
     private
       idResolved,called,valueChangedAfterDeclaration:boolean;
+      dataStoreMeta:P_datastoreMeta;
       declarationStart,declarationEnd:T_tokenLocation;
       namedValue:T_namedVariable;
       ruleType:T_ruleType;
@@ -38,16 +39,12 @@
 {$endif}
 {$ifdef include_implementation}
 PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapters);
-  VAR stream:T_streamWrapper;
-      lit:P_literal;
+  VAR lit:P_literal;
   begin
-    stream:=package^.getDatastoreForId(id,true);
-    if stream.allOkay then begin
-      lit:=newLiteralFromStream(stream,declarationStart,adapters);
-      if stream.allOkay then namedValue.setValue(lit);
-      lit^.unreference;
+    if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta^.fileChangedSinceRead) then begin
+      lit:=dataStoreMeta^.readValue(declarationStart,adapters);
+      if lit<>nil then namedValue.setValue(lit);
     end;
-    stream.destroy;
   end;
 
 CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
@@ -69,6 +66,9 @@ CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONS
 
     if ruleType in C_mutableRuleTypes
     then namedValue.create(id,newVoidLiteral,false);
+
+    if ruleType in [rt_datastore_private,rt_datastore_public] then
+      new(dataStoreMeta,create(startAt.package^.getPath,ruleId));
   end;
 
 DESTRUCTOR T_rule.destroy;
@@ -85,6 +85,10 @@ DESTRUCTOR T_rule.destroy;
 
     if ruleType in C_mutableRuleTypes
     then namedValue.destroy;
+
+    if ruleType in [rt_datastore_private,rt_datastore_public] then
+      dispose(dataStoreMeta,destroy);
+
 
     ruleType:=rt_normal;
     id:='';
@@ -172,7 +176,7 @@ exit}
       rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
-          if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+          if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
           system.enterCriticalSection(rule_cs);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
@@ -299,7 +303,6 @@ FUNCTION T_rule.getDocHtml:ansistring;
 
 FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; CONST package:P_package):boolean;
   VAR code:ansistring;
-      stream:T_streamWrapper;
       L:P_literal;
   begin
     if (adapters.noErrors) and valueChangedAfterDeclaration then begin
@@ -328,11 +331,9 @@ FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; 
         end;
         rt_datastore_private,rt_datastore_public:
         begin
-          stream:=package^.getDatastoreForId(id,false);
           L:=namedValue.getValue;
-          writeLiteralToStream(L,stream,declarationStart,@adapters,false);
+          dataStoreMeta^.writeValue(L,declarationStart,@adapters);
           disposeLiteral(L);
-          stream.destroy;
           result:=false; //because the package file remains unchanged
         end;
         else result:=false;
