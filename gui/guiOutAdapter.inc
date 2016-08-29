@@ -21,6 +21,7 @@ DESTRUCTOR T_guiOutAdapter.destroy;
 
 FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   VAR i,j,lineIndex,k:longint;
+      outputLinesLimit:longint;
   PROCEDURE writeWrapped(CONST messageType:T_messageType; CONST message:ansistring);
     VAR txt:string;
         tokens:T_arrayOfString;
@@ -49,6 +50,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
   begin
     system.enterCriticalSection(cs);
     result:=length(storedMessages)>0;
+    if result then outputLinesLimit:=settings.value^.outputLinesLimit;
     for i:=0 to length(storedMessages)-1 do with storedMessages[i] do begin
       case messageType of
         mt_evaluatedStatementInInteractiveMode: begin
@@ -80,8 +82,14 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
           begin
             if (length(multiMessage)>0) and (multiMessage[0]=C_formFeedChar) then begin
               syn.lines.clear;
-              for j:=1 to length(multiMessage)-1 do  syn.lines.append(multiMessage[j]);
-            end else for j:=0 to length(multiMessage)-1 do syn.lines.append(multiMessage[j]);
+              for j:=1 to length(multiMessage)-1 do begin
+                syn.lines.append(multiMessage[j]);
+                if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
+              end;
+            end else for j:=0 to length(multiMessage)-1 do begin
+              syn.lines.append(multiMessage[j]);
+              if syn.lines.count>outputLinesLimit then syn.lines.delete(0);
+            end;
           end;
         mt_endOfEvaluation: begin
           for j:=0 to length(MnhForm.editorMeta)-1 do MnhForm.editorMeta[j].doneDebugging;
@@ -95,11 +103,10 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         else begin           syn.lines.append(UTF8_ZERO_WIDTH_SPACE+C_messageTypeMeta[messageType].prefix+' '+ansistring(location)+' '+(simpleMessage));
         end;
       end;
+      while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
     end;
     clearMessages;
     if result then begin
-      i:=settings.value^.outputLinesLimit;
-      while syn.lines.count>i do syn.lines.delete(0);
       syn.ExecuteCommand(ecEditorBottom,' ',nil);
       syn.ExecuteCommand(ecLineStart,' ',nil);
     end;

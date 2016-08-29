@@ -1,15 +1,15 @@
 private getFangs(i:int)->begin
-  local digits:=length(toString(i)) div 2;
-  local toTest1:=10^(digits-1);
+  local iDigits:=i.digits.sort;
+  local digitCount:=iDigits.size div 2;
+  local toTest1:=10^(digitCount-1);
   local toTest2:=round(sqrt(i));
-  local toTest3:=10^digits-1;
+  local toTest3:=10^digitCount-1;
   local toTest:=abs(toTest2-toTest1)<abs(toTest3-toTest2)
                  ? [toTest1..toTest2]
                  : [toTest3..toTest2];
-  local iDigits:=toString(i).chars.sort;
   toTest
   .get(i mod toTest=0)
-  .pEach(d,(toString(d)&toString(i div d)).chars.sort==iDigits
+  .pEach(d,(digits(d)|digits(i div d)).sort==iDigits
            ? [i div d,d]
            : void);
 end;
