@@ -194,6 +194,7 @@ TYPE
     PROCEDURE outputPageControlChanging(Sender: TObject;
       VAR AllowChange: boolean);
     PROCEDURE PageControlChange(Sender: TObject);
+    PROCEDURE pmiOpenFile(CONST idOrName:string);
     PROCEDURE pmiOpenFile1Click(Sender: TObject);
     PROCEDURE pmiOpenFile2Click(Sender: TObject);
     PROCEDURE PopupNotifier1Close(Sender: TObject; VAR CloseAction: TCloseAction);
@@ -1134,22 +1135,29 @@ PROCEDURE TMnhForm.PageControlChange(Sender: TObject);
     end;
   end;
 
-PROCEDURE TMnhForm.pmiOpenFile1Click(Sender: TObject);
+PROCEDURE TMnhForm.pmiOpenFile(CONST idOrName:string);
+  VAR fileName:string;
   begin
     with settings.value^ do begin
-      if fileExists(popupFile[1])
-      then PageControl.activePageIndex:=addOrGetEditorMetaForFile(popupFile[1])
-      else if polishHistory then processFileHistory;
+      if fileExists(idOrName)
+      then begin
+        PageControl.activePageIndex:=addOrGetEditorMetaForFile(idOrName);
+        exit;
+      end;
+      if polishHistory then processFileHistory;
+      fileName:=codeAssistant.resolveImport(idOrName);
+      if (fileName<>'') and fileExists(fileName) then PageControl.activePageIndex:=addOrGetEditorMetaForFile(fileName);
     end;
+  end;
+
+PROCEDURE TMnhForm.pmiOpenFile1Click(Sender: TObject);
+  begin
+    pmiOpenFile(popupFile[1]);
   end;
 
 PROCEDURE TMnhForm.pmiOpenFile2Click(Sender: TObject);
   begin
-    with settings.value^ do begin
-      if fileExists(popupFile[2])
-      then PageControl.activePageIndex:=addOrGetEditorMetaForFile(popupFile[2])
-      else if polishHistory then processFileHistory;
-    end;
+    pmiOpenFile(popupFile[2]);
   end;
 
 PROCEDURE TMnhForm.PopupNotifier1Close(Sender: TObject;

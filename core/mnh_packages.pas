@@ -54,6 +54,7 @@ TYPE
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
       FUNCTION ensureRuleId(CONST ruleId:idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
+      FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
       PROCEDURE complainAboutUnused(CONST inMainPackage:boolean; VAR adapters:T_adapters);
       FUNCTION getDoc:P_userPackageDocumentation;
@@ -984,6 +985,13 @@ PROCEDURE T_package.updateLists(VAR userDefinedRules: T_listOfString);
     userDefinedRules.addAll(packageRules.keySet);
     userDefinedRules.addAll(importedRules.keySet);
     userDefinedRules.unique;
+  end;
+
+FUNCTION T_package.getSecondaryPackageById(CONST id:ansistring):ansistring;
+  VAR i:longint;
+  begin
+    for i:=0 to length(secondaryPackages)-1 do if secondaryPackages[i]^.getCodeProvider^.id=id then exit(secondaryPackages[i]^.getPath);
+    result:='';
   end;
 
 PROCEDURE T_package.resolveRuleIds(CONST adapters:P_adapters);
