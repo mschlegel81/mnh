@@ -112,7 +112,7 @@ private analyzeFlavour(data,flavour:string)->begin
   groupedData:=groupedData.getInner(1);
   //fill with Nan from left to equal size
   local maxSize:=groupedData.each(L,L.size,max);
-  groupedData:=groupedData.each(L,L.size<maxSize ? [1..maxSize-L.size].each(i,Nan)|L : L);
+  groupedData:=groupedData.each(L,L.size<maxSize ? [1..maxSize-L.size].each(i,Nan)|L : L).each(L,L.isList ? L : [L]);
   groupedData.each(L,addPlot(L,'0.5 black'));
   plot.display;
   [0..maxSize-1].each(i,groupedData.getInner(i).each(t,isNan(t) ? void : t).{$T.agg(+)/$T.size}).addPlot('2 red');
