@@ -43,7 +43,10 @@ PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapter
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta^.fileChangedSinceRead) then begin
       lit:=dataStoreMeta^.readValue(declarationStart,adapters);
-      if lit<>nil then namedValue.setValue(lit);
+      if lit<>nil then begin
+        namedValue.setValue(lit);
+        lit^.unreference;
+      end;
     end;
   end;
 
