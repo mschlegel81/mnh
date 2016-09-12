@@ -63,6 +63,7 @@ TYPE
       FUNCTION getErrorHints:T_arrayOfString;
       FUNCTION getStateCounter:longint;
       FUNCTION isUserRule(CONST id:string):boolean;
+      FUNCTION resolveImport(CONST id:string):string;
       PROCEDURE extendCompletionList(VAR list:T_listOfString);
   end;
 
@@ -161,7 +162,8 @@ CONSTRUCTOR T_evaluator.create(CONST adapters: P_adapters;
     adapter:=adapters;
   end;
 
-CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters; threadFunc: TThreadFunc);
+CONSTRUCTOR T_assistanceEvaluator.create(CONST adapters: P_adapters;
+  threadFunc: TThreadFunc);
   begin
     inherited create(adapters,threadFunc);
     stateCounter:=0;
@@ -351,6 +353,12 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY
         info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
         if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
       end;
+      tt_customTypeRule, tt_customTypeCheck: begin
+        if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
+        info.tokenExplanation:=info.tokenExplanation+'Custom type'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
+        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
+      end;
     end;
     leaveCriticalSection(cs);
   end;
@@ -505,7 +513,12 @@ FUNCTION T_assistanceEvaluator.isUserRule(CONST id:string):boolean;
     leaveCriticalSection(cs);
   end;
 
-PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list:T_listOfString);
+FUNCTION T_assistanceEvaluator.resolveImport(CONST id: string): string;
+  begin
+    result:=package.getSecondaryPackageById(id);
+  end;
+
+PROCEDURE T_assistanceEvaluator.extendCompletionList(VAR list: T_listOfString);
   begin
     enterCriticalSection(cs);
     list.addAll(completionList.elementArray);

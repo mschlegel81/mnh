@@ -205,7 +205,7 @@ PROCEDURE T_rule.addOrReplaceSubRule(CONST rule: P_subrule; VAR context:T_evalua
     if i>=length(subrules) then setLength(subrules,i+1)
                            else dispose(subrules[i],destroy);
     subrules[i]:=rule;
-    if (length(subrules)>0) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a mutable rule!',rule^.declaredAt);
+    if (length(subrules)>1) and (ruleType in C_ruleTypesWithOnlyOneSubrule) then context.adapters^.raiseError('Cannot add a subrule to a '+C_ruleTypeText[ruleType]+'rule!',rule^.declaredAt);
     if (ruleType=rt_memoized) then cache^.clear;
   end;
 

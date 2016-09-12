@@ -238,7 +238,7 @@ FUNCTION permutations_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tok
 
 FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   {$define DIVIDE_THROUGH:=while n mod p=0 do begin n:=n div p; P_listLiteral(result)^.appendInt(p); end}
-  VAR n,sqn,p:int64;
+  VAR n,p:int64;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_int) then begin
@@ -249,12 +249,11 @@ FUNCTION factorize_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
         n:=-n;
         P_listLiteral(result)^.appendInt(-1);
       end;
-      sqn:=floor(sqrt(n));
       p:=2; DIVIDE_THROUGH;
       p:=3; DIVIDE_THROUGH;
       p:=5; DIVIDE_THROUGH;
       p:=7;
-      while (n>1) and (p<sqn) and (context.adapters^.noErrors) do begin
+      while (p*p<n) and (context.adapters^.noErrors) do begin
         DIVIDE_THROUGH; inc(p,4);
         DIVIDE_THROUGH; inc(p,2);
         DIVIDE_THROUGH; inc(p,4);
