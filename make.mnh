@@ -208,10 +208,12 @@ private testMnh(...)->begin
   : void,
   exeHasWrongVersion(i)
   ? void
-  : print('Testing ',binName(i)) orElse
-    binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i))
-    ? void
-    : print('Test failed') orElse false,
+  : testAlreadyPassed(binName(i))
+    ? print('Test of  ',binName(i),' skipped')
+    : print('Testing  ',binName(i)) orElse
+      binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i))
+      ? void
+      : print('Test failed') orElse false,
   AND);
 end;
 
