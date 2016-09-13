@@ -1,5 +1,7 @@
 USE hash,testLog,mnhInfo;
 
+tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
+
 private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.exe').execPipeless(
        ['gui\lib\i386-win32',
         'gui\lib\x86_64-linux',
@@ -40,7 +42,7 @@ end;
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
-  isLinux ? print('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
+  isLinux ? tprint('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
   ensureDemos;
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
@@ -58,7 +60,7 @@ currentCodeHash:=begin
   ? void
   : begin
       writeFile('core/code_hash.inc',"writeln(':"&result&"');");
-      print('core/code_hash.inc updated with current hash ',result);
+      tprint('core/code_hash.inc updated with current hash ',result);
     end;
   result;
 end;
@@ -90,8 +92,8 @@ end;
 
 private myMove(source,dest:string)->fileExists(source) ? begin
   deleteStubbornly(dest);
-  moveFile(source,dest) ? void : print('File move ',source,' -> ',dest,' failed!');
-end : print('File  ',source,' does not exist');
+  moveFile(source,dest) ? void : tprint('File move ',source,' -> ',dest,' failed!');
+end : tprint('File  ',source,' does not exist');
 
 private build(FI:int)->
 exeHasWrongVersion(FI) ? begin
@@ -108,11 +110,11 @@ exeHasWrongVersion(FI) ? begin
 
   deleteStubbornly(exeName);
   local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
-  printf('Compiling %-25s logging to %s',exeName,logName);
+  tprint('Compiling ',exeName,' logging to ',exeName,logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
   myMove(outName,exeName);
   not(exeHasWrongVersion(FI));
-end : print('Build of ',binName(FI),' skipped ') orElse true;
+end : tprint('Build of ',binName(FI),' skipped ') orElse true;
 
 private call7z(fileList,suffix)->isLinux ? void : begin
   local zipParams:=['a','-mx=9',format('versions/mnh5_%s_%s.7z',formatTime('yyyymmdd',systime),suffix)]|fileList;
@@ -136,8 +138,8 @@ main('distro')->isLinux ? fail('Distro building is currently not supported under
   begin
     local buildOk:=build(i);
     local testOk:=testAlreadyPassed(binName(i));
-    buildOk ? void : print('Building of ',binName(i),' failed');
-    testOk ? void : print(binName(i),' has not been tested successfully');
+    buildOk ? void : tprint('Building of ',binName(i),' failed');
+    testOk ? void : tprint(binName(i),' has not been tested successfully');
     buildOk and testOk;
   end,
   AND)
@@ -150,7 +152,7 @@ main('distro')->isLinux ? fail('Distro building is currently not supported under
           call7z(['mnh.exe','mnh_light.exe'],'32bit');
           movePairs.get([3..0]).each(pair,verboseMove@(pair.get([1,0])));
         end
-      : print('Error moving files! 32bit distro has not been created!');
+      : tprint('Error moving files! 32bit distro has not been created!');
       //Linux executables exist and are less than one hour old
       ['mnh','mnh_light'].each(file,fileExists(file) AND systime-file.fileInfo["time"]<1/24,AND)
       AND linuxTestsPassed
@@ -179,7 +181,7 @@ main('clean')->begin
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
   .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
   .each(f,begin
-           print('Deleting ',f);
+           tprint('Deleting ',f);
            deleteDir(f);
           end);
   (files(allFolders('.')&'/*.png')|
@@ -192,7 +194,7 @@ main('clean')->begin
    allFiles('consoles','*.exe')|
    files('make*.log.txt'))
   .unique
-  .each(file,print('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
+  .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;
 end;
 
@@ -209,11 +211,11 @@ private testMnh(...)->begin
   exeHasWrongVersion(i)
   ? void
   : testAlreadyPassed(binName(i))
-    ? print('Test of  ',binName(i),' skipped')
-    : print('Testing  ',binName(i)) orElse
+    ? tprint('Test of  ',binName(i),' skipped')
+    : tprint('Testing  ',binName(i)) orElse
       binName(i).execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(binName(i))
       ? void
-      : print('Test failed') orElse false,
+      : tprint('Test failed') orElse false,
   AND);
 end;
 
@@ -242,16 +244,16 @@ private buildAndTest(version:int)->begin
   ? begin
       skip:=testAlreadyPassed(binName(versionToTest));
       skip
-      ? print('Skipping already passed test')
+      ? tprint('Skipping already passed test')
       : begin
-          print('Testing ',binName(versionToTest));
+          tprint('Testing ',binName(versionToTest));
           binName(versionToTest).exec(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...);
           testAlreadyPassed(binName(versionToTest))
           ? void
-          : print('  TEST FAILED!') orElse beep;
+          : tprint('  TEST FAILED!') orElse beep;
         end;
     end
-  : print('  BUILD FAILED!') orElse beep;
+  : tprint('  BUILD FAILED!') orElse beep;
   skip;
 end;
 
@@ -259,11 +261,11 @@ end;
 main('continuous')->begin
   local skipCount:=0;
   while(skipCount<=4,begin
-    print("\n\nContinuous run - building/testing");
+    tprint("\n\nContinuous run - building/testing");
     updateCurrentCodeHash;
     buildAndTest(intRandom(buildableVersions.size))
     ? skipCount+=1
-    : print('Continuous run - sleeping') orElse sleep(5*60);
+    : tprint('Continuous run - sleeping') orElse sleep(5*60);
   end);
   buildableVersions.scramble.each(ver,buildAndTest(ver));
 end;
