@@ -83,7 +83,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="40">
+    <Units Count="41">
       <Unit0>
         <Filename Value="mnh_gui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -273,6 +273,12 @@
         <Filename Value="..\core\mnh_datastores.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit39>
+      <Unit40>
+        <Filename Value="openDemoDialog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="openDemoDialogForm"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit40>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

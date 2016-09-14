@@ -11,7 +11,7 @@ USES
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
-  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables;
+  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables, openDemoDialog;
 
 TYPE
   {$define includeInterface}
@@ -1325,9 +1325,8 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
-    ensureDemos;
-    OpenDialog.fileName:=configDir+'demos';
-    miOpenClick(Sender);
+    if openDemoDialogForm.ShowModal=mrOK then
+       PageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
   end;
 
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
