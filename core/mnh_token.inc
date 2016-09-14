@@ -1266,7 +1266,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
-
   PROCEDURE pon_flip;
     VAR newFunctionToken:P_token;
         newParameterListToken:P_token;
@@ -1275,6 +1274,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         ruleIdResolved:boolean=false;
         cTokType3:T_tokenType;
     begin
+      if first^.next^.next=nil then exit;
       //Assuming:
       //cTokType[0]=tt_literal
       //cTokType[1]=tt_ponFlipper
