@@ -982,8 +982,7 @@ PROCEDURE TMnhForm.handleBreak;
     updateDebugParts;
   end;
 
-FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring
-  ): longint;
+FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
   VAR i:longint;
   begin
     i:=length(editorMeta)-1;
@@ -1334,7 +1333,7 @@ PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin
     if newCentralPackageForm.ShowModal=mrOk then
-      PageControl.activePageIndex:=addEditorMetaForNewFile(newCentralPackageForm.fileNameEdit.caption);
+      PageControl.activePageIndex:=addOrGetEditorMetaForFile(newCentralPackageForm.fileNameEdit.text);
   end;
 
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);

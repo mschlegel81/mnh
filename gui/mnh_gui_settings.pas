@@ -74,21 +74,8 @@ IMPLEMENTATION
 {$R *.lfm}
 
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
-  PROCEDURE ensurePackages;
-    {$i res_ensurePackages.inc}
-    VAR code:T_arrayOfString;
-        i:longint;
-    begin
-      setLength(code,length(ensurePackages_mnh));
-      for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-      append(code,'('+escapeString(configDir)+')');
-      runAlone(code);
-    end;
-
   VAR i:longint;
-
   begin
-    ensurePackages;
     if settings.value^.editorFontname<>'' then begin
       EditorFontDialog.Font.name := settings.value^.editorFontname;
       FontButton.Font.name := settings.value^.editorFontname;
