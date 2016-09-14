@@ -107,7 +107,7 @@ exeHasWrongVersion(FI) ? begin
 
   deleteStubbornly(exeName);
   local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
-  tprint('Compiling ',exeName,' logging to ',exeName,logName);
+  tprint('Compiling ',exeName,' logging to ',logName);
   writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
   myMove(outName,exeName);
   not(exeHasWrongVersion(FI));

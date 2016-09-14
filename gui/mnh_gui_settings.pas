@@ -149,7 +149,6 @@ PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
 
 PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
   {$i res_removeAssoc.inc}
-  {$endif}
   begin
     runAlone(removeAssoc_mnh);
   end;
