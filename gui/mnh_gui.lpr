@@ -8,7 +8,7 @@ USES {$IFDEF UNIX} cthreads, cmem,{$else}
   Interfaces, // this includes the LCL widgetset
   Forms,
   mnh_gui_main,mnh_gui_settings,closeDialog,askDialog,mnh_plotForm, newCentralPackageDialog, mnh_tables, //actual Forms
-  mySys, mnh_cmdLineInterpretation {$ifdef imig},mnh_imig_form{$endif};
+  mySys, mnh_cmdLineInterpretation,openDemoDialog {$ifdef imig},mnh_imig_form{$endif};
 
 {$R *.res}
 
@@ -28,6 +28,7 @@ begin
     Application.CreateForm(TplotForm, plotForm);
     Application.CreateForm(TnewCentralPackageForm, newCentralPackageForm);
     Application.CreateForm(TtableForm, tableForm);
+    Application.CreateForm(TopenDemoDialogForm, openDemoDialogForm);
     {$ifdef imig}
     Application.CreateForm(TDisplayImageForm, DisplayImageForm);
     {$endif}

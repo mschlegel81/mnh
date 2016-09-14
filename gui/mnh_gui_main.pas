@@ -11,7 +11,7 @@ USES
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,
   myGenerics,mnh_fileWrappers,mySys,mnh_html,mnh_plotFuncs,mnh_cmdLineInterpretation,
   mnh_plotForm,newCentralPackageDialog,SynGutterMarks,SynEditMarks,mnh_contexts,SynPluginMultiCaret,
-  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables{$ifdef imig},mnh_imig_form{$endif};
+  SynEditMiscClasses, mnh_tokens, LazUTF8, mnh_tables, openDemoDialog{$ifdef imig},mnh_imig_form{$endif};
 
 TYPE
   {$define includeInterface}
@@ -982,8 +982,7 @@ PROCEDURE TMnhForm.handleBreak;
     updateDebugParts;
   end;
 
-FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring
-  ): longint;
+FUNCTION TMnhForm.addEditorMetaForNewFile(CONST newFileName: ansistring): longint;
   VAR i:longint;
   begin
     i:=length(editorMeta)-1;
@@ -1326,15 +1325,14 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
-    ensureDemos;
-    OpenDialog.fileName:=configDir+'demos';
-    miOpenClick(Sender);
+    if openDemoDialogForm.ShowModal=mrOk then
+       PageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
   end;
 
 PROCEDURE TMnhForm.miNewCentralPackageClick(Sender: TObject);
   begin
     if newCentralPackageForm.ShowModal=mrOk then
-      PageControl.activePageIndex:=addEditorMetaForNewFile(newCentralPackageForm.fileNameEdit.caption);
+      PageControl.activePageIndex:=addOrGetEditorMetaForFile(newCentralPackageForm.fileNameEdit.text);
   end;
 
 PROCEDURE TMnhForm.miFindClick(Sender: TObject);

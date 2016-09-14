@@ -1,0 +1,23 @@
+object openDemoDialogForm: TopenDemoDialogForm
+  Left = 596
+  Height = 240
+  Top = 301
+  Width = 198
+  BorderStyle = bsDialog
+  Caption = 'Open demo'
+  ClientHeight = 240
+  ClientWidth = 198
+  OnShow = FormShow
+  Position = poMainFormCenter
+  LCLVersion = '1.6.0.4'
+  object ListBox: TListBox
+    Left = 0
+    Height = 240
+    Top = 0
+    Width = 198
+    Align = alClient
+    ItemHeight = 0
+    OnDblClick = ListBoxDblClick
+    TabOrder = 0
+  end
+end

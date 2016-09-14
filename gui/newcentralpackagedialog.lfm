@@ -1,73 +1,105 @@
 object newCentralPackageForm: TnewCentralPackageForm
   Left = 379
-  Height = 84
+  Height = 294
   Top = 145
-  Width = 401
+  Width = 263
   BorderStyle = bsDialog
-  Caption = 'Create central package'
-  ClientHeight = 84
-  ClientWidth = 401
+  Caption = 'Manage utility packages'
+  ClientHeight = 294
+  ClientWidth = 263
   OnShow = FormShow
   Position = poMainFormCenter
   LCLVersion = '1.6.0.4'
-  object Label1: TLabel
-    Left = 8
-    Height = 15
-    Top = 8
-    Width = 35
-    Caption = 'Name:'
-    ParentColor = False
-  end
-  object packageNameEdit: TEdit
-    Left = 72
-    Height = 23
-    Top = 8
-    Width = 328
-    OnChange = packageNameEditChange
+  object ListBox: TListBox
+    Left = 0
+    Height = 137
+    Top = 25
+    Width = 263
+    Align = alClient
+    ItemHeight = 0
+    OnClick = ListBoxClick
+    OnDblClick = ListBoxDblClick
     TabOrder = 0
   end
-  object Label2: TLabel
-    Left = 8
-    Height = 15
-    Top = 32
-    Width = 51
-    Caption = 'Filename:'
-    ParentColor = False
-  end
-  object filenameEdit: TEdit
-    Left = 72
-    Height = 23
-    Top = 32
-    Width = 328
-    ReadOnly = True
-    TabStop = False
-    TabOrder = 3
-    Text = 'filenameEdit'
-  end
-  object complaintLabel: TLabel
-    Left = 8
-    Height = 15
-    Top = 64
-    Width = 93
-    Caption = 'File already exists!'
-    ParentColor = False
-  end
-  object okButton: TButton
-    Left = 248
+  object remButton: TButton
+    Left = 0
     Height = 25
-    Top = 56
-    Width = 75
-    Caption = 'O.K.'
-    ModalResult = 1
+    Top = 162
+    Width = 263
+    Align = alBottom
+    Caption = 'remove package'
     TabOrder = 1
   end
-  object cancelButton: TButton
-    Left = 325
-    Height = 25
-    Top = 56
-    Width = 75
-    Caption = 'Cancel'
-    ModalResult = 2
+  object GroupBox1: TGroupBox
+    Left = 0
+    Height = 107
+    Top = 187
+    Width = 263
+    Align = alBottom
+    Caption = 'create package'
+    ClientHeight = 87
+    ClientWidth = 259
     TabOrder = 2
+    object Label1: TLabel
+      Left = 8
+      Height = 15
+      Top = 8
+      Width = 35
+      Caption = 'Name:'
+      ParentColor = False
+    end
+    object packageNameEdit: TEdit
+      Left = 72
+      Height = 23
+      Top = 8
+      Width = 184
+      OnChange = packageNameEditChange
+      TabOrder = 0
+    end
+    object Label2: TLabel
+      Left = 8
+      Height = 15
+      Top = 32
+      Width = 51
+      Caption = 'Filename:'
+      ParentColor = False
+    end
+    object filenameEdit: TEdit
+      Left = 72
+      Height = 23
+      Top = 32
+      Width = 184
+      ReadOnly = True
+      TabStop = False
+      TabOrder = 1
+      Text = 'filenameEdit'
+    end
+    object complaintLabel: TLabel
+      Left = 8
+      Height = 15
+      Top = 64
+      Width = 93
+      Caption = 'File already exists!'
+      ParentColor = False
+    end
+    object okButton: TButton
+      Left = 181
+      Height = 25
+      Top = 56
+      Width = 75
+      Caption = 'O.K.'
+      ModalResult = 1
+      TabOrder = 2
+    end
+  end
+  object restoreButton: TButton
+    Left = 0
+    Height = 25
+    Top = 0
+    Width = 263
+    Align = alTop
+    Caption = 'restore default packages'
+    OnClick = restoreButtonClick
+    TabOrder = 3
   end
 end

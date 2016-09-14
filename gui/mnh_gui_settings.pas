@@ -15,7 +15,8 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
-    Button2: TButton;
+    installButton: TButton;
+    uninstallButton: TButton;
     outputSizeLimit: TEdit;
     Label7: TLabel;
     memLimitEdit: TEdit;
@@ -41,7 +42,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
-    PROCEDURE Button2Click(Sender: TObject);
+    PROCEDURE installButtonClick(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FontSizeEditEditingDone(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
@@ -51,6 +52,7 @@ TYPE
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
     PROCEDURE rbLogOffChange(Sender: TObject);
+    PROCEDURE uninstallButtonClick(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
@@ -72,21 +74,8 @@ IMPLEMENTATION
 {$R *.lfm}
 
 PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
-  PROCEDURE ensurePackages;
-    {$i res_ensurePackages.inc}
-    VAR code:T_arrayOfString;
-        i:longint;
-    begin
-      setLength(code,length(ensurePackages_mnh));
-      for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-      append(code,'('+escapeString(configDir)+')');
-      runAlone(code);
-    end;
-
   VAR i:longint;
-
   begin
-    ensurePackages;
     if settings.value^.editorFontname<>'' then begin
       EditorFontDialog.Font.name := settings.value^.editorFontname;
       FontButton.Font.name := settings.value^.editorFontname;
@@ -139,17 +128,31 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
     setFontSize(getFontSize);
   end;
 
-PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
+PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
   {$ifdef imig}
-  {$i res_ensureInstallScripts_imig.inc}
+  {$i res_ensureAssoc_imig.inc}
   {$else}
-  {$i res_ensureInstallScripts.inc}
+  {$i res_ensureAssoc.inc}
   {$endif}
   begin
     {$ifdef imig}
-    runAlone(ensureInstallScripts_imig_mnh);
+    runAlone(ensureAssoc_imig_mnh);
     {$else}
-    runAlone(ensureInstallScripts_mnh);
+    runAlone(ensureAssoc_mnh);
+    {$endif}
+  end;
+
+PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
+  {$ifdef imig}
+  {$i res_removeAssoc_imig.inc}
+  {$else}
+  {$i res_removeAssoc.inc}
+  {$endif}
+  begin
+    {$ifdef imig}
+    runAlone(removeAssoc_imig_mnh);
+    {$else}
+    runAlone(removeAssoc_mnh);
     {$endif}
   end;
 
