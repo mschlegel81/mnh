@@ -1325,7 +1325,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
 
 PROCEDURE TMnhForm.miOpenDemoClick(Sender: TObject);
   begin
-    if openDemoDialogForm.ShowModal=mrOK then
+    if openDemoDialogForm.ShowModal=mrOk then
        PageControl.activePageIndex:=addOrGetEditorMetaForFile(openDemoDialogForm.selectedFile);
   end;
 
