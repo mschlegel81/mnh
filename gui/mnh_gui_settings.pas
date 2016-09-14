@@ -15,7 +15,8 @@ TYPE
   { TSettingsForm }
 
   TSettingsForm = class(TForm)
-    Button2: TButton;
+    installButton: TButton;
+    uninstallButton: TButton;
     outputSizeLimit: TEdit;
     Label7: TLabel;
     memLimitEdit: TEdit;
@@ -41,7 +42,7 @@ TYPE
     workerThreadCountEdit: TEdit;
     Label4: TLabel;
     autosaveComboBox: TComboBox;
-    PROCEDURE Button2Click(Sender: TObject);
+    PROCEDURE installButtonClick(Sender: TObject);
     PROCEDURE FontButtonClick(Sender: TObject);
     PROCEDURE FontSizeEditEditingDone(Sender: TObject);
     PROCEDURE FormCreate(Sender: TObject);
@@ -51,6 +52,7 @@ TYPE
     PROCEDURE memLimitEditEditingDone(Sender: TObject);
     PROCEDURE outputSizeLimitEditingDone(Sender: TObject);
     PROCEDURE rbLogOffChange(Sender: TObject);
+    PROCEDURE uninstallButtonClick(Sender: TObject);
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE AntialiasCheckboxChange(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
@@ -139,10 +141,17 @@ PROCEDURE TSettingsForm.FontSizeEditEditingDone(Sender: TObject);
     setFontSize(getFontSize);
   end;
 
-PROCEDURE TSettingsForm.Button2Click(Sender: TObject);
-  {$i res_ensureInstallScripts.inc}
+PROCEDURE TSettingsForm.installButtonClick(Sender: TObject);
+  {$i res_ensureAssoc.inc}
   begin
-    runAlone(ensureInstallScripts_mnh);
+    runAlone(ensureAssoc_mnh);
+  end;
+
+PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
+  {$i res_removeAssoc.inc}
+  {$endif}
+  begin
+    runAlone(removeAssoc_mnh);
   end;
 
 PROCEDURE TSettingsForm.ensureFont(CONST editorFont:TFont);

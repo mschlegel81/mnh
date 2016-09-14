@@ -11,13 +11,11 @@ private delp->(isLinux ? 'delp' : '..\lazarus64\fpc\3.0.0\bin\x86_64-win64\delp.
    'consoles\lib\x86_64-win64']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
-  local inLines:=inFile.fileContents;
+  local inLines:=inFile.fileLines;
   local pasId:=clean(inFile.splitFileName['filename'],['a'..'z','A'..'Z'],'_');
   local outText:=
-  'VAR '&pasId&'cache:T_arrayOfString;'&
-  'FUNCTION '&pasId&': T_arrayOfString;'&
-  'CONST raw='& join('#'&strings.compress(inLines).chars.ord) &';'&
-  'begin if length('&pasId&'cache)=0 then '&pasId&'cache:=split(decompressString(raw)); result:='&pasId&'cache; end;';
+  'CONST '&pasId&': array[0..'&(inLines.size-1)&"] of string=(\n"&
+  inLines.each(line,line='' ? "''" : join('#'&(line.chars.ord))).join(",\n")&');';
   outFile.fileContents==outText
   ? void
   : writeFile(outFile,outText);
@@ -49,8 +47,10 @@ currentCodeHash:=begin
   templateToInc('resources/html_template.txt','core/res_html_template.inc');
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
   templateToInc('resources/ensureDemos.mnh','core/res_ensureDemos.inc');
-  templateToInc('resources/ensureInstallScripts.mnh','core/res_ensureInstallScripts.inc');
-  templateToInc('resources/ensureInstallScripts_imig.mnh','core/res_ensureInstallScripts_imig.inc');
+  templateToInc('resources/ensureAssoc.mnh'     ,'core/res_ensureAssoc.inc');
+  templateToInc('resources/ensureAssoc_imig.mnh','core/res_ensureAssoc_imig.inc');
+  templateToInc('resources/removeAssoc.mnh'     ,'core/res_removeAssoc.inc');
+  templateToInc('resources/removeAssoc_imig.mnh','core/res_removeAssoc_imig.inc');
   templateToInc('resources/ensurePackages.mnh','core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   //update code hash

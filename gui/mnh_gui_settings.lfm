@@ -216,14 +216,23 @@ object SettingsForm: TSettingsForm
         OnClick = Button1Click
         TabOrder = 0
       end
-      object Button2: TButton
+      object installButton: TButton
         Left = 24
         Height = 25
         Top = 48
         Width = 256
-        Caption = 'Create install scripts'
-        OnClick = Button2Click
+        Caption = 'Create file associations'
+        OnClick = installButtonClick
         TabOrder = 1
+      end
+      object uninstallButton: TButton
+        Left = 24
+        Height = 25
+        Top = 80
+        Width = 256
+        Caption = 'Remove file associations and program folder'
+        OnClick = uninstallButtonClick
+        TabOrder = 2
       end
     end
   end
