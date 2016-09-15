@@ -11,7 +11,7 @@
 
       id:idString;
       subrules:array of P_subrule;
-      PROCEDURE readDataStore(CONST package:P_package; CONST adapters:P_adapters);
+      PROCEDURE readDataStore(CONST adapters:P_adapters);
     public
       CONSTRUCTOR create(CONST ruleId:idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
       DESTRUCTOR destroy;
@@ -30,7 +30,7 @@
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
-      FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; CONST package:P_package):boolean;
+      FUNCTION writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
       FUNCTION isReportable(OUT value:P_literal):boolean;
       FUNCTION inspect:P_listLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
@@ -38,7 +38,7 @@
     end;
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_rule.readDataStore(CONST package:P_package; CONST adapters:P_adapters);
+PROCEDURE T_rule.readDataStore(CONST adapters:P_adapters);
   VAR lit:P_literal;
   begin
     if not(called) or (not(valueChangedAfterDeclaration) and dataStoreMeta^.fileChangedSinceRead) then begin
@@ -179,7 +179,7 @@ exit}
       rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private: begin
         result:=(includePrivateRules or (ruleType in C_publicRuleTypes)) and ((param=nil) or (param^.size=0));
         if result then begin
-          if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+          if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
           system.enterCriticalSection(rule_cs);
           firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
@@ -236,7 +236,7 @@ PROCEDURE T_rule.setMutableValue(CONST value:P_literal; CONST onDeclaration:bool
 FUNCTION T_rule.mutateInline(CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     system.enterCriticalSection(rule_cs);
-    if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(P_package(declarationStart.package),context.adapters);
+    if not(called) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
     result:=namedValue.mutate(mutation,RHS,location,context.adapters^);
     valueChangedAfterDeclaration:=true;
     called:=true;
@@ -304,7 +304,7 @@ FUNCTION T_rule.getDocHtml:ansistring;
     if not(anyPublic) then result:='';
   end;
 
-FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters; CONST package:P_package):boolean;
+FUNCTION T_rule.writeBack(VAR provider:T_codeProvider; VAR adapters:T_adapters):boolean;
   VAR code:ansistring;
       L:P_literal;
   begin

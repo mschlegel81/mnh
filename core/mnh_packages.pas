@@ -890,7 +890,7 @@ PROCEDURE T_package.finalize(VAR adapters:T_adapters);
     adapters.updateErrorlevel;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
-      if ruleList[i]^.writeBack(codeProvider,adapters,@self) then wroteBack:=true;
+      if ruleList[i]^.writeBack(codeProvider,adapters) then wroteBack:=true;
       if ruleList[i]^.ruleType=rt_memoized then ruleList[i]^.cache^.clear;
     end;
     setLength(ruleList,0);
