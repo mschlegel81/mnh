@@ -6,8 +6,8 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls, mnh_funcs, myGenerics, mnh_out_adapters, mnh_constants,
-  mnh_packages,myStringUtil,mnh_settings;
+  StdCtrls, mnh_funcs, mnh_out_adapters, mnh_constants,
+  mnh_packages,mnh_settings;
 
 CONST MINIMUM_OUTPUT_LINES=16;
 TYPE

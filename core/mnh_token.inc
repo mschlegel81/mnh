@@ -349,9 +349,12 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         result.tokType:=tt_ponFlipper;
         parsedLength:=1;
       end;
-      ':': if startsWith(':=') then begin
+      ':': if startsWith(C_tokenInfo[tt_assign].defaultId) then begin
         parsedLength:=2;
         result.tokType:=tt_assign;
+      end else if startsWith(C_tokenInfo[tt_pseudoFuncPointer].defaultId) then begin
+        parsedLength:=2;
+        result.tokType:=tt_pseudoFuncPointer;
       end else if (length(line)>=lineLocation.column+3) and (line[lineLocation.column+1] in ['b','e','i','l','n','s','r','k']) then begin
         id:=leadingId;
         if      id=C_tokenInfo[tt_typeCheckBoolList  ].defaultId then result.tokType:=tt_typeCheckBoolList
@@ -1432,6 +1435,24 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
     end;
 
+  PROCEDURE resolvePseudoFuncPointer;
+    VAR exRule:P_subrule;
+        ruleToken:P_token;
+        temp:P_token;
+        location:T_tokenLocation;
+    begin
+      //state @pre: ::f ...
+      location:=first^.location;;
+      ruleToken:=context.disposeToken(first); //dispose ::, store f
+      temp:=ruleToken^.next; //store ...
+      ruleToken^.next      :=context.newToken(location,'',tt_listToParameterList); //f -> f@
+      ruleToken^.next^.next:=context.newToken(location,ALL_PARAMETERS_TOKEN_TEXT,tt_parameterIdentifier); //f@ -> f@$params
+      new(exRule,createFromInline(ruleToken,context));
+      first:=context.newToken(location,'',tt_literal,newExpressionLiteral(exRule)); // {f@$params}
+      first^.next:=temp; //-> {f@$params} ...
+      didSubstitution:=true;
+    end;
+
   FUNCTION tokenContextString:ansistring;
     begin
       result:=getEnumName(TypeInfo(cTokType[-1]),ord(cTokType[-1]))+' # '+
@@ -1765,6 +1786,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
           then resolveInlineIf(P_boolLiteral(stack.dat[stack.topIndex]^.data)^.value)
           else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Instead I found a '+C_typeString[P_literal(stack.dat[stack.topIndex]^.data)^.literalType]+': '+stack.dat[stack.topIndex]^.singleTokenToString,first^.location);
         end else context.adapters^.raiseError('Invalid syntax for inline-if; first operand is expected to be a boolean. Here, the first operand is not even a literal.',first^.location);
+        tt_pseudoFuncPointer: if cTokType[1] in [tt_localUserRule, tt_importedUserRule, tt_customTypeRule, tt_intrinsicRule] then resolvePseudoFuncPointer;
       end;
     until not(didSubstitution) or not(context.adapters^.noErrors);
     {$ifndef DEBUGMODE}
