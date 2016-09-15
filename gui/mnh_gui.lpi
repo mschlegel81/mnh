@@ -277,6 +277,7 @@
         <Filename Value="openDemoDialog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="openDemoDialogForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit40>
     </Units>
