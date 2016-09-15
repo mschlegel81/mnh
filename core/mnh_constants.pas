@@ -74,7 +74,7 @@ TYPE
     tt_ponFlipper,
     tt_aggregatorConstructor,
     //special operators
-    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginFunc, tt_endBlock, tt_endFunc, tt_try, tt_toId,
+    tt_each, tt_parallelEach, tt_forcedParallelEach, tt_agg, tt_while, tt_beginBlock, tt_beginFunc, tt_endBlock, tt_endFunc, tt_try, tt_toId, tt_pseudoFuncPointer,
     //lists and list constructors
     tt_braceOpen, tt_braceClose, tt_parList_constructor, tt_parList,
     tt_listBraceOpen, tt_listBraceClose, tt_list_constructor,
@@ -198,13 +198,14 @@ CONST
     {tt_parallelEach}       tt_braceClose,
     {tt_forcedParallelEach} tt_braceClose,
     {tt_agg}                tt_braceClose,
-    {tt_when,tt_while}      tt_EOL,
+    {tt_while}              tt_EOL,
     {tt_beginBlock}         tt_endBlock,
     {tt_beginFunc}          tt_endFunc,
     {tt_endBlock}           tt_EOL,
     {tt_endFunc}            tt_EOL,
     {tt_try}                tt_EOL,
     {tt_toId}               tt_EOL,
+                            tt_EOL,
     {tt_braceOpen}          tt_braceClose,
     {tt_braceClose}         tt_EOL,
     {tt_parList_constructor}tt_braceClose,
@@ -272,6 +273,7 @@ CONST
       (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
       (defaultId:'try'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
       (defaultId:'toId'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
+      (defaultId:'::'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
       //lists and list constructor
       (defaultId:'('; reservedWordClass:rwc_not_reserved; helpText:'Opening round bracket#Used as in default mathematical syntax.'),
       (defaultId:')'; reservedWordClass:rwc_not_reserved; helpText:'Closing round bracket#Used as in default mathematical syntax.'),
