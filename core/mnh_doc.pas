@@ -52,12 +52,12 @@ VAR packages: array of P_userPackageDocumentation;
 CONST PACKAGE_DOC_SUBFOLDER='package_doc';
 
 PROCEDURE ensureDemos;
-  {$i res_ensureDemos.inc}
+  {$i res_ensurePackages.inc}
   VAR code:T_arrayOfString;
       i:longint;
   begin
-    setLength(code,length(ensureDemos_mnh));
-    for i:=0 to length(code)-1 do code[i]:=ensureDemos_mnh[i];
+    setLength(code,length(ensurePackages_mnh));
+    for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
     append(code,'('+escapeString(configDir)+')');
     demoCodeToHtmlCallback(code);
   end;

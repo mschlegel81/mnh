@@ -24,16 +24,10 @@ end;
 
 private nameAndContents(filename)->'['&escape(filename)&','&escape(fileContents(filename))&']';
 
-private ensureDemos->fileExists('resources/ensureDemos.mnh') ? void : begin
-  writeFileLines('resources/ensureDemos.mnh','{'|
-    (files('demos/*.mnh')|'demos/inputs/inputs.mnh')
-    .each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}","\n");
-end;
-
 private ensurePackages->fileExists('resources/ensurePackages.mnh') ? void : begin
   writeFileLines('resources/ensurePackages.mnh','{'|
-    files('packages/*.mnh').each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
+    (files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
+    .each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
     "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}","\n");
 end;
 
@@ -41,13 +35,11 @@ private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
   isLinux ? tprint('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
-  ensureDemos;
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('resources/examples.txt','core/res_examples.inc');
   templateToInc('resources/html_template.txt','core/res_html_template.inc');
   templateToInc('resources/ensureNotepad++Highlighting.mnh','core/res_ensureNppHighlighting.inc');
-  templateToInc('resources/ensureDemos.mnh','core/res_ensureDemos.inc');
   templateToInc('resources/ensureAssoc.mnh'     ,'core/res_ensureAssoc.inc');
   templateToInc('resources/ensureAssoc_imig.mnh','core/res_ensureAssoc_imig.inc');
   templateToInc('resources/removeAssoc.mnh'     ,'core/res_removeAssoc.inc');
