@@ -1,0 +1,43 @@
+private timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]);
+
+//*Waits for a folder change and returns the changes as a list:
+//*[[filename,changetype,fileInfo],...]
+//*where changetype is one of ['new','deleted','modified',''].
+//*If the file is deleted, fileInfo is the info of the old file
+waitForFolderChange(folderPath:string,scanIntervalInSeconds:numeric)->begin
+  local scanInterval:=time;
+  local initialContent:=timedFolderContent(folderPath);
+  scanInterval:=max(scanIntervalInSeconds,time-scanInterval);
+  local currentContent:=initialContent;
+  while(currentContent==initialContent,begin
+    sleep(scanInterval);
+    currentContent:=timedFolderContent(folderPath);
+  end);
+  currentContent;
+  local names:=initialContent.getInner(0).union(currentContent.getInner(0)).sort;
+  names.each(n,n in initialContent.getInner(0)
+               ? n in currentContent.getInner(0)
+                 ? initialContent[n]==currentContent[n]
+                   ? [n,'',currentContent[n]]
+                   : [n,'modified',currentContent[n]]
+                 : [n,'deleted',initialContent[n]]
+               : [n,'new',currentContent[n]]);
+end;
+
+//*Returns a list as waitForFolderChange but without waiting
+pseudoFolderChange(folderPath:string)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
+
+//*Waits for a folder change and calls onChange when the folder is changed
+watchFolder(folderPath:string,onChange:expression,scanIntervalInSeconds:numeric)->
+  async({while(true,onChange(waitForFolderChange(folderPath,scanIntervalInSeconds)))});
+
+//*Returns a temp file name by the specified pattern.
+//*pattern must contain exactly one "#" as placeholder
+tempFile(pattern:string)->
+  trueCount(pattern.chars='#')!=1
+  ? fail('pattern must contain exactly one "#" as placeholder')
+  : begin
+      local tmpFileIndex:=0;
+      while(fileExists(replace(pattern,'#',tmpFileIndex)),tmpFileIndex+=1);
+      replace(pattern,'#',tmpFileIndex);
+    end;

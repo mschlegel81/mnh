@@ -14,6 +14,7 @@ TYPE
                LIST_NAMESPACE           ,
                REGEX_NAMESPACE          ,
                SYSTEM_BUILTIN_NAMESPACE ,
+               FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE
                {$ifdef fullVersion},
                PLOT_NAMESPACE
@@ -46,7 +47,7 @@ CONST
   ONE_SECOND=1/(24*60*60);
   ONE_MINUTE=1/(24*60);
   SCRIPT_EXTENSION='.mnh';
-  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','typecast'{$ifdef fullVersion},'plot'{$endif}{$ifdef IMIG},'imig'{$endif});
+  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','files','typecast'{$ifdef fullVersion},'plot'{$endif}{$ifdef IMIG},'imig'{$endif});
   C_ID_QUALIFY_CHARACTER='.';
 
   C_eachIndexIdentifier='index';

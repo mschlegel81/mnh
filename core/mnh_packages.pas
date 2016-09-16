@@ -5,7 +5,7 @@ USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, 
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,{$endif}
-     mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system,
+     mnh_funcs_mnh, mnh_funcs_math, mnh_funcs_strings, mnh_funcs_list, mnh_funcs_system, mnh_funcs_files,
      mnh_funcs_regex{$ifdef IMIG},mnh_imig{$endif},mnh_datastores;
 
 {$define include_interface}
