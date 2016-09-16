@@ -117,6 +117,7 @@ TYPE
       PROCEDURE ClearAll;
       PROCEDURE stopEvaluation;
       FUNCTION noErrors: boolean; inline;
+      FUNCTION hasHaltMessage: boolean;
       PROCEDURE resetErrorFlags;
       PROCEDURE updateErrorlevel;
       {$ifdef fullVersion}FUNCTION hasNeedGUIerror:boolean;{$endif}
@@ -444,6 +445,7 @@ PROCEDURE T_adapters.clearErrors;
 PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
+    if hasHaltMessage then exit;
     if maxErrorLevel< C_messageTypeMeta[thisErrorLevel].level then
        maxErrorLevel:=C_messageTypeMeta[thisErrorLevel].level;
     hasMessageOfType[thisErrorLevel]:=true;
@@ -461,6 +463,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
+    if hasHaltMessage then exit;
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     hasMessageOfType[message.messageType]:=true;
@@ -520,6 +523,12 @@ FUNCTION T_adapters.noErrors: boolean;
     {$ifdef fullVersion}
     and not(hasNeedGUIerror)
     {$endif};
+  end;
+
+FUNCTION T_adapters.hasHaltMessage:boolean;
+  begin
+    result:=hasMessageOfType[mt_el5_haltMessageQuiet] or
+            hasMessageOfType[mt_el5_haltMessageReceived];
   end;
 
 PROCEDURE T_adapters.resetErrorFlags;
