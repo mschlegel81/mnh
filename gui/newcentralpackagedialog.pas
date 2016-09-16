@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, myStringUtil, mnh_constants, mnh_fileWrappers, myGenerics, LazFileUtils, mnh_packages;
+  ExtCtrls, myStringUtil, mnh_constants, mnh_fileWrappers, myGenerics, LazFileUtils, mnh_doc;
 
 TYPE
 
@@ -86,14 +86,8 @@ PROCEDURE TnewCentralPackageForm.packageNameEditChange(Sender: TObject);
   end;
 
 PROCEDURE TnewCentralPackageForm.restoreButtonClick(Sender: TObject);
-  {$i res_ensurePackages.inc}
-  VAR code:T_arrayOfString;
-      i:longint;
   begin
-    setLength(code,length(ensurePackages_mnh));
-    for i:=0 to length(code)-1 do code[i]:=ensurePackages_mnh[i];
-    append(code,'('+escapeString(configDir)+')');
-    runAlone(code);
+    ensureDemos;
     updatePackageList;
   end;
 

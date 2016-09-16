@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls, mnh_funcs, mnh_out_adapters, mnh_constants,
-  mnh_packages,mnh_settings;
+  mnh_packages,mnh_settings,mnh_doc;
 
 CONST MINIMUM_OUTPUT_LINES=16;
 TYPE
@@ -83,7 +83,10 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     AntialiasCheckbox.Checked := settings.value^.antialiasedFonts;
     setFontSize(settings.value^.fontSize);
     setOutputLimit(settings.value^.outputLinesLimit);
-    if not(settings.value^.wasLoaded) then settings.value^.activePage:=0;
+    if not(settings.value^.wasLoaded) then begin
+      settings.value^.activePage:=0;
+      ensureDemos;
+    end;
     workerThreadCountEdit.text:=intToStr(settings.value^.cpuCount);
     memLimitEdit.text:=intToStr(settings.value^.memoryLimit shr 20);
     FontButton.Font.size := getFontSize;
