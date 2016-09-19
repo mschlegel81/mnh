@@ -1,19 +1,13 @@
-private timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]);
-
-//*Waits for a folder change and returns the changes as a list:
-//*[[filename,changetype,fileInfo],...]
-//*where changetype is one of ['new','deleted','modified',''].
-//*If the file is deleted, fileInfo is the info of the old file
-waitForFolderChange(folderPath:string,scanIntervalInSeconds:numeric)->begin
-  local scanInterval:=time;
-  local initialContent:=timedFolderContent(folderPath);
-  scanInterval:=max(scanIntervalInSeconds,time-scanInterval);
+private timedFolderContent(folderPath:string)->files(folderPath&'/*').each(file,[file,fileInfo(file)]).sort(0);
+private changeToContent(L:list)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
+private
+waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric,initialContent)->begin
+  local scanInterval:=-1;
   local currentContent:=initialContent;
   while(currentContent==initialContent,begin
-    sleep(scanInterval);
+    sleep(scanInterval:=min(scanInterval+1,maxSleepTimeInSeconds));
     currentContent:=timedFolderContent(folderPath);
   end);
-  currentContent;
   local names:=initialContent.getInner(0).union(currentContent.getInner(0)).sort;
   names.each(n,n in initialContent.getInner(0)
                ? n in currentContent.getInner(0)
@@ -24,12 +18,28 @@ waitForFolderChange(folderPath:string,scanIntervalInSeconds:numeric)->begin
                : [n,'new',currentContent[n]]);
 end;
 
+changeSymbol:=[['',''],['modified','*'],['deleted','-'],['new','+']];
+
+
+//*Waits for a folder change and returns the changes as a list:
+//*[[filename,changetype,fileInfo],...]
+//*where changetype is one of ['new','deleted','modified',''].
+//*If the file is deleted, fileInfo is the info of the old file
+waitForFolderChange(folderPath:string,maxSleepTimeInSeconds:numeric)->waitForFolderChange(folderPath,maxSleepTimeInSeconds,timedFolderContent(folderPath));
+
 //*Returns a list as waitForFolderChange but without waiting
 pseudoFolderChange(folderPath:string)->timedFolderContent(folderPath).each(e,[e[0],'',e[1]]);
 
 //*Waits for a folder change and calls onChange when the folder is changed
-watchFolder(folderPath:string,onChange:expression,scanIntervalInSeconds:numeric)->
-  async({while(true,onChange(waitForFolderChange(folderPath,scanIntervalInSeconds)))});
+watchFolder(folderPath:string,onChange:expression,maxSleepTimeInSeconds:numeric)->
+  async({begin
+    local contents:=timedFolderContent(folderPath);
+    while(true,begin
+      contents:=waitForFolderChange(folderPath,maxSleepTimeInSeconds,contents);
+      onChange(contents);
+      contents:=contents.changeToContent;
+    end);
+  end});
 
 //*Returns a temp file name by the specified pattern.
 //*pattern must contain exactly one "#" as placeholder

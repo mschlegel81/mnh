@@ -25,3 +25,17 @@ cPot(x:numericList(2),k:int)->(k and 1)=1 ? x.cPot(k-1).cMult(x)
                                           : x.cSqr.cPot(k div 2);
 cPot(x:numericList(2),k:real)->k=0 ? [1,0] : (x.cLn*k).cExp;
 cPot(x:numericList(2),k:numericList(2))->k=0 ? [1,0] : (x.cLn.cMult(k)).cExp;
+
+//*Returns cosinus of complex x
+cCos(x:numericList(2))->begin
+  //cos(x)=(e^(ix)+e^(-ix))/2
+  local result:=cExp([0, 1].cMult(x));
+  (result+cInv(result))*0.5;
+end;
+
+//*Returns sinus of complex x
+cSin(x:numericList(2))->begin
+  //sin(x)=(e^(ix)-e^(-ix))/2
+  local result:=cExp([0, 1].cMult(x));
+  (result-cInv(result))*0.5;
+end;

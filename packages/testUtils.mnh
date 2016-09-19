@@ -1,0 +1,6 @@
+testExpression(...)->... .each(e,e.isExpression
+                                 ? void
+                                 : fail(e.toString&' is no expression'),head) orElse
+                     printf("%s\t=\t%s",
+                            ... .each(e,e.toString.unbrace.unbrace),
+                            ... .each(e,toString(e())));

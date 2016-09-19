@@ -1,14 +1,10 @@
 //*Returns the mean of all values in <code>X</code>
 mean    (X:numericList)->X.agg(+)/size(X);
-//*Returns the (statistical) variance of all values in <code>X</code>
+//*Returns the (statistical) variance X
 variance(X:numericList)->mean(X^2)-mean(X)^2;
-
+//*Returns the standardVariation of X
+standardVariation(X:numericList)->sqrt(X.variance);
+//*Returns the median of numeric list X
 median(X:numericList)->sort(X).get(size(X) div 2);
-
+//*Returns the decils of L
 decils(L)->sort(L).get(round([0..10]/10*(size(L)-1)));
-
-private testEx(e:expression)->printf("%-29s = %s",unbrace(toString(e)),toString(e()));
-main->testEx({mean([1,2,3.2,-1.8])}) |
-      testEx({variance([1,2,3.2,-1.8])})|
-      testEx({median(random(100))}) |
-      testEx({decils(round(random(1000),3))});
