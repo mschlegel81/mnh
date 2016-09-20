@@ -1,12 +1,12 @@
 {$ifdef include_interface}
   T_patternElement=object
     private
-      id               :ansistring;
+      id               :idString;
       restrictionType  :T_tokenType;
       restrictionValue :P_literal;
       restrictionIdx   :longint;
       typeWhitelist    :T_literalTypeSet;
-      restrictionId    :ansistring;
+      restrictionId    :idString;
       customTypeCheck  :P_subrule;
     public
       CONSTRUCTOR createAnonymous;

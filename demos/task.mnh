@@ -20,7 +20,7 @@ end;
 main()->begin
   endTask;
   print('All tasks:');
-  printf("  %s\t%{$1:string?$1:formatTime('hh:nn:ss',$1)}s",
+  printf("  %s\t%{$1.isString?$1:formatTime('hh:nn:ss',$1)}s",
     'Task'      | allTasks.getInner(0),
     'Time spent'| allTasks.getInner(1));
 end;

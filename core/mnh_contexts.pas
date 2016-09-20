@@ -100,7 +100,10 @@ PROCEDURE T_valueStore.scopePop;
     i:=length(data);
     repeat
       dec(i);
-      with data[i] do if v<>nil then dispose(v,destroy);
+      with data[i] do if v<>nil then begin
+        dispose(v,destroy);
+        v:=nil;
+      end;
     until data[i].marker<>vsm_none;
     setLength(data,i);
     system.leaveCriticalSection(cs);

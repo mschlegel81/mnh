@@ -202,7 +202,10 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
     t:=@self;
     result:=true;
     while result and (t<>nil) do begin
-      if t^.tokType in C_forbiddenTokenTypes then adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Invalid symbol '+safeTokenToString(t),t^.location);
+      if t^.tokType in C_forbiddenTokenTypes then begin
+        adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Invalid symbol '+safeTokenToString(t),t^.location);
+        result:=false;
+      end;
       if      t^.tokType in C_openingBrackets then push(t)
       else if t^.tokType in C_closingBrackets then result:=result and popPlausible(t);
       t:=t^.next;
