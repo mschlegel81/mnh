@@ -13,7 +13,7 @@
     scope:P_evaluationContext;
 
     {$ifdef fullVersion}
-    variableName:string;
+    variableName:idString;
     variableValue:P_literal;
     {$endif}
 

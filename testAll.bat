@@ -1,6 +1,6 @@
 @echo off
 @rem files('demos/*.mnh').union(files('packages/*.mnh')).each(file,file.matches('htmlFunctionPlotter|timer') ? void : file).each(demo,'echo. >> D:\heaptrace_per_demo.txt','echo '&demo&' >> D:\heaptrace_per_demo.txt','echo '&demo,'echo. >> D:\heaptrace_per_demo.txt','%1 -quiet '&demo.splitFileName['expanded']&(demo.matches('24\.mnh') ?' demo' : demo.matches('diff\.mnh') ?' test' :'')&' >> D:\heaptrace_per_demo.txt 2>&1').join("\n").print;
-echo. >> D:\heaptrace_per_demo.txt
+echo. > D:\heaptrace_per_demo.txt
 echo demos/100doors.mnh >> D:\heaptrace_per_demo.txt
 echo demos/100doors.mnh
 echo. >> D:\heaptrace_per_demo.txt

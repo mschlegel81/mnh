@@ -28,7 +28,7 @@ private ensurePackages->fileExists('resources/ensurePackages.mnh') ? void : begi
   writeFileLines('resources/ensurePackages.mnh','{'|
     (files('demos/*.mnh')|'demos/inputs/inputs.mnh'|files('packages/*.mnh'))
     .each(file,(index=0 ? '[' : ',') & nameAndContents(file))|
-    "].each(f,fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}","\n");
+    "].each(f,matches(f[0],'packages/').not AND fileExists($0&f[0]) ? void : writeFile($0&f[0],f[1]))}","\n");
 end;
 
 private mutable currentCodeHash:=void;
@@ -171,7 +171,6 @@ main->main('build');
 main('clean')->begin
   allFolders('..')
   .each(f,splitFileName(f)['filename'] in ["nppBackup","backup"] ? f : void)
-  .union('C:\ProgramData\MNH\*'.folders) //cleanup default install directory, but keep settings untouched
   .each(f,begin
            tprint('Deleting ',f);
            deleteDir(f);

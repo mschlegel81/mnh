@@ -455,7 +455,7 @@ PROCEDURE T_adapters.clearErrors;
 PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
-    if hasHaltMessage then exit;
+    if hasHaltMessage and (thisErrorLevel<>mt_endOfEvaluation) then exit;
     if maxErrorLevel< C_messageTypeMeta[thisErrorLevel].level then
        maxErrorLevel:=C_messageTypeMeta[thisErrorLevel].level;
     hasMessageOfType[thisErrorLevel]:=true;
@@ -473,7 +473,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
-    if hasHaltMessage then exit;
+    if hasHaltMessage and (message.messageType<>mt_endOfEvaluation) then exit;
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     hasMessageOfType[message.messageType]:=true;

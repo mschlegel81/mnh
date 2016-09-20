@@ -363,11 +363,11 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       exTokens.destroy;
       exit(nil); //Parsing error ocurred
     end;
-    result:=context.newToken(exTokens.current);
+    result:=context.newToken(exTokens.current); exTokens.current.undefine;
     last:=result;
     exTokens.step(package,dummyForLastComment,context.adapters^);
     while not(exTokens.atEnd) do begin
-      last^.next:=context.newToken(exTokens.current);
+      last^.next:=context.newToken(exTokens.current);  exTokens.current.undefine;
       last:=last^.next;
       exTokens.step(package,dummyForLastComment,context.adapters^);
     end;
@@ -397,13 +397,11 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
     if (context.adapters^.noErrors) and (first^.next<>nil) then context.adapters^.raiseCustomMessage(mt_el4_parsingError,'The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context.adapters^.noErrors) then begin
       context.cascadeDisposeToken(first);
-      context.destroy;
       exit(newErrorLiteral);
     end;
     if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
       context.disposeToken(first);
       context.adapters^.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
-      context.destroy;
       exit(newErrorLiteral);
     end;
     result:=P_expressionLiteral(first^.data);

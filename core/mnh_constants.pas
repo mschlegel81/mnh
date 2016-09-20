@@ -7,7 +7,7 @@ USES sysutils;
 {$endif}
 TYPE
   T_hashInt=dword;
-  idString =ansistring;
+  idString =shortString;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
                STRINGS_NAMESPACE        ,
