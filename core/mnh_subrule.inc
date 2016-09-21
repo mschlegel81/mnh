@@ -556,14 +556,14 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
       end else begin
         result:=nil;
         if (params<>nil) and (params^.size>0)
-        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt)
+        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toString(tt_parList)+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt)
         else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
         context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
         context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,50),declaredAt);
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin
-      context.adapters^.raiseError('Cannot apply function to parameters: '+params^.toParameterListString(true),declaredAt);
+      context.adapters^.raiseError('Cannot apply function to parameters: '+params^.toString(tt_parList),declaredAt);
       result:=nil;
     end;
   end;
