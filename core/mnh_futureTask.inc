@@ -131,8 +131,8 @@ FUNCTION T_futureTask.getResultAsLiteral(VAR context: T_evaluationContext): P_li
       if sleepTime<100 then inc(sleepTime);
     end;
     if (context.adapters^.noErrors) then begin
-      if (task<>nil) and (task^.next=nil) and (task^.tokType=tt_literal) then begin
-        result:=task^.data;
+      if (task<>nil) and (task^.next=nil) and (task^.tokenType=tt_literal) then begin
+        result:=task^.literal;
         result^.rereference;
       end else begin
         result:=newErrorLiteral;

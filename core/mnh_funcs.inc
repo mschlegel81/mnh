@@ -257,17 +257,17 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION evaluate(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral):P_literal;
     VAR first:P_token;
     begin
-      first:=context.newToken(tokenLocation,'',tt_literal,subruleLiteral); subruleLiteral^.rereference;
-      first^.next:=context.newToken(tokenLocation,'',tt_parList,parameters); parameters^.rereference;
+      first:=context.newLiteralToken(tokenLocation,subruleLiteral); subruleLiteral^.rereference;
+      first^.next:=context.newToken(tokenLocation,tt_parList);
+      first^.next^.literal:=parameters; parameters^.rereference;
       t:=timer.value.elapsed;
       reduceExpression(first,0,context);
       t:=timer.value.elapsed-t;
-      if (first<>nil) and (first^.next=nil) and (first^.tokType=tt_literal)
-      then begin result:=first^.data; result^.rereference; end
+      if (first<>nil) and (first^.next=nil) and (first^.tokenType=tt_literal)
+      then begin result:=first^.literal; result^.rereference; end
       else result:=nil;
       if first<>nil then context.cascadeDisposeToken(first);
     end;
-
 
   begin
     result:=nil;
@@ -314,13 +314,15 @@ FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     if (params^.size>=1) and (params^.value(0)^.literalType=lt_expression) and
        ((params^.size=1) or (params^.size=2) and (params^.value(1)^.literalType in C_validListTypes)) then begin
       getMem(p,sizeOf(T_asyncTask));
-      p^.task:=context.newToken(tokenLocation,'',tt_literal,params^.value(0));
+      p^.task:=context.newLiteralToken(tokenLocation,params^.value(0));
       params^.value(0)^.rereference;
+      p^.task^.next:=context.newToken(tokenLocation,tt_parList);
       if params^.size=2 then begin
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,params^.value(1));
+        p^.task^.next^.literal:=params^.value(1);
         params^.value(1)^.rereference;
-      end else
-        p^.task^.next:=context.newToken(tokenLocation,'',tt_parList,newListLiteral);
+      end else begin
+        p^.task^.next^.literal:=newListLiteral;
+      end;
       p^.adapters:=context.adapters;
       InterLockedIncrement(runningAsyncTasks);
       beginThread(@doAsync,p);
@@ -386,11 +388,11 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
       context.cascadeDisposeToken(first);
       exit(nil);
     end;
-    if first^.tokType<>tt_expBraceOpen then begin
-      temp:=context.newToken(location,'',tt_expBraceOpen);
+    if first^.tokenType<>tt_expBraceOpen then begin
+      temp:=context.newToken(location,tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;
-      temp^.next:=context.newToken(location,'',tt_expBraceClose);
+      temp^.next:=context.newToken(location,tt_expBraceClose);
     end;
 
     digestInlineExpression(first,context);
@@ -399,14 +401,14 @@ FUNCTION stringToExpression(CONST s:ansistring; CONST location:T_tokenLocation; 
       context.cascadeDisposeToken(first);
       exit(newErrorLiteral);
     end;
-    if (first^.tokType<>tt_literal) or (P_literal(first^.data)^.literalType<>lt_expression) then begin
+    if (first^.tokenType<>tt_literal) or (first^.literal^.literalType<>lt_expression) then begin
       context.disposeToken(first);
       context.adapters^.raiseCustomMessage(mt_el5_systemError,'This is unexpected. The result of mnh_tokens.stringToExpression should be an expression!',location);
       exit(newErrorLiteral);
     end;
-    result:=P_expressionLiteral(first^.data);
-    first^.tokType:=tt_EOL;
-    first^.data:=nil;
+    result:=P_expressionLiteral(first^.literal);
+    first^.tokenType:=tt_EOL;
+    first^.literal:=nil;
     context.disposeToken(first);
   end;
 
@@ -415,14 +417,14 @@ FUNCTION toExpression_imp(CONST params:P_listLiteral; CONST tokenLocation:T_toke
     VAR first:P_token;
     begin
       //Create token-series { <Literal> }
-      first            :=context.newToken(tokenLocation,'',tt_expBraceOpen);
-      first^.next      :=context.newToken(tokenLocation,'',tt_literal,l); L^.rereference;
-      first^.next^.next:=context.newToken(tokenLocation,'',tt_expBraceClose);
+      first            :=context.newToken(tokenLocation,tt_expBraceOpen);
+      first^.next      :=context.newLiteralToken(tokenLocation,l); L^.rereference;
+      first^.next^.next:=context.newToken(tokenLocation,tt_expBraceClose);
       //Reduce to inline expression
       digestInlineExpression(first,context);
-      result:=P_expressionLiteral(first^.data);
-      first^.tokType:=tt_EOL;
-      first^.data:=nil;
+      result:=P_expressionLiteral(first^.literal);
+      first^.tokenType:=tt_EOL;
+      first^.literal:=nil;
       context.disposeToken(first);
     end;
 

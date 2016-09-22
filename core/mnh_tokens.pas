@@ -21,6 +21,7 @@ TYPE
       PROCEDURE setId(CONST id:T_idString);
       FUNCTION getLiteral:P_literal;
       PROCEDURE setLiteral(CONST lit:P_literal);
+      PROCEDURE setRawData(CONST newRawData:P_tokenPayload);
     public
       location:T_tokenLocation;
       next    :P_token;
@@ -42,7 +43,7 @@ TYPE
     PROPERTY comment:T_commentString read getComment write setCommment;
     PROPERTY id:T_idString read getId write setId;
     PROPERTY literal:P_literal read getLiteral write setLiteral;
-    PROPERTY rawData:P_tokenPayload read data;
+    PROPERTY rawData:P_tokenPayload read data write setRawData;
     FUNCTION getIdWithPointer:T_idWithPointerPayload;
     PROCEDURE setIdWithPointer(CONST id_:T_idString; CONST ptr:pointer);
     PROCEDURE disposeLiteral;
@@ -331,6 +332,19 @@ procedure T_token.setLiteral(const lit: P_literal);
   begin
     if (C_tokenInfo[tokType].payloadType<>tpt_literal) then raise Exception.create('Invalid operation');
     data:=lit;
+  end;
+
+procedure T_token.setRawData(const newRawData: P_tokenPayload);
+  begin
+    if (C_tokenInfo[tokenType].payloadType=tpt_none) then raise Exception.create('Invalid operation');
+      if data<>nil then case C_tokenInfo[tokType].payloadType of
+      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
+      tpt_identifier,
+      tpt_comment,
+      tpt_idWithPointerPayload,
+      tpt_eachPayload: dispose(data,destroy);
+    end;
+    data:=newRawData;
   end;
 
 procedure T_token.disposeLiteral;

@@ -507,7 +507,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     origRule:=original^.value;
     pattern.create;
     setLength(preparedBody,1);
-    with preparedBody[0] do begin token.create; token.location:=declaredAt; token.tokenType:=tt_intrinsicRule; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+    with preparedBody[0] do begin token.create; token.location:=declaredAt; token.tokenType:=tt_intrinsicRule; token.rawData:=intrinsicRuleMap.get(intrinsicRuleId); parIdx:=-1; end;
     if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceOpen);
     for i:=0 to length(origRule^.preparedBody)-1 do appendToExpression(origRule^.preparedBody[i].token);
     if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceClose);
@@ -557,7 +557,7 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
       reduceExpression(firstRep,callDepth+1,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokenType=tt_literal)
       then begin
-        result:=firstRep^.data;
+        result:=firstRep^.literal;
         result^.rereference;
       end else begin
         result:=nil;
@@ -635,7 +635,7 @@ FUNCTION T_subrule.getInlineValue:P_literal;
   begin
     if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
     with preparedBody[0] do if token.tokenType=tt_literal then begin
-      result:=token.data;
+      result:=token.literal;
       result^.rereference;
     end else result:=nil;
   end;
@@ -718,7 +718,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
       result:=false;
       for k:=0 to bracketStack.topIndex do
       if (bracketStack.dat[k]^.tokenType in [tt_each,tt_parallelEach,tt_forcedParallelEach]) and
-         (bracketStack.dat[k]^.txt=id) or (id=C_eachIndexIdentifier) then exit(true);
+         (bracketStack.dat[k]^.id=id) or (id=C_eachIndexIdentifier) then exit(true);
     end;
 
   begin
@@ -728,7 +728,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
         tt_each,tt_parallelEach,tt_forcedParallelEach,tt_braceOpen: bracketStack.quietPush(@token);
         tt_braceClose:bracketStack.quietPop;
       end;
-      if (parIdx<0) and (token.tokenType=tt_identifier) and not(isEachIdentifier(token.txt)) then
+      if (parIdx<0) and (token.tokenType=tt_identifier) and not(isEachIdentifier(token.id)) then
       P_package(token.location.package)^.resolveRuleId(token,adapters);
     end;
     bracketStack.destroy;
@@ -760,24 +760,26 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
               (firstRep<>nil) and
               (firstRep^.next=nil) and
               (firstRep^.tokenType=tt_literal) and
-              (P_literal(firstRep^.data)^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
-              (P_listLiteral(firstRep^.data)^.size = TList^.size);
+              (firstRep^.literal^.literalType in [lt_list,lt_realList,lt_intList,lt_numList]) and
+              (P_listLiteral(firstRep^.literal)^.size = TList^.size);
       tempAdapters.clearErrors;
       if not(result) then context.cascadeDisposeToken(firstRep);
     end;
 
   FUNCTION evaluatePEachExpressionOk:boolean;
     begin
-      firstRep:=context.newToken(location,'',tt_literal,TList); TList^.rereference;
-      firstRep^.next:=context.newToken(location,'t',tt_parallelEach);
+      firstRep:=context.newLiteralToken(location,TList); TList^.rereference;
+      firstRep^.next:=context.newToken(location,tt_parallelEach);
+      firstRep^.next^.id:='t';
       lastRep:=firstRep^.next;
-      lastRep^.next:=context.newToken(location,'t',tt_identifier);
+      lastRep^.next:=context.newToken(location,tt_identifier);
+      firstRep^.next^.id:='t';
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_ponFlipper);
+      lastRep^.next:=context.newToken(location,tt_ponFlipper);
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_literal,f); f^.rereference;
+      lastRep^.next:=context.newLiteralToken(location,f); f^.rereference;
       lastRep:=lastRep^.next;
-      lastRep^.next:=context.newToken(location,'',tt_braceClose);
+      lastRep^.next:=context.newToken(location,tt_braceClose);
       result:=evaluateOk;
     end;
 
@@ -858,7 +860,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         stillOk:=dataReadyVectorized and evaluateVectorExpressionOk
               or dataReadyScalar     and evaluatePEachExpressionOk;
         if stillOk then begin
-          resultLiteral:=P_listLiteral(firstRep^.data);
+          resultLiteral:=P_listLiteral(firstRep^.literal);
           if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
           then newRow:=newDataRow(resultLiteral,TList)
           else newRow:=newDataRow(resultLiteral);
@@ -917,7 +919,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     if not(dataReadyVectorized) then dataReadyScalar:=evaluatePEachExpressionOk;
 
     if dataReadyScalar or dataReadyVectorized then begin
-      resultLiteral:=P_listLiteral(firstRep^.data);
+      resultLiteral:=P_listLiteral(firstRep^.literal);
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);

@@ -122,11 +122,14 @@ exit}
     VAR newFirst,t:P_token;
     begin
       useParam^.rereference; //rereference useParam because it is used below
-      newFirst      :=context.newToken(firstRep^.location, id+'.put.cache',tt_rulePutCacheValue,@self);
-      newFirst^.next:=context.newToken(firstRep^.location, '', tt_parList_constructor,newOneElementListLiteral(useParam,true)); t:=newFirst^.next;
+      newFirst      :=context.newToken(firstRep^.location,tt_rulePutCacheValue);
+      newFirst^.rawData:=@self;
+      newFirst^.next:=context.newToken(firstRep^.location,tt_parList_constructor);
+      newFirst^.next^.literal:=newOneElementListLiteral(useParam,true);
+      t:=newFirst^.next;
       t       ^.next:=firstRep;
       firstRep:=newFirst;
-      lastRep^.next:=context.newToken(firstRep^.location, '', tt_braceClose);
+      lastRep^.next:=context.newToken(firstRep^.location, tt_braceClose);
       lastRep:=lastRep^.next;
     end;
 
@@ -139,22 +142,22 @@ exit}
         lit:=cache^.get(useParam);
         if lit<>nil then begin
           lit^.rereference;
-          firstRep:=context.newToken(declarationStart,'',tt_literal,lit);
+          firstRep:=context.newLiteralToken(declarationStart,lit);
           lastRep:=firstRep;
           CLEAN_EXIT(true);
         end else for useUncurryingFallback:=false to true do
                  for i:=0 to length(subrules)-1 do if (includePrivateRules or (subrules[i]^.typ=srt_normal_public)) and subrules[i]^.replaces(useParam,nil,firstRep,lastRep,context,useUncurryingFallback) then begin
           if (callDepth>=STACK_DEPTH_LIMIT) then begin called:=true; wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
           if (context.adapters^.noErrors) then reduceExpression(firstRep,callDepth+1,context);
-          if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal) then begin
-            lit:=firstRep^.data;
+          if (context.adapters^.noErrors) and (firstRep^.next=nil) and (firstRep^.tokenType=tt_literal) then begin
+            lit:=firstRep^.literal;
             cache^.put(useParam,lit);
           end;
           lastRep:=firstRep^.last;
           if not(context.adapters^.noErrors) then begin
             if (callDepth mod 1000)=0 then context.adapters^.raiseNote('Quitting evaluation of cached rule '+id+' on level '+intToStr(callDepth),declarationStart);
             context.cascadeDisposeToken(firstRep);
-            firstRep:=context.newToken(declarationStart,'',tt_literal,newErrorLiteral);
+            firstRep:=context.newLiteralToken(declarationStart,newErrorLiteral);
             lastRep:=firstRep;
           end;
           called:=true;
@@ -182,7 +185,7 @@ exit}
         if result then begin
           if not(valueChangedAfterDeclaration) and (ruleType in [rt_datastore_private,rt_datastore_public]) then readDataStore(context.adapters);
           system.enterCriticalSection(rule_cs);
-          firstRep:=context.newToken(declarationStart,'',tt_literal,namedValue.getValue);
+          firstRep:=context.newLiteralToken(declarationStart,namedValue.getValue);
           system.leaveCriticalSection(rule_cs);
           lastRep:=firstRep;
           called:=true;

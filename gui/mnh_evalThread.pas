@@ -329,35 +329,35 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY
     tokens.getRawTokensUndefining;
     tokens.destroy;
 
-    if tokenToExplain.tokType=tt_identifier then package.resolveRuleId(tokenToExplain,nil);
+    if tokenToExplain.tokenType=tt_identifier then package.resolveRuleId(tokenToExplain,nil);
 
-    info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain.tokType].helpText,'#',C_lineBreakChar);
+    info.tokenExplanation:=replaceAll(C_tokenInfo[tokenToExplain.tokenType].helpText,'#',C_lineBreakChar);
     for i:=0 to length(C_specialWordInfo)-1 do
       if C_specialWordInfo[i].txt=info.tokenText then
       info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar+replaceAll(C_specialWordInfo[i].helpText,'#',C_lineBreakChar);
 
-    case tokenToExplain.tokType of
+    case tokenToExplain.tokenType of
       tt_intrinsicRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
         appendBuiltinRuleInfo;
       end;
       tt_importedUserRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
+        info.tokenExplanation:=info.tokenExplanation+'Imported rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.rawData)^.getDocTxt,C_tabChar,' ');
+        info.location:=P_rule(tokenToExplain.rawData)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(tokenToExplain.id) then appendBuiltinRuleInfo('hides ');
       end;
       tt_localUserRule: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
+        info.tokenExplanation:=info.tokenExplanation+'Local rule'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.rawData)^.getDocTxt,C_tabChar,' ');
+        info.location:=P_rule(tokenToExplain.rawData)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(tokenToExplain.id) then appendBuiltinRuleInfo('hides ');
       end;
       tt_customTypeRule, tt_customTypeCheck: begin
         if info.tokenExplanation<>'' then info.tokenExplanation:=info.tokenExplanation+C_lineBreakChar;
-        info.tokenExplanation:=info.tokenExplanation+'Custom type'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.data)^.getDocTxt,C_tabChar,' ');
-        info.location:=P_rule(tokenToExplain.data)^.getLocationOfDeclaration;
-        if intrinsicRuleMap.containsKey(tokenToExplain.txt) then appendBuiltinRuleInfo('hides ');
+        info.tokenExplanation:=info.tokenExplanation+'Custom type'+C_lineBreakChar+replaceAll(P_rule(tokenToExplain.rawData)^.getDocTxt,C_tabChar,' ');
+        info.location:=P_rule(tokenToExplain.rawData)^.getLocationOfDeclaration;
+        if intrinsicRuleMap.containsKey(tokenToExplain.id) then appendBuiltinRuleInfo('hides ');
       end;
     end;
     leaveCriticalSection(cs);
