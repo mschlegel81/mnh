@@ -143,11 +143,12 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; VAR
   VAR tok:P_token;
   begin
     if (restrictionId<>'') and (restrictionIdx<0) then begin
-      tok:=context.newToken(location,restrictionId,tt_identifier,nil);
+      tok:=context.newToken(location,tt_identifier);
+      tok^.id:=restrictionId;
       reduceExpression(tok,0,context);
-      if (tok<>nil) and (tok^.next=nil) and (tok^.tokType=tt_literal) then begin
+      if (tok<>nil) and (tok^.next=nil) and (tok^.tokenType=tt_literal) then begin
         restrictionId:='';
-        restrictionValue:=tok^.data;
+        restrictionValue:=tok^.literal;
         restrictionValue^.rereference;
       end else context.adapters^.raiseError('Invalid pattern; cannot resolve ID "'+restrictionId+'"',location);
       context.cascadeDisposeToken(tok);
@@ -378,8 +379,8 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   begin
     t:=tok;
     while t<>nil do begin
-      if (t^.tokType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
-      and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
+      if (t^.tokenType in [tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule])
+      and (indexOfId(t^.id)>=0) then t^.tokenType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
   end;

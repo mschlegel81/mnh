@@ -6,16 +6,28 @@ TYPE
   T_rawTokenArray=array of T_rawToken;
 
   P_token=^T_token;
+
+  { T_token }
+
   T_token=object
-    next    :P_token;
-    location:T_tokenLocation;
-    txt     :T_idString;
-    tokType :T_tokenType;
-    data    :pointer;
+    private
+      tokType :T_tokenType;
+      data    :P_tokenPayload;
+
+      PROCEDURE setTokenType(CONST newType:T_tokenType);
+      FUNCTION getComment:T_commentString;
+      PROCEDURE setCommment(CONST comment:T_commentString);
+      FUNCTION getId:T_idString;
+      PROCEDURE setId(CONST id:T_idString);
+      FUNCTION getLiteral:P_literal;
+      PROCEDURE setLiteral(CONST lit:P_literal);
+    public
+      location:T_tokenLocation;
+      next    :P_token;
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
+    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
@@ -26,6 +38,15 @@ TYPE
     FUNCTION getDeclarationOrAssignmentToken:P_token;
     FUNCTION getRawToken:T_rawToken;
     FUNCTION hash:T_hashInt;
+
+    PROPERTY tokenType:T_tokenType read tokType write setTokenType;
+    PROPERTY comment:T_commentString read getComment write setCommment;
+    PROPERTY id:T_idString read getId write setId;
+    PROPERTY literal:P_literal read getLiteral write setLiteral;
+    PROPERTY rawData:P_tokenPayload read data;
+    FUNCTION getIdWithPointer:T_idWithPointerPayload;
+    PROCEDURE setIdWithPointer(CONST id_:T_idString; CONST ptr:pointer);
+    PROCEDURE disposeLiteral;
   end;
 
   T_bodyParts=array of record first,last:P_token; end;
@@ -57,53 +78,50 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-CONSTRUCTOR T_token.create;
+constructor T_token.create;
   begin
   end;
 
-DESTRUCTOR T_token.destroy;
+destructor T_token.destroy;
   begin
     undefine;
   end;
 
-PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer);
+procedure T_token.define(const tokenLocation: T_tokenLocation;
+  const tokenType: T_tokenType; const ptr: pointer);
   {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
-    if (tokenText='') and (C_tokenInfo[tokenType].defaultId<>'')
-      then txt:=C_tokenInfo[tokenType].defaultId
-      else txt:=tokenText;
     tokType:=tokenType;
     data:=ptr;
     {$ifdef DEBUGMODE}
-    if (ptr=nil) and (tokenType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
+    if (ptr=nil) and (C_tokenInfo[tokenType].payloadType<>tpt_none) then raise Exception.create('Creating token without payload in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
-PROCEDURE T_token.define(CONST original: T_token);
+procedure T_token.define(const original: T_token);
   {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=original.location;
-    txt     :=original.txt;
-    tokType :=original.tokType;
-    data    :=original.data;
-    case tokType of
-      tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
-      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then P_literal(data)^.rereference;
-      tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
-    end;
+    tokType:=original.tokType;
+    if C_tokenInfo[tokType].payloadType<>tpt_none
+    then data:=original.data^.cloneOrCopy(tokType)
+    else data:=nil;
     {$ifdef DEBUGMODE}
-    if (data=nil) and (tokType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
+    if (data=nil) and (C_tokenInfo[tokType].payloadType<>tpt_none) then raise Exception.create('Creating token without payload in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     if location.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
-PROCEDURE T_token.undefine;
+procedure T_token.undefine;
   begin
-    case tokType of
-      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
-      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then disposeLiteral(data);
+    if data<>nil then case C_tokenInfo[tokType].payloadType of
+      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
+      tpt_identifier,
+      tpt_comment,
+      tpt_idWithPointerPayload,
+      tpt_eachPayload: dispose(data,destroy);
     end;
     data:=nil;
     tokType:=tt_EOL;
@@ -112,40 +130,18 @@ PROCEDURE T_token.undefine;
     location.line:=0;
   end;
 
-FUNCTION T_token.last: P_token;
+function T_token.last: P_token;
   begin
     result:=@self;
     while result^.next<>nil do result:=result^.next;
   end;
 
-FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CONST limit:longint=maxLongint): ansistring;
+function T_token.toString(const lastWasIdLike: boolean; out idLike: boolean;
+  const limit: longint): ansistring;
   begin
     idLike:=false;
-    case tokType of
-      tt_each, tt_parallelEach, tt_forcedParallelEach: begin
-        result:=C_tokenInfo[tokType].defaultId;
-        if txt<>'' then result:=result+'('+txt+','
-                   else result:=C_tokenInfo[tt_agg].defaultId+'(';
-        if data<>nil then result:=result+P_literal(data)^.toString(tokType, limit-6)+',';
-      end;
-      tt_customTypeCheck: result:=':'+txt;
-      tt_aggregatorExpressionLiteral,
-      tt_literal            : result:=P_literal    (data)^.toString(tokType,limit);
-      tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
-      tt_beginFunc:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
-      tt_endFunc  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
-      tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
-      tt_identifier,
-      tt_localUserRule,
-      tt_importedUserRule,
-      tt_intrinsicRule,
-      tt_rulePutCacheValue,
-      tt_customTypeRule,
-      tt_parameterIdentifier,
-      tt_blockLocalVariable,
-      tt_blank: result:=txt;
-      else result:=C_tokenInfo[tokType].defaultId;
-    end;
+    if data=nil then result:=C_tokenInfo[tokType].defaultId
+                 else result:=data^.toString(tokType,limit);
     if length(result)<1 then begin
       idLike:=false; exit(result);
     end;
@@ -155,7 +151,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
 
-FUNCTION T_token.singleTokenToString: ansistring;
+function T_token.singleTokenToString: ansistring;
   VAR dummy:boolean;
   begin
     result:=toString(false,dummy);
@@ -163,7 +159,8 @@ FUNCTION T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): boolean;
+function T_token.areBracketsPlausible(var adaptersForComplaints: T_adapters
+  ): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
     begin
@@ -210,7 +207,8 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): bo
     result:=result and stackIsEmpty;
   end;
 
-FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLevel: longint; CONST initialLevel: longint): P_token;
+function T_token.getTokenOnBracketLevel(const types: T_tokenTypeSet;
+  const onLevel: longint; const initialLevel: longint): P_token;
   VAR level:longint=0;
       t:P_token;
   begin
@@ -225,17 +223,15 @@ FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLev
     result:=nil;
   end;
 
-FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
+function T_token.getDeclarationOrAssignmentToken: P_token;
   VAR level:longint=0;
       t,newNext:P_token;
-
   begin
     t:=@self;
     while (t<>nil) do begin
       if (t^.tokType=tt_iifElse) and (t^.next<>nil) and (t^.next^.tokType=tt_customTypeRule) then begin
         newNext:=t^.next^.next;
         t^.tokType:=tt_customTypeCheck;
-        t^.txt    :=t^.next^.txt;
         t^.data   :=t^.next^.data;
         dispose(t^.next,destroy);
         t^.next:=newNext;
@@ -248,15 +244,14 @@ FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
     result:=nil;
   end;
 
-FUNCTION T_token.getRawToken: T_rawToken;
+function T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
   end;
 
-FUNCTION T_token.hash:T_hashInt;
-  VAR i:longint;
-      pt:P_token;
+function T_token.hash: T_hashInt;
+  VAR pt:P_token;
   begin
     result:=0;
     pt:=@self;
@@ -264,19 +259,99 @@ FUNCTION T_token.hash:T_hashInt;
     while pt<>nil do begin
       with pt^ do begin
         case tokType of
-          tt_identifier,    tt_localUserRule    ,tt_importedUserRule    ,tt_intrinsicRule    : result:=result*31+longint(tt_identifier);
+          tt_identifier, tt_localUserRule,tt_importedUserRule,tt_intrinsicRule:
+               result:=result*31+longint(tt_identifier);
           else result:=result*31+longint(tokType);
         end;
-        result:=result*31+length(txt);
-        for i:=1 to length(txt) do result:=result*31+ord(txt[i]);
-        case tokType of
-          tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: result:=result*31+P_literal(data)^.hash;
-          tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then result:=result*31+P_literal(data)^.hash else result:=result*31;
-        end;
+        if C_tokenInfo[tokType].payloadType<>tpt_none
+        then result:=result*31+data^.hash;
       end;
       pt:=pt^.next;
     end;
     {$Q+}{$R+}
   end;
+
+function T_token.getIdWithPointer: T_idWithPointerPayload;
+  begin
+    if (C_tokenInfo[tokType].payloadType in [tpt_idWithPointerPayload,tpt_builtinRule]) and (data<>nil)
+    then result:=P_idWithPointerPayload(data)^
+    else raise Exception.create('Invalid operation');
+  end;
+
+procedure T_token.setIdWithPointer(const id_: T_idString; const ptr: pointer);
+  begin
+    if (C_tokenInfo[tokType].payloadType=tpt_idWithPointerPayload) then raise Exception.create('Invalid operation');
+    if data=nil then new(P_idWithPointerPayload(data),create(id_,ptr)) else begin
+      P_idWithPointerPayload(data)^.id :=id_;
+      P_idWithPointerPayload(data)^.ptr:=ptr;
+    end;
+  end;
+
+procedure T_token.setTokenType(const newType: T_tokenType);
+  begin
+    if (data<>nil) and (C_tokenInfo[newType].payloadType=C_tokenInfo[tokType].payloadType) or
+       (data=nil)  and (C_tokenInfo[newType].payloadType=tpt_none) then begin
+      tokType:=newType;
+      exit;
+    end;
+    if data<>nil then case C_tokenInfo[tokType].payloadType of
+      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
+      tpt_identifier,
+      tpt_comment,
+      tpt_idWithPointerPayload,
+      tpt_eachPayload: dispose(data,destroy);
+    end;
+    tokType:=newType;
+  end;
+
+function T_token.getComment: T_commentString;
+  begin
+    if (C_tokenInfo[tokType].payloadType=tpt_comment) and (data<>nil)
+    then result:=P_commentPayload(data)^.txt
+    else result:='';
+  end;
+
+procedure T_token.setCommment(const comment: T_commentString);
+  begin
+    if (C_tokenInfo[tokType].payloadType<>tpt_comment) then raise Exception.create('Invalid operation');
+    if data=nil then new(P_commentPayload(data),create(comment))
+                else P_commentPayload(data)^.txt:=comment;
+  end;
+
+function T_token.getId: T_idString;
+  begin
+    if (C_tokenInfo[tokenType].payloadType in [tpt_identifier,tpt_builtinRule,tpt_userRule,tpt_eachPayload]) and (data<>nil)
+    then result:=P_idPayload(data)^.id
+    else result:='';
+  end;
+
+procedure T_token.setId(const id: T_idString);
+  begin
+    if not(C_tokenInfo[tokType].payloadType in [tpt_identifier,tpt_eachPayload]) then raise Exception.create('Invalid operation');
+    case C_tokenInfo[tokType].payloadType of
+      tpt_identifier : if data=nil then new(P_idPayload  (data),create(id    )) else P_idPayload  (data)^.id:=id;
+      tpt_eachPayload: if data=nil then new(P_eachPayload(data),create(id,nil)) else P_eachPayload(data)^.id:=id;
+    end;
+  end;
+
+function T_token.getLiteral: P_literal;
+  begin
+    if C_tokenInfo[tokType].payloadType=tpt_literal
+    then result:=P_literal(data)
+    else result:=nil;
+  end;
+
+procedure T_token.setLiteral(const lit: P_literal);
+  begin
+    if (C_tokenInfo[tokType].payloadType<>tpt_literal) then raise Exception.create('Invalid operation');
+    data:=lit;
+  end;
+
+procedure T_token.disposeLiteral;
+  begin
+    if C_tokenInfo[tokType].payloadType=tpt_literal
+    then mnh_litVar.disposeLiteral(P_literal(data));
+  end;
+
 
 end.

@@ -9,6 +9,8 @@ TYPE
   T_hashInt=dword;
   T_idString =shortString;
   P_idString =^T_idString;
+CONST maxIdLength=255;
+TYPE
   T_commentString=ansistring;
   P_commentString=^T_commentString;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
