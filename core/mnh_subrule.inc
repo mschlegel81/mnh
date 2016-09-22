@@ -124,15 +124,18 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
 PROCEDURE T_subrule.embrace;
   VAR i:longint;
   begin
-
     setLength(preparedBody,length(preparedBody)+2);
     for i:=length(preparedBody)-2 downto 1 do preparedBody[i]:=preparedBody[i-1];
     with preparedBody[0] do begin
-      token.create; token.define(declaredAt,'',tt_braceOpen);
+      token.create;
+      token.location:=declaredAt;
+      token.tokenType:=tt_braceOpen;
       parIdx:=-1;
     end;
     with preparedBody[length(preparedBody)-1] do begin
-      token.create; token.define(declaredAt,'',tt_braceClose);
+      token.create;
+      token.location:=declaredAt;
+      token.tokenType:=tt_braceClose;
       parIdx:=-1;
     end;
   end;
@@ -174,7 +177,7 @@ PROCEDURE T_subrule.updatePatternForInline;
     pattern.clear;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do
     if token.tokenType=tt_parameterIdentifier then begin
-      parIdx:=pattern.indexOfIdForInline(token.txt);
+      parIdx:=pattern.indexOfIdForInline(token.id);
     end else if token.tokenType=tt_optionalParameters then begin
       parIdx:=REMAINING_PARAMETERS_IDX;
       pattern.hasOptionals:=true;
@@ -203,7 +206,6 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
 
 CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
   VAR dummyBool:boolean;
-      funcPtr:T_intFuncCallback=nil;
   begin
     init(srt_inline_for_literal,tok^.location);
     pattern.create;
@@ -211,34 +213,33 @@ CONSTRUCTOR T_subrule.createPrimitiveAggregator(CONST tok:P_token; VAR context:T
       pattern.appendFreeId('$x');
       pattern.appendFreeId('$y');
       setLength(preparedBody,5);
-      with preparedBody[0] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
-      with preparedBody[1] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
-      with preparedBody[2] do begin token.create; token.define(tok^.location,'',tok^.tokenType);             parIdx:=-1; end;
-      with preparedBody[3] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
-      with preparedBody[4] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_braceOpen          ;                 parIdx:=-1; end;
+      with preparedBody[1] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_parameterIdentifier; token.id:='$x'; parIdx:= 0; end;
+      with preparedBody[2] do begin token.create; token.location:=tok^.location; token.tokenType:=tok^.tokenType        ;                 parIdx:=-1; end;
+      with preparedBody[3] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_parameterIdentifier; token.id:='$y'; parIdx:= 1; end;
+      with preparedBody[4] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_braceClose         ;                 parIdx:=-1; end;
     end else if (tok^.tokenType=tt_intrinsicRule) then begin
-      if (T_intFuncCallback(tok^.data)=BUILTIN_MIN) or
-         (T_intFuncCallback(tok^.data)=BUILTIN_MAX) or
-         (T_intFuncCallback(tok^.data)=BUILTIN_HEAD) then funcPtr:=T_intFuncCallback(tok^.data)
-      else begin
+      if (T_intFuncCallback(tok^.getIdWithPointer.ptr)<>BUILTIN_MIN^.func) and
+         (T_intFuncCallback(tok^.getIdWithPointer.ptr)<>BUILTIN_MAX^.func) and
+         (T_intFuncCallback(tok^.getIdWithPointer.ptr)<>BUILTIN_HEAD^.func) then begin
         context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
         exit;
       end;
-      if T_intFuncCallback(tok^.data)=BUILTIN_HEAD then begin
+      if T_intFuncCallback(tok^.getIdWithPointer.ptr)=BUILTIN_HEAD^.func then begin
         pattern.appendFreeId('$x');
         pattern.appendFreeId('$y');
         setLength(preparedBody,1);
-        with preparedBody[0] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
+        with preparedBody[0] do begin token.create; token.location:=tok^.location; tok^.tokenType:=tt_parameterIdentifier; tok^.id:='$x'; parIdx:= 0; end;
       end else begin
         pattern.appendFreeId('$x');
         pattern.appendFreeId('$y');
         setLength(preparedBody,6);
-        with preparedBody[0] do begin token.create; token.define(declaredAt,tok^.txt,tt_intrinsicRule,funcPtr); parIdx:=-1; end;
-        with preparedBody[1] do begin token.create; token.define(tok^.location,'',tt_braceOpen);             parIdx:=-1; end;
-        with preparedBody[2] do begin token.create; token.define(tok^.location,'$x',tt_parameterIdentifier); parIdx:= 0; end;
-        with preparedBody[3] do begin token.create; token.define(tok^.location,'',tt_separatorComma);        parIdx:=-1; end;
-        with preparedBody[4] do begin token.create; token.define(tok^.location,'$y',tt_parameterIdentifier); parIdx:= 1; end;
-        with preparedBody[5] do begin token.create; token.define(tok^.location,'',tt_braceClose);            parIdx:=-1; end;
+        with preparedBody[0] do begin token.create; token.define(tok^); parIdx:=-1; end;
+        with preparedBody[1] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_braceOpen          ;                 parIdx:=-1; end;
+        with preparedBody[2] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_parameterIdentifier; token.id:='$x'; parIdx:= 0; end;
+        with preparedBody[3] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_separatorComma     ;                 parIdx:=-1; end;
+        with preparedBody[4] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_parameterIdentifier; token.id:='$y'; parIdx:= 1; end;
+        with preparedBody[5] do begin token.create; token.location:=tok^.location; token.tokenType:=tt_braceClose         ;                 parIdx:=-1; end;
       end;
     end else context.adapters^.raiseError('Cannot construct primitive aggregator from token: '+tok^.toString(false,dummyBool),declaredAt);
   end;
@@ -253,8 +254,8 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
       token:=original^.preparedBody[i].token;
       case token.tokenType of
-        tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: P_literal(token.data)^.rereference;
-        tt_each,tt_parallelEach,tt_forcedParallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
+        tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: token.literal^.rereference;
+        tt_each,tt_parallelEach,tt_forcedParallelEach: if token.literal<>nil then token.literal^.rereference;
       end;
       parIdx:=original^.preparedBody[i].parIdx;
     end;
@@ -305,7 +306,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
           L:=remaining;
         end else L:=param^.value(index);
         if L=nil then exit(context.newToken(@original));
-        result:=context.newToken(original.location,'',tt_literal,L);
+        result:=context.newLiteralToken(original.location,L);
         L^.rereference;
       end else begin
         result:=context.newToken(@original);
@@ -333,14 +334,14 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         context.callStackPush(declaredAt,getSubruleId,report);
         if firstRep^.tokenType<>tt_beginFunc then begin
           //new first
-          tmp:=context.newToken(declaredAt,'',tt_beginFunc);
+          tmp:=context.newToken(declaredAt,tt_beginFunc);
           tmp^.next:=firstRep;
           firstRep:=tmp;
 
           //new last
-          lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
+          lastRep^.next:=context.newToken(declaredAt,tt_semicolon);
           lastRep:=lastRep^.next;
-          lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc);
+          lastRep^.next:=context.newToken(declaredAt,tt_endFunc);
           lastRep:=lastRep^.next;
         end;
       end;
@@ -354,7 +355,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
              (param<>nil) and pattern.matchesForFallback(param^,selfLiteral<>nil,context) and
               //The function result must (likely) be an expression
          (    (preparedBody[0].token.tokenType=tt_literal)
-          and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
+          and (preparedBody[0].token.literal^.literalType=lt_expression)
            or (length(preparedBody)>=2)
           and (preparedBody[0].token.tokenType=tt_expBraceOpen)
           and (preparedBody[length(preparedBody)-1].token.tokenType=tt_expBraceClose));
@@ -382,7 +383,8 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
       prepareResult;
       tempInnerParam:=newListLiteral;
       for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
-      lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
+      lastRep^.next:=context.newToken(declaredAt,tt_parList);
+      lastRep^.next^.literal:=tempInnerParam;
       lastRep:=lastRep^.next;
     end else begin
       result:=false;
@@ -412,7 +414,7 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
         token.create;
         token.define(T.token);
         parIdx:=T.parIdx;
-        if parIdx>=0 then token.txt:=pattern.idForIndexInline(parIdx);
+        if parIdx>=0 then token.id:=pattern.idForIndexInline(parIdx);
       end;
     end;
 
@@ -422,7 +424,9 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       L^.rereference;
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(opLocation,'',tt_literal,L);
+        token.location:=opLocation;
+        token.tokenType:=tt_literal;
+        token.literal:=L;
         parIdx:=-1;
       end;
     end;
@@ -432,7 +436,8 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(opLocation,'',op);
+        token.location:=opLocation;
+        token.tokenType:=op;
         parIdx:=-1;
       end;
     end;
@@ -491,7 +496,8 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
-        token.define(funcLocation,'',op);
+        token.location:=funcLocation;
+        token.tokenType:=op;
         parIdx:=-1;
       end;
     end;
@@ -501,7 +507,7 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     origRule:=original^.value;
     pattern.create;
     setLength(preparedBody,1);
-    with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
+    with preparedBody[0] do begin token.create; token.location:=declaredAt; token.tokenType:=tt_intrinsicRule; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
     if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceOpen);
     for i:=0 to length(origRule^.preparedBody)-1 do appendToExpression(origRule^.preparedBody[i].token);
     if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceClose);

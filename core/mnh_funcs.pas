@@ -15,20 +15,30 @@ TYPE
   end;
 
 VAR
-  intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
+  intrinsicRuleMap:specialize G_stringKeyMap<P_builtinFuncPayload>;
   print_cs        :system.TRTLCriticalSection;
 
-PROCEDURE registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false);
+FUNCTION registerRule(CONST namespace:T_namespace; CONST name:ansistring; CONST ptr:T_intFuncCallback; CONST explanation:ansistring; CONST fullNameOnly:boolean=false):P_builtinFuncPayload;
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST typ:T_literalType; CONST messageTail:ansistring; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters);
 PROCEDURE setMnhParameters(CONST p:T_arrayOfString);
 IMPLEMENTATION
 VAR mnhParameters:P_listLiteral=nil;
 
-PROCEDURE registerRule(CONST namespace: T_namespace; CONST name: ansistring; CONST ptr: T_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean);
+FUNCTION registerRule(CONST namespace: T_namespace; CONST name: ansistring; CONST ptr: T_intFuncCallback; CONST explanation: ansistring; CONST fullNameOnly: boolean):P_builtinFuncPayload;
+  FUNCTION putPayload(CONST withPrefix: boolean; CONST func:T_intFuncCallback):P_builtinFuncPayload;
+    VAR id:T_idString;
+    begin
+      if withPrefix then id:=C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name
+                    else id:=                                                    name;
+
+      new(result,create(id,func));
+      intrinsicRuleMap.put(id,result);
+    end;
+
   begin
     if not(fullNameOnly) then
-    intrinsicRuleMap.put(                                                    name,ptr);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,ptr);
+            putPayload(false,ptr);
+    result:=putPayload(true ,ptr);
     {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
@@ -204,8 +214,13 @@ FUNCTION T_builtinFuncPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPa
     result:=@self;
   end;
 
+PROCEDURE disposeBuiltinFuncPayload(VAR p:P_builtinFuncPayload);
+  begin
+    dispose(p,destroy);
+  end;
+
 INITIALIZATION
-  intrinsicRuleMap.create;
+  intrinsicRuleMap.create(@disposeBuiltinFuncPayload);
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint',@clearPrint_imp,'clearPrint(...);#Clears the output and returns void.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'print',@print_imp,'print(...);#Prints out the given parameters and returns void#if tabs and line breaks are part of the output, a default pretty-printing is used');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'typeOf',@typeOf_imp,'typeOf(x);#Returns a string representation of the type of x');

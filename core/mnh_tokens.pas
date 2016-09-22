@@ -27,7 +27,6 @@ TYPE
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
@@ -85,19 +84,6 @@ constructor T_token.create;
 destructor T_token.destroy;
   begin
     undefine;
-  end;
-
-procedure T_token.define(const tokenLocation: T_tokenLocation;
-  const tokenType: T_tokenType; const ptr: pointer);
-  {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
-  begin
-    location:=tokenLocation;
-    tokType:=tokenType;
-    data:=ptr;
-    {$ifdef DEBUGMODE}
-    if (ptr=nil) and (C_tokenInfo[tokenType].payloadType<>tpt_none) then raise Exception.create('Creating token without payload in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
-    if tokenLocation.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
-    {$endif}
   end;
 
 procedure T_token.define(const original: T_token);

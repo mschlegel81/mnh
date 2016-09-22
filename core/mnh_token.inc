@@ -136,7 +136,7 @@ FUNCTION T_tokenArray.lastToken:T_token;
 FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
       lastComment:ansistring='';
-      intrinsicFuncPtr:T_intFuncCallback;
+      intrinsicFuncPtr:P_builtinFuncPayload;
       nullAdapter:T_adapters;
   begin
     nullAdapter.create;
@@ -469,7 +469,9 @@ PROCEDURE T_tokenArray.tokenizeAll(VAR provider: T_codeProvider; CONST inPackage
     //Handle unfinished blobs
     if blob.text<>'' then begin
       next.create;
-      next.define(blob.start,tt_literal,newStringLiteral(blob.text));
+      next.location:=blob.start;
+      next.tokenType:=tt_literal;
+      next.literal:=newStringLiteral(blob.text);
       append(next);
       blob.text:='';
     end;
@@ -692,12 +694,12 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
             end else if isPureAggregator then context.adapters^.raiseError('Invalid agg-construct: argument must be an aggregator or aggregator prototype.',eachToken^.location);
-            tt_intrinsicRule: if (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_MIN) or
-                                 (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_MAX) then begin
+            tt_intrinsicRule: if (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_MIN^.func) or
+                                 (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_MAX^.func) then begin
               aggregatorExpression:=createPrimitiveAggregatorLiteral(t,context);
               aggregatorPresent:=yes_as_expression;
               aggregatorLocation:=t^.location
-            end else if (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_HEAD) then begin
+            end else if (T_intFuncCallback(t^.getIdWithPointer.ptr)=BUILTIN_HEAD^.func) then begin
               aggregatorPresent:=yes_as_head;
               aggregatorLocation:=t^.location
             end;
@@ -1110,7 +1112,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$endif}
       end else if (first^.tokenType=tt_rulePutCacheValue) then begin
         newLiteral:=P_rule(first^.rawData)^.doPutCache(parameterListLiteral);
-        firstReplace:=context.newToken(first^.location,tt_literal,newLiteral);
+        firstReplace:=context.newLiteralToken(first^.location,newLiteral);
         lastReplace:=firstReplace;
       end else if (first^.tokenType=tt_aggregatorConstructor) then begin
         if (parameterListLiteral<>nil) and (parameterListLiteral^.size=1) and (parameterListLiteral^.value(0)^.literalType=lt_expression) then begin
@@ -1124,7 +1126,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             newLiteral:=newExpressionLiteral(inlineRule);
           end;
           inlineRule^.pattern.appendOptional;
-          firstReplace:=context.newToken(first^.location,tt_aggregatorExpressionLiteral,newLiteral);
+          firstReplace:=context.newLiteralToken(first^.location,newLiteral);
           lastReplace:=firstReplace;
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokenType=tt_intrinsicRule) then begin
@@ -1136,7 +1138,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if currentlyDebugging then stepper.steppingOut(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.getIdWithPointer.ptr),2*sizeOf(pointer)));
         {$endif}
         if newLiteral<>nil then begin
-          firstReplace:=context.newToken(first^.location,tt_literal,newLiteral);
+          firstReplace:=context.newLiteralToken(first^.location,newLiteral);
           lastReplace:=firstReplace;
         end else if not(context.adapters^.noErrors) then exit else begin
           if parameterListLiteral=nil
@@ -1298,7 +1300,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end;
       if ruleIdResolved then begin
         //resolved rule ID mutate x . y -> y(x)
-        newParameterListToken:=context.newToken(first^.next^.next^.location,tt_parList,newOneElementListLiteral(first^.literal,false));
+        newParameterListToken:=context.newToken(first^.next^.next^.location,tt_parList);
+        newParameterListToken^.literal:=newOneElementListLiteral(first^.literal,false);
 
         first^.literal:=nil; first^.tokenType:=tt_identifier;
                                //Disposing from:   <Lit> . func ...
@@ -1439,7 +1442,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       ruleToken^.next^.next^.id:=ALL_PARAMETERS_TOKEN_TEXT;
 
       new(exRule,createFromInline(ruleToken,context));
-      first:=context.newToken(location,tt_literal,newExpressionLiteral(exRule)); // {f@$params}
+      first:=context.newLiteralToken(location,newExpressionLiteral(exRule)); // {f@$params}
       first^.next:=temp; //-> {f@$params} ...
       didSubstitution:=true;
     end;

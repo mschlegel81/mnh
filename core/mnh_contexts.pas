@@ -48,7 +48,8 @@ TYPE
     //Recycler routines:
     FUNCTION disposeToken(p:P_token):P_token; inline;
     PROCEDURE cascadeDisposeToken(VAR p:P_token);
-    FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
+    FUNCTION newToken(CONST location:T_tokenLocation; CONST tokenType:T_tokenType):P_token; inline;
+    FUNCTION newLiteralToken(CONST location:T_tokenLocation; CONST literal:P_literal):P_token; inline;
     FUNCTION newToken(CONST original:T_token):P_token; inline;
     FUNCTION newToken(CONST original:P_token):P_token; inline;
     //Local scope routines:
@@ -226,14 +227,21 @@ PROCEDURE T_evaluationContext.cascadeDisposeToken(VAR p:P_token);
     while p<>nil do p:=disposeToken(p);
   end;
 
-FUNCTION T_evaluationContext.newToken(CONST tokenLocation:T_tokenLocation; CONST tokenType:T_tokenType; CONST ptr:pointer):P_token;
+FUNCTION T_evaluationContext.newToken(CONST location:T_tokenLocation; CONST tokenType:T_tokenType):P_token; inline;
   begin
     if (fill>0) then begin
       dec(fill);
       result:=dat[fill];
     end else new(result,create);
-    result^.define(tokenLocation,tokenType,ptr);
+    result^.location:=location;
+    result^.tokenType:=tokenType;
     result^.next:=nil;
+  end;
+
+FUNCTION T_evaluationContext.newLiteralToken(CONST location:T_tokenLocation; CONST literal:P_literal):P_token; inline;
+  begin
+    result:=newToken(location,tt_literal);
+    result^.literal:=literal;
   end;
 
 FUNCTION T_evaluationContext.newToken(CONST original:T_token):P_token;
