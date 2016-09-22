@@ -85,7 +85,7 @@ TYPE
   public
     class FUNCTION GetLanguageName: ansistring; override;
   public
-    CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour);
+    CONSTRUCTOR create(AOwner: TComponent; CONST flav:T_mnhSynFlavour); virtual;
     DESTRUCTOR destroy; override;
     {$WARN 5024 OFF}
     FUNCTION GetDefaultAttribute(index: integer): TSynHighlighterAttributes; override;

@@ -1,5 +1,5 @@
 {$ifdef include_interface}
-  T_rule=object
+  T_rule=object(T_idPayload)
     private
       idResolved,called,valueChangedAfterDeclaration:boolean;
       dataStoreMeta:P_datastoreMeta;
@@ -9,12 +9,11 @@
       cache:P_cache;
       rule_cs:system.TRTLCriticalSection;
 
-      id:idString;
       subrules:array of P_subrule;
       PROCEDURE readDataStore(CONST adapters:P_adapters);
     public
-      CONSTRUCTOR create(CONST ruleId:idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
-      DESTRUCTOR destroy;
+      CONSTRUCTOR create(CONST ruleId:T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+      DESTRUCTOR destroy; virtual;
       FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
       FUNCTION replaces(CONST param:P_listLiteral; OUT firstRep,lastRep:P_token; CONST callDepth:word; CONST includePrivateRules:boolean; VAR context:T_evaluationContext):boolean;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subrule; VAR context:T_evaluationContext);
@@ -35,6 +34,7 @@
       FUNCTION inspect:P_listLiteral;
       PROCEDURE resolveIds(CONST adapters:P_adapters);
       FUNCTION idForErrorFeedback:ansistring;
+      FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
     end;
 {$endif}
 {$ifdef include_implementation}
@@ -50,15 +50,15 @@ PROCEDURE T_rule.readDataStore(CONST adapters:P_adapters);
     end;
   end;
 
-CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
+CONSTRUCTOR T_rule.create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
+    inherited create(ruleId);
     called:=false;
     idResolved:=false;
     valueChangedAfterDeclaration:=false;
     declarationStart:=startAt;
     declarationEnd:=startAt;
     ruleType:=ruleTyp;
-    id:=ruleId;
     setLength(subrules,0);
 
     if ruleType=rt_memoized
@@ -77,6 +77,7 @@ CONSTRUCTOR T_rule.create(CONST ruleId: idString; CONST ruleTyp:T_ruleType; CONS
 DESTRUCTOR T_rule.destroy;
   VAR i:longint;
   begin
+    inherited destroy;
     for i:=0 to length(subrules)-1 do dispose(subrules[i],destroy);
     setLength(subrules,0);
 
@@ -397,6 +398,11 @@ PROCEDURE T_rule.resolveIds(CONST adapters:P_adapters);
 FUNCTION T_rule.idForErrorFeedback:ansistring;
   begin
     result:=P_package(declarationStart.package)^.codeProvider.id+'.'+id+' ('+ansistring(declarationStart)+')';
+  end;
+
+FUNCTION T_rule.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
+  begin
+    result:=@self;
   end;
 
 {$endif}

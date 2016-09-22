@@ -9,7 +9,7 @@ TYPE
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
-    txt     :idString;
+    txt     :T_idString;
     tokType :T_tokenType;
     data    :pointer;
 
@@ -126,14 +126,11 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
         result:=C_tokenInfo[tokType].defaultId;
         if txt<>'' then result:=result+'('+txt+','
                    else result:=C_tokenInfo[tt_agg].defaultId+'(';
-        if data<>nil then result:=result+P_literal(data)^.toString(limit-6)+',';
+        if data<>nil then result:=result+P_literal(data)^.toString(tokType, limit-6)+',';
       end;
       tt_customTypeCheck: result:=':'+txt;
       tt_aggregatorExpressionLiteral,
-      tt_literal            : result:=P_literal    (data)^.toString(limit);
-      tt_parList_constructor: result:=P_listLiteral(data)^.toParameterListString(false,limit);
-      tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true ,limit);
-      tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
+      tt_literal            : result:=P_literal    (data)^.toString(tokType,limit);
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
       tt_beginFunc:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
       tt_endFunc  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';

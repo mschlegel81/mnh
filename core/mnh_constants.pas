@@ -7,7 +7,10 @@ USES sysutils;
 {$endif}
 TYPE
   T_hashInt=dword;
-  idString =shortString;
+  T_idString =shortString;
+  P_idString =^T_idString;
+  T_commentString=ansistring;
+  P_commentString=^T_commentString;
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
                STRINGS_NAMESPACE        ,
@@ -131,6 +134,47 @@ TYPE
     tt_EOL,
     tt_blank);
 
+  T_tokenPayloadType=(tpt_none,tpt_identifier,tpt_comment,tpt_idWithPointerPayload,tpt_literal,tpt_userRule,tpt_builtinRule,tpt_eachPayload);
+
+  P_tokenPayload=^T_tokenPayload;
+  T_tokenPayload=object
+    CONSTRUCTOR create; //pro forma
+    DESTRUCTOR destroy; virtual;
+    FUNCTION hash:T_hashInt; virtual; abstract;
+    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual; abstract;
+    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual; abstract;
+  end;
+
+  P_idPayload=^T_idPayload;
+  T_idPayload=object(T_tokenPayload)
+    id:T_idString;
+    CONSTRUCTOR create(CONST id_:T_idString);
+    DESTRUCTOR destroy; virtual;
+    FUNCTION hash:T_hashInt; virtual;
+    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual;
+    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
+  end;
+
+  P_commentPayload=^T_commentPayload;
+
+  { T_commentPayload }
+
+  T_commentPayload=object(T_tokenPayload)
+    txt:T_commentString;
+    CONSTRUCTOR create(CONST txt_:T_commentString);
+    DESTRUCTOR destroy; virtual;
+    FUNCTION hash:T_hashInt; virtual;
+    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual;
+    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
+  end;
+
+  P_idWithPointerPayload=^T_idWithPointerPayload;
+  T_idWithPointerPayload=object(T_idPayload)
+    ptr:pointer;
+    CONSTRUCTOR create(CONST id_:T_idString; CONST ptr_:pointer);
+    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
+  end;
+
   T_tokenTypeSet=set of T_tokenType;
   T_modifier=                         tt_modifier_private..tt_modifier_customType;
   T_cStyleOperator=tt_cso_assignPlus..tt_cso_assignAppend;
@@ -251,121 +295,122 @@ CONST
   C_tokenInfo:array[T_tokenType] of record
     defaultId:string;
     reservedWordClass:T_reservedWordClass;
+    payloadType:T_tokenPayloadType;
     helpText:string;
-  end=((defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A literal'),
-       (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An aggregator expression literal'),
+  end=((defaultId:''; reservedWordClass:rwc_not_reserved; payloadType:tpt_literal; helpText:'A literal'),
+       (defaultId:''; reservedWordClass:rwc_not_reserved; payloadType:tpt_literal; helpText:'An aggregator expression literal'),
     //identifier and resolved identifiers
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An identifier (unresolved)'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A parameter identifier'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A local user rule'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'An imported user rule'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A built in rule'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A put-cache-value call'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A custom type check rule'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A block-local variable'),
-      (defaultId:'.'; reservedWordClass:rwc_not_reserved; helpText:'A pseudo-object-notation flipper'),
-      (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: aggregator#The aggregator constructor'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_identifier;  helpText:'An identifier (unresolved)'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_identifier;  helpText:'A parameter identifier'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_userRule;    helpText:'A local user rule'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_userRule;    helpText:'An imported user rule'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_builtinRule; helpText:'A built in rule'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_userRule;    helpText:'A put-cache-value call'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_userRule;    helpText:'A custom type check rule'),
+      (defaultId:'';           reservedWordClass:rwc_not_reserved;     payloadType:tpt_identifier;  helpText:'A block-local variable'),
+      (defaultId:'.';          reservedWordClass:rwc_not_reserved;     payloadType:tpt_none;        helpText:'A pseudo-object-notation flipper'),
+      (defaultId:'aggregator'; reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: aggregator#The aggregator constructor'),
     //special operators
-      (defaultId:'.each'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: each#Used for (serial) list operations.#Syntax: <list>.each(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
-      (defaultId:'.pEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: pEach (parallel each)#Used for parallel list operations.#Parallelized depending on the systen settings.#Syntax: <list>.pEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
-      (defaultId:'.PEach'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: PEach (forced parallel each)#Used for parallel list operations.#Parallelized independent from systen settings.#Syntax: <list>.PEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
-      (defaultId:'.agg'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: agg#Used for list aggregation#Syntax: <list>.agg(<aggregator>) - where <aggregator> may be an expression or a simple operator as +'),
-      (defaultId:'while'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: while#Used for loops#Syntax: while(<entry condition>,<body>) - where <entry condition> must return a scalar boolean'),
-      (defaultId:'begin'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: begin#Opening delimiter for procedural blocks'),
-      (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
-      (defaultId:'end'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: end#Closing delimiter for procedural blocks'),
-      (defaultId:'';{No default ID, because tokenizer shall not produce this token} reservedWordClass:rwc_specialConstruct; helpText:''),
-      (defaultId:'try'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
-      (defaultId:'toId'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: toId#Returns the string argument as an identifier'),
-      (defaultId:'::'; reservedWordClass:rwc_specialConstruct; helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
+      (defaultId:'.each';  reservedWordClass:rwc_specialConstruct; payloadType:tpt_eachPayload; helpText:'Special construct: each#Used for (serial) list operations.#Syntax: <list>.each(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.pEach'; reservedWordClass:rwc_specialConstruct; payloadType:tpt_eachPayload; helpText:'Special construct: pEach (parallel each)#Used for parallel list operations.#Parallelized depending on the systen settings.#Syntax: <list>.pEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.PEach'; reservedWordClass:rwc_specialConstruct; payloadType:tpt_eachPayload; helpText:'Special construct: PEach (forced parallel each)#Used for parallel list operations.#Parallelized independent from systen settings.#Syntax: <list>.PEach(<id>,<body>,<aggregator>)#<body> is an arbitrary expression which may use <id> to refer to the current list element or "index" for the current index#<aggregator> is optional and may be a simple operator'),
+      (defaultId:'.agg';   reservedWordClass:rwc_specialConstruct; payloadType:tpt_eachPayload; helpText:'Special construct: agg#Used for list aggregation#Syntax: <list>.agg(<aggregator>) - where <aggregator> may be an expression or a simple operator as +'),
+      (defaultId:'while';  reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: while#Used for loops#Syntax: while(<entry condition>,<body>) - where <entry condition> must return a scalar boolean'),
+      (defaultId:'begin';  reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: begin#Opening delimiter for procedural blocks'),
+      (defaultId:'';       reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:''), {No default ID, because tokenizer shall not produce this token}
+      (defaultId:'end';    reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: end#Closing delimiter for procedural blocks'),
+      (defaultId:'';       reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:''), {No default ID, because tokenizer shall not produce this token}
+      (defaultId:'try';    reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: try#Used for local exception handling#Syntax: try(<body>,<catch body>) - where <catch body> is executed only if evaluation of <body> fails'),
+      (defaultId:'toId';   reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: toId#Returns the string argument as an identifier'),
+      (defaultId:'::';     reservedWordClass:rwc_specialConstruct; payloadType:tpt_none;        helpText:'Special construct: ::# Returns reference to a function#::f -> {f@$params}'),
       //lists and list constructor
-      (defaultId:'('; reservedWordClass:rwc_not_reserved; helpText:'Opening round bracket#Used as in default mathematical syntax.'),
-      (defaultId:')'; reservedWordClass:rwc_not_reserved; helpText:'Closing round bracket#Used as in default mathematical syntax.'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A parameter list constructor'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A parameter list'),
-      (defaultId:'['; reservedWordClass:rwc_not_reserved; helpText:'Square opening bracket#Used for list construction and list access'),
-      (defaultId:']'; reservedWordClass:rwc_not_reserved; helpText:'Square closing bracket#Used for list construction and list access'),
-      (defaultId:''; reservedWordClass:rwc_not_reserved; helpText:'A list constructor'),
-      (defaultId:'{';reservedWordClass:rwc_not_reserved; helpText:'Curly opening bracket#Delimits an expression'),
-      (defaultId:'}';reservedWordClass:rwc_not_reserved; helpText:'Curly closing bracket#Delimits an expression'),
+      (defaultId:'('; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Opening round bracket#Used as in default mathematical syntax.'),
+      (defaultId:')'; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Closing round bracket#Used as in default mathematical syntax.'),
+      (defaultId:'';  reservedWordClass:rwc_not_reserved; payloadType:tpt_literal; helpText:'A parameter list constructor'),
+      (defaultId:'';  reservedWordClass:rwc_not_reserved; payloadType:tpt_literal; helpText:'A parameter list'),
+      (defaultId:'['; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Square opening bracket#Used for list construction and list access'),
+      (defaultId:']'; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Square closing bracket#Used for list construction and list access'),
+      (defaultId:'';  reservedWordClass:rwc_not_reserved; payloadType:tpt_literal; helpText:'A list constructor'),
+      (defaultId:'{'; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Curly opening bracket#Delimits an expression'),
+      (defaultId:'}'; reservedWordClass:rwc_not_reserved; payloadType:tpt_none;    helpText:'Curly closing bracket#Delimits an expression'),
       //separators
-      (defaultId:',';reservedWordClass:rwc_not_reserved; helpText:'Separator comma'),
-      (defaultId:'..';reservedWordClass:rwc_not_reserved; helpText:'Separator ..#Used for constructing ranges and only allowed in that context'),
+      (defaultId:','; reservedWordClass:rwc_not_reserved; payloadType:tpt_none; helpText:'Separator comma'),
+      (defaultId:'..';reservedWordClass:rwc_not_reserved; payloadType:tpt_none; helpText:'Separator ..#Used for constructing ranges and only allowed in that context'),
       //comparators
-      (defaultId:'=';reservedWordClass:rwc_operator; helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'),
-      (defaultId:'<>';reservedWordClass:rwc_operator; helpText:'Not-equals operator#Returns true if the scalar comparands are type-compatible#and not equal#For list operands a list of booleans is returned'),
-      (defaultId:'<=';reservedWordClass:rwc_operator; helpText:'Lesser-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser or equal to the right hand side#For list operands a list of booleans is returned'),
-      (defaultId:'>=';reservedWordClass:rwc_operator; helpText:'Greater-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is greater or equal to the right hand side#For list operands a list of booleans is returned'),
-      (defaultId:'<';reservedWordClass:rwc_operator; helpText:'Lesser operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser than the right hand side#For list operands a list of booleans is returned'),
-      (defaultId:'>';reservedWordClass:rwc_operator; helpText:'Greater operator#Returns true if the scalar comparands are type-compatible#and the left hand side is greater than the right hand side#For list operands a list of booleans is returned'),
-      (defaultId:'==';reservedWordClass:rwc_operator; helpText:'Strict-equals operator#Returns true if the comparands are strictly equal.#Always returns a scalar boolean'),
+      (defaultId:'=';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Equals operator#Returns true if the scalar comparands are type-compatible#and equal#For list operands a list of booleans is returned'),
+      (defaultId:'<>'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Not-equals operator#Returns true if the scalar comparands are type-compatible#and not equal#For list operands a list of booleans is returned'),
+      (defaultId:'<='; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Lesser-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser or equal to the right hand side#For list operands a list of booleans is returned'),
+      (defaultId:'>='; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Greater-or-equals operator#Returns true if the scalar comparands are type-compatible#and the left hand side is greater or equal to the right hand side#For list operands a list of booleans is returned'),
+      (defaultId:'<';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Lesser operator#Returns true if the scalar comparands are type-compatible#and the left hand side is lesser than the right hand side#For list operands a list of booleans is returned'),
+      (defaultId:'>';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Greater operator#Returns true if the scalar comparands are type-compatible#and the left hand side is greater than the right hand side#For list operands a list of booleans is returned'),
+      (defaultId:'=='; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Strict-equals operator#Returns true if the comparands are strictly equal.#Always returns a scalar boolean'),
       //logical operators
-      (defaultId:'and';reservedWordClass:rwc_operator; helpText:'Bit-wise and operator#Applies to (lists of) integers and (lists of) booleans'),
-      (defaultId:'or';reservedWordClass:rwc_operator; helpText:'Bit-wise or operator#Applies to (lists of) integers and (lists of) booleans'),
-      (defaultId:'xor';reservedWordClass:rwc_operator; helpText:'Bit-wise xor operator#Applies to (lists of) integers and (lists of) booleans'),
-      (defaultId:'AND';reservedWordClass:rwc_operator; helpText:'Lazy and operator#Applies to scalar booleans only'),
-      (defaultId:'OR';reservedWordClass:rwc_operator; helpText:'Lazy or operator#Applies to scalar booleans only'),
+      (defaultId:'and'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Bit-wise and operator#Applies to (lists of) integers and (lists of) booleans'),
+      (defaultId:'or';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Bit-wise or operator#Applies to (lists of) integers and (lists of) booleans'),
+      (defaultId:'xor'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Bit-wise xor operator#Applies to (lists of) integers and (lists of) booleans'),
+      (defaultId:'AND'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Lazy and operator#Applies to scalar booleans only'),
+      (defaultId:'OR';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Lazy or operator#Applies to scalar booleans only'),
       //arthmetical operators
-      (defaultId:'+';reservedWordClass:rwc_operator; helpText:'Plus operator#Applies to (lists of) numbers and (lists of) strings'),
-      (defaultId:'-';reservedWordClass:rwc_operator; helpText:'Minus operator#Applies to (lists of) numbers'),
-      (defaultId:'*';reservedWordClass:rwc_operator; helpText:'Multiplication operator#Applies to (lists of) numbers'),
-      (defaultId:'/';reservedWordClass:rwc_operator; helpText:'Division operator#Applies to (lists of) numbers'),
-      (defaultId:'div';reservedWordClass:rwc_operator; helpText:'Integer division operator#Applies to (lists of) integers'),
-      (defaultId:'mod';reservedWordClass:rwc_operator; helpText:'Integer modulo operator#Applies to (lists of) integers'),
-      (defaultId:'^';reservedWordClass:rwc_operator; helpText:'Potentiation operator#Applies to (lists of) numbers'),
+      (defaultId:'+';   reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Plus operator#Applies to (lists of) numbers and (lists of) strings'),
+      (defaultId:'-';   reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Minus operator#Applies to (lists of) numbers'),
+      (defaultId:'*';   reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Multiplication operator#Applies to (lists of) numbers'),
+      (defaultId:'/';   reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Division operator#Applies to (lists of) numbers'),
+      (defaultId:'div'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Integer division operator#Applies to (lists of) integers'),
+      (defaultId:'mod'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Integer modulo operator#Applies to (lists of) integers'),
+      (defaultId:'^';   reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Potentiation operator#Applies to (lists of) numbers'),
       //partially evaluated operators
-      (defaultId:'+';reservedWordClass:rwc_operator; helpText:'Unary plus operator#Neutral'),
-      (defaultId:'-';reservedWordClass:rwc_operator; helpText:'Unary minus operator#Negates the operand'),
+      (defaultId:'+'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Unary plus operator#Neutral'),
+      (defaultId:'-'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Unary minus operator#Negates the operand'),
       //special: string concatenation
-      (defaultId:'&';reservedWordClass:rwc_operator; helpText:'String concatenation operator#Applies to all literals'),
-      (defaultId:'orElse';reservedWordClass:rwc_operator; helpText:'Or-Else operator#Employed to provide a fallback to void literals'),
+      (defaultId:'&';      reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'String concatenation operator#Applies to all literals'),
+      (defaultId:'orElse'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Or-Else operator#Employed to provide a fallback to void literals'),
       //list operators:
-      (defaultId:'|';reservedWordClass:rwc_operator; helpText:'List concatenation operator#Applies to all literals'),
-      (defaultId:'in';reservedWordClass:rwc_operator; helpText:'In operator#Applies to all literals on the left hand side and lists on the right hand side.#Returns true if the RHS contains the LHS'),
+      (defaultId:'|';  reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'List concatenation operator#Applies to all literals'),
+      (defaultId:'in'; reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'In operator#Applies to all literals on the left hand side and lists on the right hand side.#Returns true if the RHS contains the LHS'),
       //inline if: (<condition>?<then>:<else>)
-      (defaultId:'?';reservedWordClass:rwc_operator; helpText:'Inline-if-operator'),
-      (defaultId:':';reservedWordClass:rwc_operator; helpText:'Inline-if-operator'),
-      (defaultId:'@';reservedWordClass:rwc_operator; helpText:'List-to-parameter-list operator'),
+      (defaultId:'?';reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Inline-if-operator'),
+      (defaultId:':';reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'Inline-if-operator'),
+      (defaultId:'@';reservedWordClass:rwc_operator; payloadType:tpt_none; helpText:'List-to-parameter-list operator'),
       //assignment operators:
-      (defaultId:'->';reservedWordClass:rwc_operator; helpText:'Declaration operator'),
-      (defaultId:':=';reservedWordClass:rwc_operator; helpText:'Assignment operator'),
-      (defaultId:':=';reservedWordClass:rwc_operator; helpText:'Mutate-assign operator'),
-      (defaultId:':=';reservedWordClass:rwc_operator; helpText:'Assign new block local operator'),
-      (defaultId:':=';reservedWordClass:rwc_operator; helpText:'Assign existing block local operator'),
-      (defaultId:'+=';reservedWordClass:rwc_operator; helpText:'C-Style assign-increment operator'),
-      (defaultId:'-=';reservedWordClass:rwc_operator; helpText:'C-Style assign-decrement operator'),
-      (defaultId:'*=';reservedWordClass:rwc_operator; helpText:'C-Style assign-multiply operator'),
-      (defaultId:'/=';reservedWordClass:rwc_operator; helpText:'C-Style assign-divide operator'),
-      (defaultId:'&=';reservedWordClass:rwc_operator; helpText:'C-Style assign-(string-)concatenate operator'),
-      (defaultId:'|=';reservedWordClass:rwc_operator; helpText:'C-Style assign-(list-)concatenate operator'),
+      (defaultId:'->';reservedWordClass:rwc_operator; payloadType:tpt_none;                 helpText:'Declaration operator'),
+      (defaultId:':=';reservedWordClass:rwc_operator; payloadType:tpt_none;                 helpText:'Assignment operator'),
+      (defaultId:':=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'Mutate-assign operator'),
+      (defaultId:':=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'Assign new block local operator'),
+      (defaultId:':=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'Assign existing block local operator'),
+      (defaultId:'+=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-increment operator'),
+      (defaultId:'-=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-decrement operator'),
+      (defaultId:'*=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-multiply operator'),
+      (defaultId:'/=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-divide operator'),
+      (defaultId:'&=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-(string-)concatenate operator'),
+      (defaultId:'|=';reservedWordClass:rwc_operator; payloadType:tpt_idWithPointerPayload; helpText:'C-Style assign-(list-)concatenate operator'),
       //type checks:
-      (defaultId:':scalar';reservedWordClass:rwc_typeCheck; helpText:'Type check scalar;#Matches on all non-lists'),
-      (defaultId:':list';reservedWordClass:rwc_typeCheck; helpText:'Type check list;#Matches on all lists#In patterns it can be modified to match only lists of a given size'),
-      (defaultId:':boolean';reservedWordClass:rwc_typeCheck; helpText:'Type check boolean;#Matches on scalar booleans'),
-      (defaultId:':booleanList';reservedWordClass:rwc_typeCheck; helpText:'Type check boolean list;#Matches on lists of booleans and empty lists'),
-      (defaultId:':int';reservedWordClass:rwc_typeCheck; helpText:'Type check integer;#Matches on scalar integers'),
-      (defaultId:':intList';reservedWordClass:rwc_typeCheck; helpText:'Type check integer list;#Matches on lists of integers and empty lists'),
-      (defaultId:':real';reservedWordClass:rwc_typeCheck; helpText:'Type check real;#Matches on scalar reals'),
-      (defaultId:':realList';reservedWordClass:rwc_typeCheck; helpText:'Type check real list;#Matches on lists of reals and empty lists'),
-      (defaultId:':string';reservedWordClass:rwc_typeCheck; helpText:'Type check string;#Matches on scalar strings'),
-      (defaultId:':stringList';reservedWordClass:rwc_typeCheck; helpText:'Type check string list;#Matches on lists of strings and empty lists'),
-      (defaultId:':numeric';reservedWordClass:rwc_typeCheck; helpText:'Type check numeric;#Matches on scalar integers and reals'),
-      (defaultId:':numericList';reservedWordClass:rwc_typeCheck; helpText:'Type check numeric list;#Matches on lists of integers and reals (mixing is allowed) and empty lists'),
-      (defaultId:':expression';reservedWordClass:rwc_typeCheck; helpText:'Type check expression;#Matches on expressions#In patterns it can be modified to match only on expressions with a given arity'),
-      (defaultId:':keyValueList';reservedWordClass:rwc_typeCheck; helpText:'Type check key-value-list;#Matches on key-value-lists and empty lists#A key-value list only consists of sub-lists of size 2 whose first element is a string'),
-      (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'Custom type check'),
-      (defaultId:';';reservedWordClass:rwc_not_reserved; helpText:'Semicolon#Ends a statement'),
-      (defaultId:'...';reservedWordClass:rwc_not_reserved; helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
-      (defaultId:'private';reservedWordClass:rwc_modifier; helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
-      (defaultId:'memoized';reservedWordClass:rwc_modifier; helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
-      (defaultId:'mutable';reservedWordClass:rwc_modifier; helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
-      (defaultId:'persistent';reservedWordClass:rwc_modifier; helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),
-      (defaultId:'datastore';reservedWordClass:rwc_modifier; helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
-      (defaultId:'synchronized';reservedWordClass:rwc_modifier; helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
-      (defaultId:'local';reservedWordClass:rwc_modifier; helpText:'Modifier local#Used for declaring block-local variables'),
-      (defaultId:'type';reservedWordClass:rwc_modifier; helpText:'Modifier type#Used for declaring custom type checks'),
-      (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'End-Of-Input#Helper token; May also indicate a comment'),
-      (defaultId:'';reservedWordClass:rwc_not_reserved; helpText:'Blank#Helper token; May indicate a comment or whitespace'));
+      (defaultId:':scalar';      reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check scalar;#Matches on all non-lists'),
+      (defaultId:':list';        reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check list;#Matches on all lists#In patterns it can be modified to match only lists of a given size'),
+      (defaultId:':boolean';     reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check boolean;#Matches on scalar booleans'),
+      (defaultId:':booleanList'; reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check boolean list;#Matches on lists of booleans and empty lists'),
+      (defaultId:':int';         reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check integer;#Matches on scalar integers'),
+      (defaultId:':intList';     reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check integer list;#Matches on lists of integers and empty lists'),
+      (defaultId:':real';        reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check real;#Matches on scalar reals'),
+      (defaultId:':realList';    reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check real list;#Matches on lists of reals and empty lists'),
+      (defaultId:':string';      reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check string;#Matches on scalar strings'),
+      (defaultId:':stringList';  reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check string list;#Matches on lists of strings and empty lists'),
+      (defaultId:':numeric';     reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check numeric;#Matches on scalar integers and reals'),
+      (defaultId:':numericList'; reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check numeric list;#Matches on lists of integers and reals (mixing is allowed) and empty lists'),
+      (defaultId:':expression';  reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check expression;#Matches on expressions#In patterns it can be modified to match only on expressions with a given arity'),
+      (defaultId:':keyValueList';reservedWordClass:rwc_typeCheck;    payloadType:tpt_none;     helpText:'Type check key-value-list;#Matches on key-value-lists and empty lists#A key-value list only consists of sub-lists of size 2 whose first element is a string'),
+      (defaultId:'';             reservedWordClass:rwc_not_reserved; payloadType:tpt_userRule; helpText:'Custom type check'),
+      (defaultId:';';            reservedWordClass:rwc_not_reserved; payloadType:tpt_none;     helpText:'Semicolon#Ends a statement'),
+      (defaultId:'...';          reservedWordClass:rwc_not_reserved; payloadType:tpt_none;     helpText:'Remaining arguments#Allowes access to anonymous furhter parameters#Returns a list'),
+      (defaultId:'private';      reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier private#Limits visiblity of the declaration to the package it is declared in'),
+      (defaultId:'memoized';     reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier memoized#Makes the rule memoized, caching previously computed results'),
+      (defaultId:'mutable';      reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier mutable#Makes the rule mutable, de facto changing the rule to a variable'),
+      (defaultId:'persistent';   reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier persistent#Makes the rule persistent.#Persistent rules also are mutable'),
+      (defaultId:'datastore';    reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier datastore#Makes the rule persistent in a separate file.#Persistent rules also are mutable'),
+      (defaultId:'synchronized'; reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier synchronized#Protects the rule from concurrent execution.'),
+      (defaultId:'local';        reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier local#Used for declaring block-local variables'),
+      (defaultId:'type';         reservedWordClass:rwc_modifier;     payloadType:tpt_none;     helpText:'Modifier type#Used for declaring custom type checks'),
+      (defaultId:'';             reservedWordClass:rwc_not_reserved; payloadType:tpt_comment;  helpText:'End-Of-Input#Helper token; May also indicate a comment'),
+      (defaultId:'';             reservedWordClass:rwc_not_reserved; payloadType:tpt_comment;  helpText:'Blank#Helper token; May indicate a comment or whitespace'));
 
   C_specialWordInfo:array[0..6] of record
     txt:string;
@@ -531,7 +576,11 @@ CONST
 
 FUNCTION isReservedNamespace(CONST id:ansistring):boolean;
 FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
-//FUNCTION reservedWordsByClass(CONST clazz:T_reservedWordClass):T_listOfString;
+FUNCTION new_P_idString(CONST id:T_idString):P_idString;
+FUNCTION new_P_idString(CONST id:P_idString):P_idString;
+FUNCTION new_P_commentString(CONST id:T_commentString):P_commentString;
+FUNCTION new_P_commentString(CONST id:P_commentString):P_commentString;
+
 IMPLEMENTATION
 FUNCTION isQualified(CONST s:string):boolean;
   begin
@@ -552,6 +601,30 @@ FUNCTION isReservedWord(CONST wordText:ansistring):T_reservedWordClass;
     result:=rwc_not_reserved;
   end;
 
+FUNCTION new_P_idString(CONST id: T_idString): P_idString;
+  begin
+    getMem(result,sizeOf(T_idString));
+    result^:=id;
+  end;
+
+FUNCTION new_P_idString(CONST id: P_idString): P_idString;
+  begin
+    getMem(result,sizeOf(T_idString));
+    result^:=id^;
+  end;
+
+FUNCTION new_P_commentString(CONST id: T_commentString): P_commentString;
+  begin
+    getMem(result,sizeOf(T_commentString));
+    result^:=id;
+  end;
+
+FUNCTION new_P_commentString(CONST id: P_commentString): P_commentString;
+  begin
+    getMem(result,sizeOf(T_commentString));
+    result^:=id^;
+  end;
+
 FUNCTION getAppName: string;
   begin
     result:=C_appName;
@@ -566,6 +639,89 @@ FUNCTION configDir:string;
     result:=GetAppConfigDir(false);
     {$endif}
   end;
+
+{ T_commentPayload }
+
+CONSTRUCTOR T_commentPayload.create(CONST txt_: T_commentString);
+  begin
+    inherited create;
+    txt:=txt_;
+  end;
+
+DESTRUCTOR T_commentPayload.destroy;
+  begin
+    inherited destroy;
+    txt:='';
+  end;
+
+FUNCTION T_commentPayload.hash: T_hashInt;
+  VAR i:longint;
+  begin
+    {$Q-}{$R-}
+    result:=length(txt);
+    for i:=1 to length(txt) do result:=result*31+ord(txt[i]);
+    {$Q+}{$R+}
+  end;
+
+FUNCTION T_commentPayload.toString(CONST tokType: T_tokenType; CONST lengthLimit: longint): ansistring;
+  begin
+    result:=txt;
+  end;
+
+FUNCTION T_commentPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
+  begin
+    new(P_commentPayload(result),create(txt));
+  end;
+
+{ T_tokenPayload }
+
+CONSTRUCTOR T_tokenPayload.create; begin end;
+DESTRUCTOR T_tokenPayload.destroy; begin end;
+{ T_idPayload }
+CONSTRUCTOR T_idPayload.create(CONST id_: T_idString);
+  begin
+    inherited create;
+    id:=id_;
+  end;
+
+DESTRUCTOR T_idPayload.destroy;
+  begin
+    inherited destroy;
+  end;
+
+FUNCTION T_idPayload.hash: T_hashInt;
+  VAR i:longint;
+  begin
+    {$Q-}{$R-}
+    result:=length(id);
+    for i:=1 to length(id) do result:=result*31+ord(id[i]);
+    {$Q+}{$R+}
+  end;
+
+FUNCTION T_idPayload.toString(CONST tokType: T_tokenType; CONST lengthLimit: longint): ansistring;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_idPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
+  VAR typedResult:P_idPayload;
+  begin
+    new(typedResult,create(id));
+    result:=typedResult;
+  end;
+
+{ T_idWithPointerPayload }
+CONSTRUCTOR T_idWithPointerPayload.create(CONST id_: T_idString; CONST ptr_: pointer);
+  begin
+    inherited create(id_);
+    ptr:=ptr_;
+  end;
+
+FUNCTION T_idWithPointerPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
+  begin
+    result:=@self;
+  end;
+
 
 INITIALIZATION
   OnGetApplicationName:=@getAppName;
