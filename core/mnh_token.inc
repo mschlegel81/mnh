@@ -42,26 +42,26 @@ end;
 
 {$endif}
 {$ifdef include_implementation}
-constructor T_tokenArray.create;
+CONSTRUCTOR T_tokenArray.create;
   begin
     setLength(t,0);
     i:=-1;
   end;
 
-destructor T_tokenArray.destroy;
+DESTRUCTOR T_tokenArray.destroy;
   begin
     setLength(t,0);
     i:=-1;
   end;
 
-procedure T_tokenArray.append(const newTok: T_token);
+PROCEDURE T_tokenArray.append(CONST newTok: T_token);
   begin
     setLength(t,length(t)+1);
     t[length(t)-1]:=newTok;
   end;
 
-procedure T_tokenArray.step(const package: P_package;
-  var lastComment: ansistring; var adapters: T_adapters);
+PROCEDURE T_tokenArray.step(CONST package: P_package;
+  VAR lastComment: ansistring; VAR adapters: T_adapters);
   VAR fullText:ansistring;
       line:longint;
   begin
@@ -120,29 +120,29 @@ procedure T_tokenArray.step(const package: P_package;
           (t[i].tokenType<>tt_EOL);
   end;
 
-function T_tokenArray.current: T_token;
+FUNCTION T_tokenArray.current: T_token;
   begin
     result:=t[i];
   end;
 
-procedure T_tokenArray.mutateCurrentTokType(const newTokType: T_tokenType);
+PROCEDURE T_tokenArray.mutateCurrentTokType(CONST newTokType: T_tokenType);
   begin
     t[i].tokenType:=newTokType;
   end;
 
-function T_tokenArray.atEnd: boolean;
+FUNCTION T_tokenArray.atEnd: boolean;
   begin
     result:=i>=length(t);
   end;
 
-function T_tokenArray.lastToken: T_token;
+FUNCTION T_tokenArray.lastToken: T_token;
   begin
     if length(t)>0 then exit(t[length(t)-1]);
     result.create;
     result.undefine;
   end;
 
-function T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
+FUNCTION T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
   VAR k:longint;
       lastComment:ansistring='';
       intrinsicFuncPtr:P_builtinFuncPayload;
@@ -163,9 +163,9 @@ function T_tokenArray.getRawTokensUndefining: T_rawTokenArray;
     nullAdapter.destroy;
   end;
 
-function T_tokenArray.getToken(const line: ansistring;
-  var lineLocation: T_tokenLocation; const inPackage: P_package;
-  var adapters: T_adapters; const retainBlanks: boolean): T_token;
+FUNCTION T_tokenArray.getToken(CONST line: ansistring;
+  VAR lineLocation: T_tokenLocation; CONST inPackage: P_package;
+  VAR adapters: T_adapters; CONST retainBlanks: boolean): T_token;
   VAR parsedLength:longint=0;
 
   PROCEDURE fail(message:ansistring);
@@ -425,9 +425,9 @@ function T_tokenArray.getToken(const line: ansistring;
     if parsedLength>0 then inc(lineLocation.column,parsedLength);
   end;
 
-procedure T_tokenArray.tokenizeAll(const inputString: ansistring;
-  const location: T_tokenLocation; const inPackage: P_package;
-  var adapters: T_adapters; const retainBlanks: boolean);
+PROCEDURE T_tokenArray.tokenizeAll(CONST inputString: ansistring;
+  CONST location: T_tokenLocation; CONST inPackage: P_package;
+  VAR adapters: T_adapters; CONST retainBlanks: boolean);
   VAR next:T_token;
       workLocation:T_tokenLocation;
   begin
@@ -462,8 +462,8 @@ FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenA
     tokenArray.destroy;
   end;
 
-procedure T_tokenArray.tokenizeAll(var provider: T_codeProvider;
-  const inPackage: P_package; var adapters: T_adapters);
+PROCEDURE T_tokenArray.tokenizeAll(VAR provider: T_codeProvider;
+  CONST inPackage: P_package; VAR adapters: T_adapters);
   VAR location:T_tokenLocation;
       lineIndex:longint;
       next:T_token;

@@ -78,16 +78,16 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-constructor T_token.create;
+CONSTRUCTOR T_token.create;
   begin
   end;
 
-destructor T_token.destroy;
+DESTRUCTOR T_token.destroy;
   begin
     undefine;
   end;
 
-procedure T_token.define(const original: T_token);
+PROCEDURE T_token.define(CONST original: T_token);
   {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=original.location;
@@ -101,7 +101,7 @@ procedure T_token.define(const original: T_token);
     {$endif}
   end;
 
-procedure T_token.undefine;
+PROCEDURE T_token.undefine;
   begin
     if data<>nil then case C_tokenInfo[tokType].payloadType of
       tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
@@ -117,14 +117,14 @@ procedure T_token.undefine;
     location.line:=0;
   end;
 
-function T_token.last: P_token;
+FUNCTION T_token.last: P_token;
   begin
     result:=@self;
     while result^.next<>nil do result:=result^.next;
   end;
 
-function T_token.toString(const lastWasIdLike: boolean; out idLike: boolean;
-  const limit: longint): ansistring;
+FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean;
+  CONST limit: longint): ansistring;
   begin
     idLike:=false;
     if data=nil then result:=C_tokenInfo[tokType].defaultId
@@ -138,7 +138,7 @@ function T_token.toString(const lastWasIdLike: boolean; out idLike: boolean;
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
 
-function T_token.singleTokenToString: ansistring;
+FUNCTION T_token.singleTokenToString: ansistring;
   VAR dummy:boolean;
   begin
     result:=toString(false,dummy);
@@ -146,7 +146,7 @@ function T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-function T_token.areBracketsPlausible(var adaptersForComplaints: T_adapters
+FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters
   ): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
@@ -194,8 +194,8 @@ function T_token.areBracketsPlausible(var adaptersForComplaints: T_adapters
     result:=result and stackIsEmpty;
   end;
 
-function T_token.getTokenOnBracketLevel(const types: T_tokenTypeSet;
-  const onLevel: longint; const initialLevel: longint): P_token;
+FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet;
+  CONST onLevel: longint; CONST initialLevel: longint): P_token;
   VAR level:longint=0;
       t:P_token;
   begin
@@ -210,7 +210,7 @@ function T_token.getTokenOnBracketLevel(const types: T_tokenTypeSet;
     result:=nil;
   end;
 
-function T_token.getDeclarationOrAssignmentToken: P_token;
+FUNCTION T_token.getDeclarationOrAssignmentToken: P_token;
   VAR level:longint=0;
       t,newNext:P_token;
   begin
@@ -231,13 +231,13 @@ function T_token.getDeclarationOrAssignmentToken: P_token;
     result:=nil;
   end;
 
-function T_token.getRawToken: T_rawToken;
+FUNCTION T_token.getRawToken: T_rawToken;
   begin
     result.tokType:=tokType;
     result.txt:=singleTokenToString;
   end;
 
-function T_token.hash: T_hashInt;
+FUNCTION T_token.hash: T_hashInt;
   VAR pt:P_token;
   begin
     result:=0;
@@ -258,14 +258,14 @@ function T_token.hash: T_hashInt;
     {$Q+}{$R+}
   end;
 
-function T_token.getIdWithPointer: T_idWithPointerPayload;
+FUNCTION T_token.getIdWithPointer: T_idWithPointerPayload;
   begin
     if (C_tokenInfo[tokType].payloadType in [tpt_idWithPointerPayload,tpt_builtinRule]) and (data<>nil)
     then result:=P_idWithPointerPayload(data)^
     else raise Exception.create('Invalid operation');
   end;
 
-procedure T_token.setIdWithPointer(const id_: T_idString; const ptr: pointer);
+PROCEDURE T_token.setIdWithPointer(CONST id_: T_idString; CONST ptr: pointer);
   begin
     if (C_tokenInfo[tokType].payloadType=tpt_idWithPointerPayload) then raise Exception.create('Invalid operation');
     if data=nil then new(P_idWithPointerPayload(data),create(id_,ptr)) else begin
@@ -274,7 +274,7 @@ procedure T_token.setIdWithPointer(const id_: T_idString; const ptr: pointer);
     end;
   end;
 
-procedure T_token.setTokenType(const newType: T_tokenType);
+PROCEDURE T_token.setTokenType(CONST newType: T_tokenType);
   begin
     if (data<>nil) and (C_tokenInfo[newType].payloadType=C_tokenInfo[tokType].payloadType) or
        (data=nil)  and (C_tokenInfo[newType].payloadType=tpt_none) then begin
@@ -291,28 +291,28 @@ procedure T_token.setTokenType(const newType: T_tokenType);
     tokType:=newType;
   end;
 
-function T_token.getComment: T_commentString;
+FUNCTION T_token.getComment: T_commentString;
   begin
     if (C_tokenInfo[tokType].payloadType=tpt_comment) and (data<>nil)
     then result:=P_commentPayload(data)^.txt
     else result:='';
   end;
 
-procedure T_token.setCommment(const comment: T_commentString);
+PROCEDURE T_token.setCommment(CONST comment: T_commentString);
   begin
     if (C_tokenInfo[tokType].payloadType<>tpt_comment) then raise Exception.create('Invalid operation');
     if data=nil then new(P_commentPayload(data),create(comment))
                 else P_commentPayload(data)^.txt:=comment;
   end;
 
-function T_token.getId: T_idString;
+FUNCTION T_token.getId: T_idString;
   begin
     if (C_tokenInfo[tokenType].payloadType in [tpt_identifier,tpt_builtinRule,tpt_userRule,tpt_eachPayload]) and (data<>nil)
     then result:=P_idPayload(data)^.id
     else result:='';
   end;
 
-procedure T_token.setId(const id: T_idString);
+PROCEDURE T_token.setId(CONST id: T_idString);
   begin
     if not(C_tokenInfo[tokType].payloadType in [tpt_identifier,tpt_eachPayload]) then raise Exception.create('Invalid operation');
     case C_tokenInfo[tokType].payloadType of
@@ -321,20 +321,20 @@ procedure T_token.setId(const id: T_idString);
     end;
   end;
 
-function T_token.getLiteral: P_literal;
+FUNCTION T_token.getLiteral: P_literal;
   begin
     if C_tokenInfo[tokType].payloadType=tpt_literal
     then result:=P_literal(data)
     else result:=nil;
   end;
 
-procedure T_token.setLiteral(const lit: P_literal);
+PROCEDURE T_token.setLiteral(CONST lit: P_literal);
   begin
     if (C_tokenInfo[tokType].payloadType<>tpt_literal) then raise Exception.create('Invalid operation');
     data:=lit;
   end;
 
-procedure T_token.setRawData(const newRawData: P_tokenPayload);
+PROCEDURE T_token.setRawData(CONST newRawData: P_tokenPayload);
   begin
     if (C_tokenInfo[tokenType].payloadType=tpt_none) then raise Exception.create('Invalid operation');
       if data<>nil then case C_tokenInfo[tokType].payloadType of
@@ -347,7 +347,7 @@ procedure T_token.setRawData(const newRawData: P_tokenPayload);
     data:=newRawData;
   end;
 
-procedure T_token.disposeLiteral;
+PROCEDURE T_token.disposeLiteral;
   begin
     if C_tokenInfo[tokType].payloadType=tpt_literal
     then mnh_litVar.disposeLiteral(P_literal(data));
