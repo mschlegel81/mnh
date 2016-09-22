@@ -34,7 +34,7 @@ FUNCTION demosFolder:string;
 
 PROCEDURE TopenDemoDialogForm.ListBoxDblClick(Sender: TObject);
   begin
-    selectedFile:=configDir+ListBox.Items[ListBox.ItemIndex]+'.mnh';
+    selectedFile:=demosFolder+ListBox.Items[ListBox.ItemIndex]+'.mnh';
     ModalResult:=mrOk;
   end;
 
