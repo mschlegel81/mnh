@@ -487,7 +487,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
 
 CONSTRUCTOR T_eachPayload.create(CONST id_: T_idString; CONST value_: P_literal);
   begin
-    inherited create(id_);
+    inherited create(id_,tpt_eachPayload);
     value:=value_;
   end;
 
@@ -656,7 +656,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   end;
 
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
+CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin inherited create(tpt_literal); literalType:=lt; numberOfReferences:=1; end;
 
 PROCEDURE T_literal.rereference;
   begin

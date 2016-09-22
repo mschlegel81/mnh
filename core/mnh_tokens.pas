@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters;
+USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters,typinfo;
 TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;
@@ -22,6 +22,7 @@ TYPE
       FUNCTION getLiteral:P_literal;
       PROCEDURE setLiteral(CONST lit:P_literal);
       PROCEDURE setRawData(CONST newRawData:P_tokenPayload);
+      PROCEDURE validate;
     public
       location:T_tokenLocation;
       next    :P_token;
@@ -30,6 +31,8 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
+    PROCEDURE resolvedIntFunc(CONST newPayload:P_tokenPayload);
+    PROCEDURE resolvedUserFunc(CONST newPayload:P_tokenPayload; CONST newTyp:T_tokenType);
     FUNCTION last:P_token;
     FUNCTION toString(CONST lastWasIdLike:boolean; OUT idLike:boolean; CONST limit:longint=maxLongint):ansistring;
     FUNCTION singleTokenToString:ansistring;
@@ -80,6 +83,9 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
 
 CONSTRUCTOR T_token.create;
   begin
+    tokType:=tt_EOL;
+    data:=nil;
+    next:=nil;
   end;
 
 DESTRUCTOR T_token.destroy;
@@ -92,30 +98,51 @@ PROCEDURE T_token.define(CONST original: T_token);
   begin
     location:=original.location;
     tokType:=original.tokType;
-    if C_tokenInfo[tokType].payloadType<>tpt_none
+    if (original.data<>nil)
     then data:=original.data^.cloneOrCopy(tokType)
     else data:=nil;
     {$ifdef DEBUGMODE}
-    if (data=nil) and (C_tokenInfo[tokType].payloadType<>tpt_none) then raise Exception.create('Creating token without payload in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
+    validate;
+//    if (data=nil) and (C_tokenInfo[tokType].payloadType<>tpt_none) then raise Exception.create('Creating token without payload in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     if location.package=nil then raise Exception.create('Creating token without package in location @'+intToStr(location.line)+':'+intToStr(location.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
 
 PROCEDURE T_token.undefine;
+  VAR dummy:boolean;
   begin
-    if data<>nil then case C_tokenInfo[tokType].payloadType of
-      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
-      tpt_identifier,
-      tpt_comment,
-      tpt_idWithPointerPayload,
-      tpt_eachPayload: dispose(data,destroy);
-    end;
+//    writeln('Undefining token of type ',tokType,'; Payload type: ',C_tokenInfo[tokType].payloadType,'; payload present: ',data<>nil);
+    writeln('Undefining token of type ',tokType,': ',toString(false,dummy));
+    //if data<>nil then case C_tokenInfo[tokType].payloadType of
+    //  tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
+    //  tpt_identifier,
+    //  tpt_comment,
+    //  tpt_idWithPointerPayload,
+    //  tpt_eachPayload: dispose(data,destroy);
+    //end;
     data:=nil;
     tokType:=tt_EOL;
     location.package:=nil;
     location.column:=0;
     location.line:=0;
   end;
+
+PROCEDURE T_token.resolvedIntFunc(CONST newPayload: P_tokenPayload);
+  begin
+    dispose(data,destroy);
+    data:=newPayload;
+    tokType:=tt_intrinsicRule;
+    {$ifdef DEBUGMODE} validate; {$endif}
+  end;
+
+PROCEDURE T_token.resolvedUserFunc(CONST newPayload: P_tokenPayload; CONST newTyp: T_tokenType);
+  begin
+    dispose(data,destroy);
+    data:=newPayload;
+    tokType:=newTyp;
+    {$ifdef DEBUGMODE} validate; {$endif}
+  end;
+
 
 FUNCTION T_token.last: P_token;
   begin
@@ -128,7 +155,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean;
   begin
     idLike:=false;
     if data=nil then result:=C_tokenInfo[tokType].defaultId
-                 else result:=data^.toString(tokType,limit);
+                else result:=data^.toString(tokType,limit);
     if length(result)<1 then begin
       idLike:=false; exit(result);
     end;
@@ -146,8 +173,7 @@ FUNCTION T_token.singleTokenToString: ansistring;
     then result:=trim(result);
   end;
 
-FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters
-  ): boolean;
+FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters): boolean;
   VAR bracketStack:array of P_token;
   PROCEDURE push(CONST token:P_token);
     begin
@@ -183,6 +209,7 @@ FUNCTION T_token.areBracketsPlausible(VAR adaptersForComplaints: T_adapters
     t:=@self;
     result:=true;
     while result and (t<>nil) do begin
+      {$ifdef DEBUGMODE} validate; {$endif}
       if t^.tokType in C_forbiddenTokenTypes then begin
         adaptersForComplaints.raiseCustomMessage(mt_el4_parsingError,'Invalid symbol '+safeTokenToString(t),t^.location);
         result:=false;
@@ -260,14 +287,14 @@ FUNCTION T_token.hash: T_hashInt;
 
 FUNCTION T_token.getIdWithPointer: T_idWithPointerPayload;
   begin
-    if (C_tokenInfo[tokType].payloadType in [tpt_idWithPointerPayload,tpt_builtinRule]) and (data<>nil)
+    if (C_tokenInfo[tokType].payloadType in [tpt_idWithPointerPayload]) and (data<>nil)
     then result:=P_idWithPointerPayload(data)^
-    else raise Exception.create('Invalid operation');
+    else raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
   end;
 
 PROCEDURE T_token.setIdWithPointer(CONST id_: T_idString; CONST ptr: pointer);
   begin
-    if (C_tokenInfo[tokType].payloadType=tpt_idWithPointerPayload) then raise Exception.create('Invalid operation');
+    if (C_tokenInfo[tokType].payloadType<>tpt_idWithPointerPayload) then raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
     if data=nil then new(P_idWithPointerPayload(data),create(id_,ptr)) else begin
       P_idWithPointerPayload(data)^.id :=id_;
       P_idWithPointerPayload(data)^.ptr:=ptr;
@@ -277,22 +304,18 @@ PROCEDURE T_token.setIdWithPointer(CONST id_: T_idString; CONST ptr: pointer);
 PROCEDURE T_token.setTokenType(CONST newType: T_tokenType);
   begin
     if (data<>nil) and (C_tokenInfo[newType].payloadType=C_tokenInfo[tokType].payloadType) or
-       (data=nil)  and (C_tokenInfo[newType].payloadType=tpt_none) then begin
+       (data=nil) then begin
+       if (tokType<>tt_EOL) then writeln('Tokent mutation ',tokType,' -> ',newType);
       tokType:=newType;
       exit;
     end;
-    if data<>nil then case C_tokenInfo[tokType].payloadType of
-      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
-      tpt_identifier,
-      tpt_comment,
-      tpt_idWithPointerPayload,
-      tpt_eachPayload: dispose(data,destroy);
-    end;
-    tokType:=newType;
+    raise Exception.create('Invalid mutation '+getEnumName(TypeInfo(tokType),ord(tokType))+' -> '+getEnumName(TypeInfo(newType),ord(newType))+'; '+
+    'Payload '+getEnumName(TypeInfo(T_tokenPayloadType),ord(C_tokenInfo[tokType].payloadType))+' -> '+getEnumName(TypeInfo(T_tokenPayloadType),ord(C_tokenInfo[newType].payloadType)));
   end;
 
 FUNCTION T_token.getComment: T_commentString;
   begin
+    {$ifdef DEBUGMODE} validate; {$endif}
     if (C_tokenInfo[tokType].payloadType=tpt_comment) and (data<>nil)
     then result:=P_commentPayload(data)^.txt
     else result:='';
@@ -300,13 +323,15 @@ FUNCTION T_token.getComment: T_commentString;
 
 PROCEDURE T_token.setCommment(CONST comment: T_commentString);
   begin
-    if (C_tokenInfo[tokType].payloadType<>tpt_comment) then raise Exception.create('Invalid operation');
+    {$ifdef DEBUGMODE} validate; {$endif}
+    if (C_tokenInfo[tokType].payloadType<>tpt_comment) then raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
     if data=nil then new(P_commentPayload(data),create(comment))
                 else P_commentPayload(data)^.txt:=comment;
   end;
 
 FUNCTION T_token.getId: T_idString;
   begin
+    {$ifdef DEBUGMODE} validate; {$endif}
     if (C_tokenInfo[tokenType].payloadType in [tpt_identifier,tpt_builtinRule,tpt_userRule,tpt_eachPayload]) and (data<>nil)
     then result:=P_idPayload(data)^.id
     else result:='';
@@ -314,15 +339,17 @@ FUNCTION T_token.getId: T_idString;
 
 PROCEDURE T_token.setId(CONST id: T_idString);
   begin
-    if not(C_tokenInfo[tokType].payloadType in [tpt_identifier,tpt_eachPayload]) then raise Exception.create('Invalid operation');
+    {$ifdef DEBUGMODE} validate; {$endif}
+    if not(C_tokenInfo[tokType].payloadType in [tpt_identifier,tpt_eachPayload]) then raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
     case C_tokenInfo[tokType].payloadType of
-      tpt_identifier : if data=nil then new(P_idPayload  (data),create(id    )) else P_idPayload  (data)^.id:=id;
+      tpt_identifier : if data=nil then new(P_idPayload  (data),create(id    ,tpt_identifier )) else P_idPayload  (data)^.id:=id;
       tpt_eachPayload: if data=nil then new(P_eachPayload(data),create(id,nil)) else P_eachPayload(data)^.id:=id;
     end;
   end;
 
 FUNCTION T_token.getLiteral: P_literal;
   begin
+    {$ifdef DEBUGMODE} validate; {$endif}
     if C_tokenInfo[tokType].payloadType=tpt_literal
     then result:=P_literal(data)
     else result:=nil;
@@ -330,25 +357,42 @@ FUNCTION T_token.getLiteral: P_literal;
 
 PROCEDURE T_token.setLiteral(CONST lit: P_literal);
   begin
-    if (C_tokenInfo[tokType].payloadType<>tpt_literal) then raise Exception.create('Invalid operation');
+    {$ifdef DEBUGMODE} validate; {$endif}
+    if (C_tokenInfo[tokType].payloadType<>tpt_literal) then raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
     data:=lit;
   end;
 
 PROCEDURE T_token.setRawData(CONST newRawData: P_tokenPayload);
   begin
-    if (C_tokenInfo[tokenType].payloadType=tpt_none) then raise Exception.create('Invalid operation');
-      if data<>nil then case C_tokenInfo[tokType].payloadType of
-      tpt_literal: mnh_litVar.disposeLiteral(P_literal(data));
+    {$ifdef DEBUGMODE} validate; {$endif}
+    if (C_tokenInfo[tokenType].payloadType=tpt_none) then raise Exception.create('Invalid operation for token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
+    if data<>nil then case C_tokenInfo[tokType].payloadType of
       tpt_identifier,
       tpt_comment,
       tpt_idWithPointerPayload,
       tpt_eachPayload: dispose(data,destroy);
     end;
     data:=newRawData;
+    {$ifdef DEBUGMODE} validate; {$endif}
+  end;
+
+PROCEDURE T_token.validate;
+  begin
+    if (C_tokenInfo[tokenType].payloadType=tpt_none) and (data<>nil) then begin
+      writeln('Token of type ',tokenType,' should have no payload.');
+      writeln('Payload is of type: ',data^.payloadType);
+      raise Exception.create('Token validation failed');
+    end;
+    if (data<>nil) and (C_tokenInfo[tokenType].payloadType<>data^.payloadType) then begin
+      writeln('Token of type ',tokenType,' should have payload of type ',C_tokenInfo[tokenType].payloadType);
+      writeln('Payload is of type: ',data^.payloadType);
+      raise Exception.create('Token validation failed');
+    end;
   end;
 
 PROCEDURE T_token.disposeLiteral;
   begin
+    {$ifdef DEBUGMODE} validate; {$endif}
     if C_tokenInfo[tokType].payloadType=tpt_literal
     then mnh_litVar.disposeLiteral(P_literal(data));
   end;

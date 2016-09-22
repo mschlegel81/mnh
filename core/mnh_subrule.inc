@@ -55,6 +55,7 @@
 {$ifdef include_implementation}
 PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
   VAR t:P_token;
+      tempId:T_idString;
   begin
     setLength(preparedBody,0);
     t:=rep;
@@ -62,18 +63,23 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
         token:=t^;
-        t^.tokenType:=tt_EOL; t:=context.disposeToken(t);
+        t^.rawData:=nil; t:=context.disposeToken(t);
         token.next:=nil;
         case token.tokenType of
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
           tt_identifier, tt_localUserRule, tt_importedUserRule, tt_parameterIdentifier, tt_intrinsicRule: begin
+            tempId:=token.id;
             parIdx:=pattern.indexOfId(token.id);
             if parIdx>=0 then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
               then token.tokenType:=tt_parameterIdentifier
               else token.tokenType:=tt_identifier;
+              token.id:=tempId;
             end else if (construct=tt_each) and (token.id=C_eachIndexIdentifier) then token.tokenType:=tt_blockLocalVariable
-            else if token.tokenType<>tt_parameterIdentifier then token.tokenType:=tt_identifier;
+            else if token.tokenType<>tt_parameterIdentifier then begin
+              token.tokenType:=tt_identifier;
+              token.id:=tempId;
+            end;
           end;
           else parIdx:=-1;
         end;
@@ -264,6 +270,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
 DESTRUCTOR T_subrule.destroy;
   VAR i:longint;
   begin
+    writeln('Destroying subrule ',toString(true));
     declaredAt.package:=nil;
     declaredAt.column:=0;
     declaredAt.line:=0;
@@ -722,6 +729,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     end;
 
   begin
+    writeln('T_subrule.resolveIds() for ',toString);
     bracketStack.create;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
       case token.tokenType of

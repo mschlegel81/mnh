@@ -215,7 +215,7 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring;
       tt:T_tokenType;
   begin
     result.location:=lineLocation;
-    result.undefine;
+    result.create;
     result.next:=nil;
     with blob do if closer<>#0 then begin
       //stringValue now is rest of line
@@ -1147,7 +1147,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$ifdef FULLVERSION}
         if currentlyDebugging then stepper.steppingIn(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.getIdWithPointer.ptr),2*sizeOf(pointer)),first^.id);
         {$endif}
-        newLiteral:=T_intFuncCallback(first^.getIdWithPointer.ptr)(parameterListLiteral,first^.location,context);
+        newLiteral:=P_builtinFuncPayload(first^.rawData)^.func(parameterListLiteral,first^.location,context);
         {$ifdef FULLVERSION}
         if currentlyDebugging then stepper.steppingOut(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.getIdWithPointer.ptr),2*sizeOf(pointer)));
         {$endif}

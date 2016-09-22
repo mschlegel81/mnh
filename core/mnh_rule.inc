@@ -52,7 +52,7 @@ PROCEDURE T_rule.readDataStore(CONST adapters:P_adapters);
 
 CONSTRUCTOR T_rule.create(CONST ruleId: T_idString; CONST ruleTyp:T_ruleType; CONST startAt:T_tokenLocation);
   begin
-    inherited create(ruleId);
+    inherited create(ruleId,tpt_userRule);
     called:=false;
     idResolved:=false;
     valueChangedAfterDeclaration:=false;

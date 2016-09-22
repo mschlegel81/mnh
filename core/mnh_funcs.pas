@@ -200,7 +200,7 @@ GENERIC_TYPE_CHECK;
 
 CONSTRUCTOR T_builtinFuncPayload.create(CONST id_: T_idString; CONST func_: T_intFuncCallback);
   begin
-    inherited create(id_);
+    inherited create(id_,tpt_builtinRule);
     func:=func_;
   end;
 

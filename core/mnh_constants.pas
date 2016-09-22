@@ -137,7 +137,8 @@ TYPE
 
   P_tokenPayload=^T_tokenPayload;
   T_tokenPayload=object
-    CONSTRUCTOR create; //pro forma
+    payloadType:T_tokenPayloadType;
+    CONSTRUCTOR create(CONST typ:T_tokenPayloadType); //pro forma
     DESTRUCTOR destroy; virtual;
     FUNCTION hash:T_hashInt; virtual; abstract;
     FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual; abstract;
@@ -147,7 +148,7 @@ TYPE
   P_idPayload=^T_idPayload;
   T_idPayload=object(T_tokenPayload)
     id:T_idString;
-    CONSTRUCTOR create(CONST id_:T_idString);
+    CONSTRUCTOR create(CONST id_:T_idString; CONST typ:T_tokenPayloadType);
     DESTRUCTOR destroy; virtual;
     FUNCTION hash:T_hashInt; virtual;
     FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual;
@@ -638,7 +639,7 @@ FUNCTION configDir:string;
 
 CONSTRUCTOR T_commentPayload.create(CONST txt_: T_commentString);
   begin
-    inherited create;
+    inherited create(tpt_comment);
     txt:=txt_;
   end;
 
@@ -669,12 +670,12 @@ FUNCTION T_commentPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayloa
 
 { T_tokenPayload }
 
-CONSTRUCTOR T_tokenPayload.create; begin end;
+CONSTRUCTOR T_tokenPayload.create(CONST typ:T_tokenPayloadType); begin payloadType:=typ; end;
 DESTRUCTOR T_tokenPayload.destroy; begin end;
 { T_idPayload }
-CONSTRUCTOR T_idPayload.create(CONST id_: T_idString);
+CONSTRUCTOR T_idPayload.create(CONST id_: T_idString; CONST typ:T_tokenPayloadType);
   begin
-    inherited create;
+    inherited create(typ);
     id:=id_;
   end;
 
@@ -700,14 +701,14 @@ FUNCTION T_idPayload.toString(CONST tokType: T_tokenType; CONST lengthLimit: lon
 FUNCTION T_idPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
   VAR typedResult:P_idPayload;
   begin
-    new(typedResult,create(id));
+    new(typedResult,create(id,tpt_identifier));
     result:=typedResult;
   end;
 
 { T_idWithPointerPayload }
 CONSTRUCTOR T_idWithPointerPayload.create(CONST id_: T_idString; CONST ptr_: pointer);
   begin
-    inherited create(id_);
+    inherited create(id_,tpt_idWithPointerPayload);
     ptr:=ptr_;
   end;
 

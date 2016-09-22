@@ -919,23 +919,20 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     ruleId   :=token.id;
     if packageRules.containsKey(ruleId,userRule) then begin
       if userRule^.ruleType=rt_customTypeCheck
-      then token.tokenType:=tt_customTypeRule
-      else token.tokenType:=tt_localUserRule;
-      token.rawData:=userRule;
+      then token.resolvedUserFunc(userRule,tt_customTypeRule)
+      else token.resolvedUserFunc(userRule,tt_localUserRule);
       userRule^.idResolved:=true;
       exit;
     end;
     if importedRules.containsKey(ruleId,userRule) then begin
       if userRule^.ruleType=rt_customTypeCheck
-      then token.tokenType:=tt_customTypeRule
-      else token.tokenType:=tt_importedUserRule;
-      token.rawData:=userRule;
+      then token.resolvedUserFunc(userRule,tt_customTypeRule)
+      else token.resolvedUserFunc(userRule,tt_importedUserRule);
       userRule^.idResolved:=true;
       exit;
     end;
     if intrinsicRuleMap.containsKey(ruleId,intrinsicFuncPtr) then begin
-      token.tokenType:=tt_intrinsicRule;
-      token.rawData:=intrinsicFuncPtr;
+      token.resolvedIntFunc(intrinsicFuncPtr);
       exit;
     end;
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.id+'"',token.location);
