@@ -197,7 +197,6 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
   end;
 
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
-  CONST writeMode:array[boolean] of longint=(fmCreate,fmAppend);
   VAR i,j: longint;
       textLineEnding:string;
       stream:TFileStream;
@@ -239,7 +238,12 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     try
       ensurePath(name);
       findTextLineEnding;
-      stream:=TFileStream.create(name,writeMode[doAppend]);
+      if doAppend and fileExists(name)
+      then begin
+             stream:=TFileStream.create(name,fmOpenReadWrite);
+             stream.Seek(0, soEnd);
+           end
+      else stream:=TFileStream.create(name,fmCreate);
       for i:=0 to length(textToWrite)-1 do begin
         for j:=1 to length(textToWrite[i]) do stream.writeByte(ord(textToWrite[i][j]));
         for j:=1 to length(textLineEnding) do stream.writeByte(ord(textLineEnding[j]));
