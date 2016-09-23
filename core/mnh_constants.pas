@@ -6,41 +6,57 @@ USES sysutils;
 {$PACKENUM 1}
 {$endif}
 CONST
-  LOGO:array[0..6] of string=(' ___      ___ ___   ___ ___   ___ ',
-                              '|   \    /   |   \ |   |   | |   |  ______',
-                              '|    \  /    |    \|   |   |_|   | |   ___|',
-                              '|     \/     |     \   |         | |  |__',
-                              '|   \    /   |   \     |    _    | |___  \',
-                              '|   |\  /|   |   |\    |   | |   |  ___)  |',
-                              '|___| \/ |___|___| \___|___| |___| |_____/');
+  LOGO:array[0..6] of string=(
+  ' ___      ___ ___   ___ ___   ___',
+  '|   \    /   |   \ |   |   | |   |  ______',
+  '|    \  /    |    \|   |   |_|   | |   ___|',
+  '|     \/     |     \   |         | |  |__',
+  '|   \    /   |   \     |    _    | |___  \',
+  '|   |\  /|   |   |\    |   | |   |  ___)  |',
+  '|___| \/ |___|___| \___|___| |___| |_____/');
 
   UTF8_ZERO_WIDTH_SPACE=#226#128#139;
-  APP_NAME='MNH';
-  APP_TITLE='MNH5';
-  SCRIPT_EXTENSION='.mnh';
-  LITERAL_TEXT_VOID= 'void';
-  LITERAL_NAN_TEXT = 'Nan';
-  LITERAL_INF_TEXT = 'Inf';
-  LITERAL_BOOL_TEXT: array[false..true] of string = ('false', 'true');
-  {$ifdef fullVersion}
-  FORCE_GUI_PSEUDO_PACKAGE='GUI';
-  {$endif}
-  ONE_SECOND=1/(24*60*60);
-  ONE_MINUTE=1/(24*60);
-  ID_QUALIFY_CHARACTER='.';
-  EACH_INDEX_IDENTIFIER='index';
-  MAIN_RULE_ID='main';
+  APP_NAME             ='MNH';
+  APP_TITLE            ='MNH5';
+  SCRIPT_EXTENSION     ='.mnh';
+
+  LITERAL_TEXT_VOID    = 'void';
+  LITERAL_NAN_TEXT     = 'Nan';
+  LITERAL_INF_TEXT     = 'Inf';
+  LITERAL_BOOL_TEXT: array[boolean] of string = ('false', 'true');
+
+  ONE_SECOND                    =1/(24*60*60);
+  ONE_MINUTE                    =1/(24*60);
+
+  ID_QUALIFY_CHARACTER          ='.';
+  EACH_INDEX_IDENTIFIER         ='index';
+  MAIN_RULE_ID                  ='main';
   BUILTIN_PSEUDO_LOCATION_PREFIX='builtin';
-  SELF_TOKEN_TEXT='$self';
-  SELF_TOKEN_PAR_IDX=maxLongint;
-  ALL_PARAMETERS_TOKEN_TEXT='$params';
-  ALL_PARAMETERS_PAR_IDX=SELF_TOKEN_PAR_IDX-1;
-  REMAINING_PARAMETERS_IDX=ALL_PARAMETERS_PAR_IDX-1;
-  DOC_COMMENT_PREFIX='//*';
-  SPECIAL_COMMENT_BLOB_BEGIN='//!';
+  SELF_TOKEN_TEXT               ='$self';
+  SELF_TOKEN_PAR_IDX            =maxLongint;
+  ALL_PARAMETERS_TOKEN_TEXT     ='$params';
+  ALL_PARAMETERS_PAR_IDX        =SELF_TOKEN_PAR_IDX-1;
+  REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
+  DOC_COMMENT_PREFIX            ='//*';
+  SPECIAL_COMMENT_BLOB_BEGIN    ='//!';
+  {$ifdef fullVersion}
+  FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
+  {$endif}
 TYPE
-  T_hashInt=dword;
+  T_hashInt  =dword;
   T_idString =string[100];
+  T_myFloat = extended;
+  P_abstractPackage=^T_abstractPackage;
+  T_abstractPackage=object
+    FUNCTION getPath:ansistring; virtual; abstract;
+  end;
+  T_reservedWordClass=(rwc_not_reserved,
+                       rwc_specialLiteral,
+                       rwc_specialConstruct,
+                       rwc_operator,
+                       rwc_typeCheck,
+                       rwc_modifier);
+
   T_namespace=(DEFAULT_BUILTIN_NAMESPACE,
                MATH_NAMESPACE           ,
                STRINGS_NAMESPACE        ,
@@ -49,26 +65,21 @@ TYPE
                SYSTEM_BUILTIN_NAMESPACE ,
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE
-               {$ifdef fullVersion},
-               PLOT_NAMESPACE
-               {$endif});
+               {$ifdef fullVersion},PLOT_NAMESPACE{$endif}
+               );
 CONST
-  C_namespaceString:array[T_namespace] of string=('mnh','math','strings','lists','regex','system','files','typecast'{$ifdef fullVersion},'plot'{$endif});
+  C_namespaceString:array[T_namespace] of string=(
+    'mnh',
+    'math',
+    'strings',
+    'lists',
+    'regex',
+    'system',
+    'files',
+    'typecast'
+    {$ifdef fullVersion},'plot'{$endif}
+    );
 TYPE
-  T_reservedWordClass=(rwc_not_reserved,
-                       rwc_specialLiteral,
-                       rwc_specialConstruct,
-                       rwc_operator,
-                       rwc_typeCheck,
-                       rwc_modifier);
-  P_abstractPackage=^T_abstractPackage;
-  T_abstractPackage=object
-    FUNCTION getPath:ansistring; virtual; abstract;
-  end;
-
-TYPE
-  T_myFloat = extended;
-
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
     //identifier and resolved identifiers
     tt_identifier, tt_parameterIdentifier, tt_localUserRule,
@@ -131,13 +142,12 @@ TYPE
     tt_EOL,
     tt_blank);
 
-  T_tokenTypeSet=set of T_tokenType;
-  T_modifier=                         tt_modifier_private..tt_modifier_customType;
+  T_tokenTypeSet  =set of T_tokenType;
+  T_modifier      =tt_modifier_private..tt_modifier_customType;
   T_cStyleOperator=tt_cso_assignPlus..tt_cso_assignAppend;
 CONST C_ruleModifiers:T_tokenTypeSet=[tt_modifier_private..tt_modifier_synchronized,tt_modifier_customType];
 TYPE
   T_modifierSet=set of T_modifier;
-
   T_literalType = (
     lt_error,
     lt_boolean,
@@ -156,9 +166,27 @@ TYPE
     lt_flatList,
     lt_listWithError,
     lt_void);
-
+CONST
+  C_typeString: array[T_literalType] of string = (
+    'error',
+    'boolean',
+    'int',
+    'real',
+    'string',
+    'expression',
+    'list',
+    'booleanList',
+    'intList',
+    'realList',
+    'numericList',
+    'stringList',
+    'emptyList',
+    'keyValueList',
+    'flatList',
+    'list(containing error)',
+    LITERAL_TEXT_VOID);
+TYPE
   T_literalTypeSet=set of T_literalType;
-
   T_tokenTypeInfo=record
     tokenType:T_tokenType;
     reservedWordClass:T_reservedWordClass;
@@ -249,10 +277,7 @@ CONST
 
   C_compatibleEnd:array[tt_beginBlock..tt_beginFunc] of T_tokenType=(tt_endBlock,tt_endFunc);
   C_tokenInfo:array[T_tokenType] of record
-    defaultId:string;
-    reservedWordClass:T_reservedWordClass;
-    helpText:string;
-  end=(
+                                 defaultId:string;         reservedWordClass:T_reservedWordClass;  helpText:string; end=(
 {tt_literal}                    (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'A literal'),
 {tt_aggregatorExpressionLiteral}(defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'An aggregator expression literal'),
 {tt_identifier}                 (defaultId:'';             reservedWordClass:rwc_not_reserved;     helpText:'An identifier (unresolved)'),
@@ -367,25 +392,6 @@ CONST
        (txt:'true';     reservedWordClass:rwc_specialLiteral; helpText:'true literal'),
        (txt:'main';     reservedWordClass:rwc_not_reserved  ; helpText:'main rule#Called when the script is executed from the command line (or via "call main" in the GUI)'));
 
-  C_typeString: array[T_literalType] of string = (
-    'error',
-    'boolean',
-    'int',
-    'real',
-    'string',
-    'expression',
-    'list',
-    'booleanList',
-    'intList',
-    'realList',
-    'numericList',
-    'stringList',
-    'emptyList',
-    'keyValueList',
-    'flatList',
-    'list(containing error)',
-    LITERAL_TEXT_VOID);
-
   C_ruleTypeString: array[tt_localUserRule..tt_intrinsicRule] of string = (
     'user function (local)',
     'user function (imported)',
@@ -402,38 +408,39 @@ TYPE
               rt_datastore_private,
               rt_synchronized,
               rt_customTypeCheck);
-CONST C_mutableRuleTypes:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
+CONST C_mutableRuleTypes:           set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private];
       C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_datastore_public,rt_datastore_private,rt_customTypeCheck];
-      C_csProtectedRuleTypes:set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
-      C_publicRuleTypes:set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public,rt_customTypeCheck];
+      C_csProtectedRuleTypes:       set of T_ruleType=[rt_memoized,rt_mutable_public,rt_mutable_private,rt_persistent_public,rt_persistent_private,rt_synchronized,rt_datastore_public,rt_datastore_private];
+      C_publicRuleTypes:            set of T_ruleType=[rt_mutable_public,rt_persistent_public,rt_datastore_public,rt_customTypeCheck];
       C_ruleTypeText:array[T_ruleType] of string=(
-      '','memoized ',
-         'mutable ',
-         'private mutable ',
-         'persistent ',
-         'private persistent ',
-         'datastore ',
-         'private datastore ',
-         'synchronized ',
-         'type ');
+      '',
+      'memoized ',
+      'mutable ',
+      'private mutable ',
+      'persistent ',
+      'private persistent ',
+      'datastore ',
+      'private datastore ',
+      'synchronized ',
+      'type ');
       C_validModifierCombinations:array[0..14] of record
         modifiers:T_modifierSet;
         ruleType:T_ruleType;
-      end=((modifiers:[];ruleType:rt_normal),
-           (modifiers:[tt_modifier_private];ruleType:rt_normal),
-           (modifiers:[tt_modifier_memoized];ruleType:rt_memoized),
-           (modifiers:[tt_modifier_memoized,tt_modifier_private];ruleType:rt_memoized),
-           (modifiers:[tt_modifier_mutable];ruleType:rt_mutable_public),
-           (modifiers:[tt_modifier_mutable,tt_modifier_private];ruleType:rt_mutable_private),
-           (modifiers:[tt_modifier_persistent];ruleType:rt_persistent_public),
-           (modifiers:[tt_modifier_persistent,tt_modifier_private];ruleType:rt_persistent_private),
-           (modifiers:[tt_modifier_datastore];ruleType:rt_datastore_public),
-           (modifiers:[tt_modifier_datastore,tt_modifier_private];ruleType:rt_datastore_private),
-           (modifiers:[tt_modifier_memoized];ruleType:rt_memoized),
-           (modifiers:[tt_modifier_memoized,tt_modifier_private];ruleType:rt_memoized),
-           (modifiers:[tt_modifier_synchronized];ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_synchronized,tt_modifier_private];ruleType:rt_synchronized),
-           (modifiers:[tt_modifier_customType];ruleType:rt_customTypeCheck));
+      end=((modifiers:[];                                             ruleType:rt_normal),
+           (modifiers:[                         tt_modifier_private]; ruleType:rt_normal),
+           (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
+           (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
+           (modifiers:[tt_modifier_mutable];                          ruleType:rt_mutable_public),
+           (modifiers:[tt_modifier_mutable     ,tt_modifier_private]; ruleType:rt_mutable_private),
+           (modifiers:[tt_modifier_persistent];                       ruleType:rt_persistent_public),
+           (modifiers:[tt_modifier_persistent  ,tt_modifier_private]; ruleType:rt_persistent_private),
+           (modifiers:[tt_modifier_datastore];                        ruleType:rt_datastore_public),
+           (modifiers:[tt_modifier_datastore   ,tt_modifier_private]; ruleType:rt_datastore_private),
+           (modifiers:[tt_modifier_memoized];                         ruleType:rt_memoized),
+           (modifiers:[tt_modifier_memoized    ,tt_modifier_private]; ruleType:rt_memoized),
+           (modifiers:[tt_modifier_synchronized];                     ruleType:rt_synchronized),
+           (modifiers:[tt_modifier_synchronized,tt_modifier_private]; ruleType:rt_synchronized),
+           (modifiers:[tt_modifier_customType];                       ruleType:rt_customTypeCheck));
 
 TYPE
   T_messageType = (
