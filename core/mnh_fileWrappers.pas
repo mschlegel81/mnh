@@ -38,7 +38,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
 PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_hashInt);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
-FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
+FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
@@ -196,7 +196,8 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
     stream.destroy;
   end;
 
-FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string): boolean;
+FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
+  CONST writeMode:array[boolean] of longint=(fmCreate,fmAppend);
   VAR i,j: longint;
       textLineEnding:string;
       stream:TFileStream;
@@ -227,9 +228,10 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
       end;
 
     begin
-      if     lineSeparator<>'' then textLineEnding:=lineSeparator
-      else if fileExists(name) then textLineEnding:=currentTextLineEnding
-      else textLineEnding:=LineEnding;
+      if doAppend and fileExists(name) then textLineEnding:=currentTextLineEnding
+      else if lineSeparator<>''        then textLineEnding:=lineSeparator
+      else if fileExists(name)         then textLineEnding:=currentTextLineEnding
+                                       else textLineEnding:=LineEnding;
     end;
 
   begin
@@ -237,7 +239,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
     try
       ensurePath(name);
       findTextLineEnding;
-      stream:=TFileStream.create(name,fmCreate);
+      stream:=TFileStream.create(name,writeMode[doAppend]);
       for i:=0 to length(textToWrite)-1 do begin
         for j:=1 to length(textToWrite[i]) do stream.writeByte(ord(textToWrite[i][j]));
         for j:=1 to length(textLineEnding) do stream.writeByte(ord(textLineEnding[j]));
@@ -437,7 +439,7 @@ PROCEDURE T_codeProvider.load;
 
 PROCEDURE T_codeProvider.save;
   begin
-    if (filePath<>'') and writeFileLines(filePath, lineData,'') then begin
+    if (filePath<>'') and writeFileLines(filePath, lineData,'',false) then begin
       fileAge(filePath,fileAccessedAtFileAge);
       outOfSync:=false;
     end;

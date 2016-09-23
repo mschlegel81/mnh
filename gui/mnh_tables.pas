@@ -168,7 +168,7 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
         content[i-1]:=row;
       end;
       content:=formatTabs(content);
-      writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding);
+      writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding,false);
     end;
   end;
 

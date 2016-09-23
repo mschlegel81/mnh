@@ -879,7 +879,7 @@ FUNCTION TMnhForm._doSaveAs_(CONST index: longint): boolean;
       filePath:=expandFileName(SaveDialog.fileName);
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
-      writeFileLines(filePath,arr,'');
+      writeFileLines(filePath,arr,'',false);
       fileAge(filePath,fileAccessAge);
       changed:=false;
       result:=true;
@@ -896,7 +896,7 @@ FUNCTION TMnhForm._doSave_(CONST index: longint): boolean;
     else begin
       setLength(arr,editor.lines.count);
       for i:=0 to length(arr)-1 do arr[i]:=editor.lines[i];
-      writeFileLines(filePath,arr,'');
+      writeFileLines(filePath,arr,'',false);
       fileAge(filePath,fileAccessAge);
       changed:=false;
       result:=true;

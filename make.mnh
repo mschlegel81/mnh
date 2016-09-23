@@ -87,6 +87,8 @@ private myMove(source,dest:string)->fileExists(source) ? begin
   moveFile(source,dest) ? void : tprint('File move ',source,' -> ',dest,' failed!');
 end : tprint('File  ',source,' does not exist');
 
+private BUILD_LOG_NAME:='build.log';
+
 private build(FI:int)->
 exeHasWrongVersion(FI) ? begin
   local imig :=FI=8;
@@ -101,9 +103,8 @@ exeHasWrongVersion(FI) ? begin
   local parameters:=['-B','--bm='&(imig ? 'imig' : debug ? 'Default' : 'deployment'),full ? 'gui/mnh_gui.lpi' : 'consoles/mnh_light.lpi'];
 
   deleteStubbornly(exeName);
-  local logName:=replace('make_'&exeName,['.exe','.','/','\','__'],['','','_','_','_'])&'.log.txt';
-  tprint('Compiling ',exeName,' logging to ',logName);
-  writeFileLines(logName,(compiler&' '&(parameters.join(' ')))|exec(compiler,parameters));
+  tprint('Compiling ',exeName,' logging to ',BUILD_LOG_NAME);
+  appendFileLines(BUILD_LOG_NAME,[repeat('*',80),formatTime('dd.mm.yyyy hh:nn.ss ',systime),compiler&' '&(parameters.join(' ')),repeat('*',80)]|exec(compiler,parameters));
   myMove(outName,exeName);
   not(exeHasWrongVersion(FI));
 end : tprint('Build of ',binName(FI),' skipped ') orElse true;
@@ -126,7 +127,7 @@ end;
 //*Make distro 7z - including build if needed
 main('distro')->isLinux ? fail('Distro building is currently not supported under Linux') : begin
   updateCurrentCodeHash;
-  [0..3].scramble.each(i,
+  [0..3].each(i,
   begin
     local buildOk:=build(i);
     local testOk:=testAlreadyPassed(binName(i));
@@ -161,7 +162,7 @@ end;
 //*Build - ignoring potentially existing executables
 main('build')->begin
   updateCurrentCodeHash;
-  buildableVersions.scramble.each(i,build(i),AND);
+  buildableVersions.each(i,build(i),AND);
 end;
 
 //*Build - ignoring potentially existing executables
@@ -189,12 +190,9 @@ main('clean')->begin
   delp;
 end;
 
-private scramble(L:list)->L[L.size.random.sortPerm];
-
 private testMnh(...)->begin
   updateCurrentCodeHash;
   buildableVersions
-  .scramble
   .each(i,
   i in buildableVersions.minus([4..7])
   ? build(i)
@@ -258,7 +256,7 @@ main('continuous')->begin
     ? skipCount+=1
     : tprint('Continuous run - sleeping') orElse sleep(5*60);
   end);
-  buildableVersions.scramble.each(ver,buildAndTest(ver));
+  buildableVersions.each(ver,buildAndTest(ver));
 end;
 
 //*Several steps in succession
