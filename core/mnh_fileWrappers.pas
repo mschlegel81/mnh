@@ -228,7 +228,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
       end;
 
     begin
-      if doAppend and FileExists(name) then textLineEnding:=currentTextLineEnding
+      if doAppend and fileExists(name) then textLineEnding:=currentTextLineEnding
       else if lineSeparator<>''        then textLineEnding:=lineSeparator
       else if fileExists(name)         then textLineEnding:=currentTextLineEnding
                                        else textLineEnding:=LineEnding;
