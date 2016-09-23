@@ -168,7 +168,7 @@ FUNCTION writeFile_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenL
     end;
   end;
 
-FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+FUNCTION writeOrAppendFileLines(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST doAppend:boolean):P_literal;
   VAR ok:boolean;
       L:T_arrayOfString;
       i:longint;
@@ -183,11 +183,17 @@ FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_t
                         else sep:='';
       setLength(L,list1^.size);
       for i:=0 to length(L)-1 do L[i]:=P_stringLiteral(list1^.value(i))^.value;
-      ok:=writeFileLines(str0^.value,L,sep);
+      ok:=writeFileLines(str0^.value,L,sep,doAppend);
       result:=newBoolLiteral(ok);
       if not(ok) then context.adapters^.raiseWarning('File "'+str0^.value+'" cannot be accessed',tokenLocation);
     end;
   end;
+
+FUNCTION writeFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin result:=writeOrAppendFileLines(params,tokenLocation,context,false); end;
+
+FUNCTION appendFileLines_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin result:=writeOrAppendFileLines(params,tokenLocation,context,true); end;
 
 FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList; CONST includeStdErr:boolean): boolean;
@@ -429,6 +435,8 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'writeFile',@writeFile_impl,'writeFile(filename:string, content:string);#Writes the specified content to the specified file and returns true');
   registerRule(FILES_BUILTIN_NAMESPACE,'writeFileLines',@writeFileLines_impl,'writeFileLines(filename:string, content:stringList);#Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
                                                                               'writeFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
+  registerRule(FILES_BUILTIN_NAMESPACE,'appendFileLines',@appendFileLines_impl,'appendFileLines(filename:string, content:stringList);#Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                              'appendFileLines(filename:string, content:stringList, lineEnding:string);#As above with specified line ending');
   registerRule(FILES_BUILTIN_NAMESPACE,'exec',@execSync_impl,'exec(programPath:string);#Executes the specified program and returns the text output including stdErr output#'+
                                                               'exec(programPath:string,parameters:flatList);#Executes the specified program with given command line parameters and returns the text output including stdErr output#'+
                                                               'exec(programPath:string,includeStdErr:boolean);#Executes the specified program and returns the text output optionally including stdErr output#'+
