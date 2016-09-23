@@ -5,15 +5,6 @@ USES sysutils,myGenerics,mnh_constants,mnh_litVar,mnh_out_adapters,mnh_tokLoc,mn
 TYPE
   T_intFuncCallback=FUNCTION(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
 
-  P_builtinFuncPayload=^T_builtinFuncPayload;
-  T_builtinFuncPayload=object(T_idPayload)
-    func:T_intFuncCallback;
-
-    CONSTRUCTOR create(CONST id_:T_idString; CONST func_:T_intFuncCallback);
-    DESTRUCTOR destroy; virtual;
-    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
-  end;
-
 VAR
   intrinsicRuleMap:specialize G_stringKeyMap<T_intFuncCallback>;
   print_cs        :system.TRTLCriticalSection;
@@ -28,8 +19,8 @@ PROCEDURE registerRule(CONST namespace: T_namespace; CONST name: ansistring; CON
   begin
     if not(fullNameOnly) then
     intrinsicRuleMap.put(                                                    name,ptr);
-    intrinsicRuleMap.put(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,ptr);
-    {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+C_ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
+    intrinsicRuleMap.put(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,ptr);
+    {$ifdef fullVersion}registerDoc(C_namespaceString[namespace]+ID_QUALIFY_CHARACTER+name,explanation,fullNameOnly);{$endif}
   end;
 
 PROCEDURE raiseNotApplicableError(CONST functionName: ansistring; CONST typ: T_literalType; CONST messageTail: ansistring; CONST tokenLocation: T_tokenLocation; VAR adapters: T_adapters);
@@ -187,22 +178,6 @@ GENERIC_TYPE_CHECK;
 {$define FUNC_ID:=isExpression}
 {$define TYPE_CHECK:=tt_typeCheckExpression}
 GENERIC_TYPE_CHECK;
-
-CONSTRUCTOR T_builtinFuncPayload.create(CONST id_: T_idString; CONST func_: T_intFuncCallback);
-  begin
-    inherited create(id_);
-    func:=func_;
-  end;
-
-DESTRUCTOR T_builtinFuncPayload.destroy;
-  begin
-    inherited destroy;
-  end;
-
-FUNCTION T_builtinFuncPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
-  begin
-    result:=@self;
-  end;
 
 INITIALIZATION
   intrinsicRuleMap.create;

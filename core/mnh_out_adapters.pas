@@ -455,7 +455,7 @@ PROCEDURE T_adapters.clearErrors;
 PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CONST errorMessage: ansistring; CONST errorLocation: T_searchTokenLocation);
   VAR i:longint;
   begin
-    if hasHaltMessage and (thisErrorLevel<>mt_endOfEvaluation) then exit;
+    if hasHaltMessage and not(thisErrorLevel in [mt_endOfEvaluation,mt_timing_info]) then exit;
     if maxErrorLevel< C_messageTypeMeta[thisErrorLevel].level then
        maxErrorLevel:=C_messageTypeMeta[thisErrorLevel].level;
     hasMessageOfType[thisErrorLevel]:=true;
@@ -473,7 +473,7 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
   VAR i:longint;
   begin
-    if hasHaltMessage and (message.messageType<>mt_endOfEvaluation) then exit;
+    if hasHaltMessage and not(message.messageType in [mt_endOfEvaluation,mt_timing_info]) then exit;
     if maxErrorLevel< C_messageTypeMeta[message.messageType].level then
        maxErrorLevel:=C_messageTypeMeta[message.messageType].level;
     hasMessageOfType[message.messageType]:=true;
@@ -1076,8 +1076,8 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
     setLength(linesToPrint,length(entrySet)+1);
     linesToPrint[0]:=headerLine;
     for i:=0 to length(entrySet)-1 do begin
-      if startsWith(entrySet[i].key,C_builtinPseudolocationPrefix)
-      then linesToPrint[i+1]:=C_builtinPseudolocationPrefix
+      if startsWith(entrySet[i].key,BUILTIN_PSEUDO_LOCATION_PREFIX)
+      then linesToPrint[i+1]:=BUILTIN_PSEUDO_LOCATION_PREFIX
       else linesToPrint[i+1]:=entrySet[i].key;
       linesToPrint[i+1]:=linesToPrint[i+1]+C_tabChar+
                        entrySet[i].value.functionId+C_tabChar+

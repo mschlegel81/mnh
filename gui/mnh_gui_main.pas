@@ -1249,7 +1249,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
         then begin
           aid:=editorMeta[PageControl.activePageIndex].updateSheetCaption;
           editorMeta[PageControl.activePageIndex].repaintWithStateCounter(codeAssistant.getStateCounter,codeAssistant.getErrorHints);
-        end else aid:=C_appTitle;
+        end else aid:=APP_TITLE;
         if aid<>caption then caption:=aid;
         //-------------------------------------------------------------:Form caption
       end;
@@ -1483,7 +1483,7 @@ PROCEDURE TMnhForm.setEditorMode(CONST enable:boolean);
       PageControl.enabled:=false;
       Splitter1.visible:=false;
       Splitter1.enabled:=false;
-      caption:=C_appTitle+' '+getFileOrCommandToInterpretFromCommandLine;
+      caption:=APP_TITLE+' '+getFileOrCommandToInterpretFromCommandLine;
     end;
     subMenuFile.enabled:=enable;
     subMenuFile.visible:=enable;

@@ -10,7 +10,7 @@
       customTypeCheck  :P_subrule;
     public
       CONSTRUCTOR createAnonymous;
-      CONSTRUCTOR create(CONST parameterId:ansistring);
+      CONSTRUCTOR create(CONST parameterId:T_idString);
       FUNCTION accept(VAR parameterList:T_listLiteral; CONST ownIndex:longint; VAR context:T_evaluationContext):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
@@ -31,12 +31,12 @@
     CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern);
     PROCEDURE clear;
     DESTRUCTOR destroy;
-    FUNCTION appendFreeId(CONST parId:ansistring):longint;
+    FUNCTION appendFreeId(CONST parId:T_idString):longint;
     PROCEDURE append(CONST el:T_patternElement);
     PROCEDURE appendOptional;
-    FUNCTION indexOfId(CONST id:ansistring):longint;
-    FUNCTION indexOfIdForInline(CONST id:ansistring):longint;
-    FUNCTION idForIndexInline(CONST index:longint):ansistring;
+    FUNCTION indexOfId(CONST id:T_idString):longint;
+    FUNCTION indexOfIdForInline(CONST id:T_idString):longint;
+    FUNCTION idForIndexInline(CONST index:longint):T_idString;
     PROCEDURE finalizeRefs(CONST location:T_tokenLocation; VAR context:T_evaluationContext);
     FUNCTION matches(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
     FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST selfPointerProvided:boolean; VAR context:T_evaluationContext):boolean;
@@ -60,7 +60,7 @@ CONSTRUCTOR T_patternElement.createAnonymous;
     typeWhitelist   :=C_validNonVoidTypes;
   end;
 
-CONSTRUCTOR T_patternElement.create(CONST parameterId: ansistring);
+CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString);
   begin
     createAnonymous;
     id:=parameterId;
@@ -220,7 +220,7 @@ PROCEDURE T_pattern.clear;
 DESTRUCTOR T_pattern.destroy;
   begin clear; end;
 
-FUNCTION T_pattern.appendFreeId(CONST parId: ansistring): longint;
+FUNCTION T_pattern.appendFreeId(CONST parId: T_idString): longint;
   begin
     result:=length(sig);
     setLength(sig,result+1);
@@ -238,7 +238,7 @@ PROCEDURE T_pattern.appendOptional;
     hasOptionals:=true;
   end;
 
-FUNCTION T_pattern.indexOfId(CONST id: ansistring): longint;
+FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then exit(SELF_TOKEN_PAR_IDX);
@@ -247,7 +247,7 @@ FUNCTION T_pattern.indexOfId(CONST id: ansistring): longint;
     result:=-1;
   end;
 
-FUNCTION T_pattern.indexOfIdForInline(CONST id: ansistring): longint;
+FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString): longint;
   VAR i:longint;
   begin
     if id=SELF_TOKEN_TEXT           then begin containsSelfPointer:=true; exit(SELF_TOKEN_PAR_IDX); end;
@@ -263,7 +263,7 @@ FUNCTION T_pattern.indexOfIdForInline(CONST id: ansistring): longint;
     result:=appendFreeId(id);
   end;
 
-FUNCTION T_pattern.idForIndexInline(CONST index:longint):ansistring;
+FUNCTION T_pattern.idForIndexInline(CONST index:longint):T_idString;
   begin
     if index=SELF_TOKEN_PAR_IDX     then exit(SELF_TOKEN_TEXT);
     if index=ALL_PARAMETERS_PAR_IDX then exit(ALL_PARAMETERS_TOKEN_TEXT);

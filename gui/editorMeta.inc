@@ -329,7 +329,7 @@ FUNCTION T_editorMeta.updateSheetCaption: ansistring;
     if changed then result:=' *'
                else result:='';
     sheet.caption:=pseudoName(true)+result;
-    result:=C_appTitle+' '+pseudoName(false)+result;
+    result:=APP_TITLE+' '+pseudoName(false)+result;
   end;
 
 PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST errorHints:T_arrayOfString);

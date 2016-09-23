@@ -5,9 +5,10 @@ INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
 USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
 TYPE
+  PP_literal = ^P_literal;
   P_literal = ^T_literal;
   T_arrayOfLiteral=array of P_literal;
-  T_literal = packed object (T_tokenPayload)
+  T_literal = packed object
   private
     numberOfReferences: longint;
     CONSTRUCTOR init(CONST lt:T_literalType);
@@ -18,24 +19,13 @@ TYPE
     FUNCTION unreference: longint;
     FUNCTION getReferenceCount: longint;
 
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     FUNCTION typeString:string; virtual;
-    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
-  end;
-
-  P_eachPayload=^T_eachPayload;
-  T_eachPayload=object(T_idPayload)
-    value:P_literal;
-    CONSTRUCTOR create(CONST id_:T_idString; CONST value_:P_literal);
-    DESTRUCTOR destroy;
-    FUNCTION hash:T_hashInt; virtual;
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint):ansistring; virtual;
-    FUNCTION cloneOrCopy(CONST tokType:T_tokenType=tt_EOL):P_tokenPayload; virtual;
   end;
 
   P_scalarLiteral = ^T_scalarLiteral;
@@ -49,7 +39,7 @@ TYPE
       CONSTRUCTOR create();
     public
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
   end;
 
   P_boolLiteral = ^T_boolLiteral;
@@ -62,7 +52,7 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -79,7 +69,7 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -97,7 +87,7 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -126,7 +116,7 @@ TYPE
     FUNCTION stringForm: ansistring; virtual;
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -147,7 +137,7 @@ TYPE
     //from T_scalarLiteral:
     FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
     //from T_literal:
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION typeString:string; virtual;
@@ -189,6 +179,7 @@ TYPE
     PROCEDURE modifyType(CONST L:P_literal); inline;
   public
     CONSTRUCTOR create;
+    FUNCTION toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
     FUNCTION append(CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_listLiteral;
     FUNCTION appendString(CONST s:ansistring):P_listLiteral;
     FUNCTION appendBool  (CONST b:boolean):P_listLiteral;
@@ -221,7 +212,8 @@ TYPE
     FUNCTION clone:P_listLiteral;
     //from T_literal:
     DESTRUCTOR destroy; virtual;
-    FUNCTION toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+    FUNCTION listConstructorToString(CONST lengthLimit:longint=maxLongint):ansistring;
     FUNCTION negate(CONST minusLocation: T_tokenLocation; VAR adapters:T_adapters): P_literal; virtual;
     FUNCTION hash: T_hashInt; virtual;
     FUNCTION equals(CONST other: P_literal): boolean; virtual;
@@ -485,39 +477,6 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
     end;
   end;
 
-CONSTRUCTOR T_eachPayload.create(CONST id_: T_idString; CONST value_: P_literal);
-  begin
-    inherited create(id_);
-    value:=value_;
-  end;
-
-DESTRUCTOR T_eachPayload.destroy;
-  begin
-    inherited destroy;
-    disposeLiteral(value);
-  end;
-
-FUNCTION T_eachPayload.hash: T_hashInt;
-  begin
-    {$Q-}{$R-}
-    result:=inherited hash;
-    if value<>nil then result:=result*31+value^.hash;
-    {$Q+}{$R+}
-  end;
-
-FUNCTION T_eachPayload.toString(CONST tokType: T_tokenType; CONST lengthLimit: longint): ansistring;
-  begin
-    if id<>'' then result:=C_tokenInfo[tokType].defaultId+'('+id+','
-              else result:=C_tokenInfo[tt_agg ].defaultId+'(';
-    if value<>nil then result:=result+value^.toString(tt_literal,lengthLimit-length(result)-1)+',';
-  end;
-
-FUNCTION T_eachPayload.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
-  begin
-    new(P_eachPayload(result),create(id,value));
-    if value<>nil then value^.rereference;
-  end;
-
 {$ifdef fullVersion}
 CONSTRUCTOR T_variableReport.create;
   begin
@@ -656,7 +615,7 @@ FUNCTION G_literalKeyMap.keySet:T_arrayOfLiteral;
   end;
 
 //=====================================================================================================================
-CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
+CONSTRUCTOR T_literal.init(CONST lt:T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 
 PROCEDURE T_literal.rereference;
   begin
@@ -778,49 +737,68 @@ FUNCTION T_listLiteral.leading:P_listLiteral;
 FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
   begin result:=head(datFill-trailSize); end;
 //?.toString:===================================================================
-FUNCTION T_literal.toString(CONST tokType: T_tokenType;
-  CONST lengthLimit: longint): ansistring; begin result:='<ERR>';           end;
-FUNCTION T_voidLiteral      .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=C_voidText;        end;
-FUNCTION T_boolLiteral      .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=C_boolText[val];   end;
-FUNCTION T_intLiteral       .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
-FUNCTION T_realLiteral      .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
-FUNCTION T_stringLiteral    .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=escapeString(val); end;
-FUNCTION T_expressionLiteral.toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring; begin result:=subruleToStringCallback(val,lengthLimit); end;
-FUNCTION T_listLiteral      .toString(CONST tokType:T_tokenType=tt_EOL; CONST lengthLimit:longint=maxLongint): ansistring;
+FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
+FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
+FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val];   end;
+FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
+FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
+FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=escapeString(val); end;
+FUNCTION T_expressionLiteral.toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=subruleToStringCallback(val,lengthLimit); end;
+FUNCTION T_listLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   VAR i,remainingLength: longint;
   begin
-    if datFill = 0 then begin
-      case tokType of
-        tt_parList: result:='()';
-        tt_parList_constructor: result:='(';
-        tt_list_constructor: result:='[';
-        else result:='[]'
-      end;
-    end
+    if datFill = 0 then result:='[]'
     else begin
       remainingLength:=lengthLimit-1;
-      if tokType in [tt_parList,tt_parList_constructor]
-      then result:='('+dat[0]^.toString(tt_literal,remainingLength)
-      else result:='['+dat[0]^.toString(tt_literal,remainingLength);
+      result:='['+dat[0]^.toString(remainingLength);
       for i:=1 to datFill-1 do if remainingLength>0 then begin
         remainingLength:=lengthLimit-length(result);
-        result:=result+','+dat[i]^.toString(tt_literal,remainingLength);
+        result:=result+','+dat[i]^.toString(remainingLength);
       end else begin
         result:=result+',... ';
         break;
       end;
-      case tokType of
-        tt_parList: result:=result+')';
-        tt_parList_constructor: result:=result+',';
-        tt_list_constructor:
-          if nextAppendIsRange then result:=result+'..'
-                               else result:=result+',';
-        else result:=result+']';
-      end;
+      result:=result+']';
     end;
   end;
-//===================================================================:?.toString
 
+FUNCTION T_listLiteral.listConstructorToString(CONST lengthLimit:longint=maxLongint):ansistring;
+  VAR i,remainingLength:longint;
+  begin
+    if datFill = 0 then result:='['
+    else begin
+      remainingLength:=lengthLimit-1;
+      result:='['+dat[0]^.toString;
+      for i:=1 to datFill-1 do if remainingLength>0 then begin
+        remainingLength:=lengthLimit-length(result);
+        result:=result+','+dat[i]^.toString(remainingLength);
+      end else begin
+        result:=result+',... ';
+        break;
+      end;
+      if nextAppendIsRange then result:=result+'..'
+                           else result:=result+',';
+    end;
+  end;
+
+//===================================================================:?.toString
+FUNCTION T_listLiteral.toParameterListString(CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
+  VAR i,remainingLength: longint;
+  begin
+    if datFill = 0 then if isFinalized then exit('()')
+                                       else exit('(');
+    remainingLength:=lengthLimit-1;
+    result:='('+dat[0]^.toString(lengthLimit);
+    for i:=1 to datFill-1 do if remainingLength>0 then begin
+      remainingLength:=lengthLimit-length(result);
+      result:=result+','+dat[i]^.toString;
+    end else begin
+      result:=result+',... ';
+      break;
+    end;
+    if isFinalized then result:=result+')'
+                   else result:=result+',';
+  end;
 
 //?.stringForm:=================================================================
 FUNCTION T_scalarLiteral.stringForm: ansistring; begin result:=toString; end;
@@ -957,16 +935,6 @@ FUNCTION T_expressionLiteral.typeString: string;
 FUNCTION T_listLiteral.typeString:string;
   begin
     result:=C_typeString[literalType]+'('+intToStr(datFill)+')';
-  end;
-
-FUNCTION T_literal.cloneOrCopy(CONST tokType: T_tokenType): P_tokenPayload;
-  begin
-    if tokType in [tt_parList,tt_parList_constructor]
-    then result:=P_listLiteral(@self)^.clone
-    else begin
-      result:=@self;
-      rereference;
-    end;
   end;
 
 FUNCTION T_listLiteral.parameterListTypeString:string;
@@ -1271,9 +1239,9 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
     len: longint;
     otherVal: ansistring;
   begin
-    if lowercase(val) = C_boolText [false] then
+    if lowercase(val) = LITERAL_BOOL_TEXT[false] then
       exit(newBoolLiteral(false));
-    if lowercase(val) = C_boolText [true] then
+    if lowercase(val) = LITERAL_BOOL_TEXT[true] then
       exit(newBoolLiteral(true));
     result:=parseNumber(val, 1, false, len);
     if (result<>nil) then
@@ -1584,7 +1552,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex:longint; CONST location:
       then result:=P_listLiteral(a)^.dat[innerIndex]^.leqForSorting(P_listLiteral(b)^.dat[innerIndex])
       else begin
         result:=false;
-        adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(tt_literal,50)+' and '+b^.toString(tt_literal,50),location);
+        adapters.raiseError('Invalid sorting index '+intToStr(innerIndex)+' for elements '+a^.toString(50)+' and '+b^.toString(50),location);
       end;
     end;
 
@@ -2460,7 +2428,7 @@ FUNCTION T_namedVariable.getValue:P_literal;
 
 FUNCTION T_namedVariable.toString(CONST lengthLimit:longint=maxLongint):ansistring;
   begin
-    result:=id+'='+value^.toString(tt_literal,lengthLimit-1-length(id));
+    result:=id+'='+value^.toString(lengthLimit-1-length(id));
   end;
 
 FUNCTION mapPut(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR adapters:T_adapters):P_literal;
