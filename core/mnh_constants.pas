@@ -66,10 +66,10 @@ TYPE
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE
                {$ifdef fullVersion},PLOT_NAMESPACE{$endif}
+               {$ifdef IMIG},IMIG_NAMESPACE{$endif}
                );
-               {$endif}
-               {$ifdef IMIG},
-               IMIG_NAMESPACE
+
+
 CONST
   C_namespaceString:array[T_namespace] of string=(
     'mnh',
@@ -81,6 +81,7 @@ CONST
     'files',
     'typecast'
     {$ifdef fullVersion},'plot'{$endif}
+    {$ifdef IMIG},'imig'{$endif}
     );
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
