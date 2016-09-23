@@ -1062,8 +1062,8 @@ PROCEDURE T_stepper.showTimeInfo(VAR adapters:T_adapters);
     setLength(linesToPrint,length(entrySet)+1);
     linesToPrint[0]:=headerLine;
     for i:=0 to length(entrySet)-1 do begin
-      if startsWith(entrySet[i].key,C_builtinPseudolocationPrefix)
-      then linesToPrint[i+1]:=C_builtinPseudolocationPrefix
+      if startsWith(entrySet[i].key,BUILTIN_PSEUDO_LOCATION_PREFIX)
+      then linesToPrint[i+1]:=BUILTIN_PSEUDO_LOCATION_PREFIX
       else linesToPrint[i+1]:=entrySet[i].key;
       linesToPrint[i+1]:=linesToPrint[i+1]+C_tabChar+
                        entrySet[i].value.functionId+C_tabChar+

@@ -89,7 +89,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
         tt_identifier: if (i<length(t)-2) and (t[i+1].tokType=tt_ponFlipper) and (t[i+2].tokType=tt_identifier) and (package<>nil) and package^.isImportedOrBuiltinPackage(t[i].txt) then begin
           //resolve ambiguous notation "x.y" to qualified identifier "x.y" if applicable
           inc(i,2);
-          t[i].txt:=t[i-2].txt+C_ID_QUALIFY_CHARACTER+t[i].txt;
+          t[i].txt:=t[i-2].txt+ID_QUALIFY_CHARACTER+t[i].txt;
           t[i].tokType:=tt_identifier;
           package^.resolveRuleId(t[i],nil);
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
@@ -291,11 +291,11 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
         for tt:=low(T_tokenType) to high(T_tokenType) do
         if result.txt=C_tokenInfo[tt].defaultId then result.tokType:=tt;
         if result.tokType=tt_identifier then begin
-          if      result.txt=C_boolText[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
-          else if result.txt=C_boolText[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end
-          else if result.txt=C_nanText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Nan); end
-          else if result.txt=C_infText         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(infinity); end
-          else if result.txt=C_voidText        then begin result.tokType:=tt_literal; result.data:=newVoidLiteral; end
+          if      result.txt=LITERAL_BOOL_TEXT[true]  then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(true); end
+          else if result.txt=LITERAL_BOOL_TEXT[false] then begin result.tokType:=tt_literal; result.data:=newBoolLiteral(false); end
+          else if result.txt=LITERAL_NAN_TEXT         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(Nan); end
+          else if result.txt=LITERAL_INF_TEXT         then begin result.tokType:=tt_literal; result.data:=newRealLiteral(infinity); end
+          else if result.txt=LITERAL_TEXT_VOID        then begin result.tokType:=tt_literal; result.data:=newVoidLiteral; end
           else begin
             result.data:=inPackage;
           end;
@@ -1105,7 +1105,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if parameterListLiteral=nil
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
             else begin
-              if (P_rule(first^.data)^.id=C_mainRuleId)
+              if (P_rule(first^.data)^.id=MAIN_RULE_ID)
               then context.adapters^.raiseCustomMessage(mt_el3_noMatchingMain,'Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.parameterListTypeString+':  '+parameterListLiteral^.toParameterListString(true),first^.location)
               else context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to parameter list '+parameterListLiteral^.toParameterListString(true),first^.location);
             end;
@@ -1141,11 +1141,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
         {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingIn(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
+        if currentlyDebugging then stepper.steppingIn(BUILTIN_PSEUDO_LOCATION_PREFIX+IntToHex(ptrint(first^.data),2*sizeOf(pointer)),first^.txt);
         {$endif}
         newLiteral:=T_intFuncCallback(first^.data)(parameterListLiteral,first^.location,context);
         {$ifdef FULLVERSION}
-        if currentlyDebugging then stepper.steppingOut(C_builtinPseudolocationPrefix+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
+        if currentlyDebugging then stepper.steppingOut(BUILTIN_PSEUDO_LOCATION_PREFIX+IntToHex(ptrint(first^.data),2*sizeOf(pointer)));
         {$endif}
         if newLiteral<>nil then begin
           firstReplace:=context.newToken(first^.location,'',tt_literal,newLiteral);

@@ -408,7 +408,7 @@ PROCEDURE makeHtmlFromTemplate(CONST includeUserPackages:boolean);
       VAR useId:ansistring;
           n:T_namespace;
       begin
-        if isQualified(id) then useId:=split(id,C_ID_QUALIFY_CHARACTER)[0] else useId:=id;
+        if isQualified(id) then useId:=split(id,ID_QUALIFY_CHARACTER)[0] else useId:=id;
         for n:=low(T_namespace) to high(T_namespace) do if C_namespaceString[n]=useId then exit(n);
         result:=DEFAULT_BUILTIN_NAMESPACE;
       end;

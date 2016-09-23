@@ -229,15 +229,15 @@ TYPE
   P_namedVariable=^T_namedVariable;
   T_namedVariable=object
     private
-      id:idString;
+      id:T_idString;
       value:P_literal;
       readonly:boolean;
     public
-      CONSTRUCTOR create(CONST initialId:idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
+      CONSTRUCTOR create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
       DESTRUCTOR destroy;
       PROCEDURE setValue(CONST newValue:P_literal);
       FUNCTION mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_literal; CONST location:T_tokenLocation; VAR adapters:T_adapters):P_literal;
-      FUNCTION getId:idString;
+      FUNCTION getId:T_idString;
       FUNCTION getValue:P_literal;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):ansistring;
   end;
@@ -738,8 +738,8 @@ FUNCTION T_listLiteral.leading  (CONST trailSize:longint):P_listLiteral;
   begin result:=head(datFill-trailSize); end;
 //?.toString:===================================================================
 FUNCTION T_literal          .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:='<ERR>';           end;
-FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=C_voidText;        end;
-FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=C_boolText[val];   end;
+FUNCTION T_voidLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_TEXT_VOID;        end;
+FUNCTION T_boolLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=LITERAL_BOOL_TEXT[val];   end;
 FUNCTION T_intLiteral       .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=intToStr(val);     end;
 FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=escapeString(val); end;
@@ -1239,9 +1239,9 @@ FUNCTION T_stringLiteral.softCast: P_scalarLiteral;
     len: longint;
     otherVal: ansistring;
   begin
-    if lowercase(val) = C_boolText [false] then
+    if lowercase(val) = LITERAL_BOOL_TEXT[false] then
       exit(newBoolLiteral(false));
-    if lowercase(val) = C_boolText [true] then
+    if lowercase(val) = LITERAL_BOOL_TEXT[true] then
       exit(newBoolLiteral(true));
     result:=parseNumber(val, 1, false, len);
     if (result<>nil) then
@@ -2352,7 +2352,7 @@ FUNCTION resolveOperator(CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS:
     result:=newErrorLiteralRaising(LHS^.literalType, RHS^.literalType, op, tokenLocation,adapters);
   end;
 
-CONSTRUCTOR T_namedVariable.create(CONST initialId:idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
+CONSTRUCTOR T_namedVariable.create(CONST initialId:T_idString; CONST initialValue:P_literal; CONST isReadOnly:boolean);
   begin
     id:=initialId;
     value:=initialValue;
@@ -2415,7 +2415,7 @@ FUNCTION T_namedVariable.mutate(CONST mutation:T_cStyleOperator; CONST RHS:P_lit
     end;
   end;
 
-FUNCTION T_namedVariable.getId:idString;
+FUNCTION T_namedVariable.getId:T_idString;
   begin
     result:=id;
   end;

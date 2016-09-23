@@ -9,7 +9,7 @@ TYPE
   T_token=object
     next    :P_token;
     location:T_tokenLocation;
-    txt     :idString;
+    txt     :T_idString;
     tokType :T_tokenType;
     data    :pointer;
 

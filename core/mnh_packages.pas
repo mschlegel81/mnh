@@ -52,7 +52,7 @@ TYPE
       PROCEDURE finalize(VAR adapters:T_adapters);
       DESTRUCTOR destroy;
       PROCEDURE resolveRuleId(VAR token:T_token; CONST adaptersOrNil:P_adapters);
-      FUNCTION ensureRuleId(CONST ruleId:idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
+      FUNCTION ensureRuleId(CONST ruleId:T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false):P_rule;
       PROCEDURE updateLists(VAR userDefinedRules:T_listOfString);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
       {$ifdef fullVersion}
@@ -270,7 +270,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
          for j:=0 to length(rulesSet)-1 do if rulesSet[j].value^.hasPublicSubrule then begin
            if not(importedRules.containsKey(rulesSet[j].key,dummyRule))
            then importedRules.put(rulesSet[j].key,rulesSet[j].value);
-           importedRules.put(packageUses[i].id+C_ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
+           importedRules.put(packageUses[i].id+ID_QUALIFY_CHARACTER+rulesSet[j].key,rulesSet[j].value);
          end;
       end;
     end;
@@ -288,7 +288,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if first^.tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_intrinsicRule] then begin
             newId:=first^.txt;
             {$ifdef FULLVERSION}
-            if (newId=C_forceGuiPseudoPackage) then begin
+            if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
               if not(gui_started) then context.adapters^.raiseCustomMessage(mt_guiPseudoPackageFound,'',locationForErrorFeedback);
             end else
             {$endif}
@@ -342,7 +342,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           hasTrivialPattern:boolean=true;
           //rule meta data
           ruleModifiers:T_modifierSet=[];
-          ruleId:idString='';
+          ruleId:T_idString='';
           evaluateBody:boolean;
           rulePattern:T_pattern;
           rulePatternElement:T_patternElement;
@@ -630,10 +630,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     begin
       resolveRuleIds(nil);
       if not(ready) or not(context.adapters^.noErrors) then exit;
-      if not(packageRules.containsKey(C_mainRuleId,mainRule)) then begin
+      if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
       end else begin
-        t:=context.newToken(packageTokenLocation(@self),C_mainRuleId,tt_localUserRule,mainRule);
+        t:=context.newToken(packageTokenLocation(@self),MAIN_RULE_ID,tt_localUserRule,mainRule);
         parametersForMain:=newListLiteral;
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
@@ -939,7 +939,7 @@ PROCEDURE T_package.resolveRuleId(VAR token: T_token; CONST adaptersOrNil:P_adap
     if adaptersOrNil<>nil then adaptersOrNil^.raiseCustomMessage(mt_el4_parsingError,'Cannot resolve ID "'+token.txt+'"',token.location);
   end;
 
-FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false): P_rule;
+FUNCTION T_package.ensureRuleId(CONST ruleId: T_idString; CONST modifiers:T_modifierSet; CONST ruleDeclarationStart,ruleDeclarationEnd:T_tokenLocation; VAR adapters:T_adapters; CONST suppressDatastoreRestore:boolean=false): P_rule;
   VAR ruleType:T_ruleType=rt_normal;
       i:longint;
   PROCEDURE raiseModifierComplaint;
@@ -959,7 +959,7 @@ FUNCTION T_package.ensureRuleId(CONST ruleId: idString; CONST modifiers:T_modifi
       exit;
     end;
     if not(packageRules.containsKey(ruleId,result)) then begin
-      if (ruleId=C_mainRuleId) then begin
+      if (ruleId=MAIN_RULE_ID) then begin
         if modifiers<>[] then begin
           adapters.raiseError('main rules must not have any modifiers',ruleDeclarationStart);
           exit;
@@ -1028,7 +1028,7 @@ FUNCTION T_package.getDoc:P_userPackageDocumentation;
     ruleList:=packageRules.valueSet;
     for i:=0 to length(ruleList)-1 do begin
       result^.addRuleDoc(ruleList[i]^.getDocHtml);
-      if ruleList[i]^.id=C_mainRuleId then result^.isExecutable:=true;
+      if ruleList[i]^.id=MAIN_RULE_ID then result^.isExecutable:=true;
     end;
     setLength(ruleList,0);
     for i:=0 to length(packageUses)-1 do result^.addUses(expandFileName(packageUses[i].path));
@@ -1040,7 +1040,7 @@ PROCEDURE T_package.printHelpOnMain(VAR adapters:T_adapters);
       docText:T_arrayOfString;
       i:longint;
   begin
-    if not(packageRules.containsKey(C_mainRuleId,mainRule))
+    if not(packageRules.containsKey(MAIN_RULE_ID,mainRule))
     then adapters.printOut('The package contains no main rule')
     else begin
       docText:=split(mainRule^.getCmdLineHelpText,C_lineBreakChar);

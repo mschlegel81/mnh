@@ -463,7 +463,7 @@ PROCEDURE T_assistanceEvaluator.postEval;
       completionList.addAll(intrinsicRulesForCompletion.elementArray);
       package.updateLists(userRules);
       completionList.addAll(userRules.elementArray);
-      for i:=0 to userRules.size-1 do if pos(C_ID_QUALIFY_CHARACTER,userRules[i])<=0 then completionList.add(C_ID_QUALIFY_CHARACTER+userRules[i]);
+      for i:=0 to userRules.size-1 do if pos(ID_QUALIFY_CHARACTER,userRules[i])<=0 then completionList.add(ID_QUALIFY_CHARACTER+userRules[i]);
       completionList.unique;
     end;
 
@@ -534,15 +534,15 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
       ids:=mnh_funcs.intrinsicRuleMap.keySet;
       intrinsicRulesForCompletion.create;
       for i:=0 to length(ids)-1 do begin
-        if pos(C_ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
+        if pos(ID_QUALIFY_CHARACTER,ids[i])<=0 then begin
           intrinsicRulesForCompletion.add(ids[i]);
-          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+ids[i]);
+          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+ids[i]);
         end else begin
           intrinsicRulesForCompletion.add(ids[i]);
-          intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.add(split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
-          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[0]);
-          intrinsicRulesForCompletion.add(C_ID_QUALIFY_CHARACTER+split(ids[i],C_ID_QUALIFY_CHARACTER)[1]);
+          intrinsicRulesForCompletion.add(split(ids[i],ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.add(split(ids[i],ID_QUALIFY_CHARACTER)[1]);
+          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[0]);
+          intrinsicRulesForCompletion.add(ID_QUALIFY_CHARACTER+split(ids[i],ID_QUALIFY_CHARACTER)[1]);
         end;
       end;
       for tt:=low(T_tokenType) to high(T_tokenType) do if isIdentifier(C_tokenInfo[tt].defaultId,true) then

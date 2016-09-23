@@ -54,8 +54,8 @@ FUNCTION toBoolean_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
         lt_boolean: begin result:=arg0; result^.rereference; exit(result); end;
-        lt_string: if lowercase(str0^.value) = C_boolText[false] then exit(newBoolLiteral(false))
-              else if lowercase(str0^.value) = C_boolText[true]  then exit(newBoolLiteral(true));
+        lt_string: if lowercase(str0^.value) = LITERAL_BOOL_TEXT[false] then exit(newBoolLiteral(false))
+              else if lowercase(str0^.value) = LITERAL_BOOL_TEXT[true]  then exit(newBoolLiteral(true));
         lt_int: if int0^.value=0 then exit(newBoolLiteral(false))
            else if int0^.value=1 then exit(newBoolLiteral(true));
         lt_real: if real0^.value=0 then exit(newBoolLiteral(false))

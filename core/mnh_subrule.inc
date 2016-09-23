@@ -72,7 +72,7 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
               if parIdx>=REMAINING_PARAMETERS_IDX
               then token.tokType:=tt_parameterIdentifier
               else token.tokType:=tt_identifier;
-            end else if (construct=tt_each) and (token.txt=C_eachIndexIdentifier) then token.tokType:=tt_blockLocalVariable
+            end else if (construct=tt_each) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
             else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
           end;
           else parIdx:=-1;
@@ -712,7 +712,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
       result:=false;
       for k:=0 to bracketStack.topIndex do
       if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach,tt_forcedParallelEach]) and
-         (bracketStack.dat[k]^.txt=id) or (id=C_eachIndexIdentifier) then exit(true);
+         (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
     end;
 
   begin

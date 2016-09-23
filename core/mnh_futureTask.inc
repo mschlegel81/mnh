@@ -13,7 +13,7 @@
     scope:P_evaluationContext;
 
     {$ifdef fullVersion}
-    variableName:idString;
+    variableName:T_idString;
     variableValue:P_literal;
     {$endif}
 
@@ -101,7 +101,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     if (scope<>@context) then context.adopt(scope);
     context.valueStore.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
-    context.valueStore.createVariable(C_eachIndexIdentifier,idxLit,true);
+    context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
     idxLit^.unreference;
     if context.adapters^.noErrors then begin
       {$ifdef FULLVERSION}
