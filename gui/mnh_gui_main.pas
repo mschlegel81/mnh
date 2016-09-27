@@ -1189,6 +1189,7 @@ PROCEDURE TMnhForm.ensureWordsInEditorForCompletion;
   begin
     with editorMeta[PageControl.activePageIndex] do caret:=editor.CaretXY;
     if (wordsInEditor.size>0) and (lastWordsCaret=caret.y) then exit;
+    lastWordsCaret:=caret.y;
     wordsInEditor.clear;
     with editorMeta[PageControl.activePageIndex] do begin
       for i:=0 to caret.y-1 do

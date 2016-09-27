@@ -32,7 +32,6 @@ private ensurePackages->fileExists('resources/ensurePackages.mnh') ? void : begi
 end;
 
 private mutable currentCodeHash:=void;
-private memoized updateCurrentCodeHashOnce->updateCurrentCodeHash;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
   tprint('Checkstyle');
@@ -60,7 +59,9 @@ currentCodeHash:=begin
   result;
 end;
 
+private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
 binName(8)->'./mnh_imig' & (isLinux ? '' : '.exe');
+
 binName(FI:int)->format('%smnh%s%s%s',
                                 (FI and 1)>0 OR isLinux ? './' : 'bin32/',
                                 (FI and 2)>0 ? '' : '_light',
@@ -72,7 +73,7 @@ buildableVersions:=isLinux ? [0,2,4,6,8] : [0..8];
 private exeHasWrongVersion(FI:int)->begin
   local exeName:=binName(FI);
   fileExists(exeName)
-  ? exeName.codeVersion != (currentCodeHash orElse updateCurrentCodeHash)
+  ? exeName.codeVersion != ensureCodeHash
   : true;
 end;
 
@@ -129,7 +130,7 @@ end;
 
 //*Make distro 7z - including build if needed
 main('distro')->isLinux ? fail('Distro building is currently not supported under Linux') : begin
-  updateCurrentCodeHashOnce;
+  ensureCodeHash;
   [0..3].each(i,
   begin
     local buildOk:=build(i);
@@ -159,12 +160,14 @@ main('distro')->isLinux ? fail('Distro building is currently not supported under
       : void;
     end
   : void;
-  fileExists('distro_hook.mnh') ? executor.execPipeless(['distro_hook.mnh']) : void;
+  fileExists('distro_hook.mnh')
+  ? executor.execPipeless(['distro_hook.mnh'])
+  : void;
 end;
 
 //*Build - ignoring potentially existing executables
 main('build')->begin
-  updateCurrentCodeHashOnce;
+  ensureCodeHash;
   buildableVersions.each(i,build(i),AND);
 end;
 
@@ -191,10 +194,11 @@ main('clean')->begin
   .unique
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;
+  currentCodeHash:=void;
 end;
 
 private testMnh(...)->begin
-  updateCurrentCodeHashOnce;
+  ensureCodeHash;
   buildableVersions
   .each(i,
   i in buildableVersions.minus([4..7])
@@ -264,7 +268,6 @@ end;
 
 //*Several steps in succession
 main(...)->begin
-  updateCurrentCodeHashOnce;
   ... .each(p,
   buildableVersions
   .each(i,isSameFileName(i,p) ? build(i) : false,OR)
