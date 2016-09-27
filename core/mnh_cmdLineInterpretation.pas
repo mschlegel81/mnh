@@ -114,7 +114,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:T_package;
     begin
       package.create(nil);
-      package.setSourcePath(ExpandFileName(fileOrCommandToInterpret));
+      package.setSourcePath(expandFileName(fileOrCommandToInterpret));
       SetCurrentDir(ExtractFileDir(fileOrCommandToInterpret));
 
       if wantHelpDisplay then begin
