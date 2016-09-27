@@ -96,7 +96,7 @@ FUNCTION T_guiOutAdapter.flushToGui(VAR syn: TSynEdit): boolean;
         mt_echo_input,
         mt_echo_declaration,
         mt_echo_output: writeWrapped(messageType,simpleMessage);
-        else begin syn.lines.append(defaultFormatting(storedMessages[i]));
+        else begin syn.lines.append(UTF8_ZERO_WIDTH_SPACE+defaultFormatting(storedMessages[i]));
         end;
       end;
       while syn.lines.count>outputLinesLimit do syn.lines.delete(0);
