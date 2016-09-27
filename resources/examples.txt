@@ -51,8 +51,6 @@ softCast(3);
 
 softCast([1, "2", "true", "'TEXT'", "1.5", "2,6"]);
 
-splitFileName("../test.txt");
-
 toString('a');
 
 toString(234);
@@ -473,16 +471,6 @@ getOptions;
 
 executor;
 
-//#inspect
-inspect('sudoku').{
-  print('Package ID is: ',$L['id']) |
-  print('Path         : ',$L['path']) |
-  print('Uses         : ',$L['uses']) |
-  $L['declares']
-  .each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location'])
-  .join("\n")
-  .print};
-
 //Print with line breaks but without pretty printing
 print("1\n2.0\n03.45");
 
@@ -582,3 +570,15 @@ fileStats(executor);
 //#exec
 executor.exec(['-h']).head(5).join("\n").print;
 
+splitFileName("../test.txt");
+
+//#inspect
+inspect('sudoku').{
+  print('Package ID is: ',$L['id']) |
+  print('Path         : ',$L['path']) |
+  print('Uses         : ',$L['uses']) |
+  $L['declares']
+  .each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location'])
+  .join("\n")
+  .print};
+  
