@@ -122,6 +122,11 @@ PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
       result:='<img alt="mnh plot" src="data:image/png;base64,'+EncodeStringBase64(pngString)+'"/>';
     end;
 
+  FUNCTION imageLink(CONST fileName:string):string;
+    begin
+      result:='<a href="'+replaceAll(extractRelativePath(outputFileName,fileName),'\','/')+'">'+fileName+'</a>'
+    end;
+
   VAR handle:text;
       i,j:longint;
   begin
@@ -156,8 +161,8 @@ PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
           mt_echo_input,mt_echo_output,mt_echo_declaration:
             writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
           {$ifdef fullVersion}
-          mt_plotCreatedWithInstantDisplay,mt_plotFileCreated:
-            writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',imageDataTag(multiMessage[0]),'</td></tr>');
+          mt_plotCreatedWithInstantDisplay: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',imageDataTag(multiMessage[0]),'</td></tr>');
+          mt_plotFileCreated: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',imageDataTag(multiMessage[0]),'<br>',imageLink(simpleMessage),'</td></tr>');
           {$endif}
           else writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;
