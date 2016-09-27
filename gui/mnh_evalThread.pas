@@ -105,7 +105,6 @@ FUNCTION main(p:pointer):ptrint;
           preEval;
           sleepTime:=0;
           package.setSourcePath(getFileOrCommandToInterpretFromCommandLine);
-          setupOutputBehaviour(mainEvaluationContext.adapters^);
           package.load(lu_forCallingMain,mainEvaluationContext,parametersForMainCall);
           postEval;
         end;
@@ -309,7 +308,7 @@ PROCEDURE T_evaluator.explainIdentifier(CONST fullLine: ansistring; CONST CaretY
     loc.line:=1;
     loc.column:=1;
     loc.package:=@package;
-    adapter^.ClearAll;
+    adapter^.clearAll;
     tokens.tokenizeAll(fullLine,loc,@package,adapter^,false);
     tokens.step(@package,lastComment,adapter^);
 
@@ -439,7 +438,7 @@ PROCEDURE T_evaluator.preEval;
     request:=er_none;
     state:=es_running;
     startOfEvaluation:=now;
-    adapter^.ClearAll;
+    adapter^.clearAll;
     leaveCriticalSection(cs);
   end;
 
@@ -556,9 +555,8 @@ PROCEDURE initUnit(CONST guiAdapters:P_adapters);
   begin
     runEvaluator.create(guiAdapters,@main);
     silentAdapters.create;
-    new(collector,create(at_unknown,false));
+    new(collector,create(at_unknown,C_collectAllOutputBehavior));
     silentAdapters.addOutAdapter(collector,true);
-    silentAdapters.minErrorLevel:=1;
     codeAssistant.create(@silentAdapters,@docMain);
     initIntrinsicRuleList;
     unitIsInitialized:=true;

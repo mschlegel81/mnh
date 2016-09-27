@@ -535,9 +535,9 @@ PROCEDURE TMnhForm.FormCreate(Sender: TObject);
     debugHighlighter:=TSynMnhSyn.create(nil,msf_input);
     currentExpressionMemo.highlighter:=debugHighlighter;
 
-    OutputEdit.ClearAll;
+    OutputEdit.clearAll;
     for i:=0 to length(LOGO)-1 do OutputEdit.lines.append(LOGO[i]);
-    assistanceSynEdit.ClearAll;
+    assistanceSynEdit.clearAll;
     for i:=0 to length(LOGO)-1 do assistanceSynEdit.lines.append(LOGO[i]);
     {$ifdef debugMode}
     if wantConsoleAdapter then guiAdapters.addConsoleOutAdapter;
@@ -774,8 +774,8 @@ PROCEDURE TMnhForm.miDeclarationEchoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miDeclarationEcho.Checked:=not(miDeclarationEcho.Checked);
-      guiAdapters.doEchoDeclaration:=miDeclarationEcho.Checked;
-      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
+      guiOutAdapter.doEchoDeclaration:=miDeclarationEcho.Checked;
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
     end;
   end;
 
@@ -792,8 +792,8 @@ PROCEDURE TMnhForm.miExpressionEchoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miExpressionEcho.Checked:=not(miExpressionEcho.Checked);
-      guiAdapters.doEchoInput:=miExpressionEcho.Checked;
-      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
+      guiOutAdapter.doEchoInput:=miExpressionEcho.Checked;
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
     end;
   end;
 
@@ -801,8 +801,8 @@ PROCEDURE TMnhForm.miExpressionResultClick(Sender: TObject);
   begin
     if settingsReady then begin
       miExpressionResult.Checked:=not(miExpressionResult.Checked);
-      guiAdapters.doShowExpressionOut:=miExpressionResult.Checked;
-      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
+      guiOutAdapter.doShowExpressionOut:=miExpressionResult.Checked;
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
     end;
   end;
 
@@ -865,8 +865,8 @@ PROCEDURE TMnhForm._setErrorlevel_(CONST i: byte);
         4: miMinErrorlevel4.Checked:=true;
         5: miMinErrorlevel5.Checked:=true;
       end;
-      guiAdapters.minErrorLevel:=i;
-      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
+      guiOutAdapter.minErrorLevel:=i;
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
     end;
   end;
 
@@ -1063,8 +1063,8 @@ PROCEDURE TMnhForm.miTimingInfoClick(Sender: TObject);
   begin
     if settingsReady then begin
       miTimingInfo.Checked:=not(miTimingInfo.Checked);
-      guiAdapters.doShowTimingInfo:=miTimingInfo.Checked;
-      settings.value^.outputBehaviour:=guiAdapters.outputBehaviour;
+      guiOutAdapter.doShowTimingInfo:=miTimingInfo.Checked;
+      settings.value^.outputBehaviour:=guiOutAdapter.outputBehaviour;
     end;
   end;
 
@@ -1523,7 +1523,7 @@ PROCEDURE TMnhForm.processSettings;
         miMinErrorlevel3.Checked:=minErrorLevel=3;
         miMinErrorlevel4.Checked:=minErrorLevel=4;
         miMinErrorlevel5.Checked:=minErrorLevel>=5;
-        guiAdapters.outputBehaviour:=settings.value^.outputBehaviour;
+        guiOutAdapter.outputBehaviour:=settings.value^.outputBehaviour;
       end;
 
       plotForm.miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;

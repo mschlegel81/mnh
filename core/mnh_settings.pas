@@ -128,6 +128,7 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     antialiasedFonts:=stream.readBoolean;
     mainForm.loadFromStream(stream);
     with outputBehaviour do begin
+      doShowPrint := true;
       doEchoInput := stream.readBoolean;
       doEchoDeclaration := stream.readBoolean;
       doShowExpressionOut := stream.readBoolean;
@@ -209,6 +210,7 @@ PROCEDURE T_settings.initDefaults;
       isFullscreen := false;
     end;
     with outputBehaviour do begin
+      doShowPrint := true;
       doEchoInput := true;
       doEchoDeclaration := true;
       doShowExpressionOut := true;

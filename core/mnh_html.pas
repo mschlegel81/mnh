@@ -12,39 +12,42 @@ CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
   HTML_FILE_END='</body></html>';
 TYPE
   P_htmlOutAdapter=^T_htmlOutAdapter;
-  T_htmlOutAdapter=object(T_collectingOutAdapter)
-    lastFileFlushTime:double;
-    outputFileName:ansistring;
-    lastWasEndOfEvaluation:boolean;
-    CONSTRUCTOR create(CONST fileName:ansistring);
+  T_htmlOutAdapter=object(T_abstractFileOutAdapter)
+    PROCEDURE flush(CONST finalFlush:boolean); virtual;
+  public
+    CONSTRUCTOR create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
     DESTRUCTOR destroy; virtual;
-    PROCEDURE append(CONST message: T_storedMessage); virtual;
-    PROCEDURE flush;
   end;
 
   T_rawTokenizeCallback=FUNCTION(CONST inputString:ansistring):T_rawTokenArray;
 
 VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
-FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
-FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileName:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
+FUNCTION addOutfile(VAR adapters:T_adapters; CONST fileNameAndOptions:ansistring; CONST appendMode:boolean=true):P_abstractOutAdapter;
   VAR htmlOutAdapter:P_htmlOutAdapter;
       fileOutAdapter:P_textFileOutAdapter;
+      fileName:string;
+      options:string='';
   begin
-    if not(appendMode) then try DeleteFile(fileName); except end;
+    if pos('(',fileNameAndOptions)>0 then begin
+      options :=copy(fileNameAndOptions,  pos('(',fileNameAndOptions),length(fileNameAndOptions));
+      fileName:=copy(fileNameAndOptions,1,pos('(',fileNameAndOptions)-1);
+    end else fileName:=fileNameAndOptions;
+
     if uppercase(extractFileExt(fileName))='.HTML'
     then begin
-      new(htmlOutAdapter,create(fileName));
+      new(htmlOutAdapter,create(fileName,options,not(appendMode)));
       adapters.addOutAdapter(htmlOutAdapter,true);
       result:=htmlOutAdapter;
     end else begin
-      new(fileOutAdapter,create(fileName));
+      new(fileOutAdapter,create(fileName,options,not(appendMode)));
       adapters.addOutAdapter(fileOutAdapter,true);
       result:=fileOutAdapter;
     end;
@@ -105,40 +108,21 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
     result:=result+copy(line,i0,i1-i0+1);
   end;
 
-CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring);
+CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
   begin
-    inherited create(at_htmlFile,true);
-    outputFileName:=expandFileName(fileName);
-    lastFileFlushTime:=now;
-    lastWasEndOfEvaluation:=true;
-    with outputBehaviour do begin
-      doEchoDeclaration  :=true;
-      doEchoInput        :=true;
-      doShowExpressionOut:=true;
-      doShowTimingInfo   :=true;
-      minErrorLevel      :=2;
-    end;
+    inherited create(at_htmlFile,fileName,behaviour,forceNewFile);
   end;
 
 DESTRUCTOR T_htmlOutAdapter.destroy;
-  begin flush; inherited destroy; end;
+  begin inherited destroy; end;
 
-PROCEDURE T_htmlOutAdapter.append(CONST message: T_storedMessage);
-  begin
-    if (message.messageType<>mt_clearConsole) then inherited append(message);
-    {$ifndef DEBUGMODE}
-    //Debugmode: flush immediately
-    if (message.messageType in [mt_endOfEvaluation, mt_clearConsole]) or (now-lastFileFlushTime>1/(24*60*60)) or (length(storedMessages)>=1000) then
-    {$endif}
-    flush;
-  end;
-
-PROCEDURE T_htmlOutAdapter.flush;
+PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
   VAR handle:text;
       i,j:longint;
   begin
     if length(storedMessages)=0 then exit;
     try
+      enterCriticalSection(cs);
       assign(handle,outputFileName);
       if fileExists(outputFileName) then begin
         system.append(handle);
@@ -158,9 +142,7 @@ PROCEDURE T_htmlOutAdapter.flush;
             for j:=1 to length(multiMessage)-2 do writeln(handle,escapeHtml(multiMessage[j]));
             writeln(handle,escapeHtml(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
           end;
-
-          mt_endOfEvaluation: if not(lastWasEndOfEvaluation) then writeln(handle,'</table><div><hr></div><table>');
-
+          mt_endOfEvaluation: writeln(handle,'</table><div><hr></div><table>');
           mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
           {$ifdef fullVersion}
           mt_plotFileCreated: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',
@@ -169,12 +151,11 @@ PROCEDURE T_htmlOutAdapter.flush;
           {$endif}
           else writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;
-        lastWasEndOfEvaluation:=storedMessages[i].messageType=mt_endOfEvaluation;
       end;
+      clearMessages;
       close(handle);
     finally
-      clearMessages;
-      lastFileFlushTime:=now;
+      leaveCriticalSection(cs);
     end;
   end;
 end.

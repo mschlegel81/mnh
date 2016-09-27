@@ -6,7 +6,6 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
-PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
 
 VAR consoleAdapters:T_adapters;
     reEvaluationWithGUIrequired:boolean=false;
@@ -21,20 +20,10 @@ VAR fileOrCommandToInterpret:ansistring='';
     mnhParameters:T_arrayOfString;
     wantHelpDisplay:boolean=false;
     directExecutionMode:boolean=false;
-
     echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
     time:(t_forcedOn,t_default,t_forcedOff)=t_default;
     minEL:longint=3;
 //---------------:by command line parameters
-PROCEDURE setupOutputBehaviour(VAR adapters:T_adapters);
-  begin
-    adapters.doEchoInput        :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    adapters.doEchoDeclaration  :=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    adapters.doShowExpressionOut:=(echo=e_forcedOn) or (echo=e_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    adapters.doShowTimingInfo   :=(time=t_forcedOn) or (time=t_default) and ((fileOrCommandToInterpret='') or directExecutionMode);
-    adapters.minErrorLevel:=minEL;
-  end;
-
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
   begin
     result:=fileOrCommandToInterpret;
@@ -142,6 +131,8 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 
   VAR i:longint;
       quitImmediate:boolean=false;
+      nextAppendMode:boolean;
+
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
@@ -159,16 +150,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           append(filesToOpenInEditor,paramStr(i));
         end
         {$endif}
-        else if (paramStr(i)='-out') and (i<paramCount) then begin
+        else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
+          nextAppendMode:=paramStr(i)='+out';
           addParameter(mnhParameters,i);
           inc(i);
-          addOutfile(consoleAdapters, paramStr(i),false);
-          addParameter(mnhParameters,i);
-        end
-        else if (paramStr(i)='+out') and (i<paramCount) then begin
-          addParameter(mnhParameters,i);
-          inc(i);
-          addOutfile(consoleAdapters, paramStr(i));
+          addOutfile(consoleAdapters, paramStr(i),nextAppendMode);
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
@@ -184,10 +170,10 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-el') then begin
           minEL:=strToIntDef(copy(paramStr(i),4,length(paramStr(i))-3),-1);
           addParameter(mnhParameters,i);
-          if (minEL<0) or (minEL>5) then begin
+          if (minEL<=0) or (minEL>5) then begin
             writeln('Invalid minimum error level given!');
             writeln('Parameter: ',paramStr(i),'; extracted level: ',copy(paramStr(i),4,length(paramStr(i))-3));
-            writeln('Allowed values: 0, 1, 2, 3, 4, 5');
+            writeln('Allowed values: 1, 2, 3, 4, 5');
             exit(false);
           end;
         end else if directExecutionMode then begin
@@ -204,9 +190,28 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       inc(i);
     end;
     setMnhParameters(mnhParameters);
+    if (fileOrCommandToInterpret='') or directExecutionMode
+    then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
+    else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
+    defaultOutputBehavior.minErrorLevel:=minEL;
+    case echo of
+      e_forcedOn: begin
+        defaultOutputBehavior.doEchoDeclaration  :=true;
+        defaultOutputBehavior.doEchoInput        :=true;
+        defaultOutputBehavior.doShowExpressionOut:=true;
+      end;
+      e_forcedOff: begin
+        defaultOutputBehavior.doEchoDeclaration  :=false;
+        defaultOutputBehavior.doEchoInput        :=false;
+        defaultOutputBehavior.doShowExpressionOut:=false;
+      end;
+    end;
+    case time of
+      t_forcedOn:  defaultOutputBehavior.doShowTimingInfo:=true;
+      t_forcedOff: defaultOutputBehavior.doShowTimingInfo:=false;
+    end;
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
-    setupOutputBehaviour(consoleAdapters);
 
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect

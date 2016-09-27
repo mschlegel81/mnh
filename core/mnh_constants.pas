@@ -483,6 +483,23 @@ TYPE
   T_messageTypeSet=set of T_messageType;
 
 CONST
+  C_nonTextMessageTypes:T_messageTypeSet=[
+    mt_el5_haltMessageQuiet,
+    mt_endOfEvaluation,
+    mt_reloadRequired
+    {$ifdef fullVersion},
+    mt_plotFileCreated,
+    mt_plotCreatedWithDeferredDisplay,
+    mt_plotCreatedWithInstantDisplay,
+    mt_plotSettingsChanged,
+    mt_evaluatedStatementInInteractiveMode,
+    mt_displayTable,
+    mt_guiPseudoPackageFound
+    {$endif}
+    {$ifdef IMIG},
+    mt_displayImage
+    {$endif}
+    ];
   C_messageTypeMeta:array[T_messageType] of record
     level:shortint;
     prefix:string;

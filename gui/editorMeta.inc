@@ -181,7 +181,7 @@ PROCEDURE T_editorMeta.doneDebugging;
 PROCEDURE T_editorMeta.closeEditor;
   begin
     sheet.tabVisible:=false;
-    editor.ClearAll;
+    editor.clearAll;
     filePath:='';
     changed:=false;
   end;
@@ -190,7 +190,7 @@ PROCEDURE T_editorMeta.setFile(CONST fileName: string);
   begin
     sheet.tabVisible:=true;
     filePath:=fileName;
-    editor.ClearAll;
+    editor.clearAll;
     try
       editor.lines.loadFromFile(filePath);
       fileAge(filePath,fileAccessAge);
@@ -209,7 +209,7 @@ PROCEDURE T_editorMeta.initForNewFile;
     changed      :=false;
     fileAccessAge:=0;
     filePath     :='';
-    editor.ClearAll;
+    editor.clearAll;
     updateSheetCaption;
   end;
 
@@ -338,7 +338,7 @@ PROCEDURE T_editorMeta.repaintWithStateCounter(CONST stateCounter:longint; CONST
     if (stateCounter<>paintedWithState) then begin
       paintedWithState:=stateCounter;
       editor.Repaint;
-      MnhForm.assistanceSynEdit.ClearAll;
+      MnhForm.assistanceSynEdit.clearAll;
       MnhForm.assistanceSynEdit.lines.clear;
       for i:=0 to length(errorHints)-1 do MnhForm.assistanceSynEdit.lines.add(errorHints[i]);
     end;
