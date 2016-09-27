@@ -422,6 +422,92 @@ FUNCTION fileStats_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     end;
   end;
 
+FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  PROCEDURE appendPair(VAR result:P_literal; CONST el0,el1:string);
+    begin
+      P_listLiteral(result)^.append(
+        newListLiteral^.
+        appendString(el0)^.
+        appendString(el1),false);
+    end;
+  VAR name:string;
+      i:longint;
+      tmpParam:P_listLiteral;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
+      result:=newListLiteral;
+      name:=str0^.value;
+      appendPair(result,'input',name);
+      appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
+      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),expandFileName(name)),'\','/'));
+      if ExtractFileDir(name)=''
+      then appendPair(result,'directory','.')
+      else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
+      appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
+      appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
+      appendPair(result,'drive',ExtractFileDrive(expandFileName(name)));
+    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
+      result:=newListLiteral;
+      for i:=0 to list0^.size-1 do begin
+        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
+        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,context),false);
+        disposeLiteral(tmpParam);
+      end;
+    end;
+  end;
+
+FUNCTION changeFileExtension_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
+    then result:=newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
+  end;
+
+FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) then case arg0^.literalType of
+      lt_string: case arg1^.literalType of
+        lt_string: exit(newStringLiteral(
+            replaceAll(
+            extractRelativePath(str0^.value+'/',
+                                str1^.value),
+            '\','/')));
+        lt_stringList,lt_emptyList: begin
+          result:=newListLiteral;
+          for i:=0 to list1^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(str0^.value+'/',
+                                P_stringLiteral(list1^.value(i))^.value),
+            '\','/'));
+        end;
+      end;
+      lt_stringList,lt_emptyList: case arg1^.literalType of
+        lt_string: begin
+          result:=newListLiteral;
+          for i:=0 to list1^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
+                                str1^.value),
+            '\','/'));
+        end;
+        lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
+          result:=newListLiteral;
+          for i:=0 to list1^.size-1 do
+            P_listLiteral(result)^.appendString(
+            replaceAll(
+            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
+                                P_stringLiteral(list1^.value(i))^.value),
+            '\','/'));
+        end;
+      end;
+    end;
+  end;
+
 INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'files',@files_impl,'files(searchPattern:string);#Returns a list of files matching the given search pattern');
   registerRule(FILES_BUILTIN_NAMESPACE,'allFiles',@allFiles_impl,'allFiles(root);#Returns a list of all files below root (string or stringList)#'+
@@ -450,5 +536,8 @@ INITIALIZATION
   registerRule(FILES_BUILTIN_NAMESPACE,'moveFile',@moveFile_imp,'moveFile(source:string,dest:string);#Moves a file from source to dest, returning true on success and false otherwise');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileInfo',@fileInfo_imp,'fileInfo(filename:string);#Retuns file info as a key-value-list');
   registerRule(FILES_BUILTIN_NAMESPACE,'fileStats',@fileStats_imp,'fileStats(filename:string);#Retuns a triplet [lineCount,wordCount,byteCount,hash].');
+  registerRule(FILES_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
+  registerRule(FILES_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);#Returns the path of file with the new extension');
+  registerRule(FILES_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
 
 end.

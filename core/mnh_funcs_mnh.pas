@@ -132,92 +132,6 @@ FUNCTION executor_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
     then result:=newStringLiteral(paramStr(0));
   end;
 
-FUNCTION splitFileName_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  PROCEDURE appendPair(VAR result:P_literal; CONST el0,el1:string);
-    begin
-      P_listLiteral(result)^.append(
-        newListLiteral^.
-        appendString(el0)^.
-        appendString(el1),false);
-    end;
-  VAR name:string;
-      i:longint;
-      tmpParam:P_listLiteral;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=newListLiteral;
-      name:=str0^.value;
-      appendPair(result,'input',name);
-      appendPair(result,'expanded',replaceAll(expandFileName(name),'\','/'));
-      appendPair(result,'relative',replaceAll(extractRelativePath(expandFileName(''),expandFileName(name)),'\','/'));
-      if ExtractFileDir(name)=''
-      then appendPair(result,'directory','.')
-      else appendPair(result,'directory',replaceAll(ExtractFileDir(name),'\','/'));
-      appendPair(result,'filename',replaceAll(extractFileName(name),'\','/'));
-      appendPair(result,'extension',replaceAll(extractFileExt(name),'\','/'));
-      appendPair(result,'drive',ExtractFileDrive(expandFileName(name)));
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=newListLiteral;
-      for i:=0 to list0^.size-1 do begin
-        tmpParam:=newOneElementListLiteral(list0^.value(i),true);
-        P_listLiteral(result)^.append(splitFileName_imp(tmpParam,tokenLocation,context),false);
-        disposeLiteral(tmpParam);
-      end;
-    end;
-  end;
-
-FUNCTION changeFileExtension_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
-    then result:=newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
-  end;
-
-FUNCTION relativeFilename_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR i:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=2) then case arg0^.literalType of
-      lt_string: case arg1^.literalType of
-        lt_string: exit(newStringLiteral(
-            replaceAll(
-            extractRelativePath(str0^.value+'/',
-                                str1^.value),
-            '\','/')));
-        lt_stringList,lt_emptyList: begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            P_listLiteral(result)^.appendString(
-            replaceAll(
-            extractRelativePath(str0^.value+'/',
-                                P_stringLiteral(list1^.value(i))^.value),
-            '\','/'));
-        end;
-      end;
-      lt_stringList,lt_emptyList: case arg1^.literalType of
-        lt_string: begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            P_listLiteral(result)^.appendString(
-            replaceAll(
-            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
-                                str1^.value),
-            '\','/'));
-        end;
-        lt_stringList,lt_emptyList: if  list0^.size= list1^.size then begin
-          result:=newListLiteral;
-          for i:=0 to list1^.size-1 do
-            P_listLiteral(result)^.appendString(
-            replaceAll(
-            extractRelativePath(P_stringLiteral(list0^.value(i))^.value+'/',
-                                P_stringLiteral(list1^.value(i))^.value),
-            '\','/'));
-        end;
-      end;
-    end;
-  end;
-
 FUNCTION hash_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     result:=nil;
@@ -315,9 +229,6 @@ INITIALIZATION
   registerRule(TYPECAST_NAMESPACE,'toReal',@toReal_imp,'toReal(X);#Casts X to real or throws an error if not possible');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'myPath',@myPath_impl,'myPath;#returns the path to the current package');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'executor',@executor_impl,'executor;#returns the path to the currently executing instance of MNH');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'splitFileName',@splitFileName_imp,'splitFilename(name:string);#Returns various representations and parts of the given name');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'changeFileExt',@changeFileExtension_imp,'changeFileExt(filename,newExtension);#Returns the path of file with the new extension');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'relativeFilename',@relativeFilename_impl,'relativeFilename(reference,file);#Returns the path of file relative to reference');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'hash',@hash_imp,'hash(x);#Returns the builtin hash for the given literal');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin',@listBuiltin_imp,'listBuiltin;#Returns a list of all built-in functions (qualified and non-qualified)');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,'listKeywords;#Returns a list of all keywords by category');
