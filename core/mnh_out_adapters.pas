@@ -28,12 +28,16 @@ CONST
   C_includableMessages:array[T_adapterType] of T_messageTypeSet=(
     {at_unknown}  [low(T_messageType)..high(T_messageType)],
     {at_console}  [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info],
-    {at_textFile} [mt_clearConsole..mt_el5_haltMessageReceived,mt_timing_info,mt_endOfEvaluation],
-    {at_htmlFile} [low(T_messageType)..high(T_messageType)],
+    {at_textFile} [mt_printline..mt_el5_haltMessageReceived,mt_timing_info,mt_endOfEvaluation],
+    {at_htmlFile} [mt_echo_input..mt_endOfEvaluation,mt_timing_info{$ifdef fullVersion},mt_plotFileCreated,mt_plotCreatedWithInstantDisplay{$endif}],
     {at_gui}      [low(T_messageType)..high(T_messageType)],
     {at_sandbo...}[low(T_messageType)..high(T_messageType)],
     {at_printT...}[mt_printline]);
-
+  {$ifdef fullVersion}
+  HTML_IMAGE_WIDTH        =1000;
+  HTML_IMAGE_HEIGHT       = 750;
+  HTML_IMAGE_SUPERSAMPLING=   2;
+  {$endif}
 TYPE
   P_abstractOutAdapter = ^T_abstractOutAdapter;
   T_abstractOutAdapter = object
@@ -81,7 +85,6 @@ TYPE
   P_collectingOutAdapter = ^T_collectingOutAdapter;
   T_collectingOutAdapter = object(T_abstractOutAdapter)
     storedMessages:T_storedMessages;
-    includeNonTextOutput:boolean;
     cs:TRTLCriticalSection;
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
     DESTRUCTOR destroy; virtual;
@@ -116,7 +119,7 @@ TYPE
   T_adapters=object
     private
       profiler:record
-        unaccounted,
+        startOfProfiling,
         importing,
         tokenizing,
         declarations,
@@ -131,6 +134,10 @@ TYPE
       someEchoDeclaration  :boolean;
       someShowExpressionOut:boolean;
       someShowTimingInfo   :boolean;
+      {$ifdef fullVersion}
+      hasHtmlAdapter           :boolean;
+      plotChangedAfterDeferring:boolean;
+      {$endif}
     public
       hasMessageOfType:array[T_messageType] of boolean;
       {$ifdef fullVersion}
@@ -179,7 +186,7 @@ TYPE
       PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
       PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
 
-      PROCEDURE profileUnaccounted;
+      PROCEDURE startProfiling;
       PROCEDURE profileImporting;
       PROCEDURE profileTokenizing;
       PROCEDURE profileDeclarations;
@@ -403,6 +410,7 @@ PROCEDURE T_abstractOutAdapter.setOutputBehaviour(CONST value: T_outputBehaviour
 CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType; CONST behaviour:T_outputBehaviour);
   begin
     adapterType:=typ;
+    messageTypesToInclude:=C_includableMessages[typ];
     setOutputBehaviour(behaviour);
   end;
 //=========================================================:T_abstractOutAdapter
@@ -530,7 +538,7 @@ PROCEDURE T_textFileOutAdapter.flush(CONST finalFlush:boolean);
         forceRewrite:=false;
         for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
           mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
-          else if C_messageTypeMeta[messageType].textOut then myWrite(defaultFormatting(storedMessages[i]));
+          else myWrite(defaultFormatting(storedMessages[i]));
         end;
         clearMessages;
         if finalFlush and (longestLineUpToNow>0) then writeln(handle,StringOfChar('=',longestLineUpToNow));
@@ -602,6 +610,23 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST thisErrorLevel: T_messageType; CON
   end;
 
 PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
+  {$ifdef fullVersion}
+  PROCEDURE raiseModifiedMessage;
+    VAR modifiedMessage:T_storedMessage;
+        i:longint;
+    begin
+      modifiedMessage.messageType  :=message.messageType;
+      modifiedMessage.location     :=message.location;
+      modifiedMessage.simpleMessage:=message.simpleMessage;
+      setLength(modifiedMessage.multiMessage,1);
+      modifiedMessage.multiMessage[0]:=plot.renderToString(HTML_IMAGE_WIDTH,HTML_IMAGE_HEIGHT,HTML_IMAGE_SUPERSAMPLING);
+      for i:=0 to length(adapter)-1 do
+        if adapter[i]^.adapterType=at_htmlFile
+        then adapter[i]^.append(modifiedMessage)
+        else adapter[i]^.append(message);
+    end;
+  {$endif}
+
   VAR i:longint;
   begin
     hasMessageOfType[message.messageType]:=true;
@@ -616,6 +641,16 @@ PROCEDURE T_adapters.raiseCustomMessage(CONST message: T_storedMessage);
       inc(errorCount);
       if errorCount>30 then exit;
     end;
+    {$ifdef fullVersion}
+    if message.messageType in C_plotMessages then plotChangedAfterDeferring:=true;
+    if hasHtmlAdapter and ((message.messageType in [mt_plotCreatedWithInstantDisplay,mt_plotFileCreated])
+                        or (message.messageType=mt_endOfEvaluation) and plotChangedAfterDeferring)
+    then begin
+      raiseModifiedMessage;
+      plotChangedAfterDeferring:=false;
+      exit;
+    end;
+    {$endif}
     for i:=0 to length(adapter)-1 do adapter[i]^.append(message);
   end;
 
@@ -657,24 +692,30 @@ PROCEDURE T_adapters.clearAll;
     {$ifdef imig}
     if picture.value<>nil then dispose(picture.value,destroy);
     picture.value:=nil;
-    {$endif}   
-    writeln('Print cleared.');
+    {$endif}
     someEchoInput        :=false;
     someEchoDeclaration  :=false;
     someShowExpressionOut:=false;
     someShowTimingInfo   :=false;
+    {$ifdef fullVersion}
+    hasHtmlAdapter           :=false;
+    plotChangedAfterDeferring:=false;
+    {$endif}
     for i:=0 to length(adapter)-1 do begin
       someEchoInput        :=someEchoInput         or adapter[i]^.doEchoInput        ;
       someEchoDeclaration  :=someEchoDeclaration   or adapter[i]^.doEchoDeclaration  ;
       someShowExpressionOut:=someShowExpressionOut or adapter[i]^.doShowExpressionOut;
       someShowTimingInfo   :=someShowTimingInfo    or adapter[i]^.doShowTimingInfo   ;
+      {$ifdef fullVersion}
+      hasHtmlAdapter       :=hasHtmlAdapter        or (adapter[i]^.adapterType=at_htmlFile);
+      {$endif}
     end;
     with profiler do begin
-      unaccounted   :=0;
-      importing     :=0;
-      tokenizing    :=0;
-      declarations  :=0;
-      interpretation:=0;
+      startOfProfiling:=-1;
+      importing       :=0;
+      tokenizing      :=0;
+      declarations    :=0;
+      interpretation  :=0;
     end;
   end;
 
@@ -746,6 +787,9 @@ PROCEDURE T_adapters.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyI
     setLength(adapter,length(adapter)+1);
     adapter[length(adapter)-1]:=p;
     p^.autodestruct:=destroyIt;
+    {$ifdef fullVersion}
+    hasHtmlAdapter:=hasHtmlAdapter or (p^.adapterType=at_htmlFile);
+    {$endif}
     someEchoInput        :=someEchoInput         or p^.doEchoInput        ;
     someEchoDeclaration  :=someEchoDeclaration   or p^.doEchoDeclaration  ;
     someShowExpressionOut:=someShowExpressionOut or p^.doShowExpressionOut;
@@ -775,6 +819,10 @@ PROCEDURE T_adapters.removeOutAdapter(CONST index:longint);
     if adapter[index]^.autodestruct then dispose(adapter[index],destroy);
     for j:=index to length(adapter)-2 do adapter[j]:=adapter[j+1];
     setLength(adapter,length(adapter)-1);
+    {$ifdef fullVersion}
+    hasHtmlAdapter:=false;
+    for j:=0 to length(adapter)-1 do hasHtmlAdapter:=hasHtmlAdapter or (adapter[j]^.adapterType=at_htmlFile);
+    {$endif}
   end;
 
 PROCEDURE T_adapters.setPrintTextFileAdapter(CONST filenameOrBlank:string);
@@ -850,11 +898,11 @@ PROCEDURE T_adapters.setExitCode;
   end;
 
 
-PROCEDURE T_adapters.profileUnaccounted;    begin with profiler do if someShowTimingInfo then unaccounted   :=wallClock.value.elapsed-unaccounted   ; end;
-PROCEDURE T_adapters.profileImporting;      begin with profiler do if someShowTimingInfo then importing     :=wallClock.value.elapsed-importing     ; end;
-PROCEDURE T_adapters.profileTokenizing;     begin with profiler do if someShowTimingInfo then tokenizing    :=wallClock.value.elapsed-tokenizing    ; end;
-PROCEDURE T_adapters.profileDeclarations;   begin with profiler do if someShowTimingInfo then declarations  :=wallClock.value.elapsed-declarations  ; end;
-PROCEDURE T_adapters.profileInterpretation; begin with profiler do if someShowTimingInfo then interpretation:=wallClock.value.elapsed-interpretation; end;
+PROCEDURE T_adapters.startProfiling;        begin with profiler do if someShowTimingInfo and (startOfProfiling<0) then startOfProfiling:=wallClock.value.elapsed; end;
+PROCEDURE T_adapters.profileImporting;      begin with profiler do importing     :=wallClock.value.elapsed-importing     ; end;
+PROCEDURE T_adapters.profileTokenizing;     begin with profiler do tokenizing    :=wallClock.value.elapsed-tokenizing    ; end;
+PROCEDURE T_adapters.profileDeclarations;   begin with profiler do declarations  :=wallClock.value.elapsed-declarations  ; end;
+PROCEDURE T_adapters.profileInterpretation; begin with profiler do interpretation:=wallClock.value.elapsed-interpretation; end;
 
 PROCEDURE T_adapters.appendTimingInfoIfApplicable;
   VAR importing_     ,
@@ -864,6 +912,7 @@ PROCEDURE T_adapters.appendTimingInfoIfApplicable;
       unaccounted_   ,
       total_         ,
       timeUnit:string;
+      unaccounted,
       totalTime:double;
       longest:longint=0;
       formatString:ansistring;
@@ -872,7 +921,8 @@ PROCEDURE T_adapters.appendTimingInfoIfApplicable;
   FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
   begin
     with profiler do begin
-      totalTime:=importing+tokenizing+declarations+interpretation+unaccounted;
+      totalTime:=wallClock.value.elapsed-startOfProfiling;
+      unaccounted:=totalTime-importing-tokenizing-declarations-interpretation;
       if totalTime<1 then begin
         importing     :=importing     *1000;
         tokenizing    :=tokenizing    *1000;

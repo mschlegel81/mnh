@@ -78,8 +78,22 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
       consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
-      consoleAdapters.printOut('  -out <filename>   write output to the given file; if the extension is .html, ');
-      consoleAdapters.printOut('                    an html document will be generated, otherwise simple text.');
+      consoleAdapters.printOut('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
+      consoleAdapters.printOut('     an html document will be generated, otherwise simple text.');
+      consoleAdapters.printOut('     options can consist of multiple characters interpreted as:');
+      consoleAdapters.printOut('        p    : show print out');
+      consoleAdapters.printOut('        P    : suppress print out');
+      consoleAdapters.printOut('        i    : show input echo');
+      consoleAdapters.printOut('        I    : suppress input echo');
+      consoleAdapters.printOut('        d    : show declaration echo');
+      consoleAdapters.printOut('        D    : suppress declaration echo');
+      consoleAdapters.printOut('        o    : show output echo');
+      consoleAdapters.printOut('        O    : suppress output echo');
+      consoleAdapters.printOut('        t    : show timing info');
+      consoleAdapters.printOut('        T    : suppress timing info');
+      consoleAdapters.printOut('        1..5 : override minimum error level');
+      consoleAdapters.printOut('        v    : be verbose; same as pidot1');
+      consoleAdapters.printOut('     if no options are given, the global output settings will be used');
       consoleAdapters.printOut('  +out <filename>   As -out but appending to the file if existing.');
       consoleAdapters.printOut('  -quiet            disable console output');
     end;
@@ -132,10 +146,15 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR i:longint;
       quitImmediate:boolean=false;
       nextAppendMode:boolean;
+      deferredAdapterCreations:array of record
+        nameAndOption:string;
+        appending:boolean;
+      end;
 
   begin
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
+    setLength(deferredAdapterCreations,0);
     i:=1;
     while i<=paramCount do begin
       if (fileOrCommandToInterpret='') or directExecutionMode then begin
@@ -154,7 +173,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           nextAppendMode:=paramStr(i)='+out';
           addParameter(mnhParameters,i);
           inc(i);
-          addOutfile(consoleAdapters, paramStr(i),nextAppendMode);
+          setLength(deferredAdapterCreations,length(deferredAdapterCreations)+1);
+          with deferredAdapterCreations[length(deferredAdapterCreations)-1] do begin
+            appending:=nextAppendMode;
+            nameAndOption:=paramStr(i);
+          end;
           addParameter(mnhParameters,i);
         end
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
@@ -212,6 +235,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
+    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(consoleAdapters,nameAndOption,appending);
 
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect

@@ -435,7 +435,11 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
       stepper.doStart(false);
       updateDebugParts;
-    end else currentlyDebugging:=false;
+    end else begin
+      currentlyDebugging:=false;
+      wallClock.value.clear;
+      wallClock.value.start;
+    end;
     breakPointHandlingPending:=true;
     UpdateTimeTimer.interval:=20;
   end;
