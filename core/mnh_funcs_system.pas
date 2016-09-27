@@ -203,7 +203,7 @@ FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_to
   begin
     if (params=nil) or (params^.size=0) then begin
       if collector.isObtained
-      then collector.value^.clearMessages
+      then collector.value^.clear
       else context.adapters^.addOutAdapter(collector.value,true);
       result:=newVoidLiteral;
     end else result:=nil;

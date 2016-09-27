@@ -65,6 +65,7 @@ TYPE
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
     DESTRUCTOR destroy; virtual; abstract;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual; abstract;
+    PROCEDURE clear; virtual;
 
     PROPERTY doShowPrint        : boolean        read getShowPrint         write setShowPrint        ;
     PROPERTY doEchoInput        : boolean        read getEchoInput         write setEchoInput        ;
@@ -89,7 +90,7 @@ TYPE
     CONSTRUCTOR create(CONST typ:T_adapterType; CONST behaviour:T_outputBehaviour);
     DESTRUCTOR destroy; virtual;
     FUNCTION append(CONST message:T_storedMessage):boolean; virtual;
-    PROCEDURE clearMessages;
+    PROCEDURE clear; virtual;
   end;
 
   T_abstractFileOutAdapter = object(T_collectingOutAdapter)
@@ -410,6 +411,8 @@ CONSTRUCTOR T_abstractOutAdapter.create(CONST typ: T_adapterType; CONST behaviou
     messageTypesToInclude:=C_includableMessages[typ];
     setOutputBehaviour(behaviour);
   end;
+
+PROCEDURE T_abstractOutAdapter.clear; begin end;
 //=========================================================:T_abstractOutAdapter
 //T_consoleOutAdapter:==========================================================
 CONSTRUCTOR T_consoleOutAdapter.create(CONST behaviour:T_outputBehaviour);
@@ -457,7 +460,7 @@ CONSTRUCTOR T_collectingOutAdapter.create(CONST typ:T_adapterType; CONST behavio
 
 DESTRUCTOR T_collectingOutAdapter.destroy;
   begin
-    clearMessages;
+    clear;
     system.doneCriticalSection(cs);
   end;
 
@@ -472,7 +475,7 @@ FUNCTION T_collectingOutAdapter.append(CONST message: T_storedMessage):boolean;
     end;
   end;
 
-PROCEDURE T_collectingOutAdapter.clearMessages;
+PROCEDURE T_collectingOutAdapter.clear;
   begin
     system.enterCriticalSection(cs);
     setLength(storedMessages,0);
@@ -537,7 +540,7 @@ PROCEDURE T_textFileOutAdapter.flush(CONST finalFlush:boolean);
           mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
           else myWrite(defaultFormatting(storedMessages[i]));
         end;
-        clearMessages;
+        clear;
         if finalFlush and (longestLineUpToNow>0) then writeln(handle,StringOfChar('=',longestLineUpToNow));
         close(handle);
       finally
@@ -688,6 +691,7 @@ PROCEDURE T_adapters.clearAll;
     plotChangedAfterDeferring:=false;
     {$endif}
     for i:=0 to length(adapter)-1 do begin
+      adapter[i]^.clear;
       someEchoInput        :=someEchoInput         or adapter[i]^.doEchoInput        ;
       someEchoDeclaration  :=someEchoDeclaration   or adapter[i]^.doEchoDeclaration  ;
       someShowExpressionOut:=someShowExpressionOut or adapter[i]^.doShowExpressionOut;

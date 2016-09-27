@@ -167,7 +167,7 @@ PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
           else writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;
       end;
-      clearMessages;
+      clear;
       close(handle);
     finally
       leaveCriticalSection(cs);
