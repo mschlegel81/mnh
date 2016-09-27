@@ -3324,7 +3324,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.isNumList','mnh.executor','mnh.isString','mnh.parameterNames','mnh.isExpression','mnh.isRealList','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.splitFileName','mnh.arity','mnh.relativeFilename','mnh.listBuiltin','mnh.bits','mnh.isInt','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.isNumeric','mnh.group','mnh.isStringList','mnh.isKeyValueList','mnh.isReal','mnh.isList','mnh.myPath','mnh.not','mnh.isBoolList','mnh.isScalar','mnh.isBoolean','mnh.isIntList','mnh.ord','mnh.changeFileExt']
+out> ['mnh.isNumList','mnh.executor','mnh.isString','mnh.parameterNames','mnh.isExpression','mnh.isRealList','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.isInt','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.isNumeric','mnh.group','mnh.isStringList','mnh.isKeyValueList','mnh.isReal','mnh.isList','mnh.myPath','mnh.not','mnh.isBoolList','mnh.isScalar','mnh.isBoolean','mnh.isIntList','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
