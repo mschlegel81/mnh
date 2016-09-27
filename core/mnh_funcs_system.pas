@@ -196,7 +196,7 @@ FUNCTION isGuiActive_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
   end;
 
 FUNCTION newCollectingOutAdapter:P_collectingOutAdapter;
-  begin new(result,create(at_unknown,true)); end;
+  begin new(result,create(at_unknown,C_collectAllOutputBehavior)); end;
 
 VAR collector: specialize G_lazyVar<P_collectingOutAdapter> ;
 FUNCTION collectOutput_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;

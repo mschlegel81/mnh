@@ -97,7 +97,6 @@ VAR killServersCallback:PROCEDURE;
 IMPLEMENTATION
 CONST STACK_DEPTH_LIMIT={$ifdef WINDOWS}60000{$else}3000{$endif};
 VAR pendingTasks     :T_taskQueue;
-    timer: specialize G_lazyVar<TEpikTimer>;
 
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
   begin
@@ -123,14 +122,9 @@ FUNCTION runAlone(CONST input:T_arrayOfString):T_storedMessages;
       adapter:T_adapters;
       i:longint;
   begin
-    collector.create(at_unknown,true);
+    collector.create(at_unknown,C_collectAllOutputBehavior);
     adapter.create;
     adapter.addOutAdapter(@collector,false);
-    adapter.minErrorLevel:=0;
-    adapter.doEchoDeclaration:=true;
-    adapter.doEchoInput:=true;
-    adapter.doShowExpressionOut:=true;
-    adapter.doShowTimingInfo:=false;
     runAlone(input,@adapter);
     setLength(result,length(collector.storedMessages));
     for i:=0 to length(result)-1 do result[i]:=collector.storedMessages[i];
@@ -241,23 +235,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   VAR statementCounter:longint=0;
       evaluateAll:boolean=false;
       lastComment:ansistring;
-      profiler:record
-        active:boolean;
-        unaccounted,
-        importing,
-        tokenizing,
-        declarations,
-        interpretation:double;
-      end = (active:false;unaccounted:0;importing:0;tokenizing:0;declarations:0;interpretation:0);
 
   PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
     VAR i,j:longint;
         rulesSet:T_ruleMap.KEY_VALUE_LIST;
         dummyRule:P_rule;
     begin
-      with profiler do if active then importing:=timer.value.elapsed;
+      context.adapters^.profileImporting;
       for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
-      with profiler do if active then importing:=timer.value.elapsed-importing;
+      context.adapters^.profileImporting;
       i:=0;
       while i<length(packageUses) do begin
         if packageUses[i].pack=nil then begin
@@ -587,7 +573,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
-        with profiler do if active then declarations:=timer.value.elapsed-declarations;
+        context.adapters^.profileDeclarations;
         if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
           context.cascadeDisposeToken(first);
           exit;
@@ -595,15 +581,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
-        with profiler do if active then declarations:=timer.value.elapsed-declarations;
+        context.adapters^.profileDeclarations;
       end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
-        with profiler do if active then declarations:=timer.value.elapsed-declarations;
+        context.adapters^.profileDeclarations;
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseDataStore;
-        with profiler do if active then declarations:=timer.value.elapsed-declarations;
+        context.adapters^.profileDeclarations;
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
-          with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
+          context.adapters^.profileInterpretation;
           if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
             exit;
@@ -612,7 +598,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           resolveRuleIds(nil);
           reduceExpression(first,0,context);
-          with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
+          context.adapters^.profileInterpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -638,9 +624,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
-        with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
+        context.adapters^.profileInterpretation;
         reduceExpression(t,0,context);
-        with profiler do if active then interpretation:=timer.value.elapsed-interpretation;
+        context.adapters^.profileInterpretation;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
@@ -666,59 +652,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
     end;
 
-  PROCEDURE prettyPrintTime;
-    VAR importing_     ,
-        tokenizing_    ,
-        declarations_  ,
-        interpretation_,
-        unaccounted_   ,
-        total_         ,
-        timeUnit:string;
-        totalTime:double;
-        longest:longint=0;
-        formatString:ansistring;
-
-    FUNCTION fmt(CONST d:double):string; begin result:=formatFloat(formatString,d); if length(result)>longest then longest:=length(result); end;
-    FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
-    begin
-      with profiler do begin
-        totalTime:=importing+tokenizing+declarations+interpretation+unaccounted;
-        if totalTime<1 then begin
-          importing     :=importing     *1000;
-          tokenizing    :=tokenizing    *1000;
-          declarations  :=declarations  *1000;
-          interpretation:=interpretation*1000;
-          unaccounted   :=unaccounted   *1000;
-          totalTime     :=totalTime     *1000;
-          timeUnit:='ms';
-          formatString:='0.000';
-        end else begin
-          timeUnit:='s';
-          formatString:='0.000000';
-        end;
-        importing_     :=fmt(importing     );
-        tokenizing_    :=fmt(tokenizing    );
-        declarations_  :=fmt(declarations  );
-        interpretation_:=fmt(interpretation);
-        unaccounted_   :=fmt(unaccounted   );
-        total_         :=fmt(totalTime     );
-        if importing     >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Importing time      '+fmt(importing_     ),packageTokenLocation(@self));
-        if tokenizing    >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Tokenizing time     '+fmt(tokenizing_    ),packageTokenLocation(@self));
-        if declarations  >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Declaration time    '+fmt(declarations_  ),packageTokenLocation(@self));
-        if interpretation>0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Interpretation time '+fmt(interpretation_),packageTokenLocation(@self));
-        if unaccounted   >0 then context.adapters^.raiseCustomMessage(mt_timing_info,'Unaccounted for     '+fmt(unaccounted_   ),packageTokenLocation(@self));
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,StringOfChar('-',20+length(fmt(total_))),packageTokenLocation(@self));
-                                 context.adapters^.raiseCustomMessage(mt_timing_info,'                    '+fmt(total_         ),packageTokenLocation(@self));
-      end;
-      {$ifdef FULLVERSION}
-      if currentlyDebugging then stepper.showTimeInfo(context.adapters^);
-      {$endif}
-    end;
-
   {$define stepToken:=
-    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
+    context.adapters^.profileTokenizing;
     fileTokens.step(@self,lastComment,context.adapters^);
-    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing}
+    context.adapters^.profileTokenizing}
 
   PROCEDURE processTokens(VAR fileTokens:T_tokenArray);
     VAR first:P_token=nil;
@@ -771,10 +708,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           stepToken;
         end;
       end;
-      with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
+      context.adapters^.profileTokenizing;
       fileTokens.destroy;
       localIdStack.destroy;
-      with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
+      context.adapters^.profileTokenizing;
 
       if (context.adapters^.noErrors)
       then begin if first<>nil then interpret(first,first^.location); end
@@ -784,22 +721,21 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   begin
     if isMain then context.adapters^.clearErrors;
     if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
-      profiler.active:=usecase<>lu_interactiveMode;
-      timer.value.clear;
-      timer.value.start;
-      profiler.unaccounted:=timer.value.elapsed;
-    end else profiler.active:=false;
+      wallClock.value.clear;
+      wallClock.value.start;
+      context.adapters^.profileUnaccounted;
+    end;
 
     if usecase<>lu_interactiveMode
     then clear(false)
     else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
-    with profiler do if active then tokenizing:=timer.value.elapsed;
+    context.adapters^.profileTokenizing;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     fileTokens.step(@self,lastComment,context.adapters^);
-    with profiler do if active then tokenizing:=timer.value.elapsed-tokenizing;
+    context.adapters^.profileTokenizing;
     processTokens(fileTokens);
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
@@ -827,10 +763,8 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       clearCachedFormats;
     end;
 
-    with profiler do if active then begin
-      unaccounted:=timer.value.elapsed-unaccounted-importing-tokenizing-declarations-interpretation;
-      prettyPrintTime;
-    end;
+    context.adapters^.profileUnaccounted;
+    context.adapters^.appendTimingInfoIfApplicable;
     if isMain then context.adapters^.logEndOfEvaluation;
   end;
 
@@ -1179,21 +1113,8 @@ PROCEDURE prepareDocumentation(CONST includePackageDoc:boolean);
   end;
 {$endif}
 
-FUNCTION initTimer:TEpikTimer;
-  begin
-    result:=TEpikTimer.create(nil);
-    result.clear;
-    result.start;
-  end;
-
-PROCEDURE disposeTimer(t:TEpikTimer);
-  begin
-    t.destroy;
-  end;
-
 {$undef include_implementation}
 INITIALIZATION
-  timer.create(@initTimer,@disposeTimer);
 {$define include_initialization}
 {$include mnh_fmtStmt.inc}
   pendingTasks.create;
@@ -1218,6 +1139,5 @@ INITIALIZATION
 FINALIZATION
 {$define include_finalization}
   pendingTasks.destroy;
-  timer.destroy;
 {$include mnh_fmtStmt.inc}
 end.
