@@ -27,7 +27,8 @@ validateCollectedOutput->begin
       : begin
           lastResultName.writeFileLines(printOut);
           stateMessage:='NOT OK';
-          print("Result is not okay!\nPlease compare "&lastResultName&"\n           and "&expectedResultName);
+          print("Result is not okay!\nPlease compare "&lastResultName
+                                  &"\n           and "&expectedResultName);
         end;
     end
   : begin
@@ -35,9 +36,11 @@ validateCollectedOutput->begin
       stateMessage:='o.k.';
       expectedResultName.writeFileLines(printOut);
     end;
-  printf('%s',exec(executor,['-version'],false)[0]| (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
+  printf('%s',executor.codeVersion | (codeHash&' '&stateMessage) |("Total time: "&(time-startOfEvaluation)));
   print('');
-  log|=[[flavour,executor.codeVersion,time-startOfEvaluation]];
+  stateMessage='o.k.'
+  ? log|=[[flavour,executor.codeVersion,time-startOfEvaluation]]
+  : void;
 end;
 
 testHistory->begin
