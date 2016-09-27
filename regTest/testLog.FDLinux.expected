@@ -3378,6 +3378,7 @@ Note  Creating new rule: t
  in> plot(t, sin(t));
 out> void
  in> plot.renderToFile('plotDemo1.png', 600, 300, 4);
+Image: /plotDemo1.png
 out> void
  in> abs({$x});
 out> {abs($x)}

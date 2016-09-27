@@ -907,7 +907,7 @@ PROCEDURE T_adapters.appendTimingInfoIfApplicable;
   FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
   begin
     with profiler do begin
-      totalTime:=wallClock.value.Elapsed-startOfProfiling;
+      totalTime:=wallClock.value.elapsed-startOfProfiling;
       unaccounted:=totalTime-importing-tokenizing-declarations-interpretation;
       if totalTime<1 then begin
         importing     :=importing     *1000;
