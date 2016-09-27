@@ -210,6 +210,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
+    for i:=0 to consoleAdapters.adapterCount-1 do consoleAdapters.getAdapter(i)^.outputBehaviour:=defaultOutputBehavior;
 
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect

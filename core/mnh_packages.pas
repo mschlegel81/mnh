@@ -762,10 +762,12 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       finalize(context.adapters^);
       clearCachedFormats;
     end;
-
     context.adapters^.profileUnaccounted;
-    context.adapters^.appendTimingInfoIfApplicable;
-    if isMain then context.adapters^.logEndOfEvaluation;
+    if isMain then begin
+      if (usecase in [lu_forDirectExecution,lu_forCallingMain]) then
+      context.adapters^.appendTimingInfoIfApplicable;
+      context.adapters^.logEndOfEvaluation;
+    end;
   end;
 
 PROCEDURE T_package.loadForDocumentation;

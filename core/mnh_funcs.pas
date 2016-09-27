@@ -105,6 +105,7 @@ FUNCTION bits_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
       k:longint;
   begin
     if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType=lt_int) then begin
+      initialize(bits);
       move(P_intLiteral(params^.value(0))^.value,bits,8);
       result:=newListLiteral;
       for k:=0 to 63 do P_listLiteral(result)^.appendBool(bits[k]);

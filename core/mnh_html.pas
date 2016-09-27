@@ -1,6 +1,6 @@
 UNIT mnh_html;
 INTERFACE
-USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens;
+USES sysutils,mnh_constants,myStringUtil,mnh_litVar,mnh_out_adapters,mnh_tokLoc,FileUtil,mnh_tokens,base64;
 CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
   '<meta charset="UTF8"> <style> body { padding-left: 1em; font-family: Georgia, "Times New Roman", Times, '+
   'serif; color: black; background-color: #EEEEEE} h1 { font-family: Helvetica, Geneva, Arial, SunSans-Regu'+
@@ -117,6 +117,11 @@ DESTRUCTOR T_htmlOutAdapter.destroy;
   begin inherited destroy; end;
 
 PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
+  FUNCTION imageDataTag(CONST pngString:string):string;
+    begin
+      result:='<img alt="mnh plot" src="data:image/png;base64,'+EncodeStringBase64(pngString)+'"/>';
+    end;
+
   VAR handle:text;
       i,j:longint;
   begin
@@ -124,30 +129,35 @@ PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
     try
       enterCriticalSection(cs);
       assign(handle,outputFileName);
-      if fileExists(outputFileName) then begin
-        system.append(handle);
-      end else begin
+      if fileExists(outputFileName) and not(forceRewrite)
+      then system.append(handle)
+      else begin
         rewrite(handle);
         writeln(handle,replaceOne(HTML_FILE_START,'%','10'),'<table>');
       end;
+      forceRewrite:=false;
       for i:=0 to length(storedMessages)-1 do begin
         with storedMessages[i] do case messageType of
-          mt_clearConsole: begin end;
-
           mt_printline:
-          if length(multiMessage)<1 then writeln(handle,'<tr></tr>') else
-          if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]),'</code></td></tr>')
-          else begin
-            writeln(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]));
-            for j:=1 to length(multiMessage)-2 do writeln(handle,escapeHtml(multiMessage[j]));
-            writeln(handle,escapeHtml(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
-          end;
-          mt_endOfEvaluation: writeln(handle,'</table><div><hr></div><table>');
-          mt_echo_input,mt_echo_output,mt_echo_declaration: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
+            if length(multiMessage)<1 then writeln(handle,'<tr></tr>') else
+            if length(multiMessage)=1 then write(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]),'</code></td></tr>')
+            else begin
+              writeln(handle,'<tr><td></td><td></td><td><code>',escapeHtml(multiMessage[0]));
+              for j:=1 to length(multiMessage)-2 do writeln(handle,escapeHtml(multiMessage[j]));
+              writeln(handle,escapeHtml(multiMessage[length(multiMessage)-1]),'</code></td></tr>');
+            end;
+          mt_endOfEvaluation:
+            begin
+              {$ifdef fullVersion}
+              if length(multiMessage)=1 then writeln(handle,'<tr><td></td><td></td><td>',imageDataTag(multiMessage[0]),'</td></tr>');
+              {$endif}
+              writeln(handle,'</table><div><hr></div><table>');
+            end;
+          mt_echo_input,mt_echo_output,mt_echo_declaration:
+            writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td><code>',toHtmlCode(simpleMessage),'</code></td></tr>');
           {$ifdef fullVersion}
-          mt_plotFileCreated: writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',
-                                   imageTag(extractRelativePath(outputFileName,simpleMessage)),'</td></tr>');
-          mt_plotCreatedWithDeferredDisplay,mt_plotCreatedWithInstantDisplay,mt_plotSettingsChanged: begin end;
+          mt_plotCreatedWithInstantDisplay,mt_plotFileCreated:
+            writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td></td><td>',imageDataTag(multiMessage[0]),'</td></tr>');
           {$endif}
           else writeln(handle,'<tr><td>',C_messageTypeMeta[messageType].prefix,'</td><td>',ansistring(location),'</td><td><code>',simpleMessage,'</code></td></tr>');
         end;

@@ -207,6 +207,7 @@ FUNCTION execSync_impl(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLo
       BytesRead: longint;
       sleepTime: longint = 1;
     begin
+      initialize(stdErrDummy);
       memStream := TMemoryStream.create;
       BytesRead := 0;
       tempProcess := TProcessUTF8.create(nil);
