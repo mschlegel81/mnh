@@ -235,15 +235,16 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   VAR statementCounter:longint=0;
       evaluateAll:boolean=false;
       lastComment:ansistring;
+      profile:boolean=false;
 
   PROCEDURE reloadAllPackages(CONST locationForErrorFeedback:T_tokenLocation);
     VAR i,j:longint;
         rulesSet:T_ruleMap.KEY_VALUE_LIST;
         dummyRule:P_rule;
     begin
-      context.adapters^.profileImporting;
+      if profile then context.adapters^.profileImporting;
       for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,context);
-      context.adapters^.profileImporting;
+      if profile then context.adapters^.profileImporting;
       i:=0;
       while i<length(packageUses) do begin
         if packageUses[i].pack=nil then begin
@@ -573,7 +574,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       end;
       assignmentToken:=first^.getDeclarationOrAssignmentToken;
       if (assignmentToken<>nil) then begin
-        context.adapters^.profileDeclarations;
+        if profile then context.adapters^.profileDeclarations;
         if not ((assignmentToken^.next<>nil) and assignmentToken^.next^.areBracketsPlausible(context.adapters^)) then begin
           context.cascadeDisposeToken(first);
           exit;
@@ -581,15 +582,15 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         predigest(assignmentToken,@self,context);
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseRule;
-        context.adapters^.profileDeclarations;
+        if profile then context.adapters^.profileDeclarations;
       end else if first^.getTokenOnBracketLevel([tt_modifier_datastore],0)<>nil then begin
-        context.adapters^.profileDeclarations;
+        if profile then context.adapters^.profileDeclarations;
         if context.adapters^.doEchoDeclaration then context.adapters^.raiseCustomMessage(mt_echo_declaration, tokensToString(first)+';',first^.location);
         parseDataStore;
-        context.adapters^.profileDeclarations;
+        if profile then context.adapters^.profileDeclarations;
       end else if context.adapters^.noErrors then begin
         if (usecase in [lu_forDirectExecution, lu_interactiveMode]) then begin
-          context.adapters^.profileInterpretation;
+          if profile then context.adapters^.profileInterpretation;
           if not ((first<>nil) and first^.areBracketsPlausible(context.adapters^)) then begin
             context.cascadeDisposeToken(first);
             exit;
@@ -598,7 +599,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
           resolveRuleIds(nil);
           reduceExpression(first,0,context);
-          context.adapters^.profileInterpretation;
+          if profile then context.adapters^.profileInterpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
         end else context.adapters^.raiseNote('Skipping expression '+tokensToString(first,20),first^.location);
       end;
@@ -624,9 +625,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         parametersForMain^.rereference;
         for i:=0 to length(mainParameters)-1 do parametersForMain^.appendString(mainParameters[i]);
         t^.next:=context.newToken(packageTokenLocation(@self),'',tt_parList,parametersForMain);
-        context.adapters^.profileInterpretation;
+        if profile then context.adapters^.profileInterpretation;
         reduceExpression(t,0,context);
-        context.adapters^.profileInterpretation;
+        if profile then context.adapters^.profileInterpretation;
         //error handling if main returns more than one token:------------------
         if (t=nil) or (t^.next<>nil) then begin
           {$ifdef fullVersion} if context.adapters^.hasNeedGUIerror
@@ -653,9 +654,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     end;
 
   {$define stepToken:=
-    context.adapters^.profileTokenizing;
+    if profile then context.adapters^.profileTokenizing;
     fileTokens.step(@self,lastComment,context.adapters^);
-    context.adapters^.profileTokenizing}
+    if profile then context.adapters^.profileTokenizing}
 
   PROCEDURE processTokens(VAR fileTokens:T_tokenArray);
     VAR first:P_token=nil;
@@ -708,10 +709,10 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           stepToken;
         end;
       end;
-      context.adapters^.profileTokenizing;
+      if profile then context.adapters^.profileTokenizing;
       fileTokens.destroy;
       localIdStack.destroy;
-      context.adapters^.profileTokenizing;
+      if profile then context.adapters^.profileTokenizing;
 
       if (context.adapters^.noErrors)
       then begin if first<>nil then interpret(first,first^.location); end
@@ -721,9 +722,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
   begin
     if isMain then context.adapters^.clearErrors;
     if context.adapters^.doShowTimingInfo and (usecase in [lu_forDirectExecution,lu_forCallingMain,lu_interactiveMode]) then begin
-      wallClock.value.clear;
-      wallClock.value.start;
-      context.adapters^.profileUnaccounted;
+      wallClock.value;
+      profile:=true;
+      context.adapters^.startProfiling;
     end;
 
     if usecase<>lu_interactiveMode
@@ -731,11 +732,11 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     else reloadAllPackages(packageTokenLocation(@self));
 
     if ((usecase=lu_forCallingMain) or not(isMain)) and codeProvider.fileHasChanged then codeProvider.load;
-    context.adapters^.profileTokenizing;
+    if profile then context.adapters^.profileTokenizing;
     fileTokens.create;
     fileTokens.tokenizeAll(codeProvider,@self,context.adapters^);
     fileTokens.step(@self,lastComment,context.adapters^);
-    context.adapters^.profileTokenizing;
+    if profile then context.adapters^.profileTokenizing;
     processTokens(fileTokens);
 
     ready:=not(usecase in [lu_forDocGeneration,lu_forCodeAssistance]);
@@ -762,7 +763,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
       finalize(context.adapters^);
       clearCachedFormats;
     end;
-    context.adapters^.profileUnaccounted;
+
     if isMain then begin
       if (usecase in [lu_forDirectExecution,lu_forCallingMain]) then
       context.adapters^.appendTimingInfoIfApplicable;

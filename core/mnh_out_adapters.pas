@@ -119,7 +119,7 @@ TYPE
   T_adapters=object
     private
       profiler:record
-        unaccounted,
+        startOfProfiling,
         importing,
         tokenizing,
         declarations,
@@ -183,7 +183,7 @@ TYPE
       PROPERTY doShowExpressionOut: boolean read someShowExpressionOut;
       PROPERTY doShowTimingInfo:    boolean read someShowTimingInfo   ;
 
-      PROCEDURE profileUnaccounted;
+      PROCEDURE startProfiling;
       PROCEDURE profileImporting;
       PROCEDURE profileTokenizing;
       PROCEDURE profileDeclarations;
@@ -697,11 +697,11 @@ PROCEDURE T_adapters.clearAll;
       {$endif}
     end;
     with profiler do begin
-      unaccounted   :=0;
-      importing     :=0;
-      tokenizing    :=0;
-      declarations  :=0;
-      interpretation:=0;
+      startOfProfiling:=-1;
+      importing       :=0;
+      tokenizing      :=0;
+      declarations    :=0;
+      interpretation  :=0;
     end;
   end;
 
@@ -884,11 +884,11 @@ PROCEDURE T_adapters.setExitCode;
   end;
 
 
-PROCEDURE T_adapters.profileUnaccounted;    begin with profiler do if someShowTimingInfo then unaccounted   :=wallClock.value.elapsed-unaccounted   ; end;
-PROCEDURE T_adapters.profileImporting;      begin with profiler do if someShowTimingInfo then importing     :=wallClock.value.elapsed-importing     ; end;
-PROCEDURE T_adapters.profileTokenizing;     begin with profiler do if someShowTimingInfo then tokenizing    :=wallClock.value.elapsed-tokenizing    ; end;
-PROCEDURE T_adapters.profileDeclarations;   begin with profiler do if someShowTimingInfo then declarations  :=wallClock.value.elapsed-declarations  ; end;
-PROCEDURE T_adapters.profileInterpretation; begin with profiler do if someShowTimingInfo then interpretation:=wallClock.value.elapsed-interpretation; end;
+PROCEDURE T_adapters.startProfiling;        begin with profiler do if someShowTimingInfo and (startOfProfiling<0) then startOfProfiling:=wallClock.value.elapsed; end;
+PROCEDURE T_adapters.profileImporting;      begin with profiler do importing     :=wallClock.value.elapsed-importing     ; end;
+PROCEDURE T_adapters.profileTokenizing;     begin with profiler do tokenizing    :=wallClock.value.elapsed-tokenizing    ; end;
+PROCEDURE T_adapters.profileDeclarations;   begin with profiler do declarations  :=wallClock.value.elapsed-declarations  ; end;
+PROCEDURE T_adapters.profileInterpretation; begin with profiler do interpretation:=wallClock.value.elapsed-interpretation; end;
 
 PROCEDURE T_adapters.appendTimingInfoIfApplicable;
   VAR importing_     ,
@@ -898,6 +898,7 @@ PROCEDURE T_adapters.appendTimingInfoIfApplicable;
       unaccounted_   ,
       total_         ,
       timeUnit:string;
+      unaccounted,
       totalTime:double;
       longest:longint=0;
       formatString:ansistring;
@@ -906,7 +907,8 @@ PROCEDURE T_adapters.appendTimingInfoIfApplicable;
   FUNCTION fmt(CONST s:string):string; begin result:=StringOfChar(' ',longest-length(s))+s+timeUnit; end;
   begin
     with profiler do begin
-      totalTime:=importing+tokenizing+declarations+interpretation+unaccounted;
+      totalTime:=wallClock.value.Elapsed-startOfProfiling;
+      unaccounted:=totalTime-importing-tokenizing-declarations-interpretation;
       if totalTime<1 then begin
         importing     :=importing     *1000;
         tokenizing    :=tokenizing    *1000;
