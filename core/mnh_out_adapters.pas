@@ -644,7 +644,6 @@ PROCEDURE T_adapters.clearAll;
   begin
     clearErrors;
     clearPrint;
-    writeln('Print cleared.');
     someEchoInput        :=false;
     someEchoDeclaration  :=false;
     someShowExpressionOut:=false;
