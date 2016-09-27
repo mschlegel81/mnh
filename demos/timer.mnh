@@ -1,39 +1,39 @@
-//This is the safest way to parallelize a list of tasks;
-private parallelize(...)->
-  size(...)=0 OR ... .each(task,task:expression,AND)
-  ? ... .PEach(task,task())
-  : fail('parallelize expects expressions as arguments');
+tolerantParseTime(input:string)->
+  try(parseTime('hh:nn:ss',input),
+  try(parseTime('hh:nn',input),
+  false));
 
-//This must be a global variable because it is shared by different threads (A1 and A2)
-private mutable beepOn:=true;
-beepUntilKeyIsPressed:={parallelize(
- {while(beepOn,begin [1..4].each(i,beep(1000,100)); sleep(1); end)},                //A1
- {begin ask('Press Enter to stop this annoying beeping...'); beepOn:=false; end})}; //A2
+readTimeOrInterval(questionPrefix:string)->begin
+  local result:=false;
+  while(not(result.isNumeric),
+    result:=ask(questionPrefix&' as HH:MM.SS or HH:MM').tolerantParseTime);
+  result;
+end;
 
-private lockScreen:={execPipeless('rundll32.exe',['user32.dll,LockWorkStation'])};
-
-//Just a conversion factor
-private MINUTES_PER_DAY:=24*60;
-//This must be a global variable because it is shared by different threads (B1 and B2)
-private mutable timerCancelled:=false;
+readInterval->readTimeOrInterval('Enter interval') - parseTime('hh:nn:ss','00:00:00') + systime;
+readTime    ->readTimeOrInterval('Enter time');
+mutable endTime:=void;
+mutable keypressed:=false;
 
 main->begin
-  local timerAction:=ask('Timer action...',['Beep','Lock screen'])='Beep'
-  ? beepUntilKeyIsPressed
-  : lockScreen;
-  local timeOut:=systime+softCast(ask('Time in minutes'))/MINUTES_PER_DAY;
-  parallelize(
-    {begin //B1
-       while(not(timerCancelled) AND systime<timeOut,
-       begin
-         print(formatTime('hh:mm:ss',timeOut-systime),' - press Enter to cancel');
-         sleep(1);
-         clearPrint;
-       end);
-       timerCancelled ? void : timerAction();
-     end},
-    {begin //B2
-       ask('');
-       timerCancelled:=true;
-     end});
+  endTime:=[['t',{readTime}],['i',{readInterval}],['a',{false}]][ask('Timer: [t]ime, [i]nterval or [a]bort?',['t','i','a'])]();
+  endTime.isNumeric
+  ? begin
+      async({begin
+        ask('Press enter to cancel');
+        keypressed:=true;
+      end});
+
+      while(systime<endTime AND not(keypressed),begin
+        clearPrint;
+        print('Timer set for: ',formatTime('hh:nn:ss',endTime        ));
+        print('    remaining: ',formatTime('hh:nn:ss',endTime-systime));
+        sleep(1);
+      end);
+      while(not(keypressed),begin
+        beep;
+        sleep(1);
+      end);
+    end
+  : void;
 end;
