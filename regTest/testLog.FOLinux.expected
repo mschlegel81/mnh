@@ -3114,23 +3114,23 @@ Root found at   4.18837195873177E-244
 Root found at   1.0
 Root found at   2.0
 ***** barnsleyFern *****
-Hash of regTest/../demos/barnsleyFern.png is 408EFA0F
+Hash of /regTest/../demos/barnsleyFern.png is 408EFA0F
 ***** fractalPlant *****
-Hash of regTest/../demos/fractalPlant.png is B99380A8
+Hash of /regTest/../demos/fractalPlant.png is B99380A8
 ***** kochCurve *****
-Hash of regTest/../demos/kochCurve.png is 41731335
+Hash of /regTest/../demos/kochCurve.png is 41731335
 ***** rotatingCube *****
-Hash of regTest/../demos/rotatingCube.png is C8D2CADA
+Hash of /regTest/../demos/rotatingCube.png is C8D2CADA
 ***** sierpinskiCurve *****
-Hash of regTest/../demos/sierpinskiCurve.png is 3AB24074
+Hash of /regTest/../demos/sierpinskiCurve.png is 3AB24074
 ***** travellingSalesmanProblem *****
 Path length after construction is 1534.011
 Path length after polishing is    1501.698
-Hash of regTest/../demos/travellingSalesmanProblem.png is C6052EF2
+Hash of /regTest/../demos/travellingSalesmanProblem.png is C6052EF2
 ***** turtleGfx *****
-Hash of regTest/../demos/turtleGfx.png is FB769509
+Hash of /regTest/../demos/turtleGfx.png is FB769509
 ***** heart *****
-Hash of regTest/../demos/heart.png is 88B30F70
+Hash of /regTest/../demos/heart.png is 88B30F70
 ***** examples from file *****
 Examples file has 584 lines
  in> arity({3});
@@ -3181,8 +3181,6 @@ out> 'B'
 out> 3
  in> softCast([1,'2','true',"'TEXT'",'1.5','2,6']);
 out> [1,2,true,'TEXT',1.5,'2,6']
- in> splitFileName('../test.txt');
-out> [['input','../test.txt'],['expanded','/media/dev/test.txt'],['relative','../test.txt'],['directory','..'],['filename','test.txt'],['extension','.txt'],['drive','']]
  in> toString('a');
 out> 'a'
  in> toString(234);
@@ -3378,7 +3376,7 @@ Note  Creating new rule: t
  in> plot(t, sin(t));
 out> void
  in> plot.renderToFile('plotDemo1.png', 600, 300, 4);
-Image: /plotDemo1.png
+Image: /regTest/plotDemo1.png
 out> void
  in> abs({$x});
 out> {abs($x)}
@@ -3587,25 +3585,6 @@ out> 3.0
 out> [['x0',-1.5],['x1',1.5],['y0',-1.5],['y1',1.5],['fontsize',10.0],['preserveAspect',true],['autoscaleX',true],['autoscaleY',true],['autoscaleFactor',1.0],['logscaleX',false],['logscaleY',false],['axisStyleX',7],['axisStyleY',7]]
  in> executor;
 out> '/mnh'
- in> inspect('sudoku').{print('Package ID is: ',$L['id'])|print('Path         : ',$L['path'])|print('Uses         : ',$L['uses'])|$L['declares'].each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location']).join("\n").print};
-Package ID is: sudoku
-Path         : /demos/sudoku.mnh
-Uses         : []
- rule:          COMPONENTS     @/demos/sudoku.mnh:4,1
-memoized  rule: connectedIdx   @/demos/sudoku.mnh:9,1
-memoized  rule: components     @/demos/sudoku.mnh:10,1
- rule:          difficulty     @/demos/sudoku.mnh:18,1
- rule:          restrictRandom @/demos/sudoku.mnh:66,1
- rule:          main           @/demos/sudoku.mnh:98,1
- rule:          initialBoard   @/demos/sudoku.mnh:20,1
- rule:          solve          @/demos/sudoku.mnh:35,1
- rule:          randomSolution @/demos/sudoku.mnh:74,1
- rule:          drop           @/demos/sudoku.mnh:1,1
- rule:          isSolved       @/demos/sudoku.mnh:13,1
- rule:          isValid        @/demos/sudoku.mnh:15,1
- rule:          printBoard     @/demos/sudoku.mnh:27,1
- rule:          randomRiddle   @/demos/sudoku.mnh:85,1
-out> []
  in> print("1\n2.0\n03.45");
 1
 2.0
