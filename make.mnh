@@ -34,7 +34,7 @@ end;
 private mutable currentCodeHash:=void;
 private synchronized updateCurrentCodeHash->
 currentCodeHash:=begin
-  isLinux ? tprint('Checkstyle skipped!') : executor.execPipeless(['../checkstyle.mnh','fix']);
+  executor.execPipeless(['../checkstyle.mnh','fix']);
   ensurePackages;
   //convert here to ensure these files are considered in code hash calculation
   templateToInc('resources/examples.txt','core/res_examples.inc');
@@ -184,7 +184,7 @@ main('clean')->begin
    allFiles('versions','*.exe')|
    allFiles('gui','*.exe')|
    allFiles('consoles','*.exe')|
-   files('make*.log.txt'))
+   files('build.log'))
   .unique
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
   delp;
