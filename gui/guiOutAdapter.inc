@@ -129,7 +129,7 @@ PROCEDURE T_guiOutAdapter.flushClear;
   begin
     system.enterCriticalSection(cs);
     clear;
-    clearConsole;
+    append(message(mt_clearConsole,'',C_nilTokenLocation));
     setLength(lineIndexPerEvaluatedStatement,0);
     system.leaveCriticalSection(cs);
   end;

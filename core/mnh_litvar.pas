@@ -2674,12 +2674,7 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
         lt_keyValueList,
         lt_flatList,
         lt_listWithError:begin
-          listSize:=stream.readLongint;
-          if listSize<0 then begin
-            if adapters<>nil then adapters^.raiseError('Read negative list size! Abort.',location);
-            stream.logWrongTypeError;
-            exit(newErrorLiteral);
-          end;
+          listSize:=stream.readNaturalNumber;
           result:=newListLiteral;
           setLength(P_listLiteral(result)^.dat,listSize);
           for i:=0 to listSize-1 do if stream.allOkay then P_listLiteral(result)^.append(literalFromStream(),false);
@@ -2737,7 +2732,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
         lt_keyValueList,
         lt_flatList,
         lt_listWithError:begin
-          stream.writeLongint(P_listLiteral(L)^.size);
+          stream.writeNaturalNumber(P_listLiteral(L)^.size);
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
         end;
       end;

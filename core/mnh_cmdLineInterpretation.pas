@@ -184,10 +184,10 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
-        else if startsWith(paramStr(i),'-codeHash') then begin write({$ifdef fullVersion}'F'{$else}'L'{$endif},
-                                                                     {$ifdef IMIG}'I'{$else}''{$endif},
-                                                                     {$ifdef debugMode}'D'{$else}'O'{$endif},
-                                                                     {$I %FPCTargetOS%}); {$include code_hash.inc} quitImmediate:=true; end
+        else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
+                                                                       {$ifdef IMIG}'I'{$else}''{$endif},
+                                                                       {$ifdef debugMode}'D'{$else}'O'{$endif},
+                                                                       {$I %FPCTargetOS%},':',CODE_HASH); quitImmediate:=true; end
         {$ifdef fullVersion}
         else if startsWith(paramStr(i),'-doc') then begin makeAndShowDoc(false); quitImmediate:=true; end
         {$endif}

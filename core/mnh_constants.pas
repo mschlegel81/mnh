@@ -6,6 +6,7 @@ USES sysutils;
 {$PACKENUM 1}
 {$endif}
 CONST
+  {$i code_hash.inc}
   LOGO:array[0..6] of string=(
   ' ___      ___ ___   ___ ___   ___',
   '|   \    /   |   \ |   |   | |   |  ______',
