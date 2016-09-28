@@ -288,7 +288,9 @@ VAR
   currentlyDebugging:boolean=false;
   gui_started:boolean=false;
 {$endif}
-
+FUNCTION message(CONST messageType  : T_messageType;
+                 CONST simpleMessage: ansistring;
+                 CONST location     : T_searchTokenLocation):T_storedMessage;
 FUNCTION defaultFormatting(CONST message:T_storedMessage):ansistring;
 FUNCTION defaultFormatting(CONST messageType:T_messageType; CONST message: ansistring; CONST location: T_searchTokenLocation):ansistring;
 OPERATOR :=(s:string):T_outputBehaviour;
@@ -671,7 +673,6 @@ PROCEDURE T_adapters.printOut(CONST s: T_arrayOfString);
     for i:=0 to length(adapter)-1 do adapter[i]^.append(m);
   end;
 
-CONST C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
 PROCEDURE T_adapters.clearPrint;
   begin
     raiseCustomMessage(mt_clearConsole,'',C_nilTokenLocation);

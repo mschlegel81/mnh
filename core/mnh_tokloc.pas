@@ -6,7 +6,9 @@ TYPE
     fileName: ansistring;
     line, column: longint;
   end;
-
+CONST
+  C_nilTokenLocation: T_searchTokenLocation = (fileName:'?'; line: 0; column: 0);
+TYPE
   T_tokenLocation = record
     package:P_abstractPackage;
     line, column: longint;
