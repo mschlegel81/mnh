@@ -412,13 +412,13 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       deferredUntil:=now+0.1*ONE_SECOND;
       start:=now;
     end;
+    if clearOutput then begin
+      guiOutAdapter.flushClear;
+      UpdateTimeTimerTimer(self);
+      doConditionalPlotReset;
+    end;
     if not(reEvaluating) then begin
       editorMeta[PageControl.activePageIndex].setWorkingDir;
-      if clearOutput then begin
-        guiOutAdapter.flushClear;
-        UpdateTimeTimerTimer(self);
-        doConditionalPlotReset;
-      end;
       logName:=settings.value^.getLogName;
       if logName<>'' then begin
         if tempAdapter=nil
