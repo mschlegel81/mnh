@@ -86,12 +86,13 @@ private deleteStubbornly(file:string)->begin
     tries-=1;
     sleep(0.1);
   end);
+  fileExists(file) ? fail('Failed deleting '+file) : void;
 end;
 
 private myMove(source,dest:string)->fileExists(source) ? begin
   deleteStubbornly(dest);
-  moveFile(source,dest) ? void : tprint('File move ',source,' -> ',dest,' failed!');
-end : tprint('File  ',source,' does not exist');
+  moveFile(source,dest) ? void : fail('File move '+source+' -> '+dest+' failed!');
+end : fail('File  '+source+' does not exist');
 
 private BUILD_LOG_NAME:='build.log';
 
