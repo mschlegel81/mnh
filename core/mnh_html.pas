@@ -13,7 +13,7 @@ CONST HTML_FILE_START:ansistring= '<!doctype html> <html> <head>'+
 TYPE
   P_htmlOutAdapter=^T_htmlOutAdapter;
   T_htmlOutAdapter=object(T_abstractFileOutAdapter)
-    PROCEDURE flush(CONST finalFlush:boolean); virtual;
+    PROCEDURE flush(); virtual;
   public
     CONSTRUCTOR create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
     DESTRUCTOR destroy; virtual;
@@ -116,7 +116,7 @@ CONSTRUCTOR T_htmlOutAdapter.create(CONST fileName:ansistring; CONST behaviour:T
 DESTRUCTOR T_htmlOutAdapter.destroy;
   begin inherited destroy; end;
 
-PROCEDURE T_htmlOutAdapter.flush(CONST finalFlush:boolean);
+PROCEDURE T_htmlOutAdapter.flush;
   FUNCTION imageDataTag(CONST pngString:string):string;
     begin
       result:='<img alt="mnh plot" src="data:image/png;base64,'+EncodeStringBase64(pngString)+'"/>';

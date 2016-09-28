@@ -98,7 +98,7 @@ TYPE
       outputFileName:ansistring;
       forceRewrite:boolean;
       FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
-      PROCEDURE flush(CONST finalFlush:boolean); virtual; abstract;
+      PROCEDURE flush; virtual; abstract;
     public
       CONSTRUCTOR create(CONST typ:T_adapterType; CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
@@ -108,9 +108,8 @@ TYPE
   P_textFileOutAdapter = ^T_textFileOutAdapter;
   T_textFileOutAdapter = object(T_abstractFileOutAdapter)
     protected
-      longestLineUpToNow:longint;
       FUNCTION switchFile(CONST newFileName:string):boolean; virtual;
-      PROCEDURE flush(CONST finalFlush:boolean); virtual;
+      PROCEDURE flush; virtual;
     public
       CONSTRUCTOR create(CONST fileName:ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
       DESTRUCTOR destroy; virtual;
@@ -497,14 +496,14 @@ CONSTRUCTOR T_abstractFileOutAdapter.create(CONST typ:T_adapterType; CONST fileN
 
 DESTRUCTOR T_abstractFileOutAdapter.destroy;
   begin
-    flush(true);
+    flush();
     inherited destroy;
   end;
 
 FUNCTION T_abstractFileOutAdapter.append(CONST message: T_storedMessage):boolean;
   begin
     result:=inherited append(message);
-    if result {$ifndef DEBUGMODE} and (length(storedMessages)>=100) {$endif} then flush(false);
+    if result {$ifndef DEBUGMODE} and (length(storedMessages)>=100) {$endif} then flush();
   end;
 
 FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
@@ -512,7 +511,7 @@ FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
   begin
     newFullFileName:=expandFileName(newFileName);
     if newFileName=outputFileName then exit(false);
-    flush(true);
+    flush();
     outputFileName:=newFullFileName;
     result:=true;
   end;
@@ -521,17 +520,12 @@ FUNCTION T_abstractFileOutAdapter.switchFile(CONST newFileName:string):boolean;
 FUNCTION T_textFileOutAdapter.switchFile(CONST newFileName: string):boolean;
   begin
     result:=inherited switchFile(newFileName);
-    if result then longestLineUpToNow:=0;
   end;
 
-PROCEDURE T_textFileOutAdapter.flush(CONST finalFlush:boolean);
+PROCEDURE T_textFileOutAdapter.flush;
   VAR i,j:longint;
       handle:text;
-  PROCEDURE myWrite(CONST s:ansistring);
-    begin
-      if length(s)>=longestLineUpToNow then longestLineUpToNow:=length(s);
-      writeln(handle,s);
-    end;
+
   begin
     if length(storedMessages)>0 then begin
       enterCriticalSection(cs);
@@ -542,11 +536,10 @@ PROCEDURE T_textFileOutAdapter.flush(CONST finalFlush:boolean);
         else rewrite(handle);
         forceRewrite:=false;
         for i:=0 to length(storedMessages)-1 do with storedMessages[i] do case messageType of
-          mt_printline: for j:=0 to length(multiMessage)-1 do myWrite(multiMessage[j]);
-          else myWrite(defaultFormatting(storedMessages[i]));
+          mt_printline: for j:=0 to length(multiMessage)-1 do writeln(handle,multiMessage[j]);
+          else writeln(handle,defaultFormatting(storedMessages[i]));
         end;
         clear;
-        if finalFlush and (longestLineUpToNow>0) then writeln(handle,StringOfChar('=',longestLineUpToNow));
         close(handle);
       finally
         leaveCriticalSection(cs);
@@ -557,12 +550,10 @@ PROCEDURE T_textFileOutAdapter.flush(CONST finalFlush:boolean);
 CONSTRUCTOR T_textFileOutAdapter.create(CONST fileName: ansistring; CONST behaviour:T_outputBehaviour; CONST forceNewFile:boolean);
   begin
     inherited create(at_textFile,fileName,behaviour,forceNewFile);
-    longestLineUpToNow:=0;
   end;
 
 DESTRUCTOR T_textFileOutAdapter.destroy;
   begin
-    flush(true);
     inherited destroy;
   end;
 //=========================================================:T_textFileOutAdapter

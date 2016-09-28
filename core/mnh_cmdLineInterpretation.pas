@@ -115,8 +115,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         package:T_package;
     begin
       package.create(nil);
-      package.setSourcePath(expandFileName(fileOrCommandToInterpret));
-      SetCurrentDir(ExtractFileDir(fileOrCommandToInterpret));
+      package.setSourcePath(fileOrCommandToInterpret);
 
       if wantHelpDisplay then begin
         package.loadForDocumentation;
@@ -214,7 +213,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       inc(i);
     end;
     setMnhParameters(mnhParameters);
-    if (fileOrCommandToInterpret='') or directExecutionMode
+    if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
     else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
     defaultOutputBehavior.minErrorLevel:=minEL;
