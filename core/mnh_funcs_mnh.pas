@@ -221,6 +221,21 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
     then result:=recurse(arg0);
   end;
 
+FUNCTION mnhInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  begin
+    if (params=nil) or (params^.size=0) then
+    result:=newListLiteral(8)^
+      .append(newListLiteral(2)^.appendString('isFullVersion'  )^.appendBool  ({$ifdef fullVersion}true{$else}false{$endif}),false)^
+      .append(newListLiteral(2)^.appendString('isDebugVersion' )^.appendBool  ({$ifdef debugMode}  true{$else}false{$endif}),false)^
+      .append(newListLiteral(2)^.appendString('is64bit'        )^.appendBool  ({$ifdef CPU64}      true{$else}false{$endif}),false)^
+      .append(newListLiteral(2)^.appendString('compileTime'    )^.appendString( {$I %DATE%}+' '+{$I %TIME%}                ),false)^
+      .append(newListLiteral(2)^.appendString('compilerVersion')^.appendString( {$I %FPCVERSION%}                          ),false)^
+      .append(newListLiteral(2)^.appendString('targetCpu'      )^.appendString( {$I %FPCTARGET%}                           ),false)^
+      .append(newListLiteral(2)^.appendString('targetOs'       )^.appendString( {$I %FPCTargetOS%}                         ),false)^
+      .append(newListLiteral(2)^.appendString('codeHash'       )^.appendString( CODE_HASH                                  ),false)
+    else result:=nil;
+  end;
+
 INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule(TYPECAST_NAMESPACE,'toString',@toString_imp,'toString(X);#Casts X to string');
@@ -234,5 +249,6 @@ INITIALIZATION
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'listKeywords',@listKeywords_imp,'listKeywords;#Returns a list of all keywords by category');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'fail',@fail_impl,'fail;#Raises an exception without a message#fail(message);#Raises an exception with the given message');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'ord',@ord_imp,'ord(x);#Returns the ordinal value of x');
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'mnhInfo',@mnhInfo_imp,'mnhInfo;#Returns a key-value list with info on the currently executing instance of MNH');
 
 end.
