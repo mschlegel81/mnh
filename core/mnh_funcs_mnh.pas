@@ -224,7 +224,7 @@ FUNCTION ord_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation
 FUNCTION mnhInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newListLiteral(8)^
+    result:=newListLiteral(9)^
       .append(newListLiteral(2)^.appendString('isFullVersion'  )^.appendBool  ({$ifdef fullVersion}true{$else}false{$endif}),false)^
       .append(newListLiteral(2)^.appendString('isDebugVersion' )^.appendBool  ({$ifdef debugMode}  true{$else}false{$endif}),false)^
       .append(newListLiteral(2)^.appendString('is64bit'        )^.appendBool  ({$ifdef CPU64}      true{$else}false{$endif}),false)^
@@ -232,7 +232,11 @@ FUNCTION mnhInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
       .append(newListLiteral(2)^.appendString('compilerVersion')^.appendString( {$I %FPCVERSION%}                          ),false)^
       .append(newListLiteral(2)^.appendString('targetCpu'      )^.appendString( {$I %FPCTARGET%}                           ),false)^
       .append(newListLiteral(2)^.appendString('targetOs'       )^.appendString( {$I %FPCTargetOS%}                         ),false)^
-      .append(newListLiteral(2)^.appendString('codeHash'       )^.appendString( CODE_HASH                                  ),false)
+      .append(newListLiteral(2)^.appendString('codeVersion'    )^.appendString( CODE_HASH                                  ),false)^
+      .append(newListLiteral(2)^.appendString('flavour'        )^.appendString({$ifdef fullVersion}'F'{$else}'L'{$endif}+
+                                                                               {$ifdef IMIG}'I'{$else}''{$endif}+
+                                                                               {$ifdef debugMode}  'D'{$else}'O'{$endif}+
+                                                                               {$I %FPCTargetOS%}                          ),false)
     else result:=nil;
   end;
 
