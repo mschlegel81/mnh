@@ -79,7 +79,7 @@ IMPLEMENTATION
 
 FUNCTION settingsFileName: string;
   begin
-    result := configDir+'mnh_gui.settings';
+    result:=configDir+'mnh_gui.settings';
   end;
 
 PROCEDURE saveSettings;
@@ -139,9 +139,8 @@ FUNCTION T_settings.loadFromStream(VAR stream:T_streamWrapper): boolean;
     fileHistory.clear;
     for i:=0 to FILE_HISTORY_MAX_SIZE-1 do fileHistory.add(stream.readAnsiString);
     polishHistory;
-    i:=stream.readLongint;
-    if (i<0) or not(stream.allOkay) then exit(false);
-    setLength(editorState,i);
+    setLength(editorState,stream.readNaturalNumber);
+    if not(stream.allOkay) then exit(false);
     for i:=0 to length(editorState)-1 do begin
       editorState[i].create;
       editorState[i].loadFromStream(stream);
@@ -182,7 +181,7 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_streamWrapper);
     stream.writeBoolean(doResetPlotOnEvaluation);
     for i:=0 to FILE_HISTORY_MAX_SIZE-1 do stream.writeAnsiString(historyItem(i));
     for i:=0 to length(editorState)-1 do if editorState[i].visible then inc(visibleEditorCount);
-    stream.writeLongint(visibleEditorCount);
+    stream.writeNaturalNumber(visibleEditorCount);
     for i:=0 to length(editorState)-1 do if editorState[i].visible then editorState[i].saveToStream(stream);
     stream.writeLongint(activePage);
     stream.writeByte(saveIntervalIdx);
@@ -350,23 +349,16 @@ FUNCTION T_editorState.loadFromStream(VAR stream:T_streamWrapper):boolean;
     changed:=stream.readBoolean;
     if changed then begin
       fileAccessAge:=stream.readDouble;
-      i:=stream.readLongint;
-      if i>=0 then begin
-        setLength(lines,i);
-        for i:=0 to length(lines)-1 do lines[i]:=stream.readAnsiString;
-        result:=true;
-      end else result:=false;
-    end else begin
+      setLength(lines,stream.readNaturalNumber);
+      for i:=0 to length(lines)-1 do lines[i]:=stream.readAnsiString;
+     end else begin
       lines:=fileLines(filePath,result);
       if result then fileAge(filePath,fileAccessAge)
                 else visible:=false;
-      result:=true;
     end;
-    i:=stream.readLongint;
-    if i>=0 then begin
-      setLength(markedLines,i);
-      for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
-    end else result:=false;
+    setLength(markedLines,stream.readNaturalNumber);
+    for i:=0 to length(markedLines)-1 do markedLines[i]:=stream.readLongint;
+    result:=stream.allOkay;
   end;
 
 PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
@@ -378,10 +370,10 @@ PROCEDURE T_editorState.saveToStream(VAR stream:T_streamWrapper);
     stream.writeBoolean(changed);
     if changed then begin
       stream.writeDouble(fileAccessAge);
-      stream.writeLongint(length(lines));
+      stream.writeNaturalNumber(length(lines));
       for i:=0 to length(lines)-1 do stream.writeAnsiString(lines[i]);
     end;
-    stream.writeLongint(length(markedLines));
+    stream.writeNaturalNumber(length(markedLines));
     for i:=0 to length(markedLines)-1 do stream.writeLongint(markedLines[i]);
   end;
 
