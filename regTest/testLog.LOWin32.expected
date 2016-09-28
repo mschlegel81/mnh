@@ -3322,7 +3322,7 @@ out> 271003
  in> hash('a');
 out> 252
  in> listBuiltin.each(func,copy(func, 0, 4)=='mnh.' ? func : void);
-out> ['mnh.isNumList','mnh.executor','mnh.isString','mnh.parameterNames','mnh.isExpression','mnh.isRealList','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.isInt','mnh.softCast','mnh.hash','mnh.sandBoxExecute','mnh.fail','mnh.isNumeric','mnh.group','mnh.isStringList','mnh.isKeyValueList','mnh.isReal','mnh.isList','mnh.myPath','mnh.not','mnh.isBoolList','mnh.isScalar','mnh.isBoolean','mnh.isIntList','mnh.ord']
+out> ['mnh.isNumList','mnh.executor','mnh.isString','mnh.parameterNames','mnh.isExpression','mnh.isRealList','mnh.listKeywords','mnh.inspect','mnh.sleep','mnh.arity','mnh.listBuiltin','mnh.bits','mnh.isInt','mnh.softCast','mnh.hash','mnh.mnhInfo','mnh.sandBoxExecute','mnh.fail','mnh.isNumeric','mnh.group','mnh.isStringList','mnh.isKeyValueList','mnh.isReal','mnh.isList','mnh.myPath','mnh.not','mnh.isBoolList','mnh.isScalar','mnh.isBoolean','mnh.isIntList','mnh.ord']
  in> group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']], 1, aggregator({[$x[0]+$y[0],$x[1]]}));
 out> [[5,'a'],[3,'b'],[4,'c']]
  in> abs(3);
@@ -3599,15 +3599,15 @@ out> [[1,1,2],[1,2,1],[1,1,2],[1,2,1],[2,1,1],[2,1,1]]
 out> [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
  in> bits(123).ord.join;
 out> '1101111000000000000000000000000000000000000000000000000000000000'
- in> input :=[[1..10], 1/7,'test', random(9)];
+ in> input :=[[1..10], random,'test', random(9)];
 Note  Creating new rule: input
  in> serialized :=input.serialize;
 Note  Creating new rule: serialized
  in> print(input.toString.length,' > ', serialized.length);
-213 > 204
+213 > 192
 out> void
  in> input==serialized.deserialize;
-out> false
+out> true
  in> factorize(1001);
 out> [7,11,13]
  in> formatTabs("\v-2\n3\t4.3");
