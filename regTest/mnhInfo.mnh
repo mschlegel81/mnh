@@ -1,7 +1,7 @@
 private memoized memExeInfo(exe,exeFileInfo)->begin
   exe=executor
   ? mnh.mnhInfo
-  : executor.exec(['-echo','-time','-cmd','mnhInfo.print'])[0].toExpression()();
+  : (exe.exec(['-echo','-time','-cmd','mnhInfo.print'],false)[0] orElse '[]').toExpression()();
 end;
 
 private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable)[['time','size']]);
@@ -12,7 +12,7 @@ canPlot->executor.canPlot;
 canPlot(exe)->exe.exeInfo['isFullVersion'];
 codeVersion(exe)->exe.exeInfo['codeVersion'];
 codeHash->executor.codeHash;
-codeHash(exe)->exe.exeInfo[['flavour','codeHash']].join(':');
+codeHash(exe)->exe.exeInfo[['flavour','codeVersion']].join(':');
 isDebug(exe)->exe.exeInfo['isDebugVersion'];
 flavour->executor.flavour;
 flavour(exe)->exe.exeInfo['flavour'];
