@@ -109,9 +109,17 @@ PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
-begin
-  doneCriticalSection(cs);
-end;
+  begin
+    if current.literal<>nil then begin
+      disposeLiteral(current.literal);
+      current.literal:=nil;
+    end;
+    if requested.literal<>nil then begin
+      disposeLiteral(requested.literal);
+      requested.literal:=nil;
+    end;
+    doneCriticalSection(cs);
+  end;
 
 PROCEDURE TtableForm.FormKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin

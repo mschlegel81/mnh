@@ -304,7 +304,7 @@ FUNCTION TMnhForm.autosizeBlocks(CONST forceOutputFocus: boolean): boolean;
       inputFocus:boolean;
   begin
     result:=false;
-    if miAutosize.Checked and (PageControl.activePageIndex>=0) then with editorMeta[PageControl.activePageIndex] do begin
+    if miAutosize.Checked and not(reEvaluationWithGUIrequired) and (PageControl.activePageIndex>=0) then with editorMeta[PageControl.activePageIndex] do begin
       scrollbarHeight :=editor.height-editor.ClientHeight;
       idealInputHeight:=scrollbarHeight+editor.Font.GetTextHeight(SAMPLE_TEXT)*(editor.lines.count+1);
       if outputPageControl.activePage=variablesTabSheet
