@@ -167,7 +167,7 @@ private call7z(fileList,suffix)->isLinux ? void : begin
 end;
 
 private testIsPassedAccordingToLog(B:BuildConfig)->
-  testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size;
+  testLog.log[testLog.log.getInner(0)=B[1] and testLog.log.getInner(1)=ensureCodeHash].size>0;
 
 private makeDistro->begin
   BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
@@ -175,7 +175,7 @@ private makeDistro->begin
   call7z(['mnh.exe','mnh_light.exe'],'64bit_windows');
   execPipeless('..\upx.exe',['-9','bin32/mnh_light.exe']);
   call7z(['bin32/mnh.exe','bin32/mnh_light.exe'],'32bit_windows');
-  BUILTS[8,9].each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND)
+  BUILTS[[8,9]].each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND)
   ? begin
       execPipeless('..\upx.exe',['-9','mnh_light']);
       call7z(['mnh','mnh_light'],'linux');
