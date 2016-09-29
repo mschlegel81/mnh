@@ -8,21 +8,33 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 {$endif}
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
 
-VAR consoleAdapters:T_adapters;
-    reEvaluationWithGUIrequired:boolean=false;
-    mainParameters:T_arrayOfString;
+VAR mainParameters:T_arrayOfString;
     wantConsoleAdapter:boolean=true;
     {$ifdef fullVersion}
+    reEvaluationWithGUIrequired:boolean=false;
+    profilingRun:boolean=false;
     filesToOpenInEditor:T_arrayOfString;
     {$endif}
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
+    deferredAdapterCreations:array of record
+      nameAndOption:string;
+      appending:boolean;
+    end;
 //---------------:by command line parameters
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
   begin
     result:=fileOrCommandToInterpret;
+  end;
+
+PROCEDURE setupOutputBehaviourFromCommandLineOptions(VAR adapters:T_adapters; CONST guiAdapterOrNil:P_abstractOutAdapter);
+  VAR i:longint;
+  begin
+    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(adapters,nameAndOption,appending);
+    if guiAdapterOrNil<>nil then guiAdapterOrNil^.outputBehaviour:=defaultOutputBehavior;
   end;
 
 {$ifdef fullVersion}
@@ -35,10 +47,10 @@ PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 {$endif}
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
-  VAR mnhParameters:T_arrayOfString;
+  VAR consoleAdapters:T_adapters;
+      mnhParameters:T_arrayOfString;
       wantHelpDisplay:boolean=false;
       directExecutionMode:boolean=false;
-      {$ifdef fullVersion}profilingRun:boolean=false;{$endif}
       echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
       time:(t_forcedOn,t_default,t_forcedOff)=t_default;
       minEL:longint=3;
@@ -149,12 +161,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
   VAR i:longint;
       quitImmediate:boolean=false;
       nextAppendMode:boolean;
-      deferredAdapterCreations:array of record
-        nameAndOption:string;
-        appending:boolean;
-      end;
 
   begin
+    consoleAdapters.create;
     setLength(mainParameters,0);
     setLength(mnhParameters,0);
     setLength(deferredAdapterCreations,0);
@@ -247,7 +256,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
-    for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(consoleAdapters,nameAndOption,appending);
+    setupOutputBehaviourFromCommandLineOptions(consoleAdapters,nil);
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect
                               else fileMode;
@@ -259,13 +268,10 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     end;
     {$ifdef fullVersion}quitImmediate:=quitImmediate and (length(filesToOpenInEditor)=0) and not(reEvaluationWithGUIrequired);{$endif}
     result:=not(quitImmediate);
+    consoleAdapters.destroy;
   end;
 
 INITIALIZATION
   {$ifdef fullVersion}filesToOpenInEditor:=C_EMPTY_STRING_ARRAY;{$endif}
-  consoleAdapters.create;
-
-FINALIZATION
-  consoleAdapters.destroy;
 
 end.

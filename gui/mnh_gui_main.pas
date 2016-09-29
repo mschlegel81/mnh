@@ -430,8 +430,9 @@ PROCEDURE TMnhForm.doStartEvaluation(CONST clearOutput, reEvaluating: boolean);
       end;
     end;
     underCursor.tokenText:='';
-    if miDebug.Checked then begin
+    if miDebug.Checked or reEvaluating and profilingRun then begin
       currentlyDebugging:=true;
+      if reEvaluating and profilingRun then stepper.clearBreakpoints;
       for i:=0 to length(editorMeta)-1 do editorMeta[i].startDebugging;
       stepper.doStart(false);
       updateDebugParts;
@@ -1531,6 +1532,10 @@ PROCEDURE TMnhForm.processSettings;
         guiOutAdapter.outputBehaviour:=settings.value^.outputBehaviour;
       end;
 
+      if reEvaluationWithGUIrequired
+      then setupOutputBehaviourFromCommandLineOptions(guiAdapters,@guiOutAdapter)
+      else setupOutputBehaviourFromCommandLineOptions(guiAdapters,nil);
+
       plotForm.miAutoReset.Checked:=settings.value^.doResetPlotOnEvaluation;
       processFileHistory;
       SettingsForm.ensureFont(OutputEdit.Font);
@@ -1625,7 +1630,6 @@ PROCEDURE formCycle(CONST ownId:longint; CONST next:boolean);
   end;
 
 PROCEDURE lateInitialization;
-  VAR i:longint;
   begin
     SynHighlighterMnh.initLists;
 
@@ -1635,10 +1639,6 @@ PROCEDURE lateInitialization;
     tempAdapter:=nil;
 
     guiAdapters.addOutAdapter(@guiOutAdapter,false);
-    for i:=0 to consoleAdapters.adapterCount-1 do
-      if consoleAdapters.getAdapter(i)^.adapterType in [at_textFile,at_htmlFile] then
-        guiAdapters.addOutAdapter(consoleAdapters.getAdapter(i),false);
-
     mnh_plotForm.formCycleCallback:=@formCycle;
     mnh_tables.formCycleCallback:=@formCycle;
     registerRule(SYSTEM_BUILTIN_NAMESPACE,'ask', @ask_impl,'');
