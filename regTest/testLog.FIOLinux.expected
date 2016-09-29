@@ -3114,23 +3114,23 @@ Root found at   4.18837195873177E-244
 Root found at   1.0
 Root found at   2.0
 ***** barnsleyFern *****
-Hash of /regTest/../demos/barnsleyFern.png is 408EFA0F
+Hash of regTest/../demos/barnsleyFern.png is 408EFA0F
 ***** fractalPlant *****
-Hash of /regTest/../demos/fractalPlant.png is B99380A8
+Hash of regTest/../demos/fractalPlant.png is B99380A8
 ***** kochCurve *****
-Hash of /regTest/../demos/kochCurve.png is 41731335
+Hash of regTest/../demos/kochCurve.png is 41731335
 ***** rotatingCube *****
-Hash of /regTest/../demos/rotatingCube.png is C8D2CADA
+Hash of regTest/../demos/rotatingCube.png is C8D2CADA
 ***** sierpinskiCurve *****
-Hash of /regTest/../demos/sierpinskiCurve.png is 3AB24074
+Hash of regTest/../demos/sierpinskiCurve.png is 3AB24074
 ***** travellingSalesmanProblem *****
 Path length after construction is 1534.011
 Path length after polishing is    1501.698
-Hash of /regTest/../demos/travellingSalesmanProblem.png is C6052EF2
+Hash of regTest/../demos/travellingSalesmanProblem.png is C6052EF2
 ***** turtleGfx *****
-Hash of /regTest/../demos/turtleGfx.png is FB769509
+Hash of regTest/../demos/turtleGfx.png is FB769509
 ***** heart *****
-Hash of /regTest/../demos/heart.png is 88B30F70
+Hash of regTest/../demos/heart.png is 88B30F70
 ***** examples from file *****
 Examples file has 584 lines
  in> arity({3});
@@ -3376,7 +3376,7 @@ Note  Creating new rule: t
  in> plot(t, sin(t));
 out> void
  in> plot.renderToFile('plotDemo1.png', 600, 300, 4);
-Image: /regTest/plotDemo1.png
+Image: /plotDemo1.png
 out> void
  in> abs({$x});
 out> {abs($x)}
