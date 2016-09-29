@@ -7,6 +7,7 @@ USES {$ifdef UNIX}cmem, cthreads,{$else}
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;
       consolePackage:T_package;
+      adapters:T_adapters;
   PROCEDURE readInputFromConsole;
     VAR nextInput:ansistring;
     begin
@@ -22,13 +23,16 @@ PROCEDURE interactiveMode;
   VAR i:longint;
       context:T_evaluationContext;
   begin
+    adapters.create;
+    adapters.addConsoleOutAdapter();
+    setupOutputBehaviourFromCommandLineOptions(adapters,nil);
+
     consolePackage.create(nil);
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
     writeln('No command line parameters were given. You are in interactive mode.');
     writeln('Type "exit" (case insensitive) to quit.');
     writeln('Type \ to clear and restart.');
-    context.createNormalContext(P_adapters(@consoleAdapters));
 
     readInputFromConsole;
     while not(hasExitSignal) do begin
@@ -37,6 +41,7 @@ PROCEDURE interactiveMode;
     end;
     context.destroy;
     consolePackage.destroy;
+    adapters.destroy;
   end;
 
 begin
