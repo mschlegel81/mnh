@@ -4,7 +4,9 @@ USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh
      myStringUtil,sysutils,myGenerics,mnh_contexts,
      lclintf,mnh_html,mnh_funcs_mnh;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
+{$ifdef fullVersion}
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
+{$endif}
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
 
 VAR consoleAdapters:T_adapters;
@@ -17,30 +19,30 @@ VAR consoleAdapters:T_adapters;
 IMPLEMENTATION
 //by command line parameters:---------------
 VAR fileOrCommandToInterpret:ansistring='';
-    mnhParameters:T_arrayOfString;
-    wantHelpDisplay:boolean=false;
-    directExecutionMode:boolean=false;
-    echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
-    time:(t_forcedOn,t_default,t_forcedOff)=t_default;
-    minEL:longint=3;
 //---------------:by command line parameters
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
   begin
     result:=fileOrCommandToInterpret;
   end;
 
+{$ifdef fullVersion}
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
   begin
-    {$ifdef fullVersion}
     prepareDocumentation(includePackageDoc);
     if includePackageDoc then OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/packages.html'),'\','/')+'#defined')
                          else OpenURL('file:///'+replaceAll(expandFileName(getHtmlRoot+'/index.html'   ),'\','/'));
-    {$else}
-    writeln('Generation of the documentation is only implemented in the full (i.e. non-light) version.');
-    {$endif}
   end;
+{$endif}
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
+  VAR mnhParameters:T_arrayOfString;
+      wantHelpDisplay:boolean=false;
+      directExecutionMode:boolean=false;
+      {$ifdef fullVersion}profilingRun:boolean=false;{$endif}
+      echo:(e_forcedOn,e_default,e_forcedOff)=e_default;
+      time:(t_forcedOn,t_default,t_forcedOff)=t_default;
+      minEL:longint=3;
+
   PROCEDURE displayVersionInfo;
     begin writeln('MNH5',
                   {$ifdef fullVersion}'(full'{$else}'(light'{$endif},
@@ -77,6 +79,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.printOut('  -info             show info; same as -cmd mnhInfo.print');
       {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
+      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
       consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
       consoleAdapters.printOut('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
@@ -169,6 +172,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           inc(i);
           append(filesToOpenInEditor,paramStr(i));
         end
+        else if (paramStr(i)='-profile') then profilingRun:=true
         {$endif}
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
           nextAppendMode:=paramStr(i)='+out';
@@ -215,6 +219,14 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       inc(i);
     end;
     setMnhParameters(mnhParameters);
+    {$ifdef fullVersion}
+    if profilingRun then begin
+      time:=t_forcedOn;
+      currentlyDebugging:=true;
+      stepper.clearBreakpoints;
+      stepper.doStart(false);
+    end;
+    {$endif}
     if fileOrCommandToInterpret=''
     then defaultOutputBehavior:=C_defaultOutputBehavior_interactive
     else defaultOutputBehavior:=C_defaultOutputBehavior_fileMode;
@@ -238,7 +250,6 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     //-----------------------------------------------------
     if wantConsoleAdapter then consoleAdapters.addConsoleOutAdapter;
     for i:=0 to length(deferredAdapterCreations)-1 do with deferredAdapterCreations[i] do addOutfile(consoleAdapters,nameAndOption,appending);
-
     if fileOrCommandToInterpret<>'' then begin
        if directExecutionMode then doDirect
                               else fileMode;
