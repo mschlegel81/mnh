@@ -2,7 +2,7 @@ UNIT mnh_cmdLineInterpretation;
 INTERFACE
 USES mnh_constants,mnh_out_adapters,mnh_funcs,consoleAsk{$ifdef fullVersion},mnh_doc,mnh_funcs_server{$endif},mnh_packages,
      myStringUtil,sysutils,myGenerics,mnh_contexts,
-     lclintf,mnh_html;
+     lclintf,mnh_html,mnh_funcs_mnh;
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 PROCEDURE makeAndShowDoc(CONST includePackageDoc:boolean);
 FUNCTION getFileOrCommandToInterpretFromCommandLine:ansistring;
@@ -73,6 +73,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.printOut('  -version          show version info and exit');
       consoleAdapters.printOut('  -codeHash         show codeHash and exit');
       consoleAdapters.printOut('  -cmd              directly execute the following command');
+      consoleAdapters.printOut('  -info             show info; same as -cmd mnhInfo.print');
       {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
       consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
@@ -182,6 +183,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         else if startsWith(paramStr(i),'-quiet') then wantConsoleAdapter:=false
         else if startsWith(paramStr(i),'-h') then wantHelpDisplay:=true
         else if startsWith(paramStr(i),'-version') then begin displayVersionInfo; quitImmediate:=true; end
+        else if startsWith(paramStr(i),'-info')    then begin writeln(getMnhInfo); quitImmediate:=true; end
         else if startsWith(paramStr(i),'-codeHash') then begin writeln({$ifdef fullVersion}'F'{$else}'L'{$endif},
                                                                        {$ifdef debugMode}  'D'{$else}'O'{$endif},
                                                                        {$I %FPCTargetOS%},':',CODE_HASH); quitImmediate:=true; end
