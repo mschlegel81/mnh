@@ -22,8 +22,8 @@ BUILTS:=[[false,'LOWin32','bin32/mnh_light.exe'      ,'..\lazarus32\lazbuild.exe
          [true ,'FOLinux','./mnh'                    ,'lazbuild'                 ,['-B','--bm=deployment','gui/mnh_gui.lpi']       ,'gui/mnh'                     ,false],
          [true ,'LDLinux','./mnh_light_debug'        ,'lazbuild'                 ,['-B','--bm=Default'   ,'consoles/mnh_light.lpi'],'consoles/mnh_light_debug'    ,true],
          [true ,'FDLinux','./mnh_debug'              ,'lazbuild'                 ,['-B','--bm=Default'   ,'gui/mnh_gui.lpi']       ,'gui/mnh_debug'               ,true],
-         [false,'FOIWin64','./mnh_imig.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnh_imig.exe'            ,false],
-         [true ,'FOILinux','./mnh_imig'              ,'lazbuild'                 ,['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnh_imig'                ,false]];
+         [false,'FIOWin64','./mnh_imig.exe'          ,'..\lazarus64\lazbuild.exe',['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnh_imig.exe'            ,false],
+         [true ,'FIOLinux','./mnh_imig'              ,'lazbuild'                 ,['-B','--bm=imig'      ,'gui/mnh_gui.lpi']       ,'gui/mnh_imig'                ,false]];
 //Configuration:=====================================================
 private canBuild(B:BuildConfig)->B[0]=isLinux;
 private VALID_TARGETS:=BUILTS.each(B,B.canBuild ? B[2] : void);
