@@ -77,6 +77,7 @@ currentCodeHash:=begin
   templateToInc('resources/ensurePackages.mnh'             ,'core/res_ensurePackages.inc');
   local relevantFiles:=allFiles('.','*.lpr;*.pas;*.inc').each(f,splitFileName(f)['filename']='code_hash.inc' ? void : f);
   //update code hash
+  tprint('Updating code hash based on ',relevantFiles.size,' files');
   local result:=format('%8.8x',fileStats(relevantFiles).getInner(3).agg(+)).copy(0,8);
   fileContents('core/code_hash.inc')=="CODE_HASH='"&result&"';"
   ? void
@@ -95,7 +96,7 @@ private myMove(source,dest:string)->fileExists(source) ? begin
     tries-=1;
     sleep(0.1);
   end);
-  fileExists(dest) ? fail('Failed deleting '+dest) : tprint('Moved compilate: ',source,' -> ',dest);
+  fileExists(dest) ? fail('Failed deleting '+dest) : void;
   moveFile(source,dest) ? void : fail('File move '+source+' -> '+dest+' failed!');
 end : fail('File  '+source+' does not exist');
 
@@ -116,14 +117,14 @@ private buildExe(B:BuildConfig)->
       ok ? tprint('Built successful')
          : fail('Built failed - see '&BUILD_LOG&' for details');
     end
-  : tprint('Build of ',B[2],' skipped');
+  : void;
 
 private testExe(B:BuildConfig,...)->
   not(B.canBuild)
   ? void
   : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or not(fileExists(B[2]))
-    ? tprint('Skipping test of ',B[2])
-    : tprint('Testing ',B[2])
+    ? void
+    : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(B[2])
       ? tprint('Test passed')
       : fail('Test failed');
@@ -173,10 +174,15 @@ private testIsPassedAccordingToLog(B:BuildConfig)->
 
 private makeDistro->begin
   BUILTS.each(B,B.canBuild AND not(B[6]) ? B.testExe : void);
+  execPipeless('..\upx.exe',['-9','mnh_light.exe']);
   call7z(['mnh.exe','mnh_light.exe'],'64bit_windows');
+  execPipeless('..\upx.exe',['-9','bin32/mnh_light.exe']);
   call7z(['bin32/mnh.exe','bin32/mnh_light.exe'],'32bit_windows');
   BUILTS[8,9].each(linuxConfig,testIsPassedAccordingToLog(linuxConfig),AND)
-  ? call7z(['mnh','mnh_light'],'linux');
+  ? begin
+      execPipeless('..\upx.exe',['-9','mnh_light']);
+      call7z(['mnh','mnh_light'],'linux');
+    end
   : void;
   fileExists('distroHook.mnh')
   ? executor.execPipeless(['distroHook.mnh'])
