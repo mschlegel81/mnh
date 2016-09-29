@@ -2,6 +2,7 @@ UNIT mnh_funcs_mnh;
 INTERFACE
 {$WARN 5024 OFF}
 USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
+FUNCTION getMnhInfo:string;
 IMPLEMENTATION
 {$MACRO ON}
 {$define str0:=P_stringLiteral(params^.value(0))}
@@ -238,6 +239,18 @@ FUNCTION mnhInfo_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
                                                                                {$ifdef debugMode}  'D'{$else}'O'{$endif}+
                                                                                {$I %FPCTargetOS%}                          ),false)
     else result:=nil;
+  end;
+
+FUNCTION getMnhInfo:string;
+  VAR L:P_literal;
+      pseudoLoc:T_tokenLocation=(package:nil; line: 0; column: 0);
+      context:T_evaluationContext;
+  begin
+    context.createSanboxContext(nil);
+    L:=mnhInfo_imp(nil,pseudoLoc,context);
+    context.destroy;
+    result:=L^.toString();
+    disposeLiteral(L);
   end;
 
 INITIALIZATION

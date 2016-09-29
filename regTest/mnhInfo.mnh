@@ -1,20 +1,21 @@
-private memoized memExeInfo(exe,exeFileInfo)->begin
+private memoized memExeInfo(exe,exeFileInfo)->
   exe=executor
   ? mnh.mnhInfo
   : (exe.exec(['-echo','-time','-cmd','mnhInfo.print'],false)[0] orElse '[]').toExpression()();
-end;
 
 private exeInfo(executable:string)->memExeInfo(executable,fileInfo(executable)[['time','size']]);
 
 isLinux->mnhInfo['targetOs']='Linux';
-isLinux(exe)->exe.exeInfo['targetOs']='Linux';
+isLinux(exe:string)->exe.exeInfo['targetOs']=='Linux';
 canPlot->executor.canPlot;
-canPlot(exe)->exe.exeInfo['isFullVersion'];
-codeVersion(exe)->exe.exeInfo['codeVersion'];
+canPlot(exe:string)->exe.exeInfo['isFullVersion'];
+codeVersion(exe:string)->exe.exeInfo['codeVersion'] orElse '';
 codeHash->executor.codeHash;
-codeHash(exe)->exe.exeInfo[['flavour','codeVersion']].join(':');
-isDebug(exe)->exe.exeInfo['isDebugVersion'];
+codeHash(exe:string)->exe.exeInfo[['flavour','codeVersion']].join(':');
+isDebug(exe:string)->exe.exeInfo['isDebugVersion'];
 flavour->executor.flavour;
-flavour(exe)->exe.exeInfo['flavour'];
+flavour(exe:string)->exe.exeInfo['flavour'] orElse '';
+compileTime(exe:string)->exe.exeInfo['compileTime'] orElse '';
 
 main(exe)->exe.exeInfo.each(line,line.join("\t")).join("\n").print;
+main->main(executor);
