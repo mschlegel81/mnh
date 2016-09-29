@@ -87,7 +87,6 @@ currentCodeHash:=begin
   result;
 end;
 private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
-binName(8)->'./mnh_imig' & (isLinux ? '' : '.exe');
 
 private myMove(source,dest:string)->fileExists(source) ? begin
   local tries:=3;
