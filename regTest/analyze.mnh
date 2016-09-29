@@ -119,6 +119,21 @@ private analyzeFlavour(data,flavour:string)->begin
   plot.display;
 end;
 
+private compareFlavours(data,flavour1:string,flavour2:string)->begin
+  print('Comparing flavours: ',flavour1,' and ',flavour2);
+  local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  local tableData:=dat1.getInner(0).union(dat2.getInner(0))
+    .each(case,case|(dat1[case] orElse [0,0])|(dat2[case] orElse [0,0]))
+    .{$L|['TOTAL'| $L.agg(+).tail]}
+    .each(line,line|(100*(1-line[[3,4]]/line[[1,2]]))|(line[[3,4]]-line[[1,2]]));
+
+  showTable([['case','avg. '&flavour1,'last '&flavour1,
+                     'avg. '&flavour2,'last '&flavour2,
+                     'rel.avg. (%)'  ,'rel.last (%)',
+                     'Delta.avg. (%)'  ,'Delta.last (%)']]|tableData,'Flavour comparison',true);
+end;
+
 private loadAndFilterUnplausible(filename)->filename.fileContents.deserialize.pEach(i,i[2]<0 ? void : i);
 
 main(inputFile:string)->doAnalysis(inputFile.loadAndFilterUnplausible);
@@ -142,4 +157,15 @@ main(inputFile:string,testCaseOrFlavour:string)->begin
         print('Flavours: ',data.getInner(1).unique.join(' '));
         print('Cases: ',data.getInner(0).unique.join(' '));
       end;
+end;
+
+main(inputFile:string,flavour1:string,flavour2:string)->begin
+  local data:=inputFile.loadAndFilterUnplausible;
+  flavour1 in data.getInner(1) AND
+  flavour2 in data.getInner(1)
+  ? compareFlavours(data,flavour1,flavour2)
+  : begin
+      print('Input must be two flavours to compare');
+      print('Flavours: ',data.getInner(1).unique.join(' '));
+    end;
 end;
