@@ -85,11 +85,11 @@ USE testLog,mnhInfo,
     '../demos/heart.mnh';
 private plotDemoCount:=8;
 
-private testPlotting(import:string, file:string)->begin
+private testPlotting(import:string,doLog:boolean,file:string)->begin
   local filePath:=(myPath.splitFileName['directory'])&'/'&file;
   deleteFile(filePath);
   resetOptions;
-  executeMainCall(import);
+  executeMainCall(import,doLog);
   printf('Hash of %s is %x',filePath,filePath.fileContents.hash);
 end;
 
@@ -140,35 +140,40 @@ main('limit',count:string)->begin
 end;
 
 //*Test without examples file
-main->main('',false);
+main->main_impl('',false,true);
 //*Retest without examples file
-main('retest')->main('',true);
+main('retest')->main_impl('',true,true);
 //*Test with examples file
-main(examplesFile:string)->main_impl(examplesFile,false);
+main(examplesFile:string)->main_impl(examplesFile,false,true);
 //*Retest with examples file
-main(examplesFile:string,'retest')->main_impl(examplesFile,true);
+main(examplesFile:string,'retest')->main_impl(examplesFile,true,true);
+//*Retest with examples file - supressing result times logging
+main(examplesFile:string,'retest')->main_impl(examplesFile,true,true);
+//*Retest with examples file - supressing result times logging
+main(examplesFile:string,'noLog')->main_impl(examplesFile,true,false);
 
-private executeMainCall(import:string,...)->begin
+private executeMainCall(import:string,doLog:boolean,...)->begin
   print('***** ',import,' *****');
   local t0:=time;
   toId(import&'.main')@...;
   local dt:=time-t0;
-  runTimes|=[[import,flavour(executor),dt]];
+  doLog ? runTimes|=[[import,flavour(executor),dt]]
+        : void;
   void;
 end;
 
-main_impl(examplesFile:string,forceTest:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
+main_impl(examplesFile:string,forceTest:boolean,doLog:boolean)->not(forceTest) AND testAlreadyPassed ? print('Tests skipped. They have already been passed.') :
 begin
   resetRandom;
   collectOutput;
-  executeMainCall('24','demo');
-  executeMainCall('diff','test');
-  inspect['uses'].getInner(0).leading(plotDemoCount).tail(4).each(import,executeMainCall(import));
+  executeMainCall('24',doLog,'demo');
+  executeMainCall('diff',doLog,'test');
+  inspect['uses'].getInner(0).leading(plotDemoCount).tail(4).each(import,executeMainCall(import,doLog));
   canPlot
-  ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,'../demos/'&import&'.png'))
+  ? inspect['uses'].getInner(0).trailing(plotDemoCount).each(import,testPlotting(import,doLog,'../demos/'&import&'.png'))
   : void;
   examplesFile==''
   ? void
   : executeExamples(examplesFile);
-  validateCollectedOutput;
+  validateCollectedOutput(doLog);
 end;

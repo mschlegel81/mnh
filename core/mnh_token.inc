@@ -93,7 +93,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           t[i].tokType:=tt_identifier;
           package^.resolveRuleId(t[i],nil);
         end else if package<>nil then package^.resolveRuleId(t[i],nil);
-        tt_each,tt_forcedParallelEach,tt_parallelEach: if (i<length(t)-3) and
+        tt_each,tt_parallelEach: if (i<length(t)-3) and
          (t[i+1].tokType=tt_braceOpen) and
          (t[i+2].tokType in [tt_identifier,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule]) and
          (t[i+3].tokType=tt_separatorComma) then begin
@@ -111,7 +111,7 @@ PROCEDURE T_tokenArray.step(CONST package: P_package; VAR lastComment: ansistrin
           inc(i);
         end;
         tt_operatorMinus,tt_operatorPlus: if (i<length(t)-1) and
-         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_forcedParallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
+         ((i=0) or (t[i-1].tokType in [tt_braceOpen,tt_listBraceOpen,tt_separatorCnt,tt_separatorComma,tt_each,tt_parallelEach,tt_expBraceOpen,tt_unaryOpMinus,tt_unaryOpPlus])) and
          (t[i+1].tokType in [tt_literal,tt_identifier,tt_braceOpen,tt_listBraceOpen,tt_expBraceOpen,tt_localUserRule,tt_importedUserRule,tt_customTypeRule,tt_intrinsicRule,tt_parameterIdentifier]) then begin
           if t[i].tokType=tt_operatorMinus
           then t[i].tokType:=tt_unaryOpMinus //unary - is special token
@@ -333,9 +333,6 @@ FUNCTION T_tokenArray.getToken(CONST line: ansistring; VAR lineLocation: T_token
       end else if startsWith(C_tokenInfo[tt_parallelEach].defaultId) then begin
         parsedLength:=length(C_tokenInfo[tt_parallelEach].defaultId);
         result.tokType:=tt_parallelEach;
-      end else if startsWith(C_tokenInfo[tt_forcedParallelEach].defaultId) then begin
-        parsedLength:=length(C_tokenInfo[tt_forcedParallelEach].defaultId);
-        result.tokType:=tt_forcedParallelEach;
       end else if startsWith(C_tokenInfo[tt_agg].defaultId) then begin
         parsedLength:=length(C_tokenInfo[tt_agg].defaultId);
         result.tokType:=tt_agg;
@@ -877,12 +874,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         if (aggregatorPresent=yes_as_operator) and (aggregatorToken in [tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorOrElse])
         then maxFutureForwardInitialization:=workerThreadCount
         else maxFutureForwardInitialization:=1024;
-        if eachType=tt_forcedParallelEach then maxFutureForwardInitialization:=maxLongint;
         initializedFutures:=0;
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context,eachType=tt_forcedParallelEach);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context);
             if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
@@ -920,10 +916,6 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         eachType:=tt_each;
         context.adapters^.raiseNote('Not parallelizing pEach during debugging.',eachLocation);
       end;
-      if currentlyDebugging and (eachType=tt_forcedParallelEach) then begin
-        context.adapters^.raiseError('PEach is not allowed during debugging. Sorry.',eachLocation);
-        exit
-      end;
       {$endif}
       if (first^.data=nil) or (P_literal(first^.data)^.literalType in [lt_error,lt_listWithError,lt_void]) then begin
         context.adapters^.raiseError('Cannot apply each construct to void literal',eachLocation);
@@ -945,11 +937,11 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         resultLiteral:=newVoidLiteral;
         finalizeAggregation;
       end else if length(bodyRule)>0 then begin
-        if eachType in [tt_parallelEach,tt_forcedParallelEach]
+        if eachType in [tt_parallelEach]
         then initFutures
         else initNonFutures;
       end else begin
-        if eachType in [tt_parallelEach,tt_forcedParallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
+        if eachType in [tt_parallelEach] then context.adapters^.raiseNote('There is no paralellization for pEach statements without body (i.e. pure aggregators)',eachLocation);
         for i:=0 to itList^.size-1 do addToAggregation(itList^.value(i),false);
         finalizeAggregation;
       end;
@@ -1359,7 +1351,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end
       else if cTokType[1] in [tt_parList_constructor,tt_braceOpen,tt_listToParameterList] then startOrPushParameterList
       else if cTokType[1]=tt_ponFlipper then pon_flip
-      else if cTokType[1] in [tt_each,tt_forcedParallelEach,tt_parallelEach] then resolveEach(cTokType[1])
+      else if cTokType[1] in [tt_each,tt_parallelEach] then resolveEach(cTokType[1])
       else if cTokType[1]= tt_listBraceOpen then begin stack.push(first); didSubstitution:=true; end
       else begin
         stack.push(first);
@@ -1483,7 +1475,7 @@ tt_parList:  if (cTokType[2]=tt_listToParameterList) then begin
              end else applyRule(first^.next,first^.next^.next);
 tt_comparatorEq..tt_operatorIn: operator_and_literal_push;
 tt_iifCheck: begin stack.push(first); didSubstitution:=true; end;
-tt_each,tt_parallelEach,tt_forcedParallelEach: resolveEach(cTokType[1])}
+tt_each,tt_parallelEach: resolveEach(cTokType[1])}
 
 {$define FORBIDDEN_SEPARATORS:=
 tt_separatorCnt:   context.adapters^.raiseError('Token .. is only allowed in list constructors.',first^.next^.location);
@@ -1771,7 +1763,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_comparatorEq..tt_operatorIn,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_ponFlipper, tt_each,tt_parallelEach,tt_forcedParallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
+          tt_ponFlipper, tt_each,tt_parallelEach,tt_listBraceOpen : applyRule(nil,first^.next);
         end;
         tt_while: if (cTokType[1]=tt_braceOpen) then begin
           first^.next:=context.disposeToken(first^.next);
