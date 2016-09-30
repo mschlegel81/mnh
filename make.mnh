@@ -181,7 +181,7 @@ private makeDistro->begin
     end
   : void;
   fileExists('distro_hook.mnh')
-  ? executor.execPipeless(['distroHook.mnh'])
+  ? executor.execPipeless(['distro_hook.mnh'])
   : void;
 end;
 
