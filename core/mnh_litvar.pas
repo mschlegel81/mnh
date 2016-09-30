@@ -2638,14 +2638,14 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
   VAR reusableLiterals:array of P_literal;
   FUNCTION literalFromStream:P_literal;
     VAR literalType:T_literalType;
-        reusableIndex:word;
+        reusableIndex:longint;
         literalByte:byte;
         listSize:longint;
         i:longint;
     begin
       literalByte:=stream.readByte;
       if literalByte=255 then begin
-        reusableIndex:=stream.readWord;
+        reusableIndex:=stream.readNaturalNumber;
         if (reusableIndex<length(reusableLiterals)) then begin
           result:=reusableLiterals[reusableIndex];
           result^.rereference;
@@ -2700,20 +2700,20 @@ FUNCTION newLiteralFromStream(VAR stream:T_streamWrapper; CONST location:T_token
   end;
 
 PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CONST location:T_tokenLocation; CONST adapters:P_adapters; CONST tryCompressStrings:boolean);
-  VAR reusableMap:specialize G_literalKeyMap<word>;
+  VAR reusableMap:specialize G_literalKeyMap<longint>;
       stringCompression:byte;
   PROCEDURE writeLiteral(CONST L:P_literal);
     VAR i:longint;
-        reusableIndex:word;
+        reusableIndex:longint;
     begin
       if (L^.literalType=lt_expression) then begin
         if adapters<>nil then adapters^.raiseError('Cannot represent expression literal in binary form!',location);
         exit;
       end;
-      reusableIndex:=reusableMap.get(L,65535);
-      if reusableIndex<65535 then begin
+      reusableIndex:=reusableMap.get(L,2097151);
+      if reusableIndex<2097151 then begin
         stream.writeByte(255);
-        stream.writeWord(reusableIndex);
+        stream.writeNaturalNumber(reusableIndex);
         exit;
       end;
       stream.writeByte(byte(L^.literalType));
@@ -2736,7 +2736,7 @@ PROCEDURE writeLiteralToStream(CONST L:P_literal; VAR stream:T_streamWrapper; CO
           for i:=0 to P_listLiteral(L)^.size-1 do if (adapters=nil) or (adapters^.noErrors) then writeLiteral(P_listLiteral(L)^.value(i));
         end;
       end;
-      if (reusableMap.fill<65535) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then begin
+      if (reusableMap.fill<2097151) and not(L^.literalType in [lt_boolean,lt_void,lt_error]) then begin
         reusableMap.put(L,reusableMap.fill);
       end;
     end;
