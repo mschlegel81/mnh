@@ -151,8 +151,7 @@ private cleanup->begin
    files('resources/ensurePackages.mnh')|
    files('core/res_*.inc')|
    allFiles('versions','*.exe')|
-   allFiles('gui','*.exe')|
-   allFiles('consoles','*.exe')|
+   files(BUILTS.getInner(5))|
    files('build.log'))
   .unique
   .each(file,tprint('Deleting ',file,' ',deleteFile(file) ? 'ok' : 'ERR!'));
@@ -181,7 +180,7 @@ private makeDistro->begin
       call7z(['mnh','mnh_light'],'linux');
     end
   : void;
-  fileExists('distroHook.mnh')
+  fileExists('distro_hook.mnh')
   ? executor.execPipeless(['distroHook.mnh'])
   : void;
 end;
@@ -209,6 +208,12 @@ main('prepare')->ensureCodeHash;
 main('clean')->cleanup;
 //*Create 7z distro
 main('distro')->makeDistro;
+//*Deep cleaning, including deleting all executables
+main('CLEAN')->begin
+  cleanup;
+  BUILTS.getInner(2).each(binary,deleteFile(binary));
+end;
+
 //*Build one specific target
 main(target:string)->
   BUILTS.each(B,isSameFileName(B[2],target) OR target=B[1] ? buildExe(B) orElse true : false,OR) OR

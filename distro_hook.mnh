@@ -11,7 +11,7 @@ main->begin
   ? begin
       deleteFile('C:\bin\mnh_imig.exe');
       copyFile('mnh_imig.exe','C:\bin\mnh_imig.exe')
-      ? print('Copied mnh_imig.exe -> C:\bin\mnh_imig.exe');
+      ? print('Copied mnh_imig.exe -> C:\bin\mnh_imig.exe')
       : fail('Copy mnh_imig.exe -> C:\bin\mnh_imig.exe failed');
     end
   : void;
