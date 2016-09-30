@@ -26,7 +26,7 @@ PROCEDURE interactiveMode;
     adapters.create;
     adapters.addConsoleOutAdapter();
     setupOutputBehaviourFromCommandLineOptions(adapters,nil);
-
+    context.createNormalContext(@adapters);
     consolePackage.create(nil);
     for i:=0 to length(LOGO)-1 do writeln(LOGO[i]);
     writeln;
