@@ -34,7 +34,7 @@
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    FUNCTION  enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext; CONST enforceNewThread:boolean):P_futureTask;
+    FUNCTION  enqueue(CONST expr:P_subrule; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext):P_futureTask;
     FUNCTION  dequeue:P_futureTask;
     PROCEDURE activeDeqeue(CONST callDepth:word; VAR context:T_evaluationContext);
   end;
@@ -67,9 +67,9 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
     interlockedDecrement(poolThreadsRunning);
   end;
 
-PROCEDURE ensurePoolThreads(CONST enforceNewThread:boolean);
+PROCEDURE ensurePoolThreads();
   begin
-    if enforceNewThread or (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(currentlyDebugging) {$endif} then begin
+    if (poolThreadsRunning<workerThreadCount) {$ifdef fullVersion} and not(currentlyDebugging) {$endif} then begin
       InterLockedIncrement(poolThreadsRunning);
       beginThread(@threadPoolThread);
     end;
@@ -177,7 +177,7 @@ DESTRUCTOR T_taskQueue.destroy;
     system.doneCriticalSection(cs);
   end;
 
-FUNCTION T_taskQueue.enqueue(CONST expr: P_subrule; CONST idx: longint; CONST x: P_literal; CONST context: P_evaluationContext; CONST enforceNewThread:boolean): P_futureTask;
+FUNCTION T_taskQueue.enqueue(CONST expr: P_subrule; CONST idx: longint; CONST x: P_literal; CONST context: P_evaluationContext): P_futureTask;
   begin
     new(result,createTask(expr,idx,x,context));
     if result^.state=fts_pending then begin
@@ -191,7 +191,7 @@ FUNCTION T_taskQueue.enqueue(CONST expr: P_subrule; CONST idx: longint; CONST x:
         last^.next:=result;
         last:=result;
       end;
-      ensurePoolThreads(enforceNewThread);
+      ensurePoolThreads();
       system.leaveCriticalSection(cs);
     end;
   end;

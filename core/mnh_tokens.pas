@@ -90,7 +90,7 @@ PROCEDURE T_token.define(CONST original: T_token);
     data    :=original.data;
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
-      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then P_literal(data)^.rereference;
+      tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=newListLiteral else data:=P_listLiteral(original.data)^.clone;
     end;
     {$ifdef DEBUGMODE}
@@ -103,7 +103,7 @@ PROCEDURE T_token.undefine;
   begin
     case tokType of
       tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: disposeLiteral(data);
-      tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then disposeLiteral(data);
+      tt_each,tt_parallelEach: if data<>nil then disposeLiteral(data);
     end;
     data:=nil;
     tokType:=tt_EOL;
@@ -122,7 +122,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
   begin
     idLike:=false;
     case tokType of
-      tt_each, tt_parallelEach, tt_forcedParallelEach: begin
+      tt_each, tt_parallelEach: begin
         result:=C_tokenInfo[tokType].defaultId;
         if txt<>'' then result:=result+'('+txt+','
                    else result:=C_tokenInfo[tt_agg].defaultId+'(';
@@ -274,7 +274,7 @@ FUNCTION T_token.hash:T_hashInt;
         for i:=1 to length(txt) do result:=result*31+ord(txt[i]);
         case tokType of
           tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: result:=result*31+P_literal(data)^.hash;
-          tt_each,tt_parallelEach,tt_forcedParallelEach: if data<>nil then result:=result*31+P_literal(data)^.hash else result:=result*31;
+          tt_each,tt_parallelEach: if data<>nil then result:=result*31+P_literal(data)^.hash else result:=result*31;
         end;
       end;
       pt:=pt^.next;

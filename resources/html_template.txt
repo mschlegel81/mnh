@@ -95,7 +95,7 @@ f(x)->sin(x);
   <li><h5><a href="#comments">Comments</a></h5></li>
 </ul>
 <li><h4><a href="#defined">Currently defined packages</a></h4></li>
-</ul> 
+</ul>
   </ul>
 </div>
 <div class="docContent">
@@ -164,14 +164,14 @@ Additionally, comments of the main rule are shown as help on the package on the 
   <li><h5><a href="#compOps"> Comparators </a></h5></li>
   <li><h5><a href="#logOps"> Logical operators </a></h5></li>
   <li><h5><a href="#stringOps"> String concatenation</a></h5></li>
-  <li><h5><a href="#orElseOp"> orElse</a></h5></li>  
+  <li><h5><a href="#orElseOp"> orElse</a></h5></li>
 </ul>
-<li><h4><a href="#listOps"> List operators </a></h4></li>  
-<li><h4><a href="#iifOps"> The ternary inline-if operator</a></h4></li>  
-<li><h4><a href="#typecheckOps"> Type check operators</a></h4></li>  
-<li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>  
-<li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>  
-</ul> 
+<li><h4><a href="#listOps"> List operators </a></h4></li>
+<li><h4><a href="#iifOps"> The ternary inline-if operator</a></h4></li>
+<li><h4><a href="#typecheckOps"> Type check operators</a></h4></li>
+<li><h4><a href="#assignmentOps"> Assignment operators</a></h4></li>
+<li><h4><a href="#cStyleOps"> C-Style operators</a></h4></li>
+</ul>
   <li><h3><a href="functions.html">Functions</a></h4></li>
   <li><h3><a href="specials.html">Special constructs</a></h4></li>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
@@ -211,7 +211,7 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <tr><td><code>xor</code></td><td>9</td><td> bitwise exclusive or</td></tr>
 <tr><td><code>OR</code></td><td>9</td><td> lazy or</td></tr>
 <tr><td><code>? :</code></td><td>n/a</td><td> ternary inline if operator</td></tr>
-<tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr> 
+<tr><td><code>@</code></td><td>n/a</td><td> list-to-parameter</td></tr>
 </table>
 
 <h3><a name="scalarOps"> Scalar operators<a></h3>
@@ -301,7 +301,7 @@ Examples: <code>
  in> 30 div 12;
 out> 2
  in> -15 div 12;
-out> -1   
+out> -1
 <!--end-->
 </code>
 </td></tr>
@@ -313,7 +313,7 @@ This is the "symmetric" modulo operator, i.e. <code><span class="identifier">x</
  in> 30 mod 12;
 out> 6
  in> -15 mod 12;
-out> -3 
+out> -3
 <!--end-->
 </code>
 </td></tr>
@@ -506,7 +506,7 @@ The <code>orElse</code>-operator is intended for cases where the left-hand-side 
    in> false AND true orElse 2;
   out> false
    in> false OR true orElse 2;
-  out> true  
+  out> true
 <!--end-->
 </code>
 
@@ -572,7 +572,7 @@ Note that <code>B</code> must be a boolean scalar; boolean lists are not allowed
 Lazy evaluation is employed, i.e. <code>X</code> is evaluated only if <code>B</code> is true and <code>Y</code> is evaluated only if <code>B</code> is false.
 
 <h3><a name="typecheckOps"> Type check operators</a></h3>
-Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match. 
+Type check operators can be employed to test a value or an expression for it's type; they return boolean scalars, true if the types match.
 <br>The following type checks are defined:<code>
 <!--mnh-->
   :scalar
@@ -703,7 +703,7 @@ If <code>someFunction</code> returns a nullary expression, consider the followin
   out> {(1+2*3)}
        //First evaluate someFunction then evaluate the returned expression
    in> someFunction()();
-  out> 7           
+  out> 7
 <!--end-->
 </code>
 If however <code>someOtherFunction</code> returns an unary expression the behaviour is slightly different:<code>
@@ -745,7 +745,7 @@ This can improve readability a lot. For example consider the following equivalen
   fileLines('input.txt').replace('x',' ').trim.sort({length($x)<=length($y)});
 <!--end-->
 </code>
-While the first one is virtually unreadable without bracket highlighting, the secon one quite clearly reads: "Read all lines from file 'input.txt', 
+While the first one is virtually unreadable without bracket highlighting, the secon one quite clearly reads: "Read all lines from file 'input.txt',
 then replace every ocurring 'x' by a space, then trim each line, then sort the lines by ascending length.".<br>
 This notation can be ambiguous however, since in <code>a.b</code> identifier <code>a</code> can either denote a package (so <code>a.b</code> is a fully qualified function) or
 a local function or variable (so <code>a.b</code> is interpreted as <code>b(a)</code>). This is resolved by favouring the first interpretation: if there is an imported package "a", it will be used.
@@ -816,7 +816,7 @@ There is a shorthand for tests on equality: the first comparand can be omitted. 
 <h3><a name="variadic">Variadic functions</a></h3>
 Variadic functions can be defined using three dots (<code>...</code>) as last parameter in the function head.
 This allows the function to accept any number of additional parameters.<br>
-The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>, which gives the remaining (anonymous) parameters as a list. 
+The trailing anonymous parameters can be referenced inside the function body by the pseudo-identifier <code>...</code>, which gives the remaining (anonymous) parameters as a list.
 An example for a variadic recursive function, printing out all parameters in a separate line wold be:<code>
 <!--mnh-->
   multiPrint->void;
@@ -882,14 +882,14 @@ Functions modifying the value of a persistent value should be <a href="#synchron
 The <i>datastore modifier</i> allows for a rule to be persistent, by writing the assigned value to the an additional file after successful evaluation. This file is automatically named based on the package source name.<br>
 Datastore rules are defined differently from other rules: they have no bodies.<code>
 <!--mnh-->
-  private datastore x;  
+  private datastore x;
 <!--end-->
 </code>
 If the corresponding file is not found, the variable will be initialized with <code><span class="literal">void</span></code>.<br>
 The following restrictions apply:<ul>
   <li> A datastore rule also is mutable per definition </li>
   <li> A datastore rule also is not memoized per definition </li>
-  <li> A datastore rule must have no body</li>  
+  <li> A datastore rule must have no body</li>
 </ul>
 Functions modifying the value of a datastore value should be <a href="#synchronizedMod">synchronized</a>.
 
@@ -902,7 +902,7 @@ The <i>type modifier</i> allowes for the declaration of custom type checks. Thes
 The rule must contain exactly one subrule accepting one parameter and returning a boolean.<br>
 The following restrictions apply:<ul>
   <li> A type rule cannot be private </li>
-  <li> A type rule must have exactly one subrule</li>  
+  <li> A type rule must have exactly one subrule</li>
 </ul>
 
 </div>
@@ -1007,7 +1007,7 @@ You can use one of the following representations:<br>
   <span class="identifier">quote</span><span class="operator">:=</span><span class="literal">"'"</span>;
   <span class="identifier">doubleQuote</span><span class="operator">:=</span><span class="literal">"\""</span>;
   <span class="identifier">backslash</span><span class="operator">:=</span><span class="literal">"\\"</span>;
-<!--end-->  
+<!--end-->
 </code></li>
   <li><b>Blobs</b>:
 Alternatively strings can be written as "blobs", i.e. as a text block preserving line breaks and indentations. Blobs are started with a special comment
@@ -1075,7 +1075,7 @@ List elements can be extracted from Lists via the <code>get</code> function or t
    in> simpleList.get(4);
   out> 'E'
    in> simpleList[4];
-  out> 'E'  
+  out> 'E'
 <!--end-->
 </code>
 Alternative accesses include access by a list of indexes...<code>
@@ -1153,6 +1153,7 @@ out> [2,5,8]
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
 <li><h4><a href="#while">while</a></h4></li>
 <li><h4><a href="#try">try</a></h4></li>
+<li><h4><a href="#async">async</a></h4></li>
 </ul>
   <li><h3><a href="builtin.html">Built-in Functions</a></h4></li>
   <li><h3><a href="formatStrings.html">Format Strings</a></h4></li>
@@ -1166,7 +1167,6 @@ The general syntax is: <code>
 <!--mnh-->
   list.each(id,body,aggregator)
   list.pEach(id,body,aggregator)
-  list.PEach(id,body,aggregator)
   list.agg(aggregator)
 <!--end-->
 </code>
@@ -1176,7 +1176,7 @@ Where <code>id</code> is an identifier,<br>
 <code>body</code> is an expression or list of expressions.<br>
 
 <code>agg</code> is just a shorthand for an <code>each</code> construct without a body (consequently not needing an id to be used inside of the body).
-If <code>agg</code> is used with a body which neither a primitive aggregator (as e.g. <code>+</code>) nor an aggregator (as e.g. <code>aggregator({$0/(1+$1)})</code>) 
+If <code>agg</code> is used with a body which neither a primitive aggregator (as e.g. <code>+</code>) nor an aggregator (as e.g. <code>aggregator({$0/(1+$1)})</code>)
 but can be converted to an aggregator via the <a href="#aggregator">aggregator construct</a>, it will be converted to an aggregator.
 
 <h4><a name="construction">List construction</a></h4>
@@ -1187,20 +1187,20 @@ Simple example: return the input list<code>
   out> [0,1,2,3]
 <!--end-->
 </code>
-You can also use multiple body parts. These are then interlaced in the resulting list:<code>  
+You can also use multiple body parts. These are then interlaced in the resulting list:<code>
 <!--mnh-->
    in> ['a'..'c'].each(c,c,upper(c));
   out> ['a','A','b','B','c','C']
 <!--end-->
 </code>
-Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<code>  
+Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<code>
 <!--mnh-->
    in> f(i)->-2*i;
    in> [0..3].each(i,f(i));
   out> [0,-2,-4,-6]
 <!--end-->
 </code>
-More complex: a function returning the intersection of sets A and B<code>  
+More complex: a function returning the intersection of sets A and B<code>
 <!--mnh-->
    in> intersect(A,B)->A.get(A.each(a,a in B));
    in> intersect(2*[0..10],3*[0..10]);
@@ -1229,7 +1229,7 @@ Generally an aggregator is an expression expecting two parameters. Given an aggr
 
 <h4><a name="consAgg">List construction and aggregation</a></h4>
 You can also use aggregator and body in the same each-/pEach clause.<br><br>
-Nested each: construct a cross product:<code>  
+Nested each: construct a cross product:<code>
 <!--mnh-->
    in> [0..9].each(i,[0..9].each(j,[i,j]));
   out> [[[0,0],...,[0,9]],[[1,0],...,[1,9]],...]
@@ -1253,8 +1253,7 @@ Compute Euler's number based on inverse factorials<code>
 
 <h4><a name="parallelization">Parallelization</a></h4>
 This is simple.<br>In order to parallelize your existing <code>each</code>-expression just replace <code>each</code> by <code>pEach</code>.<br>
-However <code>pEach</code> uses only as many threads as configured. If you want make sure that processing takes place in a parallel fashion, use the
-<code>PEach</code> keyword instead. <br>
+However <code>pEach</code> uses only as many threads as configured. If you want make sure that processing takes place in a parallel fashion, use <code>async</code> instead. <br>
 
 <h3><a name="aggregator">aggregator</a></h3>
 The <code>aggregator</code> construct can be used to mark an expression for the use within an each-/pEach-clause.<code>
@@ -1262,7 +1261,7 @@ The <code>aggregator</code> construct can be used to mark an expression for the 
        //A simple expression, interpreted as each-body
    in> [1..5].each(x,{1/$x+$y});
   out> [{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)},{(1/$x+$y)}]
-       //An aggregator, interpreted as such           
+       //An aggregator, interpreted as such
    in> [1..5].each(x,aggregator({1/$x+$y}));
   out> 5.23255813953488
 <!--end-->
@@ -1274,13 +1273,13 @@ first argument only. Again the comparison with and without the <code>aggregator<
 <!--mnh-->
    in> {$x}(1,2);
   Error  @:1,2 Cannot evaluate inline function {$x} with the given number of parameters; Got 2, expected 1
-  Error [stack trace] @:1,1 0:  || {$x}(1,2)    
+  Error [stack trace] @:1,1 0:  || {$x}(1,2)
    in> aggregator({$x})(1,2);
   out> 1
 <!--end-->
 </code>
 <br>
-Finally you can use the <code>aggregator</code> keyword to construct simple binary expressions. For this you can use operators and the built-in functions 
+Finally you can use the <code>aggregator</code> keyword to construct simple binary expressions. For this you can use operators and the built-in functions
 <code>min</code> and <code>max</code>:<code>
 <!--mnh-->
    in> aggregator(+);
@@ -1310,7 +1309,7 @@ The <code>while</code> construct can be used to construct head-controlled loops.
 <!--mnh-->
   while(condition,body);
 <!--end-->
-</code> 
+</code>
 Where <code>condition</code> is an expression returning a boolean value and body is one expression.<code>
 <!--mnh-->
  in> greatestCommonDivisor(xIn:int,yIn:int)->
@@ -1326,7 +1325,7 @@ Where <code>condition</code> is an expression returning a boolean value and body
  in> greatestCommonDivisor(12,102);
 out> 6
 <!--end-->
-</code> 
+</code>
 
 <h3><a name="try">try</a></h3>
 The <code>try</code> construct can be used for basic exception handling.<br>
@@ -1342,14 +1341,47 @@ Example:<code>
 <!--mnh-->
    in> safeParse(s:string)->
          try(toExpression(s),
-             print('Parsing failed - returning fallback result.') orElse {0});   
+             print('Parsing failed - returning fallback result.') orElse {0});
    in> safeParse('!');
-<!--end-->   
+<!--end-->
   Parsing failed - returning fallback result.
-<!--mnh-->  
+<!--mnh-->
   out> {0}
    in> safeParse('2+$x^2');
-  out> {(2+$x^2)}                  
+  out> {(2+$x^2)}
+<!--end-->
+</code>
+
+<h3><a name="async">async</a></h3>
+The <code>async</code> construct can be used for parallelization.<br>
+It accepts a nullary expression as input. This expression is then executed in a separate thread.<br>
+Note that you cannot access local variables defined in the calling procedure. Use mutable variables for inter-thread communication instead.<br>
+Example (1):<code>
+<!--mnh-->
+  mutable enterPressed:=false;
+
+  main->begin
+    async({begin
+             ask('Press enter to quit');
+             enterPressed:=true;
+           end});
+    while(not(enterPressed),begin
+      sleep(1);
+      print(round(time));
+    end);
+  end;
+<!--end-->
+</code>
+Asynchronous tasks are silently killed when the main evaluation task is finished. Making use of this property, you could simplify the above script (without changing its behavior) by printing asynchronusly and asking in the main thread:<br>
+Example (2):<code>
+<!--mnh-->
+  main->begin
+    async({while(true,begin
+             sleep(1);
+             print(round(time));
+           end)});
+    ask('Press enter to quit');
+  end;
 <!--end-->
 </code>
 </div>
@@ -1375,7 +1407,7 @@ Example:<code>
 </div>
 <div class="docContent">
 <h3><a name="generalFmt">General formatting</a></h3>
-Format Strings are used in conjunction with the builtin functions <a href="builtin.html#strings.format">strings.format</a> and 
+Format Strings are used in conjunction with the builtin functions <a href="builtin.html#strings.format">strings.format</a> and
 <a href="builtin.html#system.printf">system.printf</a>. They contain parts of the string which are independent from the remaining arguments and placeholders for the remaining arguments.
 
 Every placeholder begins with a percent-sign "<code>%</code>". If you want to have a percent-sign in your output, use "<code>%%</code>" instead.
@@ -1415,7 +1447,7 @@ Using list parameters as arguments to be formatted results in multi-line-printin
         99 bottles of beer
         Take one down, pass it around
         98 bottles of beer on the wall.
-        
+
         98 bottles of beer on the wall
         98 bottles of beer
         Take one down, pass it around
@@ -1424,7 +1456,7 @@ Using list parameters as arguments to be formatted results in multi-line-printin
 (Output abridged... obviously.)
 <br>
 <h3><a name="timeFmt">Time formatting</a></h3>
-There are additional routines for formatting and parsing dates and times. Some of the available placeholders can be used in 
+There are additional routines for formatting and parsing dates and times. Some of the available placeholders can be used in
 <code><span class="builtin">formatTime</span></code> only, others can be used both in <code><span class="builtin">formatTime</span></code> and in <code><span class="builtin">parseTime</span></code>.
 <br>
 <table><tr class="ruleHead">

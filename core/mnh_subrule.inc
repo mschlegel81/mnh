@@ -254,7 +254,7 @@ CONSTRUCTOR T_subrule.clone(CONST original:P_subrule);
       token:=original^.preparedBody[i].token;
       case token.tokType of
         tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: P_literal(token.data)^.rereference;
-        tt_each,tt_parallelEach,tt_forcedParallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
+        tt_each,tt_parallelEach: if token.data<>nil then P_literal(token.data)^.rereference;
       end;
       parIdx:=original^.preparedBody[i].parIdx;
     end;
@@ -711,7 +711,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     begin
       result:=false;
       for k:=0 to bracketStack.topIndex do
-      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach,tt_forcedParallelEach]) and
+      if (bracketStack.dat[k]^.tokType in [tt_each,tt_parallelEach]) and
          (bracketStack.dat[k]^.txt=id) or (id=EACH_INDEX_IDENTIFIER) then exit(true);
     end;
 
@@ -719,7 +719,7 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     bracketStack.create;
     for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
       case token.tokType of
-        tt_each,tt_parallelEach,tt_forcedParallelEach,tt_braceOpen: bracketStack.quietPush(@token);
+        tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
         tt_braceClose:bracketStack.quietPop;
       end;
       if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then
