@@ -33,10 +33,8 @@ CONST
   EACH_INDEX_IDENTIFIER         ='index';
   MAIN_RULE_ID                  ='main';
   BUILTIN_PSEUDO_LOCATION_PREFIX='builtin';
-  SELF_TOKEN_TEXT               ='$self';
-  SELF_TOKEN_PAR_IDX            =maxLongint;
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
-  ALL_PARAMETERS_PAR_IDX        =SELF_TOKEN_PAR_IDX-1;
+  ALL_PARAMETERS_PAR_IDX        =maxLongint;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
   DOC_COMMENT_PREFIX            ='//*';
   SPECIAL_COMMENT_BLOB_BEGIN    ='//!';
