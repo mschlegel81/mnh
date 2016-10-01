@@ -6,11 +6,6 @@ TYPE
   T_idString =shortString;
   T_myFloat = extended;
 
-  P_objectWithId=^T_objectWithId;
-  T_objectWithId=object
-    FUNCTION getId:T_idString; virtual; abstract;
-  end;
-
   P_objectWithPath=^T_objectWithPath;
   T_objectWithPath=object
     FUNCTION getPath:ansistring; virtual; abstract;
@@ -26,6 +21,12 @@ TYPE
   T_tokenLocation = record
     package:P_objectWithPath;
     line, column: longint;
+  end;
+
+  P_objectWithIdAndLocation=^T_objectWithIdAndLocation;
+  T_objectWithIdAndLocation=object
+    FUNCTION getId:T_idString; virtual; abstract;
+    FUNCTION getLocation:T_tokenLocation; virtual; abstract;
   end;
 
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;

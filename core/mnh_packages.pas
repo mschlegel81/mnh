@@ -638,7 +638,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         //special handling if main returns an expression:----------------------
         if (t<>nil) and (t^.tokType=tt_literal) and (t^.next=nil) and
            (P_literal(t^.data)^.literalType=lt_expression) then begin
-          P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(nil,0,context);
+          P_subrule(P_expressionLiteral(t^.data)^.value)^.directEvaluateNullary(packageTokenLocation(@self),context,0);
         end;
         //----------------------:special handling if main returns an expression
         if context.adapters^.hasMessageOfType[mt_el3_noMatchingMain] then begin

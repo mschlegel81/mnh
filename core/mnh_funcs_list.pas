@@ -71,7 +71,7 @@ FUNCTION sort_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
         result:=arg0;
         result^.rereference;
       end else result:=list0^.clone;
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),context.adapters^);
+      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,context.adapters^);
     end else if (params<>nil) and (params^.size=2)
             and (arg0^.literalType in C_validListTypes)
             and (arg1^.literalType=lt_int) then begin

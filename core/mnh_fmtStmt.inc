@@ -192,10 +192,10 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
 
       if formatSubrule<>nil then begin
         temp:=P_subrule(P_expressionLiteral(formatSubrule)^.value)^.directEvaluate(
-          P_expressionLiteral(formatSubrule),
           fpar,
-          0,
-          context);
+          tokenLocation,
+          context,
+          0);
         disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_validListTypes)
         then fpar:=P_listLiteral(temp)

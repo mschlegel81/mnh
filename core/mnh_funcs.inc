@@ -250,7 +250,7 @@ FUNCTION time_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocatio
   FUNCTION evaluateNullary(CONST subruleLiteral:P_expressionLiteral):P_literal;
     begin
       t:=wallClock.value.elapsed;
-      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(subruleLiteral,0,context);
+      result:=P_subrule(subruleLiteral^.value)^.directEvaluateNullary(tokenLocation,context,0);
       t:=wallClock.value.elapsed-t;
     end;
 
@@ -519,7 +519,7 @@ FUNCTION group_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
         if resultLiteral=nil then begin
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,aggregator,0,context);
+          newLit:=P_subrule(aggregator^.value)^.directEvaluateAggregator(resultLiteral,L,tokenLocation,context,0);
           if newLit<>nil then begin
             disposeLiteral(resultLiteral);
             resultLiteral:=newLit;

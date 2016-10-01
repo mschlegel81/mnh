@@ -813,7 +813,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             if resultLiteral=nil then begin
               resultLiteral:=L; L^.rereference;
             end else begin
-              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,aggregatorExpression,callDepth+1,context);
+              newLit:=P_subrule(aggregatorExpression^.value)^.directEvaluateAggregator(resultLiteral,L,eachLocation,context,callDepth+1);
               if newLit<>nil then begin
                 disposeLiteral(resultLiteral);
                 resultLiteral:=newLit;
@@ -856,11 +856,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
             and (future[nextFuture]<>nil)
             and ((pendingTasks.queuedCount>maxFutureForwardInitialization) or
                  finalizing or
-                 (future[nextFuture]^.state in [fts_errorOnInitialization,fts_ready])) do begin
+                 (future[nextFuture]^.state in [fts_ready])) do begin
             while (future[nextFuture]^.state in [fts_pending,fts_evaluating]) do pendingTasks.activeDeqeue(callDepth+1,context);
-            addToAggregation(future[nextFuture]^.getResultAsLiteral(context),true);
-            future[nextFuture]^.free(context);
-            dispose(future[nextFuture],proFormaDestroy);
+            addToAggregation(future[nextFuture]^.getResultAsLiteral,true);
+            dispose(future[nextFuture],destroy);
             inc(nextFuture);
           end;
           if finalizing then begin
@@ -878,8 +877,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         setLength(future,length(bodyRule)*itList^.size);
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do begin
           if (context.adapters^.noErrors) and not(lazyAbort) then begin
-            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],i,itList^.value(i),@context);
-            if future[initializedFutures]^.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing future.',eachLocation);
+            future[initializedFutures]:=pendingTasks.enqueue(bodyRule[j],eachLocation,i,itList^.value(i),@context);
           end else future[initializedFutures]:=nil;
           inc(initializedFutures);
           if ((initializedFutures and 255)=0) or (pendingTasks.queuedCount>maxFutureForwardInitialization) then aggregateFutures(false);
@@ -892,14 +890,10 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
           i,j:longint;
       begin
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
-          task.createTask(bodyRule[j],i,itList^.value(i),@context);
-          if task.state=fts_errorOnInitialization then context.adapters^.raiseError('Error initializing (pseudo-)future.',eachLocation)
-          else begin
-            task.evaluate(callDepth+1,context);
-            addToAggregation(task.getResultAsLiteral(context),true);
-          end;
-          task.free(context);
-          task.proFormaDestroy;
+          task.createTask(bodyRule[j],eachLocation,i,itList^.value(i),@context);
+          task.evaluate(callDepth+1,context);
+          addToAggregation(task.getResultAsLiteral,true);
+          task.destroy;
         end;
         finalizeAggregation;
       end;
@@ -992,7 +986,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     FUNCTION evaluateHead:boolean;
       VAR res:P_literal;
       begin
-        res:=headRule^.directEvaluateNullary(nil,callDepth+1,context);
+        res:=headRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
         if (res<>nil) and (res^.literalType=lt_boolean) then begin
           result:=P_boolLiteral(res)^.value;
         end else begin
@@ -1007,7 +1001,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     PROCEDURE evaluateBody;
       VAR res:P_literal;
       begin
-        res:=bodyRule^.directEvaluateNullary(nil,callDepth+1,context);
+        res:=bodyRule^.directEvaluateNullary(whileLocation,context,callDepth+1);
         if res<>nil then disposeLiteral(res);
       end;
 
@@ -1093,7 +1087,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         {$ifndef DEBUGMODE}
         try
         {$endif}
-          if not(P_rule(first^.data)^.replaces(parameterListLiteral,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
+          if not(P_rule(first^.data)^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,callDepth,first^.tokType in [tt_localUserRule,tt_customTypeRule],context)) then begin
             if parameterListLiteral=nil
             then context.adapters^.raiseError('Cannot apply user defined rule '+P_rule(first^.data)^.id+' to empty parameter list',first^.location)
             else begin
@@ -1151,8 +1145,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,false)) and
-           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),firstReplace,lastReplace,context,true )) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
+           not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;

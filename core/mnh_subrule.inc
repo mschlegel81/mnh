@@ -8,7 +8,7 @@
     token:T_token;
   end;
 
-  T_subrule=object
+  T_subrule=object(T_objectWithIdAndLocation)
     private
       comment:ansistring;
       parent:P_rule;
@@ -33,18 +33,23 @@
       CONSTRUCTOR createPrimitiveAggregator(CONST tok:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
-      FUNCTION replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
-      FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
-      FUNCTION directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-      FUNCTION directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-      FUNCTION directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
-      FUNCTION directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-      FUNCTION accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
+      //Evaluation calls:
+      FUNCTION replaces                (CONST param:P_listLiteral;  CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+      FUNCTION directEvaluateComparator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):boolean;
+      FUNCTION directEvaluateAggregator(CONST x,y:P_literal;        CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext;                               CONST callDepth:word):P_literal;
+      FUNCTION accept                  (CONST x:P_literal;                                                                            VAR context:T_evaluationContext):boolean;
       FUNCTION getInlineValue:P_literal;
+
+      //Inspection/documentation calls
+      FUNCTION toString(CONST includePattern:boolean=true; CONST lengthLimit:longint=maxLongint):ansistring;
       FUNCTION getCmdLineHelpText:ansistring;
       FUNCTION getDocTxt:ansistring;
       FUNCTION getDocHtml:ansistring;
-      FUNCTION getSubruleId:ansistring;
+      FUNCTION getId:T_idString; virtual;
+      FUNCTION getLocation:T_tokenLocation; virtual;
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
@@ -284,7 +289,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expressionLiteral; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
   VAR t:P_token;
       i:longint;
       remaining:P_listLiteral=nil;
@@ -294,7 +299,6 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     begin
       if index>=0 then begin
         if index=ALL_PARAMETERS_PAR_IDX then L:=param
-        else if index=SELF_TOKEN_PAR_IDX then L:=selfLiteral
         else if index=REMAINING_PARAMETERS_IDX then begin
           if remaining=nil then begin
             if param=nil
@@ -330,7 +334,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
         report.create;
         if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
         for i:=0 to i1-1 do report.addVariable(parId(i),param^.value(i),'');
-        context.callStackPush(declaredAt,getSubruleId,report);
+        context.callStackPush(callLocation,@self,param);
         if firstRep^.tokType<>tt_beginFunc then begin
           //new first
           tmp:=context.newToken(declaredAt,'',tt_beginFunc);
@@ -351,7 +355,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
     begin
       result:=useUncurryingFallback and
               //The given parameters must match
-             (param<>nil) and pattern.matchesForFallback(param^,selfLiteral<>nil,context) and
+             (param<>nil) and pattern.matchesForFallback(param^,context) and
               //The function result must (likely) be an expression
          (    (preparedBody[0].token.tokType=tt_literal)
           and (P_literal(preparedBody[0].token.data)^.literalType=lt_expression)
@@ -376,7 +380,7 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST selfLiteral:P_expre
   VAR tempInnerParam:P_listLiteral;
   begin
     if (param= nil) and pattern.matchesNilPattern or
-       (param<>nil) and pattern.matches(param^,selfLiteral<>nil,context) then begin
+       (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
     end else if fallbackFeasible then begin
       prepareResult;
@@ -543,11 +547,10 @@ FUNCTION subruleToArityImpl(CONST p:pointer):longint;
     result:=P_subrule(p)^.arity;
   end;
 
-
-FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST params:P_listLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(params,selfLiteral,firstRep,lastRep,context,false) then begin
+    if replaces(params, callLocation, firstRep,lastRep,context,false) then begin
       reduceExpression(firstRep,callDepth+1,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -556,8 +559,8 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
       end else begin
         result:=nil;
         if (params<>nil) and (params^.size>0)
-        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors, returning only a literal. ',declaredAt)
-        else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors, returning only a literal. ',declaredAt);
+        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors. ',declaredAt)
+        else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors. ',declaredAt);
         context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
         context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,50),declaredAt);
       end;
@@ -568,20 +571,31 @@ FUNCTION T_subrule.directEvaluate(CONST selfLiteral:P_expressionLiteral; CONST p
     end;
   end;
 
-FUNCTION T_subrule.directEvaluateNullary(CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
+FUNCTION evaluateSubrule(CONST subruleLiteral:P_expressionLiteral; CONST location:T_tokenLocation; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
   begin
-    result:=directEvaluate(selfLiteral,nil,callDepth,context);
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluate(parameters,location,P_evaluationContext(context)^,0);
   end;
 
-FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):boolean;
-  VAR param:T_listLiteral;
+FUNCTION T_subrule.directEvaluateNullary(CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+  begin
+    result:=directEvaluate(nil,callLocation,context,callDepth);
+  end;
+
+FUNCTION T_subrule.directEvaluateUnary(CONST x:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+  VAR param:P_listLiteral;
+  begin
+    param:=newOneElementListLiteral(x,true);
+    result:=directEvaluate(param,callLocation,context,callDepth);
+    disposeLiteral(param);
+  end;
+
+FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):boolean;
+  VAR param:P_listLiteral;
       lit:P_literal;
   begin
-    param.create;
-    param.append(x,true);
-    param.append(y,true);
-    lit:=directEvaluate(selfLiteral,@param,callDepth,context);
-    param.destroy;
+    param:=newListLiteral(2)^.append(x,true)^.append(y,true);
+    lit:=directEvaluate(param,callLocation,context,callDepth);
+    disposeLiteral(param);
     if (context.adapters^.noErrors) and (lit<>nil) and (lit^.literalType=lt_boolean) then result:=P_boolLiteral(lit)^.value
     else begin
       result:=false;
@@ -590,39 +604,31 @@ FUNCTION T_subrule.directEvaluateComparator(CONST x,y:P_literal; CONST selfLiter
     if lit<>nil then disposeLiteral(lit);
   end;
 
-FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal; CONST selfLiteral:P_expressionLiteral; CONST callDepth:word; VAR context:T_evaluationContext):P_literal;
-  VAR param:T_listLiteral;
-  begin
-    param.create;
-    param.append(x,true);
-    param.append(y,true);
-    result:=directEvaluate(selfLiteral,@param,callDepth,context);
-    param.destroy;
-  end;
-
-FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; VAR adapters:T_adapters):boolean;
+FUNCTION evaluateComparator(CONST subruleLiteral:P_expressionLiteral; CONST LHSComparand,RHScomparand:P_literal; CONST callLocation:T_tokenLocation; VAR adapters:T_adapters):boolean;
   VAR tempcontext:T_evaluationContext;
   begin
     tempcontext.createNormalContext(P_adapters(@adapters));
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,subruleLiteral,0,tempcontext);
+    result:=P_subrule(subruleLiteral^.value)^.directEvaluateComparator(LHSComparand,RHScomparand,callLocation,tempcontext,0);
     tempcontext.destroy;
   end;
 
-FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
-  VAR param:T_listLiteral;
-      L:P_literal;
+FUNCTION T_subrule.directEvaluateAggregator(CONST x,y:P_literal;CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
+  VAR param:P_listLiteral;
   begin
-    param.create;
-    param.append(x,true);
-    L:=directEvaluate(nil,@param,0,context);
-    param.destroy;
-    result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
-    if L<>nil then disposeLiteral(L);
+    param:=newListLiteral(2)^.append(x,true)^.append(y,true);
+    result:=directEvaluate(param,callLocation,context,callDepth);
+    disposeLiteral(param);
   end;
 
-FUNCTION evaluateSubrule(CONST subruleLiteral:P_expressionLiteral; CONST parameters:P_listLiteral; CONST context:pointer):P_literal;
+FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):boolean;
+  VAR param:P_listLiteral;
+      L:P_literal;
   begin
-    result:=P_subrule(subruleLiteral^.value)^.directEvaluate(subruleLiteral,parameters,0,P_evaluationContext(context)^);
+    param:=newOneElementListLiteral(x,true);
+    L:=directEvaluate(param,declaredAt,context,0);
+    dispose(param,destroy);
+    result:=(L<>nil) and (L^.literalType=lt_boolean) and P_boolLiteral(L)^.value;
+    if L<>nil then disposeLiteral(L);
   end;
 
 FUNCTION T_subrule.getInlineValue:P_literal;
@@ -644,7 +650,7 @@ FUNCTION T_subrule.getDocTxt():ansistring;
   begin
     result:='@Line '+intToStr(declaredAt.line)+': '+C_tabChar;
     if typ=srt_normal_private then result:=result+'private ';
-    result:=result+getSubruleId+';';
+    result:=result+getId+';';
     if comment<>'' then result:=result+C_tabChar+'//'+replaceAll(comment,C_lineBreakChar,C_lineBreakChar+C_tabChar+C_tabChar+'//');
   end;
 
@@ -657,10 +663,10 @@ FUNCTION T_subrule.getDocHtml():ansistring;
       then result:=result+'<br>'+Shift+'<i>'+replaceAll(comment,C_lineBreakChar,'<br>'+Shift)+'</i><br>'
       else result:=result+'<i>'+comment+'</i><br>';
     end;
-    result:=result+'<code>'+toHtmlCode(getSubruleId)+'</code></td></tr>';
+    result:=result+'<code>'+toHtmlCode(getId)+'</code></td></tr>';
   end;
 
-FUNCTION T_subrule.getSubruleId:ansistring;
+FUNCTION T_subrule.getId:T_idString;
   begin
     case typ of
       srt_inline_for_literal: result:='expression';
@@ -671,6 +677,11 @@ FUNCTION T_subrule.getSubruleId:ansistring;
         result:=result+pattern.toString;
       end;
     end;
+  end;
+
+FUNCTION T_subrule.getLocation:T_tokenLocation;
+  begin
+    result:=declaredAt;
   end;
 
 FUNCTION T_subrule.arity:longint;
@@ -780,8 +791,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       params.create;
       params.append(TList,true);
-      result:=(subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,false) or
-               subRule^.replaces(@params,f,firstRep,lastRep,tempcontext,true)) and evaluateOk;
+      result:=(subRule^.replaces(@params,location,firstRep,lastRep,tempcontext,false) or
+               subRule^.replaces(@params,location,firstRep,lastRep,tempcontext,true)) and evaluateOk;
       params.destroy;
     end;
 

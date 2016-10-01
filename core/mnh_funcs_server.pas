@@ -220,7 +220,7 @@ PROCEDURE T_microserver.serve;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         initRequestLiteral(request);
-        response:=servingExpression^.evaluate(@requestLiteral,@context);
+        response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,@context);
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes

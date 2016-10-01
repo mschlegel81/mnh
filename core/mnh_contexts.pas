@@ -36,9 +36,9 @@ TYPE
     allowDelegation:boolean;
     {$ifdef FULLVERSION}
     callStack:array of record
-      calledFuncLoc:T_tokenLocation;
-      calledFunctionId:ansistring;
-      parameters:T_variableReport;
+      callerLocation:T_tokenLocation;
+      callee:P_objectWithIdAndLocation;
+      callParameters:P_listLiteral;
     end;
     {$endif}
     CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
@@ -56,8 +56,8 @@ TYPE
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
     {$ifdef FULLVERSION}
     //For debugging:
-    PROCEDURE callStackPush(CONST calledFuncLoc:T_tokenLocation; CONST calledFunctionId:ansistring; CONST parameters:T_variableReport);
-    PROCEDURE callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
+    PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral);
+    //PROCEDURE callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
     PROCEDURE callStackPop();
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
     {$endif}
@@ -271,50 +271,44 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
   end;
 
 {$ifdef FULLVERSION}
-PROCEDURE T_evaluationContext.callStackPush(CONST calledFuncLoc:T_tokenLocation; CONST calledFunctionId:ansistring; CONST parameters:T_variableReport);
+PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral);
   VAR i:longint;
   begin
     i:=length(callStack);
     setLength(callStack,i+1);
-    callStack[i].calledFuncLoc   :=calledFuncLoc;
-    callStack[i].calledFunctionId:=calledFunctionId;
-    callStack[i].parameters      :=parameters;
-    for i:=0 to length(parameters.dat)-1 do with parameters.dat[i] do value^.rereference;
-    stepper.steppingIn(calledFuncLoc,calledFunctionId);
+    callStack[i].callerLocation:=callerLocation;
+    callStack[i].callee        :=callee;
+    callStack[i].callParameters:=callParameters;
+    callParameters^.rereference;
+    stepper.steppingIn(callee^.getLocation,callee^.getId);
   end;
 
-PROCEDURE T_evaluationContext.callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
-  VAR i:longint;
-  begin
-    i:=length(callStack);
-    setLength(callStack,i+1);
-    callStack[i].calledFuncLoc   :=calledFuncLoc;
-    callStack[i].calledFunctionId:='(p)each body';
-    callStack[i].parameters.create;
-    callStack[i].parameters.addVariable(listElementName,listElementValue,'');
-    listElementValue^.rereference;
-    stepper.steppingIn(calledFuncLoc,'(p)each body');
-  end;
+//PROCEDURE T_evaluationContext.callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
+//  VAR i:longint;
+//  begin
+//    i:=length(callStack);
+//    setLength(callStack,i+1);
+//    callStack[i].calledFuncLoc   :=calledFuncLoc;
+//    callStack[i].calledFunctionId:='(p)each body';
+//    callStack[i].parameters.create;
+//    callStack[i].parameters.addVariable(listElementName,listElementValue,'');
+//    listElementValue^.rereference;
+//    stepper.steppingIn(calledFuncLoc,'(p)each body');
+//  end;
 
 PROCEDURE T_evaluationContext.callStackPop();
-  VAR i:longint;
   begin
     if length(callStack)<=0 then exit;
     with callStack[length(callStack)-1] do begin
-      stepper.steppingOut(calledFuncLoc);
-      for i:=0 to length(parameters.dat)-1 do with parameters.dat[i] do disposeLiteral(value);
-      parameters.destroy;
+      stepper.steppingOut(callee^.getLocation);
+      disposeLiteral(callParameters);
     end;
     setLength(callStack,length(callStack)-1);
   end;
 
 PROCEDURE T_evaluationContext.reportVariables(VAR variableReport:T_variableReport);
-  VAR i:longint;
   begin
     if parentContext<>nil then parentContext^.reportVariables(variableReport);
-    for i:=0 to length(callStack)-1 do begin
-      variableReport.addSubReport(callStack[i].parameters,'call '+callStack[i].calledFunctionId);
-    end;
     valueStore.reportVariables(variableReport);
   end;
 
