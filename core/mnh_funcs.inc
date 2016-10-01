@@ -328,25 +328,6 @@ FUNCTION async_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocati
     end;
   end;
 
-FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
-  VAR sleepUntil:double;
-      sleepInt:longint;
-  begin
-    result:=nil;
-    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
-      sleepUntil:=wallClock.value.elapsed;
-      result:=newVoidLiteral;
-      if params^.value(0)^.literalType=lt_int
-      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
-      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
-      while (wallClock.value.elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
-        sleepInt:=round(900*(sleepUntil-wallClock.value.elapsed));
-        if sleepInt>100 then sleepInt:=100;
-        if (sleepInt>0) then sleep(sleepInt);
-      end;
-    end;
-  end;
-
 FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONST package:P_package; VAR context:T_evaluationContext):P_token;
   VAR exTokens:T_tokenArray;
       dummyForLastComment:ansistring='';
@@ -761,7 +742,6 @@ FUNCTION inspect_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
                                                          'time(E:expression,par:list);#Evaluates E@par and returns a nested List with evaluation details.');
   registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,'async(E:expression);Calls E asynchronously (without parameters) and returns void.#'+
                                                            'async(E:expression,par:list);#Calls E@par and asynchronously and returns void.#Asynchronous tasks are killed at the end of (synchonous) evaluation.');
-  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(TYPECAST_NAMESPACE,'toExpression',@toExpression_imp,'toExpression(S);#Returns an expression parsed from S');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity',@arity_imp,'arity(e:expression);#Returns the arity of expression e');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,'parameterNames(e:expression);#Returns the IDs of named parameters of e');

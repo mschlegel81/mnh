@@ -15,6 +15,25 @@ IMPLEMENTATION
 {$define arg0:=params^.value(0)}
 {$define arg1:=params^.value(1)}
 
+FUNCTION sleep_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
+  VAR sleepUntil:double;
+      sleepInt:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (params^.value(0)^.literalType in [lt_real,lt_int]) then begin
+      sleepUntil:=wallClock.value.elapsed;
+      result:=newVoidLiteral;
+      if params^.value(0)^.literalType=lt_int
+      then sleepUntil:=sleepUntil+P_intLiteral (params^.value(0))^.value
+      else sleepUntil:=sleepUntil+P_realLiteral(params^.value(0))^.value;
+      while (wallClock.value.elapsed<sleepUntil) and (context.adapters^.noErrors) do begin
+        sleepInt:=round(900*(sleepUntil-wallClock.value.elapsed));
+        if sleepInt>100 then sleepInt:=100;
+        if (sleepInt>0) then sleep(sleepInt);
+      end;
+    end;
+  end;
+
 FUNCTION softCast_imp(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext):P_literal;
   FUNCTION softCastRecurse(CONST x:P_literal):P_literal;
     VAR i:longint;
@@ -253,6 +272,7 @@ FUNCTION getMnhInfo:string;
   end;
 
 INITIALIZATION
+  registerRule(DEFAULT_BUILTIN_NAMESPACE,'sleep',@sleep_imp,'sleep(seconds:number);#Sleeps for the given number of seconds before returning void');
   registerRule(DEFAULT_BUILTIN_NAMESPACE,'softCast',@softCast_imp,'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans');
   registerRule(TYPECAST_NAMESPACE,'toString',@toString_imp,'toString(X);#Casts X to string');
   registerRule(TYPECAST_NAMESPACE,'toBoolean',@toBoolean_imp,'toBoolean(X);#Casts X to boolean or throws an error if not possible');
