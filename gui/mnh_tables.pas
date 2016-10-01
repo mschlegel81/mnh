@@ -6,7 +6,7 @@ INTERFACE
 
 USES
   Classes, sysutils, FileUtil, Forms, Controls, Graphics, Dialogs, Grids, Menus,
-  mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_tokLoc,
+  mnh_litVar, mnh_funcs,mnh_constants,mnh_contexts,mnh_out_adapters,mnh_basicTypes,
   myGenerics,myStringUtil,mnh_fileWrappers;
 
 TYPE

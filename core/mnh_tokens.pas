@@ -1,6 +1,6 @@
 UNIT mnh_tokens;
 INTERFACE
-USES sysutils,mnh_litVar,mnh_tokLoc,mnh_constants,mnh_out_adapters;
+USES sysutils,mnh_litVar,mnh_basicTypes,mnh_constants,mnh_out_adapters;
 TYPE
   T_rawToken=record txt:string; tokType:T_tokenType; end;
   T_rawTokenArray=array of T_rawToken;

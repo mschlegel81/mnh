@@ -1,6 +1,6 @@
 UNIT mnh_datastores;
 INTERFACE
-USES mnh_litVar,mnh_tokLoc,mnh_out_adapters, serializationUtil,myGenerics,mnh_fileWrappers,sysutils;
+USES mnh_litVar,mnh_basicTypes,mnh_out_adapters, serializationUtil,myGenerics,mnh_fileWrappers,sysutils;
 TYPE
   P_datastoreMeta=^T_datastoreMeta;
   T_datastoreMeta=object

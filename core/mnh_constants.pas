@@ -44,13 +44,6 @@ CONST
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
   {$endif}
 TYPE
-  T_hashInt  =dword;
-  T_idString =string[100];
-  T_myFloat = extended;
-  P_abstractPackage=^T_abstractPackage;
-  T_abstractPackage=object
-    FUNCTION getPath:ansistring; virtual; abstract;
-  end;
   T_reservedWordClass=(rwc_not_reserved,
                        rwc_specialLiteral,
                        rwc_specialConstruct,

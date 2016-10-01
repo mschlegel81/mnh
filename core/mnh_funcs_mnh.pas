@@ -1,7 +1,7 @@
 UNIT mnh_funcs_mnh;
 INTERFACE
 {$WARN 5024 OFF}
-USES mnh_tokLoc,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
+USES mnh_basicTypes,mnh_litVar,mnh_constants, mnh_funcs,sysutils,myGenerics,mnh_out_adapters,myStringUtil,mnh_html,mnh_contexts;
 FUNCTION getMnhInfo:string;
 IMPLEMENTATION
 {$MACRO ON}

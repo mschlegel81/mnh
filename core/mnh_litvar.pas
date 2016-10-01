@@ -3,7 +3,7 @@ UNIT mnh_litVar;
 {$Q-}
 INTERFACE
 {$WARN 3018 OFF}{$WARN 3019 OFF}
-USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_tokLoc, typinfo, serializationUtil, Classes;
+USES myGenerics, mnh_constants, mnh_out_adapters, sysutils, math, myStringUtil, mnh_basicTypes, typinfo, serializationUtil, Classes;
 TYPE
   PP_literal = ^P_literal;
   P_literal = ^T_literal;
@@ -227,7 +227,7 @@ TYPE
   end;
 
   P_namedVariable=^T_namedVariable;
-  T_namedVariable=object
+  T_namedVariable=object(T_objectWithId)
     private
       id:T_idString;
       value:P_literal;

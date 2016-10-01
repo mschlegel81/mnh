@@ -5,7 +5,7 @@ INTERFACE
 USES
   Classes, sysutils, FileUtil, SynEdit, SynEditTypes, SynCompletion, Forms, Controls,
   Graphics, Dialogs, ExtCtrls, Menus, ComCtrls, Grids,
-  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_tokLoc,
+  SynHighlighterMnh, mnh_settings, mnh_gui_settings, mnh_basicTypes,
   mnh_out_adapters, myStringUtil, mnh_evalThread, mnh_constants,
   types, LCLType,mnh_plotData,mnh_funcs,mnh_litVar,mnh_doc,lclintf, StdCtrls,
   mnh_packages,closeDialog,askDialog,SynEditKeyCmds, SynMemo,

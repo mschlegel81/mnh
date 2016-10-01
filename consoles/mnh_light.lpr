@@ -2,7 +2,8 @@
 PROGRAM mnh_light;
 USES {$ifdef UNIX}cmem, cthreads,{$else}
      {$ifdef DEBUGMODE}heaptrc,{$endif}{$endif}
-     mnh_constants,myGenerics,mnh_cmdLineInterpretation, mnh_packages, mnh_contexts, sysutils,mnh_out_adapters;
+     mnh_constants, myGenerics, mnh_cmdLineInterpretation, mnh_packages,
+     mnh_contexts, sysutils, mnh_out_adapters;
 
 PROCEDURE interactiveMode;
   VAR hasExitSignal:boolean=false;

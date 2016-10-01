@@ -1,6 +1,6 @@
 UNIT consoleAsk;
 INTERFACE
-USES mnh_funcs, sysutils, mnh_litVar, mnh_tokLoc, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil,mnh_contexts;
+USES mnh_funcs, sysutils, mnh_litVar, mnh_basicTypes, mnh_constants, mnh_out_adapters, myGenerics, myStringUtil,mnh_contexts;
 IMPLEMENTATION
 VAR cs:TRTLCriticalSection;
 FUNCTION ask(CONST question: ansistring): ansistring;

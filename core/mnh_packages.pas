@@ -1,7 +1,7 @@
 UNIT mnh_packages;
 INTERFACE
-USES myGenerics, mnh_constants, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
-     mnh_litVar, mnh_fileWrappers, mnh_tokLoc, mnh_tokens, mnh_contexts, //types
+USES myGenerics, mnh_constants, mnh_basicTypes, math, sysutils, myStringUtil,typinfo, FileUtil, //utilities
+     mnh_litVar, mnh_fileWrappers, mnh_tokens, mnh_contexts, //types
      EpikTimer,
      mnh_funcs, mnh_out_adapters, mnh_caches, mnh_html, mnh_settings, //even more specific
      {$ifdef fullVersion}mnh_doc,Classes,mnh_plotData,mnh_plotFuncs,{$endif}
@@ -32,7 +32,7 @@ TYPE
     PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR context:T_evaluationContext);
   end;
 
-  T_package=object(T_abstractPackage)
+  T_package=object(T_objectWithPath)
     private
       mainPackage:P_package;
       secondaryPackages:array of P_package;

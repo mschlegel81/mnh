@@ -1,8 +1,6 @@
 UNIT mnh_plotData;
-
 INTERFACE
-
-USES sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types;
+USES mnh_basicTypes, sysutils, math, mnh_constants,Interfaces, Classes, ExtCtrls, Graphics, types;
 CONST
   C_lineStyle_none      =   0;
   C_lineStyle_straight  =   1;
