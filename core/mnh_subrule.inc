@@ -2,7 +2,8 @@
   T_subruleType=(srt_normal_public,
                  srt_normal_private,
                  srt_inline_for_literal,
-                 srt_inline_for_each);
+                 srt_inline_for_each,
+                 srt_inline_for_while);
   T_preparedToken=record
     parIdx:longint;
     token:T_token;
@@ -10,6 +11,9 @@
 
   T_subrule=object(T_objectWithIdAndLocation)
     private
+      firstCallCs:TRTLCriticalSection;
+      functionIdsReady:boolean;
+
       comment:ansistring;
       parent:P_rule;
       typ:T_subruleType;
@@ -18,14 +22,12 @@
       preparedBody:array of T_preparedToken;
 
       PROCEDURE updatePatternForInline;
-      PROCEDURE embrace;
-      FUNCTION needEmbrace:boolean;
-      FUNCTION canUnbrace(CONST outerPrecedence:longint):boolean;
-      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
-      PROCEDURE modifyBeginEnd;
+      PROCEDURE constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEach:boolean);
       CONSTRUCTOR init(CONST srt: T_subruleType; CONST location: T_tokenLocation; CONST parentRule:P_rule=nil);
+      PROCEDURE resolveIds(CONST adapters:P_adapters);
+      FUNCTION needEmbrace(CONST outerPrecedence:longint):boolean;
     public
-      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
+      CONSTRUCTOR create           (CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_evaluationContext);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromInline (CONST rep:P_token; VAR context:T_evaluationContext);
       CONSTRUCTOR createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
@@ -53,12 +55,11 @@
       FUNCTION arity:longint;
       PROCEDURE increaseArity(CONST newArity:longint);
       FUNCTION inspect:P_listLiteral;
-      PROCEDURE resolveIds(CONST adapters:P_adapters);
   end;
 
 {$endif}
 {$ifdef include_implementation}
-PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST construct:T_tokenType);
+PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluationContext; CONST forEach:boolean);
   VAR t:P_token;
   begin
     setLength(preparedBody,0);
@@ -77,30 +78,19 @@ PROCEDURE T_subrule.constructExpression(CONST rep:P_token; VAR context:T_evaluat
               if parIdx>=REMAINING_PARAMETERS_IDX
               then token.tokType:=tt_parameterIdentifier
               else token.tokType:=tt_identifier;
-            end else if (construct=tt_each) and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
+            end else if forEach and (token.txt=EACH_INDEX_IDENTIFIER) then token.tokType:=tt_blockLocalVariable
             else if token.tokType<>tt_parameterIdentifier then token.tokType:=tt_identifier;
           end;
           else parIdx:=-1;
         end;
       end;
     end;
-    resolveIds(nil);
-    if not(construct<>tt_EOL) then modifyBeginEnd;
-  end;
-
-PROCEDURE T_subrule.modifyBeginEnd;
-  VAR last:longint;
-  begin
-    last:=length(preparedBody)-1;
-    if (preparedBody[0   ].token.tokType=tt_beginBlock) and
-       (preparedBody[last].token.tokType=tt_endBlock) then begin
-      preparedBody  [0   ].token.tokType:=tt_beginFunc;
-      preparedBody  [last].token.tokType:=tt_endFunc;
-    end;
   end;
 
 CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocation; CONST parentRule:P_rule=nil);
   begin
+    initCriticalSection(firstCallCs);
+    functionIdsReady:=false;
     comment:='';
     parent:=parentRule;
     typ:=srt;
@@ -108,14 +98,14 @@ CONSTRUCTOR T_subrule.init(CONST srt:T_subruleType; CONST location:T_tokenLocati
     setLength(preparedBody,0);
   end;
 
-CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forSpecialConstruct:boolean; VAR context:T_evaluationContext);
-  CONST C_specialConstruct:array[false..true] of T_tokenType=(tt_EOL,tt_while);
+CONSTRUCTOR T_subrule.create(CONST parent_:P_rule; CONST pat:T_pattern; CONST rep:P_token; CONST declAt:T_tokenLocation; CONST isPrivate,forWhile:boolean; VAR context:T_evaluationContext);
   begin
-    if isPrivate then init(srt_normal_private,declAt,parent_)
-                 else init(srt_normal_public ,declAt,parent_);
+    init(srt_normal_public,declAt,parent_);
+    if       forWhile then typ:=srt_inline_for_while
+    else if isPrivate then typ:=srt_normal_private;
     pattern:=pat;
-    constructExpression(rep,context,C_specialConstruct[forSpecialConstruct]);
-    if needEmbrace then embrace;
+    constructExpression(rep,context,false);
+    resolveIds(nil);
   end;
 
 CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; VAR context:T_evaluationContext);
@@ -123,53 +113,23 @@ CONSTRUCTOR T_subrule.createForEachBody(CONST parameterId:ansistring; CONST rep:
     init(srt_inline_for_each,rep^.location);
     pattern.create;
     pattern.appendFreeId(parameterId);
-    constructExpression(rep,context,tt_each);
+    constructExpression(rep,context,true);
+    resolveIds(nil);
   end;
 
-PROCEDURE T_subrule.embrace;
-  VAR i:longint;
-  begin
-
-    setLength(preparedBody,length(preparedBody)+2);
-    for i:=length(preparedBody)-2 downto 1 do preparedBody[i]:=preparedBody[i-1];
-    with preparedBody[0] do begin
-      token.create; token.define(declaredAt,'',tt_braceOpen);
-      parIdx:=-1;
-    end;
-    with preparedBody[length(preparedBody)-1] do begin
-      token.create; token.define(declaredAt,'',tt_braceClose);
-      parIdx:=-1;
-    end;
-  end;
-
-FUNCTION T_subrule.needEmbrace:boolean;
-  VAR i:longint;
-      level:longint=0;
-  begin
-    if length(preparedBody)<=1 then exit(false);
-    result:=false;
-    for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
-      if ((tokType in C_operatorsAndComparators) or (tokType in [tt_iifCheck, tt_iifElse])) and (level=0) then exit(true);
-      if      tokType in C_openingBrackets then inc(level)
-      else if tokType in C_closingBrackets then dec(level);
-    end;
-  end;
-
-FUNCTION T_subrule.canUnbrace(CONST outerPrecedence:longint):boolean;
+FUNCTION T_subrule.needEmbrace(CONST outerPrecedence:longint):boolean;
   VAR i:longint;
       level:longint=0;
   begin
     if length(preparedBody)<=1 then exit(false);
     level:=0;
     i:=length(preparedBody)-1;
-    if (preparedBody[0].token.tokType<>tt_braceOpen) or
-       (preparedBody[i].token.tokType<>tt_braceClose) then exit(false);
-    for i:=1 to length(preparedBody)-2 do with preparedBody[i].token do begin
+    for i:=0 to length(preparedBody)-1 do with preparedBody[i].token do begin
       if tokType in C_openingBrackets then inc(level)
       else if tokType in C_closingBrackets then dec(level)
-      else if (tokType in C_operatorsAndComparators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(false);
+      else if (tokType in C_operatorsAndComparators) and (level=0) and (C_opPrecedence[preparedBody[i].token.tokType]>outerPrecedence) then exit(true);
     end;
-    result:=true;
+    result:=false;
   end;
 
 PROCEDURE T_subrule.updatePatternForInline;
@@ -202,7 +162,6 @@ CONSTRUCTOR T_subrule.createFromInline(CONST rep:P_token; VAR context:T_evaluati
         parIdx:=-1;
       end;
     end;
-    if needEmbrace then embrace;
     updatePatternForInline;
   end;
 
@@ -274,6 +233,7 @@ DESTRUCTOR T_subrule.destroy;
     pattern.destroy;
     for i:=0 to length(preparedBody)-1 do preparedBody[i].token.destroy;
     setLength(preparedBody,0);
+    doneCriticalSection(firstCallCs);
   end;
 
 FUNCTION createPrimitiveAggregatorLiteral(CONST tok:P_token; VAR context:T_evaluationContext):P_expressionLiteral;
@@ -290,8 +250,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
   end;
 
 FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
-  VAR t:P_token;
-      i:longint;
+  VAR i:longint;
       remaining:P_listLiteral=nil;
 
   FUNCTION tokenFromLiteral(VAR original:T_token; CONST index:longint):P_token; inline;
@@ -316,41 +275,6 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
       end;
     end;
 
-  {$ifdef fullVersion}
-  PROCEDURE wrapResult;
-    FUNCTION parId(CONST index:longint):string;
-      begin
-        if (index>=0) and (index<length(pattern.sig))
-        then result:=pattern.sig[index].id
-        else result:='';
-        if result='' then result:='#'+intToStr(i);
-      end;
-
-    VAR i,i1:longint;
-        report:T_variableReport;
-        tmp:P_token;
-    begin
-      if typ in [srt_normal_private,srt_normal_public] then begin
-        report.create;
-        if (param<>nil) then i1:=param^.size else i1:=length(pattern.sig);
-        for i:=0 to i1-1 do report.addVariable(parId(i),param^.value(i),'');
-        context.callStackPush(callLocation,@self,param);
-        if firstRep^.tokType<>tt_beginFunc then begin
-          //new first
-          tmp:=context.newToken(declaredAt,'',tt_beginFunc);
-          tmp^.next:=firstRep;
-          firstRep:=tmp;
-
-          //new last
-          lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
-          lastRep:=lastRep^.next;
-          lastRep^.next:=context.newToken(declaredAt,'',tt_endFunc);
-          lastRep:=lastRep^.next;
-        end;
-      end;
-    end;
-  {$endif}
-
   FUNCTION fallbackFeasible:boolean;
     begin
       result:=useUncurryingFallback and
@@ -365,15 +289,25 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
     end;
 
   PROCEDURE prepareResult;
+    CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
+          endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule  );
     VAR i:longint;
+        b:boolean;
     begin
-      with preparedBody[0] do firstRep:=tokenFromLiteral(token,parIdx);
-      t:=firstRep;
-      for i:=1 to length(preparedBody)-1 do with preparedBody[i] do begin
-        t^.next:=tokenFromLiteral(token,parIdx);
-        t:=t^.next;
+      if not(functionIdsReady) then resolveIds(context.adapters);
+
+      b:=typ in [srt_normal_private,srt_normal_public];
+
+      firstRep:=context.newToken(declaredAt,'',beginToken[b]);
+      lastRep:=firstRep;
+      for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
+        lastRep^.next:=tokenFromLiteral(token,parIdx);
+        lastRep:=lastRep^.next;
       end;
-      lastRep:=t;
+      lastRep^.next:=context.newToken(declaredAt,'',tt_semicolon);
+      lastRep:=lastRep^.next;
+      lastRep^.next:=context.newToken(declaredAt,'',endToken[b]);
+      lastRep:=lastRep^.next;
       result:=true;
     end;
 
@@ -382,8 +316,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
+      context.callStackPush(callLocation,@self,param);
     end else if fallbackFeasible then begin
       prepareResult;
+      context.callStackPush(callLocation,@self,param);
       tempInnerParam:=newListLiteral;
       for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
       lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
@@ -401,14 +337,12 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
         end;
       end;
     end;
-    {$ifdef fullVersion}
-    if currentlyDebugging and result and (typ<>srt_inline_for_each) and (param<>nil) and (param^.size<>0) then wrapResult;
-    {$endif}
   end;
 
 CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST opLocation:T_tokenLocation);
   VAR i:longint;
       r:P_subrule;
+      embrace:boolean;
   PROCEDURE appendToExpression(VAR T:T_preparedToken);
     begin
       setLength(preparedBody,length(preparedBody)+1);
@@ -456,18 +390,19 @@ CONSTRUCTOR T_subrule.createFromOp(CONST LHS:P_literal; CONST op:T_tokenType; CO
     end;
     if LHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(LHS)^.value;
-      if r^.canUnbrace(C_opPrecedence[op])
-      then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i])
-      else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
+      embrace:=r^.needEmbrace(C_opPrecedence[op]);
+      if embrace then appendToExpression(tt_braceOpen);
+      for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
+      if embrace then appendToExpression(tt_braceClose);
     end else appendToExpression(LHS);
     appendToExpression(op);
     if RHS^.literalType=lt_expression then begin
       r:=P_expressionLiteral(RHS)^.value;
-      if r^.canUnbrace(C_opPrecedence[op]-1)
-      then for i:=1 to length(r^.preparedBody)-2 do appendToExpression(r^.preparedBody[i])
-      else for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
+      embrace:=r^.needEmbrace(C_opPrecedence[op]);
+      if embrace then appendToExpression(tt_braceOpen);
+      for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
+      if embrace then appendToExpression(tt_braceClose);
     end else appendToExpression(RHS);
-    embrace;
   end;
 
 FUNCTION subruleApplyOpImpl (CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation):pointer;
@@ -506,9 +441,9 @@ CONSTRUCTOR T_subrule.createFromInlineWithOp(CONST original:P_expressionLiteral;
     pattern.create;
     setLength(preparedBody,1);
     with preparedBody[0] do begin token.create; token.define(declaredAt,intrinsicRuleId,tt_intrinsicRule,intrinsicRuleMap.get(intrinsicRuleId)); parIdx:=-1; end;
-    if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceOpen);
+    appendToExpression(tt_braceOpen);
     for i:=0 to length(origRule^.preparedBody)-1 do appendToExpression(origRule^.preparedBody[i].token);
-    if not(origRule^.canUnbrace(C_opPrecedence[tt_unaryOpPlus])) then appendToExpression(tt_braceClose);
+    appendToExpression(tt_braceClose);
     updatePatternForInline;
   end;
 
@@ -532,9 +467,10 @@ FUNCTION T_subrule.toString(CONST includePattern:boolean=true; CONST lengthLimit
       prevIdLike:=idLike;
     end;
     if not(includePattern) then exit(result);
-    if      typ=srt_inline_for_literal then result:=                 '{'+result+'}'
-    else if typ=srt_inline_for_each    then result:=pattern.toString+'{'+result+'}'
-    else result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
+    if      typ in [srt_inline_for_literal,srt_inline_for_while]
+                                    then result:=                 '{'+result+'}'
+    else if typ=srt_inline_for_each then result:=pattern.toString+'{'+result+'}'
+    else                                 result:=pattern.toString+C_tokenInfo[tt_declare].defaultId+result;
   end;
 
 FUNCTION subruleToStringImpl(CONST p:pointer; CONST lengthLimit:longint):string;
@@ -558,11 +494,6 @@ FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation
         result^.rereference;
       end else begin
         result:=nil;
-        if (params<>nil) and (params^.size>0)
-        then context.adapters^.raiseError('Cannot directly resolve call with parameters '+params^.toParameterListString(true)+'. Make sure the function can be resolved without errors. ',declaredAt)
-        else context.adapters^.raiseError('Cannot directly resolve call without parameters. '                                  +'Make sure the function can be resolved without errors. ',declaredAt);
-        context.adapters^.raiseError('The failed function is:'+toString,declaredAt);
-        context.adapters^.raiseError('The resulting expression is: '+tokensToString(firstRep,50),declaredAt);
       end;
       context.cascadeDisposeToken(firstRep);
     end else begin
@@ -633,7 +564,7 @@ FUNCTION T_subrule.accept(CONST x:P_literal; VAR context:T_evaluationContext):bo
 
 FUNCTION T_subrule.getInlineValue:P_literal;
   begin
-    if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_literal]) then exit(nil);
+    if (length(preparedBody)<>1) or (typ in [srt_inline_for_each,srt_inline_for_while,srt_inline_for_literal]) then exit(nil);
     with preparedBody[0] do if token.tokType=tt_literal then begin
       result:=token.data;
       result^.rereference;
@@ -670,7 +601,8 @@ FUNCTION T_subrule.getId:T_idString;
   begin
     case typ of
       srt_inline_for_literal: result:='expression';
-      srt_inline_for_each   : result:='each body ';
+      srt_inline_for_each   : result:='each body';
+      srt_inline_for_while  : result:='while body';
       else begin
         if parent=nil then result:='?'
                       else result:=parent^.id;
@@ -702,6 +634,7 @@ FUNCTION T_subrule.inspect:P_listLiteral;
         srt_normal_private    : result:='private';
         srt_inline_for_literal: result:='for_literal';
         srt_inline_for_each   : result:='for_each';
+        srt_inline_for_while  : result:='for_while';
       end;
     end;
 
@@ -727,18 +660,24 @@ PROCEDURE T_subrule.resolveIds(CONST adapters:P_adapters);
     end;
 
   begin
-    bracketStack.create;
-    for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
-      case token.tokType of
-        tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
-        tt_braceClose:bracketStack.quietPop;
+    enterCriticalSection(firstCallCs);
+    if not(functionIdsReady) then begin
+      bracketStack.create;
+      functionIdsReady:=true;
+      for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
+        case token.tokType of
+          tt_each,tt_parallelEach,tt_braceOpen: bracketStack.quietPush(@token);
+          tt_braceClose:bracketStack.quietPop;
+        end;
+        if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then begin
+          P_package(token.location.package)^.resolveRuleId(token,nil);
+          functionIdsReady:=functionIdsReady and (token.tokType<>tt_identifier);
+        end;
       end;
-      if (parIdx<0) and (token.tokType=tt_identifier) and not(isEachIdentifier(token.txt)) then
-      P_package(token.location.package)^.resolveRuleId(token,adapters);
+      bracketStack.destroy;
     end;
-    bracketStack.destroy;
+    leaveCriticalSection(firstCallCs);
   end;
-
 
 {$ifdef FULLVERSION}
 FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; VAR context:T_evaluationContext):T_dataRow;

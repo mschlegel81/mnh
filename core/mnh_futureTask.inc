@@ -18,7 +18,7 @@
       state:T_futureTaskState;
 
     CONSTRUCTOR createTask(CONST expr:P_subrule; CONST location:T_tokenLocation; CONST idx:longint; CONST x:P_literal; CONST context:P_evaluationContext);
-    PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext);
+    PROCEDURE   evaluate(CONST callDepth:word; VAR context:T_evaluationContext; CONST calledFromWorkerThread:boolean);
     FUNCTION    getResultAsLiteral:P_literal;
     DESTRUCTOR  destroy;
   end;
@@ -57,7 +57,7 @@ FUNCTION threadPoolThread(p:pointer):ptrint;
         inc(sleepTime);
         sleep(sleepTime div 5);
       end else begin
-        currentTask^.evaluate(0,tempcontext);
+        currentTask^.evaluate(0,tempcontext,true);
         sleepTime:=0;
       end;
     until (sleepTime>=SLEEP_TIME_TO_QUIT) or (pendingTasks.destructionPending);
@@ -86,10 +86,10 @@ CONSTRUCTOR T_futureTask.createTask(CONST expr:P_subrule; CONST location:T_token
     evaluationResult:=nil;
   end;
 
-PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext);
+PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluationContext; CONST calledFromWorkerThread:boolean);
   VAR idxLit:P_intLiteral;
   begin
-    if (scope<>@context) then context.adopt(scope);
+    if calledFromWorkerThread then context.adopt(scope);
     context.valueStore.scopePush(false);
     idxLit:=newIntLiteral(eachIndex);
     context.valueStore.createVariable(EACH_INDEX_IDENTIFIER,idxLit,true);
@@ -98,7 +98,7 @@ PROCEDURE T_futureTask.evaluate(CONST callDepth: word; VAR context: T_evaluation
     then evaluationResult:=eachRule^.directEvaluateUnary(eachParameter,eachLocation,context,callDepth)
     else evaluationResult:=nil;
     context.valueStore.scopePop;
-    if (scope<>@context) then context.adopt(nil);
+    if calledFromWorkerThread then context.adopt(nil);
     repeat state:=fts_ready until state=fts_ready;
   end;
 
@@ -171,7 +171,7 @@ PROCEDURE T_taskQueue.activeDeqeue(CONST callDepth: word; VAR context: T_evaluat
   VAR task:P_futureTask;
   begin
     task:=dequeue;
-    if task<>nil then task^.evaluate(callDepth,context);
+    if task<>nil then task^.evaluate(callDepth,context,false);
   end;
 
 {$endif}

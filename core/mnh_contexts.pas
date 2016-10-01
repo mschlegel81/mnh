@@ -34,13 +34,13 @@ TYPE
     valueStore:T_valueStore;
     adapters:P_adapters;
     allowDelegation:boolean;
-    {$ifdef FULLVERSION}
+
     callStack:array of record
       callerLocation:T_tokenLocation;
       callee:P_objectWithIdAndLocation;
       callParameters:P_listLiteral;
     end;
-    {$endif}
+
     CONSTRUCTOR createNormalContext(CONST outAdapters:P_adapters);
     CONSTRUCTOR createSanboxContext(CONST outAdapters:P_adapters);
     PROCEDURE adopt(CONST parent:P_evaluationContext);
@@ -54,13 +54,14 @@ TYPE
     //Local scope routines:
     FUNCTION getVariable(CONST id:ansistring):P_namedVariable;
     FUNCTION getVariableValue(CONST id:ansistring):P_literal;
-    {$ifdef FULLVERSION}
     //For debugging:
     PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral);
-    //PROCEDURE callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
     PROCEDURE callStackPop();
+    {$ifdef FULLVERSION}
     PROCEDURE reportVariables(VAR variableReport:T_variableReport);
     {$endif}
+    PROCEDURE printCallStack(CONST messageType:T_messageType);
+    PROCEDURE clearCallStack;
   end;
 
 IMPLEMENTATION
@@ -206,6 +207,7 @@ DESTRUCTOR T_evaluationContext.destroy;
       end;
     end;
     valueStore.destroy;
+    clearCallStack;
   end;
 
 FUNCTION T_evaluationContext.disposeToken(p:P_token):P_token;
@@ -270,7 +272,6 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id:ansistring):P_literal;
                  else result:=named^.getValue;
   end;
 
-{$ifdef FULLVERSION}
 PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_listLiteral);
   VAR i:longint;
   begin
@@ -279,38 +280,44 @@ PROCEDURE T_evaluationContext.callStackPush(CONST callerLocation:T_tokenLocation
     callStack[i].callerLocation:=callerLocation;
     callStack[i].callee        :=callee;
     callStack[i].callParameters:=callParameters;
-    callParameters^.rereference;
-    stepper.steppingIn(callee^.getLocation,callee^.getId);
+    if callParameters<>nil then callParameters^.rereference;
+    {$ifdef fullVersion}
+    if currentlyDebugging then stepper.steppingIn(callee^.getLocation,callee^.getId);
+    {$endif}
   end;
-
-//PROCEDURE T_evaluationContext.callStackPushInEach(CONST calledFuncLoc:T_tokenLocation; CONST listElementValue:P_literal; CONST listElementName:ansistring);
-//  VAR i:longint;
-//  begin
-//    i:=length(callStack);
-//    setLength(callStack,i+1);
-//    callStack[i].calledFuncLoc   :=calledFuncLoc;
-//    callStack[i].calledFunctionId:='(p)each body';
-//    callStack[i].parameters.create;
-//    callStack[i].parameters.addVariable(listElementName,listElementValue,'');
-//    listElementValue^.rereference;
-//    stepper.steppingIn(calledFuncLoc,'(p)each body');
-//  end;
 
 PROCEDURE T_evaluationContext.callStackPop();
   begin
     if length(callStack)<=0 then exit;
     with callStack[length(callStack)-1] do begin
-      stepper.steppingOut(callee^.getLocation);
-      disposeLiteral(callParameters);
+      {$ifdef fullVersion}
+      if currentlyDebugging then stepper.steppingOut(callee^.getLocation);
+      {$endif}
+      if callParameters<>nil then disposeLiteral(callParameters);
     end;
     setLength(callStack,length(callStack)-1);
   end;
-
+{$ifdef FULLVERSION}
 PROCEDURE T_evaluationContext.reportVariables(VAR variableReport:T_variableReport);
   begin
     if parentContext<>nil then parentContext^.reportVariables(variableReport);
     valueStore.reportVariables(variableReport);
   end;
-
 {$endif}
+
+PROCEDURE T_evaluationContext.printCallStack(CONST messageType:T_messageType);
+  VAR i:longint;
+  begin
+    for i:=length(callStack)-1 downto 0 do with callStack[i] do
+    if callParameters=nil
+    then adapters^.raiseCustomMessage(messageType,callee^.getId+' ()'                                             ,callerLocation)
+    else adapters^.raiseCustomMessage(messageType,callee^.getId+' '+callParameters^.toParameterListString(true,50),callerLocation);
+    if parentContext<>nil then parentContext^.printCallStack(messageType);
+  end;
+
+PROCEDURE T_evaluationContext.clearCallStack;
+  begin
+    while length(callStack)>0 do callStackPop();
+  end;
+
 end.

@@ -891,7 +891,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       begin
         for i:=0 to itList^.size-1 do for j:=0 to length(bodyRule)-1 do if (context.adapters^.noErrors) and not(lazyAbort) then begin
           task.createTask(bodyRule[j],eachLocation,i,itList^.value(i),@context);
-          task.evaluate(callDepth+1,context);
+          task.evaluate(callDepth+1,context,false);
           addToAggregation(task.getResultAsLiteral,true);
           task.destroy;
         end;
@@ -1477,9 +1477,9 @@ tt_separatorComma: context.adapters^.raiseError('Token , is only allowed in para
 
 {$WARN 2005 OFF}
 {$define COMMON_SEMICOLON_HANDLING:=
-tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) then begin
+tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) then begin
   if (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
-    {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop; {$endif}
+    if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop;
     stack.popDestroy(context);
     first^.next:=context.disposeToken(first^.next);
     first^.next:=context.disposeToken(first^.next);
@@ -1623,8 +1623,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_CASES;
           end;
           tt_mutate: case cTokType[1] of
-            tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
-              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop(); {$endif}
+            tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]])  then begin
+              if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
               stack.popDestroy(context);
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
@@ -1643,9 +1643,9 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             COMMON_CASES;
           end;
           tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_cso_assignPlus..tt_cso_assignAppend: case cTokType[1] of
-            tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginFunc]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
+            tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=context.disposeToken(first);
-              {$ifdef fullVersion}  if currentlyDebugging and (cTokType[-1]=tt_beginFunc) then context.callStackPop(); {$endif}
+              if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then context.callStackPop();
               first^.next:=context.disposeToken(first^.next);
               first^.next:=context.disposeToken(first^.next);
               context.valueStore.scopePop;
@@ -1670,8 +1670,8 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
             end;
           end;
         end;
-        tt_beginBlock,tt_beginFunc: begin
-          context.valueStore.scopePush(cTokType[0]=tt_beginFunc);
+        tt_beginBlock,tt_beginRule,tt_beginExpression: begin
+          context.valueStore.scopePush(cTokType[0]=tt_beginRule);
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1785,21 +1785,23 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
     {$endif}
     if context.adapters^.noErrors then begin
       if (stack.topIndex>=0) or (first^.next<>nil) then begin
+        if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+        context.clearCallStack;
         if first=nil then while (stack.topIndex>=0) do stack.popLink(first);
-        context.adapters^.raiseError('Cannot reduce expression.',first^.location);
-        context.adapters^.raiseError('Remaining rest is:'+C_lineBreakChar+tokensToString(first,50),first^.location);
-        context.adapters^.raiseError('Token Context is: '+tokenContextString,first^.location);
       end;
     end else if (context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived] or
                  context.adapters^.hasMessageOfType[mt_el5_systemError] or
                  context.adapters^.hasMessageOfType[mt_el5_haltMessageQuiet]) then begin
+      if not(context.adapters^.hasMessageOfType[mt_el5_haltMessageReceived]) and
+         not(context.adapters^.hasMessageOfType[mt_el5_haltMessageQuiet]) and
+         not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+      context.clearCallStack;
       while (stack.topIndex>=0) do stack.popDestroy(context);
       if (callDepth=0) then context.cascadeDisposeToken(first);
     end else begin
-      {$ifdef fullVersion}
-      if gui_started then context.adapters^.raiseCustomMessage(mt_el3_stackTrace,stack.toString(first,50),first^.location);
-      {$endif}
-      while (stack.topIndex>=0) do stack.popLink(first);
+     if not(context.adapters^.hasMessageOfType[mt_el3_stackTrace]) then context.printCallStack(mt_el3_stackTrace);
+     context.clearCallStack;
+     while (stack.topIndex>=0) do stack.popLink(first);
     end;
     stack.destroy;
   end;

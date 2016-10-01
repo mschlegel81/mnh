@@ -480,7 +480,9 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         end else begin
           rulePattern.toParameterIds(ruleBody);
           //[marker 1]
-          if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then reduceExpression(ruleBody,0,context);
+          if evaluateBody and (usecase<>lu_forCodeAssistance) and (context.adapters^.noErrors) then begin
+            reduceExpression(ruleBody,0,context);
+          end;
         end;
 
         if context.adapters^.noErrors then begin
@@ -597,7 +599,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
           end;
           predigest(first,@self,context);
           if context.adapters^.doEchoInput then context.adapters^.raiseCustomMessage(mt_echo_input, tokensToString(first)+';',first^.location);
-          resolveRuleIds(nil);
           reduceExpression(first,0,context);
           if profile then context.adapters^.profileInterpretation;
           if (first<>nil) and context.adapters^.doShowExpressionOut then context.adapters^.raiseCustomMessage(mt_echo_output, tokensToString(first),first^.location);
@@ -615,7 +616,6 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
         t:P_token;
         i:longint;
     begin
-      resolveRuleIds(nil);
       if not(ready) or not(context.adapters^.noErrors) then exit;
       if not(packageRules.containsKey(MAIN_RULE_ID,mainRule)) then begin
         context.adapters^.raiseError('The specified package contains no main rule.',packageTokenLocation(@self));
@@ -743,7 +743,7 @@ PROCEDURE T_package.load(CONST usecase:T_packageLoadUsecase; VAR context:T_evalu
     case usecase of
       lu_forCodeAssistance,
       lu_forDocGeneration: resolveRuleIds(context.adapters);
-      lu_forImport:        resolveRuleIds(nil);
+//      lu_forImport:        resolveRuleIds(nil);
       lu_forCallingMain:   executeMain;
     end;
     {$ifdef fullVersion}

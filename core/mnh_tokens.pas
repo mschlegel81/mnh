@@ -15,7 +15,7 @@ TYPE
 
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
+    PROCEDURE define(CONST tokenLocation: T_tokenLocation; CONST tokenText:T_idString; CONST tokenType:T_tokenType; CONST ptr:pointer=nil);
     PROCEDURE define(CONST original:T_token);
     PROCEDURE undefine;
     FUNCTION last:P_token;
@@ -66,7 +66,7 @@ DESTRUCTOR T_token.destroy;
     undefine;
   end;
 
-PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: ansistring; CONST tokenType: T_tokenType; CONST ptr: pointer);
+PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: T_idString; CONST tokenType: T_tokenType; CONST ptr: pointer);
   {$ifdef DEBUGMODE}VAR idLikeDummy:boolean;{$endif}
   begin
     location:=tokenLocation;
@@ -135,8 +135,8 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_parList            : result:=P_listLiteral(data)^.toParameterListString(true ,limit);
       tt_list_constructor   : result:=P_listLiteral(data)^.listConstructorToString(limit);
       tt_assignNewBlockLocal: result:=C_tokenInfo[tt_modifier_local].defaultId+' '+txt+C_tokenInfo[tokType].defaultId;
-      tt_beginFunc:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
-      tt_endFunc  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
+      tt_beginRule,tt_beginExpression:result:=C_tokenInfo[tt_beginBlock].defaultId+'* ';
+      tt_endRule  ,tt_endExpression  :result:=C_tokenInfo[tt_endBlock  ].defaultId+'* ';
       tt_mutate, tt_assignExistingBlockLocal, tt_cso_assignPlus..tt_cso_assignAppend: result:=txt+C_tokenInfo[tokType].defaultId;
       tt_identifier,
       tt_localUserRule,
