@@ -142,7 +142,7 @@ TYPE
       PROCEDURE removeOption(CONST option:T_contextOption);
       //Delegation routines:
       PROCEDURE notifyAsyncTaskEnd;
-      FUNCTION canGetNewAsyncContext (OUT childContext:T_evaluationContext):boolean;
+      FUNCTION getNewAsyncContext:P_evaluationContext;
       FUNCTION enterTryStatementReturningPreviousAdapters:P_adapters;
       PROCEDURE leaveTryStatementReassumingPreviousAdapters(CONST previousAdapters:P_adapters; CONST tryBodyFailed:boolean);
       PROCEDURE attachWorkerContext(CONST newParent:P_evaluationContext);
@@ -506,19 +506,18 @@ PROCEDURE T_evaluationContext.notifyAsyncTaskEnd;
     interlockedDecrement(asyncChildCount);
   end;
 
-FUNCTION T_evaluationContext.canGetNewAsyncContext(OUT
-  childContext: T_evaluationContext): boolean;
+FUNCTION T_evaluationContext.getNewAsyncContext:P_evaluationContext;
   begin
-    if not(cp_createDetachedTask in options) then exit(false);
+    if not(cp_createDetachedTask in options) then exit(nil);
     if parentContext=nil then begin
       InterLockedIncrement(asyncChildCount);
-      childContext.createContext(initialAdapters,ct_normal);
-      childContext.parentContext:=@self;
-      childContext.options:=options-[cp_timing,cp_queryParentValueStore];
-      childContext.options:=[cp_notifyParentOfAsyncTaskEnd];
-      if cp_profile in childContext.options then childContext.options:=childContext.options+[cp_pushProfliningInfoToParent];
+      new(result,createContext(initialAdapters,ct_normal));
+      result^.parentContext:=@self;
+      result^.options:=options-[cp_timing,cp_queryParentValueStore];
+      result^.options:=[cp_notifyParentOfAsyncTaskEnd];
+      if cp_profile in result^.options then result^.options:=result^.options+[cp_pushProfliningInfoToParent];
     end else begin
-      result:=parentContext^.canGetNewAsyncContext(childContext);
+      result:=parentContext^.getNewAsyncContext();
     end;
   end;
 
@@ -626,16 +625,9 @@ PROCEDURE T_evaluationContext.createVariable(CONST id: T_idString;
   end;
 
 FUNCTION T_evaluationContext.getVariable(CONST id: T_idString): P_namedVariable;
-  VAR c:T_contextOption;
   begin
     result:=valueStore.getVariable(id);
     if (result=nil) and (parentContext<>nil) and (cp_queryParentValueStore in options) then result:=parentContext^.getVariable(id);
-    if result=nil then begin
-      writeln(' - getVariable failed; context privileges are:');
-      for c:=low(T_contextOption) to high(T_contextOption)  do begin
-        if c in options then writeln('   - ',c);
-      end;
-    end;
   end;
 
 FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
@@ -645,7 +637,6 @@ FUNCTION T_evaluationContext.getVariableValue(CONST id: T_idString): P_literal;
     if named=nil then result:=nil
                  else begin
       result:=named^.getValue;
-      if result=nil then writeln('Something strange happened - encountered a named variable without literal');
     end;
   end;
 

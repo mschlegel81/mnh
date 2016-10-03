@@ -11,9 +11,9 @@ TYPE
     feedbackLocation:T_tokenLocation;
     hasKillRequest:boolean;
     up:boolean;
-    context:T_evaluationContext;
+    context:P_evaluationContext;
 
-    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST parentContext:T_evaluationContext; OUT creationSuccessful:boolean);
+    CONSTRUCTOR create(CONST ip_:string; CONST servingExpression_:P_expressionLiteral; CONST timeout_:double; CONST feedbackLocation_:T_tokenLocation; CONST context_: P_evaluationContext);
     DESTRUCTOR destroy;
     PROCEDURE serve;
     PROCEDURE killQuickly;
@@ -57,7 +57,7 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
       timeout:double;
       servingExpression:P_expressionLiteral;
       servingSubrule:P_subrule;
-      creationSuccessful:boolean;
+      childContext:P_evaluationContext;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=3) and
@@ -74,10 +74,11 @@ FUNCTION startServer_impl(CONST params:P_listLiteral; CONST tokenLocation:T_toke
         servingExpression:=newExpressionLiteral(servingSubrule);
         servingSubrule^.increaseArity(4);
       end else servingExpression^.rereference;
-      new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,context,creationSuccessful));
-      if creationSuccessful
-      then result:=newVoidLiteral
-      else context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
+      childContext:=context.getNewAsyncContext;
+      if childContext<>nil then begin
+        new(microserver,create(str0^.value,servingExpression,timeout,tokenLocation,childContext));
+        result:=newVoidLiteral;
+      end else context.adapters^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
 
@@ -88,27 +89,23 @@ FUNCTION microserverThread(p:pointer):ptrint;
     result:=0;
   end;
 
-CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST parentContext: T_evaluationContext; OUT creationSuccessful:boolean);
+CONSTRUCTOR T_microserver.create(CONST ip_: string; CONST servingExpression_: P_expressionLiteral; CONST timeout_: double; CONST feedbackLocation_: T_tokenLocation; CONST context_: P_evaluationContext);
   VAR i:longint;
   begin
-    if parentContext.canGetNewAsyncContext(context) then begin
-      system.enterCriticalSection(serverCS);
-      ip:=cleanIp(ip_);
-      if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
-      then timeout:=0
-      else timeout:=timeout_;
-      servingExpression:=servingExpression_;
-      feedbackLocation:=feedbackLocation_;
-      hasKillRequest:=false;
-      for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
-      setLength(currentUpServers,length(currentUpServers)+1);
-      currentUpServers[length(currentUpServers)-1]:=@self;
-      beginThread(@microserverThread,@self);
-      system.leaveCriticalSection(serverCS);
-      creationSuccessful:=true;
-    end else begin
-      creationSuccessful:=false;
-    end;
+    system.enterCriticalSection(serverCS);
+    ip:=cleanIp(ip_);
+    if isNan(timeout_) or isInfinite(timeout_) or (timeout_<0)
+    then timeout:=0
+    else timeout:=timeout_;
+    servingExpression:=servingExpression_;
+    feedbackLocation:=feedbackLocation_;
+    context:=context_;
+    hasKillRequest:=false;
+    for i:=0 to length(currentUpServers)-1 do if currentUpServers[i]^.ip=ip then currentUpServers[i]^.killQuickly;
+    setLength(currentUpServers,length(currentUpServers)+1);
+    currentUpServers[length(currentUpServers)-1]:=@self;
+    beginThread(@microserverThread,@self);
+    system.leaveCriticalSection(serverCS);
   end;
 
 DESTRUCTOR T_microserver.destroy;
@@ -191,7 +188,7 @@ PROCEDURE T_microserver.serve;
 
   begin
     socket.create(ip);
-    context.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
+    context^.adapters^.raiseNote('Microserver started. '+socket.toString,feedbackLocation);
     up:=true;
     lastActivity:=now;
     repeat
@@ -200,7 +197,7 @@ PROCEDURE T_microserver.serve;
         sleepTime:=minSleepTime;
         lastActivity:=now;
         initRequestLiteral(request);
-        response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,@context);
+        response:=servingExpression^.evaluate(@requestLiteral,feedbackLocation,context);
         requestLiteral.destroy;
         if (response<>nil) then begin
           if response^.literalType in C_validScalarTypes
@@ -208,7 +205,7 @@ PROCEDURE T_microserver.serve;
           else socket.SendString(P_scalarLiteral(response)^.toString);
           disposeLiteral(response);
         end else begin
-          context.adapters^.raiseWarning('Microserver response is nil!', feedbackLocation);
+          context^.adapters^.raiseWarning('Microserver response is nil!', feedbackLocation);
           socket.SendString(HTTP_404_RESPONSE);
         end;
       end else begin
@@ -216,12 +213,12 @@ PROCEDURE T_microserver.serve;
         inc(sleepTime);
         if sleepTime>maxSleepTime then sleepTime:=maxSleepTime;
       end;
-    until timedOut or not(context.adapters^.noErrors);
+    until timedOut or not(context^.adapters^.noErrors);
     disposeLiteral(servingExpression);
     socket.destroy;
-    context.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
-    context.afterEvaluation;
-    context.destroy;
+    context^.adapters^.raiseNote('Microserver stopped. '+socket.toString,feedbackLocation);
+    context^.afterEvaluation;
+    dispose(context,destroy);
     up:=false;
   end;
 
