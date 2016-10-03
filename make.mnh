@@ -120,7 +120,7 @@ private buildExe(B:BuildConfig)->
 private testExe(B:BuildConfig,...)->
   not(B.canBuild)
   ? void
-  : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or not(fileExists(B[2]))
+  : (B[6] ? void : B.buildExe) orElse testAlreadyPassed(B[2]) or needBuilt(B)
     ? void
     : tprint('Testing ',B[2]) orElse
       B[2].execPipeless(['-el5','-quiet','regTest/regTest.mnh','resources/examples.txt'.splitFileName['expanded']]|...) and testAlreadyPassed(B[2])

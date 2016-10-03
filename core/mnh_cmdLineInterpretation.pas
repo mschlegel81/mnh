@@ -88,9 +88,9 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       consoleAdapters.printOut('  -codeHash         show codeHash and exit');
       consoleAdapters.printOut('  -cmd              directly execute the following command');
       consoleAdapters.printOut('  -info             show info; same as -cmd mnhInfo.print');
+      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
       {$ifdef fullVersion}
       consoleAdapters.printOut('  -doc              regenerate and show documentation');
-      consoleAdapters.printOut('  -profile          do a profiling run - implies +time');
       consoleAdapters.printOut('  -edit <filename>  opens file(s) in editor instead of interpreting it directly');
       {$endif}
       consoleAdapters.printOut('  -out <filename>[(options)] write output to the given file; if the extension is .html, ');
@@ -120,6 +120,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
                       else context.createContext(P_adapters(@consoleAdapters),ct_normal);
       package:=packageFromCode(fileOrCommandToInterpret,'<cmd_line>');
+      context.removeOption(cp_clearAdaptersOnStart);
       context.resetForEvaluation(package);
       package^.load(lu_forDirectExecution,context,C_EMPTY_STRING_ARRAY);
       context.afterEvaluation;
@@ -143,6 +144,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
       end;
       if profilingRun then context.createContext(P_adapters(@consoleAdapters),ct_profiling)
                       else context.createContext(P_adapters(@consoleAdapters),ct_normal);
+      context.removeOption(cp_clearAdaptersOnStart);
       context.resetForEvaluation(@package);
       package.load(lu_forCallingMain,context,mainParameters);
       context.afterEvaluation;
@@ -186,8 +188,8 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
           inc(i);
           append(filesToOpenInEditor,paramStr(i));
         end
-        else if (paramStr(i)='-profile') then profilingRun:=true
         {$endif}
+        else if (paramStr(i)='-profile') then profilingRun:=true
         else if ((paramStr(i)='-out') or (paramStr(i)='+out')) and (i<paramCount) then begin
           nextAppendMode:=paramStr(i)='+out';
           addParameter(mnhParameters,i);

@@ -656,7 +656,7 @@ PROCEDURE TMnhForm.InputEditKeyDown(Sender: TObject; VAR key: word;
     if (key=13) and ((ssCtrl in Shift) or (ssAlt in Shift))
     then inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,ssCtrl in Shift,true)
     else inputEditReposition(editorMeta[PageControl.activePageIndex].editor.CaretXY,false,false);
-    if runEvaluator.context.may(cp_debug) and runEvaluator.evaluationRunning then begin
+    if runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning then begin
       if (key=116) and tbRun      .enabled then tbRunClick(Sender);
       if (key=117) and tbStepIn   .enabled then tbStepInClick(Sender);
       if (key=118) and tbStep     .enabled then tbStepClick(Sender);
@@ -1269,7 +1269,7 @@ PROCEDURE TMnhForm.UpdateTimeTimerTimer(Sender: TObject);
       then aid:=C_tabChar+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretY)+','+intToStr(editorMeta[PageControl.activePageIndex].editor.CaretX)
       else aid:='';
       if isEvaluationRunning then begin
-        if runEvaluator.context.may(cp_debug) then begin
+        if runEvaluator.context.hasOption(cp_debug) then begin
           if runEvaluator.context.paused then begin
             StatusBar.SimpleText:='Debugging [HALTED]'+aid;
             if breakPointHandlingPending then handleBreak;
@@ -1468,7 +1468,7 @@ PROCEDURE TMnhForm.tbStopClick(Sender: TObject);
 
 PROCEDURE TMnhForm.InputEditSpecialLineMarkup(Sender: TObject; line: integer; VAR Special: boolean; Markup: TSynSelectedColor);
   begin
-    Special:=runEvaluator.context.may(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
+    Special:=runEvaluator.context.hasOption(cp_debug) and runEvaluator.evaluationRunning and (Sender=debugLine.editor) and (line=debugLine.line);
   end;
 
 FUNCTION TMnhForm.editForSearch(CONST replacing: boolean): TSynEdit;

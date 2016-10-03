@@ -901,7 +901,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
     begin
       if (eachType=tt_parallelEach) and
          ((callDepth>=STACK_DEPTH_LIMIT-16) or
-         not(context.may(cp_spawnWorker)) or
+         not(context.hasOption(cp_spawnWorker)) or
          (workerThreadCount<=0))
       then eachType:=tt_each;
       eachLocation:=first^.location;
@@ -1121,7 +1121,7 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
         end else context.adapters^.raiseError('Aggregators can only be constructed from expression literals!',first^.location);
       end else if (first^.tokType=tt_intrinsicRule) then begin
 
-        context.callStackPush(first^.location,P_intFuncCallback(first^.data),parameterListLiteral);
+        context.callStackPush(first^.location,P_intFuncCallback(first^.data),parameterListLiteral,nil);
         newLiteral:=P_intFuncCallback(first^.data)^.call(parameterListLiteral,first^.location,context);
         context.callStackPop();
 
@@ -1137,8 +1137,8 @@ PROCEDURE reduceExpression(VAR first:P_token; CONST callDepth:word; VAR context:
       end else if (first^.tokType in [tt_literal,tt_aggregatorExpressionLiteral]) and (P_literal(first^.data)^.literalType=lt_expression) then begin
         inlineRule:=P_expressionLiteral(first^.data)^.value;
         //failing "replaces" for inline rules will raise evaluation error.
-        if not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,false)) and
-           not(inlineRule^.replaces(parameterListLiteral,first^.location,firstReplace,lastReplace,context,true )) then exit;
+        if not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,false)) and
+           not(inlineRule^.replaces(parameterListLiteral,P_expressionLiteral(first^.data),first^.location,firstReplace,lastReplace,context,true )) then exit;
       end else begin
         context.adapters^.raiseError('Trying to apply a rule which is no rule!',first^.location);
         exit;
@@ -1491,7 +1491,7 @@ end else context.adapters^.raiseError('Token ; is only allowed in begin-end-bloc
       didSubstitution:=false;
       initTokTypes;
       //writeln(tokensToString(first,50));      writeln(tokenContextString);
-      {$ifdef fullVersion} if context.may(cp_debug) then context.stepping(first,@stack); {$endif}
+      {$ifdef fullVersion} if context.hasOption(cp_debug) then context.stepping(first,@stack); {$endif}
       case cTokType[0] of
         tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
           tt_ponFlipper: if (P_literal(first^.data)^.literalType=lt_expression)

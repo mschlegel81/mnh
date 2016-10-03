@@ -36,7 +36,7 @@
       CONSTRUCTOR clone(CONST original:P_subrule);
       DESTRUCTOR destroy;
       //Evaluation calls:
-      FUNCTION replaces                (CONST param:P_listLiteral;  CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+      FUNCTION replaces                (CONST param:P_listLiteral;  CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
       FUNCTION directEvaluate          (CONST params:P_listLiteral; CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
       FUNCTION directEvaluateNullary   (                            CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
       FUNCTION directEvaluateUnary     (CONST x:P_literal;          CONST callLocation:T_tokenLocation;                               VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
@@ -249,7 +249,7 @@ PROCEDURE disposeSubruleImpl (VAR p:pointer);
     p:=nil;
   end;
 
-FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
+FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST expressionLiteralOrNil:P_expressionLiteral; CONST callLocation:T_tokenLocation; OUT firstRep,lastRep:P_token; VAR context:T_evaluationContext; CONST useUncurryingFallback:boolean):boolean;
   VAR i:longint;
       remaining:P_listLiteral=nil;
 
@@ -316,10 +316,10 @@ FUNCTION T_subrule.replaces(CONST param:P_listLiteral; CONST callLocation:T_toke
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,context) then begin
       prepareResult;
-      context.callStackPush(callLocation,@self,param);
+      context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
     end else if fallbackFeasible then begin
       prepareResult;
-      context.callStackPush(callLocation,@self,param);
+      context.callStackPush(callLocation,@self,param,expressionLiteralOrNil);
       tempInnerParam:=newListLiteral;
       for i:=length(pattern.sig) to param^.size-1 do tempInnerParam^.append(param^.value(i),true);
       lastRep^.next:=context.newToken(declaredAt,'',tt_parList,tempInnerParam);
@@ -486,7 +486,7 @@ FUNCTION subruleToArityImpl(CONST p:pointer):longint;
 FUNCTION T_subrule.directEvaluate(CONST params:P_listLiteral; CONST callLocation:T_tokenLocation; VAR context:T_evaluationContext; CONST callDepth:word):P_literal;
   VAR firstRep,lastRep:P_token;
   begin
-    if replaces(params, callLocation, firstRep,lastRep,context,false) then begin
+    if replaces(params, nil, callLocation, firstRep,lastRep,context,false) then begin
       reduceExpression(firstRep,callDepth+1,context);
       if (context.adapters^.noErrors) and (firstRep<>nil) and (firstRep^.next=nil) and (firstRep^.tokType=tt_literal)
       then begin
@@ -730,8 +730,8 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
     begin
       params.create;
       params.append(TList,true);
-      result:=(subRule^.replaces(@params,location,firstRep,lastRep,tempcontext,false) or
-               subRule^.replaces(@params,location,firstRep,lastRep,tempcontext,true)) and evaluateOk;
+      result:=(subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,false) or
+               subRule^.replaces(@params,nil,location,firstRep,lastRep,tempcontext,true)) and evaluateOk;
       params.destroy;
     end;
 
@@ -789,7 +789,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         end;
         //fallback: ensure that new samples are always added
         if length(newTimes)=0 then begin
-          {$ifdef DEBUGMODE}writeln('Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
+          {$ifdef DEBUGMODE}writeln(stderr,'Fallback: refining all; ',length(tRow)-1,' new samples. TList^.size=',TList^.size);{$endif}
           setLength(newTimes,length(tRow)-1);
           for i:=1 to length(tRow)-1 do begin
             t:=tRow[i]*0.5+tRow[i-1]*0.5;
